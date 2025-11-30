@@ -1,127 +1,81 @@
 // app/api/systeme-io/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
-// ----- Types internes -----
-
 type InternalPlan = 'basic' | 'essential' | 'elite';
 
-// Mapping "fake" pour les tests simples (prod_basic_1, etc.)
-function planFromProductId(productId?: string | null): InternalPlan | null {
-  if (!productId) return null;
+// À adapter si Systeme.io utilise d'autres IDs, mais d'après tes captures :
+const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
+  2962438: 'basic',
+  2962440: 'essential',
+  2962442: 'elite',
+};
 
-  if (productId === 'prod_basic_1') return 'basic';
-  if (productId === 'prod_essential_1') return 'essential';
-  if (productId === 'prod_elite_1') return 'elite';
+function extractFields(body: any) {
+  const email: string | undefined =
+    body.email ??
+    body.customer?.email ??
+    body.contact?.email ??
+    body.data?.customer?.email ??
+    body.data?.contact?.email;
 
-  return null;
-}
+  const firstName: string | undefined =
+    body.first_name ??
+    body.firstname ??
+    body.customer?.first_name ??
+    body.data?.customer?.first_name ??
+    body.data?.customer?.fields?.first_name;
 
-// ----- Zod schemas -----
+  const sioContactId: string | undefined =
+    body.sio_contact_id ??
+    body.customer?.contact_id?.toString?.() ??
+    body.data?.customer?.contact_id?.toString?.();
 
-// Webhook "réel" de Systeme.io (customer.sale.completed)
-const systemeNewSaleSchema = z.object({
-  type: z.literal('customer.sale.completed'),
-  data: z.object({
-    customer: z.object({
-      id: z.number(),
-      contact_id: z.number(),
-      email: z.string().email(),
-      fields: z
-        .object({
-          first_name: z.string().optional(),
-          surname: z.string().optional(),
-        })
-        .catchall(z.any())
-        .optional(),
-    }),
-    offer_price_plan: z.object({
-      id: z.number(),
-      name: z.string(),
-      inner_name: z.string().optional().nullable(),
-      type: z.string(),
-    }),
-    order: z
-      .object({
-        id: z.number(),
-        created_at: z.string().optional(),
-      })
-      .partial()
-      .optional(),
-  }),
-});
+  let offerId: string | number | undefined =
+    body.offer_price_plan_id ??
+    body.offer_price_plan?.id ??
+    body.data?.offer_price_plan?.id ??
+    body.product_id ??
+    body.data?.product_id;
 
-// Ancien format "simple" pour nos tests manuels
-const simpleTestSchema = z.object({
-  email: z.string().email(),
-  first_name: z.string().optional(),
-  sio_contact_id: z.string().optional(),
-  product_id: z.string().optional(),
-});
-
-// ----- Helpers Supabase -----
-
-async function findUserByEmail(email: string) {
-  // On liste les users et on cherche celui qui a cet email
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-
-  if (error) {
-    console.error('Error listing users:', error);
-    throw error;
+  // "123456" -> 123456
+  if (typeof offerId === 'string' && /^\d+$/.test(offerId)) {
+    offerId = Number(offerId);
   }
 
-  const lower = email.toLowerCase();
-  const user = data?.users?.find(
-    (u) => u.email && u.email.toLowerCase() === lower,
-  );
+  let plan: InternalPlan | null = null;
 
-  return user ?? null;
-}
-
-async function getOrCreateUser(params: {
-  email: string;
-  firstName?: string | null;
-  sioContactId?: string | null;
-  plan?: InternalPlan | null;
-}) {
-  const { email, firstName, sioContactId, plan } = params;
-
-  // 1) On essaie de retrouver un user existant
-  const existingUser = await findUserByEmail(email);
-
-  if (existingUser) {
-    // On peut éventuellement mettre à jour ses metadata plus tard
-    return existingUser.id;
+  if (typeof offerId === 'number' && OFFER_PRICE_PLAN_ID_TO_PLAN[offerId]) {
+    plan = OFFER_PRICE_PLAN_ID_TO_PLAN[offerId];
+  } else if (typeof offerId === 'string') {
+    const pid = offerId.toLowerCase();
+    if (pid.includes('basic')) plan = 'basic';
+    else if (pid.includes('essential')) plan = 'essential';
+    else if (pid.includes('elite')) plan = 'elite';
   }
 
-  // 2) Sinon on le crée
-  const { data: created, error: createError } =
-    await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName ?? undefined,
-        sio_contact_id: sioContactId ?? undefined,
-        plan: plan ?? undefined,
-      },
-    });
+  if (!plan) {
+    const label =
+      body.offer_price_plan?.name ??
+      body.data?.offer_price_plan?.name ??
+      body.name ??
+      body.data?.name;
 
-  if (createError || !created?.user) {
-    console.error('Error creating user:', createError);
-    throw createError ?? new Error('Failed to create user');
+    if (typeof label === 'string') {
+      const lower = label.toLowerCase();
+      if (lower.includes('basic')) plan = 'basic';
+      else if (lower.includes('essential')) plan = 'essential';
+      else if (lower.includes('elite')) plan = 'elite';
+    }
   }
 
-  return created.user.id;
+  return { email, firstName, sioContactId, plan };
 }
-
-// ----- Handler principal -----
 
 export async function POST(req: NextRequest) {
   try {
-    // 1) Vérif du "secret" dans l’URL
     const secret = req.nextUrl.searchParams.get('secret');
 
     if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
@@ -131,72 +85,120 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawBody = await req.json();
-    console.log('Incoming Systeme.io webhook body:', rawBody);
-
-    // 2) On essaie le vrai payload Systeme.io
-    const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
-
-    if (parsedSysteme.success) {
-      const { data } = parsedSysteme.data;
-
-      const email = data.customer.email.toLowerCase();
-      const firstName = data.customer.fields?.first_name ?? null;
-      const sioContactId = String(data.customer.contact_id);
-
-      // Pour l’instant, on ne fait PAS d’inférence de plan à partir de offer_price_plan
-      // (tu pourras l’ajouter plus tard quand on aura les vrais IDs)
-      const plan: InternalPlan | null = null;
-
-      const userId = await getOrCreateUser({
-        email,
-        firstName,
-        sioContactId,
-        plan,
-      });
-
-      return NextResponse.json({
-        status: 'ok',
-        mode: 'systeme_real',
-        email,
-        user_id: userId,
-        plan,
-      });
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('[Systeme.io webhook] Failed to parse JSON body', e);
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 },
+      );
     }
 
-    // 3) Sinon, on teste notre format "simple" de debug
-    const parsedSimple = simpleTestSchema.safeParse(rawBody);
+    console.log('[Systeme.io webhook] Incoming payload', {
+      topLevelKeys: Object.keys(body ?? {}),
+      type: body?.type,
+    });
 
-    if (parsedSimple.success) {
-      const { email, first_name, sio_contact_id, product_id } =
-        parsedSimple.data;
+    // On essaie d'extraire email / prénom / contact / plan
+    const { email, firstName, sioContactId, plan } = extractFields(body);
 
-      const plan = planFromProductId(product_id ?? null);
-
-      const userId = await getOrCreateUser({
-        email: email.toLowerCase(),
-        firstName: first_name ?? null,
-        sioContactId: sio_contact_id ?? null,
-        plan,
-      });
-
-      return NextResponse.json({
-        status: 'ok',
-        mode: 'simple_test',
-        email,
-        user_id: userId,
-        plan,
-      });
+    if (!email) {
+      console.error(
+        '[Systeme.io webhook] Could not find email in payload, aborting',
+        body,
+      );
+      return NextResponse.json(
+        { error: 'Missing email in payload' },
+        { status: 400 },
+      );
     }
 
-    console.error('Payload does not match any known schema', rawBody);
+    // Client admin Supabase (on passe par "any" pour avoir getUserByEmail)
+    const admin = supabaseAdmin.auth.admin as any;
 
-    return NextResponse.json(
-      { error: 'Unsupported payload' },
-      { status: 400 },
-    );
+    const { data: existingUserData, error: getUserError } =
+      await admin.getUserByEmail(email);
+
+    if (getUserError) {
+      console.error(
+        '[Systeme.io webhook] Error fetching user by email:',
+        getUserError,
+      );
+      return NextResponse.json(
+        { error: 'Failed to fetch user' },
+        { status: 500 },
+      );
+    }
+
+    let userId: string;
+
+    if (existingUserData?.user) {
+      userId = existingUserData.user.id;
+    } else {
+      const { data: createdUser, error: createUserError } =
+        await admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: {
+            first_name: firstName,
+            sio_contact_id: sioContactId,
+          },
+        });
+
+      if (createUserError || !createdUser?.user) {
+        console.error(
+          '[Systeme.io webhook] Error creating user:',
+          createUserError,
+        );
+        return NextResponse.json(
+          { error: 'Failed to create user' },
+          { status: 500 },
+        );
+      }
+
+      userId = createdUser.user.id;
+    }
+
+    // Upsert dans profiles
+    const { error: upsertProfileError } = await supabaseAdmin
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          email,
+          first_name: firstName ?? null,
+          sio_contact_id: sioContactId ?? null,
+          plan,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' },
+      );
+
+    if (upsertProfileError) {
+      console.error(
+        '[Systeme.io webhook] Error upserting profile:',
+        upsertProfileError,
+      );
+      return NextResponse.json(
+        { error: 'Failed to upsert profile' },
+        { status: 500 },
+      );
+    }
+
+    const mode =
+      body?.type === 'customer.sale.completed' ? 'systeme_sale' : 'simple_test';
+
+    return NextResponse.json({
+      status: 'ok',
+      mode,
+      email,
+      user_id: userId,
+      plan,
+    });
   } catch (err) {
-    console.error('Unexpected error in Systeme.io webhook:', err);
+    console.error('[Systeme.io webhook] Unexpected error:', err);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },
