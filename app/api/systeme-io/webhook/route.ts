@@ -1,178 +1,276 @@
 // app/api/systeme-io/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import supabaseAdmin from '@/lib/supabaseAdmin';
 
-/**
- * Schéma minimal des données qu'on attend depuis Systeme.io.
- * À adapter une fois qu'on aura un exemple réel de payload.
- */
-const systemeIoPayloadSchema = z.object({
-  email: z.string().email(),
-  first_name: z.string().optional(),
-  // Identifiant unique du contact Systeme.io (contact_id, id, etc.)
-  sio_contact_id: z.string().optional(),
-  // Identifiant du produit acheté
-  product_id: z.string().optional(),
-  // Optionnel : un plan explicite si tu préfères l'envoyer depuis Systeme.io
-  plan: z.string().optional(),
+const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
+
+// ----- Zod schemas -----
+
+// Vrai payload "NEW SALE" de Systeme.io
+const systemeNewSaleSchema = z.object({
+  type: z.literal('customer.sale.completed'),
+  data: z.object({
+    customer: z.object({
+      id: z.number(),
+      contact_id: z.number(),
+      email: z.string().email(),
+      fields: z
+        .object({
+          first_name: z.string().optional(),
+          surname: z.string().optional(),
+        })
+        .catchall(z.any())
+        .optional(),
+    }),
+    offer_price_plan: z.object({
+      id: z.number(),
+      name: z.string(),
+      inner_name: z.string().optional().nullable(),
+      type: z.string(),
+    }),
+    order: z
+      .object({
+        id: z.number(),
+        created_at: z.string().optional(),
+      })
+      .partial()
+      .optional(),
+  }),
 });
 
-/**
- * Détermine le plan Tipote à partir du product_id Systeme.io
- * et éventuellement d'un champ "plan" explicite.
- */
-function determinePlan(input: {
-  product_id?: string;
-  planFromPayload?: string;
-}): 'free' | 'basic' | 'essential' | 'elite' {
-  // Si le plan est explicitement envoyé par le webhook, on le truste
-  if (input.planFromPayload) {
-    const normalized = input.planFromPayload.toLowerCase();
-    if (['free', 'basic', 'essential', 'elite'].includes(normalized)) {
-      return normalized as 'free' | 'basic' | 'essential' | 'elite';
-    }
+// Ancien payload simple qu’on utilisait pour les tests manuels
+const simpleTestSchema = z.object({
+  email: z.string().email(),
+  first_name: z.string().optional(),
+  sio_contact_id: z.string().optional(),
+  product_id: z.string().optional(),
+});
+
+// ----- Mapping offres Systeme.io -> plan Tipote -----
+
+type InternalPlan = 'basic' | 'essential' | 'elite';
+
+// ⚠️ À ADAPTER avec les vrais IDs d’offer_price_plan de tes offres Systeme.io.
+const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
+  // exemple :
+  // 1111111: 'basic',
+  // 2222222: 'essential',
+  // 3333333: 'elite',
+};
+
+function inferPlanFromOffer(offer: {
+  id: number;
+  name: string;
+  inner_name?: string | null;
+}): InternalPlan | null {
+  // 1) mapping par ID si tu l’as rempli
+  if (offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) {
+    return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
   }
 
-  const productId = input.product_id;
-  if (!productId) {
-    return 'basic'; // par défaut, on peut mettre "basic"
-  }
+  // 2) fallback : on essaie de deviner à partir du nom
+  const name = `${offer.inner_name ?? ''} ${offer.name}`.toLowerCase();
 
-  const basicIds = (process.env.PLAN_BASIC_PRODUCT_IDS || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const essentialIds = (process.env.PLAN_ESSENTIAL_PRODUCT_IDS || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const eliteIds = (process.env.PLAN_ELITE_PRODUCT_IDS || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (name.includes('basic')) return 'basic';
+  if (name.includes('essential')) return 'essential';
+  if (name.includes('elite')) return 'elite';
 
-  if (eliteIds.includes(productId)) return 'elite';
-  if (essentialIds.includes(productId)) return 'essential';
-  if (basicIds.includes(productId)) return 'basic';
-
-  // fallback
-  return 'basic';
+  return null;
 }
 
-/**
- * Handler POST pour le webhook Systeme.io
- */
+// ----- Handler principal -----
+
 export async function POST(req: NextRequest) {
-  // 1) Vérification du secret dans l'URL
-  const url = new URL(req.url);
-  const secret = url.searchParams.get('secret');
-  if (secret !== process.env.SYSTEME_IO_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Invalid secret' }, { status: 401 });
-  }
-
-  // 2) Lecture du body (on suppose du JSON pour la V1)
-  let jsonBody: unknown;
   try {
-    jsonBody = await req.json();
-  } catch (e) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+    // 1) Vérif du "secret" dans l’URL
+    const secret = req.nextUrl.searchParams.get('secret');
 
-  const parseResult = systemeIoPayloadSchema.safeParse(jsonBody);
-  if (!parseResult.success) {
-    console.error('Invalid payload from Systeme.io', parseResult.error.flatten());
-    return NextResponse.json(
-      { error: 'Invalid payload', details: parseResult.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const { email, first_name, sio_contact_id, product_id, plan } = parseResult.data;
-
-  const resolvedPlan = determinePlan({
-    product_id,
-    planFromPayload: plan,
-  });
-
-  // 3) Vérifier si le profil existe déjà (idempotence)
-  const existingProfileRes = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
-
-  if (existingProfileRes.error) {
-    console.error('Error checking existing profile', existingProfileRes.error);
-    return NextResponse.json(
-      { error: 'Database error when checking profile' },
-      { status: 500 }
-    );
-  }
-
-  if (existingProfileRes.data) {
-    // 4-a) Mise à jour du profil existant
-    const updateRes = await supabaseAdmin
-      .from('profiles')
-      .update({
-        plan: resolvedPlan,
-        sio_contact_id: sio_contact_id ?? existingProfileRes.data.id,
-        product_id: product_id ?? null,
-      })
-      .eq('id', existingProfileRes.data.id);
-
-    if (updateRes.error) {
-      console.error('Error updating profile', updateRes.error);
+    if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
       return NextResponse.json(
-        { error: 'Failed to update profile' },
-        { status: 500 }
+        { error: 'Invalid or missing secret' },
+        { status: 401 },
       );
     }
 
-    return NextResponse.json({ status: 'ok', action: 'updated_existing_profile' });
-  }
+    const rawBody = await req.json();
 
-  // 4-b) Pas de profil existant → créer un nouvel utilisateur + profil
-  const createdUserRes = await supabaseAdmin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: {
-      first_name,
-      source: 'systeme.io',
-    },
-  });
+    // 2) On essaie d’abord de parser comme un vrai webhook Systeme.io
+    const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
 
-  if (createdUserRes.error || !createdUserRes.data.user) {
-    console.error('Error creating auth user', createdUserRes.error);
+    if (parsedSysteme.success) {
+      const { data } = parsedSysteme.data;
+
+      const email = data.customer.email.toLowerCase();
+      const firstName = data.customer.fields?.first_name ?? null;
+      const sioContactId = String(data.customer.contact_id);
+      const plan = inferPlanFromOffer(data.offer_price_plan);
+
+      // 3) Création / récupération de l’utilisateur Supabase
+      const { data: existingUserData, error: getUserError } =
+        await supabaseAdmin.auth.admin.getUserByEmail(email);
+
+      if (getUserError) {
+        console.error('Error fetching user by email:', getUserError);
+        return NextResponse.json(
+          { error: 'Failed to fetch user' },
+          { status: 500 },
+        );
+      }
+
+      let userId: string;
+
+      if (existingUserData?.user) {
+        userId = existingUserData.user.id;
+      } else {
+        const { data: createdUser, error: createUserError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email,
+            email_confirm: true,
+            user_metadata: {
+              first_name: firstName,
+              sio_contact_id: sioContactId,
+            },
+          });
+
+        if (createUserError || !createdUser?.user) {
+          console.error('Error creating user:', createUserError);
+          return NextResponse.json(
+            { error: 'Failed to create user' },
+            { status: 500 },
+          );
+        }
+
+        userId = createdUser.user.id;
+      }
+
+      // 4) Upsert du profil dans la table profiles
+      const { error: upsertProfileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert(
+          {
+            id: userId,
+            email,
+            full_name: firstName,
+            sio_contact_id: sioContactId,
+            plan, // "basic" | "essential" | "elite" ou null
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        );
+
+      if (upsertProfileError) {
+        console.error('Error upserting profile:', upsertProfileError);
+        return NextResponse.json(
+          { error: 'Failed to upsert profile' },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        status: 'ok',
+        action: 'systeme_new_sale',
+        email,
+        user_id: userId,
+        plan,
+      });
+    }
+
+    // 3) Sinon, on tente l’ancien format “simple” (tests manuels)
+    const parsedSimple = simpleTestSchema.safeParse(rawBody);
+
+    if (parsedSimple.success) {
+      const { email, first_name, sio_contact_id, product_id } =
+        parsedSimple.data;
+
+      const plan: InternalPlan | null =
+        product_id === 'prod_basic_1'
+          ? 'basic'
+          : product_id === 'prod_essential_1'
+          ? 'essential'
+          : product_id === 'prod_elite_1'
+          ? 'elite'
+          : null;
+
+      const { data: existingUserData, error: getUserError } =
+        await supabaseAdmin.auth.admin.getUserByEmail(email);
+
+      if (getUserError) {
+        console.error('Error fetching user by email (simple):', getUserError);
+        return NextResponse.json(
+          { error: 'Failed to fetch user' },
+          { status: 500 },
+        );
+      }
+
+      let userId: string;
+
+      if (existingUserData?.user) {
+        userId = existingUserData.user.id;
+      } else {
+        const { data: createdUser, error: createUserError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email,
+            email_confirm: true,
+            user_metadata: {
+              first_name,
+              sio_contact_id,
+            },
+          });
+
+        if (createUserError || !createdUser?.user) {
+          console.error('Error creating user (simple):', createUserError);
+          return NextResponse.json(
+            { error: 'Failed to create user' },
+            { status: 500 },
+          );
+        }
+
+        userId = createdUser.user.id;
+      }
+
+      const { error: upsertProfileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert(
+          {
+            id: userId,
+            email,
+            full_name: first_name,
+            sio_contact_id,
+            plan,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        );
+
+      if (upsertProfileError) {
+        console.error('Error upserting profile (simple):', upsertProfileError);
+        return NextResponse.json(
+          { error: 'Failed to upsert profile' },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        status: 'ok',
+        action: 'simple_test',
+        email,
+        user_id: userId,
+        plan,
+      });
+    }
+
+    console.error('Payload does not match any known schema', rawBody);
+
     return NextResponse.json(
-      { error: 'Failed to create auth user' },
-      { status: 500 }
+      { error: 'Unsupported payload' },
+      { status: 400 },
+    );
+  } catch (err) {
+    console.error('Unexpected error in Systeme.io webhook:', err);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
-
-  const user = createdUserRes.data.user;
-
-  const insertProfileRes = await supabaseAdmin.from('profiles').insert({
-    id: user.id,
-    email: user.email,
-    first_name: first_name ?? null,
-    locale: 'fr',
-    plan: resolvedPlan,
-    sio_contact_id: sio_contact_id ?? null,
-    product_id: product_id ?? null,
-  });
-
-  if (insertProfileRes.error) {
-    console.error('Error inserting profile', insertProfileRes.error);
-    return NextResponse.json(
-      { error: 'Failed to create profile' },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({
-    status: 'ok',
-    action: 'created_user_and_profile',
-    user_id: user.id,
-  });
 }
