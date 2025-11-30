@@ -1,7 +1,7 @@
 // app/api/systeme-io/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import supabaseAdmin from '@/lib/supabaseAdmin';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
@@ -49,14 +49,13 @@ const simpleTestSchema = z.object({
 
 // ----- Mapping offres Systeme.io -> plan Tipote -----
 
-type InternalPlan = 'basic' | 'essential' | 'elite';
+export type InternalPlan = 'basic' | 'essential' | 'elite';
 
 // ⚠️ À ADAPTER avec les vrais IDs d’offer_price_plan de tes offres Systeme.io.
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
-  // exemple :
-  // 1111111: 'basic',
-  // 2222222: 'essential',
-  // 3333333: 'elite',
+  // 2962438: 'basic',
+  // 2962440: 'essential',
+  // 2962442: 'elite',
 };
 
 function inferPlanFromOffer(offer: {
@@ -77,6 +76,28 @@ function inferPlanFromOffer(offer: {
   if (name.includes('elite')) return 'elite';
 
   return null;
+}
+
+// ----- Helper Supabase : trouver un user par email -----
+
+async function findUserByEmail(email: string) {
+  // On prend une grosse page et on filtre côté JS.
+  // Pour ton projet, 1000 users par page c’est largement suffisant.
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (error) {
+    return { user: null as any, error };
+  }
+
+  const user =
+    data?.users?.find(
+      (u: any) => u.email?.toLowerCase() === email.toLowerCase(),
+    ) ?? null;
+
+  return { user, error: null as any };
 }
 
 // ----- Handler principal -----
@@ -107,8 +128,8 @@ export async function POST(req: NextRequest) {
       const plan = inferPlanFromOffer(data.offer_price_plan);
 
       // 3) Création / récupération de l’utilisateur Supabase
-      const { data: existingUserData, error: getUserError } =
-        await supabaseAdmin.auth.admin.getUserByEmail(email);
+      const { user: existingUser, error: getUserError } =
+        await findUserByEmail(email);
 
       if (getUserError) {
         console.error('Error fetching user by email:', getUserError);
@@ -120,8 +141,8 @@ export async function POST(req: NextRequest) {
 
       let userId: string;
 
-      if (existingUserData?.user) {
-        userId = existingUserData.user.id;
+      if (existingUser) {
+        userId = existingUser.id;
       } else {
         const { data: createdUser, error: createUserError } =
           await supabaseAdmin.auth.admin.createUser({
@@ -192,8 +213,8 @@ export async function POST(req: NextRequest) {
           ? 'elite'
           : null;
 
-      const { data: existingUserData, error: getUserError } =
-        await supabaseAdmin.auth.admin.getUserByEmail(email);
+      const { user: existingUser, error: getUserError } =
+        await findUserByEmail(email);
 
       if (getUserError) {
         console.error('Error fetching user by email (simple):', getUserError);
@@ -205,8 +226,8 @@ export async function POST(req: NextRequest) {
 
       let userId: string;
 
-      if (existingUserData?.user) {
-        userId = existingUserData.user.id;
+      if (existingUser) {
+        userId = existingUser.id;
       } else {
         const { data: createdUser, error: createUserError } =
           await supabaseAdmin.auth.admin.createUser({
