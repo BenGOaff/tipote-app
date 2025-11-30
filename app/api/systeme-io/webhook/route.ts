@@ -5,161 +5,91 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
-// ---------------- Zod schemas ----------------
-
-// Vrai payload “NEW SALE” de Systeme.io (on le prépare pour plus tard)
-const systemeNewSaleSchema = z.object({
-  type: z.literal('customer.sale.completed'),
-  data: z.object({
-    customer: z.object({
-      id: z.number(),
-      contact_id: z.number(),
-      email: z.string().email(),
-      fields: z
-        .object({
-          first_name: z.string().optional(),
-          surname: z.string().optional(),
-        })
-        .catchall(z.any())
-        .optional(),
-    }),
-    offer_price_plan: z.object({
-      id: z.number(),
-      name: z.string(),
-      inner_name: z.string().optional().nullable(),
-      type: z.string(),
-    }),
-    order: z
-      .object({
-        id: z.number(),
-        created_at: z.string().optional(),
-      })
-      .partial()
-      .optional(),
-  }),
-});
-
-// Ancien payload simple qu’on utilise pour les tests manuels (Invoke-RestMethod)
-const simpleTestSchema = z.object({
+// ----- Schéma du payload que TU reçois déjà de Systeme.io -----
+const simplePayloadSchema = z.object({
   email: z.string().email(),
-  first_name: z.string().optional(),
-  sio_contact_id: z.string().optional(),
-  product_id: z.string().optional(),
+  first_name: z.string().optional().nullable(),
+  sio_contact_id: z.string().optional().nullable(),
+  product_id: z.string().optional().nullable(),
 });
 
-// ---------------- Types internes ----------------
-
+// ----- Plans internes -----
 type InternalPlan = 'basic' | 'essential' | 'elite';
 
-// Si un jour tu récupères les vrais IDs de offer_price_plan, tu peux les mapper ici.
-const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
-  // 2962438: 'basic',
-  // 2962440: 'essential',
-  // 2962442: 'elite',
-};
-
-function inferPlanFromOffer(offer: {
-  id: number;
-  name: string;
-  inner_name?: string | null;
-}): InternalPlan | null {
-  if (offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) {
-    return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
-  }
-
-  const name = `${offer.inner_name ?? ''} ${offer.name}`.toLowerCase();
-
-  if (name.includes('basic')) return 'basic';
-  if (name.includes('essential')) return 'essential';
-  if (name.includes('elite')) return 'elite';
-
+function planFromProductId(productId?: string | null): InternalPlan | null {
+  if (!productId) return null;
+  if (productId === 'prod_basic_1') return 'basic';
+  if (productId === 'prod_essential_1') return 'essential';
+  if (productId === 'prod_elite_1') return 'elite';
   return null;
 }
 
-// ---------------- Helpers réutilisables ----------------
-
-async function getOrCreateUserByEmail(opts: {
+// ----- Helper: trouver OU créer l'utilisateur Supabase -----
+async function findOrCreateUser(opts: {
   email: string;
   firstName: string | null;
   sioContactId: string | null;
 }): Promise<string> {
-  const { email, firstName, sioContactId } = opts;
+  const emailLower = opts.email.toLowerCase();
 
-  // getUserByEmail existe bien dans supabase-js,
-  // mais les typings ne le connaissent pas -> on caste en any.
-  const adminApi: any = supabaseAdmin.auth.admin;
+  // 1) On essaie de le trouver via listUsers
+  const { data: listData, error: listError } = await (supabaseAdmin.auth
+    .admin as any).listUsers({
+    page: 1,
+    perPage: 1000,
+  });
 
-  const { data: existingUserData, error: getUserError } =
-    await adminApi.getUserByEmail(email);
-
-  if (getUserError) {
-    console.error('[Systeme.io webhook] Error fetching user by email:', getUserError);
-    throw new Error('Failed to fetch user');
+  if (listError) {
+    console.error('[Systeme.io webhook] Error listing users:', listError);
+    throw new Error('Failed to list users');
   }
 
-  if (existingUserData?.user) {
-    return existingUserData.user.id;
+  const existingUser = listData?.users?.find(
+    (u: any) => u.email && u.email.toLowerCase() === emailLower,
+  );
+
+  if (existingUser) {
+    console.log('[Systeme.io webhook] Found existing user', {
+      id: existingUser.id,
+      email: existingUser.email,
+    });
+    return existingUser.id;
   }
 
-  const { data: createdUser, error: createUserError } =
-    await adminApi.createUser({
-      email,
+  // 2) Pas trouvé → on le crée
+  const { data: createData, error: createError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
       email_confirm: true,
       user_metadata: {
-        first_name: firstName,
-        sio_contact_id: sioContactId,
+        first_name: opts.firstName,
+        sio_contact_id: opts.sioContactId,
       },
     });
 
-  if (createUserError || !createdUser?.user) {
-    console.error('[Systeme.io webhook] Error creating user:', createUserError);
+  if (createError || !createData?.user) {
+    console.error('[Systeme.io webhook] Error creating user:', createError);
     throw new Error('Failed to create user');
   }
 
-  return createdUser.user.id;
+  console.log('[Systeme.io webhook] Created new user', {
+    id: createData.user.id,
+    email: createData.user.email,
+  });
+
+  return createData.user.id;
 }
 
-async function upsertProfile(opts: {
-  userId: string;
-  email: string;
-  firstName: string | null;
-  plan: InternalPlan | null;
-  sioContactId: string | null;
-  productId: string | null;
-}) {
-  const { userId, email, firstName, plan, sioContactId, productId } = opts;
-
-  const { error } = await supabaseAdmin
-    .from('profiles')
-    .upsert(
-      {
-        id: userId,
-        email,
-        first_name: firstName,
-        // locale a un défaut 'fr' dans la table
-        // plan a un défaut 'basic' : on envoie celui déduit si dispo
-        ...(plan ? { plan } : {}),
-        sio_contact_id: sioContactId,
-        product_id: productId,
-        // on laisse Postgres gérer created_at / updated_at
-      },
-      { onConflict: 'id' },
-    );
-
-  if (error) {
-    console.error('[Systeme.io webhook] Error upserting profile:', error);
-    throw new Error('Failed to upsert profile');
-  }
-}
-
-// ---------------- Handler principal ----------------
-
+// ----- Handler principal -----
 export async function POST(req: NextRequest) {
   try {
-    // 1) Vérif du secret dans l’URL
+    // 1) Vérif du secret
     const secret = req.nextUrl.searchParams.get('secret');
 
     if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
+      console.warn('[Systeme.io webhook] Invalid or missing secret', {
+        got: secret,
+      });
       return NextResponse.json(
         { error: 'Invalid or missing secret' },
         { status: 401 },
@@ -169,99 +99,83 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.json();
 
     console.log('[Systeme.io webhook] Incoming payload', {
-      topLevelKeys: Object.keys(rawBody ?? {}),
-      type: rawBody?.type,
+      topLevelKeys: Object.keys(rawBody),
+      rawBody,
     });
 
-    // 2) On essaie d’abord de parser comme un vrai webhook Systeme.io
-    const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
+    // 2) On parse le payload SIMPLE (celui que tu envoies déjà depuis Systeme.io)
+    const parsed = simplePayloadSchema.safeParse(rawBody);
 
-    if (parsedSysteme.success) {
-      const { data } = parsedSysteme.data;
-
-      const email = data.customer.email.toLowerCase();
-      const firstName = data.customer.fields?.first_name ?? null;
-      const sioContactId = String(data.customer.contact_id);
-      const plan = inferPlanFromOffer(data.offer_price_plan);
-      const productId = String(data.offer_price_plan.id);
-
-      const userId = await getOrCreateUserByEmail({
-        email,
-        firstName,
-        sioContactId,
-      });
-
-      await upsertProfile({
-        userId,
-        email,
-        firstName,
-        plan,
-        sioContactId,
-        productId,
-      });
-
-      return NextResponse.json({
-        status: 'ok',
-        mode: 'systeme_new_sale',
-        email,
-        user_id: userId,
-        plan: plan ?? 'basic',
-        product_id: productId,
-      });
+    if (!parsed.success) {
+      console.error(
+        '[Systeme.io webhook] Payload does not match expected schema',
+        parsed.error.format(),
+      );
+      return NextResponse.json(
+        { error: 'Unsupported payload' },
+        { status: 400 },
+      );
     }
 
-    // 3) Sinon, on tente l’ancien format “simple” (tests manuels)
-    const parsedSimple = simpleTestSchema.safeParse(rawBody);
+    const { email, first_name, sio_contact_id, product_id } = parsed.data;
 
-    if (parsedSimple.success) {
-      const { email, first_name, sio_contact_id, product_id } =
-        parsedSimple.data;
+    const plan = planFromProductId(product_id) ?? 'basic';
 
-      const lowerEmail = email.toLowerCase();
+    // 3) On trouve ou crée l'utilisateur auth.users
+    const userId = await findOrCreateUser({
+      email,
+      firstName: first_name ?? null,
+      sioContactId: sio_contact_id ?? null,
+    });
 
-      const plan: InternalPlan | null =
-        product_id === 'prod_basic_1'
-          ? 'basic'
-          : product_id === 'prod_essential_1'
-          ? 'essential'
-          : product_id === 'prod_elite_1'
-          ? 'elite'
-          : null;
+    // 4) Upsert dans profiles (avec product_id et sio_contact_id)
+    const { error: upsertError } = await supabaseAdmin
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          email,
+          first_name: first_name ?? null,
+          locale: 'fr',
+          plan,
+          sio_contact_id,
+          product_id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' },
+      );
 
-      const userId = await getOrCreateUserByEmail({
-        email: lowerEmail,
-        firstName: first_name ?? null,
-        sioContactId: sio_contact_id ?? null,
+    if (upsertError) {
+      console.error('[Systeme.io webhook] Error upserting profile:', {
+        details: upsertError.details,
+        message: upsertError.message,
+        hint: upsertError.hint,
+        code: upsertError.code,
       });
 
-      await upsertProfile({
-        userId,
-        email: lowerEmail,
-        firstName: first_name ?? null,
-        plan,
-        sioContactId: sio_contact_id ?? null,
-        productId: product_id ?? null,
-      });
-
-      return NextResponse.json({
-        status: 'ok',
-        mode: 'simple_test',
-        email: lowerEmail,
-        user_id: userId,
-        plan: plan ?? 'basic',
-        product_id,
-      });
+      return NextResponse.json(
+        { error: 'Failed to upsert profile' },
+        { status: 500 },
+      );
     }
 
-    console.error(
-      '[Systeme.io webhook] Payload does not match any known schema',
-      rawBody,
-    );
+    console.log('[Systeme.io webhook] Success', {
+      email,
+      userId,
+      plan,
+      product_id,
+      sio_contact_id,
+    });
 
-    return NextResponse.json(
-      { error: 'Unsupported payload' },
-      { status: 400 },
-    );
+    return NextResponse.json({
+      status: 'ok',
+      mode: 'simple_test',
+      email,
+      user_id: userId,
+      plan,
+      product_id,
+      sio_contact_id,
+    });
   } catch (err) {
     console.error('[Systeme.io webhook] Unexpected error:', err);
     return NextResponse.json(
