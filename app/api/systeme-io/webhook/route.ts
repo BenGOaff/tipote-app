@@ -53,6 +53,7 @@ type InternalPlan = 'basic' | 'essential' | 'elite';
 
 // À remplir si un jour tu veux mapper par ID d’offer_price_plan
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
+  // Exemple si tu veux t’en servir :
   // 2962438: 'basic',
   // 2962440: 'essential',
   // 2962442: 'elite',
@@ -144,6 +145,7 @@ async function getOrCreateSupabaseUser(params: {
 
 /**
  * Upsert du profil dans la table public.profiles
+ * ➜ MODIFIÉ pour inclure product_id
  */
 async function upsertProfile(params: {
   userId: string;
@@ -151,8 +153,9 @@ async function upsertProfile(params: {
   first_name: string | null;
   sio_contact_id: string | null;
   plan: InternalPlan | null;
+  product_id?: string | null;
 }) {
-  const { userId, email, first_name, sio_contact_id, plan } = params;
+  const { userId, email, first_name, sio_contact_id, plan, product_id } = params;
 
   const { error: upsertError } = await supabaseAdmin
     .from('profiles')
@@ -163,6 +166,7 @@ async function upsertProfile(params: {
         first_name,
         sio_contact_id,
         plan,
+        product_id, // <<< NOUVEAU
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'id' },
@@ -216,6 +220,8 @@ export async function POST(req: NextRequest) {
         first_name: firstName,
         sio_contact_id: sioContactId,
         plan,
+        // on stocke aussi l'id de l'offer_price_plan comme "product_id"
+        product_id: String(data.offer_price_plan.id),
       });
 
       return NextResponse.json({
@@ -224,6 +230,7 @@ export async function POST(req: NextRequest) {
         email,
         user_id: userId,
         plan,
+        product_id: String(data.offer_price_plan.id),
       });
     }
 
@@ -255,6 +262,7 @@ export async function POST(req: NextRequest) {
         first_name: first_name ?? null,
         sio_contact_id: sio_contact_id ?? null,
         plan,
+        product_id: product_id ?? null,
       });
 
       return NextResponse.json({
@@ -263,6 +271,7 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase(),
         user_id: userId,
         plan,
+        product_id,
       });
     }
 
