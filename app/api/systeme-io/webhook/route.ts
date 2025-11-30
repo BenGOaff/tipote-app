@@ -5,9 +5,24 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
+// ----- Types internes -----
+
+type InternalPlan = 'basic' | 'essential' | 'elite';
+
+// Mapping "fake" pour les tests simples (prod_basic_1, etc.)
+function planFromProductId(productId?: string | null): InternalPlan | null {
+  if (!productId) return null;
+
+  if (productId === 'prod_basic_1') return 'basic';
+  if (productId === 'prod_essential_1') return 'essential';
+  if (productId === 'prod_elite_1') return 'elite';
+
+  return null;
+}
+
 // ----- Zod schemas -----
 
-// Vrai payload "NEW SALE" de Systeme.io
+// Webhook "réel" de Systeme.io (customer.sale.completed)
 const systemeNewSaleSchema = z.object({
   type: z.literal('customer.sale.completed'),
   data: z.object({
@@ -39,7 +54,7 @@ const systemeNewSaleSchema = z.object({
   }),
 });
 
-// Ancien payload simple qu’on utilisait pour les tests manuels
+// Ancien format "simple" pour nos tests manuels
 const simpleTestSchema = z.object({
   email: z.string().email(),
   first_name: z.string().optional(),
@@ -47,57 +62,59 @@ const simpleTestSchema = z.object({
   product_id: z.string().optional(),
 });
 
-// ----- Mapping offres Systeme.io -> plan Tipote -----
-
-export type InternalPlan = 'basic' | 'essential' | 'elite';
-
-// ⚠️ À ADAPTER avec les vrais IDs d’offer_price_plan de tes offres Systeme.io.
-const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<number, InternalPlan> = {
-  // 2962438: 'basic',
-  // 2962440: 'essential',
-  // 2962442: 'elite',
-};
-
-function inferPlanFromOffer(offer: {
-  id: number;
-  name: string;
-  inner_name?: string | null;
-}): InternalPlan | null {
-  // 1) mapping par ID si tu l’as rempli
-  if (offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) {
-    return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
-  }
-
-  // 2) fallback : on essaie de deviner à partir du nom
-  const name = `${offer.inner_name ?? ''} ${offer.name}`.toLowerCase();
-
-  if (name.includes('basic')) return 'basic';
-  if (name.includes('essential')) return 'essential';
-  if (name.includes('elite')) return 'elite';
-
-  return null;
-}
-
-// ----- Helper Supabase : trouver un user par email -----
+// ----- Helpers Supabase -----
 
 async function findUserByEmail(email: string) {
-  // On prend une grosse page et on filtre côté JS.
-  // Pour ton projet, 1000 users par page c’est largement suffisant.
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
+  // On liste les users et on cherche celui qui a cet email
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
 
   if (error) {
-    return { user: null as any, error };
+    console.error('Error listing users:', error);
+    throw error;
   }
 
-  const user =
-    data?.users?.find(
-      (u: any) => u.email?.toLowerCase() === email.toLowerCase(),
-    ) ?? null;
+  const lower = email.toLowerCase();
+  const user = data?.users?.find(
+    (u) => u.email && u.email.toLowerCase() === lower,
+  );
 
-  return { user, error: null as any };
+  return user ?? null;
+}
+
+async function getOrCreateUser(params: {
+  email: string;
+  firstName?: string | null;
+  sioContactId?: string | null;
+  plan?: InternalPlan | null;
+}) {
+  const { email, firstName, sioContactId, plan } = params;
+
+  // 1) On essaie de retrouver un user existant
+  const existingUser = await findUserByEmail(email);
+
+  if (existingUser) {
+    // On peut éventuellement mettre à jour ses metadata plus tard
+    return existingUser.id;
+  }
+
+  // 2) Sinon on le crée
+  const { data: created, error: createError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName ?? undefined,
+        sio_contact_id: sioContactId ?? undefined,
+        plan: plan ?? undefined,
+      },
+    });
+
+  if (createError || !created?.user) {
+    console.error('Error creating user:', createError);
+    throw createError ?? new Error('Failed to create user');
+  }
+
+  return created.user.id;
 }
 
 // ----- Handler principal -----
@@ -115,8 +132,9 @@ export async function POST(req: NextRequest) {
     }
 
     const rawBody = await req.json();
+    console.log('Incoming Systeme.io webhook body:', rawBody);
 
-    // 2) On essaie d’abord de parser comme un vrai webhook Systeme.io
+    // 2) On essaie le vrai payload Systeme.io
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
 
     if (parsedSysteme.success) {
@@ -125,156 +143,46 @@ export async function POST(req: NextRequest) {
       const email = data.customer.email.toLowerCase();
       const firstName = data.customer.fields?.first_name ?? null;
       const sioContactId = String(data.customer.contact_id);
-      const plan = inferPlanFromOffer(data.offer_price_plan);
 
-      // 3) Création / récupération de l’utilisateur Supabase
-      const { user: existingUser, error: getUserError } =
-        await findUserByEmail(email);
+      // Pour l’instant, on ne fait PAS d’inférence de plan à partir de offer_price_plan
+      // (tu pourras l’ajouter plus tard quand on aura les vrais IDs)
+      const plan: InternalPlan | null = null;
 
-      if (getUserError) {
-        console.error('Error fetching user by email:', getUserError);
-        return NextResponse.json(
-          { error: 'Failed to fetch user' },
-          { status: 500 },
-        );
-      }
-
-      let userId: string;
-
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        const { data: createdUser, error: createUserError } =
-          await supabaseAdmin.auth.admin.createUser({
-            email,
-            email_confirm: true,
-            user_metadata: {
-              first_name: firstName,
-              sio_contact_id: sioContactId,
-            },
-          });
-
-        if (createUserError || !createdUser?.user) {
-          console.error('Error creating user:', createUserError);
-          return NextResponse.json(
-            { error: 'Failed to create user' },
-            { status: 500 },
-          );
-        }
-
-        userId = createdUser.user.id;
-      }
-
-      // 4) Upsert du profil dans la table profiles
-      const { error: upsertProfileError } = await supabaseAdmin
-        .from('profiles')
-        .upsert(
-          {
-            id: userId,
-            email,
-            full_name: firstName,
-            sio_contact_id: sioContactId,
-            plan, // "basic" | "essential" | "elite" ou null
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' },
-        );
-
-      if (upsertProfileError) {
-        console.error('Error upserting profile:', upsertProfileError);
-        return NextResponse.json(
-          { error: 'Failed to upsert profile' },
-          { status: 500 },
-        );
-      }
+      const userId = await getOrCreateUser({
+        email,
+        firstName,
+        sioContactId,
+        plan,
+      });
 
       return NextResponse.json({
         status: 'ok',
-        action: 'systeme_new_sale',
+        mode: 'systeme_real',
         email,
         user_id: userId,
         plan,
       });
     }
 
-    // 3) Sinon, on tente l’ancien format “simple” (tests manuels)
+    // 3) Sinon, on teste notre format "simple" de debug
     const parsedSimple = simpleTestSchema.safeParse(rawBody);
 
     if (parsedSimple.success) {
       const { email, first_name, sio_contact_id, product_id } =
         parsedSimple.data;
 
-      const plan: InternalPlan | null =
-        product_id === 'prod_basic_1'
-          ? 'basic'
-          : product_id === 'prod_essential_1'
-          ? 'essential'
-          : product_id === 'prod_elite_1'
-          ? 'elite'
-          : null;
+      const plan = planFromProductId(product_id ?? null);
 
-      const { user: existingUser, error: getUserError } =
-        await findUserByEmail(email);
-
-      if (getUserError) {
-        console.error('Error fetching user by email (simple):', getUserError);
-        return NextResponse.json(
-          { error: 'Failed to fetch user' },
-          { status: 500 },
-        );
-      }
-
-      let userId: string;
-
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        const { data: createdUser, error: createUserError } =
-          await supabaseAdmin.auth.admin.createUser({
-            email,
-            email_confirm: true,
-            user_metadata: {
-              first_name,
-              sio_contact_id,
-            },
-          });
-
-        if (createUserError || !createdUser?.user) {
-          console.error('Error creating user (simple):', createUserError);
-          return NextResponse.json(
-            { error: 'Failed to create user' },
-            { status: 500 },
-          );
-        }
-
-        userId = createdUser.user.id;
-      }
-
-      const { error: upsertProfileError } = await supabaseAdmin
-        .from('profiles')
-        .upsert(
-          {
-            id: userId,
-            email,
-            full_name: first_name,
-            sio_contact_id,
-            plan,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' },
-        );
-
-      if (upsertProfileError) {
-        console.error('Error upserting profile (simple):', upsertProfileError);
-        return NextResponse.json(
-          { error: 'Failed to upsert profile' },
-          { status: 500 },
-        );
-      }
+      const userId = await getOrCreateUser({
+        email: email.toLowerCase(),
+        firstName: first_name ?? null,
+        sioContactId: sio_contact_id ?? null,
+        plan,
+      });
 
       return NextResponse.json({
         status: 'ok',
-        action: 'simple_test',
+        mode: 'simple_test',
         email,
         user_id: userId,
         plan,
