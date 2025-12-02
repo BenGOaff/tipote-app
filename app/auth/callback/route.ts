@@ -6,25 +6,25 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
 
-  // 1) Pas de code -> retour à la page de login
+  // 1) Pas de code → retour à la home avec un flag d'erreur
   if (!code) {
-    // URL relative -> le navigateur reste sur tipote.com
     return NextResponse.redirect('/?auth_error=missing_code');
   }
 
   try {
+    // 2) On récupère le client Supabase côté serveur (PKCE + cookies)
     const supabase = await getSupabaseServerClient();
 
-    // 2) On échange le code contre une session
+    // 3) On échange le code PKCE contre une session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       console.error('[auth/callback] exchangeCodeForSession error', error);
-      // Toujours une URL RELATIVE
       return NextResponse.redirect('/?auth_error=invalid_code');
     }
 
-    // 3) Session OK -> on envoie l'utilisateur sur /app (toujours url relative)
+    // 4) Session OK → redirection vers /app
+    // URL RELATIVE → pas de retour sur localhost via nginx.
     return NextResponse.redirect('/app');
   } catch (err) {
     console.error('[auth/callback] unexpected error', err);
