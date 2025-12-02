@@ -6,26 +6,28 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
 
-  // Si pas de code dans l'URL → on renvoie vers la page de login
+  // 1) Pas de code -> retour à la page de login
   if (!code) {
-    return NextResponse.redirect(`${url.origin}/?auth_error=missing_code`);
+    // URL relative -> le navigateur reste sur tipote.com
+    return NextResponse.redirect('/?auth_error=missing_code');
   }
 
   try {
     const supabase = await getSupabaseServerClient();
 
+    // 2) On échange le code contre une session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       console.error('[auth/callback] exchangeCodeForSession error', error);
-      // On renvoie vers la page de login avec un flag d’erreur
-      return NextResponse.redirect(`${url.origin}/?auth_error=invalid_code`);
+      // Toujours une URL RELATIVE
+      return NextResponse.redirect('/?auth_error=invalid_code');
     }
 
-    // Session OK → on envoie l'utilisateur sur /app
-    return NextResponse.redirect(`${url.origin}/app`);
+    // 3) Session OK -> on envoie l'utilisateur sur /app (toujours url relative)
+    return NextResponse.redirect('/app');
   } catch (err) {
     console.error('[auth/callback] unexpected error', err);
-    return NextResponse.redirect(`${url.origin}/?auth_error=unexpected`);
+    return NextResponse.redirect('/?auth_error=unexpected');
   }
 }
