@@ -4,26 +4,22 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const tokenHash = url.searchParams.get('token_hash');
+  const code = url.searchParams.get('code');
 
-  // Si pas de token dans l'URL → on renvoie vers la page de login
-  if (!tokenHash) {
-    return NextResponse.redirect(`${url.origin}/?auth_error=missing_token`);
+  // Si pas de code dans l'URL → on renvoie vers la page de login
+  if (!code) {
+    return NextResponse.redirect(`${url.origin}/?auth_error=missing_code`);
   }
 
   try {
     const supabase = await getSupabaseServerClient();
 
-    // Flux Magic Link + PKCE recommandé par Supabase :
-    const { data, error } = await supabase.auth.verifyOtp({
-      type: 'email',
-      token_hash: tokenHash,
-    } as any);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error || !data?.session) {
-      console.error('[auth/callback] verifyOtp error', error);
+    if (error) {
+      console.error('[auth/callback] exchangeCodeForSession error', error);
       // On renvoie vers la page de login avec un flag d’erreur
-      return NextResponse.redirect(`${url.origin}/?auth_error=otp_error`);
+      return NextResponse.redirect(`${url.origin}/?auth_error=invalid_code`);
     }
 
     // Session OK → on envoie l'utilisateur sur /app
