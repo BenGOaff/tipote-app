@@ -1,186 +1,240 @@
 // components/LoginForm.tsx
+// Rôle : page de connexion Tipote (email + mot de passe + lien magique).
+
 'use client';
 
-import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '../lib/supabaseBrowser';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
 
-const SYSTEME_IO_SALES_PAGE_URL =
-  'https://www.blagardette.com/tipote-test'; // 🔁 à remplacer par ta vraie page de vente
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tipote.com';
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const supabase = getSupabaseBrowserClient();
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  // --- Etat pour login par mot de passe ---
+  const [emailPassword, setEmailPassword] = useState('');
+  const [password, setPassword] = useState('');
+  const [loadingPassword, setLoadingPassword] = useState(false);
+  const [errorPassword, setErrorPassword] = useState<string | null>(null);
+
+  // --- Etat pour login par lien magique ---
+  const [emailMagic, setEmailMagic] = useState('');
+  const [loadingMagic, setLoadingMagic] = useState(false);
+  const [errorMagic, setErrorMagic] = useState<string | null>(null);
+  const [successMagic, setSuccessMagic] = useState<string | null>(null);
+
+  // --- Message d'erreur global venant du callback ---
+  const authError = searchParams.get('auth_error');
+
+  const bannerMessage =
+    authError === 'missing_code'
+      ? 'Lien de connexion invalide. Merci de recommencer.'
+      : authError === 'invalid_code'
+      ? 'Lien de connexion invalide ou expiré. Merci de recommencer.'
+      : authError === 'unexpected'
+      ? 'Erreur de connexion. Merci de réessayer.'
+      : authError === 'not_authenticated'
+      ? 'Tu dois être connecté pour accéder à cette page.'
+      : null;
+
+  // --- Submit : login par mot de passe ---
+  async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
+    setErrorPassword(null);
 
-    const trimmedEmail = email.trim();
-    if (trimmedEmail === '') {
-      setError('Merci de renseigner ton adresse email.');
+    if (!emailPassword || !password) {
+      setErrorPassword('Merci de remplir ton email et ton mot de passe.');
       return;
     }
 
+    setLoadingPassword(true);
+
     try {
-      setIsSubmitting(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailPassword,
+        password,
+      });
 
-      const supabase = getSupabaseBrowserClient();
-
-      const { error: authError } = await supabase.auth.signInWithOtp({
-  email: trimmedEmail,
-  options: {
-    emailRedirectTo: `${window.location.origin}/auth/callback`,
-    shouldCreateUser: false,
-  },
-});
-
-
-      if (authError) {
-        throw authError;
+      if (error) {
+        console.error('[LoginForm] signInWithPassword error', error);
+        setErrorPassword('Email ou mot de passe incorrect.');
+        setLoadingPassword(false);
+        return;
       }
 
-      setMessage(
-        "Un lien de connexion vient d'être envoyé à cette adresse. " +
-          'Pense à vérifier aussi tes spams.',
-      );
-    } catch (err: any) {
-      console.error('[LoginForm] signInWithOtp error', err);
-      setError(
-        err?.message ??
-          "Une erreur est survenue lors de l'envoi du lien de connexion.",
-      );
-    } finally {
-      setIsSubmitting(false);
+      router.push('/app');
+    } catch (err) {
+      console.error('[LoginForm] unexpected error (password login)', err);
+      setErrorPassword('Erreur inattendue. Merci de réessayer.');
+      setLoadingPassword(false);
     }
   }
 
-  function handleGoToSalesPage() {
-    router.push(SYSTEME_IO_SALES_PAGE_URL);
+  // --- Submit : envoi du lien magique ---
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMagic(null);
+    setSuccessMagic(null);
+
+    if (!emailMagic) {
+      setErrorMagic('Merci de renseigner ton email.');
+      return;
+    }
+
+    setLoadingMagic(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailMagic,
+        options: {
+          emailRedirectTo: `${SITE_URL}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        console.error('[LoginForm] signInWithOtp error', error);
+        setErrorMagic("Impossible d'envoyer le lien de connexion.");
+        setLoadingMagic(false);
+        return;
+      }
+
+      setSuccessMagic(
+        'Un lien de connexion t’a été envoyé. Pense à vérifier tes spams.',
+      );
+    } catch (err) {
+      console.error('[LoginForm] unexpected error (magic link)', err);
+      setErrorMagic('Erreur inattendue. Merci de réessayer.');
+    } finally {
+      setLoadingMagic(false);
+    }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black via-[#641168] to-[#B042B4] px-4 py-8">
-      <div className="flex w-full max-w-4xl flex-col gap-8 rounded-3xl bg-zinc-950/80 p-6 shadow-2xl ring-1 ring-white/10 md:flex-row md:p-10">
-        {/* Colonne gauche : branding */}
-        <div className="flex flex-1 flex-col justify-between gap-6 text-white">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-white/80 ring-1 ring-white/10">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>Accès réservé aux membres Tipote®</span>
+    <main className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg space-y-6">
+        <header className="space-y-1">
+          <h1 className="text-2xl font-semibold text-slate-50">
+            Connexion Tipote
+          </h1>
+          <p className="text-sm text-slate-400">
+            Tu peux te connecter avec ton mot de passe ou demander un lien magique.
+          </p>
+        </header>
+
+        {bannerMessage && (
+          <p className="text-sm text-amber-300 bg-amber-950/40 border border-amber-900 rounded-md px-3 py-2">
+            {bannerMessage}
+          </p>
+        )}
+
+        {/* Bloc : login par mot de passe */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">
+            Connexion par mot de passe
+          </h2>
+
+          <form onSubmit={handlePasswordLogin} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-200">
+                Email
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+                value={emailPassword}
+                onChange={(e) => setEmailPassword(e.target.value)}
+                autoComplete="email"
+                required
+              />
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              Connexion à <span className="text-[#B042B4]">Tipote</span>
-            </h1>
-            <p className="max-w-md text-sm text-zinc-300">
-              Analyse ton business, planifie ta stratégie et génère des contenus
-              organisés en quelques minutes. Connecte-toi avec le lien magique
-              envoyé par email.
-            </p>
-          </div>
 
-          <div className="hidden flex-col gap-2 text-xs text-zinc-400 md:flex">
-            <p>
-              Pas encore de compte ?{' '}
-              <button
-                type="button"
-                onClick={handleGoToSalesPage}
-                className="font-medium text-[#B042B4] underline-offset-2 hover:underline"
-              >
-                Découvre les offres et inscris-toi 😉
-              </button>
-            </p>
-            <p>Tipote® {new Date().getFullYear()} – Tous droits réservés.</p>
-          </div>
-        </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-200">
+                Mot de passe
+              </label>
+              <input
+                type="password"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
 
-        {/* Colonne droite : formulaire */}
-        <div className="flex flex-1 flex-col justify-center">
-          <div className="rounded-2xl bg-zinc-900/80 p-6 shadow-inner ring-1 ring-white/10">
-            <h2 className="text-lg font-medium text-white">
-              Connecte-toi à ton Tipote :
-            </h2>
-            <p className="mt-1 text-xs text-zinc-400">
-              Renseigne l’email utilisé lors de ton achat sur Systeme.io. Nous
-              t’enverrons un lien de connexion sécurisé.
-            </p>
+            {errorPassword && (
+              <p className="text-sm text-red-400 bg-red-950/40 border border-red-900 rounded-md px-3 py-2">
+                {errorPassword}
+              </p>
+            )}
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="email"
-                  className="text-xs font-medium text-zinc-200"
-                >
-                  Adresse email d'achat
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-[#B042B4] focus:ring-2 focus:ring-[#B042B4]/40"
-                  placeholder="jekiffe@tipote.com"
-                />
-                <p className="text-[11px] text-zinc-400">
-                  Si tu as oublié ton mot de passe, renseigne simplement ton
-                  email et clique sur « Recevoir le lien de connexion ». Tu
-                  recevras un email sécurisé pour te connecter.
-                </p>
-              </div>
-
-              {error && (
-                <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                  {error}
-                </p>
-              )}
-
-              {message && (
-                <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-                  {message}
-                </p>
-              )}
-
-              <div className="space-y-3 pt-1">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white shadow-md shadow-black/40 transition hover:bg-zinc-900 disabled:opacity-60"
-                >
-                  {isSubmitting
-                    ? 'Envoi du lien…'
-                    : 'Recevoir le lien de connexion'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleGoToSalesPage}
-                  className="inline-flex w-full items-center justify-center rounded-xl border border-[#B042B4]/70 bg-transparent px-4 py-2.5 text-sm font-medium text-[#B042B4] shadow-sm shadow-black/20 transition hover:border-[#B042B4] hover:bg-[#B042B4]/10"
-                >
-                  Créer un compte / changer de plan
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Version mobile du lien inscription */}
-          <div className="mt-4 flex flex-col gap-1 text-center text-[11px] text-zinc-400 md:hidden">
             <button
-              type="button"
-              onClick={handleGoToSalesPage}
-              className="font-medium text-[#B042B4] underline-offset-2 hover:underline"
+              type="submit"
+              disabled={loadingPassword}
+              className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium text-slate-950 py-2 transition-colors"
             >
-              Pas encore de compte ? Découvre les offres Tipote® 😉
+              {loadingPassword ? 'Connexion...' : 'Se connecter'}
             </button>
-            <span>Tipote © {new Date().getFullYear()}</span>
-          </div>
-        </div>
+          </form>
+
+          <p className="text-xs text-slate-500 text-right">
+            <a
+              href="/auth/forgot-password"
+              className="text-emerald-400 hover:text-emerald-300"
+            >
+              Mot de passe oublié ?
+            </a>
+          </p>
+        </section>
+
+        <div className="h-px bg-slate-800" />
+
+        {/* Bloc : login par lien magique */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">
+            Ou recevoir un lien magique
+          </h2>
+
+          <form onSubmit={handleMagicLink} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-200">
+                Email
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+                value={emailMagic}
+                onChange={(e) => setEmailMagic(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            {errorMagic && (
+              <p className="text-sm text-red-400 bg-red-950/40 border border-red-900 rounded-md px-3 py-2">
+                {errorMagic}
+              </p>
+            )}
+
+            {successMagic && (
+              <p className="text-sm text-emerald-400 bg-emerald-950/40 border border-emerald-900 rounded-md px-3 py-2">
+                {successMagic}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loadingMagic}
+              className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium text-slate-50 py-2 transition-colors"
+            >
+              {loadingMagic ? 'Envoi du lien...' : 'Envoyer un lien de connexion'}
+            </button>
+          </form>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
