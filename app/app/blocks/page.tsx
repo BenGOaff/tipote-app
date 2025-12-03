@@ -1,9 +1,10 @@
 // app/app/blocks/page.tsx
-// Rôle : placeholder "Blocks business", protégé, dans AppShell.
+// Rôle : vue "Blocks business", protégée, avec liste + création de blocks.
 
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import AppShell from '@/components/AppShell';
+import BlocksClient, { type BusinessBlock } from '@/components/BlocksClient';
 
 export default async function BlocksPage() {
   const supabase = await getSupabaseServerClient();
@@ -18,21 +19,30 @@ export default async function BlocksPage() {
 
   const userEmail = session.user.email ?? 'Utilisateur';
 
+  const { data, error } = await supabase
+    .from('business_blocks')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[BlocksPage] Supabase select error', error);
+  }
+
+  const blocks = (data ?? []) as BusinessBlock[];
+
   return (
     <AppShell userEmail={userEmail}>
-      <section className="space-y-2">
+      <section className="space-y-2 mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">
           Blocks business
         </h1>
         <p className="text-sm text-slate-500">
-          Ici on construira la vue principale de tes blocks business (structure,
-          objectifs, KPIs, etc.).
+          Les blocks représentent les grandes briques de ton business : offres,
+          tunnels, audiences, contenus clés, etc. On part simple pour la V1.
         </p>
       </section>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-500">
-        Placeholder : on ajoutera bientôt la vraie liste des blocks.
-      </div>
+      <BlocksClient initialBlocks={blocks} />
     </AppShell>
   );
 }
