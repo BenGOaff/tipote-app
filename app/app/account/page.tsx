@@ -1,11 +1,11 @@
-// app/app/page.tsx
-// Rôle : espace Tipote protégé (accessible seulement si session Supabase).
+// app/app/account/page.tsx
+// Rôle : page compte utilisateur, avec un bloc changement de mot de passe.
 
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import LogoutButton from '@/components/LogoutButton';
+import SetPasswordForm from '@/components/SetPasswordForm';
 
-export default async function AppPage() {
+export default async function AccountPage() {
   const supabase = await getSupabaseServerClient();
 
   const {
@@ -13,16 +13,14 @@ export default async function AppPage() {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    // Pas de session → retour à la page de login
     redirect('/');
   }
 
   const userEmail = session.user.email ?? 'Utilisateur';
 
-  // Placeholder minimal pour l'instant
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Header */}
+      {/* Header simple, cohérent avec /app */}
       <header className="border-b border-slate-800 bg-slate-950/80">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -31,7 +29,7 @@ export default async function AppPage() {
             </div>
             <div>
               <p className="text-sm font-semibold">Tipote</p>
-              <p className="text-xs text-slate-400">Espace Tipote</p>
+              <p className="text-xs text-slate-400">Mon compte</p>
             </div>
           </div>
 
@@ -40,23 +38,32 @@ export default async function AppPage() {
               {userEmail}
             </span>
             <a
-              href="/app/account"
+              href="/app"
               className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors"
             >
-              Mon compte
+              Retour à l&apos;app
             </a>
-            <LogoutButton />
           </div>
         </div>
       </header>
 
       {/* Contenu principal */}
-      <div className="max-w-5xl mx-auto py-10 px-4 space-y-4">
-        <h1 className="text-2xl font-semibold">Espace Tipote</h1>
-        <p className="text-sm text-slate-400">
-          Tu es connecté à Tipote. On remplira cette page avec le vrai contenu
-          (business blocks, plans, etc.) plus tard.
-        </p>
+      <div className="max-w-5xl mx-auto py-10 px-4 space-y-8">
+        <section className="space-y-1">
+          <h1 className="text-2xl font-semibold">Mon compte</h1>
+          <p className="text-sm text-slate-400">
+            Email : <span className="font-medium text-slate-200">{userEmail}</span>
+          </p>
+        </section>
+
+        <section className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Sécurité</h2>
+          <p className="text-sm text-slate-400">
+            Tu peux mettre à jour ton mot de passe. Tu seras automatiquement
+            connecté avec le nouveau.
+          </p>
+          <SetPasswordForm mode="reset" />
+        </section>
       </div>
     </main>
   );
