@@ -1,9 +1,9 @@
 // app/app/page.tsx
-// Rôle : espace Tipote protégé (accessible seulement si session Supabase).
+// Rôle : vue d’ensemble (dashboard) protégée, utilise AppShell.
 
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import LogoutButton from '@/components/LogoutButton';
+import AppShell from '@/components/AppShell';
 
 export default async function AppPage() {
   const supabase = await getSupabaseServerClient();
@@ -13,51 +13,44 @@ export default async function AppPage() {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    // Pas de session → retour à la page de login
     redirect('/');
   }
 
   const userEmail = session.user.email ?? 'Utilisateur';
 
-  // Placeholder minimal pour l'instant
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-xl bg-emerald-500/90 flex items-center justify-center text-xs font-bold text-slate-950">
-              T
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Tipote</p>
-              <p className="text-xs text-slate-400">Espace Tipote</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-slate-400 hidden sm:inline">
-              {userEmail}
-            </span>
-            <a
-              href="/app/account"
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors"
-            >
-              Mon compte
-            </a>
-            <LogoutButton />
-          </div>
-        </div>
-      </header>
-
-      {/* Contenu principal */}
-      <div className="max-w-5xl mx-auto py-10 px-4 space-y-4">
-        <h1 className="text-2xl font-semibold">Espace Tipote</h1>
-        <p className="text-sm text-slate-400">
-          Tu es connecté à Tipote. On remplira cette page avec le vrai contenu
-          (business blocks, plans, etc.) plus tard.
+    <AppShell userEmail={userEmail}>
+      <section className="space-y-2">
+        <h1 className="text-2xl font-semibold text-slate-900">
+          Vue d’ensemble
+        </h1>
+        <p className="text-sm text-slate-500">
+          Ici on affichera ton état global : projets, blocks business,
+          automations en cours, etc.
         </p>
-      </div>
-    </main>
+      </section>
+
+      <section className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Blocks business
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Bientôt : la liste de tes blocks, leur statut, et les prochaines
+            actions recommandées.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Automatisations
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Bientôt : les workflows n8n reliés à Systeme.io et à tes blocks
+            Tipote.
+          </p>
+        </div>
+      </section>
+    </AppShell>
   );
 }
