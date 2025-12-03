@@ -1,31 +1,15 @@
-// app/app/page.tsx
-// Rôle : espace Tipote protégé (accessible seulement si session Supabase).
+// app/page.tsx
+// Rôle : page de login (publique) qui affiche LoginForm.
+// On entoure LoginForm avec Suspense pour satisfaire Next 16
+// car LoginForm utilise useSearchParams (client component).
 
-import { redirect } from 'next/navigation';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { Suspense } from 'react';
+import LoginForm from '@/components/LoginForm';
 
-export default async function AppPage() {
-  const supabase = await getSupabaseServerClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    // Pas de session → retour à la page de login
-    redirect('/');
-  }
-
-  // Pour l'instant on affiche juste un placeholder simple.
+export default function HomePage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="max-w-4xl mx-auto py-10 px-4 space-y-4">
-        <h1 className="text-2xl font-semibold">Espace Tipote</h1>
-        <p className="text-sm text-slate-400">
-          Tu es connecté à Tipote. On remplira cette page avec le vrai contenu
-          (blocks business, plans, etc.) plus tard.
-        </p>
-      </div>
-    </main>
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
