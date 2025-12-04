@@ -6,21 +6,24 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY_OWNER,
-});
-
 export async function POST() {
   try {
-    if (!process.env.OPENAI_API_KEY_OWNER) {
+    // On récupère la clé OpenAI côté serveur.
+    // On accepte OPENAI_API_KEY_OWNER en priorité, puis OPENAI_API_KEY en fallback.
+    const apiKey =
+      process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || '';
+
+    if (!apiKey) {
       console.error(
-        '[POST /api/onboarding/complete] Missing OPENAI_API_KEY_OWNER',
+        '[POST /api/onboarding/complete] Missing OpenAI API key (OPENAI_API_KEY_OWNER or OPENAI_API_KEY)',
       );
       return NextResponse.json(
         { error: 'Server misconfiguration (OpenAI key missing)' },
         { status: 500 },
       );
     }
+
+    const openai = new OpenAI({ apiKey });
 
     const supabase = await getSupabaseServerClient();
 
