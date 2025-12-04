@@ -62,7 +62,7 @@ export async function POST() {
         profileError,
       );
       return NextResponse.json(
-        { error: 'Failed to fetch onboarding profile' },
+        { error: 'Failed to fetch onboarding profile', details: profileError },
         { status: 500 },
       );
     }
@@ -139,6 +139,12 @@ Réponds STRICTEMENT en JSON, sans texte avant ni après.
       );
     }
 
+    // Petit log de debug (type de l'objet que l'on sauvegarde)
+    console.log(
+      '[POST /api/onboarding/complete] planJson type:',
+      typeof planJson,
+    );
+
     // 2) Sauvegarde dans business_plan (upsert par user_id)
     const { data: planRow, error: upsertError } = await supabase
       .from('business_plan')
@@ -153,13 +159,16 @@ Réponds STRICTEMENT en JSON, sans texte avant ni après.
       .select()
       .single();
 
-    if (upsertError) {
+    if (upsertError || !planRow) {
       console.error(
         '[POST /api/onboarding/complete] Supabase upsert error',
         upsertError,
       );
       return NextResponse.json(
-        { error: 'Failed to save generated plan' },
+        {
+          error: 'Failed to save generated plan',
+          details: upsertError,
+        },
         { status: 500 },
       );
     }
@@ -173,7 +182,7 @@ Réponds STRICTEMENT en JSON, sans texte avant ni après.
   } catch (err) {
     console.error('[POST /api/onboarding/complete] Unexpected error', err);
     return NextResponse.json(
-      { error: 'Unexpected server error' },
+      { error: 'Unexpected server error', details: `${err}` },
       { status: 500 },
     );
   }
