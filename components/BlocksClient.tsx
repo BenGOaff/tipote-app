@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export type BusinessBlock = {
   id: string;
@@ -201,9 +202,12 @@ export default function BlocksClient({ initialBlocks }: BlocksClientProps) {
                 className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm flex flex-col gap-1"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">
+                  <Link
+                    href={`/app/blocks/${block.id}`}
+                    className="text-sm font-semibold text-slate-900 hover:text-[#b042b4]"
+                  >
                     {block.title}
-                  </h3>
+                  </Link>
                   <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-600">
                     {block.status === 'idea'
                       ? 'Idée'
