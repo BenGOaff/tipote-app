@@ -5,11 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // PATCH /api/blocks/[id] : mise à jour d'un block
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const { id } = params;
+export async function PATCH(request: NextRequest, context: any) {
+  // Next 16 peut passer params soit directement, soit sous forme de Promise.
+  const { id } = (await context.params) as { id: string };
 
   try {
     const supabase = await getSupabaseServerClient();
@@ -62,10 +60,7 @@ export async function PATCH(
     }
 
     if (body.status !== undefined) {
-      if (
-        typeof body.status !== 'string' ||
-        body.status.trim() === ''
-      ) {
+      if (typeof body.status !== 'string' || body.status.trim() === '') {
         return NextResponse.json(
           { error: 'Invalid status' },
           { status: 400 },
@@ -75,11 +70,7 @@ export async function PATCH(
     }
 
     if (body.priority !== undefined) {
-      if (
-        !Number.isFinite(body.priority) ||
-        body.priority < 1 ||
-        body.priority > 5
-      ) {
+      if (!Number.isFinite(body.priority) || body.priority < 1 || body.priority > 5) {
         return NextResponse.json(
           { error: 'Invalid priority' },
           { status: 400 },
@@ -116,11 +107,8 @@ export async function PATCH(
 }
 
 // DELETE /api/blocks/[id] : suppression d'un block
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const { id } = params;
+export async function DELETE(_request: NextRequest, context: any) {
+  const { id } = (await context.params) as { id: string };
 
   try {
     const supabase = await getSupabaseServerClient();
