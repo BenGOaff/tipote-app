@@ -1,12 +1,14 @@
-// app/api/blocks/[id]/route.ts
+// app/api/blocks/[id]/route.tsx
 // Rôle : API pour mettre à jour ou supprimer un block individuel.
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
-type Params = { params: { id: string } };
-
-export async function PATCH(request: Request, { params }: Params) {
+// PATCH /api/blocks/[id] : mise à jour d'un block
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   const { id } = params;
 
   try {
@@ -17,11 +19,19 @@ export async function PATCH(request: Request, { params }: Params) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 },
+      );
     }
 
     const body = (await request.json().catch(() => null)) as
-      | { title?: string; description?: string | null; status?: string; priority?: number }
+      | {
+          title?: string;
+          description?: string | null;
+          status?: string;
+          priority?: number;
+        }
       | null;
 
     if (!body) {
@@ -52,7 +62,10 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     if (body.status !== undefined) {
-      if (typeof body.status !== 'string' || body.status.trim() === '') {
+      if (
+        typeof body.status !== 'string' ||
+        body.status.trim() === ''
+      ) {
         return NextResponse.json(
           { error: 'Invalid status' },
           { status: 400 },
@@ -92,7 +105,7 @@ export async function PATCH(request: Request, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ block: data });
+    return NextResponse.json({ block: data }, { status: 200 });
   } catch (err) {
     console.error('[PATCH /api/blocks/[id]] Unexpected error', err);
     return NextResponse.json(
@@ -102,7 +115,11 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+// DELETE /api/blocks/[id] : suppression d'un block
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   const { id } = params;
 
   try {
@@ -113,7 +130,10 @@ export async function DELETE(_request: Request, { params }: Params) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 },
+      );
     }
 
     const { error } = await supabase
@@ -129,7 +149,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error('[DELETE /api/blocks/[id]] Unexpected error', err);
     return NextResponse.json(
