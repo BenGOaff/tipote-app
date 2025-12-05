@@ -1,49 +1,19 @@
-// scripts/ingest-resources.ts
+// scripts/ingest-resources.cjs
 // Rôle : lire tipote-knowledge/manifest/resources_manifest.xlsx,
 // créer / mettre à jour les ressources dans Supabase,
-// puis créer les chunks + embeddings.
+// puis créer les chunks + embeddings OpenAI.
 
-import * as dotenv from 'dotenv';
+require('dotenv').config({ path: '.env.production.local' });
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config(); // fallback sur .env s'il existe
 
-// On essaie plusieurs fichiers env possibles (VPS + local)
-dotenv.config({ path: '.env.production.local' });
-dotenv.config({ path: '.env.local' });
-dotenv.config(); // fallback sur .env s'il existe
+const fs = require('fs');
+const path = require('path');
+const XLSX = require('xlsx');
+const { createClient } = require('@supabase/supabase-js');
+const OpenAI = require('openai');
 
-import fs from 'fs';
-import path from 'path';
-import * as XLSX from 'xlsx';
-import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
-
-type ManifestRow = {
-  id?: string;
-  titre?: string;
-  type_contenu?: string;
-  format_fichier?: string;
-  chemin_fichier?: string;
-  theme_principal?: string;
-  sous_theme?: string;
-  usage_principal?: string;
-  niveau?: string;
-  priorite?: number;
-  langue?: string;
-  notes?: string;
-};
-
-type ResourceRow = {
-  id: string;
-};
-
-type EmbeddingItem = {
-  embedding: number[];
-};
-
-type EmbeddingResponse = {
-  data: EmbeddingItem[];
-};
-
-function getEnv(name: string): string {
+function getEnv(name) {
   const value = process.env[name];
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -51,7 +21,7 @@ function getEnv(name: string): string {
   return value;
 }
 
-function slugify(input: string): string {
+function slugify(input) {
   return input
     .toLowerCase()
     .normalize('NFKD')
@@ -60,7 +30,7 @@ function slugify(input: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function loadManifest(manifestPath: string): ManifestRow[] {
+function loadManifest(manifestPath) {
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`Manifest file not found at ${manifestPath}`);
   }
@@ -69,18 +39,14 @@ function loadManifest(manifestPath: string): ManifestRow[] {
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
 
-  const rows: ManifestRow[] = XLSX.utils.sheet_to_json(sheet, {
+  const rows = XLSX.utils.sheet_to_json(sheet, {
     defval: null,
-  }) as ManifestRow[];
+  });
 
   return rows;
 }
 
-function readResourceFile(
-  rootDir: string,
-  relativePath: string,
-  format?: string | null,
-): string {
+async function readResourceFile(rootDir, relativePath, format) {
   const fullPath = path.resolve(rootDir, relativePath);
 
   if (!fs.existsSync(fullPath)) {
@@ -95,17 +61,15 @@ function readResourceFile(
   }
 
   if (ext === 'docx') {
-    // Import dynamique pour DOCX
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mammoth = require('mammoth') as typeof import('mammoth');
+    const mammoth = require('mammoth');
     const buffer = fs.readFileSync(fullPath);
-    return mammoth
-      .extractRawText({ buffer })
-      .then((res) => res.value)
-      .catch((err: unknown) => {
-        console.error('[ingest-resources] Error reading DOCX', fullPath, err);
-        return '';
-      }) as unknown as string;
+    try {
+      const res = await mammoth.extractRawText({ buffer });
+      return res.value || '';
+    } catch (err) {
+      console.error('[ingest-resources] Error reading DOCX', fullPath, err);
+      return '';
+    }
   }
 
   console.warn(
@@ -114,12 +78,12 @@ function readResourceFile(
   return '';
 }
 
-function chunkText(text: string, maxChars = 2000): string[] {
+function chunkText(text, maxChars = 2000) {
   const clean = text.replace(/\r\n/g, '\n').trim();
   if (!clean) return [];
 
   const paragraphs = clean.split(/\n{2,}/);
-  const chunks: string[] = [];
+  const chunks = [];
   let current = '';
 
   for (const p of paragraphs) {
@@ -131,7 +95,6 @@ function chunkText(text: string, maxChars = 2000): string[] {
         chunks.push(current.trim());
         current = paragraph;
       } else {
-        // paragraphe très long → on coupe brutalement
         let start = 0;
         while (start < paragraph.length) {
           chunks.push(paragraph.slice(start, start + maxChars));
@@ -185,7 +148,6 @@ async function main() {
 
     console.log(`\n[ingest-resources] Processing resource: ${titre} (${chemin})`);
 
-    // Upsert dans resources
     const { data: resources, error: upsertError } = await supabase
       .from('resources')
       .upsert(
@@ -221,13 +183,10 @@ async function main() {
       continue;
     }
 
-    const resource = resources[0] as ResourceRow;
+    const resource = resources[0];
     const resourceId = resource.id;
 
-    // Lire le fichier
-    const rawContent = await Promise.resolve(
-      readResourceFile(rootDir, chemin, format || undefined),
-    );
+    const rawContent = await readResourceFile(rootDir, chemin, format || undefined);
 
     if (!rawContent || rawContent.trim().length === 0) {
       console.warn(
@@ -245,11 +204,10 @@ async function main() {
       continue;
     }
 
-    // Créer les embeddings en batch
-    const embeddingResponse = (await openai.embeddings.create({
+    const embeddingResponse = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: chunks,
-    })) as EmbeddingResponse;
+    });
 
     if (!embeddingResponse.data || embeddingResponse.data.length === 0) {
       console.error(
@@ -259,16 +217,12 @@ async function main() {
       continue;
     }
 
-    const rowsToUpsert = embeddingResponse.data.map(
-      (item: EmbeddingItem, idx: number) => {
-        return {
-          resource_id: resourceId,
-          chunk_index: idx,
-          content: chunks[idx],
-          embedding: item.embedding,
-        };
-      },
-    );
+    const rowsToUpsert = embeddingResponse.data.map((item, idx) => ({
+      resource_id: resourceId,
+      chunk_index: idx,
+      content: chunks[idx],
+      embedding: item.embedding,
+    }));
 
     const { error: chunksError } = await supabase
       .from('resource_chunks')
@@ -292,7 +246,6 @@ async function main() {
   console.log('\n[ingest-resources] Done.');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 main().catch((err) => {
   console.error('[ingest-resources] Fatal error', err);
   process.exit(1);
