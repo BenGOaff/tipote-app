@@ -10,6 +10,7 @@
     "ingest:resources": "node scripts/ingest-resources.cjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.0",
     "dotenv": "^17.2.3",
     "mammoth": "^1.11.0",
