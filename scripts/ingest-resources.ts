@@ -4,8 +4,13 @@
 // puis créer les chunks + embeddings.
 
 import * as dotenv from 'dotenv';
+
+// Essaie plusieurs fichiers possibles, dans cet ordre :
 dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env.production' });
+dotenv.config({ path: '.env.prod' });
 dotenv.config(); // fallback sur .env s'il existe
+
 
 import fs from 'fs';
 import path from 'path';
