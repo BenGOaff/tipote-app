@@ -15,30 +15,43 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    let body: SearchBody | null = null;
 
-    if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const body = (await req.json()) as SearchBody;
-
-    const query = (body.query || '').trim();
-    const matchCount = body.matchCount && body.matchCount > 0 ? body.matchCount : 8;
-    const matchThreshold =
-      typeof body.matchThreshold === 'number' ? body.matchThreshold : 0.7;
-
-    if (!query) {
+    try {
+      body = (await req.json()) as SearchBody | null;
+    } catch {
       return NextResponse.json(
-        { error: 'Missing query in request body' },
+        { error: 'Invalid JSON body' },
         { status: 400 },
       );
     }
 
+    const rawQuery = body?.query ?? '';
+    const query = rawQuery.trim();
+
+    if (!query) {
+      return NextResponse.json(
+        { error: 'Missing "query" in request body' },
+        { status: 400 },
+      );
+    }
+
+    const matchCount =
+      typeof body?.matchCount === 'number' &&
+      Number.isFinite(body.matchCount) &&
+      body.matchCount > 0 &&
+      body.matchCount <= 50
+        ? Math.floor(body.matchCount)
+        : 10;
+
+    const matchThreshold =
+      typeof body?.matchThreshold === 'number' &&
+      Number.isFinite(body.matchThreshold)
+        ? body.matchThreshold
+        : 0.5;
+
     const apiKey =
-      process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || '';
+      process.env.OPENAI_API_KEY_OWNER ?? process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       console.error(
@@ -58,23 +71,23 @@ export async function POST(req: NextRequest) {
       input: query,
     });
 
-    const [first] = embeddingResponse.data;
-    if (!first || !first.embedding) {
-      console.error('[POST /api/resources/search] No embedding returned');
+    if (!embeddingResponse.data?.[0]?.embedding) {
+      console.error(
+        '[POST /api/resources/search] No embedding returned by OpenAI',
+      );
       return NextResponse.json(
-        { error: 'Unable to compute embedding for query' },
+        { error: 'Failed to create embedding for query' },
         { status: 500 },
       );
     }
 
-    const queryEmbedding = first.embedding;
+    const queryEmbedding = embeddingResponse.data[0].embedding;
 
-    // 2) Appel de la fonction match_resource_chunks
+    // 2) Appel de la fonction SQL match_resource_chunks
     const { data, error } = await supabase.rpc('match_resource_chunks', {
       query_embedding: queryEmbedding,
-      match_threshold: matchThreshold,
       match_count: matchCount,
-      filter: {}, // plus tard : filtrage par theme_principal, langue, etc.
+      match_threshold: matchThreshold,
     });
 
     if (error) {
@@ -83,7 +96,7 @@ export async function POST(req: NextRequest) {
         error,
       );
       return NextResponse.json(
-        { error: 'Database error while searching resources' },
+        { error: 'Failed to query resource chunks' },
         { status: 500 },
       );
     }
