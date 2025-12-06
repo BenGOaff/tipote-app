@@ -1,10 +1,26 @@
 // app/project-tracking/page.tsx
-// Page "Suivi projet" (prototype, pas encore connectée à Supabase)
+// Page Suivi Projet : enveloppe server-side autour du composant ProjectTrackingPage client
 
-"use client";
+import { redirect } from "next/navigation";
+import AppShell from "@/components/AppShell";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import ProjectTrackingPageClient from "@/components/ProjectTrackingPage";
 
-import ProjectTrackingPage from "@/components/ProjectTrackingPage";
+export default async function ProjectTrackingPage() {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-export default function ProjectTracking() {
-  return <ProjectTrackingPage />;
+  if (!session) {
+    redirect("/auth/login");
+  }
+
+  const userEmail = session.user.email ?? "";
+
+  return (
+    <AppShell userEmail={userEmail}>
+      <ProjectTrackingPageClient />
+    </AppShell>
+  );
 }
