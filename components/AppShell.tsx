@@ -1,23 +1,25 @@
 // components/AppShell.tsx
-// Rôle : layout principal de l'app (sidebar + header + contenu).
-// Fond clair, accent aux couleurs Tipote.
+// Layout principal Tipote : sidebar + header + contenu.
+// Utilisé pour toutes les pages "app" (dashboard, stratégie, blocks, automatisations).
 
-'use client';
+"use client";
 
-import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import LogoutButton from '@/components/LogoutButton';
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
 
 type AppShellProps = {
   userEmail: string;
   children: ReactNode;
 };
 
+// Navigation principale dans la sidebar
 const navItems = [
-  { href: '/app', label: 'Vue d’ensemble' },
-  { href: '/app/blocks', label: 'Blocks business' },
-  { href: '/app/automations', label: 'Automatisations' },
+  { href: "/app", label: "Tableau de bord" },
+  { href: "/strategy", label: "Stratégie" },
+  { href: "/app/blocks", label: "Blocks business" },
+  { href: "/app/automations", label: "Automatisations" },
 ];
 
 export default function AppShell({ userEmail, children }: AppShellProps) {
@@ -25,7 +27,7 @@ export default function AppShell({ userEmail, children }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-      {/* Sidebar */}
+      {/* Sidebar desktop */}
       <aside className="hidden md:flex md:w-60 lg:w-64 flex-col border-r border-slate-200 bg-white">
         <div className="px-4 py-4 border-b border-slate-200 flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-[#b042b4] flex items-center justify-center text-base font-bold text-white">
@@ -33,25 +35,25 @@ export default function AppShell({ userEmail, children }: AppShellProps) {
           </div>
           <div className="leading-tight">
             <p className="text-sm font-semibold text-slate-900">Tipote</p>
-            <p className="text-xs text-slate-500">Workspace</p>
+            <p className="text-xs text-slate-500">SaaS Business AI</p>
           </div>
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-1">
           {navItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname?.startsWith(item.href + '/');
+              pathname === item.href || pathname?.startsWith(item.href + "/");
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={[
-                  'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? 'bg-[#b042b4] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100',
-                ].join(' ')}
+                    ? "bg-[#b042b4] text-white shadow-sm"
+                    : "text-slate-700 hover:bg-slate-100",
+                ].join(" ")}
               >
                 <span className="inline-block h-2 w-2 rounded-full bg-[#641168]/60" />
                 <span>{item.label}</span>
@@ -70,6 +72,7 @@ export default function AppShell({ userEmail, children }: AppShellProps) {
         {/* Header */}
         <header className="h-14 border-b border-slate-200 bg-white">
           <div className="h-full px-4 flex items-center justify-between gap-3 max-w-5xl mx-auto">
+            {/* Logo compact sur mobile */}
             <div className="md:hidden flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-[#b042b4] flex items-center justify-center text-sm font-bold text-white">
                 t
@@ -78,18 +81,22 @@ export default function AppShell({ userEmail, children }: AppShellProps) {
                 Tipote
               </span>
             </div>
+
+            {/* Email utilisateur */}
             <div className="hidden md:flex items-center gap-2 text-xs text-slate-500">
               <span className="hidden sm:inline">Connecté :</span>
               <span className="font-medium text-slate-700 truncate max-w-[180px] sm:max-w-none">
                 {userEmail}
               </span>
             </div>
+
+            {/* Actions */}
             <div className="flex items-center gap-2">
               <Link
-                href="/app/account"
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                href="/onboarding"
+                className="hidden sm:inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
               >
-                Mon compte
+                Refaire l&apos;onboarding
               </Link>
               <LogoutButton />
             </div>
