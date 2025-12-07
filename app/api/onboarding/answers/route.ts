@@ -28,14 +28,29 @@ const onboardingAnswersSchema = z.object({
         sales: z.number().nullable(),
       }),
     )
-    .optional()
     .default([]),
-  audienceSocial: z.number().int().nonnegative().nullable().optional(),
-  audienceEmail: z.number().int().nonnegative().nullable().optional(),
+  audienceSocial: z.string().optional().nullable(),
+  audienceEmail: z.string().optional().nullable(),
   timeAvailable: z.string(),
   mainGoal: z.string(),
+
+  // 🔥 NOUVEAUX CHAMPS AVANCÉS (tous optionnels)
+  energySources: z.string().optional().nullable(),
+  uniqueValue: z.string().optional().nullable(),
+  untappedStrength: z.string().optional().nullable(),
+  communicationStyle: z.string().optional().nullable(),
+  successDefinition: z.string().optional().nullable(),
+  sixMonthVision: z.string().optional().nullable(),
+  innerDialogue: z.string().optional().nullable(),
+  ifCertainSuccess: z.string().optional().nullable(),
+  biggestFears: z.string().optional().nullable(),
+  biggestChallenge: z.string().optional().nullable(),
+  workingStrategies: z.string().optional().nullable(),
+  recentClientFeedback: z.string().optional().nullable(),
+  preferredContentType: z.string().optional().nullable(),
 });
 
+// GET — récupérer les réponses existantes
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
@@ -86,6 +101,7 @@ export async function GET() {
   }
 }
 
+// POST — sauvegarder / mettre à jour les réponses
 export async function POST(request: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -143,10 +159,32 @@ export async function POST(request: Request) {
           business_maturity: payload.businessMaturity,
           offers_status: payload.offersStatus,
           offers: payload.offers.length > 0 ? payload.offers : null,
-          audience_social: payload.audienceSocial ?? null,
-          audience_email: payload.audienceEmail ?? null,
+          audience_social:
+            payload.audienceSocial && payload.audienceSocial.trim() !== ''
+              ? Number(payload.audienceSocial.trim())
+              : null,
+          audience_email:
+            payload.audienceEmail && payload.audienceEmail.trim() !== ''
+              ? Number(payload.audienceEmail.trim())
+              : null,
           time_available: payload.timeAvailable,
           main_goal: payload.mainGoal,
+
+          // 🔥 NOUVELLES COLONNES AVANCÉES (peuvent être nulles)
+          energy_sources: payload.energySources ?? null,
+          unique_value: payload.uniqueValue ?? null,
+          untapped_strength: payload.untappedStrength ?? null,
+          communication_style: payload.communicationStyle ?? null,
+          success_definition: payload.successDefinition ?? null,
+          six_month_vision: payload.sixMonthVision ?? null,
+          inner_dialogue: payload.innerDialogue ?? null,
+          if_certain_success: payload.ifCertainSuccess ?? null,
+          biggest_fears: payload.biggestFears ?? null,
+          biggest_challenge: payload.biggestChallenge ?? null,
+          working_strategies: payload.workingStrategies ?? null,
+          recent_client_feedback: payload.recentClientFeedback ?? null,
+          preferred_content_type: payload.preferredContentType ?? null,
+
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
