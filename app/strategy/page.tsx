@@ -198,18 +198,29 @@ export default async function StrategyPage() {
   const planJson = (planRow.plan_json ?? {}) as BusinessPlanJson;
 
   const businessProfile = (planJson.business_profile ?? {}) as AnyRecord;
-  const persona = (planJson.persona ?? {}) as AnyRecord;
-  const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
-  const selectedIndex =
-    typeof planJson.selected_offer_pyramid_index === "number"
-      ? planJson.selected_offer_pyramid_index
-      : 0;
+const persona = (planJson.persona ?? {}) as AnyRecord;
+const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
 
-  let selectedPyramid = (planJson.selected_offer_pyramid ??
-    offerPyramids[selectedIndex] ??
-    offerPyramids[0]) as AnyRecord | undefined;
+// On considère qu'il y a un vrai choix initial
+// UNIQUEMENT si l'IA a déjà stocké une pyramide choisie.
+const hasExplicitSelection =
+  typeof planJson.selected_offer_pyramid_index === "number" &&
+  !!planJson.selected_offer_pyramid;
 
-  const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
+// L'index sert surtout APRÈS le choix initial (mode "edit").
+// Si rien n'est choisi, on garde 0 mais il ne sera pas utilisé.
+const selectedIndex = hasExplicitSelection
+  ? (planJson.selected_offer_pyramid_index as number)
+  : 0;
+
+// Si aucune pyramide n'a été choisie explicitement, on laisse undefined
+// pour déclencher le mode "choose" dans StrategyClient.
+const selectedPyramid = hasExplicitSelection
+  ? (planJson.selected_offer_pyramid as AnyRecord)
+  : undefined;
+
+const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
+
   const tasks = (planJson.tasks ?? []) as Task[];
   const tasksByTimeframe = splitTasksByTimeframe(tasks);
   const globalProgress = computeProgress(tasks);
