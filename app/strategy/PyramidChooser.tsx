@@ -1,4 +1,3 @@
-// app/strategy/PyramidChooser.tsx
 "use client";
 
 import PyramidCard, { OfferPyramid } from "./PyramidCard";
@@ -19,7 +18,7 @@ export default function PyramidChooser({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-40 flex items-center justifycenter bg-black/40">
       <div className="mx-4 max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>

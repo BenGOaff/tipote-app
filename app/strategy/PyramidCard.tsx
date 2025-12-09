@@ -1,4 +1,3 @@
-// app/strategy/PyramidCard.tsx
 "use client";
 
 type OfferLevel = {
@@ -62,11 +61,29 @@ export default function PyramidCard({
 
   const barCount = 4;
 
+  const isClickable = Boolean(onChoose);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onChoose) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onChoose();
+    }
+  };
+
   return (
     <div
-      className={`flex h-full flex-col rounded-2xl border bg-white p-4 shadow-sm ${
+      className={`flex h-full flex-col rounded-2xl border bg-white p-4 shadow-sm transition ${
         highlight ? "border-[#a855f7] shadow-md" : "border-slate-200"
+      } ${
+        isClickable
+          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
+          : ""
       }`}
+      onClick={onChoose}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
     >
       {/* En-tête */}
       <div className="mb-3">
@@ -160,11 +177,14 @@ export default function PyramidCard({
         </div>
       </div>
 
-      {/* Bouton de choix */}
+      {/* Bouton explicite (en plus du clic sur la carte) */}
       {onChoose && (
         <button
           type="button"
-          onClick={onChoose}
+          onClick={(e) => {
+            e.stopPropagation(); // évite le double appel si on clique le bouton
+            onChoose();
+          }}
           className="mt-4 inline-flex items-center justify-center rounded-full bg-[#a855f7] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#9333ea]"
         >
           Choisir ce scénario

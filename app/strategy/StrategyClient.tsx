@@ -1,4 +1,3 @@
-// app/strategy/StrategyClient.tsx
 "use client";
 
 import { useState, useTransition } from "react";
@@ -83,6 +82,13 @@ export default function StrategyClient({
 
   async function handleChoose(index: number, pyramid: PyramidType) {
     setStatusMessage(null);
+
+    // ✅ Mise à jour optimiste : on ferme la popup et on passe en mode édition
+    setSelectedIndex(index);
+    setDraft(pyramid);
+    setMode("edit");
+    setChooserOpen(false);
+
     startSaving(async () => {
       try {
         const res = await fetch("/api/strategy/offer-pyramid", {
@@ -104,10 +110,6 @@ export default function StrategyClient({
           return;
         }
 
-        setSelectedIndex(index);
-        setDraft(pyramid);
-        setMode("edit");
-        setChooserOpen(false);
         setStatusMessage("Pyramide choisie et sauvegardée ✅");
       } catch (e) {
         console.error(e);
