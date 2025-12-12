@@ -1,6 +1,5 @@
 // components/AppShell.tsx
-// Layout principal conforme au design final de Tipote (doc pages design)
-// Sidebar + header + contenu central
+// Layout principal : Sidebar + header + contenu
 "use client";
 
 import Link from "next/link";
@@ -14,14 +13,12 @@ type Props = {
 };
 
 const navItems = [
-  { href: "/app", label: "Vue d’ensemble" },
-  { href: "/strategy", label: "Stratégie" },
-  { href: "/content-hub", label: "Content Hub" },
-  { href: "/calendar", label: "Calendrier" },
-  { href: "/ai-generator", label: "Génération IA" },
-  { href: "/project-tracking", label: "Suivi Projet" },
+  { href: "/app", label: "Aujourd’hui" },
+  { href: "/strategy", label: "Ma Stratégie" },
+  { href: "/create", label: "Créer" },
+  { href: "/contents", label: "Mes Contenus" },
   { href: "/analytics", label: "Analytics" },
-  { href: "/settings/ai", label: "Paramètres IA" },
+  { href: "/settings", label: "Paramètres" },
 ];
 
 export default function AppShell({ userEmail, children }: Props) {
@@ -94,7 +91,7 @@ export default function AppShell({ userEmail, children }: Props) {
             {/* Actions */}
             <div className="flex items-center gap-2">
               <Link
-                href="/app/account"
+                href="/settings?tab=profile"
                 className="border border-slate-200 px-3 py-1.5 rounded-lg text-xs hover:bg-slate-50"
               >
                 Mon compte
