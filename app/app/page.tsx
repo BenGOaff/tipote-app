@@ -90,7 +90,7 @@ export default async function AppPage() {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    redirect('/');
+    redirect('/auth/login');
   }
 
   const userEmail = session.user.email ?? 'Utilisateur';
