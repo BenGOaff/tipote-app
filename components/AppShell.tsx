@@ -14,7 +14,7 @@ type Props = {
 type NavItem = {
   href: string;
   label: string;
-  icon: (props: { className?: string }) => JSX.Element;
+  icon: (props: { className?: string }) => ReactNode;
 };
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -30,12 +30,7 @@ function IconToday({ className }: { className?: string }) {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
-      <path
-        d="M8 14h3M8 16.5h6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <path d="M8 14h3M8 16.5h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -63,17 +58,8 @@ function IconStrategy({ className }: { className?: string }) {
 function IconCreate({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} fill="none" aria-hidden="true">
-      <path
-        d="M12 5v14M5 12h14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -81,12 +67,7 @@ function IconCreate({ className }: { className?: string }) {
 function IconContent({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} fill="none" aria-hidden="true">
-      <path
-        d="M8 7h8M8 11h8M8 15h5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <path d="M8 7h8M8 11h8M8 15h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       <path
         d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
         stroke="currentColor"
@@ -99,18 +80,8 @@ function IconContent({ className }: { className?: string }) {
 function IconAnalytics({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} fill="none" aria-hidden="true">
-      <path
-        d="M6 20V10M12 20V4M18 20v-7"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4 20h16"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <path d="M6 20V10M12 20V4M18 20v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 20h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -118,11 +89,7 @@ function IconAnalytics({ className }: { className?: string }) {
 function IconSettings({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} fill="none" aria-hidden="true">
-      <path
-        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
+      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.8" />
       <path
         d="M19.4 15a8.6 8.6 0 0 0 .1-1l2-1.2-2-3.4-2.3.7a8.3 8.3 0 0 0-1.7-1l-.3-2.4H10.8l-.3 2.4c-.6.3-1.2.6-1.7 1l-2.3-.7-2 3.4 2 1.2a8.6 8.6 0 0 0 0 2l-2 1.2 2 3.4 2.3-.7c.5.4 1.1.7 1.7 1l.3 2.4h4.4l.3-2.4c.6-.3 1.2-.6 1.7-1l2.3.7 2-3.4-2-1.2Z"
         stroke="currentColor"
@@ -188,7 +155,6 @@ export default function AppShell({ userEmail, children }: Props) {
             <div className="space-y-1">
               {primaryNav.map((item) => {
                 const active = isActive(pathname, item.href);
-                const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
@@ -204,7 +170,7 @@ export default function AppShell({ userEmail, children }: Props) {
                         active ? "bg-white text-[#b042b4] shadow-sm" : "bg-zinc-50 text-zinc-500"
                       )}
                     >
-                      <Icon />
+                      {item.icon({})}
                     </span>
                     <span className={cn("font-medium", active ? "text-zinc-900" : "text-zinc-700")}>
                       {item.label}
@@ -224,7 +190,6 @@ export default function AppShell({ userEmail, children }: Props) {
               <div className="space-y-1">
                 {footerNav.map((item) => {
                   const active = isActive(pathname, item.href);
-                  const Icon = item.icon;
                   return (
                     <Link
                       key={item.href}
@@ -240,7 +205,7 @@ export default function AppShell({ userEmail, children }: Props) {
                           active ? "bg-white text-[#b042b4] shadow-sm" : "bg-zinc-50 text-zinc-500"
                         )}
                       >
-                        <Icon />
+                        {item.icon({})}
                       </span>
                       <span className={cn("font-medium", active ? "text-zinc-900" : "text-zinc-700")}>
                         {item.label}
