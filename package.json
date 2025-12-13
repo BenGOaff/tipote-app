@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/standalone-static-copy.mjs",
     "start": "next start",
     "lint": "eslint",
     "ingest:resources": "node scripts/ingest-resources.cjs"
