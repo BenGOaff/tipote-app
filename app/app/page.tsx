@@ -1,19 +1,13 @@
 // app/app/page.tsx
-// Rôle : Dashboard principal Tipote.
-// - Protégé par l'auth Supabase.
-// - Si aucun plan stratégique n'existe encore pour l'utilisateur, redirige vers /onboarding.
-// - Sinon, affiche une vue d'ensemble avec :
-//   A. Message du "Coach IA" (généré localement pour l'instant, sans appel OpenAI).
-//   B. Tâches du jour (à partir des tasks du plan si présentes, sinon placeholder).
-//   C. Contenus à publier (placeholder en attendant le module Contenus).
-//   D. Progression objectif 90 jours (calculée à partir des tasks si présentes).
-//   E. Modules actifs (raccourcis vers les modules v2.0 de l'app).
-//   F. Stats rapides (placeholder en attendant le tracking réel).
+// Dashboard "Aujourd’hui" (v2)
+// - Protégé par l'auth Supabase
+// - Si aucun plan stratégique => redirect /onboarding
+// - UI alignée cahier des charges : banner prochaine action + 4 stats + progression + actions rapides + à venir
 
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import AppShell from '@/components/AppShell';
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import AppShell from "@/components/AppShell";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 type AnyRecord = Record<string, any>;
 
@@ -21,65 +15,64 @@ type Task = {
   title?: string;
   description?: string;
   status?: string;
-  importance?: 'low' | 'medium' | 'high' | string;
+  importance?: "low" | "medium" | "high" | string;
   due_date?: string;
   dueDate?: string;
+  channel?: string;
+  type?: string;
 };
 
 type BusinessPlanJson = {
   business_profile?: AnyRecord;
   persona?: AnyRecord;
-  offer_pyramids?: AnyRecord[];
+  tasks?: Task[];
   action_plan_30_90?: {
     main_goal?: string;
-    weeks?: AnyRecord[];
-  } & AnyRecord;
-  tasks?: Task[];
-  modules_recommendations?: AnyRecord;
+    phase?: string;
+    current_week?: number;
+  };
 };
 
-function isDoneStatus(status: string | undefined): boolean {
-  if (!status) return false;
-  const s = status.toLowerCase();
-  return ['done', 'completed', 'terminé', 'termine', 'finished'].some((k) =>
+function isDoneStatus(status: string | undefined | null): boolean {
+  const s = String(status ?? "").toLowerCase();
+  return ["done", "completed", "terminé", "termine", "finished"].some((k) =>
     s.includes(k),
   );
 }
 
 function parseDueDate(task: Task): Date | null {
   const value = task.due_date ?? task.dueDate;
-  if (!value || typeof value !== 'string') return null;
+  if (!value || typeof value !== "string") return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function chipFromTask(task: {
-  _isImportant?: boolean;
-  _isDone?: boolean;
-  _dueDate?: Date | null;
-}) {
-  if (task._isDone) {
-    return {
-      label: 'Terminé',
-      className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    };
-  }
-  if (task._isImportant) {
-    return {
-      label: 'Prioritaire',
-      className: 'bg-amber-100 text-amber-800 border-amber-200',
-    };
-  }
-  if (task._dueDate && task._dueDate < new Date(new Date().setHours(0, 0, 0, 0))) {
-    return {
-      label: 'En retard',
-      className: 'bg-red-100 text-red-700 border-red-200',
-    };
-  }
-  return {
-    label: 'À faire',
-    className: 'bg-slate-100 text-slate-700 border-slate-200',
-  };
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatRelativeDay(d: Date, now: Date): string {
+  const a = startOfDay(now).getTime();
+  const b = startOfDay(d).getTime();
+  const diffDays = Math.round((b - a) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Aujourd’hui";
+  if (diffDays === 1) return "Demain";
+  if (diffDays === -1) return "Hier";
+  // fallback simple
+  return d.toLocaleDateString("fr-FR", { weekday: "long" });
+}
+
+function formatTime(d: Date): string {
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function progressBarWidth(percent: number) {
+  const p = clamp(percent, 0, 100);
+  return `${p}%`;
 }
 
 export default async function AppPage() {
@@ -90,441 +83,368 @@ export default async function AppPage() {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    redirect('/auth/login');
+    redirect("/auth/login");
   }
 
-  const userEmail = session.user.email ?? 'Utilisateur';
+  const userEmail = session.user.email ?? "Utilisateur";
 
-  // 1) Récupérer le plan stratégique de l'utilisateur
+  // 1) Charger le plan stratégique
   const { data: planRow, error: planError } = await supabase
-    .from('business_plan')
-    .select('id, plan_json')
-    .eq('user_id', session.user.id)
+    .from("business_plan")
+    .select("id, plan_json")
+    .eq("user_id", session.user.id)
     .maybeSingle();
 
   if (planError) {
-    console.error('[AppPage] Supabase business_plan select error', planError);
+    console.error("[AppPage] Supabase business_plan select error", planError);
   }
 
-  // 2) Si aucun plan trouvé, on redirige vers l'onboarding
+  // 2) Si pas de plan => onboarding
   if (!planRow || !planRow.plan_json) {
-    redirect('/onboarding');
+    redirect("/onboarding");
   }
 
   const planJson = (planRow.plan_json ?? {}) as BusinessPlanJson;
 
   const businessProfile = (planJson.business_profile ?? {}) as AnyRecord;
-  const actionPlan = (planJson.action_plan_30_90 ??
-    {}) as BusinessPlanJson['action_plan_30_90'];
+  const actionPlan = (planJson.action_plan_30_90 ?? {}) as BusinessPlanJson["action_plan_30_90"];
 
   const rawTasks = Array.isArray(planJson.tasks) ? (planJson.tasks as Task[]) : [];
 
-  // Objectif 90 jours (variante selon la façon dont l'IA l'a nommé)
-  const goal90 =
-    actionPlan?.main_goal ?? businessProfile.main_goal ?? businessProfile.goal_90_days ?? '';
-
-  // 3) Préparation des tâches (du jour / en retard / à venir)
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const todayStart = startOfDay(now);
+  const tomorrowStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 1);
+  const weekEnd = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 7);
 
-  const enrichedTasks = rawTasks.map((task) => {
-    const due = parseDueDate(task);
-    const status = task.status ?? '';
+  const tasks = rawTasks
+    .map((t) => {
+      const due = parseDueDate(t);
+      return {
+        ...t,
+        _dueDate: due as Date | null,
+        _isDone: isDoneStatus(t.status),
+        _isImportant: String(t.importance ?? "").toLowerCase() === "high",
+      };
+    })
+    // tri stable : d'abord échéance, puis important
+    .sort((a: any, b: any) => {
+      const da = a._dueDate ? a._dueDate.getTime() : Number.POSITIVE_INFINITY;
+      const db = b._dueDate ? b._dueDate.getTime() : Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
+      if (a._isImportant !== b._isImportant) return a._isImportant ? -1 : 1;
+      return 0;
+    });
+
+  const overdueTasks = tasks.filter((t: any) => t._dueDate && t._dueDate < todayStart && !t._isDone);
+  const tasksToday = tasks.filter((t: any) => t._dueDate && t._dueDate >= todayStart && t._dueDate < tomorrowStart && !t._isDone);
+  const upcomingWeek = tasks.filter((t: any) => t._dueDate && t._dueDate >= tomorrowStart && t._dueDate < weekEnd && !t._isDone);
+
+  const totalTasks = tasks.length;
+  const doneTasksCount = tasks.filter((t: any) => t._isDone).length;
+  const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasksCount / totalTasks) * 100);
+
+  // Objectif 90 jours (plusieurs variantes possibles dans le JSON)
+  const goal90 =
+    actionPlan?.main_goal ??
+    businessProfile.main_goal ??
+    businessProfile.goal_90_days ??
+    "";
+
+  // Prochaine action = priorité aux retards, sinon aujourd'hui, sinon placeholder
+  const nextTask: any =
+    overdueTasks[0] ??
+    tasksToday[0] ??
+    null;
+
+  const nextTitle =
+    nextTask?.title?.trim?.() ||
+    (overdueTasks.length > 0
+      ? "Rattraper une tâche en retard"
+      : tasksToday.length > 0
+        ? "Exécuter une tâche du jour"
+        : "Commencer ton plan d’action");
+
+  const nextTime =
+    nextTask?._dueDate ? formatTime(nextTask._dueDate) : "—";
+
+  const nextChannel =
+    String(nextTask?.channel ?? "LinkedIn");
+
+  const nextType =
+    String(nextTask?.type ?? "Tâche");
+
+  // 4 stats cards (certaines sont placeholders tant qu’on ne track pas tout)
+  const contentsPublished = Number(businessProfile.contents_published ?? 0);
+  const plannedContents = Number(businessProfile.contents_planned ?? 0);
+  const engagement = Number(businessProfile.engagement ?? 0);
+
+  const tasksRatio = totalTasks > 0 ? `${doneTasksCount}/${totalTasks}` : "0/0";
+
+  const nextDeadlineDays =
+    nextTask?._dueDate
+      ? Math.max(0, Math.ceil((startOfDay(nextTask._dueDate).getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24)))
+      : null;
+
+  const nextDeadlineLabel =
+    nextDeadlineDays === null
+      ? "—"
+      : nextDeadlineDays === 0
+        ? "0j"
+        : `${nextDeadlineDays}j`;
+
+  // Progression semaine (placeholders cohérents)
+  const weekNumber = typeof actionPlan?.current_week === "number" ? actionPlan.current_week : 2;
+  const planStrategicProgress = clamp(progressPercent, 0, 100);
+  const plannedProgress = plannedContents > 0 ? clamp(Math.round((contentsPublished / plannedContents) * 100), 0, 100) : 0;
+  const engagementTarget = Number(businessProfile.engagement_target ?? 5000);
+  const engagementProgress = engagementTarget > 0 ? clamp(Math.round((engagement / engagementTarget) * 100), 0, 100) : 0;
+
+  // List "À venir cette semaine" : on affiche soit des tâches à venir, soit fallback
+  const upcomingList = upcomingWeek.slice(0, 6).map((t: any) => {
+    const d = t._dueDate as Date | null;
     return {
-      ...task,
-      _dueDate: due,
-      _isDone: isDoneStatus(status),
-      _isImportant: (task.importance ?? '').toLowerCase() === 'high',
+      time: d ? formatTime(d) : "—",
+      title: (t.title as string) || "Contenu planifié",
+      day: d ? formatRelativeDay(d, now) : "Cette semaine",
+      type: String(t.type ?? "Tâche"),
     };
   });
 
-  const tasksToday = enrichedTasks.filter(
-    (t) =>
-      t._dueDate &&
-      t._dueDate >= startOfToday &&
-      t._dueDate < endOfToday &&
-      !t._isDone,
-  );
-
-  const overdueTasks = enrichedTasks.filter(
-    (t) => t._dueDate && t._dueDate < startOfToday && !t._isDone,
-  );
-
-  const upcomingTasks = enrichedTasks
-    .filter((t) => t._dueDate && t._dueDate >= endOfToday && !t._isDone)
-    .sort((a, b) => {
-      if (!a._dueDate || !b._dueDate) return 0;
-      return a._dueDate.getTime() - b._dueDate.getTime();
-    });
-
-  const totalTasks = enrichedTasks.length;
-  const doneTasksCount = enrichedTasks.filter((t) => t._isDone).length;
-  const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasksCount / totalTasks) * 100);
-
-  // 4) Message du "Coach IA" (sans appel OpenAI pour l'instant)
-  let coachMessage =
-    `Bienvenue dans Tipote. On va avancer ensemble sur ton objectif des 90 prochains jours.`;
-  const firstGoalSentence =
-    typeof goal90 === 'string' && goal90.trim().length > 0
-      ? ` Ton objectif prioritaire est : "${goal90}".`
-      : '';
-
-  if (overdueTasks.length > 0) {
-    const example = overdueTasks[0];
-    const title = example.title || 'une tâche importante';
-    coachMessage = `Tu as ${overdueTasks.length} tâche(s) en retard. Par exemple : "${title}". On commence par ça aujourd'hui ?${firstGoalSentence}`;
-  } else if (tasksToday.length > 0) {
-    const example = tasksToday[0];
-    const title = example.title || 'une action clé';
-    coachMessage = `Aujourd'hui, tu as ${tasksToday.length} tâche(s) prévue(s). Par exemple : "${title}". Si tu les termines, tu avances concrètement vers ton objectif.${firstGoalSentence}`;
-  } else if (upcomingTasks.length > 0) {
-    const next = upcomingTasks[0];
-    const title = next.title || 'une étape importante';
-    const daysDiff = next._dueDate
-      ? Math.max(
-          1,
-          Math.round((next._dueDate.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24)),
-        )
-      : 1;
-    coachMessage = `Prochaine grosse étape dans ${daysDiff} jour(s) : "${title}". On peut dès maintenant planifier ou préparer ce bloc.${firstGoalSentence}`;
-  } else if (totalTasks > 0 && progressPercent < 100) {
-    coachMessage = `Tu as déjà ${doneTasksCount} tâche(s) complétée(s) sur ${totalTasks}. On continue sur cette lancée pour te rapprocher de ton objectif.${firstGoalSentence}`;
-  } else if (progressPercent === 100 && totalTasks > 0) {
-    coachMessage = `Bravo, toutes les tâches de ton plan actuel sont complétées 🎉 On pourra bientôt générer un nouveau plan ou renforcer le suivant.${firstGoalSentence}`;
-  } else if (firstGoalSentence) {
-    coachMessage = `On va construire et exécuter un plan d'action aligné sur toi.${firstGoalSentence}`;
-  }
-
-  // 5) Dashboard placeholders (contenus / stats)
-  const tasksForWidget = [
-    ...tasksToday,
-    ...overdueTasks.filter((t) => !tasksToday.includes(t) && tasksToday.length < 5),
-  ].slice(0, 5);
+  const showFallbackUpcoming = upcomingList.length === 0;
 
   return (
     <AppShell userEmail={userEmail}>
-      {/* HERO / Coach IA */}
-      <section className="mb-6 rounded-2xl bg-[#b042b4] p-6 text-white shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-white/90">
-              Coach IA
-            </p>
-            <h1 className="text-lg md:text-xl font-semibold">Aujourd’hui</h1>
-            <p className="text-sm text-white/95 whitespace-pre-line max-w-2xl">{coachMessage}</p>
+      <div className="space-y-6">
+        {/* Banner prochaine action */}
+        <section className="rounded-2xl bg-[#b042b4] p-6 text-white shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Ta prochaine action
+              </p>
 
-            <div className="pt-2 flex flex-wrap gap-2">
-              <Link
-                href="/strategy"
-                className="inline-flex items-center rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
-              >
-                Voir ma stratégie
-              </Link>
+              <h1 className="text-lg md:text-xl font-semibold">Aujourd’hui</h1>
+
+              <p className="text-sm text-white/95 max-w-2xl">
+                {nextTitle}
+                {typeof goal90 === "string" && goal90.trim().length > 0 ? (
+                  <span className="text-white/90"> — Objectif : “{goal90}”</span>
+                ) : null}
+              </p>
+
+              <div className="pt-2 flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold">
+                  {nextType}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold">
+                  {nextChannel}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold">
+                  {nextTime}
+                </span>
+                {overdueTasks.length > 0 ? (
+                  <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold">
+                    {overdueTasks.length} en retard
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
               <Link
                 href="/create"
-                className="inline-flex items-center rounded-xl bg-white/15 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
               >
-                Créer un contenu
+                Créer en 1 clic
               </Link>
-              <Link
-                href="/contents"
-                className="inline-flex items-center rounded-xl bg-white/15 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20"
-              >
-                Ouvrir mes contenus
-              </Link>
-            </div>
-          </div>
-
-          <div className="shrink-0 rounded-2xl bg-white/15 px-4 py-3">
-            <p className="text-[11px] text-white/90">Progression</p>
-            <p className="mt-1 text-2xl font-semibold">{progressPercent}%</p>
-            <p className="mt-1 text-[11px] text-white/85">
-              {doneTasksCount}/{totalTasks} tâche(s)
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Grille principale */}
-      <section className="grid gap-4 lg:grid-cols-3">
-        {/* Colonne principale : tâches + contenus */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* Tâches du jour */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">Tâches du jour</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Les actions prévues pour aujourd&apos;hui et les éventuels retards.
-                </p>
-              </div>
-
               <Link
                 href="/strategy"
-                className="text-[11px] font-medium text-slate-600 hover:underline"
+                className="inline-flex items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20"
               >
-                Voir tout
+                Voir la stratégie
               </Link>
             </div>
-
-            <div className="mt-4 space-y-2">
-              {tasksForWidget.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6">
-                  <p className="text-xs text-slate-600">
-                    Tu n&apos;as pas encore de tâches planifiées dans ton tableau de suivi.
-                    Une fois ton plan généré, tu verras ici tes actions du jour.
-                  </p>
-                  <div className="mt-3">
-                    <Link
-                      href="/strategy"
-                      className="inline-flex rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white hover:opacity-95"
-                    >
-                      Ouvrir Ma Stratégie
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                tasksForWidget.map((task, index) => {
-                  const due =
-                    task._dueDate instanceof Date
-                      ? task._dueDate.toLocaleDateString('fr-FR')
-                      : null;
-                  const isOverdue = task._dueDate && task._dueDate < startOfToday;
-                  const chip = chipFromTask(task);
-
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                    >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-slate-900">
-                            {task.title || `Tâche ${index + 1}`}
-                          </p>
-                          <span
-                            className={[
-                              'text-[10px] rounded-full border px-2 py-[2px]',
-                              chip.className,
-                            ].join(' ')}
-                          >
-                            {chip.label}
-                          </span>
-                        </div>
-
-                        {task.description && (
-                          <p className="text-[11px] text-slate-600 line-clamp-2">
-                            {task.description}
-                          </p>
-                        )}
-
-                        <p className="text-[10px] text-slate-500">
-                          {due && (
-                            <>
-                              Échéance :{' '}
-                              <span className={isOverdue ? 'font-semibold text-red-600' : ''}>
-                                {due}
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="h-5 w-5 rounded border border-slate-300 bg-white"
-                        title="Marquer comme terminée (bientôt)"
-                        aria-label="Marquer comme terminée (bientôt)"
-                      />
-                    </div>
-                  );
-                })
-              )}
-            </div>
           </div>
+        </section>
 
-          {/* Contenus à publier */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        {/* 4 stats cards */}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard title="Contenus publiés" value={String(contentsPublished)} sub="(placeholder si non tracké)" />
+          <StatCard title="Tâches complétées" value={tasksRatio} sub="sur ton plan actuel" />
+          <StatCard title="Engagement" value={engagement ? engagement.toLocaleString("fr-FR") : "—"} sub="(placeholder)" />
+          <StatCard title="Prochaine échéance" value={nextDeadlineLabel} sub={nextTask?.title ? String(nextTask.title) : "—"} />
+        </section>
+
+        {/* Progression + Actions rapides */}
+        <section className="grid gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Contenus à publier</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Ici apparaîtront les contenus validés avec une date de publication pour aujourd&apos;hui.
-                </p>
-              </div>
-
-              <Link
-                href="/contents"
-                className="text-[11px] font-medium text-slate-600 hover:underline"
-              >
-                Aller à Mes Contenus
-              </Link>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
-              <p className="text-xs text-slate-600">
-                Bientôt, Tipote te montrera ici les posts, emails et autres contenus prêts à publier
-                selon ton calendrier éditorial.
-              </p>
-              <div className="mt-3 flex justify-center gap-2">
-                <Link
-                  href="/create"
-                  className="inline-flex rounded-lg bg-[#b042b4] px-3 py-2 text-[11px] font-semibold text-white hover:opacity-95"
-                >
-                  Créer un contenu
-                </Link>
-                <Link
-                  href="/contents?view=calendar"
-                  className="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Voir le calendrier
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Colonne latérale */}
-        <div className="space-y-4">
-          {/* Progression objectif 90 jours */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Progression objectif 90 jours
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Estimation basée sur les tâches complétées par rapport au total de ton plan actuel.
-                </p>
+                <h2 className="text-base font-semibold text-slate-900">Progression de la semaine</h2>
+                <p className="text-sm text-slate-600">Semaine {weekNumber} sur 12</p>
               </div>
               <Link
                 href="/strategy"
-                className="text-[11px] font-medium text-slate-600 hover:underline"
+                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
               >
-                Détails
+                Voir ma stratégie complète
               </Link>
             </div>
 
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>{progressPercent}% complété</span>
-                <span>
-                  {doneTasksCount}/{totalTasks}
-                </span>
-              </div>
+            <div className="mt-6 space-y-6">
+              <ProgressRow label="Plan stratégique" right={`${planStrategicProgress}%`} percent={planStrategicProgress} />
+              <ProgressRow label="Contenus planifiés" right={plannedContents ? `${contentsPublished}/${plannedContents}` : "—"} percent={plannedProgress} />
+              <ProgressRow
+                label="Objectif engagement"
+                right={engagementTarget ? `${engagement.toLocaleString("fr-FR")}/${engagementTarget.toLocaleString("fr-FR")}` : "—"}
+                percent={engagementProgress}
+              />
+            </div>
+          </div>
 
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-slate-900 transition-all"
-                  style={{ width: `${progressPercent}%` }}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-slate-900">Actions rapides</h2>
+            <div className="mt-4 space-y-2">
+              <QuickLink href="/create" label="Créer du contenu" />
+              <QuickLink href="/contents" label="Voir mes contenus" />
+              <QuickLink href="/strategy" label="Ma stratégie" />
+            </div>
+          </div>
+        </section>
+
+        {/* À venir cette semaine */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-semibold text-slate-900">À venir cette semaine</h2>
+            <Link
+              href="/contents"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+            >
+              Tout voir
+            </Link>
+          </div>
+
+          <div className="mt-4 divide-y divide-slate-100">
+            {showFallbackUpcoming ? (
+              <>
+                <UpcomingRow time="09:00" title="Post LinkedIn - Conseil expert" day="Aujourd’hui" type="Post" />
+                <UpcomingRow time="14:00" title="Email newsletter - Storytelling" day="Demain" type="Email" />
+                <UpcomingRow time="10:00" title="Script Reel - Hook + CTA" day="Mercredi" type="Vidéo" />
+                <UpcomingRow time="16:00" title="Article blog - Guide complet" day="Jeudi" type="Article" />
+              </>
+            ) : (
+              upcomingList.map((u, idx) => (
+                <UpcomingRow
+                  key={`${u.time}-${u.title}-${idx}`}
+                  time={u.time}
+                  title={u.title}
+                  day={u.day}
+                  type={u.type}
                 />
-              </div>
+              ))
+            )}
+          </div>
 
-              {goal90 && (
-                <p className="pt-2 text-[11px] text-slate-600">
-                  Objectif : <span className="font-medium">{goal90}</span>
-                </p>
-              )}
+          {/* mini rappel “tâches du jour” (optionnel mais utile) */}
+          <div className="mt-6 rounded-xl bg-slate-50 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-900">Tâches du jour</p>
+              <span className="text-xs text-slate-600">{tasksToday.length} à faire</span>
+            </div>
 
-              <p className="text-[11px] text-slate-500">
-                La pondération (importance) et l&apos;historique seront ajoutés ensuite.
+            {tasksToday.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Rien de planifié aujourd’hui. Tu peux avancer sur la stratégie ou créer un contenu.
               </p>
-            </div>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {tasksToday.slice(0, 4).map((t: any, i: number) => (
+                  <li key={`${t.title ?? "task"}-${i}`} className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{t.title ?? "Tâche"}</p>
+                      <p className="text-xs text-slate-600">
+                        {t._dueDate ? `${formatRelativeDay(t._dueDate, now)} • ${formatTime(t._dueDate)}` : "Aujourd’hui"}
+                        {t._isImportant ? " • Prioritaire" : ""}
+                      </p>
+                    </div>
+                    <span className="mt-0.5 inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                      {t._isImportant ? "Prioritaire" : "À faire"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+        </section>
 
-          {/* Modules actifs (v2.0) */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Modules</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Accès rapide aux principaux modules de Tipote.
-            </p>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <Link
-                href="/strategy"
-                className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 hover:bg-slate-100"
-              >
-                <span className="font-semibold text-slate-900">Ma Stratégie</span>
-                <span className="text-[11px] text-slate-600">Plan + tâches</span>
-                <span className="mt-2 inline-flex w-fit rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-medium text-emerald-700">
-                  Actif
-                </span>
-              </Link>
-
-              <Link
-                href="/create"
-                className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 hover:bg-slate-100"
-              >
-                <span className="font-semibold text-slate-900">Créer</span>
-                <span className="text-[11px] text-slate-600">IA (contenus)</span>
-                <span className="mt-2 inline-flex w-fit rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-medium text-emerald-700">
-                  Actif
-                </span>
-              </Link>
-
-              <Link
-                href="/contents"
-                className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 hover:bg-slate-100"
-              >
-                <span className="font-semibold text-slate-900">Mes Contenus</span>
-                <span className="text-[11px] text-slate-600">Liste + calendrier</span>
-                <span className="mt-2 inline-flex w-fit rounded-full bg-emerald-100 px-2 py-[2px] text-[10px] font-medium text-emerald-700">
-                  Actif
-                </span>
-              </Link>
-
-              <Link
-                href="/settings"
-                className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 hover:bg-slate-100"
-              >
-                <span className="font-semibold text-slate-900">Paramètres</span>
-                <span className="text-[11px] text-slate-600">Profil + IA</span>
-                <span className="mt-2 inline-flex w-fit rounded-full bg-slate-200 px-2 py-[2px] text-[10px] font-medium text-slate-700">
-                  À brancher
-                </span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Stats rapides */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">Stats rapides</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Quand tu auras connecté tes stats, Tipote affichera ici quelques KPIs clés.
-                </p>
-              </div>
-              <Link
-                href="/analytics"
-                className="text-[11px] font-medium text-slate-600 hover:underline"
-              >
-                Analytics
-              </Link>
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs">
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                <span className="text-slate-600">Abonnés gagnés cette semaine</span>
-                <span className="font-semibold text-slate-900">–</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                <span className="text-slate-600">Taux d&apos;ouverture emails</span>
-                <span className="font-semibold text-slate-900">–</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                <span className="text-slate-600">Ventes du mois</span>
-                <span className="font-semibold text-slate-900">–</span>
-              </div>
-
-              <p className="pt-2 text-[11px] text-slate-500">
-                Bientôt, tu pourras connecter tes stats (emails, ventes, audience) pour avoir un suivi centralisé.
-              </p>
-            </div>
-          </div>
+        {/* Lien “Analytics détaillés” (cahier des charges) */}
+        <div className="flex justify-end">
+          <Link
+            href="/analytics"
+            className="text-sm font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-4"
+          >
+            Analytics détaillés
+          </Link>
         </div>
-      </section>
+      </div>
     </AppShell>
+  );
+}
+
+function StatCard({ title, value, sub }: { title: string; value: string; sub: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-sm text-slate-600">{title}</p>
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <p className="text-2xl font-semibold text-slate-900">{value}</p>
+      </div>
+      <p className="mt-1 text-[11px] text-slate-500">{sub}</p>
+    </div>
+  );
+}
+
+function ProgressRow({ label, right, percent }: { label: string; right: string; percent: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-900">{label}</p>
+        <p className="text-sm text-slate-600">{right}</p>
+      </div>
+      <div className="mt-2 h-2 w-full rounded-full bg-slate-100">
+        <div
+          className="h-2 rounded-full bg-[#b042b4]"
+          style={{ width: progressBarWidth(percent) }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function QuickLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+    >
+      <span>{label}</span>
+      <span className="text-slate-400">→</span>
+    </Link>
+  );
+}
+
+function UpcomingRow({ time, title, day, type }: { time: string; title: string; day: string; type: string }) {
+  return (
+    <div className="py-3 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="w-14 text-sm font-semibold text-slate-900">{time}</div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-slate-900">{title}</p>
+          <p className="text-xs text-slate-600">{day}</p>
+        </div>
+      </div>
+      <span className="shrink-0 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
+        {type}
+      </span>
+    </div>
   );
 }
