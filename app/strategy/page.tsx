@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import type { ReactNode } from "react";
 import StrategyClient from "./StrategyClient";
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
 
 type Task = {
   title?: string;
@@ -27,6 +27,28 @@ type BusinessPlanJson = {
   action_plan_30_90?: AnyRecord;
   tasks?: Task[];
 };
+
+type Persona = {
+  name?: string;
+  profile?: string;
+  pains?: string | string[];
+  desires?: string | string[];
+};
+
+function asString(v: unknown): string | undefined {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return undefined;
+}
+
+function asStringOrArray(v: unknown): string | string[] | undefined {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) {
+    const out = v.filter((x): x is string => typeof x === "string");
+    return out.length ? out : undefined;
+  }
+  return undefined;
+}
 
 function splitTasksByTimeframe(tasks: Task[] | undefined) {
   const base = { d30: [] as Task[], d60: [] as Task[], d90: [] as Task[] };
@@ -131,8 +153,14 @@ type PhaseCardProps = {
 
 function PhaseCard({ label, weeksKey, data }: PhaseCardProps) {
   if (!data) return null;
-  const focus = (data.focus as string) || (data["objectif"] as string);
-  const actions = (data.actions as string[]) || [];
+
+  const focus =
+    (typeof data.focus === "string" ? (data.focus as string) : "") ||
+    (typeof data["objectif"] === "string" ? (data["objectif"] as string) : "");
+
+  const actions = Array.isArray(data.actions)
+    ? (data.actions.filter((x): x is string => typeof x === "string") as string[])
+    : [];
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -198,28 +226,37 @@ export default async function StrategyPage() {
   const planJson = (planRow.plan_json ?? {}) as BusinessPlanJson;
 
   const businessProfile = (planJson.business_profile ?? {}) as AnyRecord;
-const persona = (planJson.persona ?? {}) as AnyRecord;
-const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
 
-// On considère qu'il y a un vrai choix initial
-// UNIQUEMENT si l'IA a déjà stocké une pyramide choisie.
-const hasExplicitSelection =
-  typeof planJson.selected_offer_pyramid_index === "number" &&
-  !!planJson.selected_offer_pyramid;
+  // ✅ FIX IMPORTANT : normalisation persona => plus de `unknown` rendu dans le JSX
+  const personaRaw = (planJson.persona ?? {}) as AnyRecord;
+  const persona: Persona = {
+    name: asString(personaRaw.name),
+    profile: asString(personaRaw.profile),
+    pains: asStringOrArray(personaRaw.pains),
+    desires: asStringOrArray(personaRaw.desires),
+  };
 
-// L'index sert surtout APRÈS le choix initial (mode "edit").
-// Si rien n'est choisi, on garde 0 mais il ne sera pas utilisé.
-const selectedIndex = hasExplicitSelection
-  ? (planJson.selected_offer_pyramid_index as number)
-  : 0;
+  const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
 
-// Si aucune pyramide n'a été choisie explicitement, on laisse undefined
-// pour déclencher le mode "choose" dans StrategyClient.
-const selectedPyramid = hasExplicitSelection
-  ? (planJson.selected_offer_pyramid as AnyRecord)
-  : undefined;
+  // On considère qu'il y a un vrai choix initial
+  // UNIQUEMENT si l'IA a déjà stocké une pyramide choisie.
+  const hasExplicitSelection =
+    typeof planJson.selected_offer_pyramid_index === "number" &&
+    !!planJson.selected_offer_pyramid;
 
-const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
+  // L'index sert surtout APRÈS le choix initial (mode "edit").
+  // Si rien n'est choisi, on garde 0 mais il ne sera pas utilisé.
+  const selectedIndex = hasExplicitSelection
+    ? (planJson.selected_offer_pyramid_index as number)
+    : 0;
+
+  // Si aucune pyramide n'a été choisie explicitement, on laisse undefined
+  // pour déclencher le mode "choose" dans StrategyClient.
+  const selectedPyramid = hasExplicitSelection
+    ? (planJson.selected_offer_pyramid as AnyRecord)
+    : undefined;
+
+  const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
 
   const tasks = (planJson.tasks ?? []) as Task[];
   const tasksByTimeframe = splitTasksByTimeframe(tasks);
@@ -344,7 +381,7 @@ const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
                     <span className="text-slate-700">
                       {Array.isArray(persona.pains)
                         ? persona.pains.join(" · ")
-                        : String(persona.pains)}
+                        : persona.pains}
                     </span>
                   </p>
                 )}
@@ -357,7 +394,7 @@ const actionPlan = (planJson.action_plan_30_90 ?? {}) as AnyRecord;
                     <span className="text-slate-700">
                       {Array.isArray(persona.desires)
                         ? persona.desires.join(" · ")
-                        : String(persona.desires)}
+                        : persona.desires}
                     </span>
                   </p>
                 )}

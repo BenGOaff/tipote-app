@@ -31,7 +31,7 @@ import {
   ListTodo,
 } from "lucide-react";
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
 
 type Task = {
   title?: string;
@@ -40,6 +40,12 @@ type Task = {
   due_date?: string | null;
   dueDate?: string | null; // variantes possibles
   importance?: string | null; // "high" / ...
+};
+
+type EnrichedTask = Task & {
+  _dueDate: Date | null;
+  _isDone: boolean;
+  _isImportant: boolean;
 };
 
 type BusinessPlanJson = {
@@ -58,7 +64,9 @@ function startOfDay(d: Date) {
 
 function isDoneStatus(status: string | undefined | null): boolean {
   const s = String(status ?? "").toLowerCase();
-  return ["done", "completed", "terminé", "termine", "finished"].some((k) => s.includes(k));
+  return ["done", "completed", "terminé", "termine", "finished"].some((k) =>
+    s.includes(k),
+  );
 }
 
 function parseDueDate(task: Task): Date | null {
@@ -76,7 +84,9 @@ function formatDueBadge(due: Date | null) {
   const today = startOfDay(now);
   const dueDay = startOfDay(due);
 
-  const diffDays = Math.round((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(
+    (dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   if (diffDays < 0) return "En retard";
   if (diffDays === 0) return "Aujourd'hui";
@@ -116,13 +126,24 @@ export default async function AppPage() {
 
   const planJson = (planRow.plan_json ?? {}) as BusinessPlanJson;
   const businessProfile = (planJson.business_profile ?? {}) as AnyRecord;
-  const actionPlan = (planJson.action_plan_30_90 ?? {}) as BusinessPlanJson["action_plan_30_90"];
-  const rawTasks = Array.isArray(planJson.tasks) ? (planJson.tasks as Task[]) : [];
+  const actionPlan = (planJson.action_plan_30_90 ??
+    {}) as BusinessPlanJson["action_plan_30_90"];
+  const rawTasks = Array.isArray(planJson.tasks)
+    ? (planJson.tasks as Task[])
+    : [];
 
   const now = new Date();
   const todayStart = startOfDay(now);
-  const tomorrowStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 1);
-  const weekEnd = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 7);
+  const tomorrowStart = new Date(
+    todayStart.getFullYear(),
+    todayStart.getMonth(),
+    todayStart.getDate() + 1,
+  );
+  const weekEnd = new Date(
+    todayStart.getFullYear(),
+    todayStart.getMonth(),
+    todayStart.getDate() + 7,
+  );
 
   const tasks = rawTasks
     .map((t) => {
@@ -132,10 +153,10 @@ export default async function AppPage() {
         _dueDate: due as Date | null,
         _isDone: isDoneStatus(t.status),
         _isImportant: String(t.importance ?? "").toLowerCase() === "high",
-      };
+      } as EnrichedTask;
     })
     // tri stable : d'abord échéance, puis important
-    .sort((a: any, b: any) => {
+    .sort((a: EnrichedTask, b: EnrichedTask) => {
       const da = a._dueDate ? a._dueDate.getTime() : Number.POSITIVE_INFINITY;
       const db = b._dueDate ? b._dueDate.getTime() : Number.POSITIVE_INFINITY;
       if (da !== db) return da - db;
@@ -143,31 +164,50 @@ export default async function AppPage() {
       return 0;
     });
 
-  const overdueTasks = tasks.filter((t: any) => t._dueDate && t._dueDate < todayStart && !t._isDone);
+  const overdueTasks = tasks.filter(
+    (t: EnrichedTask) =>
+      t._dueDate && t._dueDate < todayStart && !t._isDone,
+  );
+
   const tasksToday = tasks.filter(
-    (t: any) => t._dueDate && t._dueDate >= todayStart && t._dueDate < tomorrowStart && !t._isDone,
+    (t: EnrichedTask) =>
+      t._dueDate &&
+      t._dueDate >= todayStart &&
+      t._dueDate < tomorrowStart &&
+      !t._isDone,
   );
   const upcomingWeek = tasks.filter(
-    (t: any) => t._dueDate && t._dueDate >= tomorrowStart && t._dueDate < weekEnd && !t._isDone,
+    (t: EnrichedTask) =>
+      t._dueDate &&
+      t._dueDate >= tomorrowStart &&
+      t._dueDate < weekEnd &&
+      !t._isDone,
   );
 
   const totalTasks = tasks.length;
-  const doneTasksCount = tasks.filter((t: any) => t._isDone).length;
-  const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasksCount / totalTasks) * 100);
+  const doneTasksCount = tasks.filter((t: EnrichedTask) => t._isDone).length;
+  const progressPercent =
+    totalTasks === 0 ? 0 : Math.round((doneTasksCount / totalTasks) * 100);
 
   // Objectif 90 jours (variantes possibles)
-  const goal90 =
+  const rawGoal90 =
     actionPlan?.main_goal ??
-    businessProfile.main_goal ??
-    businessProfile.goal_90_days ??
+    (businessProfile as AnyRecord).main_goal ??
+    (businessProfile as AnyRecord).goal_90_days ??
     "";
 
+  const goal90: string =
+    typeof rawGoal90 === "string" ? rawGoal90 : String(rawGoal90 ?? "");
+
   // Prochaine action = priorité aux retards, sinon aujourd'hui
-  const nextTask: any = overdueTasks[0] ?? tasksToday[0] ?? null;
+  const nextTask: EnrichedTask | null =
+    overdueTasks[0] ?? tasksToday[0] ?? null;
 
   const nextTitle =
     nextTask?.title?.trim?.() ||
-    (tasksToday.length > 0 ? "Choisir ta prochaine action" : "Définir ta prochaine action");
+    (tasksToday.length > 0
+      ? "Choisir ta prochaine action"
+      : "Définir ta prochaine action");
   const nextDescription =
     nextTask?.description?.trim?.() ||
     "On va remplir ça automatiquement après l’onboarding. Pour l’instant, tu peux avancer avec tes actions rapides.";
@@ -232,8 +272,12 @@ export default async function AppPage() {
                 </div>
 
                 <div>
-                  <p className="text-primary-foreground/80 text-sm">Ta prochaine action</p>
-                  <h2 className="text-2xl font-bold text-primary-foreground">{nextTitle}</h2>
+                  <p className="text-primary-foreground/80 text-sm">
+                    Ta prochaine action
+                  </p>
+                  <h2 className="text-2xl font-bold text-primary-foreground">
+                    {nextTitle}
+                  </h2>
                 </div>
               </div>
 
@@ -269,7 +313,10 @@ export default async function AppPage() {
                 </Link>
 
                 <Link href="/strategy">
-                  <Button variant="ghost" className="text-primary-foreground hover:bg-background/10">
+                  <Button
+                    variant="ghost"
+                    className="text-primary-foreground hover:bg-background/10"
+                  >
                     Voir la stratégie
                   </Button>
                 </Link>
@@ -292,7 +339,9 @@ export default async function AppPage() {
                   {stat.trend}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+              <p className="text-sm text-muted-foreground mb-1">
+                {stat.label}
+              </p>
               <p className="text-2xl font-bold">{stat.value}</p>
             </Card>
           ))}
@@ -313,7 +362,9 @@ export default async function AppPage() {
             <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Actions terminées</span>
+                  <span className="text-sm text-muted-foreground">
+                    Actions terminées
+                  </span>
                   <span className="text-sm font-medium">
                     {doneTasksCount}/{totalTasks}
                   </span>
@@ -323,7 +374,9 @@ export default async function AppPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Objectif 90 jours</span>
+                  <span className="text-sm text-muted-foreground">
+                    Objectif 90 jours
+                  </span>
                   <span className="text-sm font-medium">
                     {goal90 ? "Défini" : "À définir"}
                   </span>
@@ -331,7 +384,10 @@ export default async function AppPage() {
                 <Progress value={goal90 ? 25 : 0} className="h-2" />
                 {goal90 ? (
                   <p className="mt-3 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Objectif :</span> {goal90}
+                    <span className="font-medium text-foreground">
+                      Objectif :
+                    </span>{" "}
+                    {goal90}
                   </p>
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">
@@ -383,7 +439,9 @@ export default async function AppPage() {
                       <p className="font-semibold group-hover:text-primary transition-colors">
                         Voir mes contenus
                       </p>
-                      <p className="text-sm text-muted-foreground">Liste & calendrier éditorial</p>
+                      <p className="text-sm text-muted-foreground">
+                        Liste & calendrier éditorial
+                      </p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
@@ -400,7 +458,9 @@ export default async function AppPage() {
                       <p className="font-semibold group-hover:text-primary transition-colors">
                         Ajuster ma stratégie
                       </p>
-                      <p className="text-sm text-muted-foreground">Pyramides, offres, angles</p>
+                      <p className="text-sm text-muted-foreground">
+                        Pyramides, offres, angles
+                      </p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
@@ -421,11 +481,12 @@ export default async function AppPage() {
 
           {upcomingWeek.length === 0 ? (
             <div className="text-sm text-muted-foreground">
-              Rien de planifié pour la semaine pour l’instant. Après l’onboarding, on affichera ici tes prochaines échéances.
+              Rien de planifié pour la semaine pour l’instant. Après
+              l’onboarding, on affichera ici tes prochaines échéances.
             </div>
           ) : (
             <div className="grid gap-3">
-              {upcomingWeek.slice(0, 5).map((t: any, idx: number) => (
+              {upcomingWeek.slice(0, 5).map((t: EnrichedTask, idx: number) => (
                 <div
                   key={`${t.title ?? "task"}-${idx}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
@@ -435,7 +496,9 @@ export default async function AppPage() {
                       <Clock className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <div className="font-medium text-sm">{t.title ?? "Action à venir"}</div>
+                      <div className="font-medium text-sm">
+                        {t.title ?? "Action à venir"}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {formatDueBadge((t._dueDate ?? null) as Date | null)}
                       </div>
