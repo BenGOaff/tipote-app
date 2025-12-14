@@ -1,10 +1,10 @@
 // app/layout.tsx
-import './globals.css';
-import type { Metadata } from 'next';
+import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Tipote',
-  description: 'Tipote – planification stratégique & automatisations business',
+  title: "Tipote",
+  description: "Tipote – planification stratégique & automatisations business",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body className="bg-slate-50 text-slate-900 antialiased">
+      <body className="font-sans antialiased">
         {children}
       </body>
     </html>
