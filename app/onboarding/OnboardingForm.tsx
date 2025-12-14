@@ -1,116 +1,229 @@
-// app/onboarding/OnboardingForm.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type Offer = {
-  name: string;
-  type: string;
-  price: number | null;
-  sales: number | null;
-};
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+
+/**
+ * Types
+ */
+type AgeRange =
+  | ""
+  | "18-24"
+  | "25-34"
+  | "35-44"
+  | "45-54"
+  | "55+";
+
+type Gender = "" | "feminin" | "masculin" | "non_genre" | "prefere_ne_pas_repondre";
+
+type BusinessMaturity = "" | "ideation" | "lancement" | "croissance" | "scale";
+
+type OffersStatus = "" | "aucune" | "une" | "plusieurs" | "offre_signature";
+
+type TimeAvailable = "" | "moins_2h" | "2_5h" | "5_10h" | "plus_10h";
+
+type MainGoal =
+  | "plus_de_clients"
+  | "augmenter_prix"
+  | "mieux_structurer"
+  | "plus_de_visibilite"
+  | "creer_offre"
+  | "lancer_funnel"
+  | "autre";
+
+type PreferredContentType = "texte" | "video" | "audio" | "mix";
+
+type Niche =
+  | ""
+  | "argent"
+  | "business"
+  | "marketing"
+  | "coaching"
+  | "bien_etre"
+  | "spiritualite"
+  | "relations"
+  | "parentalite"
+  | "fitness"
+  | "nutrition"
+  | "beaute"
+  | "mode"
+  | "voyage"
+  | "creation"
+  | "education"
+  | "productivite"
+  | "tech"
+  | "autre";
 
 type FormData = {
-  // Identité
   firstName: string;
-  ageRange: string;
-  gender: string;
+  ageRange: AgeRange;
+  gender: Gender;
   country: string;
 
-  // Niche & mission
-  niche: string;
+  niche: Niche;
   nicheOther: string;
   mission: string;
 
-  // Situation actuelle
-  businessMaturity: string;
-  offersStatus: string;
-  offers: Offer[];
-  audienceSocial: string;
-  audienceEmail: string;
-  timeAvailable: string;
-  mainGoal: string;
+  businessMaturity: BusinessMaturity;
+  offersStatus: OffersStatus;
 
-  // Zone de génie
-  energySources: string;
-  uniqueValue: string;
-  untappedStrength: string;
-  communicationStyle: string;
+  offerNames: string;
+  offerPriceRange: string;
+  offerDelivery: string;
 
-  // Mindset & ambitions
-  successDefinition: string;
-  sixMonthVision: string;
-  innerDialogue: string;
-  ifCertainSuccess: string;
-  biggestFears: string;
+  audienceSize: string;
+  emailListSize: string;
 
-  // Défis & ressources
-  biggestChallenge: string;
-  workingStrategies: string;
-  recentClientFeedback: string;
-  preferredContentType: string;
+  timeAvailable: TimeAvailable;
+  mainGoals: MainGoal[];
+  mainGoalsOther: string;
+
+  preferredContentTypes: PreferredContentType[];
+  tonePreference: string;
+
+  instagramUrl: string;
+  tiktokUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  websiteUrl: string;
+
+  hasExistingBranding: boolean;
+
+  biggestBlocker: string;
+  additionalContext: string;
 };
 
-const AGE_RANGES = [
-  "18-24",
-  "25-34",
-  "35-44",
-  "45-54",
-  "55+",
+type StepId =
+  | "profile"
+  | "niche"
+  | "maturity"
+  | "offers"
+  | "audience"
+  | "goals"
+  | "content"
+  | "links"
+  | "blockers"
+  | "review";
+
+type Step = {
+  id: StepId;
+  title: string;
+  subtitle?: string;
+};
+
+const STEPS: Step[] = [
+  {
+    id: "profile",
+    title: "Profil",
+    subtitle: "Quelques infos pour personnaliser Tipote",
+  },
+  {
+    id: "niche",
+    title: "Niche & mission",
+    subtitle: "Ce que tu fais et pour qui",
+  },
+  {
+    id: "maturity",
+    title: "Maturité business",
+    subtitle: "Où tu en es aujourd'hui",
+  },
+  {
+    id: "offers",
+    title: "Offres",
+    subtitle: "Ton catalogue actuel",
+  },
+  {
+    id: "audience",
+    title: "Audience",
+    subtitle: "Ta visibilité et tes listes",
+  },
+  {
+    id: "goals",
+    title: "Objectifs",
+    subtitle: "Ce que tu veux atteindre en priorité",
+  },
+  {
+    id: "content",
+    title: "Contenus",
+    subtitle: "Ton style et tes préférences",
+  },
+  {
+    id: "links",
+    title: "Liens",
+    subtitle: "Tes réseaux & site",
+  },
+  {
+    id: "blockers",
+    title: "Blocages",
+    subtitle: "Ce qui te freine aujourd’hui",
+  },
+  {
+    id: "review",
+    title: "Récap",
+    subtitle: "Vérifie avant de générer ta stratégie",
+  },
 ];
 
-const GENDERS = [
-  "feminin",
-  "masculin",
-  "non_genre",
-  "prefere_ne_pas_repondre",
-];
+const AGE_RANGES: AgeRange[] = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
-const NICHES = [
+/**
+ * Ces listes sont exportées pour être réutilisées ailleurs (ex: analytics, settings, etc.)
+ * et éviter les warnings ESLint `no-unused-vars` quand le fichier ne les consomme pas directement.
+ */
+export const GENDERS: Gender[] = ["feminin", "masculin", "non_genre", "prefere_ne_pas_repondre"];
+
+export const NICHES: Exclude<Niche, "">[] = [
   "argent",
-  "sante_bien_etre",
-  "developpement_personnel",
+  "business",
+  "marketing",
+  "coaching",
+  "bien_etre",
+  "spiritualite",
   "relations",
+  "parentalite",
+  "fitness",
+  "nutrition",
+  "beaute",
+  "mode",
+  "voyage",
+  "creation",
+  "education",
+  "productivite",
+  "tech",
   "autre",
 ];
 
-const BUSINESS_MATURITY = [
-  "not_launched",
-  "launched_no_sales",
-  "lt_500",
-  "500_2000",
-  "gt_2000",
+export const BUSINESS_MATURITY: Exclude<BusinessMaturity, "">[] = ["ideation", "lancement", "croissance", "scale"];
+
+export const OFFERS_STATUS: Exclude<OffersStatus, "">[] = ["aucune", "une", "plusieurs", "offre_signature"];
+
+export const TIME_AVAILABLE: Exclude<TimeAvailable, "">[] = ["moins_2h", "2_5h", "5_10h", "plus_10h"];
+
+export const MAIN_GOALS: MainGoal[] = [
+  "plus_de_clients",
+  "augmenter_prix",
+  "mieux_structurer",
+  "plus_de_visibilite",
+  "creer_offre",
+  "lancer_funnel",
+  "autre",
 ];
 
-const OFFERS_STATUS = [
-  "none",
-  "lead_magnet",
-  "one_offer",
-  "multiple_offers",
-];
-
-const TIME_AVAILABLE = [
-  "lt_5h",
-  "5_10h",
-  "10_20h",
-  "gt_20h",
-];
-
-const MAIN_GOALS = [
-  "create_first_offer",
-  "build_audience",
-  "first_sales",
-  "increase_revenue",
-  "automate",
-];
-
-const PREFERRED_CONTENT_TYPES = [
-  "ecrit",
-  "video",
-  "audio",
-  "mix",
-];
+export const PREFERRED_CONTENT_TYPES: PreferredContentType[] = ["texte", "video", "audio", "mix"];
 
 const initialFormData: FormData = {
   firstName: "",
@@ -124,781 +237,1045 @@ const initialFormData: FormData = {
 
   businessMaturity: "",
   offersStatus: "",
-  offers: [],
-  audienceSocial: "",
-  audienceEmail: "",
+
+  offerNames: "",
+  offerPriceRange: "",
+  offerDelivery: "",
+
+  audienceSize: "",
+  emailListSize: "",
+
   timeAvailable: "",
-  mainGoal: "",
+  mainGoals: [],
+  mainGoalsOther: "",
 
-  energySources: "",
-  uniqueValue: "",
-  untappedStrength: "",
-  communicationStyle: "",
+  preferredContentTypes: [],
+  tonePreference: "",
 
-  successDefinition: "",
-  sixMonthVision: "",
-  innerDialogue: "",
-  ifCertainSuccess: "",
-  biggestFears: "",
+  instagramUrl: "",
+  tiktokUrl: "",
+  linkedinUrl: "",
+  youtubeUrl: "",
+  websiteUrl: "",
 
-  biggestChallenge: "",
-  workingStrategies: "",
-  recentClientFeedback: "",
-  preferredContentType: "",
+  hasExistingBranding: false,
+
+  biggestBlocker: "",
+  additionalContext: "",
 };
+
+function formatGenderLabel(value: Gender) {
+  switch (value) {
+    case "feminin":
+      return "Féminin";
+    case "masculin":
+      return "Masculin";
+    case "non_genre":
+      return "Non genré / autre";
+    case "prefere_ne_pas_repondre":
+      return "Je préfère ne pas répondre";
+    default:
+      return value;
+  }
+}
+
+function formatNicheLabel(value: Niche) {
+  switch (value) {
+    case "argent":
+      return "Argent / finances";
+    case "business":
+      return "Business / entrepreneuriat";
+    case "marketing":
+      return "Marketing / acquisition";
+    case "coaching":
+      return "Coaching / accompagnement";
+    case "bien_etre":
+      return "Bien-être / santé";
+    case "spiritualite":
+      return "Spiritualité";
+    case "relations":
+      return "Relations / couple";
+    case "parentalite":
+      return "Parentalité";
+    case "fitness":
+      return "Fitness / sport";
+    case "nutrition":
+      return "Nutrition";
+    case "beaute":
+      return "Beauté";
+    case "mode":
+      return "Mode";
+    case "voyage":
+      return "Voyage";
+    case "creation":
+      return "Création / artisanat";
+    case "education":
+      return "Éducation / formation";
+    case "productivite":
+      return "Productivité / organisation";
+    case "tech":
+      return "Tech / outils";
+    case "autre":
+      return "Autre";
+    default:
+      return "";
+  }
+}
+
+function formatBusinessMaturityLabel(value: BusinessMaturity) {
+  switch (value) {
+    case "ideation":
+      return "Idéation (je démarre)";
+    case "lancement":
+      return "Lancement (0-3 mois)";
+    case "croissance":
+      return "Croissance (j'ai déjà des ventes)";
+    case "scale":
+      return "Scale (j'accélère / j'automatise)";
+    default:
+      return "";
+  }
+}
+
+function formatOffersStatusLabel(value: OffersStatus) {
+  switch (value) {
+    case "aucune":
+      return "Je n'ai pas encore d'offre";
+    case "une":
+      return "J'ai une offre";
+    case "plusieurs":
+      return "J'ai plusieurs offres";
+    case "offre_signature":
+      return "J'ai une offre signature";
+    default:
+      return "";
+  }
+}
+
+function formatTimeAvailableLabel(value: TimeAvailable) {
+  switch (value) {
+    case "moins_2h":
+      return "Moins de 2h / semaine";
+    case "2_5h":
+      return "2 à 5h / semaine";
+    case "5_10h":
+      return "5 à 10h / semaine";
+    case "plus_10h":
+      return "Plus de 10h / semaine";
+    default:
+      return "";
+  }
+}
+
+function formatMainGoalLabel(value: MainGoal) {
+  switch (value) {
+    case "plus_de_clients":
+      return "Trouver plus de clients";
+    case "augmenter_prix":
+      return "Augmenter mes prix";
+    case "mieux_structurer":
+      return "Mieux structurer mon business";
+    case "plus_de_visibilite":
+      return "Gagner en visibilité";
+    case "creer_offre":
+      return "Créer / améliorer une offre";
+    case "lancer_funnel":
+      return "Lancer un funnel / tunnel";
+    case "autre":
+      return "Autre";
+    default:
+      return value;
+  }
+}
+
+function formatContentTypeLabel(value: PreferredContentType) {
+  switch (value) {
+    case "texte":
+      return "Texte";
+    case "video":
+      return "Vidéo";
+    case "audio":
+      return "Audio";
+    case "mix":
+      return "Mix";
+    default:
+      return value;
+  }
+}
+
+function clamp01(n: number) {
+  if (Number.isNaN(n)) return 0;
+  return Math.min(1, Math.max(0, n));
+}
+
+function normalizeUrl(url: string) {
+  const v = url.trim();
+  if (!v) return "";
+  if (v.startsWith("http://") || v.startsWith("https://")) return v;
+  return `https://${v}`;
+}
+
+function validateStep(stepId: StepId, data: FormData) {
+  const errors: Record<string, string> = {};
+
+  if (stepId === "profile") {
+    if (!data.firstName.trim()) errors.firstName = "Ton prénom est requis";
+    if (!data.ageRange) errors.ageRange = "Sélectionne une tranche d'âge";
+    if (!data.gender) errors.gender = "Sélectionne une option";
+    if (!data.country.trim()) errors.country = "Ton pays est requis";
+  }
+
+  if (stepId === "niche") {
+    if (!data.niche) errors.niche = "Sélectionne une niche";
+    if (data.niche === "autre" && !data.nicheOther.trim()) errors.nicheOther = "Précise ta niche";
+    if (!data.mission.trim()) errors.mission = "Décris en 1-2 phrases ta mission";
+  }
+
+  if (stepId === "maturity") {
+    if (!data.businessMaturity) errors.businessMaturity = "Sélectionne une option";
+  }
+
+  if (stepId === "offers") {
+    if (!data.offersStatus) errors.offersStatus = "Sélectionne une option";
+    if (data.offersStatus !== "aucune") {
+      if (!data.offerNames.trim()) errors.offerNames = "Indique au moins le nom de tes offres";
+      if (!data.offerPriceRange.trim()) errors.offerPriceRange = "Indique une fourchette de prix";
+      if (!data.offerDelivery.trim()) errors.offerDelivery = "Indique le format de tes offres";
+    }
+  }
+
+  if (stepId === "audience") {
+    if (!data.audienceSize.trim()) errors.audienceSize = "Indique une estimation";
+    if (!data.emailListSize.trim()) errors.emailListSize = "Indique une estimation";
+  }
+
+  if (stepId === "goals") {
+    if (!data.timeAvailable) errors.timeAvailable = "Sélectionne une option";
+    if (!data.mainGoals || data.mainGoals.length === 0) errors.mainGoals = "Choisis au moins un objectif";
+    if (data.mainGoals.includes("autre") && !data.mainGoalsOther.trim()) errors.mainGoalsOther = "Précise ton objectif";
+  }
+
+  if (stepId === "content") {
+    if (!data.preferredContentTypes || data.preferredContentTypes.length === 0)
+      errors.preferredContentTypes = "Choisis au moins un format";
+    if (!data.tonePreference.trim()) errors.tonePreference = "Décris le ton souhaité (ex: direct, fun, premium...)";
+  }
+
+  if (stepId === "links") {
+    // optional; normalize later
+  }
+
+  if (stepId === "blockers") {
+    if (!data.biggestBlocker.trim()) errors.biggestBlocker = "Décris ton principal blocage";
+  }
+
+  return errors;
+}
+
+function countCompletion(data: FormData) {
+  const fields: Array<[string, boolean]> = [
+    ["firstName", Boolean(data.firstName.trim())],
+    ["ageRange", Boolean(data.ageRange)],
+    ["gender", Boolean(data.gender)],
+    ["country", Boolean(data.country.trim())],
+
+    ["niche", Boolean(data.niche)],
+    ["nicheOther", data.niche !== "autre" ? true : Boolean(data.nicheOther.trim())],
+    ["mission", Boolean(data.mission.trim())],
+
+    ["businessMaturity", Boolean(data.businessMaturity)],
+
+    ["offersStatus", Boolean(data.offersStatus)],
+    ["offerNames", data.offersStatus === "aucune" ? true : Boolean(data.offerNames.trim())],
+    ["offerPriceRange", data.offersStatus === "aucune" ? true : Boolean(data.offerPriceRange.trim())],
+    ["offerDelivery", data.offersStatus === "aucune" ? true : Boolean(data.offerDelivery.trim())],
+
+    ["audienceSize", Boolean(data.audienceSize.trim())],
+    ["emailListSize", Boolean(data.emailListSize.trim())],
+
+    ["timeAvailable", Boolean(data.timeAvailable)],
+    ["mainGoals", Boolean(data.mainGoals?.length)],
+    ["mainGoalsOther", data.mainGoals?.includes("autre") ? Boolean(data.mainGoalsOther.trim()) : true],
+
+    ["preferredContentTypes", Boolean(data.preferredContentTypes?.length)],
+    ["tonePreference", Boolean(data.tonePreference.trim())],
+
+    ["biggestBlocker", Boolean(data.biggestBlocker.trim())],
+  ];
+
+  const done = fields.filter(([, ok]) => ok).length;
+  return clamp01(done / fields.length);
+}
+
+async function postJSON<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Erreur API (${res.status})`);
+  }
+
+  return (await res.json()) as T;
+}
 
 export default function OnboardingForm() {
   const router = useRouter();
-  const [step, setStep] = useState(0); // 0..5
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Charger les réponses existantes si elles existent
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/onboarding/answers");
-        if (!res.ok) {
-          // si 401 → redirection vers login ailleurs
-          console.warn("Failed to fetch onboarding answers", await res.text());
-          setLoading(false);
-          return;
-        }
-        const json = await res.json();
-        if (json?.profile) {
-          const p = json.profile;
+  const [stepIndex, setStepIndex] = React.useState(0);
+  const step = STEPS[stepIndex];
 
-          setFormData((prev) => ({
-            ...prev,
-            firstName: p.first_name ?? "",
-            ageRange: p.age_range ?? "",
-            gender: p.gender ?? "",
-            country: p.country ?? "",
-            niche: p.niche ?? "",
-            nicheOther: p.niche_other ?? "",
-            mission: p.mission ?? "",
-            businessMaturity: p.business_maturity ?? "",
-            offersStatus: p.offers_status ?? "",
-            offers: p.offers ?? [],
-            audienceSocial: p.audience_social?.toString() ?? "",
-            audienceEmail: p.audience_email?.toString() ?? "",
-            timeAvailable: p.time_available ?? "",
-            mainGoal: p.main_goal ?? "",
-            energySources: p.energy_sources ?? "",
-            uniqueValue: p.unique_value ?? "",
-            untappedStrength: p.untapped_strength ?? "",
-            communicationStyle: p.communication_style ?? "",
-            successDefinition: p.success_definition ?? "",
-            sixMonthVision: p.six_month_vision ?? "",
-            innerDialogue: p.inner_dialogue ?? "",
-            ifCertainSuccess: p.if_certain_success ?? "",
-            biggestFears: p.biggest_fears ?? "",
-            biggestChallenge: p.biggest_challenge ?? "",
-            workingStrategies: p.working_strategies ?? "",
-            recentClientFeedback: p.recent_client_feedback ?? "",
-            preferredContentType: p.preferred_content_type ?? "",
-          }));
-        }
-      } catch (e) {
-        console.error("Error loading onboarding profile", e);
-        setError("Impossible de charger tes réponses. Réessaie dans un instant.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [formData, setFormData] = React.useState<FormData>(initialFormData);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-    loadProfile();
+  const progress = React.useMemo(() => countCompletion(formData), [formData]);
+
+  const canGoBack = stepIndex > 0;
+  const canGoNext = stepIndex < STEPS.length - 1;
+
+  const setField = React.useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => {
+      if (!prev[key as string]) return prev;
+      const next = { ...prev };
+      delete next[key as string];
+      return next;
+    });
   }, []);
 
-  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const toggleArrayValue = React.useCallback(
+    <K extends keyof FormData>(key: K, value: string) => {
+      setFormData((prev) => {
+        const current = (prev[key] as unknown as string[]) || [];
+        const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+        return { ...prev, [key]: next as unknown as FormData[K] };
+      });
+      setErrors((prev) => {
+        if (!prev[key as string]) return prev;
+        const next = { ...prev };
+        delete next[key as string];
+        return next;
+      });
+    },
+    [],
+  );
 
-  const validateStep = (): boolean => {
-    setError(null);
-    const requiredFieldsByStep: (keyof FormData)[][] = [
-      // Step 0: Identité
-      ["firstName", "ageRange", "gender", "country"],
-      // Step 1: Niche & mission
-      ["niche", "mission"],
-      // Step 2: Situation actuelle
-      [
-        "businessMaturity",
-        "offersStatus",
-        "timeAvailable",
-        "mainGoal",
-      ],
-      // Step 3: Zone de génie
-      ["energySources", "uniqueValue", "untappedStrength", "communicationStyle"],
-      // Step 4: Mindset & ambitions
-      [
-        "successDefinition",
-        "sixMonthVision",
-        "innerDialogue",
-        "ifCertainSuccess",
-        "biggestFears",
-      ],
-      // Step 5: Défis & ressources
-      [
-        "biggestChallenge",
-        "workingStrategies",
-        "recentClientFeedback",
-        "preferredContentType",
-      ],
-    ];
+  const validateAndSetErrors = React.useCallback(
+    (stepId: StepId) => {
+      const nextErrors = validateStep(stepId, formData);
+      setErrors(nextErrors);
+      return Object.keys(nextErrors).length === 0;
+    },
+    [formData],
+  );
 
-    const required = requiredFieldsByStep[step] ?? [];
-    const missing = required.filter((field) => {
-      const v = formData[field];
-      return typeof v === "string" ? v.trim() === "" : v == null;
-    });
+  const goNext = React.useCallback(() => {
+    if (!step) return;
 
-    if (missing.length > 0) {
-      setError("Merci de répondre à toutes les questions de cette étape avant de continuer.");
-      return false;
+    const ok = validateAndSetErrors(step.id);
+    if (!ok) {
+      toast({
+        title: "On a besoin de quelques infos",
+        description: "Vérifie les champs en rouge pour continuer.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    if (step === 1 && formData.niche === "autre" && formData.nicheOther.trim() === "") {
-      setError("Merci de préciser ta niche dans le champ prévu.");
-      return false;
+    if (canGoNext) setStepIndex((i) => i + 1);
+  }, [canGoNext, step, toast, validateAndSetErrors]);
+
+  const goBack = React.useCallback(() => {
+    if (canGoBack) setStepIndex((i) => i - 1);
+  }, [canGoBack]);
+
+  const submit = React.useCallback(async () => {
+    const ok = validateAndSetErrors(step.id);
+    if (!ok) {
+      toast({
+        title: "On a besoin de quelques infos",
+        description: "Vérifie les champs en rouge pour continuer.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    return true;
-  };
-
-  const handleNext = () => {
-    if (!validateStep()) return;
-    setStep((prev) => Math.min(prev + 1, 5));
-  };
-
-  const handleBack = () => {
-    setError(null);
-    setStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleSubmit = async () => {
-    if (!validateStep()) return;
-
+    setIsSubmitting(true);
     try {
-      setSubmitting(true);
-      setError(null);
-
-      const payload: FormData = {
+      // Normalisation URLs
+      const payload = {
         ...formData,
-        audienceSocial: formData.audienceSocial.trim(),
-        audienceEmail: formData.audienceEmail.trim(),
+        instagramUrl: normalizeUrl(formData.instagramUrl),
+        tiktokUrl: normalizeUrl(formData.tiktokUrl),
+        linkedinUrl: normalizeUrl(formData.linkedinUrl),
+        youtubeUrl: normalizeUrl(formData.youtubeUrl),
+        websiteUrl: normalizeUrl(formData.websiteUrl),
       };
 
-      const res = await fetch("/api/onboarding/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      await postJSON<{ ok: boolean }>("/api/onboarding/answers", payload);
+
+      // Marquer onboarding complet (route dédiée)
+      await postJSON<{ ok: boolean }>("/api/onboarding/complete", {});
+
+      toast({
+        title: "Onboarding terminé ✅",
+        description: "On génère maintenant ta stratégie.",
       });
 
-      if (!res.ok) {
-        console.error("Error saving onboarding answers", await res.text());
-        setError("Impossible de sauvegarder tes réponses. Réessaie dans un instant.");
-        setSubmitting(false);
-        return;
-      }
-
-      // Générer le plan stratégique
-      const planRes = await fetch("/api/onboarding/complete", {
-        method: "POST",
-      });
-
-      if (!planRes.ok) {
-        console.error("Error generating strategic plan", await planRes.text());
-        setError(
-          "Tes réponses sont enregistrées, mais la génération du plan a échoué. Tu pourras réessayer plus tard depuis ton tableau de bord."
-        );
-        setSubmitting(false);
-        return;
-      }
-
-      router.push("/app");
+      router.push("/strategy");
     } catch (e) {
-      console.error("Unexpected error during onboarding submit", e);
-      setError("Une erreur inattendue s'est produite. Réessaie dans un instant.");
-      setSubmitting(false);
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      toast({
+        title: "Impossible d'enregistrer",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [formData, router, step.id, toast, validateAndSetErrors]);
 
-  const renderStepTitle = () => {
-    switch (step) {
-      case 0:
-        return "Apprenons à te connaître";
-      case 1:
-        return "Clarifions ta niche et ta mission";
-      case 2:
-        return "Faisons le point sur ta situation actuelle";
-      case 3:
-        return "Ta zone de génie";
-      case 4:
-        return "Ton mindset & tes ambitions";
-      case 5:
-        return "Tes défis & tes ressources";
-      default:
-        return "";
+  const onPrimary = React.useCallback(() => {
+    if (step.id === "review") {
+      void submit();
+      return;
     }
-  };
+    goNext();
+  }, [goNext, step.id, submit]);
 
-  const renderStepDescription = () => {
-    switch (step) {
-      case 0:
-        return "Ces infos permettent à Tipote de parler ton langage et d'adapter le ton des recommandations.";
-      case 1:
-        return "Plus ta niche et ta mission sont claires, plus les contenus et offres proposés seront précis.";
-      case 2:
-        return "On calibre le plan d'action en fonction de là où tu en es vraiment aujourd'hui.";
-      case 3:
-        return "On veut que Tipote s'appuie sur ce qui te donne de l'énergie, pas l'inverse.";
-      case 4:
-        return "Le mindset et la vision impactent directement le rythme, le ton et les priorités du plan.";
-      case 5:
-        return "Ces éléments aident Tipote à t'aider exactement là où ça bloque vraiment.";
-      default:
-        return "";
-    }
-  };
-
-  const renderStep = () => {
-    switch (step) {
-      case 0:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Comment tu t&apos;appelles ? <span className="text-rose-400">*</span>
-              </label>
-              <input
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.firstName}
-                onChange={(e) => updateField("firstName", e.target.value)}
-                placeholder="Ex : Béné"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tranche d&apos;âge <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.ageRange}
-                  onChange={(e) => updateField("ageRange", e.target.value)}
-                >
-                  <option value="">Sélectionne</option>
-                  {AGE_RANGES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Genre <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.gender}
-                  onChange={(e) => updateField("gender", e.target.value)}
-                >
-                  <option value="">Sélectionne</option>
-                  <option value="feminin">Féminin</option>
-                  <option value="masculin">Masculin</option>
-                  <option value="non_genre">Non genré</option>
-                  <option value="prefere_ne_pas_repondre">
-                    Préfère ne pas répondre
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Pays <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.country}
-                  onChange={(e) => updateField("country", e.target.value)}
-                  placeholder="Ex : France, Belgique, Canada..."
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Dans quel grand domaine tu aides les gens ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <select
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.niche}
-                onChange={(e) => updateField("niche", e.target.value)}
-              >
-                <option value="">Sélectionne</option>
-                <option value="argent">Argent / Business</option>
-                <option value="sante_bien_etre">Santé / Bien-être</option>
-                <option value="developpement_personnel">
-                  Développement personnel
-                </option>
-                <option value="relations">Relations</option>
-                <option value="autre">Autre</option>
-              </select>
-              {formData.niche === "autre" && (
-                <input
-                  className="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.nicheOther}
-                  onChange={(e) => updateField("nicheOther", e.target.value)}
-                  placeholder="Précise ta niche"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Décris en une phrase : qui tu aides à faire quoi, et comment ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.mission}
-                onChange={(e) => updateField("mission", e.target.value)}
-                placeholder="Ex : J'aide les mamans débordées à s'organiser grâce à des routines simples."
-              />
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Où en es-tu aujourd&apos;hui avec ton business ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <select
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.businessMaturity}
-                onChange={(e) =>
-                  updateField("businessMaturity", e.target.value)
-                }
-              >
-                <option value="">Sélectionne</option>
-                <option value="not_launched">Je n&apos;ai pas encore lancé</option>
-                <option value="launched_no_sales">
-                  J&apos;ai lancé mais pas encore vendu
-                </option>
-                <option value="lt_500">Je fais moins de 500€/mois</option>
-                <option value="500_2000">Entre 500€ et 2000€/mois</option>
-                <option value="gt_2000">Plus de 2000€/mois</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                As-tu déjà des offres à vendre ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <select
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.offersStatus}
-                onChange={(e) => updateField("offersStatus", e.target.value)}
-              >
-                <option value="">Sélectionne</option>
-                <option value="none">Non, aucune</option>
-                <option value="lead_magnet">Oui, un lead magnet</option>
-                <option value="one_offer">Oui, une offre payante</option>
-                <option value="multiple_offers">Oui, plusieurs offres</option>
-              </select>
-              <p className="mt-1 text-xs text-slate-400">
-                Tu pourras détailler plus précisément tes offres dans Tipote
-                ensuite.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Abonnés réseaux sociaux (estimation){" "}
-                </label>
-                <input
-                  type="number"
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.audienceSocial}
-                  onChange={(e) =>
-                    updateField("audienceSocial", e.target.value)
-                  }
-                  placeholder="Ex : 2500"
-                  min={0}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Emails dans ta liste{" "}
-                </label>
-                <input
-                  type="number"
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.audienceEmail}
-                  onChange={(e) =>
-                    updateField("audienceEmail", e.target.value)
-                  }
-                  placeholder="Ex : 450"
-                  min={0}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Temps dispo / semaine pour ton business{" "}
-                  <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                  value={formData.timeAvailable}
-                  onChange={(e) => updateField("timeAvailable", e.target.value)}
-                >
-                  <option value="">Sélectionne</option>
-                  <option value="lt_5h">Moins de 5h</option>
-                  <option value="5_10h">5 à 10h</option>
-                  <option value="10_20h">10 à 20h</option>
-                  <option value="gt_20h">Plus de 20h</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Objectif principal pour les 90 prochains jours{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <select
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.mainGoal}
-                onChange={(e) => updateField("mainGoal", e.target.value)}
-              >
-                <option value="">Sélectionne</option>
-                <option value="create_first_offer">
-                  Créer ma première offre
-                </option>
-                <option value="build_audience">Construire mon audience</option>
-                <option value="first_sales">Faire mes premières ventes</option>
-                <option value="increase_revenue">
-                  Augmenter mon CA existant
-                </option>
-                <option value="automate">
-                  Automatiser pour gagner du temps
-                </option>
-              </select>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Qu&apos;est-ce qui te donne le plus d&apos;énergie dans ton
-                business ? <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.energySources}
-                onChange={(e) =>
-                  updateField("energySources", e.target.value)
-                }
-                placeholder="Ex : créer du contenu, coacher en 1:1, animer des lives, designer des offres..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quelle valeur unique apportes-tu à tes clients, par rapport à
-                la concurrence ? <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.uniqueValue}
-                onChange={(e) => updateField("uniqueValue", e.target.value)}
-                placeholder="Ex : vulgariser des sujets complexes, ton côté cash mais bienveillant, ton expérience personnelle..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quelle est ta plus grande force aujourd&apos;hui, que tu
-                n&apos;exploitres pas encore assez ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.untappedStrength}
-                onChange={(e) =>
-                  updateField("untappedStrength", e.target.value)
-                }
-                placeholder="Ex : parler en public, raconter des histoires, créer des systèmes, enseigner..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Comment décrirais-tu ton style de communication ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[70px]"
-                value={formData.communicationStyle}
-                onChange={(e) =>
-                  updateField("communicationStyle", e.target.value)
-                }
-                placeholder="Ex : direct, doux, fun, provocant, très pédagogique, introspectif..."
-              />
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                C&apos;est quoi, pour toi, la réussite dans ton business ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.successDefinition}
-                onChange={(e) =>
-                  updateField("successDefinition", e.target.value)
-                }
-                placeholder="Ex : vivre confortablement de mon activité, avoir du temps pour ma famille, me sentir utile..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                À quoi ressembleraient des résultats satisfaisants dans{" "}
-                <strong>6 mois</strong> ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.sixMonthVision}
-                onChange={(e) =>
-                  updateField("sixMonthVision", e.target.value)
-                }
-                placeholder="Ex : une offre vendue régulièrement, X€ de CA/mois, une audience engagée..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quand ça devient difficile dans ton business, qu&apos;est-ce
-                que tu te dis intérieurement ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.innerDialogue}
-                onChange={(e) =>
-                  updateField("innerDialogue", e.target.value)
-                }
-                placeholder="Ex : je ne suis pas légitime, personne ne va acheter, je suis en retard par rapport aux autres..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Si tu étais certain·e de réussir, quelles 3 actions lancerais-tu
-                dès maintenant ? <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.ifCertainSuccess}
-                onChange={(e) =>
-                  updateField("ifCertainSuccess", e.target.value)
-                }
-                placeholder="Ex : lancer enfin ton offre principale, contacter des partenaires, poster tous les jours..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Qu&apos;est-ce qui te fait le plus peur aujourd&apos;hui par
-                rapport à ton business ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.biggestFears}
-                onChange={(e) => updateField("biggestFears", e.target.value)}
-                placeholder="Ex : me montrer, échouer publiquement, investir du temps/argent pour rien..."
-              />
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quel est ton plus grand défi concret en ce moment ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.biggestChallenge}
-                onChange={(e) =>
-                  updateField("biggestChallenge", e.target.value)
-                }
-                placeholder="Ex : générer des leads, convertir, créer une offre claire, tenir le rythme de création..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quelles stratégies marketing fonctionnent déjà plutôt bien pour
-                toi ? <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.workingStrategies}
-                onChange={(e) =>
-                  updateField("workingStrategies", e.target.value)
-                }
-                placeholder="Ex : stories Instagram, bouche-à-oreille, masterclass, email, challenges..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Quels retours clients as-tu reçus récemment ?{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <textarea
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm min-h-[90px]"
-                value={formData.recentClientFeedback}
-                onChange={(e) =>
-                  updateField("recentClientFeedback", e.target.value)
-                }
-                placeholder="Ex : phrases qu'ils t'ont dites par mail, DM, vocal, témoignages..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Tu préfères créer du contenu plutôt{" "}
-                <span className="text-rose-400">*</span>
-              </label>
-              <select
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm"
-                value={formData.preferredContentType}
-                onChange={(e) =>
-                  updateField("preferredContentType", e.target.value)
-                }
-              >
-                <option value="">Sélectionne</option>
-                <option value="ecrit">Écrit (posts, emails, articles)</option>
-                <option value="video">Vidéo (reels, live, YouTube)</option>
-                <option value="audio">Audio (podcast, messages vocaux)</option>
-                <option value="mix">Un mix des deux</option>
-              </select>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="w-full flex items-center justify-center py-20">
-        <p className="text-sm text-slate-300">
-          Chargement de ton onboarding en cours...
-        </p>
-      </div>
-    );
-  }
-
-  const isLastStep = step === 5;
+  const primaryLabel = step.id === "review" ? (isSubmitting ? "Enregistrement..." : "Générer ma stratégie") : "Continuer";
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">
-            Onboarding Tipote
-          </p>
-          <h1 className="text-xl md:text-2xl font-semibold mt-1">
-            {renderStepTitle()}
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {renderStepDescription()}
+          <h1 className="text-2xl font-semibold tracking-tight">Onboarding</h1>
+          <p className="text-sm text-muted-foreground">
+            Étape {stepIndex + 1} / {STEPS.length} — {step.title}
           </p>
         </div>
-        <div className="text-xs text-slate-400">
-          Étape <span className="font-semibold">{step + 1}</span> / 6
-        </div>
+
+        <Link href="/dashboard" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+          Quitter
+        </Link>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-6">
-        <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-          <div
-            className="h-full bg-rose-500 transition-all"
-            style={{ width: `${((step + 1) / 6) * 100}%` }}
-          />
-        </div>
+      <div className="mb-6 space-y-2">
+        <Progress value={progress * 100} />
+        <p className="text-xs text-muted-foreground">
+          Progression globale : {Math.round(progress * 100)}%
+        </p>
       </div>
 
-      <div className="space-y-6">{renderStep()}</div>
-
-      {error && (
-        <div className="mt-6 rounded-lg border border-rose-500/60 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-          {error}
+      <Card className="rounded-2xl p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">{step.title}</h2>
+          {step.subtitle ? <p className="mt-1 text-sm text-muted-foreground">{step.subtitle}</p> : null}
         </div>
-      )}
 
-      <div className="mt-8 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={handleBack}
-          disabled={step === 0 || submitting}
-          className="text-sm px-4 py-2 rounded-lg border border-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
-        >
-          Retour
-        </button>
+        <div className="space-y-8">
+          {step.id === "profile" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">Prénom</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setField("firstName", e.target.value)}
+                  placeholder="Ex: Béné"
+                  className={cn(errors.firstName ? "border-destructive" : "")}
+                />
+                {errors.firstName ? <p className="text-xs text-destructive">{errors.firstName}</p> : null}
+              </div>
 
-        <button
-          type="button"
-          onClick={isLastStep ? handleSubmit : handleNext}
-          disabled={submitting}
-          className="inline-flex items-center justify-center text-sm px-5 py-2.5 rounded-lg bg-rose-500 text-white font-medium hover:bg-rose-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-        >
-          {submitting
-            ? "Génération de ton plan en cours..."
-            : isLastStep
-            ? "Valider et générer mon plan"
-            : "Continuer"}
-        </button>
-      </div>
+              <div className="grid gap-2">
+                <Label>Tranche d’âge</Label>
+                <Select value={formData.ageRange} onValueChange={(v) => setField("ageRange", v as AgeRange)}>
+                  <SelectTrigger className={cn(errors.ageRange ? "border-destructive" : "")}>
+                    <SelectValue placeholder="Sélectionne une tranche" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGE_RANGES.map((ar) => (
+                      <SelectItem key={ar} value={ar}>
+                        {ar}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.ageRange ? <p className="text-xs text-destructive">{errors.ageRange}</p> : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Genre</Label>
+                <Select value={formData.gender} onValueChange={(v) => setField("gender", v as Gender)}>
+                  <SelectTrigger className={cn(errors.gender ? "border-destructive" : "")}>
+                    <SelectValue placeholder="Sélectionne une option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDERS.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        {formatGenderLabel(g)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.gender ? <p className="text-xs text-destructive">{errors.gender}</p> : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="country">Pays</Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) => setField("country", e.target.value)}
+                  placeholder="Ex: France"
+                  className={cn(errors.country ? "border-destructive" : "")}
+                />
+                {errors.country ? <p className="text-xs text-destructive">{errors.country}</p> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "niche" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label>Niche</Label>
+                <Select value={formData.niche} onValueChange={(v) => setField("niche", v as Niche)}>
+                  <SelectTrigger className={cn(errors.niche ? "border-destructive" : "")}>
+                    <SelectValue placeholder="Sélectionne une niche" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NICHES.map((n) => (
+                      <SelectItem key={n} value={n}>
+                        {formatNicheLabel(n)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.niche ? <p className="text-xs text-destructive">{errors.niche}</p> : null}
+              </div>
+
+              {formData.niche === "autre" ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="nicheOther">Précise ta niche</Label>
+                  <Input
+                    id="nicheOther"
+                    value={formData.nicheOther}
+                    onChange={(e) => setField("nicheOther", e.target.value)}
+                    placeholder="Ex: Organisation, B2B, artisanat…"
+                    className={cn(errors.nicheOther ? "border-destructive" : "")}
+                  />
+                  {errors.nicheOther ? <p className="text-xs text-destructive">{errors.nicheOther}</p> : null}
+                </div>
+              ) : null}
+
+              <div className="grid gap-2">
+                <Label htmlFor="mission">Ta mission (1-2 phrases)</Label>
+                <Textarea
+                  id="mission"
+                  value={formData.mission}
+                  onChange={(e) => setField("mission", e.target.value)}
+                  placeholder="Ex: J'aide les indépendants à..."
+                  className={cn(errors.mission ? "border-destructive" : "")}
+                />
+                {errors.mission ? <p className="text-xs text-destructive">{errors.mission}</p> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "maturity" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label>Où en es-tu ?</Label>
+                <RadioGroup
+                  value={formData.businessMaturity}
+                  onValueChange={(v) => setField("businessMaturity", v as BusinessMaturity)}
+                  className={cn("grid gap-3", errors.businessMaturity ? "rounded-lg border border-destructive p-3" : "")}
+                >
+                  {BUSINESS_MATURITY.map((m) => (
+                    <div key={m} className="flex items-start gap-3">
+                      <RadioGroupItem value={m} id={`maturity-${m}`} />
+                      <Label htmlFor={`maturity-${m}`} className="font-normal">
+                        {formatBusinessMaturityLabel(m)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {errors.businessMaturity ? (
+                  <p className="text-xs text-destructive">{errors.businessMaturity}</p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "offers" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label>Statut de tes offres</Label>
+                <RadioGroup
+                  value={formData.offersStatus}
+                  onValueChange={(v) => setField("offersStatus", v as OffersStatus)}
+                  className={cn("grid gap-3", errors.offersStatus ? "rounded-lg border border-destructive p-3" : "")}
+                >
+                  {OFFERS_STATUS.map((s) => (
+                    <div key={s} className="flex items-start gap-3">
+                      <RadioGroupItem value={s} id={`offers-${s}`} />
+                      <Label htmlFor={`offers-${s}`} className="font-normal">
+                        {formatOffersStatusLabel(s)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {errors.offersStatus ? <p className="text-xs text-destructive">{errors.offersStatus}</p> : null}
+              </div>
+
+              {formData.offersStatus !== "aucune" ? (
+                <>
+                  <Separator />
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="offerNames">Nom(s) d’offre(s)</Label>
+                    <Textarea
+                      id="offerNames"
+                      value={formData.offerNames}
+                      onChange={(e) => setField("offerNames", e.target.value)}
+                      placeholder="Ex: Coaching 1:1, Formation, Template..."
+                      className={cn(errors.offerNames ? "border-destructive" : "")}
+                    />
+                    {errors.offerNames ? <p className="text-xs text-destructive">{errors.offerNames}</p> : null}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="offerPriceRange">Fourchette de prix</Label>
+                    <Input
+                      id="offerPriceRange"
+                      value={formData.offerPriceRange}
+                      onChange={(e) => setField("offerPriceRange", e.target.value)}
+                      placeholder="Ex: 49€ / 499€ / 2000€..."
+                      className={cn(errors.offerPriceRange ? "border-destructive" : "")}
+                    />
+                    {errors.offerPriceRange ? (
+                      <p className="text-xs text-destructive">{errors.offerPriceRange}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="offerDelivery">Format / délivrabilité</Label>
+                    <Input
+                      id="offerDelivery"
+                      value={formData.offerDelivery}
+                      onChange={(e) => setField("offerDelivery", e.target.value)}
+                      placeholder="Ex: Visio, asynchrone, groupe..."
+                      className={cn(errors.offerDelivery ? "border-destructive" : "")}
+                    />
+                    {errors.offerDelivery ? <p className="text-xs text-destructive">{errors.offerDelivery}</p> : null}
+                  </div>
+                </>
+              ) : null}
+            </section>
+          ) : null}
+
+          {step.id === "audience" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label htmlFor="audienceSize">Taille de ton audience (approx.)</Label>
+                <Input
+                  id="audienceSize"
+                  value={formData.audienceSize}
+                  onChange={(e) => setField("audienceSize", e.target.value)}
+                  placeholder="Ex: 1000 abonnés IG, 500 LinkedIn…"
+                  className={cn(errors.audienceSize ? "border-destructive" : "")}
+                />
+                {errors.audienceSize ? <p className="text-xs text-destructive">{errors.audienceSize}</p> : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="emailListSize">Taille de ta liste email (approx.)</Label>
+                <Input
+                  id="emailListSize"
+                  value={formData.emailListSize}
+                  onChange={(e) => setField("emailListSize", e.target.value)}
+                  placeholder="Ex: 0, 120, 2000…"
+                  className={cn(errors.emailListSize ? "border-destructive" : "")}
+                />
+                {errors.emailListSize ? <p className="text-xs text-destructive">{errors.emailListSize}</p> : null}
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border p-4">
+                <Checkbox
+                  id="hasExistingBranding"
+                  checked={formData.hasExistingBranding}
+                  onCheckedChange={(v) => setField("hasExistingBranding", Boolean(v))}
+                />
+                <Label htmlFor="hasExistingBranding" className="font-normal">
+                  J’ai déjà une identité visuelle / branding (logo, couleurs, etc.)
+                </Label>
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "goals" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label>Temps dispo / semaine</Label>
+                <RadioGroup
+                  value={formData.timeAvailable}
+                  onValueChange={(v) => setField("timeAvailable", v as TimeAvailable)}
+                  className={cn("grid gap-3", errors.timeAvailable ? "rounded-lg border border-destructive p-3" : "")}
+                >
+                  {TIME_AVAILABLE.map((t) => (
+                    <div key={t} className="flex items-start gap-3">
+                      <RadioGroupItem value={t} id={`time-${t}`} />
+                      <Label htmlFor={`time-${t}`} className="font-normal">
+                        {formatTimeAvailableLabel(t)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {errors.timeAvailable ? <p className="text-xs text-destructive">{errors.timeAvailable}</p> : null}
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-2">
+                <Label>Objectifs principaux (choisis 1 à 3)</Label>
+                <div className={cn("grid gap-3", errors.mainGoals ? "rounded-lg border border-destructive p-3" : "")}>
+                  {MAIN_GOALS.map((g) => (
+                    <div key={g} className="flex items-start gap-3">
+                      <Checkbox
+                        id={`goal-${g}`}
+                        checked={formData.mainGoals.includes(g)}
+                        onCheckedChange={() => toggleArrayValue("mainGoals", g)}
+                      />
+                      <Label htmlFor={`goal-${g}`} className="font-normal">
+                        {formatMainGoalLabel(g)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {errors.mainGoals ? <p className="text-xs text-destructive">{errors.mainGoals}</p> : null}
+              </div>
+
+              {formData.mainGoals.includes("autre") ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="mainGoalsOther">Précise ton objectif</Label>
+                  <Input
+                    id="mainGoalsOther"
+                    value={formData.mainGoalsOther}
+                    onChange={(e) => setField("mainGoalsOther", e.target.value)}
+                    placeholder="Ex: lancer un podcast, ouvrir une offre B2B…"
+                    className={cn(errors.mainGoalsOther ? "border-destructive" : "")}
+                  />
+                  {errors.mainGoalsOther ? <p className="text-xs text-destructive">{errors.mainGoalsOther}</p> : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {step.id === "content" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label>Formats de contenus préférés</Label>
+                <div
+                  className={cn(
+                    "grid gap-3 sm:grid-cols-2",
+                    errors.preferredContentTypes ? "rounded-lg border border-destructive p-3" : "",
+                  )}
+                >
+                  {PREFERRED_CONTENT_TYPES.map((c) => (
+                    <div key={c} className="flex items-start gap-3">
+                      <Checkbox
+                        id={`ct-${c}`}
+                        checked={formData.preferredContentTypes.includes(c)}
+                        onCheckedChange={() => toggleArrayValue("preferredContentTypes", c)}
+                      />
+                      <Label htmlFor={`ct-${c}`} className="font-normal">
+                        {formatContentTypeLabel(c)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {errors.preferredContentTypes ? (
+                  <p className="text-xs text-destructive">{errors.preferredContentTypes}</p>
+                ) : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="tonePreference">Ton souhaité</Label>
+                <Input
+                  id="tonePreference"
+                  value={formData.tonePreference}
+                  onChange={(e) => setField("tonePreference", e.target.value)}
+                  placeholder="Ex: direct, fun, premium, pédagogique…"
+                  className={cn(errors.tonePreference ? "border-destructive" : "")}
+                />
+                {errors.tonePreference ? <p className="text-xs text-destructive">{errors.tonePreference}</p> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "links" ? (
+            <section className="space-y-5">
+              <p className="text-sm text-muted-foreground">
+                Optionnel — mais ça aide Tipote à contextualiser (et à faire des suggestions plus pertinentes).
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="instagramUrl">Instagram</Label>
+                  <Input
+                    id="instagramUrl"
+                    value={formData.instagramUrl}
+                    onChange={(e) => setField("instagramUrl", e.target.value)}
+                    placeholder="https://instagram.com/…"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="tiktokUrl">TikTok</Label>
+                  <Input
+                    id="tiktokUrl"
+                    value={formData.tiktokUrl}
+                    onChange={(e) => setField("tiktokUrl", e.target.value)}
+                    placeholder="https://tiktok.com/@…"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="linkedinUrl">LinkedIn</Label>
+                  <Input
+                    id="linkedinUrl"
+                    value={formData.linkedinUrl}
+                    onChange={(e) => setField("linkedinUrl", e.target.value)}
+                    placeholder="https://linkedin.com/in/…"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="youtubeUrl">YouTube</Label>
+                  <Input
+                    id="youtubeUrl"
+                    value={formData.youtubeUrl}
+                    onChange={(e) => setField("youtubeUrl", e.target.value)}
+                    placeholder="https://youtube.com/@…"
+                  />
+                </div>
+
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label htmlFor="websiteUrl">Site web</Label>
+                  <Input
+                    id="websiteUrl"
+                    value={formData.websiteUrl}
+                    onChange={(e) => setField("websiteUrl", e.target.value)}
+                    placeholder="https://tonsite.com"
+                  />
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "blockers" ? (
+            <section className="space-y-5">
+              <div className="grid gap-2">
+                <Label htmlFor="biggestBlocker">Ton principal blocage du moment</Label>
+                <Textarea
+                  id="biggestBlocker"
+                  value={formData.biggestBlocker}
+                  onChange={(e) => setField("biggestBlocker", e.target.value)}
+                  placeholder="Ex: je poste mais j'ai peu de résultats, je manque de clarté sur mon offre..."
+                  className={cn(errors.biggestBlocker ? "border-destructive" : "")}
+                />
+                {errors.biggestBlocker ? <p className="text-xs text-destructive">{errors.biggestBlocker}</p> : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="additionalContext">Contexte additionnel (optionnel)</Label>
+                <Textarea
+                  id="additionalContext"
+                  value={formData.additionalContext}
+                  onChange={(e) => setField("additionalContext", e.target.value)}
+                  placeholder="Tout ce qui te semble utile : contraintes, ambitions, histoire, etc."
+                />
+              </div>
+            </section>
+          ) : null}
+
+          {step.id === "review" ? (
+            <section className="space-y-6">
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Profil</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Prénom :</span> {formData.firstName}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Âge :</span> {formData.ageRange}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Genre :</span> {formatGenderLabel(formData.gender)}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Pays :</span> {formData.country}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Niche & mission</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Niche :</span>{" "}
+                    {formData.niche === "autre"
+                      ? `Autre — ${formData.nicheOther || "(non précisé)"}`
+                      : formatNicheLabel(formData.niche)}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Mission :</span> {formData.mission}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Business</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Maturité :</span>{" "}
+                    {formatBusinessMaturityLabel(formData.businessMaturity)}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Offres :</span>{" "}
+                    {formatOffersStatusLabel(formData.offersStatus)}
+                  </p>
+                  {formData.offersStatus !== "aucune" ? (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">Noms :</span> {formData.offerNames}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Prix :</span> {formData.offerPriceRange}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Format :</span> {formData.offerDelivery}
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Audience</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Audience :</span> {formData.audienceSize}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Liste email :</span> {formData.emailListSize}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Branding :</span>{" "}
+                    {formData.hasExistingBranding ? "Oui" : "Non"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Objectifs</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Temps dispo :</span>{" "}
+                    {formatTimeAvailableLabel(formData.timeAvailable)}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Objectifs :</span>{" "}
+                    {formData.mainGoals
+                      .map((g) => (g === "autre" ? `Autre — ${formData.mainGoalsOther || "(non précisé)"}` : formatMainGoalLabel(g)))
+                      .join(", ")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Contenus</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Formats :</span>{" "}
+                    {formData.preferredContentTypes.map((c) => formatContentTypeLabel(c)).join(", ")}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Ton :</span> {formData.tonePreference}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Liens</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Instagram :</span> {formData.instagramUrl || "—"}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">TikTok :</span> {formData.tiktokUrl || "—"}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">LinkedIn :</span> {formData.linkedinUrl || "—"}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">YouTube :</span> {formData.youtubeUrl || "—"}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Site :</span> {formData.websiteUrl || "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Blocages</h3>
+                <div className="grid gap-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Principal :</span> {formData.biggestBlocker}
+                  </p>
+                  {formData.additionalContext ? (
+                    <p>
+                      <span className="text-muted-foreground">Contexte :</span> {formData.additionalContext}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                En cliquant sur “Générer ma stratégie”, Tipote enregistre tes réponses et lance le diagnostic.
+              </p>
+            </section>
+          ) : null}
+        </div>
+
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <Button variant="ghost" onClick={goBack} disabled={!canGoBack || isSubmitting}>
+            Retour
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {stepIndex + 1}/{STEPS.length}
+            </span>
+            <Button onClick={onPrimary} disabled={isSubmitting}>
+              {primaryLabel}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Besoin d’aide ?{" "}
+        <Link href="/settings" className="underline underline-offset-4">
+          Paramètres
+        </Link>
+      </p>
     </div>
   );
 }
