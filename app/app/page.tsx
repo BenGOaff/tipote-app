@@ -48,14 +48,13 @@ type EnrichedTask = Task & {
   _isImportant: boolean;
 };
 
-type BusinessPlanJson = {
-  business_profile?: AnyRecord;
-  action_plan_30_90?: {
-    main_goal?: string;
-    phase?: string;
-    current_week?: number;
-  };
-  tasks?: Task[];
+type ContentItem = {
+  id: string;
+  type: string | null;
+  title: string | null;
+  status: string | null;
+  scheduled_date: string | null; // YYYY-MM-DD
+  channel: string | null;
 };
 
 function startOfDay(d: Date) {
@@ -95,42 +94,58 @@ function formatDueBadge(due: Date | null) {
   return due.toLocaleDateString("fr-FR");
 }
 
-export default async function AppPage() {
-  const supabase = await getSupabaseServerClient();
+function formatIsoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
+function formatScheduledBadge(iso: string | null) {
+  if (!iso) return "Sans date";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const [, y, mm, dd] = m;
+  return `${dd}/${mm}/${y}`;
+}
+
+export default async function TodayPage() {
+  const supabase = await getSupabaseServerClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) {
-    redirect("/auth/login");
-  }
+  if (!session) redirect("/");
 
-  const userEmail = session.user.email ?? "Utilisateur";
+  const userEmail = session.user.email ?? "";
 
-  // 1) Charger le plan stratégique
-  const { data: planRow, error: planError } = await supabase
+  // 1) Vérifier onboarding/plan existant (logique existante)
+  const { data: businessPlan } = await supabase
     .from("business_plan")
-    .select("id, plan_json")
+    .select("id, plan_json, created_at")
     .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (planError) {
-    console.error("[AppPage] Supabase business_plan select error", planError);
-  }
-
-  // 2) Si pas de plan => onboarding
-  if (!planRow || !planRow.plan_json) {
+  if (!businessPlan) {
     redirect("/onboarding");
   }
 
-  const planJson = (planRow.plan_json ?? {}) as BusinessPlanJson;
-  const businessProfile = (planJson.business_profile ?? {}) as AnyRecord;
-  const actionPlan = (planJson.action_plan_30_90 ??
-    {}) as BusinessPlanJson["action_plan_30_90"];
-  const rawTasks = Array.isArray(planJson.tasks)
-    ? (planJson.tasks as Task[])
-    : [];
+  const { data: businessProfile } = await supabase
+    .from("business_profile")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  // 2) Extraire tâches depuis plan_json (structure tolérante)
+  const planJson = (businessPlan as AnyRecord)?.plan_json as AnyRecord | null;
+
+  const rawTasks: Task[] =
+    (planJson?.tasks as Task[]) ??
+    ((planJson?.plan as AnyRecord | undefined)?.tasks as Task[]) ??
+    ((planJson?.plan_90_days as AnyRecord | undefined)?.tasks as Task[]) ??
+    [];
 
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -152,7 +167,9 @@ export default async function AppPage() {
         ...t,
         _dueDate: due as Date | null,
         _isDone: isDoneStatus(t.status),
-        _isImportant: String(t.importance ?? "").toLowerCase() === "high",
+        _isImportant: String((t as AnyRecord).importance ?? "")
+          .toLowerCase()
+          .includes("high"),
       } as EnrichedTask;
     })
     // tri stable : d'abord échéance, puis important
@@ -165,55 +182,66 @@ export default async function AppPage() {
     });
 
   const overdueTasks = tasks.filter(
-    (t: EnrichedTask) =>
-      t._dueDate && t._dueDate < todayStart && !t._isDone,
+    (t: EnrichedTask) => t._dueDate && t._dueDate < todayStart && !t._isDone,
   );
 
-  const tasksToday = tasks.filter(
-    (t: EnrichedTask) =>
-      t._dueDate &&
-      t._dueDate >= todayStart &&
-      t._dueDate < tomorrowStart &&
-      !t._isDone,
-  );
-  const upcomingWeek = tasks.filter(
-    (t: EnrichedTask) =>
-      t._dueDate &&
-      t._dueDate >= tomorrowStart &&
-      t._dueDate < weekEnd &&
-      !t._isDone,
-  );
+  const tasksToday = tasks.filter((t: EnrichedTask) => {
+    if (!t._dueDate) return false;
+    return t._dueDate >= todayStart && t._dueDate < tomorrowStart && !t._isDone;
+  });
+
+  const upcomingWeek = tasks.filter((t: EnrichedTask) => {
+    if (!t._dueDate) return false;
+    return t._dueDate >= tomorrowStart && t._dueDate < weekEnd && !t._isDone;
+  });
 
   const totalTasks = tasks.length;
   const doneTasksCount = tasks.filter((t: EnrichedTask) => t._isDone).length;
   const progressPercent =
-    totalTasks === 0 ? 0 : Math.round((doneTasksCount / totalTasks) * 100);
+    totalTasks > 0 ? Math.round((doneTasksCount / totalTasks) * 100) : 0;
 
-  // Objectif 90 jours (variantes possibles)
   const rawGoal90 =
-    actionPlan?.main_goal ??
-    (businessProfile as AnyRecord).main_goal ??
-    (businessProfile as AnyRecord).goal_90_days ??
+    (businessProfile as AnyRecord)?.main_goal ??
+    (businessProfile as AnyRecord)?.goal_90_days ??
     "";
 
   const goal90: string =
     typeof rawGoal90 === "string" ? rawGoal90 : String(rawGoal90 ?? "");
 
   // Prochaine action = priorité aux retards, sinon aujourd'hui
-  const nextTask: EnrichedTask | null =
-    overdueTasks[0] ?? tasksToday[0] ?? null;
+  const nextTask: EnrichedTask | null = overdueTasks[0] ?? tasksToday[0] ?? null;
 
   const nextTitle =
     nextTask?.title?.trim?.() ||
-    (tasksToday.length > 0
-      ? "Choisir ta prochaine action"
-      : "Définir ta prochaine action");
+    (tasksToday.length > 0 ? "Choisir ta prochaine action" : "Définir ta prochaine action");
+
   const nextDescription =
     nextTask?.description?.trim?.() ||
     "On va remplir ça automatiquement après l’onboarding. Pour l’instant, tu peux avancer avec tes actions rapides.";
 
   const nextDue = (nextTask?._dueDate ?? null) as Date | null;
   const nextDueBadge = formatDueBadge(nextDue);
+
+  // 3) Contenus planifiés (nouveau, sans casser l’existant)
+  const todayIso = formatIsoDate(todayStart);
+  const weekIso = formatIsoDate(weekEnd);
+
+  const { data: plannedContentRaw } = await supabase
+    .from("content_item")
+    .select("id, type, title, status, scheduled_date, channel")
+    .eq("user_id", session.user.id)
+    .not("scheduled_date", "is", null)
+    .gte("scheduled_date", todayIso)
+    .lte("scheduled_date", weekIso)
+    .order("scheduled_date", { ascending: true })
+    .limit(25);
+
+  const plannedContents: ContentItem[] = Array.isArray(plannedContentRaw)
+    ? (plannedContentRaw as ContentItem[])
+    : [];
+
+  const plannedToday = plannedContents.filter((c) => c.scheduled_date === todayIso);
+  const plannedWeek = plannedContents.filter((c) => c.scheduled_date !== todayIso);
 
   const stats = [
     {
@@ -223,16 +251,16 @@ export default async function AppPage() {
       icon: ListTodo,
     },
     {
-      label: "En retard",
+      label: "Contenus planifiés",
+      value: String(plannedContents.length),
+      trend: plannedContents.length > 0 ? "Semaine" : "—",
+      icon: Calendar,
+    },
+    {
+      label: "Alertes",
       value: String(overdueTasks.length),
       trend: overdueTasks.length > 0 ? "Priorité" : "OK",
       icon: AlertTriangle,
-    },
-    {
-      label: "Cette semaine",
-      value: String(upcomingWeek.length),
-      trend: upcomingWeek.length > 0 ? "À venir" : "Calme",
-      icon: Clock,
     },
     {
       label: "Progression",
@@ -250,55 +278,46 @@ export default async function AppPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold">Aujourd&apos;hui</h1>
             <Badge variant="outline" className="text-xs">
-              Dashboard
+              {new Date().toLocaleDateString("fr-FR", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+              })}
             </Badge>
           </div>
 
-          <Link href="/analytics">
-            <Button variant="outline" size="sm">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics détaillés
-            </Button>
-          </Link>
+          <div className="hidden md:flex items-center gap-2">
+            <Link href="/create">
+              <Button className="gradient-primary text-primary-foreground">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Créer
+              </Button>
+            </Link>
+            <Link href="/analytics">
+              <Button variant="outline">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analytics
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* Welcome Card with Next Action */}
-        <Card className="p-8 gradient-hero border-border/50">
-          <div className="flex items-start justify-between">
+        {/* Hero / Next action */}
+        <Card className="p-6 gradient-primary border-none">
+          <div className="flex items-start justify-between gap-6">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-background/20 backdrop-blur-sm flex items-center justify-center">
-                  <Target className="w-6 h-6 text-primary-foreground" />
-                </div>
-
-                <div>
-                  <p className="text-primary-foreground/80 text-sm">
-                    Ta prochaine action
-                  </p>
-                  <h2 className="text-2xl font-bold text-primary-foreground">
-                    {nextTitle}
-                  </h2>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
+              <div className="flex items-center gap-2 mb-3">
                 <Badge className="bg-background/20 text-primary-foreground border-none">
-                  <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                  Prochaine action
+                </Badge>
+                <Badge className="bg-background/20 text-primary-foreground border-none">
                   {nextDueBadge}
                 </Badge>
-
-                {nextTask?._isImportant ? (
-                  <Badge className="bg-background/20 text-primary-foreground border-none">
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Important
-                  </Badge>
-                ) : (
-                  <Badge className="bg-background/20 text-primary-foreground border-none">
-                    <Brain className="w-3.5 h-3.5 mr-1.5" />
-                    Assisté par l&apos;IA
-                  </Badge>
-                )}
               </div>
+
+              <h2 className="text-2xl font-bold text-primary-foreground mb-2">
+                {nextTitle}
+              </h2>
 
               <p className="text-primary-foreground/80 mb-6 max-w-2xl">
                 {nextDescription}
@@ -329,80 +348,52 @@ export default async function AppPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <Card key={index} className="p-5 hover:shadow-md transition-all">
-              <div className="flex items-start justify-between mb-3">
-                <div className="p-2.5 rounded-xl bg-muted">
+          {stats.map((stat) => (
+            <Card key={stat.label} className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
                   <stat.icon className="w-5 h-5 text-primary" />
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {stat.trend}
-                </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mb-1">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className="text-xs text-muted-foreground mt-2">{stat.trend}</p>
             </Card>
           ))}
         </div>
 
-        {/* Progress + Quick Actions */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Progress Overview */}
+        {/* Middle grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Progress / Goal */}
           <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">Progression</h3>
-              <Badge className="gradient-primary text-primary-foreground border-none">
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                {progressPercent}%
-              </Badge>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">Objectif 90 jours</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {goal90 || "Définis ton objectif pendant l’onboarding"}
+                </p>
+              </div>
+              <Target className="w-5 h-5 text-primary mt-1" />
             </div>
 
-            <div className="space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">
-                    Actions terminées
-                  </span>
-                  <span className="text-sm font-medium">
-                    {doneTasksCount}/{totalTasks}
-                  </span>
-                </div>
-                <Progress value={progressPercent} className="h-2" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span>Progression</span>
+                <span className="font-semibold">{progressPercent}%</span>
               </div>
+              <Progress value={progressPercent} />
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">
-                    Objectif 90 jours
-                  </span>
-                  <span className="text-sm font-medium">
-                    {goal90 ? "Défini" : "À définir"}
-                  </span>
-                </div>
-                <Progress value={goal90 ? 25 : 0} className="h-2" />
-                {goal90 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      Objectif :
-                    </span>{" "}
-                    {goal90}
-                  </p>
-                ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Ton objectif sera affiché ici après l’onboarding.
-                  </p>
-                )}
+              <div className="pt-2">
+                <Link href="/strategy">
+                  <Button variant="outline" className="w-full">
+                    Voir ma stratégie complète
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
               </div>
             </div>
-
-            <Link href="/strategy" className="block mt-6">
-              <Button variant="outline" className="w-full">
-                Voir ma stratégie complète
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
           </Card>
 
           {/* Quick Actions */}
@@ -432,15 +423,15 @@ export default async function AppPage() {
               <Link href="/contents" className="block">
                 <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-secondary-foreground" />
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold group-hover:text-primary transition-colors">
-                        Voir mes contenus
+                        Mes contenus
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Liste & calendrier éditorial
+                        Retrouver, éditer, planifier
                       </p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -452,11 +443,11 @@ export default async function AppPage() {
                 <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-primary" />
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold group-hover:text-primary transition-colors">
-                        Ajuster ma stratégie
+                        Ma stratégie
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Pyramides, offres, angles
@@ -468,55 +459,228 @@ export default async function AppPage() {
               </Link>
             </div>
           </Card>
+
+          {/* Today tasks */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Aujourd&apos;hui</h3>
+              <Badge variant="outline" className="text-xs">
+                {tasksToday.length} tâche(s)
+              </Badge>
+            </div>
+
+            {tasksToday.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Rien d’urgent aujourd’hui 🎉
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tu peux avancer sur la création de contenu.
+                </p>
+                <div className="mt-4">
+                  <Link href="/create">
+                    <Button className="w-full gradient-primary text-primary-foreground">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Créer
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tasksToday.slice(0, 5).map((t: EnrichedTask, idx: number) => (
+                  <div
+                    key={`${t.title ?? "task"}-${idx}`}
+                    className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                        <ListTodo className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">
+                          {t.title ?? "Action du jour"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDueBadge((t._dueDate ?? null) as Date | null)}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {t._isImportant ? "Important" : "Standard"}
+                    </Badge>
+                  </div>
+                ))}
+
+                <div className="pt-2">
+                  <Link href="/strategy">
+                    <Button variant="outline" className="w-full">
+                      Voir les tâches
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
 
         {/* Upcoming / A venir */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold">À venir</h3>
-            <Badge variant="outline" className="text-xs">
-              Semaine
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {upcomingWeek.length} tâche(s)
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {plannedContents.length} contenu(s)
+              </Badge>
+            </div>
           </div>
 
-          {upcomingWeek.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              Rien de planifié pour la semaine pour l’instant. Après
-              l’onboarding, on affichera ici tes prochaines échéances.
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {upcomingWeek.slice(0, 5).map((t: EnrichedTask, idx: number) => (
-                <div
-                  key={`${t.title ?? "task"}-${idx}`}
-                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                      <Clock className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">
-                        {t.title ?? "Action à venir"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDueBadge((t._dueDate ?? null) as Date | null)}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {t._isImportant ? "Important" : "Standard"}
-                  </Badge>
-                </div>
-              ))}
-
-              <div className="pt-2">
+          {upcomingWeek.length === 0 && plannedContents.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Rien de planifié sur la semaine pour l’instant.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Planifie un contenu pour garder le rythme.
+              </p>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                <Link href="/create">
+                  <Button className="w-full gradient-primary text-primary-foreground">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Créer
+                  </Button>
+                </Link>
                 <Link href="/contents">
                   <Button variant="outline" className="w-full">
-                    Voir tout
+                    Mes contenus
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Upcoming tasks */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm">Tâches (7 jours)</p>
+                  <Link href="/strategy" className="text-xs font-semibold text-primary">
+                    Voir →
+                  </Link>
+                </div>
+
+                {upcomingWeek.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                    <p className="text-sm text-muted-foreground">Aucune tâche à venir.</p>
+                  </div>
+                ) : (
+                  upcomingWeek.slice(0, 5).map((t: EnrichedTask, idx: number) => (
+                    <div
+                      key={`${t.title ?? "task"}-${idx}`}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                          <Clock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {t.title ?? "Action à venir"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDueBadge((t._dueDate ?? null) as Date | null)}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {t._isImportant ? "Important" : "Standard"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Planned contents */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm">Contenus planifiés</p>
+                  <Link href="/contents?view=calendar" className="text-xs font-semibold text-primary">
+                    Calendrier →
+                  </Link>
+                </div>
+
+                {plannedContents.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Aucun contenu planifié.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Renseigne une date dans “Créer”.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {plannedToday.length > 0 ? (
+                      <div className="rounded-lg border border-border p-3 bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Aujourd&apos;hui ({formatScheduledBadge(todayIso)})
+                        </p>
+                        <div className="space-y-2">
+                          {plannedToday.slice(0, 3).map((c) => (
+                            <Link
+                              key={c.id}
+                              href={`/contents/${c.id}`}
+                              className="block rounded-md border border-border bg-background p-3 hover:bg-muted/40 transition-colors"
+                            >
+                              <p className="text-[11px] text-muted-foreground">
+                                {c.type ?? "—"} • {c.channel ?? "—"}
+                              </p>
+                              <p className="text-sm font-semibold">{c.title ?? "Sans titre"}</p>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-2">
+                      {plannedWeek.slice(0, 5).map((c) => (
+                        <Link
+                          key={c.id}
+                          href={`/contents/${c.id}`}
+                          className="block rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatScheduledBadge(c.scheduled_date)} • {c.type ?? "—"} •{" "}
+                                {c.channel ?? "—"}
+                              </p>
+                              <p className="text-sm font-semibold truncate">
+                                {c.title ?? "Sans titre"}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {c.status ?? "planned"}
+                            </Badge>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+
+                    <div className="pt-2">
+                      <Link href="/contents">
+                        <Button variant="outline" className="w-full">
+                          Voir tous mes contenus
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
