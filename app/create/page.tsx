@@ -7,13 +7,38 @@ import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 const tiles = [
-  { title: "Post réseaux sociaux", desc: "LinkedIn, Instagram, X…", tag: "Réseaux sociaux" },
-  { title: "Email", desc: "Newsletter, séquence, relance…", tag: "Emails" },
-  { title: "Article / Blog", desc: "Article optimisé et structuré", tag: "Contenus longs" },
-  { title: "Script vidéo", desc: "Shorts, Reels, YouTube…", tag: "Vidéo" },
-  { title: "Page de vente", desc: "Structure + copywriting", tag: "Offres" },
-  { title: "Funnel / Tunnel", desc: "Étapes + messages clés", tag: "Funnels" },
-];
+  {
+    slug: "post",
+    title: "Post réseaux sociaux",
+    desc: "LinkedIn, Instagram, X…",
+    tag: "Réseaux sociaux",
+  },
+  { slug: "email", title: "Email", desc: "Newsletter, séquence, relance…", tag: "Emails" },
+  {
+    slug: "blog",
+    title: "Article / Blog",
+    desc: "Article optimisé et structuré",
+    tag: "Contenus longs",
+  },
+  {
+    slug: "video_script",
+    title: "Script vidéo",
+    desc: "Shorts, Reels, YouTube…",
+    tag: "Vidéo",
+  },
+  {
+    slug: "sales_page",
+    title: "Page de vente",
+    desc: "Structure + copywriting",
+    tag: "Offres",
+  },
+  {
+    slug: "funnel",
+    title: "Funnel / Tunnel",
+    desc: "Étapes + messages clés",
+    tag: "Funnels",
+  },
+] as const;
 
 export default async function CreatePage() {
   const supabase = await getSupabaseServerClient();
@@ -38,8 +63,8 @@ export default async function CreatePage() {
                 Quel type de contenu souhaitez-vous créer ?
               </h1>
               <p className="mt-2 text-sm text-white/90 max-w-2xl">
-                L’IA utilisera vos paramètres d’onboarding et votre stratégie pour générer
-                un contenu aligné (ton, offre, audience, objectifs).
+                L’IA utilisera vos paramètres d’onboarding et votre stratégie pour générer un
+                contenu aligné (ton, offre, audience, objectifs).
               </p>
             </div>
             <Link
@@ -53,27 +78,17 @@ export default async function CreatePage() {
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tiles.map((t) => (
-            <button
-              key={t.title}
-              type="button"
-              className="text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition"
+            <Link
+              key={t.slug}
+              href={`/create/${t.slug}`}
+              className="block text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition"
             >
               <p className="text-[11px] text-slate-500">{t.tag}</p>
               <h2 className="mt-2 text-sm font-semibold text-slate-900">{t.title}</h2>
               <p className="mt-1 text-xs text-slate-600">{t.desc}</p>
-              <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">
-                Générer →
-              </p>
-            </button>
+              <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">Générer →</p>
+            </Link>
           ))}
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900">Prochaine étape (dev)</h3>
-          <p className="mt-1 text-xs text-slate-600">
-            On branchera ensuite : (1) récupération du profil + stratégie, (2) appel IA Niveau 2
-            avec la clé utilisateur, (3) sauvegarde dans “Mes Contenus”.
-          </p>
         </section>
       </div>
     </AppShell>
