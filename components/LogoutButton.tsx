@@ -1,9 +1,11 @@
 // components/LogoutButton.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { Button } from "@/components/ui/button";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -14,22 +16,23 @@ export default function LogoutButton() {
       setLoading(true);
       const supabase = getSupabaseBrowserClient();
       await supabase.auth.signOut();
-      router.push('/');
+      router.push("/");
     } catch (error) {
-      console.error('[LogoutButton] signOut error', error);
+      console.error("[LogoutButton] signOut error", error);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={handleLogout}
       disabled={loading}
-      className="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60"
     >
-      {loading ? 'Déconnexion…' : 'Se déconnecter'}
-    </button>
+      {loading ? "Déconnexion…" : "Se déconnecter"}
+    </Button>
   );
 }
