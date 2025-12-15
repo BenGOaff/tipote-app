@@ -1,42 +1,43 @@
 // app/create/page.tsx
 // Page "Créer" v2.0 : hub unique pour choisir le type de contenu à générer
 
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import AppShell from "@/components/AppShell";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import AppShell from '@/components/AppShell';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 const tiles = [
   {
-    slug: "post",
-    title: "Post réseaux sociaux",
-    desc: "LinkedIn, Instagram, X…",
-    tag: "Réseaux sociaux",
+    slug: 'post',
+    title: 'Post réseaux sociaux',
+    desc: 'LinkedIn, Instagram, X…',
+    tag: 'Réseaux sociaux',
   },
-  { slug: "email", title: "Email", desc: "Newsletter, séquence, relance…", tag: "Emails" },
+  { slug: 'email', title: 'Email', desc: 'Newsletter, séquence, relance…', tag: 'Emails' },
   {
-    slug: "blog",
-    title: "Article / Blog",
-    desc: "Article optimisé et structuré",
-    tag: "Contenus longs",
-  },
-  {
-    slug: "video_script",
-    title: "Script vidéo",
-    desc: "Shorts, Reels, YouTube…",
-    tag: "Vidéo",
+    slug: 'blog',
+    title: 'Article / Blog',
+    desc: 'Article optimisé et structuré',
+    tag: 'Contenus longs',
   },
   {
-    slug: "sales_page",
-    title: "Page de vente",
-    desc: "Structure + copywriting",
-    tag: "Offres",
+    slug: 'video_script',
+    title: 'Script vidéo',
+    desc: 'Shorts, Reels, YouTube…',
+    tag: 'Vidéo',
   },
   {
-    slug: "funnel",
-    title: "Funnel / Tunnel",
-    desc: "Étapes + messages clés",
-    tag: "Funnels",
+    slug: 'sales_page',
+    title: 'Page de vente',
+    desc: 'Structure + copywriting',
+    tag: 'Offres',
+  },
+  {
+    slug: 'funnel',
+    title: 'Funnel / Tunnel',
+    desc: 'Étapes + messages clés',
+    tag: 'Funnels',
   },
 ] as const;
 
@@ -46,9 +47,9 @@ export default async function CreatePage() {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect("/");
+  if (!session) redirect('/');
 
-  const userEmail = session.user.email ?? "";
+  const userEmail = session.user.email ?? '';
 
   return (
     <AppShell userEmail={userEmail}>

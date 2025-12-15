@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useState } from 'react';
+import Link from 'next/link';
 
 type Props = {
   type: string;
@@ -13,66 +13,62 @@ type GenerateResponse = {
   title?: string;
   content?: string;
   error?: string;
+  warning?: string;
+  saveError?: string;
 };
 
-const TYPE_PRESETS: Record<
-  string,
-  { label: string; defaultChannel: string; placeholder: string }
-> = {
-  post: {
-    label: "Post",
-    defaultChannel: "LinkedIn",
-    placeholder: "Sujet + angle + audience + ton (ex: direct, bienveillant) + CTA…",
-  },
-  email: {
-    label: "Email",
-    defaultChannel: "Email",
-    placeholder:
-      "Objectif (nurture/vente) + contexte + offre éventuelle + ton + longueur…",
-  },
-  blog: {
-    label: "Blog",
-    defaultChannel: "Blog",
-    placeholder: "Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…",
-  },
-  video_script: {
-    label: "Script vidéo",
-    defaultChannel: "YouTube/Shorts",
-    placeholder: "Format (45s/60s) + style + hooks possibles + CTA…",
-  },
-  sales_page: {
-    label: "Page de vente",
-    defaultChannel: "Landing",
-    placeholder: "Produit/offre + avatar + promesse + objections + preuves…",
-  },
-  funnel: {
-    label: "Funnel",
-    defaultChannel: "Funnel",
-    placeholder: "Objectif + offre + étapes attendues + canaux + timing…",
-  },
-};
+const TYPE_PRESETS: Record<string, { label: string; defaultChannel: string; placeholder: string }> =
+  {
+    post: {
+      label: 'Post',
+      defaultChannel: 'LinkedIn',
+      placeholder: 'Sujet + angle + audience + ton (ex: direct, bienveillant) + CTA…',
+    },
+    email: {
+      label: 'Email',
+      defaultChannel: 'Email',
+      placeholder: 'Objectif (nurture/vente) + contexte + offre éventuelle + ton + longueur…',
+    },
+    blog: {
+      label: 'Blog',
+      defaultChannel: 'Blog',
+      placeholder: 'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
+    },
+    video_script: {
+      label: 'Script vidéo',
+      defaultChannel: 'YouTube/Shorts',
+      placeholder: 'Format (45s/60s) + style + hooks possibles + CTA…',
+    },
+    sales_page: {
+      label: 'Page de vente',
+      defaultChannel: 'Landing',
+      placeholder: 'Produit/offre + avatar + promesse + objections + preuves…',
+    },
+    funnel: {
+      label: 'Funnel',
+      defaultChannel: 'Funnel',
+      placeholder: 'Objectif + offre + étapes attendues + canaux + timing…',
+    },
+  };
 
 function isoDateOrNull(v: string): string | null {
   if (!v) return null;
-  // input[type=date] returns YYYY-MM-DD (already OK)
   return v;
 }
 
 export function ContentGenerator({ type }: Props) {
-  const preset = useMemo(
-    () =>
-      TYPE_PRESETS[type] ?? {
-        label: "Contenu",
-        defaultChannel: "Général",
-        placeholder: "Décris précisément ce que tu veux produire…",
-      },
-    [type],
-  );
+  const preset =
+    TYPE_PRESETS[type] ??
+    ({
+      label: 'Contenu',
+      defaultChannel: 'Général',
+      placeholder: 'Décris précisément ce que tu veux produire…',
+    } as const);
 
   const [channel, setChannel] = useState(preset.defaultChannel);
-  const [scheduledDate, setScheduledDate] = useState("");
-  const [tags, setTags] = useState("");
-  const [prompt, setPrompt] = useState("");
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [tags, setTags] = useState('');
+  const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [result, setResult] = useState<GenerateResponse | null>(null);
@@ -82,15 +78,15 @@ export function ContentGenerator({ type }: Props) {
     setResult(null);
 
     try {
-      const res = await fetch("/api/content/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/content/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type,
           channel,
           scheduledDate: isoDateOrNull(scheduledDate),
           tags: tags
-            .split(",")
+            .split(',')
             .map((t) => t.trim())
             .filter(Boolean),
           prompt,
@@ -102,7 +98,7 @@ export function ContentGenerator({ type }: Props) {
     } catch (e) {
       setResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Erreur inconnue",
+        error: e instanceof Error ? e.message : 'Erreur inconnue',
       });
     } finally {
       setLoading(false);
@@ -154,9 +150,7 @@ export function ContentGenerator({ type }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">
-              Consigne / angle
-            </label>
+            <label className="text-xs font-semibold text-slate-700">Consigne / angle</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -171,7 +165,7 @@ export function ContentGenerator({ type }: Props) {
             disabled={loading || !prompt.trim()}
             className="inline-flex h-10 items-center justify-center rounded-xl bg-[#b042b4] px-4 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-50"
           >
-            {loading ? "Génération…" : `Générer + sauvegarder`}
+            {loading ? 'Génération…' : 'Générer + sauvegarder'}
           </button>
 
           <div className="flex items-center justify-between">
@@ -191,10 +185,14 @@ export function ContentGenerator({ type }: Props) {
               Le contenu est sauvegardé automatiquement dans “Mes contenus”.
             </p>
           </div>
+
           {result?.ok && result.id ? (
-            <span className="text-[11px] rounded-full bg-emerald-50 text-emerald-700 px-2 py-1 border border-emerald-100">
-              Sauvegardé
-            </span>
+            <Link
+              href={`/contents/${result.id}`}
+              className="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-100 hover:bg-emerald-100"
+            >
+              Ouvrir →
+            </Link>
           ) : null}
         </div>
 
@@ -207,22 +205,29 @@ export function ContentGenerator({ type }: Props) {
           </div>
         ) : result.ok ? (
           <div className="mt-4 space-y-3">
+            {result.warning ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {result.warning}
+                {result.saveError ? <div className="mt-1 text-xs">{result.saveError}</div> : null}
+              </div>
+            ) : null}
+
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
               <p className="text-xs font-semibold text-slate-700">Titre</p>
-              <p className="mt-1 text-sm text-slate-900">{result.title ?? "—"}</p>
+              <p className="mt-1 text-sm text-slate-900">{result.title ?? '—'}</p>
             </div>
 
             <div className="rounded-xl border border-slate-200 p-4">
               <p className="text-xs font-semibold text-slate-700">Contenu</p>
               <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-900 leading-relaxed">
-                {result.content ?? ""}
+                {result.content ?? ''}
               </pre>
             </div>
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
             <p className="text-sm font-semibold text-rose-800">Erreur</p>
-            <p className="mt-1 text-sm text-rose-800">{result.error ?? "Erreur inconnue"}</p>
+            <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
           </div>
         )}
       </section>
