@@ -3,7 +3,15 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, Target, Sparkles, FolderOpen, Settings, BarChart3 } from "lucide-react";
+import {
+  Sun,
+  Target,
+  Sparkles,
+  FolderOpen,
+  Settings,
+  BarChart3,
+  CheckSquare,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -12,46 +20,50 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 type NavItem = {
+  title: string;
   href: string;
-  label: string;
   icon: ComponentType<{ className?: string }>;
 };
 
 const mainNav: NavItem[] = [
-  { href: "/app", label: "Aujourd'hui", icon: Sun },
-  { href: "/strategy", label: "Ma Stratégie", icon: Target },
-  { href: "/create", label: "Créer", icon: Sparkles },
-  { href: "/contents", label: "Mes Contenus", icon: FolderOpen },
+  { title: "Aujourd’hui", href: "/app", icon: Sun },
+  { title: "Créer", href: "/create", icon: Sparkles },
+  { title: "Mes contenus", href: "/contents", icon: FolderOpen },
+  { title: "Tâches", href: "/tasks", icon: CheckSquare },
+  { title: "Stratégie", href: "/strategy", icon: Target },
+  { title: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
-const footerNav: NavItem[] = [
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/settings", label: "Paramètres", icon: Settings },
-];
+const footerNav: NavItem[] = [{ title: "Settings", href: "/settings", icon: Settings }];
 
-function SidebarLink({ href, label, icon: Icon }: NavItem) {
+function isActivePath(pathname: string, href: string) {
+  if (href === "/app") return pathname === "/app";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function SidebarLink({ title, href, icon: Icon }: NavItem) {
   const pathname = usePathname();
-  const isActive = pathname === href || (href !== "/app" && pathname.startsWith(href + "/"));
+  const active = isActivePath(pathname, href);
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive} tooltip={label}>
-        <Link
-          href={href}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent",
-            isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
-          )}
-        >
-          <Icon className="h-5 w-5" />
-          <span className="truncate">{label}</span>
+      <SidebarMenuButton
+        asChild
+        tooltip={title}
+        className={cn(active && "bg-muted font-semibold")}
+      >
+        <Link href={href} className="flex items-center gap-2">
+          <Icon className="h-4 w-4" />
+          <span>{title}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -61,6 +73,14 @@ function SidebarLink({ href, label, icon: Icon }: NavItem) {
 export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="px-2 py-2">
+          <div className="text-sm font-bold leading-none">Tipote™</div>
+          <div className="text-[11px] text-muted-foreground mt-1">Business buddy IA</div>
+        </div>
+        <SidebarSeparator />
+      </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
