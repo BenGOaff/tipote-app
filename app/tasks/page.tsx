@@ -1,5 +1,5 @@
 // app/tasks/page.tsx
-// Page dédiée "Tâches" (table tasks) + bouton Sync + création + édition/suppression
+// Page dédiée "Tâches" (public.project_tasks) + Sync + CRUD
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { TaskList, type TaskItem } from "@/components/tasks/TaskList";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -22,8 +23,8 @@ export default async function TasksPage() {
   const userEmail = session.user.email ?? "";
 
   const { data: tasksRaw } = await supabase
-    .from("tasks")
-    .select("id, title, description, status, due_date, importance, created_at")
+    .from("project_tasks")
+    .select("id, title, status, due_date, priority, source, created_at")
     .eq("user_id", session.user.id)
     .order("due_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -32,10 +33,11 @@ export default async function TasksPage() {
     ? tasksRaw.map((t) => ({
         id: String(t.id),
         title: String(t.title ?? ""),
-        description: (t.description ?? null) as string | null,
+        description: null,
         status: (t.status ?? null) as string | null,
         due_date: (t.due_date ?? null) as string | null,
-        importance: (t.importance ?? null) as string | null,
+        priority: (t.priority ?? null) as string | null,
+        source: (t.source ?? null) as string | null,
       }))
     : [];
 

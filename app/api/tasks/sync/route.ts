@@ -1,7 +1,8 @@
 // app/api/tasks/sync/route.ts
-// Sync des tâches : plan_json (business_plan) -> table tasks
-// ✅ v2: ne supprime plus les tâches existantes
-// - On insère seulement les tâches manquantes (dédupe simple : title + due_date)
+// Sync “smart” : business_plan.plan_json -> public.project_tasks
+// ✅ Ne touche jamais aux tâches manuelles (source='manual')
+// ✅ Remplace uniquement les tâches de stratégie (source='strategy')
+// ✅ Préserve la progression: si une tâche stratégie existait (même title+due_date) on garde son status
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -10,14 +11,12 @@ type AnyRecord = Record<string, unknown>;
 
 type PlanTask = {
   title?: unknown;
-  description?: unknown;
-  status?: unknown;
   due_date?: unknown;
   dueDate?: unknown;
   deadline?: unknown;
   date?: unknown;
-  importance?: unknown;
   priority?: unknown;
+  importance?: unknown;
 };
 
 function asArray(v: unknown): unknown[] {
@@ -49,7 +48,6 @@ function isIsoDateYYYYMMDD(v: string): boolean {
 function normalizeDueDate(raw: unknown): string | null {
   const s = cleanNullableString(raw);
   if (!s) return null;
-
   if (isIsoDateYYYYMMDD(s)) return s;
 
   const d = new Date(s);
@@ -61,23 +59,19 @@ function normalizeDueDate(raw: unknown): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function normalizeImportance(raw: unknown): string | null {
+function normalizePriority(raw: unknown): string | null {
   const s = cleanNullableString(raw);
   if (!s) return null;
   const low = s.toLowerCase();
   return low === "high" || low === "important" || low === "urgent" || low === "p1" ? "high" : null;
 }
 
-function normalizeTask(
-  raw: unknown,
-): { title: string; description: string | null; due_date: string | null; importance: string | null } | null {
+function normalizeTask(raw: unknown): { title: string; due_date: string | null; priority: string | null } | null {
   const r = asRecord(raw);
   if (!r) return null;
 
   const title = cleanString(r.title ?? (r as PlanTask).title ?? r.task ?? r.name);
   if (!title) return null;
-
-  const description = cleanNullableString(r.description ?? (r as PlanTask).description ?? r.details ?? r.note);
 
   const dueRaw =
     (r as PlanTask).due_date ??
@@ -91,10 +85,10 @@ function normalizeTask(
 
   const due_date = normalizeDueDate(dueRaw);
 
-  const impRaw = (r as PlanTask).importance ?? (r as PlanTask).priority ?? r.importance ?? r.priority;
-  const importance = normalizeImportance(impRaw);
+  const prioRaw = (r as PlanTask).priority ?? (r as PlanTask).importance ?? r.priority ?? r.importance;
+  const priority = normalizePriority(prioRaw);
 
-  return { title, description, due_date, importance };
+  return { title, due_date, priority };
 }
 
 function pickTasksFromPlan(planJson: AnyRecord | null) {
@@ -104,7 +98,7 @@ function pickTasksFromPlan(planJson: AnyRecord | null) {
   if (direct.length) return direct;
 
   const plan = asRecord(planJson.plan);
-  const plan90 = asRecord(planJson.plan90 ?? planJson.plan_90);
+  const plan90 = asRecord(planJson.plan90 ?? planJson.plan_90 ?? planJson.plan_90_days);
 
   const a = asArray(plan?.tasks).map(normalizeTask).filter(Boolean);
   if (a.length) return a;
@@ -123,7 +117,7 @@ function pickTasksFromPlan(planJson: AnyRecord | null) {
   return [];
 }
 
-function makeKey(title: string, due_date: string | null) {
+function keyOf(title: string, due_date: string | null) {
   return `${title.toLowerCase().trim()}__${due_date ?? ""}`;
 }
 
@@ -136,10 +130,9 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1) lire le dernier business_plan
     const { data: bp, error: bpErr } = await supabase
       .from("business_plan")
-      .select("id, plan_json, created_at")
+      .select("plan_json, created_at")
       .eq("user_id", auth.user.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -149,44 +142,48 @@ export async function POST() {
 
     const planJson = asRecord((bp as AnyRecord | null)?.plan_json ?? null);
     const parsed = pickTasksFromPlan(planJson).filter(
-      (t): t is { title: string; description: string | null; due_date: string | null; importance: string | null } =>
-        Boolean(t),
+      (t): t is { title: string; due_date: string | null; priority: string | null } => Boolean(t),
     );
 
-    if (parsed.length === 0) return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
-
-    // 2) récupérer tâches existantes pour déduplication
-    const { data: existingRaw, error: exErr } = await supabase
-      .from("tasks")
-      .select("id, title, due_date")
-      .eq("user_id", auth.user.id);
+    // préserver status existant
+    const { data: existingStrategy, error: exErr } = await supabase
+      .from("project_tasks")
+      .select("title, due_date, status")
+      .eq("user_id", auth.user.id)
+      .eq("source", "strategy");
 
     if (exErr) return NextResponse.json({ ok: false, error: exErr.message }, { status: 400 });
 
-    const existingKeys = new Set<string>();
-    if (Array.isArray(existingRaw)) {
-      for (const r of existingRaw as Array<{ title: string | null; due_date: string | null }>) {
+    const statusByKey = new Map<string, string | null>();
+    if (Array.isArray(existingStrategy)) {
+      for (const r of existingStrategy as Array<{ title: string | null; due_date: string | null; status: string | null }>) {
         const t = (r.title ?? "").trim();
         if (!t) continue;
-        existingKeys.add(makeKey(t, r.due_date ?? null));
+        statusByKey.set(keyOf(t, r.due_date ?? null), r.status ?? null);
       }
     }
 
-    // 3) payload (uniquement nouvelles)
-    const payload = parsed
-      .map((t) => ({
-        user_id: auth.user.id,
-        title: t.title,
-        description: t.description,
-        due_date: t.due_date,
-        importance: t.importance,
-        status: "todo",
-      }))
-      .filter((t) => !existingKeys.has(makeKey(t.title, t.due_date)));
+    // delete uniquement strategy
+    const { error: delErr } = await supabase
+      .from("project_tasks")
+      .delete()
+      .eq("user_id", auth.user.id)
+      .eq("source", "strategy");
 
-    if (payload.length === 0) return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
+    if (delErr) return NextResponse.json({ ok: false, error: delErr.message }, { status: 400 });
 
-    const { error: insErr } = await supabase.from("tasks").insert(payload);
+    if (parsed.length === 0) return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
+
+    const payload = parsed.map((t) => ({
+      user_id: auth.user.id,
+      title: t.title,
+      due_date: t.due_date,
+      priority: t.priority,
+      status: statusByKey.get(keyOf(t.title, t.due_date)) ?? "todo",
+      source: "strategy",
+    }));
+
+    const { error: insErr } = await supabase.from("project_tasks").insert(payload);
     if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
 
     return NextResponse.json({ ok: true, inserted: payload.length }, { status: 200 });

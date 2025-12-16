@@ -1,16 +1,16 @@
 // app/api/tasks/route.ts
-// GET: liste des tâches (table tasks)
-// POST: création d'une tâche
+// GET: liste des tâches (table public.project_tasks)
+// POST: création d'une tâche (source='manual')
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 type CreateBody = {
   title?: unknown;
-  description?: unknown;
   due_date?: unknown;
-  importance?: unknown; // "high" | null
-  status?: unknown; // "todo" | "done" | ...
+  priority?: unknown;
+  importance?: unknown; // compat ancienne UI
+  status?: unknown;
 };
 
 function cleanString(v: unknown): string {
@@ -27,6 +27,27 @@ function isIsoDateYYYYMMDD(v: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
 
+function normalizeDueDate(raw: unknown): string | null {
+  const s = cleanNullableString(raw);
+  if (!s) return null;
+  if (isIsoDateYYYYMMDD(s)) return s;
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizePriority(raw: unknown): string | null {
+  const s = cleanNullableString(raw);
+  if (!s) return null;
+  const low = s.toLowerCase();
+  return low === "high" ? "high" : null;
+}
+
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
@@ -37,8 +58,8 @@ export async function GET() {
     }
 
     const { data, error } = await supabase
-      .from("tasks")
-      .select("id, title, description, status, due_date, importance, created_at, updated_at")
+      .from("project_tasks")
+      .select("id, title, status, priority, due_date, source, created_at, updated_at")
       .eq("user_id", auth.user.id)
       .order("due_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -72,38 +93,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Titre requis" }, { status: 400 });
     }
 
-    const description = cleanNullableString(raw.description);
-
-    let due_date = cleanNullableString(raw.due_date);
-    if (due_date && !isIsoDateYYYYMMDD(due_date)) {
-      // accepte ISO complet, et tronque
-      const d = new Date(due_date);
-      if (Number.isNaN(d.getTime())) {
-        return NextResponse.json({ ok: false, error: "Date invalide" }, { status: 400 });
-      }
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      due_date = `${yyyy}-${mm}-${dd}`;
-    }
-
-    const imp = cleanNullableString(raw.importance);
-    const importance = imp && imp.toLowerCase() === "high" ? "high" : null;
+    const due_date = normalizeDueDate(raw.due_date);
+    const priority = normalizePriority(raw.priority ?? raw.importance);
 
     const st = cleanNullableString(raw.status);
     const status = st ? st : "todo";
 
     const { data, error } = await supabase
-      .from("tasks")
+      .from("project_tasks")
       .insert({
         user_id: auth.user.id,
         title,
-        description,
-        due_date,
-        importance,
         status,
+        due_date,
+        priority,
+        source: "manual",
       })
-      .select("id, title, description, status, due_date, importance, created_at, updated_at")
+      .select("id, title, status, priority, due_date, source, created_at, updated_at")
       .single();
 
     if (error) {

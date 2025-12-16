@@ -1,9 +1,11 @@
 // app/strategy/page.tsx
-// Stratégie (server) + tâches via table tasks (fallback plan_json si vide)
-// + bouton sync pour importer les tâches du plan
-// + StrategyClient attend offerPyramids / initialSelectedIndex / initialSelectedPyramid (pas planJson)
+// Stratégie (server) + tâches liées au plan
+// - Affiche la pyramide d'offres via StrategyClient (UI existante)
+// - Affiche les tâches: priorité à public.project_tasks (si vide => fallback plan_json)
+// - Bouton "Sync tâches" pour importer dans project_tasks
 
 import { redirect } from "next/navigation";
+
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import StrategyClient from "./StrategyClient";
@@ -11,86 +13,112 @@ import { TaskList, type TaskItem } from "@/components/tasks/TaskList";
 
 type AnyRecord = Record<string, unknown>;
 
-type PlanTask = {
-  title?: string;
-  description?: string;
-  status?: string | null;
-  due_date?: string | null;
-  dueDate?: string | null;
-  importance?: string | null;
-};
-
 function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-function pickTasksFromPlan(planJson: AnyRecord | null): PlanTask[] {
+function asRecord(v: unknown): AnyRecord | null {
+  return v && typeof v === "object" ? (v as AnyRecord) : null;
+}
+
+function asString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function cleanString(v: unknown): string {
+  return asString(v).trim();
+}
+
+function cleanNullableString(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = cleanString(v);
+  return s ? s : null;
+}
+
+function isIsoDateYYYYMMDD(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+function normalizeDueDate(raw: unknown): string | null {
+  const s = cleanNullableString(raw);
+  if (!s) return null;
+  if (isIsoDateYYYYMMDD(s)) return s;
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizePriority(raw: unknown): string | null {
+  const s = cleanNullableString(raw);
+  if (!s) return null;
+  const low = s.toLowerCase();
+  return low === "high" || low === "important" || low === "urgent" || low === "p1" ? "high" : null;
+}
+
+function normalizePlanTask(raw: unknown, idx: number): TaskItem | null {
+  const r = asRecord(raw);
+  if (!r) return null;
+
+  const title = cleanString(r.title ?? r.task ?? r.name);
+  if (!title) return null;
+
+  const description = cleanNullableString(r.description ?? r.details ?? r.note);
+  const due_date = normalizeDueDate(r.due_date ?? r.dueDate ?? r.deadline ?? r.date);
+  const priority = normalizePriority(r.priority ?? r.importance);
+
+  return {
+    id: `plan-${idx}`,
+    title,
+    description,
+    status: cleanNullableString(r.status) ?? "todo",
+    due_date,
+    priority,
+    source: "strategy",
+  };
+}
+
+function pickTasksFromPlan(planJson: AnyRecord | null): TaskItem[] {
   if (!planJson) return [];
-  const direct = asArray(planJson.tasks) as PlanTask[];
+
+  const direct = asArray(planJson.tasks)
+    .map((t, i) => normalizePlanTask(t, i))
+    .filter(Boolean) as TaskItem[];
   if (direct.length) return direct;
 
-  const plan = (planJson.plan as AnyRecord | undefined) ?? null;
-  const plan90 = (planJson.plan_90_days as AnyRecord | undefined) ?? null;
+  const plan = asRecord(planJson.plan);
+  const plan90 = asRecord(planJson.plan90 ?? planJson.plan_90 ?? planJson.plan_90_days ?? planJson.plan_90_days);
 
-  const a = asArray(plan?.tasks) as PlanTask[];
+  const a = asArray(plan?.tasks)
+    .map((t, i) => normalizePlanTask(t, i))
+    .filter(Boolean) as TaskItem[];
   if (a.length) return a;
 
-  const b = asArray(plan90?.tasks) as PlanTask[];
+  const b = asArray(plan90?.tasks)
+    .map((t, i) => normalizePlanTask(t, i))
+    .filter(Boolean) as TaskItem[];
   if (b.length) return b;
 
-  return [];
-}
+  const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
+  if (grouped) {
+    const d30 = asArray(grouped.d30)
+      .map((t, i) => normalizePlanTask(t, i))
+      .filter(Boolean) as TaskItem[];
+    const d60 = asArray(grouped.d60)
+      .map((t, i) => normalizePlanTask(t, i))
+      .filter(Boolean) as TaskItem[];
+    const d90 = asArray(grouped.d90)
+      .map((t, i) => normalizePlanTask(t, i))
+      .filter(Boolean) as TaskItem[];
 
-function normalizePlanTask(t: PlanTask): TaskItem {
-  const title = typeof t.title === "string" ? t.title.trim() : "Tâche";
-  const description = typeof t.description === "string" ? t.description.trim() : null;
-  const status = typeof t.status === "string" ? t.status.trim() : "todo";
-  const due = (t.due_date ?? t.dueDate ?? null) as string | null;
-  const due_date = typeof due === "string" && due.trim() ? due.trim() : null;
-  const importance =
-    typeof t.importance === "string" && t.importance.trim()
-      ? t.importance.trim().toLowerCase()
-      : null;
-
-  // id fake (fallback display only)
-  const id = `${title}-${due_date ?? "nodate"}-${Math.random().toString(16).slice(2)}`;
-
-  return { id, title, description, status, due_date, importance };
-}
-
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function bucket(tasks: TaskItem[]) {
-  const now = new Date();
-  const t0 = startOfDay(now).getTime();
-  const t30 = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30)).getTime();
-  const t60 = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 60)).getTime();
-  const t90 = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 90)).getTime();
-
-  const d30: TaskItem[] = [];
-  const d60: TaskItem[] = [];
-  const d90: TaskItem[] = [];
-  const noDate: TaskItem[] = [];
-
-  for (const t of tasks) {
-    if (!t.due_date) {
-      noDate.push(t);
-      continue;
-    }
-    const ts = new Date(t.due_date).getTime();
-    if (Number.isNaN(ts)) {
-      noDate.push(t);
-      continue;
-    }
-    if (ts >= t0 && ts < t30) d30.push(t);
-    else if (ts >= t30 && ts < t60) d60.push(t);
-    else if (ts >= t60 && ts <= t90) d90.push(t);
-    else d90.push(t);
+    return [...d30, ...d60, ...d90];
   }
 
-  return { d30, d60, d90, noDate };
+  return [];
 }
 
 function pickOfferPyramidsFromPlan(planJson: AnyRecord | null): AnyRecord[] {
@@ -109,36 +137,29 @@ function pickOfferPyramidsFromPlan(planJson: AnyRecord | null): AnyRecord[] {
 
   if (single && typeof single === "object") return [single];
 
-  return [];
+  const fromBlocks = asArray((planJson as AnyRecord).business_blocks) as AnyRecord[];
+  const pyramidsFromBlocks = fromBlocks
+    .map((b) => asRecord(b)?.offer_pyramid ?? asRecord(b)?.offerPyramid ?? null)
+    .filter((x) => x && typeof x === "object") as AnyRecord[];
+
+  return pyramidsFromBlocks;
 }
 
-function pickInitialPyramid(planJson: AnyRecord | null): {
-  initialSelectedIndex: number;
-  initialSelectedPyramid?: AnyRecord;
-} {
-  if (!planJson) return { initialSelectedIndex: 0 };
-
+function pickSelectedOfferPyramid(planJson: AnyRecord | null) {
   const idxRaw =
-    (planJson as AnyRecord).selected_offer_pyramid_index ??
-    (planJson as AnyRecord).selectedOfferPyramidIndex ??
+    (planJson as AnyRecord | null)?.selected_offer_pyramid_index ??
+    (planJson as AnyRecord | null)?.selectedOfferPyramidIndex ??
     0;
 
-  const idxNum =
-    typeof idxRaw === "number"
-      ? idxRaw
-      : typeof idxRaw === "string"
-        ? Number(idxRaw)
-        : 0;
-
+  const idxNum = typeof idxRaw === "number" ? idxRaw : Number(String(idxRaw ?? "0"));
   const initialSelectedIndex = Number.isFinite(idxNum) && idxNum >= 0 ? idxNum : 0;
 
   const selected =
-    ((planJson as AnyRecord).selected_offer_pyramid as AnyRecord | undefined) ??
-    ((planJson as AnyRecord).selectedOfferPyramid as AnyRecord | undefined) ??
+    (planJson as AnyRecord | null)?.selected_offer_pyramid ??
+    (planJson as AnyRecord | null)?.selectedOfferPyramid ??
     undefined;
 
-  const initialSelectedPyramid =
-    selected && typeof selected === "object" ? selected : undefined;
+  const initialSelectedPyramid = selected && typeof selected === "object" ? (selected as AnyRecord) : undefined;
 
   return { initialSelectedIndex, initialSelectedPyramid };
 }
@@ -153,6 +174,15 @@ export default async function StrategyPage() {
 
   const userEmail = session.user.email ?? "";
 
+  // onboarding
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("onboarding_done")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  if (!profile?.onboarding_done) redirect("/onboarding");
+
+  // dernier business plan (stratégie)
   const { data: planRow } = await supabase
     .from("business_plan")
     .select("id, plan_json, created_at")
@@ -163,55 +193,70 @@ export default async function StrategyPage() {
 
   if (!planRow) redirect("/onboarding");
 
+  const planJson = asRecord((planRow as AnyRecord).plan_json ?? null);
+
+  // tâches DB (project_tasks)
   const { data: tasksRows } = await supabase
-    .from("tasks")
-    .select("id, title, description, status, due_date, importance")
+    .from("project_tasks")
+    .select("id, title, status, due_date, priority, source, created_at")
     .eq("user_id", session.user.id);
 
   const tasksFromDb: TaskItem[] = Array.isArray(tasksRows)
-    ? (tasksRows as TaskItem[])
+    ? (tasksRows as Array<{
+        id: string;
+        title: string | null;
+        status: string | null;
+        due_date: string | null;
+        priority: string | null;
+        source: string | null;
+      }>).map((t) => ({
+        id: String(t.id),
+        title: String(t.title ?? ""),
+        description: null,
+        status: (t.status ?? null) as string | null,
+        due_date: (t.due_date ?? null) as string | null,
+        priority: (t.priority ?? null) as string | null,
+        source: (t.source ?? null) as string | null,
+      }))
     : [];
 
-  const planJson = (planRow as AnyRecord).plan_json as AnyRecord | null;
-  const planTasksFallback: TaskItem[] = pickTasksFromPlan(planJson).map(normalizePlanTask);
-
+  const planTasksFallback: TaskItem[] = pickTasksFromPlan(planJson);
   const tasks = tasksFromDb.length > 0 ? tasksFromDb : planTasksFallback;
-  const buckets = bucket(tasks);
 
-  // ✅ props attendus par StrategyClient
+  // pyramides
   const offerPyramids = pickOfferPyramidsFromPlan(planJson);
-  const { initialSelectedIndex, initialSelectedPyramid } = pickInitialPyramid(planJson);
+  const { initialSelectedIndex, initialSelectedPyramid } = pickSelectedOfferPyramid(planJson);
 
   return (
     <AppShell userEmail={userEmail}>
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        <main className="space-y-6">
-          <section className="rounded-2xl bg-[#b042b4] text-white p-6 shadow-sm">
-            <h1 className="text-xl md:text-2xl font-semibold">Ma Stratégie</h1>
-            <p className="mt-2 text-sm text-white/90 max-w-2xl">
-              Pyramide d’offres + plan d’action. Les tâches peuvent maintenant être synchronisées en base.
-            </p>
-          </section>
+      <div className="p-6 max-w-6xl mx-auto space-y-8">
+        <header>
+          <h1 className="text-2xl font-bold text-slate-900">Stratégie</h1>
+          <p className="mt-1 text-sm text-slate-600">Ta feuille de route et ta pyramide d’offres.</p>
+        </header>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <TaskList title="Jours 1–30" tasks={buckets.d30} showSync={tasksFromDb.length === 0} />
-            <TaskList title="Jours 31–60" tasks={buckets.d60} showSync={tasksFromDb.length === 0} />
-            <TaskList title="Jours 61–90" tasks={buckets.d90} showSync={tasksFromDb.length === 0} />
-            <TaskList title="Sans échéance" tasks={buckets.noDate} showSync={tasksFromDb.length === 0} />
-          </section>
+        <section>
+          <h2 className="text-sm font-semibold text-slate-900">Tâches</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Synchronise les tâches depuis ta stratégie pour pouvoir les cocher et les gérer.
+          </p>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Pyramide d’offres</h2>
-            <p className="mt-1 text-xs text-slate-500">(UI existante conservée — on ne casse rien)</p>
-            <div className="mt-4">
-              <StrategyClient
-                offerPyramids={offerPyramids}
-                initialSelectedIndex={initialSelectedIndex}
-                initialSelectedPyramid={initialSelectedPyramid}
-              />
-            </div>
-          </section>
-        </main>
+          <div className="mt-4">
+            <TaskList title="Tâches (90 jours)" tasks={tasks} showSync allowCreate={false} variant="card" />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-slate-900">Pyramide d’offres</h2>
+          <p className="mt-1 text-xs text-slate-500">(UI existante conservée — on ne casse rien)</p>
+          <div className="mt-4">
+            <StrategyClient
+              offerPyramids={offerPyramids}
+              initialSelectedIndex={initialSelectedIndex}
+              initialSelectedPyramid={initialSelectedPyramid}
+            />
+          </div>
+        </section>
       </div>
     </AppShell>
   );

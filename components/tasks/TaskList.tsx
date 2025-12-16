@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type TaskItem = {
   id: string;
   title: string;
+  // project_tasks ne contient pas de colonne description (dans ton schéma actuel)
+  // on la garde pour compat UI (souvent null)
   description: string | null;
   status: string | null;
-  due_date: string | null; // YYYY-MM-DD or ISO
-  importance: string | null;
+  due_date: string | null;
+  priority: string | null; // "high" | null
+  source?: string | null; // "manual" | "strategy"
 };
 
 type Props = {
@@ -58,6 +60,10 @@ function isVirtualTaskId(id: string) {
   return id.startsWith("plan-") || id.startsWith("fallback-") || id.startsWith("tmp-");
 }
 
+function isStrategySource(src: string | null | undefined) {
+  return String(src ?? "").toLowerCase() === "strategy";
+}
+
 export function TaskList({
   title,
   tasks,
@@ -75,7 +81,6 @@ export function TaskList({
   const [creating, setCreating] = useState(false);
 
   const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [newImportant, setNewImportant] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
@@ -83,7 +88,6 @@ export function TaskList({
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editImportant, setEditImportant] = useState(false);
   const [editDone, setEditDone] = useState(false);
@@ -96,8 +100,8 @@ export function TaskList({
       const doneB = isDone(b.status);
       if (doneA !== doneB) return doneA ? 1 : -1;
 
-      const impA = String(a.importance ?? "").toLowerCase() === "high";
-      const impB = String(b.importance ?? "").toLowerCase() === "high";
+      const impA = String(a.priority ?? "").toLowerCase() === "high";
+      const impB = String(b.priority ?? "").toLowerCase() === "high";
       if (impA !== impB) return impA ? -1 : 1;
 
       const da = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
@@ -124,9 +128,8 @@ export function TaskList({
 
     setEditingId(task.id);
     setEditTitle(task.title ?? "");
-    setEditDescription(task.description ?? "");
     setEditDueDate(toDateInputValue(task.due_date));
-    setEditImportant(String(task.importance ?? "").toLowerCase() === "high");
+    setEditImportant(String(task.priority ?? "").toLowerCase() === "high");
     setEditDone(isDone(task.status));
     setEditOpen(true);
   }
@@ -135,7 +138,6 @@ export function TaskList({
     setEditOpen(false);
     setEditingId(null);
     setEditTitle("");
-    setEditDescription("");
     setEditDueDate("");
     setEditImportant(false);
     setEditDone(false);
@@ -180,7 +182,7 @@ export function TaskList({
           setMsg(data.error ?? "Erreur sync");
           return;
         }
-        setMsg(`Sync OK (+${data.inserted ?? 0})`);
+        setMsg(`Sync OK (${data.inserted ?? 0})`);
         router.refresh();
       } catch (e) {
         setMsg(e instanceof Error ? e.message : "Erreur inconnue");
@@ -203,9 +205,8 @@ export function TaskList({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: t,
-          description: newDescription.trim() ? newDescription.trim() : null,
           due_date: newDueDate ? newDueDate : null,
-          importance: newImportant ? "high" : null,
+          priority: newImportant ? "high" : null,
           status: "todo",
         }),
       });
@@ -217,7 +218,6 @@ export function TaskList({
       }
 
       setNewTitle("");
-      setNewDescription("");
       setNewDueDate("");
       setNewImportant(false);
       setCreating(false);
@@ -246,9 +246,8 @@ export function TaskList({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: t,
-          description: editDescription.trim() ? editDescription.trim() : null,
           due_date: editDueDate ? editDueDate : null,
-          importance: editImportant ? "high" : null,
+          priority: editImportant ? "high" : null,
           done: editDone,
         }),
       });
@@ -340,16 +339,6 @@ export function TaskList({
                 />
               </div>
 
-              <div className="grid gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Description</label>
-                <Textarea
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Optionnel"
-                  rows={3}
-                />
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
                   <label className="text-xs font-semibold text-slate-700">Échéance</label>
@@ -385,16 +374,20 @@ export function TaskList({
           <div className={`${mt4} rounded-2xl border border-slate-200 bg-slate-50 p-4`}>
             <p className="text-sm font-semibold text-slate-900">Aucune tâche</p>
             <p className="mt-1 text-xs text-slate-600">Ajoute une tâche ou synchronise depuis ta stratégie.</p>
+
             {showSync ? (
-              <p className="mt-2 text-xs text-slate-500">(Astuce : lance un “Sync tâches” pour importer depuis la stratégie.)</p>
+              <p className="mt-2 text-xs text-slate-500">
+                (Astuce : lance un “Sync tâches” pour importer depuis la stratégie.)
+              </p>
             ) : null}
           </div>
         ) : (
           <div className={`${mt4} space-y-2`}>
             {sorted.map((t) => {
               const done = isDone(t.status);
-              const important = String(t.importance ?? "").toLowerCase() === "high";
+              const important = String(t.priority ?? "").toLowerCase() === "high";
               const virtual = isVirtualTaskId(t.id);
+              const fromStrategy = !virtual && isStrategySource(t.source);
 
               return (
                 <div
@@ -412,6 +405,8 @@ export function TaskList({
 
                         {virtual ? (
                           <Badge variant="secondary">Depuis stratégie</Badge>
+                        ) : fromStrategy ? (
+                          <Badge variant="secondary">Stratégie</Badge>
                         ) : important ? (
                           <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">Important</Badge>
                         ) : null}
@@ -464,11 +459,6 @@ export function TaskList({
             <div className="grid gap-1.5">
               <label className="text-xs font-semibold text-slate-700">Titre</label>
               <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            </div>
-
-            <div className="grid gap-1.5">
-              <label className="text-xs font-semibold text-slate-700">Description</label>
-              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
