@@ -39,6 +39,11 @@ function formatDate(iso: string | null) {
   return `${dd}/${mm}/${y}`;
 }
 
+function isVirtualTaskId(id: string) {
+  // tâches issues du plan_json (fallback) => pas d’ID DB
+  return id.startsWith("plan-") || id.startsWith("fallback-") || id.startsWith("tmp-");
+}
+
 export function TaskList({
   title,
   tasks,
@@ -89,6 +94,12 @@ export function TaskList({
 
   async function toggle(task: TaskItem) {
     setMsg(null);
+
+    if (isVirtualTaskId(task.id)) {
+      setMsg("Cette tâche vient du plan stratégique. Fais un Sync pour l’importer dans la base.");
+      return;
+    }
+
     const nextDone = !isDone(task.status);
 
     try {
@@ -270,6 +281,7 @@ export function TaskList({
           {sorted.map((t) => {
             const done = isDone(t.status);
             const important = String(t.importance ?? "").toLowerCase() === "high";
+            const virtual = isVirtualTaskId(t.id);
 
             return (
               <div
@@ -277,14 +289,22 @@ export function TaskList({
                 className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 hover:bg-slate-50"
               >
                 <div className="flex items-start gap-3 min-w-0">
-                  <Checkbox checked={done} onCheckedChange={() => toggle(t)} className="mt-0.5" />
+                  <Checkbox
+                    checked={done}
+                    disabled={virtual}
+                    onCheckedChange={() => toggle(t)}
+                    className="mt-0.5"
+                  />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className={`text-sm font-semibold ${done ? "line-through text-slate-400" : "text-slate-900"}`}>
                         {t.title}
                       </p>
-                      {important ? (
+
+                      {virtual ? (
+                        <Badge variant="secondary">Depuis stratégie</Badge>
+                      ) : important ? (
                         <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">Important</Badge>
                       ) : null}
                     </div>
@@ -297,7 +317,9 @@ export function TaskList({
 
                 <div className="shrink-0 text-right">
                   <p className="text-xs font-semibold text-slate-700">{formatDate(t.due_date)}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">{done ? "Fait" : "À faire"}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    {virtual ? "À importer" : done ? "Fait" : "À faire"}
+                  </p>
                 </div>
               </div>
             );
