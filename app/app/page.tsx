@@ -3,7 +3,8 @@
 // - Protégé par l'auth Supabase
 // - Si aucun plan stratégique => redirect /onboarding
 // - UI Lovable : Welcome/Next action + stats + progression + quick actions + à venir
-// - Pas de contenu "prérempli" : on affiche des placeholders propres si pas de données
+// - Tâches : priorité à la table `tasks` (si vide => fallback plan_json)
+// - Contenus planifiés : table `content_item`
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -33,16 +34,31 @@ import {
 
 type AnyRecord = Record<string, unknown>;
 
-type Task = {
+type PlanTask = {
   title?: string;
   description?: string;
   status?: string | null;
   due_date?: string | null;
-  dueDate?: string | null; // variantes possibles
-  importance?: string | null; // "high" / ...
+  dueDate?: string | null;
+  importance?: string | null;
 };
 
-type EnrichedTask = Task & {
+type DbTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  due_date: string | null;
+  importance: string | null;
+};
+
+type EnrichedTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  due_date: string | null;
+  importance: string | null;
   _dueDate: Date | null;
   _isDone: boolean;
   _isImportant: boolean;
@@ -63,15 +79,11 @@ function startOfDay(d: Date) {
 
 function isDoneStatus(status: string | undefined | null): boolean {
   const s = String(status ?? "").toLowerCase();
-  return ["done", "completed", "terminé", "termine", "finished"].some((k) =>
-    s.includes(k),
-  );
+  return ["done", "completed", "termin", "finished"].some((k) => s.includes(k));
 }
 
-function parseDueDate(task: Task): Date | null {
-  const value = task.due_date ?? task.dueDate ?? null;
+function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null;
-
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return null;
   return dt;
@@ -109,6 +121,59 @@ function formatScheduledBadge(iso: string | null) {
   return `${dd}/${mm}/${y}`;
 }
 
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function pickTasksFromPlan(planJson: AnyRecord | null): PlanTask[] {
+  if (!planJson) return [];
+  const direct = asArray(planJson.tasks) as PlanTask[];
+  if (direct.length) return direct;
+
+  const plan = (planJson.plan as AnyRecord | undefined) ?? null;
+  const plan90 = (planJson.plan_90_days as AnyRecord | undefined) ?? null;
+
+  const a = asArray(plan?.tasks) as PlanTask[];
+  if (a.length) return a;
+
+  const b = asArray(plan90?.tasks) as PlanTask[];
+  if (b.length) return b;
+
+  const grouped =
+    (plan90?.tasks_by_timeframe as AnyRecord | undefined) ??
+    (planJson.tasks_by_timeframe as AnyRecord | undefined) ??
+    null;
+
+  if (grouped && typeof grouped === "object") {
+    const d30 = asArray((grouped as AnyRecord).d30) as PlanTask[];
+    const d60 = asArray((grouped as AnyRecord).d60) as PlanTask[];
+    const d90 = asArray((grouped as AnyRecord).d90) as PlanTask[];
+    return [...d30, ...d60, ...d90].filter(Boolean);
+  }
+
+  return [];
+}
+
+function enrichTask(
+  base: {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string | null;
+    due_date: string | null;
+    importance: string | null;
+  },
+): EnrichedTask {
+  const due = parseDate(base.due_date);
+  const important = String(base.importance ?? "").toLowerCase() === "high";
+  return {
+    ...base,
+    _dueDate: due,
+    _isDone: isDoneStatus(base.status),
+    _isImportant: important,
+  };
+}
+
 export default async function TodayPage() {
   const supabase = await getSupabaseServerClient();
   const {
@@ -138,14 +203,64 @@ export default async function TodayPage() {
     .eq("user_id", session.user.id)
     .maybeSingle();
 
-  // 2) Extraire tâches depuis plan_json (structure tolérante)
   const planJson = (businessPlan as AnyRecord)?.plan_json as AnyRecord | null;
 
-  const rawTasks: Task[] =
-    (planJson?.tasks as Task[]) ??
-    ((planJson?.plan as AnyRecord | undefined)?.tasks as Task[]) ??
-    ((planJson?.plan_90_days as AnyRecord | undefined)?.tasks as Task[]) ??
-    [];
+  // 2) Tâches : priorité DB `tasks`, sinon fallback plan_json
+  const { data: dbTasksRaw } = await supabase
+    .from("tasks")
+    .select("id, title, description, status, due_date, importance")
+    .eq("user_id", session.user.id);
+
+  const dbTasks: DbTask[] = Array.isArray(dbTasksRaw) ? (dbTasksRaw as DbTask[]) : [];
+  const hasDbTasks = dbTasks.length > 0;
+
+  const fallbackPlanTasks = pickTasksFromPlan(planJson);
+
+  const mergedTasks: EnrichedTask[] = hasDbTasks
+    ? dbTasks
+        .map((t) =>
+          enrichTask({
+            id: t.id,
+            title: t.title,
+            description: t.description ?? null,
+            status: t.status ?? "todo",
+            due_date: t.due_date ?? null,
+            importance: t.importance ?? null,
+          }),
+        )
+        .filter((t) => t.title.trim().length > 0)
+    : fallbackPlanTasks
+        .map((t, idx) => {
+          const title = typeof t.title === "string" ? t.title.trim() : "";
+          const description =
+            typeof t.description === "string" ? t.description.trim() : null;
+          const status = typeof t.status === "string" ? t.status.trim() : "todo";
+          const due = (t.due_date ?? t.dueDate ?? null) as string | null;
+          const due_date = typeof due === "string" && due.trim() ? due.trim() : null;
+          const importance =
+            typeof t.importance === "string" && t.importance.trim()
+              ? t.importance.trim().toLowerCase()
+              : null;
+
+          return enrichTask({
+            id: `plan-${idx}-${title || "task"}`,
+            title: title || "Tâche",
+            description,
+            status,
+            due_date,
+            importance,
+          });
+        })
+        .filter((t) => t.title.trim().length > 0);
+
+  // tri : d'abord échéance, puis important
+  const tasks = [...mergedTasks].sort((a, b) => {
+    const da = a._dueDate ? a._dueDate.getTime() : Number.POSITIVE_INFINITY;
+    const db = b._dueDate ? b._dueDate.getTime() : Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    if (a._isImportant !== b._isImportant) return a._isImportant ? -1 : 1;
+    return 0;
+  });
 
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -160,43 +275,22 @@ export default async function TodayPage() {
     todayStart.getDate() + 7,
   );
 
-  const tasks = rawTasks
-    .map((t) => {
-      const due = parseDueDate(t);
-      return {
-        ...t,
-        _dueDate: due as Date | null,
-        _isDone: isDoneStatus(t.status),
-        _isImportant: String((t as AnyRecord).importance ?? "")
-          .toLowerCase()
-          .includes("high"),
-      } as EnrichedTask;
-    })
-    // tri stable : d'abord échéance, puis important
-    .sort((a: EnrichedTask, b: EnrichedTask) => {
-      const da = a._dueDate ? a._dueDate.getTime() : Number.POSITIVE_INFINITY;
-      const db = b._dueDate ? b._dueDate.getTime() : Number.POSITIVE_INFINITY;
-      if (da !== db) return da - db;
-      if (a._isImportant !== b._isImportant) return a._isImportant ? -1 : 1;
-      return 0;
-    });
-
   const overdueTasks = tasks.filter(
-    (t: EnrichedTask) => t._dueDate && t._dueDate < todayStart && !t._isDone,
+    (t) => t._dueDate && t._dueDate < todayStart && !t._isDone,
   );
 
-  const tasksToday = tasks.filter((t: EnrichedTask) => {
+  const tasksToday = tasks.filter((t) => {
     if (!t._dueDate) return false;
     return t._dueDate >= todayStart && t._dueDate < tomorrowStart && !t._isDone;
   });
 
-  const upcomingWeek = tasks.filter((t: EnrichedTask) => {
+  const upcomingWeek = tasks.filter((t) => {
     if (!t._dueDate) return false;
     return t._dueDate >= tomorrowStart && t._dueDate < weekEnd && !t._isDone;
   });
 
   const totalTasks = tasks.length;
-  const doneTasksCount = tasks.filter((t: EnrichedTask) => t._isDone).length;
+  const doneTasksCount = tasks.filter((t) => t._isDone).length;
   const progressPercent =
     totalTasks > 0 ? Math.round((doneTasksCount / totalTasks) * 100) : 0;
 
@@ -213,16 +307,20 @@ export default async function TodayPage() {
 
   const nextTitle =
     nextTask?.title?.trim?.() ||
-    (tasksToday.length > 0 ? "Choisir ta prochaine action" : "Définir ta prochaine action");
+    (tasksToday.length > 0
+      ? "Choisir ta prochaine action"
+      : "Définir ta prochaine action");
 
   const nextDescription =
     nextTask?.description?.trim?.() ||
-    "On va remplir ça automatiquement après l’onboarding. Pour l’instant, tu peux avancer avec tes actions rapides.";
+    (!hasDbTasks
+      ? "Astuce : va dans “Ma stratégie” puis clique “Sync tâches” pour importer les tâches en base."
+      : "Tu peux avancer avec tes actions rapides et planifier tes contenus.");
 
   const nextDue = (nextTask?._dueDate ?? null) as Date | null;
   const nextDueBadge = formatDueBadge(nextDue);
 
-  // 3) Contenus planifiés (nouveau, sans casser l’existant)
+  // 3) Contenus planifiés
   const todayIso = formatIsoDate(todayStart);
   const weekIso = formatIsoDate(weekEnd);
 
@@ -336,7 +434,7 @@ export default async function TodayPage() {
                     variant="ghost"
                     className="text-primary-foreground hover:bg-background/10"
                   >
-                    Voir la stratégie
+                    Ma stratégie
                   </Button>
                 </Link>
               </div>
@@ -471,9 +569,7 @@ export default async function TodayPage() {
 
             {tasksToday.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Rien d’urgent aujourd’hui 🎉
-                </p>
+                <p className="text-sm text-muted-foreground">Rien d’urgent aujourd’hui 🎉</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Tu peux avancer sur la création de contenu.
                 </p>
@@ -485,21 +581,32 @@ export default async function TodayPage() {
                     </Button>
                   </Link>
                 </div>
+
+                {!hasDbTasks ? (
+                  <div className="mt-3">
+                    <Link href="/strategy">
+                      <Button variant="outline" className="w-full">
+                        Sync tâches (dans Stratégie)
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-3">
-                {tasksToday.slice(0, 5).map((t: EnrichedTask, idx: number) => (
+                {tasksToday.slice(0, 5).map((t, idx) => (
                   <div
-                    key={`${t.title ?? "task"}-${idx}`}
+                    key={`${t.id}-${idx}`}
                     className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
                         <ListTodo className="h-4 w-4 text-primary" />
                       </div>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {t.title ?? "Action du jour"}
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {t.title || "Action du jour"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatDueBadge((t._dueDate ?? null) as Date | null)}
@@ -576,20 +683,25 @@ export default async function TodayPage() {
                 {upcomingWeek.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border p-4 text-center">
                     <p className="text-sm text-muted-foreground">Aucune tâche à venir.</p>
+                    {!hasDbTasks ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Va dans “Ma stratégie” → “Sync tâches”.
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
-                  upcomingWeek.slice(0, 5).map((t: EnrichedTask, idx: number) => (
+                  upcomingWeek.slice(0, 5).map((t, idx) => (
                     <div
-                      key={`${t.title ?? "task"}-${idx}`}
+                      key={`${t.id}-${idx}`}
                       className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                          <Clock className="h-4 w-4 text-primary" />
+                          <Clock className="h-4 h-4 text-primary" />
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">
-                            {t.title ?? "Action à venir"}
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {t.title || "Action à venir"}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDueBadge((t._dueDate ?? null) as Date | null)}
@@ -608,16 +720,17 @@ export default async function TodayPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-sm">Contenus planifiés</p>
-                  <Link href="/contents?view=calendar" className="text-xs font-semibold text-primary">
+                  <Link
+                    href="/contents?view=calendar"
+                    className="text-xs font-semibold text-primary"
+                  >
                     Calendrier →
                   </Link>
                 </div>
 
                 {plannedContents.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Aucun contenu planifié.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Aucun contenu planifié.</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Renseigne une date dans “Créer”.
                     </p>
