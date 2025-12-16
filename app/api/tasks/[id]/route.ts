@@ -1,6 +1,7 @@
 // app/api/tasks/[id]/route.ts
 // GET / PATCH / DELETE sur public.project_tasks
-// NOTE: signature Next.js stricte pour éviter l'erreur TypeScript au build.
+// ✅ Fix Next 16: context.params est typé Promise<{ id: string }> dans ton build.
+// (c'est exactement l'erreur que tu vois dans .next/types/validator.ts)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -49,16 +50,18 @@ function normalizePriority(raw: unknown): string | null {
   return low === "high" ? "high" : null;
 }
 
-export async function GET(_request: NextRequest, context: { params: { id: string } }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_request: NextRequest, context: Ctx) {
   try {
+    const { id } = await context.params;
+
     const supabase = await getSupabaseServerClient();
     const { data: auth } = await supabase.auth.getUser();
 
     if (!auth?.user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
-
-    const id = context.params.id;
 
     const { data, error } = await supabase
       .from("project_tasks")
@@ -79,8 +82,10 @@ export async function GET(_request: NextRequest, context: { params: { id: string
   }
 }
 
-export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: Ctx) {
   try {
+    const { id } = await context.params;
+
     const supabase = await getSupabaseServerClient();
     const { data: auth } = await supabase.auth.getUser();
 
@@ -88,7 +93,6 @@ export async function PATCH(request: NextRequest, context: { params: { id: strin
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = context.params.id;
     const raw = (await request.json()) as PatchBody;
 
     const update: Record<string, string | null> = {};
@@ -142,16 +146,16 @@ export async function PATCH(request: NextRequest, context: { params: { id: strin
   }
 }
 
-export async function DELETE(_request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, context: Ctx) {
   try {
+    const { id } = await context.params;
+
     const supabase = await getSupabaseServerClient();
     const { data: auth } = await supabase.auth.getUser();
 
     if (!auth?.user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
-
-    const id = context.params.id;
 
     const { error } = await supabase.from("project_tasks").delete().eq("id", id).eq("user_id", auth.user.id);
 
