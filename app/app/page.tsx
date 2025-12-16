@@ -14,33 +14,26 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { TaskList, type TaskItem } from "@/components/tasks/TaskList";
 
 import {
-  Brain,
-  TrendingUp,
-  Calendar,
-  FileText,
-  CheckCircle2,
   ArrowRight,
-  Sparkles,
-  Target,
-  Play,
-  BarChart3,
   AlertTriangle,
-  Clock,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
   ListTodo,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 type AnyRecord = Record<string, unknown>;
 
 type PlanTask = {
-  title?: string;
-  description?: string;
-  status?: string | null;
-  due_date?: string | null;
-  dueDate?: string | null;
-  importance?: string | null;
+  title?: unknown;
+  description?: unknown;
+  due_date?: unknown;
+  importance?: unknown;
 };
 
 type DbTask = {
@@ -59,84 +52,64 @@ type EnrichedTask = {
   status: string | null;
   due_date: string | null;
   importance: string | null;
-  _dueDate: Date | null;
+
   _isDone: boolean;
   _isImportant: boolean;
+  _dueDate: Date | null;
+  _label: string;
 };
 
 type ContentItem = {
   id: string;
-  type: string | null;
   title: string | null;
+  content_type: string | null;
   status: string | null;
   scheduled_date: string | null; // YYYY-MM-DD
-  channel: string | null;
 };
-
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function isDoneStatus(status: string | undefined | null): boolean {
-  const s = String(status ?? "").toLowerCase();
-  return ["done", "completed", "termin", "finished"].some((k) => s.includes(k));
-}
-
-function parseDate(value: string | null | undefined): Date | null {
-  if (!value) return null;
-  const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) return null;
-  return dt;
-}
-
-function formatDueBadge(due: Date | null) {
-  if (!due) return "Sans échéance";
-  const now = new Date();
-  const today = startOfDay(now);
-  const dueDay = startOfDay(due);
-
-  const diffDays = Math.round(
-    (dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays < 0) return "En retard";
-  if (diffDays === 0) return "Aujourd'hui";
-  if (diffDays === 1) return "Demain";
-  if (diffDays <= 7) return `Dans ${diffDays} jours`;
-  return due.toLocaleDateString("fr-FR");
-}
-
-function formatIsoDate(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function formatScheduledBadge(iso: string | null) {
-  if (!iso) return "Sans date";
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return iso;
-  const [, y, mm, dd] = m;
-  return `${dd}/${mm}/${y}`;
-}
 
 function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
+function asString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function isDoneStatus(status: unknown): boolean {
+  const s = String(status ?? "").toLowerCase();
+  return ["done", "completed", "termin", "finished"].some((k) => s.includes(k));
+}
+
+function normalizeTask(raw: unknown): PlanTask | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as AnyRecord;
+
+  const title = r.title ?? r.task ?? r.name;
+  const description = r.description ?? r.details ?? r.note;
+  const due_date = r.due_date ?? r.dueDate ?? r.deadline ?? r.date;
+  const importance = r.importance ?? r.priority ?? r.level ?? r.impact;
+
+  return {
+    title,
+    description,
+    due_date,
+    importance,
+  };
+}
+
 function pickTasksFromPlan(planJson: AnyRecord | null): PlanTask[] {
   if (!planJson) return [];
-  const direct = asArray(planJson.tasks) as PlanTask[];
+
+  const direct = asArray(planJson.tasks).map(normalizeTask).filter(Boolean) as PlanTask[];
   if (direct.length) return direct;
 
   const plan = (planJson.plan as AnyRecord | undefined) ?? null;
-  const plan90 = (planJson.plan_90_days as AnyRecord | undefined) ?? null;
+  const plan90 = (planJson.plan90 as AnyRecord | undefined) ?? (planJson.plan_90 as AnyRecord | undefined) ?? null;
 
-  const a = asArray(plan?.tasks) as PlanTask[];
+  const a = asArray(plan?.tasks).map(normalizeTask).filter(Boolean) as PlanTask[];
   if (a.length) return a;
 
-  const b = asArray(plan90?.tasks) as PlanTask[];
+  const b = asArray(plan90?.tasks).map(normalizeTask).filter(Boolean) as PlanTask[];
   if (b.length) return b;
 
   const grouped =
@@ -145,36 +118,61 @@ function pickTasksFromPlan(planJson: AnyRecord | null): PlanTask[] {
     null;
 
   if (grouped && typeof grouped === "object") {
-    const d30 = asArray((grouped as AnyRecord).d30) as PlanTask[];
-    const d60 = asArray((grouped as AnyRecord).d60) as PlanTask[];
-    const d90 = asArray((grouped as AnyRecord).d90) as PlanTask[];
+    const d30 = asArray((grouped as AnyRecord).d30).map(normalizeTask).filter(Boolean) as PlanTask[];
+    const d60 = asArray((grouped as AnyRecord).d60).map(normalizeTask).filter(Boolean) as PlanTask[];
+    const d90 = asArray((grouped as AnyRecord).d90).map(normalizeTask).filter(Boolean) as PlanTask[];
     return [...d30, ...d60, ...d90].filter(Boolean);
   }
 
   return [];
 }
 
-function enrichTask(
-  base: {
-    id: string;
-    title: string;
-    description: string | null;
-    status: string | null;
-    due_date: string | null;
-    importance: string | null;
-  },
-): EnrichedTask {
-  const due = parseDate(base.due_date);
-  const important = String(base.importance ?? "").toLowerCase() === "high";
+function enrichTask(t: {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  due_date: string | null;
+  importance: string | null;
+}): EnrichedTask {
+  const due = t.due_date ? new Date(t.due_date) : null;
+  const imp = String(t.importance ?? "").toLowerCase();
+  const important = imp === "high" || imp === "important" || imp === "urgent" || imp === "p1";
+
+  const done = isDoneStatus(t.status);
+
+  const label = due
+    ? `${String(due.getDate()).padStart(2, "0")}/${String(due.getMonth() + 1).padStart(2, "0")}`
+    : "—";
+
   return {
-    ...base,
-    _dueDate: due,
-    _isDone: isDoneStatus(base.status),
+    ...t,
+    _isDone: done,
     _isImportant: important,
+    _dueDate: due && Number.isFinite(due.getTime()) ? due : null,
+    _label: label,
   };
 }
 
-export default async function TodayPage() {
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function addDays(d: Date, n: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function percent(n: number, d: number) {
+  if (d <= 0) return 0;
+  const p = Math.round((n / d) * 100);
+  return Math.max(0, Math.min(100, p));
+}
+
+export default async function TodayDashboard() {
   const supabase = await getSupabaseServerClient();
   const {
     data: { session },
@@ -184,7 +182,7 @@ export default async function TodayPage() {
 
   const userEmail = session.user.email ?? "";
 
-  // 1) Vérifier onboarding/plan existant (logique existante)
+  // 1) Business plan (plan_json) : sert pour onboarding redirect + fallback tâches
   const { data: businessPlan } = await supabase
     .from("business_plan")
     .select("id, plan_json, created_at")
@@ -193,17 +191,11 @@ export default async function TodayPage() {
     .limit(1)
     .maybeSingle();
 
-  if (!businessPlan) {
+  const planJson = (businessPlan as AnyRecord)?.plan_json as AnyRecord | null;
+
+  if (!planJson) {
     redirect("/onboarding");
   }
-
-  const { data: businessProfile } = await supabase
-    .from("business_profile")
-    .select("*")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
-
-  const planJson = (businessPlan as AnyRecord)?.plan_json as AnyRecord | null;
 
   // 2) Tâches : priorité DB `tasks`, sinon fallback plan_json
   const { data: dbTasksRaw } = await supabase
@@ -231,53 +223,65 @@ export default async function TodayPage() {
         .filter((t) => t.title.trim().length > 0)
     : fallbackPlanTasks
         .map((t, idx) => {
-          const title = typeof t.title === "string" ? t.title.trim() : "";
-          const description =
-            typeof t.description === "string" ? t.description.trim() : null;
-          const status = typeof t.status === "string" ? t.status.trim() : "todo";
-          const due = (t.due_date ?? t.dueDate ?? null) as string | null;
-          const due_date = typeof due === "string" && due.trim() ? due.trim() : null;
-          const importance =
-            typeof t.importance === "string" && t.importance.trim()
-              ? t.importance.trim().toLowerCase()
-              : null;
+          const title = typeof t.title === "string" ? t.title : asString(t.title);
+          const desc = typeof t.description === "string" ? t.description : asString(t.description);
+
+          const due =
+            typeof t.due_date === "string"
+              ? t.due_date
+              : t.due_date instanceof Date
+                ? t.due_date.toISOString()
+                : null;
+
+          const imp = typeof t.importance === "string" ? t.importance : null;
 
           return enrichTask({
-            id: `plan-${idx}-${title || "task"}`,
-            title: title || "Tâche",
-            description,
-            status,
-            due_date,
-            importance,
+            id: `plan-${idx}`,
+            title: title || "Action",
+            description: desc || null,
+            status: "todo",
+            due_date: due,
+            importance: imp,
           });
         })
         .filter((t) => t.title.trim().length > 0);
 
-  // tri : d'abord échéance, puis important
   const tasks = [...mergedTasks].sort((a, b) => {
+    // 1) non-fait d'abord
+    if (a._isDone !== b._isDone) return a._isDone ? 1 : -1;
+    // 2) important d'abord
+    if (a._isImportant !== b._isImportant) return a._isImportant ? -1 : 1;
+    // 3) date proche d'abord
     const da = a._dueDate ? a._dueDate.getTime() : Number.POSITIVE_INFINITY;
     const db = b._dueDate ? b._dueDate.getTime() : Number.POSITIVE_INFINITY;
     if (da !== db) return da - db;
-    if (a._isImportant !== b._isImportant) return a._isImportant ? -1 : 1;
-    return 0;
+    // 4) alpha
+    return a.title.localeCompare(b.title);
   });
+
+  // 3) Contenus planifiés (à venir / aujourd’hui)
+  const { data: plannedContentRaw } = await supabase
+    .from("content_item")
+    .select("id, title, content_type, status, scheduled_date")
+    .eq("user_id", session.user.id)
+    .not("scheduled_date", "is", null);
+
+  const plannedContents: ContentItem[] = Array.isArray(plannedContentRaw)
+    ? (plannedContentRaw as ContentItem[])
+    : [];
 
   const now = new Date();
   const todayStart = startOfDay(now);
-  const tomorrowStart = new Date(
-    todayStart.getFullYear(),
-    todayStart.getMonth(),
-    todayStart.getDate() + 1,
-  );
-  const weekEnd = new Date(
-    todayStart.getFullYear(),
-    todayStart.getMonth(),
-    todayStart.getDate() + 7,
-  );
+  const tomorrowStart = startOfDay(addDays(now, 1));
 
-  const overdueTasks = tasks.filter(
-    (t) => t._dueDate && t._dueDate < todayStart && !t._isDone,
-  );
+  const todayIso = `${todayStart.getFullYear()}-${String(todayStart.getMonth() + 1).padStart(2, "0")}-${String(
+    todayStart.getDate(),
+  ).padStart(2, "0")}`;
+
+  const plannedToday = plannedContents.filter((c) => c.scheduled_date === todayIso);
+  const plannedWeek = plannedContents.filter((c) => c.scheduled_date !== todayIso);
+
+  const overdueTasks = tasks.filter((t) => t._dueDate && t._dueDate < todayStart && !t._isDone);
 
   const tasksToday = tasks.filter((t) => {
     if (!t._dueDate) return false;
@@ -286,60 +290,15 @@ export default async function TodayPage() {
 
   const upcomingWeek = tasks.filter((t) => {
     if (!t._dueDate) return false;
-    return t._dueDate >= tomorrowStart && t._dueDate < weekEnd && !t._isDone;
+    const inNext7 = t._dueDate >= tomorrowStart && t._dueDate < startOfDay(addDays(now, 8));
+    return inNext7 && !t._isDone;
   });
 
   const totalTasks = tasks.length;
   const doneTasksCount = tasks.filter((t) => t._isDone).length;
-  const progressPercent =
-    totalTasks > 0 ? Math.round((doneTasksCount / totalTasks) * 100) : 0;
+  const progressPercent = percent(doneTasksCount, totalTasks);
 
-  const rawGoal90 =
-    (businessProfile as AnyRecord)?.main_goal ??
-    (businessProfile as AnyRecord)?.goal_90_days ??
-    "";
-
-  const goal90: string =
-    typeof rawGoal90 === "string" ? rawGoal90 : String(rawGoal90 ?? "");
-
-  // Prochaine action = priorité aux retards, sinon aujourd'hui
-  const nextTask: EnrichedTask | null = overdueTasks[0] ?? tasksToday[0] ?? null;
-
-  const nextTitle =
-    nextTask?.title?.trim?.() ||
-    (tasksToday.length > 0
-      ? "Choisir ta prochaine action"
-      : "Définir ta prochaine action");
-
-  const nextDescription =
-    nextTask?.description?.trim?.() ||
-    (!hasDbTasks
-      ? "Astuce : va dans “Ma stratégie” puis clique “Sync tâches” pour importer les tâches en base."
-      : "Tu peux avancer avec tes actions rapides et planifier tes contenus.");
-
-  const nextDue = (nextTask?._dueDate ?? null) as Date | null;
-  const nextDueBadge = formatDueBadge(nextDue);
-
-  // 3) Contenus planifiés
-  const todayIso = formatIsoDate(todayStart);
-  const weekIso = formatIsoDate(weekEnd);
-
-  const { data: plannedContentRaw } = await supabase
-    .from("content_item")
-    .select("id, type, title, status, scheduled_date, channel")
-    .eq("user_id", session.user.id)
-    .not("scheduled_date", "is", null)
-    .gte("scheduled_date", todayIso)
-    .lte("scheduled_date", weekIso)
-    .order("scheduled_date", { ascending: true })
-    .limit(25);
-
-  const plannedContents: ContentItem[] = Array.isArray(plannedContentRaw)
-    ? (plannedContentRaw as ContentItem[])
-    : [];
-
-  const plannedToday = plannedContents.filter((c) => c.scheduled_date === todayIso);
-  const plannedWeek = plannedContents.filter((c) => c.scheduled_date !== todayIso);
+  const nextAction = (tasksToday[0] ?? overdueTasks[0] ?? upcomingWeek[0] ?? null) as EnrichedTask | null;
 
   const stats = [
     {
@@ -351,11 +310,11 @@ export default async function TodayPage() {
     {
       label: "Contenus planifiés",
       value: String(plannedContents.length),
-      trend: plannedContents.length > 0 ? "Semaine" : "—",
+      trend: plannedToday.length > 0 ? "Aujourd'hui" : "Semaine",
       icon: Calendar,
     },
     {
-      label: "Alertes",
+      label: "Retards",
       value: String(overdueTasks.length),
       trend: overdueTasks.length > 0 ? "Priorité" : "OK",
       icon: AlertTriangle,
@@ -371,195 +330,187 @@ export default async function TodayPage() {
   return (
     <AppShell userEmail={userEmail}>
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        {/* Header (Lovable style) */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Aujourd&apos;hui</h1>
-            <Badge variant="outline" className="text-xs">
-              {new Date().toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-              })}
-            </Badge>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Aujourd&apos;hui</h1>
+            <p className="text-sm text-muted-foreground">
+              Avance sur l’essentiel, sans te disperser.
+            </p>
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Link href="/create">
-              <Button className="gradient-primary text-primary-foreground">
+              <Button className="bg-[#b042b4] text-white hover:opacity-95">
                 <Sparkles className="w-4 h-4 mr-2" />
-                Créer
+                Créer un contenu
               </Button>
             </Link>
-            <Link href="/analytics">
-              <Button variant="outline">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Analytics
-              </Button>
+            <Link href="/strategy">
+              <Button variant="outline">Ma stratégie</Button>
             </Link>
           </div>
         </div>
 
-        {/* Hero / Next action */}
-        <Card className="p-6 gradient-primary border-none">
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-background/20 text-primary-foreground border-none">
-                  Prochaine action
-                </Badge>
-                <Badge className="bg-background/20 text-primary-foreground border-none">
-                  {nextDueBadge}
-                </Badge>
+        {/* Next action */}
+        <Card className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs">
+                <ClipboardList className="w-4 h-4" />
+                Prochaine action
               </div>
 
-              <h2 className="text-2xl font-bold text-primary-foreground mb-2">
-                {nextTitle}
+              <h2 className="mt-3 text-xl font-bold">
+                {nextAction ? nextAction.title : "Rien d’urgent, continue ton rythme"}
               </h2>
 
-              <p className="text-primary-foreground/80 mb-6 max-w-2xl">
-                {nextDescription}
+              <p className="mt-1 text-sm text-muted-foreground">
+                {nextAction
+                  ? nextAction.description || "Une action concrète pour faire avancer ton business."
+                  : "Ajoute des échéances à tes tâches ou planifie du contenu pour la semaine."}
               </p>
 
-              <div className="flex items-center gap-3 flex-wrap">
-                <Link href="/create">
-                  <Button className="bg-background/20 hover:bg-background/30 text-primary-foreground border-none">
-                    <Play className="w-4 h-4 mr-2" />
-                    Créer en 1 clic
-                  </Button>
-                </Link>
-
-                <Link href="/strategy">
-                  <Button
-                    variant="ghost"
-                    className="text-primary-foreground hover:bg-background/10"
-                  >
-                    Ma stratégie
-                  </Button>
-                </Link>
-              </div>
+              {nextAction ? (
+                <div className="mt-4 flex items-center gap-2">
+                  {nextAction._isImportant ? (
+                    <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">
+                      Prioritaire
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">À faire</Badge>
+                  )}
+                  <Badge variant="outline">{nextAction._label}</Badge>
+                </div>
+              ) : null}
             </div>
 
-            <Brain className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
+            <div className="hidden md:flex items-center justify-center h-14 w-14 rounded-2xl bg-muted">
+              <CheckCircle2 className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Link href="/tasks" className="group">
+              <div className="rounded-xl border border-border p-4 hover:bg-muted/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tâches</p>
+                    <p className="text-sm font-semibold">{totalTasks}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/contents" className="group">
+              <div className="rounded-xl border border-border p-4 hover:bg-muted/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Contenus</p>
+                    <p className="text-sm font-semibold">{plannedContents.length}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/calendar" className="group">
+              <div className="rounded-xl border border-border p-4 hover:bg-muted/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Calendrier</p>
+                    <p className="text-sm font-semibold">
+                      {plannedToday.length > 0 ? `${plannedToday.length} aujourd’hui` : "Voir"}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </div>
+            </Link>
           </div>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {stats.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Card key={s.label} className="p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
+                    <p className="mt-2 text-2xl font-bold">{s.value}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{s.trend}</p>
+                  </div>
+
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">{stat.trend}</p>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Middle grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Progress / Goal */}
-          <Card className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold">Objectif 90 jours</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {goal90 || "Définis ton objectif pendant l’onboarding"}
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Quick actions */}
+          <Card className="p-6 lg:col-span-1">
+            <h3 className="text-lg font-bold mb-4">Actions rapides</h3>
+
+            <div className="space-y-3">
+              <Link href="/create">
+                <Button className="w-full bg-[#b042b4] text-white hover:opacity-95 justify-between">
+                  Créer un contenu
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Link href="/tasks">
+                <Button variant="outline" className="w-full justify-between">
+                  Gérer mes tâches
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Link href="/strategy">
+                <Button variant="outline" className="w-full justify-between">
+                  Voir ma stratégie
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Link href="/contents">
+                <Button variant="outline" className="w-full justify-between">
+                  Mes contenus
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+
+            {!hasDbTasks ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-border p-4">
+                <p className="text-sm font-semibold">Astuce</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tes tâches viennent encore du plan stratégique (fallback). Lance un{" "}
+                  <span className="font-medium">Sync</span> depuis la page Stratégie pour les importer dans la base.
                 </p>
-              </div>
-              <Target className="w-5 h-5 text-primary mt-1" />
-            </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span>Progression</span>
-                <span className="font-semibold">{progressPercent}%</span>
-              </div>
-              <Progress value={progressPercent} />
-
-              <div className="pt-2">
-                <Link href="/strategy">
-                  <Button variant="outline" className="w-full">
-                    Voir ma stratégie complète
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <h3 className="text-lg font-bold mb-6">Actions rapides</h3>
-
-            <div className="space-y-3">
-              <Link href="/create" className="block">
-                <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-primary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold group-hover:text-primary transition-colors">
-                        Générer un contenu
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Créer un post, une newsletter, une idée…
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
+                <div className="mt-3">
+                  <Link href="/strategy">
+                    <Button variant="outline" className="w-full">
+                      Sync tâches (dans Stratégie)
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
-              </Link>
-
-              <Link href="/contents" className="block">
-                <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold group-hover:text-primary transition-colors">
-                        Mes contenus
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Retrouver, éditer, planifier
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                </div>
-              </Link>
-
-              <Link href="/strategy" className="block">
-                <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold group-hover:text-primary transition-colors">
-                        Ma stratégie
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Pyramides, offres, angles
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                </div>
-              </Link>
-            </div>
+              </div>
+            ) : null}
           </Card>
 
           {/* Today tasks */}
-          <Card className="p-6">
+          <Card className="p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">Aujourd&apos;hui</h3>
               <Badge variant="outline" className="text-xs">
@@ -569,61 +520,56 @@ export default async function TodayPage() {
 
             {tasksToday.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                <p className="text-sm text-muted-foreground">Rien d’urgent aujourd’hui 🎉</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tu peux avancer sur la création de contenu.
+                <p className="text-sm text-muted-foreground">
+                  Rien d’urgent aujourd’hui. Bonne nouvelle.
                 </p>
-                <div className="mt-4">
-                  <Link href="/create">
-                    <Button className="w-full gradient-primary text-primary-foreground">
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Créer
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajoute une échéance à une tâche pour la voir apparaître ici.
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Link href="/tasks">
+                    <Button variant="outline" className="w-full">
+                      Voir toutes mes tâches
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </Link>
-                </div>
 
-                {!hasDbTasks ? (
-                  <div className="mt-3">
+                  {!hasDbTasks ? (
                     <Link href="/strategy">
                       <Button variant="outline" className="w-full">
                         Sync tâches (dans Stratégie)
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
-                {tasksToday.slice(0, 5).map((t, idx) => (
-                  <div
-                    key={`${t.id}-${idx}`}
-                    className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                        <ListTodo className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {t.title || "Action du jour"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDueBadge((t._dueDate ?? null) as Date | null)}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {t._isImportant ? "Important" : "Standard"}
-                    </Badge>
-                  </div>
-                ))}
+                <TaskList
+                  title="Tâches du jour"
+                  tasks={tasksToday.slice(0, 5).map(
+                    (t): TaskItem => ({
+                      id: t.id,
+                      title: t.title,
+                      description: t.description ?? null,
+                      status: t.status ?? null,
+                      due_date: t.due_date ?? null,
+                      importance: t.importance ?? null,
+                    }),
+                  )}
+                  showSync={false}
+                  allowCreate={false}
+                  variant="flat"
+                  hideHeader
+                />
 
-                <div className="pt-2">
-                  <Link href="/strategy">
-                    <Button variant="outline" className="w-full">
-                      Voir les tâches
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                <div className="pt-1">
+                  <Link href="/tasks">
+                    <Button variant="ghost" className="w-full justify-between">
+                      Gérer toutes les tâches
+                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
                 </div>
@@ -632,167 +578,118 @@ export default async function TodayPage() {
           </Card>
         </div>
 
-        {/* Upcoming / A venir */}
+        {/* Upcoming */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">À venir</h3>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {upcomingWeek.length} tâche(s)
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {plannedContents.length} contenu(s)
-              </Badge>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold">À venir</h3>
+              <p className="text-sm text-muted-foreground">Ce qui arrive sur les 7 prochains jours.</p>
             </div>
+            <Badge variant="outline" className="text-xs">
+              {upcomingWeek.length + plannedContents.length} élément(s)
+            </Badge>
           </div>
 
           {upcomingWeek.length === 0 && plannedContents.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Rien de planifié sur la semaine pour l’instant.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Planifie un contenu pour garder le rythme.
-              </p>
+            <div className="rounded-lg border border-dashed border-border p-6 text-center mt-4">
+              <p className="text-sm text-muted-foreground">Rien de planifié sur la semaine pour l’instant.</p>
+              <p className="text-xs text-muted-foreground mt-1">Planifie un contenu pour garder le rythme.</p>
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Link href="/create">
-                  <Button className="w-full gradient-primary text-primary-foreground">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Créer
+                  <Button className="w-full bg-[#b042b4] text-white hover:opacity-95">
+                    Créer un contenu
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
-                <Link href="/contents">
+                <Link href="/tasks">
                   <Button variant="outline" className="w-full">
-                    Mes contenus
+                    Ajouter une tâche
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Upcoming tasks */}
-              <div className="space-y-3">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-border p-4">
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm">Tâches (7 jours)</p>
-                  <Link href="/strategy" className="text-xs font-semibold text-primary">
-                    Voir →
-                  </Link>
+                  <h4 className="font-semibold">Tâches</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {upcomingWeek.length}
+                  </Badge>
                 </div>
 
                 {upcomingWeek.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Aucune tâche à venir.</p>
-                    {!hasDbTasks ? (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Va dans “Ma stratégie” → “Sync tâches”.
-                      </p>
-                    ) : null}
-                  </div>
+                  <p className="text-sm text-muted-foreground mt-3">Aucune tâche sur les 7 prochains jours.</p>
                 ) : (
-                  upcomingWeek.slice(0, 5).map((t, idx) => (
-                    <div
-                      key={`${t.id}-${idx}`}
-                      className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                          <Clock className="h-4 h-4 text-primary" />
-                        </div>
+                  <div className="mt-3 space-y-2">
+                    {upcomingWeek.slice(0, 6).map((t) => (
+                      <div key={t.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                         <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {t.title || "Action à venir"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatDueBadge((t._dueDate ?? null) as Date | null)}
-                          </div>
+                          <div className="text-sm font-medium truncate">{t.title}</div>
+                          <div className="text-xs text-muted-foreground">Échéance : {t._label}</div>
                         </div>
+                        {t._isImportant ? (
+                          <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">Prioritaire</Badge>
+                        ) : (
+                          <Badge variant="outline">À faire</Badge>
+                        )}
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {t._isImportant ? "Important" : "Standard"}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))}
 
-              {/* Planned contents */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm">Contenus planifiés</p>
-                  <Link
-                    href="/contents?view=calendar"
-                    className="text-xs font-semibold text-primary"
-                  >
-                    Calendrier →
-                  </Link>
-                </div>
-
-                {plannedContents.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Aucun contenu planifié.</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Renseigne une date dans “Créer”.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {plannedToday.length > 0 ? (
-                      <div className="rounded-lg border border-border p-3 bg-muted/30">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Aujourd&apos;hui ({formatScheduledBadge(todayIso)})
-                        </p>
-                        <div className="space-y-2">
-                          {plannedToday.slice(0, 3).map((c) => (
-                            <Link
-                              key={c.id}
-                              href={`/contents/${c.id}`}
-                              className="block rounded-md border border-border bg-background p-3 hover:bg-muted/40 transition-colors"
-                            >
-                              <p className="text-[11px] text-muted-foreground">
-                                {c.type ?? "—"} • {c.channel ?? "—"}
-                              </p>
-                              <p className="text-sm font-semibold">{c.title ?? "Sans titre"}</p>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="space-y-2">
-                      {plannedWeek.slice(0, 5).map((c) => (
-                        <Link
-                          key={c.id}
-                          href={`/contents/${c.id}`}
-                          className="block rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-[11px] text-muted-foreground">
-                                {formatScheduledBadge(c.scheduled_date)} • {c.type ?? "—"} •{" "}
-                                {c.channel ?? "—"}
-                              </p>
-                              <p className="text-sm font-semibold truncate">
-                                {c.title ?? "Sans titre"}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {c.status ?? "planned"}
-                            </Badge>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-
-                    <div className="pt-2">
-                      <Link href="/contents">
-                        <Button variant="outline" className="w-full">
-                          Voir tous mes contenus
-                          <ArrowRight className="w-4 h-4 ml-2" />
+                    <div className="pt-1">
+                      <Link href="/tasks">
+                        <Button variant="ghost" className="w-full justify-between">
+                          Voir tout
+                          <ArrowRight className="w-4 h-4" />
                         </Button>
                       </Link>
                     </div>
-                  </>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">Contenus</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {plannedContents.length}
+                  </Badge>
+                </div>
+
+                {plannedContents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-3">Aucun contenu planifié.</p>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {[...plannedToday, ...plannedWeek].slice(0, 6).map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {c.title || "Contenu"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {c.scheduled_date ? `Planifié : ${c.scheduled_date}` : "Non planifié"}
+                          </div>
+                        </div>
+
+                        <Badge variant="outline" className="text-xs">
+                          {c.content_type || "content"}
+                        </Badge>
+                      </div>
+                    ))}
+
+                    <div className="pt-1">
+                      <Link href="/contents">
+                        <Button variant="ghost" className="w-full justify-between">
+                          Voir tout
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

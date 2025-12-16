@@ -22,9 +22,11 @@ type Props = {
   tasks: TaskItem[];
   showSync?: boolean;
   allowCreate?: boolean;
+  variant?: "card" | "flat";
+  hideHeader?: boolean;
 };
 
-function isDone(status: string | null | undefined) {
+function isDone(status: string | null) {
   const s = String(status ?? "").toLowerCase();
   return ["done", "completed", "termin", "finished"].some((k) => s.includes(k));
 }
@@ -37,12 +39,20 @@ function formatDate(iso: string | null) {
   return `${dd}/${mm}/${y}`;
 }
 
-export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
+export function TaskList({
+  title,
+  tasks,
+  showSync = false,
+  allowCreate = false,
+  variant = "card",
+  hideHeader = false,
+}: Props) {
   const router = useRouter();
   const [syncing, startSync] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
 
+  const [msg, setMsg] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
@@ -52,15 +62,30 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
   const sorted = useMemo(() => {
     const copy = [...tasks];
     copy.sort((a, b) => {
+      const doneA = isDone(a.status);
+      const doneB = isDone(b.status);
+      if (doneA !== doneB) return doneA ? 1 : -1;
+
+      const impA = String(a.importance ?? "").toLowerCase() === "high";
+      const impB = String(b.importance ?? "").toLowerCase() === "high";
+      if (impA !== impB) return impA ? -1 : 1;
+
       const da = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
       const db = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
       if (da !== db) return da - db;
-      const ia = String(a.importance ?? "").toLowerCase() === "high" ? 0 : 1;
-      const ib = String(b.importance ?? "").toLowerCase() === "high" ? 0 : 1;
-      return ia - ib;
+
+      return a.title.localeCompare(b.title);
     });
     return copy;
   }, [tasks]);
+
+  const outerClassName =
+    variant === "card"
+      ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+      : "space-y-3";
+
+  const mt3 = variant === "card" ? "mt-3" : "";
+  const mt4 = variant === "card" ? "mt-4" : "";
 
   async function toggle(task: TaskItem) {
     setMsg(null);
@@ -83,8 +108,9 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
     }
   }
 
-  function syncFromPlan() {
+  async function syncFromPlan() {
     setMsg(null);
+
     startSync(async () => {
       try {
         const res = await fetch("/api/tasks/sync", { method: "POST" });
@@ -134,7 +160,6 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
       setNewDueDate("");
       setNewImportant(false);
       setCreating(false);
-
       router.refresh();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Erreur inconnue");
@@ -144,40 +169,42 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          <p className="mt-1 text-xs text-slate-500">{sorted.length} tâche(s)</p>
-        </div>
+    <div className={outerClassName}>
+      {!hideHeader ? (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            <p className="mt-1 text-xs text-slate-500">{sorted.length} tâche(s)</p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          {allowCreate ? (
-            <Button
-              className="h-9 bg-[#b042b4] text-white hover:opacity-95"
-              onClick={() => setCreating((v) => !v)}
-              disabled={savingNew}
-            >
-              {creating ? "Fermer" : "Nouvelle tâche"}
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {allowCreate ? (
+              <Button
+                className="h-9 bg-[#b042b4] text-white hover:opacity-95"
+                onClick={() => setCreating((v) => !v)}
+                disabled={savingNew}
+              >
+                {creating ? "Fermer" : "Nouvelle tâche"}
+              </Button>
+            ) : null}
 
-          {showSync ? (
-            <Button variant="outline" className="h-9" onClick={syncFromPlan} disabled={syncing}>
-              {syncing ? "Sync…" : "Sync tâches"}
-            </Button>
-          ) : null}
+            {showSync ? (
+              <Button variant="outline" className="h-9" onClick={syncFromPlan} disabled={syncing}>
+                {syncing ? "Sync…" : "Sync tâches"}
+              </Button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {msg ? (
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        <div className={`${mt3} rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700`}>
           {msg}
         </div>
       ) : null}
 
       {allowCreate && creating ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className={`${mt4} rounded-2xl border border-slate-200 bg-white p-4`}>
           <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label className="text-xs font-semibold text-slate-700">Titre</label>
@@ -193,31 +220,27 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
               <Textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Optionnel…"
-                className="min-h-[90px]"
+                placeholder="Optionnel"
+                rows={3}
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <label className="text-xs font-semibold text-slate-700">Échéance</label>
-                <Input
-                  type="date"
-                  value={newDueDate}
-                  onChange={(e) => setNewDueDate(e.target.value)}
-                />
+                <Input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
               </div>
 
-              <div className="grid gap-1.5 md:col-span-2">
+              <div className="grid gap-1.5">
                 <label className="text-xs font-semibold text-slate-700">Priorité</label>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-                  <Checkbox checked={newImportant} onCheckedChange={() => setNewImportant((v) => !v)} />
-                  <span className="text-sm text-slate-700">Marquer comme “Important”</span>
+                <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+                  <Checkbox checked={newImportant} onCheckedChange={(v) => setNewImportant(Boolean(v))} />
+                  <span className="text-xs text-slate-700">Important</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-2">
               <Button variant="outline" className="h-9" onClick={() => setCreating(false)} disabled={savingNew}>
                 Annuler
               </Button>
@@ -234,16 +257,16 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
       ) : null}
 
       {sorted.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-5 text-center">
-          <p className="text-sm text-slate-600">Aucune tâche ici.</p>
+        <div className={`${mt4} rounded-2xl border border-slate-200 bg-slate-50 p-4`}>
+          <p className="text-sm font-semibold text-slate-900">Aucune tâche</p>
+          <p className="mt-1 text-xs text-slate-600">Ajoute une tâche ou synchronise depuis ta stratégie.</p>
+
           {showSync ? (
-            <p className="mt-1 text-xs text-slate-500">
-              (Astuce : lance un “Sync tâches” pour importer depuis la stratégie.)
-            </p>
+            <p className="mt-2 text-xs text-slate-500">(Astuce : lance un “Sync tâches” pour importer depuis la stratégie.)</p>
           ) : null}
         </div>
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className={`${mt4} space-y-2`}>
           {sorted.map((t) => {
             const done = isDone(t.status);
             const important = String(t.importance ?? "").toLowerCase() === "high";
@@ -257,31 +280,24 @@ export function TaskList({ title, tasks, showSync, allowCreate }: Props) {
                   <Checkbox checked={done} onCheckedChange={() => toggle(t)} className="mt-0.5" />
 
                   <div className="min-w-0">
-                    <p
-                      className={[
-                        "text-sm font-semibold truncate",
-                        done ? "text-slate-400 line-through" : "text-slate-900",
-                      ].join(" ")}
-                    >
-                      {t.title}
-                    </p>
-                    {t.description ? (
-                      <p className="mt-1 text-xs text-slate-600 line-clamp-2">{t.description}</p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="text-[11px]">
-                        {done ? "done" : "todo"}
-                      </Badge>
-                      <Badge variant="outline" className="text-[11px]">
-                        Échéance : {formatDate(t.due_date)}
-                      </Badge>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-semibold ${done ? "line-through text-slate-400" : "text-slate-900"}`}>
+                        {t.title}
+                      </p>
                       {important ? (
-                        <Badge variant="outline" className="text-[11px]">
-                          Important
-                        </Badge>
+                        <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">Important</Badge>
                       ) : null}
                     </div>
+
+                    {t.description ? (
+                      <p className={`mt-0.5 text-xs ${done ? "text-slate-400" : "text-slate-600"}`}>{t.description}</p>
+                    ) : null}
                   </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-semibold text-slate-700">{formatDate(t.due_date)}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{done ? "Fait" : "À faire"}</p>
                 </div>
               </div>
             );
