@@ -24,7 +24,6 @@ function cleanNullableString(v: unknown): string | null {
 }
 
 function isIsoDateYYYYMMDD(v: string): boolean {
-  // strict YYYY-MM-DD
   return /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
 
@@ -77,7 +76,7 @@ export async function POST(req: Request) {
 
     let due_date = cleanNullableString(raw.due_date);
     if (due_date && !isIsoDateYYYYMMDD(due_date)) {
-      // on accepte aussi ISO complet, et on tronque en YYYY-MM-DD
+      // accepte ISO complet, et tronque
       const d = new Date(due_date);
       if (Number.isNaN(d.getTime())) {
         return NextResponse.json({ ok: false, error: "Date invalide" }, { status: 400 });
@@ -109,9 +108,6 @@ export async function POST(req: Request) {
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
-    if (!data) {
-      return NextResponse.json({ ok: false, error: "Erreur création" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, task: data }, { status: 200 });

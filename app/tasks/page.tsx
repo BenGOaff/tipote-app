@@ -1,5 +1,5 @@
 // app/tasks/page.tsx
-// Page dédiée "Tâches" (table tasks) + bouton Sync + création manuelle
+// Page dédiée "Tâches" (table tasks) + bouton Sync + création + édition/suppression
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -58,7 +58,7 @@ export default async function TasksPage() {
         </div>
 
         <Card className="p-6">
-          <TaskList title="Mes tâches" tasks={tasks} showSync allowCreate variant="card" />
+          <TaskList title="Mes tâches" tasks={tasks} showSync allowCreate allowEdit allowDelete variant="card" />
         </Card>
 
         {tasks.length === 0 ? (

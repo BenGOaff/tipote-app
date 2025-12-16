@@ -1,7 +1,7 @@
 // app/api/tasks/sync/route.ts
 // Sync des tâches : plan_json (business_plan) -> table tasks
-// - delete+insert pour éviter les doublons (remplace la source “stratégie”)
-// - fonctionne avec la session user (RLS attendu: user_id = auth.uid())
+// ✅ v2: ne supprime plus les tâches existantes
+// - On insère seulement les tâches manquantes (dédupe simple : title + due_date)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -68,7 +68,9 @@ function normalizeImportance(raw: unknown): string | null {
   return low === "high" || low === "important" || low === "urgent" || low === "p1" ? "high" : null;
 }
 
-function normalizeTask(raw: unknown): { title: string; description: string | null; due_date: string | null; importance: string | null } | null {
+function normalizeTask(
+  raw: unknown,
+): { title: string; description: string | null; due_date: string | null; importance: string | null } | null {
   const r = asRecord(raw);
   if (!r) return null;
 
@@ -95,7 +97,7 @@ function normalizeTask(raw: unknown): { title: string; description: string | nul
   return { title, description, due_date, importance };
 }
 
-function pickTasksFromPlan(planJson: AnyRecord | null): ReturnType<typeof normalizeTask>[] {
+function pickTasksFromPlan(planJson: AnyRecord | null) {
   if (!planJson) return [];
 
   const direct = asArray(planJson.tasks).map(normalizeTask).filter(Boolean);
@@ -121,6 +123,10 @@ function pickTasksFromPlan(planJson: AnyRecord | null): ReturnType<typeof normal
   return [];
 }
 
+function makeKey(title: string, due_date: string | null) {
+  return `${title.toLowerCase().trim()}__${due_date ?? ""}`;
+}
+
 export async function POST() {
   try {
     const supabase = await getSupabaseServerClient();
@@ -130,6 +136,7 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    // 1) lire le dernier business_plan
     const { data: bp, error: bpErr } = await supabase
       .from("business_plan")
       .select("id, plan_json, created_at")
@@ -138,22 +145,35 @@ export async function POST() {
       .limit(1)
       .maybeSingle();
 
-    if (bpErr) {
-      return NextResponse.json({ ok: false, error: bpErr.message }, { status: 400 });
-    }
+    if (bpErr) return NextResponse.json({ ok: false, error: bpErr.message }, { status: 400 });
 
     const planJson = asRecord((bp as AnyRecord | null)?.plan_json ?? null);
-    const tasks = pickTasksFromPlan(planJson);
+    const parsed = pickTasksFromPlan(planJson).filter(
+      (t): t is { title: string; description: string | null; due_date: string | null; importance: string | null } =>
+        Boolean(t),
+    );
 
-    // replace all tasks (simple, predictable). Si tu veux préserver les tâches manuelles,
-    // on fera une v2 avec un champ source.
-    const { error: delErr } = await supabase.from("tasks").delete().eq("user_id", auth.user.id);
-    if (delErr) {
-      return NextResponse.json({ ok: false, error: delErr.message }, { status: 400 });
+    if (parsed.length === 0) return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
+
+    // 2) récupérer tâches existantes pour déduplication
+    const { data: existingRaw, error: exErr } = await supabase
+      .from("tasks")
+      .select("id, title, due_date")
+      .eq("user_id", auth.user.id);
+
+    if (exErr) return NextResponse.json({ ok: false, error: exErr.message }, { status: 400 });
+
+    const existingKeys = new Set<string>();
+    if (Array.isArray(existingRaw)) {
+      for (const r of existingRaw as Array<{ title: string | null; due_date: string | null }>) {
+        const t = (r.title ?? "").trim();
+        if (!t) continue;
+        existingKeys.add(makeKey(t, r.due_date ?? null));
+      }
     }
 
-    const payload = tasks
-      .filter((t): t is { title: string; description: string | null; due_date: string | null; importance: string | null } => Boolean(t))
+    // 3) payload (uniquement nouvelles)
+    const payload = parsed
       .map((t) => ({
         user_id: auth.user.id,
         title: t.title,
@@ -161,16 +181,13 @@ export async function POST() {
         due_date: t.due_date,
         importance: t.importance,
         status: "todo",
-      }));
+      }))
+      .filter((t) => !existingKeys.has(makeKey(t.title, t.due_date)));
 
-    if (payload.length === 0) {
-      return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
-    }
+    if (payload.length === 0) return NextResponse.json({ ok: true, inserted: 0 }, { status: 200 });
 
     const { error: insErr } = await supabase.from("tasks").insert(payload);
-    if (insErr) {
-      return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
-    }
+    if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
 
     return NextResponse.json({ ok: true, inserted: payload.length }, { status: 200 });
   } catch (e) {
