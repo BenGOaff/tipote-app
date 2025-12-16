@@ -1,7 +1,5 @@
 // app/tasks/page.tsx
-// Page dédiée "Tâches" (table tasks) + bouton Sync depuis plan_json
-// - Protégée auth Supabase
-// - Ne casse pas onboarding / magic link
+// Page dédiée "Tâches" (table tasks) + bouton Sync + création manuelle
 
 import { redirect } from "next/navigation";
 
@@ -34,7 +32,7 @@ export default async function TasksPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Tâches</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Tes actions issues de la stratégie (avec sync en base) + suivi d’avancement.
+            Tes actions issues de la stratégie (sync) + tes tâches manuelles.
           </p>
         </div>
 
@@ -45,7 +43,7 @@ export default async function TasksPage() {
           </div>
         ) : null}
 
-        <TaskList title="Toutes mes tâches" tasks={tasks} showSync />
+        <TaskList title="Toutes mes tâches" tasks={tasks} showSync allowCreate />
       </div>
     </AppShell>
   );
