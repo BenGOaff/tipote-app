@@ -1,213 +1,175 @@
 // app/api/onboarding/answers/route.ts
-// Rôle : API pour lire / sauvegarder les réponses d’onboarding (Q1 → Q8)
-// pour l'utilisateur actuellement connecté.
+// Save onboarding answers into `public.business_profiles` (one row per user_id)
 
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-// Schéma assoupli : on accepte les chaînes vides pour la plupart des champs,
-// pour éviter les erreurs 400 "Invalid payload" pendant les tests.
-// On garde juste des types cohérents.
-const onboardingAnswersSchema = z.object({
-  firstName: z.string(), // on pourra remettre .min(1) plus tard avec validation front
-  ageRange: z.string(),
-  gender: z.string(),
-  country: z.string(),
-  niche: z.string(),
-  nicheOther: z.string().optional(),
-  mission: z.string(),
-  businessMaturity: z.string(),
-  offersStatus: z.string(),
-  offers: z
-    .array(
-      z.object({
-        name: z.string(),
-        type: z.string(),
-        price: z.number().nullable(),
-        sales: z.number().nullable(),
-      }),
-    )
-    .default([]),
-  audienceSocial: z.string().optional().nullable(),
-  audienceEmail: z.string().optional().nullable(),
-  timeAvailable: z.string(),
-  mainGoal: z.string(),
+const SocialLinksSchema = z
+  .object({
+    instagram: z.string().optional().nullable(),
+    tiktok: z.string().optional().nullable(),
+    linkedin: z.string().optional().nullable(),
+    youtube: z.string().optional().nullable(),
+    website: z.string().optional().nullable(),
+  })
+  .partial();
 
-  // 🔥 NOUVEAUX CHAMPS AVANCÉS (tous optionnels)
-  energySources: z.string().optional().nullable(),
-  uniqueValue: z.string().optional().nullable(),
-  untappedStrength: z.string().optional().nullable(),
-  communicationStyle: z.string().optional().nullable(),
-  successDefinition: z.string().optional().nullable(),
-  sixMonthVision: z.string().optional().nullable(),
-  innerDialogue: z.string().optional().nullable(),
-  ifCertainSuccess: z.string().optional().nullable(),
-  biggestFears: z.string().optional().nullable(),
-  biggestChallenge: z.string().optional().nullable(),
-  workingStrategies: z.string().optional().nullable(),
-  recentClientFeedback: z.string().optional().nullable(),
-  preferredContentType: z.string().optional().nullable(),
-});
+const OnboardingSchema = z
+  .object({
+    // Q1–Q10 (as used by app/onboarding/OnboardingForm.tsx)
+    firstName: z.string().min(1),
+    ageRange: z.string().min(1),
+    gender: z.string().min(1),
+    country: z.string().min(1),
 
-// GET — récupérer les réponses existantes
+    niche: z.string().min(1),
+    nicheOther: z.string().optional().nullable(),
+
+    mission: z.string().min(1),
+    businessMaturity: z.string().min(1),
+
+    offersStatus: z.string().min(1),
+    offerNames: z.string().optional().nullable(),
+    offerPriceRange: z.string().optional().nullable(),
+    offerDelivery: z.string().optional().nullable(),
+
+    audienceSize: z.string().min(1),
+    emailListSize: z.string().min(1),
+    timeAvailable: z.string().min(1),
+
+    mainGoals: z.array(z.string()).default([]),
+    mainGoalsOther: z.string().optional().nullable(),
+
+    preferredContentTypes: z.array(z.string()).default([]),
+    tonePreference: z.string().min(1),
+
+    socialLinks: SocialLinksSchema.default({}),
+
+    hasExistingBranding: z.boolean().default(false),
+
+    biggestBlocker: z.string().min(1),
+    additionalContext: z.string().optional().nullable(),
+  })
+  // allow extra fields without breaking (future-proof)
+  .passthrough();
+
+function cleanNullableString(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+// We store array/object-ish fields as JSON strings so it works even if DB columns are `text`.
+function asJsonText(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    const { data: auth } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('[GET /api/onboarding/answers] sessionError', sessionError);
-      return NextResponse.json(
-        { error: 'Authentication error' },
-        { status: 500 },
-      );
-    }
-
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 },
-      );
+    if (!auth?.user) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { data, error } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
+      .from("business_profiles")
+      .select("*")
+      .eq("user_id", auth.user.id)
       .maybeSingle();
 
-    if (error) {
-      console.error(
-        '[GET /api/onboarding/answers] Supabase select error',
-        error,
-      );
-      return NextResponse.json(
-        { error: 'Failed to fetch onboarding answers' },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ profile: data }, { status: 200 });
-  } catch (err) {
-    console.error('[GET /api/onboarding/answers] Unexpected error', err);
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
+  } catch (e) {
     return NextResponse.json(
-      { error: 'Unexpected server error' },
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
     );
   }
 }
 
-// POST — sauvegarder / mettre à jour les réponses
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    const { data: auth } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('[POST /api/onboarding/answers] sessionError', sessionError);
-      return NextResponse.json(
-        { error: 'Authentication error' },
-        { status: 500 },
-      );
+    if (!auth?.user) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 },
-      );
-    }
+    const raw = await req.json();
+    const parsed = OnboardingSchema.safeParse(raw);
 
-    const body = await request.json();
-
-    const parseResult = onboardingAnswersSchema.safeParse(body);
-    if (!parseResult.success) {
-      console.warn(
-        '[POST /api/onboarding/answers] Validation error',
-        parseResult.error.flatten(),
-      );
+    if (!parsed.success) {
       return NextResponse.json(
-        {
-          error: 'Invalid payload',
-          details: parseResult.error.flatten(),
-        },
+        { ok: false, error: "Invalid payload", details: parsed.error.flatten() },
         { status: 400 },
       );
     }
 
-    const payload = parseResult.data;
+    const d = parsed.data;
 
+    // camelCase (front) -> snake_case (DB)
+    const row: Record<string, unknown> = {
+      user_id: auth.user.id,
+
+      first_name: d.firstName,
+      age_range: d.ageRange,
+      gender: d.gender,
+      country: d.country,
+
+      niche: d.niche,
+      niche_other: cleanNullableString(d.nicheOther),
+
+      mission: d.mission,
+      business_maturity: d.businessMaturity,
+
+      offers_status: d.offersStatus,
+      offer_names: cleanNullableString(d.offerNames),
+      offer_price_range: cleanNullableString(d.offerPriceRange),
+      offer_delivery: cleanNullableString(d.offerDelivery),
+
+      audience_size: d.audienceSize,
+      email_list_size: d.emailListSize,
+      time_available: d.timeAvailable,
+
+      main_goals: asJsonText(d.mainGoals),
+      main_goals_other: cleanNullableString(d.mainGoalsOther),
+
+      preferred_content_types: asJsonText(d.preferredContentTypes),
+      tone_preference: d.tonePreference,
+
+      social_links: asJsonText(d.socialLinks),
+
+      has_existing_branding: d.hasExistingBranding,
+
+      biggest_blocker: d.biggestBlocker,
+      additional_context: cleanNullableString(d.additionalContext),
+
+      updated_at: new Date().toISOString(),
+    };
+
+    // Upsert: one row per user_id
     const { data, error } = await supabase
-      .from('business_profiles')
-      .upsert(
-        {
-          user_id: session.user.id,
-          first_name: payload.firstName,
-          age_range: payload.ageRange,
-          gender: payload.gender,
-          country: payload.country,
-          niche: payload.niche,
-          niche_other: payload.nicheOther ?? null,
-          mission: payload.mission,
-          business_maturity: payload.businessMaturity,
-          offers_status: payload.offersStatus,
-          offers: payload.offers.length > 0 ? payload.offers : null,
-          audience_social:
-            payload.audienceSocial && payload.audienceSocial.trim() !== ''
-              ? Number(payload.audienceSocial.trim())
-              : null,
-          audience_email:
-            payload.audienceEmail && payload.audienceEmail.trim() !== ''
-              ? Number(payload.audienceEmail.trim())
-              : null,
-          time_available: payload.timeAvailable,
-          main_goal: payload.mainGoal,
+      .from("business_profiles")
+      .upsert(row, { onConflict: "user_id" })
+      .select("*")
+      .maybeSingle();
 
-          // 🔥 NOUVELLES COLONNES AVANCÉES (peuvent être nulles)
-          energy_sources: payload.energySources ?? null,
-          unique_value: payload.uniqueValue ?? null,
-          untapped_strength: payload.untappedStrength ?? null,
-          communication_style: payload.communicationStyle ?? null,
-          success_definition: payload.successDefinition ?? null,
-          six_month_vision: payload.sixMonthVision ?? null,
-          inner_dialogue: payload.innerDialogue ?? null,
-          if_certain_success: payload.ifCertainSuccess ?? null,
-          biggest_fears: payload.biggestFears ?? null,
-          biggest_challenge: payload.biggestChallenge ?? null,
-          working_strategies: payload.workingStrategies ?? null,
-          recent_client_feedback: payload.recentClientFeedback ?? null,
-          preferred_content_type: payload.preferredContentType ?? null,
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' },
-      )
-      .select()
-      .single();
-
-    if (error) {
-      console.error(
-        '[POST /api/onboarding/answers] Supabase upsert error',
-        error,
-      );
-      return NextResponse.json(
-        { error: 'Failed to save onboarding answers' },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ profile: data }, { status: 200 });
-  } catch (err) {
-    console.error('[POST /api/onboarding/answers] Unexpected error', err);
+    return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
+  } catch (e) {
     return NextResponse.json(
-      { error: 'Unexpected server error' },
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
     );
   }
