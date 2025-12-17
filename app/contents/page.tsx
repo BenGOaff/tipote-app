@@ -1,7 +1,8 @@
 // app/contents/page.tsx
 // Page "Mes Contenus" : liste + vue calendrier + accès au détail
-// + Filtres (recherche / statut / type / canal) en query params (sans casser l’existant)
-// + Actions réelles : dupliquer / supprimer (API) + toasts
+// + Filtres (recherche / statut / type / canal) en query params
+// + Actions : dupliquer / supprimer (API) + toasts
+// Best: compat statut legacy planned/scheduled + fix placeholder + UX stable
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -50,12 +51,17 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
+function normalizeFilterValue(v: string) {
+  const s = v.trim();
+  return s === "all" ? "" : s;
+}
+
 function normalizeStatusForLabel(status: string | null): string {
   const s = safeString(status).trim();
   if (!s) return "—";
   const low = s.toLowerCase();
   if (low === "published") return "Publié";
-  if (low === "scheduled") return "Planifié";
+  if (low === "scheduled" || low === "planned") return "Planifié";
   if (low === "draft") return "Brouillon";
   if (low === "archived") return "Archivé";
   return s;
@@ -64,7 +70,7 @@ function normalizeStatusForLabel(status: string | null): string {
 function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
   const s = safeString(status).toLowerCase();
   if (s.includes("pub") || s === "published") return "default";
-  if (s.includes("plan") || s === "scheduled") return "secondary";
+  if (s.includes("plan") || s === "scheduled" || s === "planned") return "secondary";
   if (s.includes("brou") || s === "draft") return "outline";
   if (s.includes("arch") || s === "archived") return "outline";
   if (s.includes("err") || s.includes("fail")) return "destructive";
@@ -91,11 +97,6 @@ function buildQueryString(params: Record<string, string | undefined>) {
   }
   const s = usp.toString();
   return s ? `?${s}` : "";
-}
-
-function normalizeFilterValue(v: string) {
-  const s = v.trim();
-  return s === "all" ? "" : s;
 }
 
 export default async function MyContentPage({ searchParams }: Props) {
@@ -126,7 +127,17 @@ export default async function MyContentPage({ searchParams }: Props) {
   if (q) {
     query = query.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
   }
-  if (status) query = query.ilike("status", status);
+
+  // statut : support planned/scheduled (legacy)
+  if (status) {
+    const low = status.toLowerCase();
+    if (low === "planned" || low === "scheduled") {
+      query = query.in("status", ["planned", "scheduled"]);
+    } else {
+      query = query.ilike("status", status);
+    }
+  }
+
   if (type) query = query.ilike("type", `%${type}%`);
   if (channel) query = query.ilike("channel", `%${channel}%`);
 
@@ -136,9 +147,8 @@ export default async function MyContentPage({ searchParams }: Props) {
 
   const safeItems: ContentItem[] = Array.isArray(items) ? (items as ContentItem[]) : [];
 
-  const typeOptions = Array.from(
-    new Set(safeItems.map((it) => safeString(it.type).trim()).filter(Boolean).slice(0, 50))
-  ).sort((a, b) => a.localeCompare(b, "fr"));
+  const typeOptions = Array.from(new Set(safeItems.map((it) => safeString(it.type).trim()).filter(Boolean).slice(0, 50)))
+    .sort((a, b) => a.localeCompare(b, "fr"));
 
   const channelOptions = Array.from(
     new Set(safeItems.map((it) => safeString(it.channel).trim()).filter(Boolean).slice(0, 50))
@@ -177,10 +187,7 @@ export default async function MyContentPage({ searchParams }: Props) {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <TabsList>
               <TabsTrigger asChild value="list">
-                <Link
-                  href={`/contents${buildQueryString({ view: "list", q, status, type, channel })}`}
-                  className="gap-2"
-                >
+                <Link href={`/contents${buildQueryString({ view: "list", q, status, type, channel })}`} className="gap-2">
                   <ListIcon className="w-4 h-4" />
                   Liste
                 </Link>
@@ -225,7 +232,7 @@ export default async function MyContentPage({ searchParams }: Props) {
                   <SelectContent>
                     <SelectItem value="all">Tous</SelectItem>
                     <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="scheduled">Planifié</SelectItem>
+                    <SelectItem value="planned">Planifié</SelectItem>
                     <SelectItem value="published">Publié</SelectItem>
                     <SelectItem value="archived">Archivé</SelectItem>
                   </SelectContent>
@@ -253,7 +260,7 @@ export default async function MyContentPage({ searchParams }: Props) {
                 <Label className="text-xs">Canal</Label>
                 <Select name="channel" defaultValue={channel || "all"}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tous</" />
+                    <SelectValue placeholder="Tous" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous</SelectItem>
