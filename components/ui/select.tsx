@@ -7,14 +7,36 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Patch Tipote: support `name` prop on Select Root for native GET forms
+// ✅ Best: hidden input ALWAYS synced to the actual selected value (uncontrolled Radix Select otherwise wouldn't update)
 type SelectWithNameProps = React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> & {
   name?: string;
 };
 
-function SelectWithName({ name, ...props }: SelectWithNameProps) {
+function SelectWithName({ name, value, defaultValue, onValueChange, ...props }: SelectWithNameProps) {
+  const isControlled = value !== undefined;
+
+  const [internalValue, setInternalValue] = React.useState<string>(
+    (defaultValue as string | undefined) ?? ""
+  );
+
+  const currentValue = (isControlled ? (value as string) : internalValue) ?? "";
+
+  const handleChange = React.useCallback(
+    (next: string) => {
+      if (!isControlled) setInternalValue(next);
+      onValueChange?.(next);
+    },
+    [isControlled, onValueChange]
+  );
+
   return (
-    <SelectPrimitive.Root {...props}>
-      {name ? <input type="hidden" name={name} value={(props.value ?? props.defaultValue ?? "") as string} readOnly /> : null}
+    <SelectPrimitive.Root
+      {...props}
+      value={isControlled ? (value as string) : internalValue}
+      defaultValue={isControlled ? undefined : (defaultValue as string | undefined)}
+      onValueChange={handleChange}
+    >
+      {name ? <input type="hidden" name={name} value={currentValue} readOnly /> : null}
       {props.children}
     </SelectPrimitive.Root>
   );
@@ -111,7 +133,11 @@ const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)} {...props} />
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)}
+    {...props}
+  />
 ));
 SelectLabel.displayName = SelectPrimitive.Label.displayName;
 

@@ -1,6 +1,7 @@
 // app/contents/page.tsx
 // Page "Mes Contenus" : liste + vue calendrier + accès au détail
 // + Filtres (recherche / statut / type / canal) en query params (sans casser l’existant)
+// + Actions réelles : dupliquer / supprimer (API) + toasts
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -12,7 +13,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +22,6 @@ import {
   Mail,
   Video,
   Image as ImageIcon,
-  MoreVertical,
   Plus,
   List as ListIcon,
   CalendarDays,
@@ -33,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { ContentCalendarView, type ContentCalendarItem } from "@/components/content/ContentCalendarView";
+import { ContentItemActions } from "@/components/content/ContentItemActions";
 
 type Props = {
   searchParams?: {
@@ -93,6 +93,11 @@ function buildQueryString(params: Record<string, string | undefined>) {
   return s ? `?${s}` : "";
 }
 
+function normalizeFilterValue(v: string) {
+  const s = v.trim();
+  return s === "all" ? "" : s;
+}
+
 export default async function MyContentPage({ searchParams }: Props) {
   const supabase = await getSupabaseServerClient();
 
@@ -100,7 +105,7 @@ export default async function MyContentPage({ searchParams }: Props) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect("/auth/login");
+  if (!session) redirect("/");
 
   const userEmail = session.user.email ?? "Utilisateur";
 
@@ -108,9 +113,9 @@ export default async function MyContentPage({ searchParams }: Props) {
   const initialTab = view === "calendar" ? "calendar" : "list";
 
   const q = safeString(searchParams?.q).trim();
-  const status = safeString(searchParams?.status).trim();
-  const type = safeString(searchParams?.type).trim();
-  const channel = safeString(searchParams?.channel).trim();
+  const status = normalizeFilterValue(safeString(searchParams?.status));
+  const type = normalizeFilterValue(safeString(searchParams?.type));
+  const channel = normalizeFilterValue(safeString(searchParams?.channel));
 
   let query = supabase
     .from("content_item")
@@ -119,7 +124,6 @@ export default async function MyContentPage({ searchParams }: Props) {
     .order("created_at", { ascending: false });
 
   if (q) {
-    // recherche simple sur le titre (et fallback sur type/canal si utile)
     query = query.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
   }
   if (status) query = query.ilike("status", status);
@@ -128,33 +132,18 @@ export default async function MyContentPage({ searchParams }: Props) {
 
   const { data: items, error } = await query;
 
-  if (error) {
-    // On log seulement, UI reste stable
-    console.error("[contents] list error", error);
-  }
+  if (error) console.error("[contents] list error", error);
 
   const safeItems: ContentItem[] = Array.isArray(items) ? (items as ContentItem[]) : [];
 
-  // Options de filtres (à partir des items déjà chargés)
   const typeOptions = Array.from(
-    new Set(
-      safeItems
-        .map((it) => safeString(it.type).trim())
-        .filter(Boolean)
-        .slice(0, 50)
-    )
+    new Set(safeItems.map((it) => safeString(it.type).trim()).filter(Boolean).slice(0, 50))
   ).sort((a, b) => a.localeCompare(b, "fr"));
 
   const channelOptions = Array.from(
-    new Set(
-      safeItems
-        .map((it) => safeString(it.channel).trim())
-        .filter(Boolean)
-        .slice(0, 50)
-    )
+    new Set(safeItems.map((it) => safeString(it.channel).trim()).filter(Boolean).slice(0, 50))
   ).sort((a, b) => a.localeCompare(b, "fr"));
 
-  // group by scheduled_date for calendar view
   const itemsByDate: Record<string, ContentItem[]> = {};
   for (const it of safeItems) {
     if (!it.scheduled_date) continue;
@@ -164,12 +153,10 @@ export default async function MyContentPage({ searchParams }: Props) {
   const scheduledDates = Object.keys(itemsByDate).sort();
 
   const hasActiveFilters = Boolean(q || status || type || channel);
-  const baseParams = { view: initialTab };
 
   return (
     <AppShell userEmail={userEmail}>
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Mes Contenus</h1>
@@ -191,7 +178,7 @@ export default async function MyContentPage({ searchParams }: Props) {
             <TabsList>
               <TabsTrigger asChild value="list">
                 <Link
-                  href={`/contents${buildQueryString({ ...baseParams, view: "list", q, status, type, channel })}`}
+                  href={`/contents${buildQueryString({ view: "list", q, status, type, channel })}`}
                   className="gap-2"
                 >
                   <ListIcon className="w-4 h-4" />
@@ -200,7 +187,7 @@ export default async function MyContentPage({ searchParams }: Props) {
               </TabsTrigger>
               <TabsTrigger asChild value="calendar">
                 <Link
-                  href={`/contents${buildQueryString({ ...baseParams, view: "calendar", q, status, type, channel })}`}
+                  href={`/contents${buildQueryString({ view: "calendar", q, status, type, channel })}`}
                   className="gap-2"
                 >
                   <CalendarDays className="w-4 h-4" />
@@ -211,11 +198,10 @@ export default async function MyContentPage({ searchParams }: Props) {
 
             <Button variant="outline" className="gap-2" disabled>
               <Filter className="w-4 h-4" />
-              Filtres (live)
+              Filtres
             </Button>
           </div>
 
-          {/* Filters bar (GET form => query params) */}
           <Card className="p-4">
             <form action="/contents" method="GET" className="grid gap-4 md:grid-cols-12 items-end">
               <input type="hidden" name="view" value={initialTab} />
@@ -267,7 +253,7 @@ export default async function MyContentPage({ searchParams }: Props) {
                 <Label className="text-xs">Canal</Label>
                 <Select name="channel" defaultValue={channel || "all"}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tous" />
+                    <SelectValue placeholder="Tous</" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous</SelectItem>
@@ -297,11 +283,6 @@ export default async function MyContentPage({ searchParams }: Props) {
                 </div>
               ) : null}
             </form>
-
-            {/* Normalisation: Select "all" => on ne garde pas en query */}
-            <div className="hidden" aria-hidden>
-              {/* Note: on garde ce bloc vide, la normalisation est faite côté server via safeString + ilike */}
-            </div>
           </Card>
 
           <TabsContent value="list" className="space-y-4">
@@ -352,7 +333,9 @@ export default async function MyContentPage({ searchParams }: Props) {
                                 <p className="font-semibold truncate">
                                   {it.title?.trim() || `${it.type || "Contenu"} sans titre`}
                                 </p>
-                                <Badge variant={badgeVariantForStatus(it.status)}>{normalizeStatusForLabel(it.status)}</Badge>
+                                <Badge variant={badgeVariantForStatus(it.status)}>
+                                  {normalizeStatusForLabel(it.status)}
+                                </Badge>
                               </div>
 
                               <div className="mt-1 flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
@@ -389,20 +372,7 @@ export default async function MyContentPage({ searchParams }: Props) {
                             </Button>
                           </Link>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Actions">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/contents/${it.id}`}>Voir / éditer</Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem disabled>Dupliquer (bientôt)</DropdownMenuItem>
-                              <DropdownMenuItem disabled>Supprimer (bientôt)</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <ContentItemActions id={it.id} title={it.title} />
                         </div>
                       </div>
                     </Card>
@@ -424,8 +394,14 @@ export default async function MyContentPage({ searchParams }: Props) {
 function Spark() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
-      <path d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z" className="fill-current" />
-      <path d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z" className="fill-current opacity-70" />
+      <path
+        d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z"
+        className="fill-current"
+      />
+      <path
+        d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z"
+        className="fill-current opacity-70"
+      />
     </svg>
   );
 }
