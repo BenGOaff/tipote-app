@@ -1,298 +1,277 @@
 // app/app/page.tsx
-// Dashboard "Aujourd'hui" (server)
+// Dashboard "Aujourd'hui" (Design Lovable + logique existante)
 // - Protégé par l'auth Supabase
-// - Si onboarding non terminé => redirect /onboarding
-// - Tâches : priorité à public.project_tasks (si vide => fallback depuis business_plan.plan_json)
-// - Affiche quelques stats et liens rapides
+// - Si aucun plan stratégique => redirect /onboarding
+// - UI Lovable : Welcome/Next action + stats + progression + quick actions + à venir
+// - Pas de contenu "prérempli" : on affiche des placeholders propres si pas de données
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import AppShell from "@/components/AppShell";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { TaskList, type TaskItem } from "@/components/tasks/TaskList";
-
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
 type AnyRecord = Record<string, unknown>;
 
-type DbTask = {
-  id: string;
-  title: string | null;
-  status: string | null;
-  due_date: string | null;
-  priority: string | null;
-  source: string | null;
-};
-
-function asArray(v: unknown): unknown[] {
-  return Array.isArray(v) ? v : [];
-}
-
-function asRecord(v: unknown): AnyRecord | null {
-  return v && typeof v === "object" ? (v as AnyRecord) : null;
-}
-
-function asString(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-
-function cleanString(v: unknown): string {
-  return asString(v).trim();
-}
-
-function cleanNullableString(v: unknown): string | null {
-  if (v === null || v === undefined) return null;
-  const s = cleanString(v);
-  return s ? s : null;
-}
-
-function isIsoDateYYYYMMDD(v: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(v);
-}
-
-function normalizeDueDate(raw: unknown): string | null {
-  const s = cleanNullableString(raw);
-  if (!s) return null;
-  if (isIsoDateYYYYMMDD(s)) return s;
-
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return null;
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function normalizePriority(raw: unknown): string | null {
-  const s = cleanNullableString(raw);
-  if (!s) return null;
-  const low = s.toLowerCase();
-  return low === "high" || low === "important" || low === "urgent" || low === "p1" ? "high" : null;
-}
-
-function isDone(status: string | null) {
-  const s = String(status ?? "").toLowerCase();
-  return ["done", "completed", "termin", "finished"].some((k) => s.includes(k));
-}
-
-function toYYYYMMDD(d: Date) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function isToday(iso: string | null) {
-  if (!iso) return false;
-  return iso.startsWith(toYYYYMMDD(new Date()));
-}
-
-function isOverdue(iso: string | null) {
-  if (!iso) return false;
-  const today = new Date(toYYYYMMDD(new Date()));
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.getTime() < today.getTime();
-}
-
-function normalizePlanTask(raw: unknown, idx: number): TaskItem | null {
-  const r = asRecord(raw);
-  if (!r) return null;
-
-  const title = cleanString(r.title ?? r.task ?? r.name);
-  if (!title) return null;
-
-  const description = cleanNullableString(r.description ?? r.details ?? r.note);
-  const due_date = normalizeDueDate(r.due_date ?? r.dueDate ?? r.deadline ?? r.date);
-  const priority = normalizePriority(r.priority ?? r.importance);
-
-  return {
-    id: `plan-${idx}`,
-    title,
-    description,
-    status: cleanNullableString(r.status) ?? "todo",
-    due_date,
-    priority,
-    source: "strategy",
-  };
-}
-
-function pickTasksFromPlan(planJson: AnyRecord | null): TaskItem[] {
-  if (!planJson) return [];
-
-  const direct = asArray(planJson.tasks)
-    .map((t, i) => normalizePlanTask(t, i))
-    .filter(Boolean) as TaskItem[];
-  if (direct.length) return direct;
-
-  const plan = asRecord(planJson.plan);
-  const plan90 = asRecord(planJson.plan90 ?? planJson.plan_90 ?? planJson.plan_90_days);
-
-  const a = asArray(plan?.tasks)
-    .map((t, i) => normalizePlanTask(t, i))
-    .filter(Boolean) as TaskItem[];
-  if (a.length) return a;
-
-  const b = asArray(plan90?.tasks)
-    .map((t, i) => normalizePlanTask(t, i))
-    .filter(Boolean) as TaskItem[];
-  if (b.length) return b;
-
-  const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
-  if (grouped) {
-    const d30 = asArray(grouped.d30)
-      .map((t, i) => normalizePlanTask(t, i))
-      .filter(Boolean) as TaskItem[];
-    const d60 = asArray(grouped.d60)
-      .map((t, i) => normalizePlanTask(t, i))
-      .filter(Boolean) as TaskItem[];
-    const d90 = asArray(grouped.d90)
-      .map((t, i) => normalizePlanTask(t, i))
-      .filter(Boolean) as TaskItem[];
-
-    return [...d30, ...d60, ...d90];
+function toNumber(v: unknown, fallback = 0): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
   }
+  return fallback;
+}
 
-  return [];
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function parseDueDate(task: AnyRecord): Date | null {
+  const due = task.due_date;
+  if (typeof due !== "string" || !due) return null;
+  const dt = new Date(due);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function isDone(status: unknown): boolean {
+  if (typeof status !== "string") return false;
+  const s = status.toLowerCase();
+  return s === "done" || s === "completed" || s === "fait" || s === "terminé";
 }
 
 export default async function TodayDashboard() {
   const supabase = await getSupabaseServerClient();
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect("/");
+  if (!session) {
+    redirect("/auth/login");
+  }
 
-  const userEmail = session.user.email ?? "";
+  const userEmail = session.user.email ?? "Utilisateur";
 
-  // onboarding
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_done")
-    .eq("id", session.user.id)
-    .maybeSingle();
-  if (!profile?.onboarding_done) redirect("/onboarding");
-
-  // tasks db
-  const { data: dbTasksRaw } = await supabase
-    .from("project_tasks")
-    .select("id, title, status, due_date, priority, source, created_at")
-    .eq("user_id", session.user.id);
-
-  const dbTasks: DbTask[] = Array.isArray(dbTasksRaw) ? (dbTasksRaw as DbTask[]) : [];
-  const hasDbTasks = dbTasks.length > 0;
-
-  // fallback plan json
-  const { data: planRow } = await supabase
+  // 1) Charger le plan stratégique
+  const { data: planRow, error: planError } = await supabase
     .from("business_plan")
-    .select("plan_json, created_at")
+    .select("id, plan_json")
     .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
 
-  const fallbackPlanTasks = pickTasksFromPlan(asRecord((planRow as AnyRecord | null)?.plan_json ?? null));
+  if (planError) {
+    console.error("[app/app] Error loading plan", planError);
+  }
 
-  const tasks: TaskItem[] = hasDbTasks
-    ? dbTasks.map((t) => ({
-        id: String(t.id),
-        title: String(t.title ?? ""),
-        description: null,
-        status: (t.status ?? null) as string | null,
-        due_date: (t.due_date ?? null) as string | null,
-        priority: (t.priority ?? null) as string | null,
-        source: (t.source ?? null) as string | null,
-      }))
-    : fallbackPlanTasks;
+  if (!planRow?.id) {
+    redirect("/onboarding");
+  }
 
-  const tasksToday = tasks.filter((t) => isToday(t.due_date) && !isDone(t.status));
-  const overdueTasks = tasks.filter((t) => isOverdue(t.due_date) && !isDone(t.status));
-  const doneCount = tasks.filter((t) => isDone(t.status)).length;
+  const planJson = (planRow.plan_json ?? {}) as AnyRecord;
 
+  // 2) Charger les tâches (project_tasks)
+  const { data: rawTasks, error: tasksError } = await supabase
+    .from("project_tasks")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false });
+
+  if (tasksError) {
+    console.error("[app/app] Error loading tasks", tasksError);
+  }
+
+  const tasks = (rawTasks ?? []) as AnyRecord[];
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const tomorrowStart = new Date(
+    todayStart.getFullYear(),
+    todayStart.getMonth(),
+    todayStart.getDate() + 1,
+  );
+  const weekEnd = new Date(
+    todayStart.getFullYear(),
+    todayStart.getMonth(),
+    todayStart.getDate() + 7,
+  );
+
+  const tasksOpen = tasks.filter((t) => !isDone(t.status));
+  const tasksDone = tasks.filter((t) => isDone(t.status));
+  const tasksToday = tasksOpen.filter((t) => {
+    const due = parseDueDate(t);
+    return due && due >= todayStart && due < tomorrowStart;
+  });
+  const tasksWeek = tasksOpen.filter((t) => {
+    const due = parseDueDate(t);
+    return due && due >= todayStart && due < weekEnd;
+  });
+
+  const doneRate =
+    tasks.length === 0 ? 0 : Math.round((tasksDone.length / tasks.length) * 100);
+
+  // 3) Next action (simple)
   const nextAction =
     tasksToday[0]?.title ||
-    overdueTasks[0]?.title ||
-    tasks.find((t) => !isDone(t.status))?.title ||
+    tasksWeek[0]?.title ||
+    tasksOpen[0]?.title ||
     "Tout est à jour 🎉";
 
-  const tasksTodayTop5 = tasksToday.slice(0, 5);
-  const tasksUpcomingTop5 = tasks
-    .filter((t) => !isDone(t.status) && !isToday(t.due_date))
-    .sort((a, b) => {
-      const da = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
-      const db = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
-      return da - db;
-    })
-    .slice(0, 5);
+  // 4) Statistiques (fallback propre)
+  const audienceSize = toNumber((planJson as AnyRecord).audience_size, 0);
+  const emailListSize = toNumber((planJson as AnyRecord).email_list_size, 0);
 
   return (
     <AppShell userEmail={userEmail}>
-      <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Aujourd’hui</h1>
+            <p className="text-sm text-muted-foreground">{userEmail}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link href="/strategy">
+              <Button variant="outline">Ma stratégie</Button>
+            </Link>
+            <Link href="/create">
+              <Button>Créer du contenu</Button>
+            </Link>
+          </div>
+        </div>
+
+        <Card className="p-5">
+          <p className="text-xs text-muted-foreground">Prochaine action</p>
+          <p className="mt-1 text-base font-semibold">{nextAction as string}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant="secondary">{tasksToday.length} aujourd’hui</Badge>
+            <Badge variant="secondary">{tasksWeek.length} cette semaine</Badge>
+            <Badge variant="secondary">{tasksDone.length} terminées</Badge>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">À faire</p>
+            <p className="mt-1 text-2xl font-bold">{tasksOpen.length}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Terminées</p>
+            <p className="mt-1 text-2xl font-bold">{tasksDone.length}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Audience</p>
+            <p className="mt-1 text-2xl font-bold">{audienceSize || "—"}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Emails</p>
+            <p className="mt-1 text-2xl font-bold">{emailListSize || "—"}</p>
+          </Card>
+        </div>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Aujourd’hui</h1>
-              <p className="mt-1 text-sm text-slate-600">
-                Ton focus : <span className="font-semibold text-slate-900">{nextAction}</span>
+              <h2 className="text-base font-semibold">Progression</h2>
+              <p className="text-sm text-muted-foreground">
+                Tâches terminées : {doneRate}%
               </p>
             </div>
+            <Link href="/tasks">
+              <Button variant="outline">Voir les tâches</Button>
+            </Link>
+          </div>
 
-            <div className="flex items-center gap-2">
-              {!hasDbTasks ? (
-                <Badge variant="secondary" className="h-8 px-3">
-                  Tâches non importées
-                </Badge>
-              ) : null}
+          <div className="mt-4">
+            <Progress value={doneRate} />
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold">Aujourd’hui</h2>
+                <p className="text-sm text-muted-foreground">Tes actions du jour</p>
+              </div>
               <Link href="/tasks">
-                <Button variant="outline" className="h-9">
-                  Mes tâches
-                </Button>
+                <Button variant="outline">Tout voir</Button>
               </Link>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4">
-              <p className="text-xs text-slate-500">À faire aujourd’hui</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{tasksToday.length}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs text-slate-500">En retard</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{overdueTasks.length}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs text-slate-500">Terminées</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{doneCount}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs text-slate-500">Total</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{tasks.length}</p>
-            </Card>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-5">
-            <TaskList title="Tâches du jour" tasks={tasksTodayTop5} showSync={false} allowCreate={false} variant="flat" />
+            <div className="mt-4 space-y-2">
+              {tasksToday.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Rien de prévu aujourd’hui. Tu peux avancer sur tes tâches “à venir”.
+                </p>
+              ) : (
+                tasksToday.slice(0, 5).map((t) => (
+                  <div
+                    key={String(t.id)}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {String(t.title ?? "Sans titre")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">À faire</p>
+                    </div>
+                    <Link href="/tasks">
+                      <Button size="sm" variant="outline">
+                        Ouvrir
+                      </Button>
+                    </Link>
+                  </div>
+                ))
+              )}
+            </div>
           </Card>
 
           <Card className="p-5">
-            <TaskList title="À venir" tasks={tasksUpcomingTop5} showSync={false} allowCreate={false} variant="flat" />
-          </Card>
-        </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold">À venir</h2>
+                <p className="text-sm text-muted-foreground">
+                  Les prochaines tâches
+                </p>
+              </div>
+              <Link href="/tasks">
+                <Button variant="outline">Tout voir</Button>
+              </Link>
+            </div>
 
-        <div className="pt-1">
-          <Link href="/tasks">
-            <Button variant="outline" className="w-full justify-between">
-              Gérer toutes les tâches
-              <span className="text-xs text-slate-500">Sync + CRUD</span>
-            </Button>
-          </Link>
+            <div className="mt-4 space-y-2">
+              {tasksWeek.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune tâche planifiée cette semaine.
+                </p>
+              ) : (
+                tasksWeek.slice(0, 5).map((t) => (
+                  <div
+                    key={String(t.id)}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {String(t.title ?? "Sans titre")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Échéance : {String(t.due_date ?? "—")}
+                      </p>
+                    </div>
+                    <Link href="/tasks">
+                      <Button size="sm" variant="outline">
+                        Ouvrir
+                      </Button>
+                    </Link>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
         </div>
       </div>
     </AppShell>
