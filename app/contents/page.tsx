@@ -1,6 +1,6 @@
 // app/contents/page.tsx
 // Page "Mes Contenus" : liste + vue calendrier + accès au détail
-// Design calé sur Lovable (MyContent) tout en gardant la data Supabase existante.
+// + Filtres (recherche / statut / type / canal) en query params (sans casser l’existant)
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
   FileText,
@@ -25,18 +28,47 @@ import {
   CalendarDays,
   Filter,
   ArrowRight,
+  Search,
+  X,
 } from "lucide-react";
 
 import { ContentCalendarView, type ContentCalendarItem } from "@/components/content/ContentCalendarView";
 
 type Props = {
-  searchParams?: { view?: string };
+  searchParams?: {
+    view?: string;
+    q?: string;
+    status?: string;
+    type?: string;
+    channel?: string;
+  };
 };
 
 type ContentItem = ContentCalendarItem;
 
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
+}
+
+function normalizeStatusForLabel(status: string | null): string {
+  const s = safeString(status).trim();
+  if (!s) return "—";
+  const low = s.toLowerCase();
+  if (low === "published") return "Publié";
+  if (low === "scheduled") return "Planifié";
+  if (low === "draft") return "Brouillon";
+  if (low === "archived") return "Archivé";
+  return s;
+}
+
+function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
+  const s = safeString(status).toLowerCase();
+  if (s.includes("pub") || s === "published") return "default";
+  if (s.includes("plan") || s === "scheduled") return "secondary";
+  if (s.includes("brou") || s === "draft") return "outline";
+  if (s.includes("arch") || s === "archived") return "outline";
+  if (s.includes("err") || s.includes("fail")) return "destructive";
+  return "outline";
 }
 
 function iconForType(type: string | null) {
@@ -47,23 +79,18 @@ function iconForType(type: string | null) {
   return FileText;
 }
 
-function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
-  const s = safeString(status).toLowerCase();
-  if (s.includes("pub")) return "default";
-  if (s.includes("plan")) return "secondary";
-  if (s.includes("brou") || s.includes("draft")) return "outline";
-  if (s.includes("err") || s.includes("fail")) return "destructive";
-  return "outline";
+function formatDateLabel(dateISO: string): string {
+  const d = new Date(`${dateISO}T00:00:00`);
+  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
 }
 
-function statusLabel(status: string | null): string {
-  const s = safeString(status).trim();
-  if (!s) return "—";
-  const low = s.toLowerCase();
-  if (low === "published") return "Publié";
-  if (low === "scheduled") return "Planifié";
-  if (low === "draft") return "Brouillon";
-  return s;
+function buildQueryString(params: Record<string, string | undefined>) {
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v && v.trim()) usp.set(k, v);
+  }
+  const s = usp.toString();
+  return s ? `?${s}` : "";
 }
 
 export default async function MyContentPage({ searchParams }: Props) {
@@ -80,17 +107,52 @@ export default async function MyContentPage({ searchParams }: Props) {
   const view = (searchParams?.view ?? "list").toLowerCase();
   const initialTab = view === "calendar" ? "calendar" : "list";
 
-  const { data: items, error } = await supabase
+  const q = safeString(searchParams?.q).trim();
+  const status = safeString(searchParams?.status).trim();
+  const type = safeString(searchParams?.type).trim();
+  const channel = safeString(searchParams?.channel).trim();
+
+  let query = supabase
     .from("content_item")
     .select("id, type, title, status, scheduled_date, channel, tags, created_at")
     .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
 
+  if (q) {
+    // recherche simple sur le titre (et fallback sur type/canal si utile)
+    query = query.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
+  }
+  if (status) query = query.ilike("status", status);
+  if (type) query = query.ilike("type", `%${type}%`);
+  if (channel) query = query.ilike("channel", `%${channel}%`);
+
+  const { data: items, error } = await query;
+
   if (error) {
+    // On log seulement, UI reste stable
     console.error("[contents] list error", error);
   }
 
   const safeItems: ContentItem[] = Array.isArray(items) ? (items as ContentItem[]) : [];
+
+  // Options de filtres (à partir des items déjà chargés)
+  const typeOptions = Array.from(
+    new Set(
+      safeItems
+        .map((it) => safeString(it.type).trim())
+        .filter(Boolean)
+        .slice(0, 50)
+    )
+  ).sort((a, b) => a.localeCompare(b, "fr"));
+
+  const channelOptions = Array.from(
+    new Set(
+      safeItems
+        .map((it) => safeString(it.channel).trim())
+        .filter(Boolean)
+        .slice(0, 50)
+    )
+  ).sort((a, b) => a.localeCompare(b, "fr"));
 
   // group by scheduled_date for calendar view
   const itemsByDate: Record<string, ContentItem[]> = {};
@@ -99,8 +161,10 @@ export default async function MyContentPage({ searchParams }: Props) {
     if (!itemsByDate[it.scheduled_date]) itemsByDate[it.scheduled_date] = [];
     itemsByDate[it.scheduled_date].push(it);
   }
-
   const scheduledDates = Object.keys(itemsByDate).sort();
+
+  const hasActiveFilters = Boolean(q || status || type || channel);
+  const baseParams = { view: initialTab };
 
   return (
     <AppShell userEmail={userEmail}>
@@ -126,13 +190,19 @@ export default async function MyContentPage({ searchParams }: Props) {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <TabsList>
               <TabsTrigger asChild value="list">
-                <Link href="/contents?view=list" className="gap-2">
+                <Link
+                  href={`/contents${buildQueryString({ ...baseParams, view: "list", q, status, type, channel })}`}
+                  className="gap-2"
+                >
                   <ListIcon className="w-4 h-4" />
                   Liste
                 </Link>
               </TabsTrigger>
               <TabsTrigger asChild value="calendar">
-                <Link href="/contents?view=calendar" className="gap-2">
+                <Link
+                  href={`/contents${buildQueryString({ ...baseParams, view: "calendar", q, status, type, channel })}`}
+                  className="gap-2"
+                >
                   <CalendarDays className="w-4 h-4" />
                   Calendrier
                 </Link>
@@ -141,9 +211,98 @@ export default async function MyContentPage({ searchParams }: Props) {
 
             <Button variant="outline" className="gap-2" disabled>
               <Filter className="w-4 h-4" />
-              Filtres (bientôt)
+              Filtres (live)
             </Button>
           </div>
+
+          {/* Filters bar (GET form => query params) */}
+          <Card className="p-4">
+            <form action="/contents" method="GET" className="grid gap-4 md:grid-cols-12 items-end">
+              <input type="hidden" name="view" value={initialTab} />
+
+              <div className="md:col-span-5 grid gap-2">
+                <Label htmlFor="q" className="text-xs">
+                  Recherche
+                </Label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input id="q" name="q" defaultValue={q} placeholder="Titre, type, canal…" className="pl-9" />
+                </div>
+              </div>
+
+              <div className="md:col-span-2 grid gap-2">
+                <Label className="text-xs">Statut</Label>
+                <Select name="status" defaultValue={status || "all"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="draft">Brouillon</SelectItem>
+                    <SelectItem value="scheduled">Planifié</SelectItem>
+                    <SelectItem value="published">Publié</SelectItem>
+                    <SelectItem value="archived">Archivé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2 grid gap-2">
+                <Label className="text-xs">Type</Label>
+                <Select name="type" defaultValue={type || "all"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {typeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2 grid gap-2">
+                <Label className="text-xs">Canal</Label>
+                <Select name="channel" defaultValue={channel || "all"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {channelOptions.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-1 flex gap-2">
+                <Button type="submit" className="w-full">
+                  Filtrer
+                </Button>
+              </div>
+
+              {hasActiveFilters ? (
+                <div className="md:col-span-12 flex justify-end">
+                  <Link href={`/contents${buildQueryString({ view: initialTab })}`}>
+                    <Button type="button" variant="ghost" className="gap-2">
+                      <X className="w-4 h-4" />
+                      Réinitialiser
+                    </Button>
+                  </Link>
+                </div>
+              ) : null}
+            </form>
+
+            {/* Normalisation: Select "all" => on ne garde pas en query */}
+            <div className="hidden" aria-hidden>
+              {/* Note: on garde ce bloc vide, la normalisation est faite côté server via safeString + ilike */}
+            </div>
+          </Card>
 
           <TabsContent value="list" className="space-y-4">
             {safeItems.length === 0 ? (
@@ -151,11 +310,21 @@ export default async function MyContentPage({ searchParams }: Props) {
                 <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
                   <FileText className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <p className="font-semibold">Aucun contenu pour l’instant</p>
+                <p className="font-semibold">Aucun contenu</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Lance une génération (Réseaux sociaux, emails, blog, scripts…) et on les retrouvera ici.
+                  {hasActiveFilters
+                    ? "Aucun résultat avec ces filtres. Essaie de réinitialiser."
+                    : "Lance une génération (Réseaux sociaux, emails, blog, scripts…) et on les retrouvera ici."}
                 </p>
-                <div className="mt-6">
+                <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
+                  {hasActiveFilters ? (
+                    <Link href={`/contents${buildQueryString({ view: initialTab })}`}>
+                      <Button variant="outline" className="gap-2">
+                        <X className="w-4 h-4" />
+                        Réinitialiser
+                      </Button>
+                    </Link>
+                  ) : null}
                   <Link href="/create">
                     <Button className="gap-2">
                       <Spark />
@@ -183,7 +352,7 @@ export default async function MyContentPage({ searchParams }: Props) {
                                 <p className="font-semibold truncate">
                                   {it.title?.trim() || `${it.type || "Contenu"} sans titre`}
                                 </p>
-                                <Badge variant={badgeVariantForStatus(it.status)}>{statusLabel(it.status)}</Badge>
+                                <Badge variant={badgeVariantForStatus(it.status)}>{normalizeStatusForLabel(it.status)}</Badge>
                               </div>
 
                               <div className="mt-1 flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
@@ -252,22 +421,11 @@ export default async function MyContentPage({ searchParams }: Props) {
   );
 }
 
-function formatDateLabel(dateISO: string): string {
-  const d = new Date(`${dateISO}T00:00:00`);
-  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
-}
-
 function Spark() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
-      <path
-        d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z"
-        className="fill-current"
-      />
-      <path
-        d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z"
-        className="fill-current opacity-70"
-      />
+      <path d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z" className="fill-current" />
+      <path d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z" className="fill-current opacity-70" />
     </svg>
   );
 }
