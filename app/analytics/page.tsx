@@ -1,13 +1,30 @@
 // app/analytics/page.tsx
 // Analytics : KPIs basés sur content_item (sans nouvelle table)
 // - Protégé auth Supabase
-// - Ne casse pas onboarding / login / magic link
+// - Période via searchParams (?period=7|30|90)
+// - Export CSV via /api/analytics/export
 
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import AppShell from '@/components/AppShell';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import AppShell from "@/components/AppShell";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import {
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  FolderOpen,
+  Sparkles,
+  ArrowUpRight,
+} from "lucide-react";
 
 type ContentRow = {
   id: string;
@@ -20,7 +37,9 @@ type ContentRow = {
 };
 
 function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
 }
 
 function daysAgo(n: number) {
@@ -30,91 +49,235 @@ function daysAgo(n: number) {
   return startOfDay(d);
 }
 
+function normalizeStatus(v: string | null | undefined) {
+  return String(v ?? "").trim().toLowerCase();
+}
+
 function isPublished(status: string | null | undefined) {
-  return String(status ?? '').toLowerCase() === 'published';
-}
-function isPlanned(status: string | null | undefined) {
-  const s = String(status ?? '').toLowerCase();
-  return s === 'planned';
-}
-function isDraft(status: string | null | undefined) {
-  const s = String(status ?? '').toLowerCase();
-  return s === 'draft' || !s;
+  return normalizeStatus(status) === "published";
 }
 
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (!m) return d;
-  const [, y, mm, dd] = m;
-  return `${dd}/${mm}/${y}`;
+function isPlanned(
+  status: string | null | undefined,
+  scheduled: string | null | undefined,
+) {
+  const s = normalizeStatus(status);
+  return s === "planned" || Boolean(scheduled);
 }
 
-export default async function AnalyticsPage() {
+function isDraft(
+  status: string | null | undefined,
+  scheduled: string | null | undefined,
+) {
+  const s = normalizeStatus(status);
+  return s === "draft" || (s === "" && !scheduled);
+}
+
+function clamp01(n: number) {
+  return Math.max(0, Math.min(1, n));
+}
+
+function formatPct(n: number) {
+  return `${Math.round(n * 100)}%`;
+}
+
+function groupCount(rows: ContentRow[], keyFn: (r: ContentRow) => string) {
+  const map = new Map<string, number>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    map.set(k, (map.get(k) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function safeTitle(r: ContentRow) {
+  return r.title?.trim() || "Sans titre";
+}
+
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams?: { period?: string };
+}) {
   const supabase = await getSupabaseServerClient();
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect('/');
+  if (!session) redirect("/");
 
-  const userEmail = session.user.email ?? '';
+  const userEmail = session.user.email ?? "";
 
-  // On prend un échantillon raisonnable (les 500 derniers) pour calculer des KPIs rapides
+  const periodRaw = String(searchParams?.period ?? "30");
+  const periodDays = periodRaw === "7" ? 7 : periodRaw === "90" ? 90 : 30;
+
+  // On prend un échantillon raisonnable (les 800 derniers) pour calculer des KPIs rapides
   const { data, error } = await supabase
-    .from('content_item')
-    .select('id, title, type, status, channel, scheduled_date, created_at')
-    .order('created_at', { ascending: false })
-    .limit(500);
+    .from("content_item")
+    .select("id, title, type, status, channel, scheduled_date, created_at")
+    .order("created_at", { ascending: false })
+    .limit(800);
 
   const rows: ContentRow[] = Array.isArray(data) ? (data as ContentRow[]) : [];
 
-  const total = rows.length;
-  const published = rows.filter((r) => isPublished(r.status)).length;
-  const planned = rows.filter((r) => isPlanned(r.status) || Boolean(r.scheduled_date)).length;
-  const drafts = rows.filter((r) => isDraft(r.status) && !r.scheduled_date).length;
+  const sincePeriod = daysAgo(periodDays).getTime();
+  const sincePrev = daysAgo(periodDays * 2).getTime();
 
-  const since7 = daysAgo(7).getTime();
-  const since30 = daysAgo(30).getTime();
-
-  const published7 = rows.filter((r) => {
-    if (!isPublished(r.status)) return false;
+  const inPeriod = rows.filter((r) => {
     const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-    return ts >= since7;
-  }).length;
+    return ts >= sincePeriod;
+  });
 
-  const published30 = rows.filter((r) => {
-    if (!isPublished(r.status)) return false;
+  const inPrev = rows.filter((r) => {
     const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-    return ts >= since30;
-  }).length;
+    return ts < sincePeriod && ts >= sincePrev;
+  });
 
-  const last10 = rows.slice(0, 10);
+  const totalPeriod = inPeriod.length;
+  const publishedPeriod = inPeriod.filter((r) => isPublished(r.status)).length;
+  const plannedPeriod = inPeriod.filter((r) =>
+    isPlanned(r.status, r.scheduled_date),
+  ).length;
+  const draftsPeriod = inPeriod.filter((r) =>
+    isDraft(r.status, r.scheduled_date),
+  ).length;
+
+  const totalPrev = inPrev.length;
+  const publishedPrev = inPrev.filter((r) => isPublished(r.status)).length;
+  const plannedPrev = inPrev.filter((r) =>
+    isPlanned(r.status, r.scheduled_date),
+  ).length;
+
+  const completion = totalPeriod > 0 ? clamp01(publishedPeriod / totalPeriod) : 0;
+  const completionPrev =
+    totalPrev > 0 ? clamp01(publishedPrev / totalPrev) : 0;
+
+  function changeBadge(current: number, prev: number) {
+    const delta = current - prev;
+    const isUp = delta >= 0;
+    const value =
+      prev === 0 ? (current === 0 ? 0 : 100) : Math.round((delta / prev) * 100);
+    return { isUp, text: `${isUp ? "+" : ""}${value}%` };
+  }
+
+  const m1 = changeBadge(publishedPeriod, publishedPrev);
+  const m2 = changeBadge(plannedPeriod, plannedPrev);
+  const m3 = changeBadge(
+    Math.round(completion * 100),
+    Math.round(completionPrev * 100),
+  );
+  const m4 = changeBadge(totalPeriod, totalPrev);
+
+  const metrics = [
+    {
+      key: "published",
+      icon: CheckCircle2,
+      label: "Contenus publiés",
+      value: String(publishedPeriod),
+      change: m1.text,
+      up: m1.isUp,
+    },
+    {
+      key: "planned",
+      icon: Calendar,
+      label: "Contenus planifiés",
+      value: String(plannedPeriod),
+      change: m2.text,
+      up: m2.isUp,
+    },
+    {
+      key: "completion",
+      icon: TrendingUp,
+      label: "Taux de complétion",
+      value: formatPct(completion),
+      change: m3.text,
+      up: m3.isUp,
+    },
+    {
+      key: "total",
+      icon: FileText,
+      label: "Créations sur la période",
+      value: String(totalPeriod),
+      change: m4.text,
+      up: m4.isUp,
+    },
+  ];
+
+  const byType = groupCount(inPeriod, (r) =>
+    r.type?.trim() ? r.type!.trim() : "Autre",
+  );
+  const byChannel = groupCount(inPeriod, (r) =>
+    r.channel?.trim() ? r.channel!.trim() : "—",
+  );
+
+  const topContents = inPeriod
+    .filter((r) => r.id)
+    .slice(0, 8)
+    .map((r) => ({
+      id: r.id,
+      title: safeTitle(r),
+      type: r.type ?? "—",
+      status: r.status ?? "—",
+    }));
 
   return (
     <AppShell userEmail={userEmail}>
-      <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Analytics</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Vue rapide basée sur vos contenus (brouillons, planifiés, publiés).
+            <h1 className="text-xl font-display font-bold">Analytics</h1>
+            <p className="text-sm text-muted-foreground">
+              Période : {periodDays} jours • Basé sur vos contenus
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/contents"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-            >
-              Mes contenus
-            </Link>
-            <Link
-              href="/create"
-              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-            >
-              + Créer
-            </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-xl border bg-background p-1">
+              <Link
+                href="/analytics?period=7"
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  periodDays === 7 ? "bg-muted" : "hover:bg-muted/60"
+                }`}
+              >
+                7 jours
+              </Link>
+              <Link
+                href="/analytics?period=30"
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  periodDays === 30 ? "bg-muted" : "hover:bg-muted/60"
+                }`}
+              >
+                30 jours
+              </Link>
+              <Link
+                href="/analytics?period=90"
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  periodDays === 90 ? "bg-muted" : "hover:bg-muted/60"
+                }`}
+              >
+                90 jours
+              </Link>
+            </div>
+
+            <Button asChild variant="outline">
+              <a
+                href={`/api/analytics/export?period=${periodDays}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Exporter le rapport
+              </a>
+            </Button>
+
+            <Button asChild>
+              <Link href="/create">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Créer
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -125,84 +288,218 @@ export default async function AnalyticsPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: 'Total contenus', value: total },
-            { label: 'Brouillons', value: drafts },
-            { label: 'Planifiés', value: planned },
-            { label: 'Publiés', value: published },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-            >
-              <p className="text-xs text-slate-500">{s.label}</p>
-              <p className="mt-2 text-lg font-semibold text-slate-900">{s.value}</p>
-            </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {metrics.map((m) => (
+            <Card key={m.key} className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="rounded-xl bg-primary/10 p-3">
+                  <m.icon className="h-6 w-6 text-primary" />
+                </div>
+                <Badge
+                  variant={m.up ? "default" : "secondary"}
+                  className="flex items-center gap-1"
+                >
+                  {m.up ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {m.change}
+                </Badge>
+              </div>
+              <p className="mb-1 text-sm text-muted-foreground">{m.label}</p>
+              <p className="text-3xl font-bold">{m.value}</p>
+            </Card>
           ))}
-        </section>
+        </div>
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Rythme</h2>
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs text-slate-500">Publiés sur 7 jours</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{published7}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs text-slate-500">Publiés sur 30 jours</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{published30}</p>
-              </div>
-              <p className="text-xs text-slate-500">
-                (Prochaine étape : brancher des “entries” d’engagement & chiffres de vente.)
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full max-w-xl grid-cols-4">
+            <TabsTrigger value="overview">Aperçu</TabsTrigger>
+            <TabsTrigger value="channels">Canaux</TabsTrigger>
+            <TabsTrigger value="types">Types</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="mb-2 text-lg font-semibold">Aperçu</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Indicateurs calculés sur la période sélectionnée (sans tracking
+                externe).
               </p>
-            </div>
-          </div>
 
-          <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-sm font-semibold text-slate-900">Derniers contenus</h2>
-              <span className="text-xs text-slate-500">Top 10</span>
-            </div>
-
-            {last10.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center">
-                <p className="text-sm text-slate-600">Aucun contenu pour le moment.</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Crée ton premier contenu pour alimenter les analytics.
-                </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border p-4">
+                  <p className="text-xs text-muted-foreground">Brouillons</p>
+                  <p className="mt-1 text-2xl font-semibold">{draftsPeriod}</p>
+                </div>
+                <div className="rounded-xl border p-4">
+                  <p className="text-xs text-muted-foreground">Planifiés</p>
+                  <p className="mt-1 text-2xl font-semibold">{plannedPeriod}</p>
+                </div>
+                <div className="rounded-xl border p-4">
+                  <p className="text-xs text-muted-foreground">Publiés</p>
+                  <p className="mt-1 text-2xl font-semibold">
+                    {publishedPeriod}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200">
-                {last10.map((r) => (
-                  <Link
-                    key={r.id}
-                    href={`/contents/${r.id}`}
-                    className="block p-4 hover:bg-slate-50"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-slate-500">
-                          {r.type ?? '—'} • {r.channel ?? '—'}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
-                          {r.title ?? 'Sans titre'}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                          Statut: <span className="font-semibold text-slate-700">{r.status ?? '—'}</span>
-                          {' • '}
-                          Planifié: <span className="font-semibold text-slate-700">{formatDate(r.scheduled_date)}</span>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="mb-4 text-lg font-semibold">
+                Top contenus (récents)
+              </h2>
+
+              {topContents.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  Aucun contenu sur la période.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topContents.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/contents/${c.id}`}
+                      className="block rounded-xl border p-4 transition hover:bg-muted/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{c.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {c.type} • {c.status}
+                          </p>
+                        </div>
+                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="channels" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="mb-4 text-lg font-semibold">Sources (canaux)</h2>
+
+              {byChannel.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  Aucun contenu sur la période.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {byChannel.slice(0, 10).map((it) => (
+                    <div
+                      key={it.key}
+                      className="flex items-center justify-between rounded-xl border px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{it.key}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {it.count} contenu(s)
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">{it.count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="types" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="mb-4 text-lg font-semibold">
+                Répartition par type
+              </h2>
+
+              {byType.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  Aucun contenu sur la période.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {byType.slice(0, 10).map((it) => (
+                    <div
+                      key={it.key}
+                      className="flex items-center justify-between rounded-xl border px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{it.key}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {it.count} contenu(s)
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">{it.count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="actions" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="mb-4 text-lg font-semibold">Accès rapides</h2>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto justify-between p-4"
+                >
+                  <Link href="/contents">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                        <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Mes contenus</p>
+                        <p className="text-sm text-muted-foreground">
+                          Organiser & planifier
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs font-semibold text-[#b042b4]">Ouvrir →</span>
                     </div>
+                    <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
                   </Link>
-                ))}
+                </Button>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto justify-between p-4"
+                >
+                  <Link href="/create">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                        <Sparkles className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Créer</p>
+                        <p className="text-sm text-muted-foreground">
+                          Générer du contenu
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                  </Link>
+                </Button>
               </div>
-            )}
-          </div>
-        </section>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
   );
