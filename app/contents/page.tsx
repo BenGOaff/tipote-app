@@ -1,227 +1,273 @@
 // app/contents/page.tsx
-// Page "Mes Contenus" v2.1 : liste + vue calendrier + accès au détail
+// Page "Mes Contenus" : liste + vue calendrier + accès au détail
+// Design calé sur Lovable (MyContent) tout en gardant la data Supabase existante.
 
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import AppShell from '@/components/AppShell';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import AppShell from "@/components/AppShell";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+import {
+  FileText,
+  Mail,
+  Video,
+  Image as ImageIcon,
+  MoreVertical,
+  Plus,
+  List as ListIcon,
+  CalendarDays,
+  Filter,
+  ArrowRight,
+} from "lucide-react";
+
+import { ContentCalendarView, type ContentCalendarItem } from "@/components/content/ContentCalendarView";
 
 type Props = {
   searchParams?: { view?: string };
 };
 
-type ContentItem = {
-  id: string;
-  type: string | null;
-  title: string | null;
-  status: string | null;
-  scheduled_date: string | null;
-  channel: string | null;
-  tags: string[] | null;
-  created_at: string | null;
-};
+type ContentItem = ContentCalendarItem;
 
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (!m) return d;
-  const [, y, mm, dd] = m;
-  return `${dd}/${mm}/${y}`;
+function safeString(v: unknown): string {
+  return typeof v === "string" ? v : "";
 }
 
-export default async function ContentsPage({ searchParams }: Props) {
+function iconForType(type: string | null) {
+  const t = safeString(type).toLowerCase();
+  if (t.includes("email")) return Mail;
+  if (t.includes("video") || t.includes("vidéo")) return Video;
+  if (t.includes("image") || t.includes("visuel")) return ImageIcon;
+  return FileText;
+}
+
+function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
+  const s = safeString(status).toLowerCase();
+  if (s.includes("pub")) return "default";
+  if (s.includes("plan")) return "secondary";
+  if (s.includes("brou") || s.includes("draft")) return "outline";
+  if (s.includes("err") || s.includes("fail")) return "destructive";
+  return "outline";
+}
+
+function statusLabel(status: string | null): string {
+  const s = safeString(status).trim();
+  if (!s) return "—";
+  const low = s.toLowerCase();
+  if (low === "published") return "Publié";
+  if (low === "scheduled") return "Planifié";
+  if (low === "draft") return "Brouillon";
+  return s;
+}
+
+export default async function MyContentPage({ searchParams }: Props) {
   const supabase = await getSupabaseServerClient();
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect('/');
+  if (!session) redirect("/auth/login");
 
-  const userEmail = session.user.email ?? '';
-  const view = searchParams?.view === 'calendar' ? 'calendar' : 'list';
+  const userEmail = session.user.email ?? "Utilisateur";
 
-  const { data, error } = await supabase
-    .from('content_item')
-    .select('id, type, title, status, scheduled_date, channel, tags, created_at')
-    .order('created_at', { ascending: false })
-    .limit(150);
+  const view = (searchParams?.view ?? "list").toLowerCase();
+  const initialTab = view === "calendar" ? "calendar" : "list";
 
-  const items: ContentItem[] = Array.isArray(data) ? (data as ContentItem[]) : [];
+  const { data: items, error } = await supabase
+    .from("content_item")
+    .select("id, type, title, status, scheduled_date, channel, tags, created_at")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false });
 
-  const planned = items.filter((i) => i.scheduled_date);
-  const drafts = items.filter((i) => !i.scheduled_date);
-
-  const byDate = new Map<string, ContentItem[]>();
-  for (const it of planned) {
-    const key = it.scheduled_date || '—';
-    const arr = byDate.get(key) ?? [];
-    arr.push(it);
-    byDate.set(key, arr);
+  if (error) {
+    console.error("[contents] list error", error);
   }
-  const dates = Array.from(byDate.keys()).sort();
+
+  const safeItems: ContentItem[] = Array.isArray(items) ? (items as ContentItem[]) : [];
+
+  // group by scheduled_date for calendar view
+  const itemsByDate: Record<string, ContentItem[]> = {};
+  for (const it of safeItems) {
+    if (!it.scheduled_date) continue;
+    if (!itemsByDate[it.scheduled_date]) itemsByDate[it.scheduled_date] = [];
+    itemsByDate[it.scheduled_date].push(it);
+  }
+
+  const scheduledDates = Object.keys(itemsByDate).sort();
 
   return (
     <AppShell userEmail={userEmail}>
-      <div className="space-y-6">
+      <div className="p-6 space-y-6 max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Mes Contenus</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold">Mes Contenus</h1>
+            <p className="text-sm text-muted-foreground">
               Retrouvez vos contenus générés et planifiés (publication, statut, canal).
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/create"
-              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-            >
-              + Créer
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/contents?view=list"
-            className={[
-              'rounded-xl px-3 py-2 text-xs font-semibold border transition',
-              view === 'list'
-                ? 'border-[#b042b4] bg-[#b042b4]/10 text-slate-900'
-                : 'border-slate-200 text-slate-700 hover:bg-slate-50',
-            ].join(' ')}
-          >
-            Liste
-          </Link>
-          <Link
-            href="/contents?view=calendar"
-            className={[
-              'rounded-xl px-3 py-2 text-xs font-semibold border transition',
-              view === 'calendar'
-                ? 'border-[#b042b4] bg-[#b042b4]/10 text-slate-900'
-                : 'border-slate-200 text-slate-700 hover:bg-slate-50',
-            ].join(' ')}
-          >
-            Calendrier
+          <Link href="/create">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Créer
+            </Button>
           </Link>
         </div>
 
-        {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-            <p className="text-sm font-semibold text-rose-800">Erreur</p>
-            <p className="mt-1 text-sm text-rose-800">{error.message}</p>
-          </div>
-        ) : null}
-
-        {view === 'list' ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-sm font-semibold text-slate-900">Derniers contenus</h2>
-              <div className="text-xs text-slate-500">
-                {items.length} élément{items.length > 1 ? 's' : ''}
-              </div>
-            </div>
-
-            {items.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center">
-                <p className="text-sm text-slate-600">Aucun contenu pour le moment.</p>
-                <p className="mt-1 text-xs text-slate-500">Crée ton premier contenu en 1 clic.</p>
-                <Link
-                  href="/create"
-                  className="mt-4 inline-flex rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-                >
-                  + Créer
+        <Tabs defaultValue={initialTab} className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <TabsList>
+              <TabsTrigger asChild value="list">
+                <Link href="/contents?view=list" className="gap-2">
+                  <ListIcon className="w-4 h-4" />
+                  Liste
                 </Link>
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-3">
-                {items.map((it) => (
-                  <Link
-                    key={it.id}
-                    href={`/contents/${it.id}`}
-                    className="block rounded-xl border border-slate-200 bg-white p-4 hover:shadow-sm transition"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-slate-500">
-                          {it.type ?? '—'} • {it.channel ?? '—'}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
-                          {it.title ?? 'Sans titre'}
-                        </p>
+              </TabsTrigger>
+              <TabsTrigger asChild value="calendar">
+                <Link href="/contents?view=calendar" className="gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  Calendrier
+                </Link>
+              </TabsTrigger>
+            </TabsList>
 
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
-                            {it.status ?? '—'}
-                          </span>
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
-                            Planifié : {formatDate(it.scheduled_date)}
-                          </span>
-                          {Array.isArray(it.tags) && it.tags.length ? (
-                            <span className="text-[11px] text-slate-500 truncate">
-                              Tags: {it.tags.join(', ')}
-                            </span>
-                          ) : null}
+            <Button variant="outline" className="gap-2" disabled>
+              <Filter className="w-4 h-4" />
+              Filtres (bientôt)
+            </Button>
+          </div>
+
+          <TabsContent value="list" className="space-y-4">
+            {safeItems.length === 0 ? (
+              <Card className="p-10 text-center">
+                <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                  <FileText className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="font-semibold">Aucun contenu pour l’instant</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Lance une génération (Réseaux sociaux, emails, blog, scripts…) et on les retrouvera ici.
+                </p>
+                <div className="mt-6">
+                  <Link href="/create">
+                    <Button className="gap-2">
+                      <Spark />
+                      Générer un contenu
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {safeItems.map((it) => {
+                  const Icon = iconForType(it.type);
+
+                  return (
+                    <Card key={it.id} className="p-5 hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
+                        <Link href={`/contents/${it.id}`} className="flex-1 min-w-0">
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                              <Icon className="w-5 h-5 text-muted-foreground" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-semibold truncate">
+                                  {it.title?.trim() || `${it.type || "Contenu"} sans titre`}
+                                </p>
+                                <Badge variant={badgeVariantForStatus(it.status)}>{statusLabel(it.status)}</Badge>
+                              </div>
+
+                              <div className="mt-1 flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                                <span>{it.type || "—"}</span>
+                                <span aria-hidden>•</span>
+                                <span>{it.channel || "—"}</span>
+                                <span aria-hidden>•</span>
+                                <span>{it.scheduled_date ? formatDateLabel(it.scheduled_date) : "Non planifié"}</span>
+                              </div>
+
+                              {Array.isArray(it.tags) && it.tags.length > 0 ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {it.tags.slice(0, 6).map((t) => (
+                                    <Badge key={t} variant="outline" className="text-xs">
+                                      {t}
+                                    </Badge>
+                                  ))}
+                                  {it.tags.length > 6 ? (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{it.tags.length - 6}
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Link href={`/contents/${it.id}`}>
+                            <Button variant="ghost" className="gap-2">
+                              Ouvrir
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </Link>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label="Actions">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/contents/${it.id}`}>Voir / éditer</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem disabled>Dupliquer (bientôt)</DropdownMenuItem>
+                              <DropdownMenuItem disabled>Supprimer (bientôt)</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-
-                      <span className="shrink-0 text-xs font-semibold text-[#b042b4]">Ouvrir →</span>
-                    </div>
-                  </Link>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             )}
-          </section>
-        ) : (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-sm font-semibold text-slate-900">Calendrier</h2>
-              <div className="text-xs text-slate-500">
-                {planned.length} planifié{planned.length > 1 ? 's' : ''} • {drafts.length}{' '}
-                brouillon{drafts.length > 1 ? 's' : ''}
-              </div>
-            </div>
+          </TabsContent>
 
-            {planned.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center">
-                <p className="text-sm text-slate-600">Aucun contenu planifié pour le moment.</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Lors de la génération, renseigne une date planifiée.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-4">
-                {dates.map((d) => (
-                  <div key={d} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-900">{formatDate(d)}</p>
-                      <p className="text-xs text-slate-500">{byDate.get(d)?.length ?? 0} item(s)</p>
-                    </div>
-
-                    <div className="mt-3 grid gap-2">
-                      {(byDate.get(d) ?? []).map((it) => (
-                        <Link
-                          key={it.id}
-                          href={`/contents/${it.id}`}
-                          className="block rounded-lg border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
-                        >
-                          <p className="text-[11px] text-slate-500">
-                            {it.type ?? '—'} • {it.channel ?? '—'}
-                          </p>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {it.title ?? 'Sans titre'}
-                          </p>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+          <TabsContent value="calendar" className="space-y-4">
+            <ContentCalendarView itemsByDate={itemsByDate} scheduledDates={scheduledDates} />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
+  );
+}
+
+function formatDateLabel(dateISO: string): string {
+  const d = new Date(`${dateISO}T00:00:00`);
+  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
+}
+
+function Spark() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
+      <path
+        d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z"
+        className="fill-current"
+      />
+      <path
+        d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z"
+        className="fill-current opacity-70"
+      />
+    </svg>
   );
 }

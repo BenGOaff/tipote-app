@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type GetResp = {
   ok: boolean;
@@ -13,161 +15,213 @@ type GetResp = {
   error?: string;
 };
 
+type MutResp = {
+  ok: boolean;
+  error?: string;
+};
+
 export default function OpenAIKeyManager() {
   const provider = "openai";
+
   const [loading, setLoading] = useState(true);
-  const [configured, setConfigured] = useState(false);
-  const [hasKey, setHasKey] = useState(false);
+  const [configured, setConfigured] = useState<boolean>(false);
+  const [hasKey, setHasKey] = useState<boolean>(false);
   const [masked, setMasked] = useState<string | null>(null);
+
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canSave = useMemo(() => configured && apiKey.trim().length >= 10 && !saving, [configured, apiKey, saving]);
-
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setSuccess(null);
+
     try {
-      const r = await fetch(`/api/user/api-keys?provider=${provider}`, { cache: "no-store" });
-      const j = (await r.json()) as GetResp;
-      if (!j.ok) throw new Error(j.error || "Erreur");
-      setConfigured(Boolean(j.configured));
-      setHasKey(Boolean(j.hasKey));
-      setMasked(j.masked ?? null);
+      const res = await fetch(`/api/user/api-keys?provider=${provider}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const json = (await res.json()) as GetResp;
+
+      if (!json.ok) {
+        setConfigured(false);
+        setHasKey(false);
+        setMasked(null);
+        setError(json.error ?? "Impossible de charger la clé");
+        return;
+      }
+
+      setConfigured(Boolean(json.configured));
+      setHasKey(Boolean(json.hasKey));
+      setMasked(json.masked ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
-  }
+  }, [provider]);
 
   useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void refresh();
+  }, [refresh]);
 
-  async function onSave() {
-    setSaving(true);
+  const statusBadge = useMemo(() => {
+    if (loading) return <Badge variant="secondary">Chargement…</Badge>;
+    if (!configured) return <Badge variant="destructive">Chiffrement non configuré</Badge>;
+    if (hasKey) return <Badge>Enregistrée</Badge>;
+    return <Badge variant="outline">Non renseignée</Badge>;
+  }, [configured, hasKey, loading]);
+
+  const onSave = async () => {
     setError(null);
     setSuccess(null);
+
+    const trimmed = apiKey.trim();
+    if (trimmed.length < 10) {
+      setError("Clé invalide (trop courte)");
+      return;
+    }
+
+    setSaving(true);
     try {
-      const r = await fetch(`/api/user/api-keys`, {
+      const res = await fetch(`/api/user/api-keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: apiKey.trim() }),
+        body: JSON.stringify({ provider, apiKey: trimmed }),
       });
-      const j = (await r.json()) as { ok: boolean; error?: string };
-      if (!j.ok) throw new Error(j.error || "Impossible d’enregistrer");
+
+      const json = (await res.json()) as MutResp;
+
+      if (!json.ok) {
+        setError(json.error ?? "Enregistrement impossible");
+        return;
+      }
+
       setApiKey("");
       setSuccess("Clé enregistrée ✅");
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function onDelete() {
-    setDeleting(true);
+  const onDelete = async () => {
     setError(null);
     setSuccess(null);
+    setDeleting(true);
+
     try {
-      const r = await fetch(`/api/user/api-keys`, {
+      const res = await fetch(`/api/user/api-keys`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider }),
       });
-      const j = (await r.json()) as { ok: boolean; error?: string };
-      if (!j.ok) throw new Error(j.error || "Impossible de supprimer");
+
+      const json = (await res.json()) as MutResp;
+
+      if (!json.ok) {
+        setError(json.error ?? "Suppression impossible");
+        return;
+      }
+
       setSuccess("Clé supprimée ✅");
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setDeleting(false);
     }
-  }
+  };
 
   return (
-    <div className="rounded-xl border border-slate-100 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-slate-800">Clé OpenAI (perso)</p>
-          <p className="text-[11px] text-slate-500">
-            Stockée chiffrée. Utilisée uniquement pour la génération de contenu (niveau “contenu”).
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Clé OpenAI (contenu)</p>
+            {statusBadge}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Ta clé est chiffrée côté serveur et utilisée uniquement pour la génération de contenus (niveau “Contenu”).
           </p>
         </div>
 
-        {loading ? (
-          <Badge variant="secondary">Chargement…</Badge>
-        ) : configured ? (
-          hasKey ? (
-            <Badge>Enregistrée</Badge>
-          ) : (
-            <Badge variant="secondary">Non définie</Badge>
-          )
-        ) : (
-          <Badge variant="secondary">Non configuré</Badge>
-        )}
-      </div>
-
-      {!configured ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-medium text-amber-900">Chiffrement non configuré</p>
-          <p className="text-[11px] text-amber-800 mt-1">
-            Il manque la variable <span className="font-mono">TIPOTE_KEYS_ENCRYPTION_KEY</span> côté serveur.
-            La fonctionnalité reste désactivée sans casser l’app.
-          </p>
-        </div>
-      ) : null}
-
-      {hasKey ? (
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
-          <div className="text-sm text-slate-700">{masked ?? "••••••••"}</div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDelete}
-            disabled={deleting || saving || !configured}
-          >
+        {hasKey ? (
+          <Button variant="outline" onClick={onDelete} disabled={loading || deleting}>
             {deleting ? "Suppression…" : "Supprimer"}
           </Button>
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-slate-600">
+            <span className="font-medium">État :</span>{" "}
+            {loading
+              ? "Chargement…"
+              : configured
+                ? hasKey
+                  ? "Clé enregistrée"
+                  : "Aucune clé"
+                : "Chiffrement non configuré"}
+          </div>
+
+          {masked ? (
+            <div className="text-xs text-slate-500">
+              <span className="font-medium">Masquée :</span> {masked}
+            </div>
+          ) : null}
         </div>
-      ) : (
-        <div className="space-y-2">
-          <input
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            placeholder="sk-..."
+
+        <div className="grid gap-2">
+          <Label htmlFor="openai_api_key" className="text-xs">
+            Nouvelle clé OpenAI
+          </Label>
+          <Input
+            id="openai_api_key"
+            type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            disabled={!configured || saving || deleting}
+            placeholder="sk-…"
             autoComplete="off"
-            spellCheck={false}
+            disabled={loading || saving || !configured}
           />
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] text-slate-500">Astuce : colle ta clé puis “Enregistrer”.</div>
-            <Button type="button" size="sm" onClick={onSave} disabled={!canSave}>
-              {saving ? "Enregistrement…" : "Enregistrer"}
-            </Button>
+          {!configured ? (
+            <p className="text-[11px] text-slate-500">
+              Le chiffrement n’est pas configuré côté serveur (variable TIPOTE_KEYS_ENCRYPTION_KEY manquante).
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-500">
+              Astuce : colle ta clé complète, puis clique sur “Enregistrer”. Elle ne sera plus affichée ensuite.
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button onClick={onSave} disabled={loading || saving || !configured}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+          <Button variant="ghost" onClick={() => void refresh()} disabled={loading}>
+            Actualiser
+          </Button>
+        </div>
+
+        {error ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">{error}</div>
+        ) : null}
+
+        {success ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800">
+            {success}
           </div>
-        </div>
-      )}
-
-      {error ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">{error}</div>
-      ) : null}
-
-      {success ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800">
-          {success}
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
