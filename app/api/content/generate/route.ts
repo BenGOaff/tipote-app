@@ -1,10 +1,12 @@
 // app/api/content/generate/route.ts
 // Génération IA + sauvegarde dans content_item (sans toucher au flow auth/onboarding/magic link)
+// V2 : utilise la clé OpenAI utilisateur si configurée (sinon fallback owner key)
 
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 
 type Body = {
   type: string;
@@ -14,54 +16,48 @@ type Body = {
   prompt: string;
 };
 
-function safeString(v: unknown): string {
-  return typeof v === 'string' ? v : '';
-}
-
-function normalizeType(t: string): string {
-  const v = (t || '').trim().toLowerCase();
-  return v || 'generic';
+function safeString(v: unknown) {
+  return typeof v === "string" ? v : "";
 }
 
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
-    const { data: auth } = await supabase.auth.getUser();
 
-    if (!auth?.user) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const body = (await req.json()) as Body;
-    const type = normalizeType(safeString(body.type));
-    const channel = safeString(body.channel) || 'Général';
-    const scheduledDate = body.scheduledDate ?? null;
-    const tags = Array.isArray(body.tags) ? body.tags.filter(Boolean).slice(0, 20) : [];
-    const prompt = safeString(body.prompt).trim();
 
-    if (!prompt) {
-      return NextResponse.json({ ok: false, error: 'Missing prompt' }, { status: 400 });
+    const type = safeString(body?.type).trim();
+    const channel = safeString(body?.channel).trim() || null;
+    const scheduledDate = body?.scheduledDate ?? null;
+    const tags = Array.isArray(body?.tags) ? body.tags : [];
+    const prompt = safeString(body?.prompt).trim();
+
+    if (!type || !prompt) {
+      return NextResponse.json({ ok: false, error: "Missing type or prompt" }, { status: 400 });
     }
 
-    // Contexte: business_profile + business_plan (si dispo), sans casser si absent
-    const [{ data: profile }, { data: plan }] = await Promise.all([
-      supabase.from('business_profile').select('*').eq('user_id', auth.user.id).maybeSingle(),
-      supabase
-        .from('business_plan')
-        .select('*')
-        .eq('user_id', auth.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    // Récup contexte user (profil + plan)
+    const { data: profile } = await supabase
+      .from("business_profile")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
 
-    const system = [
-      'Tu es un assistant copywriter + stratège pour entrepreneurs.',
-      'Ta réponse doit être directement utilisable, sans blabla.',
-      'Adapte le ton au contexte business et à l’objectif.',
-      'Si des infos manquent, fais des hypothèses raisonnables et reste cohérent.',
-      'Format: texte prêt à copier-coller.',
-    ].join('\n');
+    const { data: plan } = await supabase
+      .from("business_plan")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     const context = {
       type,
@@ -72,97 +68,92 @@ export async function POST(req: Request) {
       business_plan: plan ?? null,
     };
 
-    // Pour ne pas casser l’existant : on réutilise la clé owner (fallback OPENAI_API_KEY).
-    const apiKey = process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || '';
+    // 1) Clé user (si chiffrement + table configurés)
+    let apiKey =
+      process.env.TIPOTE_KEYS_ENCRYPTION_KEY
+        ? await getDecryptedUserApiKey({
+            supabase,
+            userId: session.user.id,
+            provider: "openai",
+          })
+        : null;
+
+    // 2) Fallback owner key (compat)
+    if (!apiKey) {
+      apiKey = process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || "";
+    }
+
     if (!apiKey) {
       return NextResponse.json(
-        { ok: false, error: 'Missing OpenAI API key (OPENAI_API_KEY_OWNER or OPENAI_API_KEY)' },
-        { status: 500 }
+        { ok: false, error: "Missing OpenAI API key (user key or OPENAI_API_KEY_OWNER/OPENAI_API_KEY)" },
+        { status: 500 },
       );
     }
 
-    const openai = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey });
 
-    const userPrompt = [
-      `TYPE: ${type}`,
-      `CANAL: ${channel}`,
-      scheduledDate ? `DATE PLANIFIEE: ${scheduledDate}` : 'DATE PLANIFIEE: (non renseignée)',
-      tags.length ? `TAGS: ${tags.join(', ')}` : 'TAGS: (aucun)',
-      '',
-      'CONTEXTE (JSON):',
-      JSON.stringify(context),
-      '',
-      'CONSIGNE UTILISATEUR:',
+    const system = [
+      "Tu es Tipote™, un assistant expert en création de contenu business pour entrepreneurs.",
+      "Tu produis une sortie directement exploitable, structurée, en français.",
+      "Tu respectes le format demandé par l'utilisateur et le type de contenu.",
+    ].join("\n");
+
+    const user = [
+      "CONTEXTE (JSON):",
+      JSON.stringify(context, null, 2),
+      "",
+      "DEMANDE:",
       prompt,
-      '',
-      'INSTRUCTIONS:',
-      '- Produis un contenu final prêt à publier.',
-      '- Ajoute une variante courte si pertinent (ex: hook alternatif).',
-      '- Garde le format adapté au canal.',
-    ].join('\n');
+    ].join("\n");
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       temperature: 0.7,
       messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userPrompt },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
     });
 
-    const content = completion.choices?.[0]?.message?.content?.trim() || '';
+    const content = completion.choices?.[0]?.message?.content ?? "";
     if (!content) {
-      return NextResponse.json({ ok: false, error: 'Empty generation' }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Empty response from model" }, { status: 500 });
     }
 
-    const titleBase = `${type}`.replace(/[_-]+/g, ' ').trim();
-    const title = `${titleBase.charAt(0).toUpperCase()}${titleBase.slice(1)} — ${content
-      .slice(0, 48)
-      .replace(/\s+/g, ' ')
-      .trim()}${content.length > 48 ? '…' : ''}`;
-
-    const status = scheduledDate ? 'planned' : 'draft';
-
-    const insertPayload: Record<string, unknown> = {
-      user_id: auth.user.id,
-      type,
-      title,
-      prompt,
-      content,
-      status,
-      scheduled_date: scheduledDate,
-      channel,
-      tags,
-    };
-
-    const { data: saved, error: saveErr } = await supabase
-      .from('content_item')
-      .insert(insertPayload)
-      .select('id, title')
+    // Sauvegarde content_item
+    const { data: inserted, error: insErr } = await supabase
+      .from("content_item")
+      .insert({
+        user_id: session.user.id,
+        type,
+        title: null,
+        status: "draft",
+        channel,
+        scheduled_date: scheduledDate,
+        tags,
+        content,
+      })
+      .select("id")
       .single();
 
-    if (saveErr) {
-      // On renvoie quand même le contenu si la DB bloque (RLS/colonne), pour ne pas casser l’UX.
-      return NextResponse.json(
-        {
-          ok: true,
-          title,
-          content,
-          warning: 'Generated but not saved',
-          saveError: saveErr.message,
-        },
-        { status: 200 }
-      );
+    if (insErr) {
+      return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
     }
 
     return NextResponse.json(
-      { ok: true, id: saved?.id, title: saved?.title ?? title, content },
-      { status: 200 }
+      {
+        ok: true,
+        id: inserted?.id ?? null,
+        content,
+        usedUserKey: Boolean(process.env.TIPOTE_KEYS_ENCRYPTION_KEY) && Boolean(await getDecryptedUserApiKey({ supabase, userId: session.user.id, provider: "openai" })),
+      },
+      { status: 200 },
     );
   } catch (e) {
+    console.error("[POST /api/content/generate] error", e);
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Unknown error' },
-      { status: 500 }
+      { ok: false, error: e instanceof Error ? e.message : "Internal server error" },
+      { status: 500 },
     );
   }
 }

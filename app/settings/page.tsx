@@ -1,13 +1,14 @@
 // app/settings/page.tsx
-// Page Paramètres v2.0 : Profil / Réglages / IA & API / Abonnement
+// Page Paramètres v2.1 : Profil / Réglages / IA & API / Abonnement
 // - Protégé par auth Supabase
-// - Centralise : Sécurité (mot de passe) + Automatisations (placeholder)
+// - IA & API : gestion clé OpenAI (chiffrée) via /api/user/api-keys
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import SetPasswordForm from "@/components/SetPasswordForm";
+import OpenAIKeyManager from "@/components/settings/OpenAIKeyManager";
 
 type Props = {
   searchParams?: { tab?: string };
@@ -29,19 +30,15 @@ export default async function SettingsPage({ searchParams }: Props) {
   if (!session) redirect("/");
 
   const userEmail = session.user.email ?? "";
-  const activeTab =
-    tabs.find((t) => t.key === searchParams?.tab)?.key ?? "profile";
+
+  const activeTab = (searchParams?.tab ?? "profile") as (typeof tabs)[number]["key"];
 
   return (
-    <AppShell userEmail={userEmail}>
-      <div className="space-y-6">
-        <header>
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-            Paramètres
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Gère ton profil, tes réglages, ta clé IA et ton abonnement.
-          </p>
+    <AppShell userEmail={userEmail} headerTitle="Paramètres">
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
+        <header className="space-y-1">
+          <h1 className="text-xl font-semibold text-slate-900">Paramètres</h1>
+          <p className="text-sm text-slate-500">Gérez votre compte et vos préférences.</p>
         </header>
 
         <nav className="flex flex-wrap gap-2">
@@ -94,29 +91,15 @@ export default async function SettingsPage({ searchParams }: Props) {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">IA & API</h3>
             <p className="text-xs text-slate-500">
-              Placeholder — UI prête, logique branchée ensuite (clé par utilisateur).
+              Configurez vos clés personnelles (utilisées pour la génération de contenu).
             </p>
 
-            <div className="rounded-xl border border-slate-100 p-4 space-y-3">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-800">
-                  Clé OpenAI (perso)
-                </p>
-                <input
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  placeholder="sk-..."
-                  disabled
-                />
-                <p className="text-[11px] text-slate-500">
-                  Elle sera stockée de façon sécurisée et utilisée uniquement pour ton compte.
-                </p>
-              </div>
+            <OpenAIKeyManager />
 
-              <div className="rounded-xl border border-dashed border-slate-200 p-4">
-                <p className="text-xs text-slate-600">
-                  Prochaine étape : sauvegarde + validation + test appel API.
-                </p>
-              </div>
+            <div className="rounded-xl border border-dashed border-slate-200 p-4">
+              <p className="text-xs text-slate-600">
+                Prochaine étape : ajouter Claude/Gemini + sélecteur provider dans “Créer”.
+              </p>
             </div>
           </section>
         )}
