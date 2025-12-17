@@ -1,6 +1,7 @@
 // app/analytics/page.tsx
-// Analytics : KPIs basés sur content_item (sans nouvelle table)
-// - Protégé auth Supabase
+// Pixel-perfect (Lovable) : reprend la structure du design (src/pages/Analytics.tsx)
+// Analytics V1 : KPIs calculés à partir de content_item (pas de tracking externe)
+// - Auth Supabase obligatoire
 // - Période via searchParams (?period=7|30|90)
 // - Export CSV via /api/analytics/export
 
@@ -22,7 +23,6 @@ import {
   Calendar,
   CheckCircle2,
   FolderOpen,
-  Sparkles,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -65,14 +65,6 @@ function isPlanned(
   return s === "planned" || Boolean(scheduled);
 }
 
-function isDraft(
-  status: string | null | undefined,
-  scheduled: string | null | undefined,
-) {
-  const s = normalizeStatus(status);
-  return s === "draft" || (s === "" && !scheduled);
-}
-
 function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
@@ -81,19 +73,12 @@ function formatPct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
 
-function groupCount(rows: ContentRow[], keyFn: (r: ContentRow) => string) {
-  const map = new Map<string, number>();
-  for (const r of rows) {
-    const k = keyFn(r);
-    map.set(k, (map.get(k) ?? 0) + 1);
-  }
-  return Array.from(map.entries())
-    .map(([key, count]) => ({ key, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
 function safeTitle(r: ContentRow) {
   return r.title?.trim() || "Sans titre";
+}
+
+function csvPeriod(p: string | null) {
+  return p === "7" ? 7 : p === "90" ? 90 : 30;
 }
 
 export default async function AnalyticsPage({
@@ -110,11 +95,9 @@ export default async function AnalyticsPage({
   if (!session) redirect("/");
 
   const userEmail = session.user.email ?? "";
+  const periodDays = csvPeriod(String(searchParams?.period ?? "30"));
 
-  const periodRaw = String(searchParams?.period ?? "30");
-  const periodDays = periodRaw === "7" ? 7 : periodRaw === "90" ? 90 : 30;
-
-  // On prend un échantillon raisonnable (les 800 derniers) pour calculer des KPIs rapides
+  // KPI rapide : on calcule sur les 800 derniers contenus
   const { data, error } = await supabase
     .from("content_item")
     .select("id, title, type, status, channel, scheduled_date, created_at")
@@ -137,16 +120,14 @@ export default async function AnalyticsPage({
   });
 
   const totalPeriod = inPeriod.length;
+  const totalPrev = inPrev.length;
+
   const publishedPeriod = inPeriod.filter((r) => isPublished(r.status)).length;
+  const publishedPrev = inPrev.filter((r) => isPublished(r.status)).length;
+
   const plannedPeriod = inPeriod.filter((r) =>
     isPlanned(r.status, r.scheduled_date),
   ).length;
-  const draftsPeriod = inPeriod.filter((r) =>
-    isDraft(r.status, r.scheduled_date),
-  ).length;
-
-  const totalPrev = inPrev.length;
-  const publishedPrev = inPrev.filter((r) => isPublished(r.status)).length;
   const plannedPrev = inPrev.filter((r) =>
     isPlanned(r.status, r.scheduled_date),
   ).length;
@@ -157,127 +138,141 @@ export default async function AnalyticsPage({
 
   function changeBadge(current: number, prev: number) {
     const delta = current - prev;
-    const isUp = delta >= 0;
+    const up = delta >= 0;
     const value =
       prev === 0 ? (current === 0 ? 0 : 100) : Math.round((delta / prev) * 100);
-    return { isUp, text: `${isUp ? "+" : ""}${value}%` };
+    return { up, text: `${up ? "+" : ""}${value}%` };
   }
 
-  const m1 = changeBadge(publishedPeriod, publishedPrev);
-  const m2 = changeBadge(plannedPeriod, plannedPrev);
-  const m3 = changeBadge(
+  const mPublished = changeBadge(publishedPeriod, publishedPrev);
+  const mPlanned = changeBadge(plannedPeriod, plannedPrev);
+  const mCompletion = changeBadge(
     Math.round(completion * 100),
     Math.round(completionPrev * 100),
   );
-  const m4 = changeBadge(totalPeriod, totalPrev);
+  const mTotal = changeBadge(totalPeriod, totalPrev);
 
   const metrics = [
     {
-      key: "published",
-      icon: CheckCircle2,
       label: "Contenus publiés",
       value: String(publishedPeriod),
-      change: m1.text,
-      up: m1.isUp,
+      change: mPublished.text,
+      trend: mPublished.up ? "up" : "down",
+      icon: CheckCircle2,
     },
     {
-      key: "planned",
-      icon: Calendar,
       label: "Contenus planifiés",
       value: String(plannedPeriod),
-      change: m2.text,
-      up: m2.isUp,
+      change: mPlanned.text,
+      trend: mPlanned.up ? "up" : "down",
+      icon: Calendar,
     },
     {
-      key: "completion",
-      icon: TrendingUp,
       label: "Taux de complétion",
       value: formatPct(completion),
-      change: m3.text,
-      up: m3.isUp,
+      change: mCompletion.text,
+      trend: mCompletion.up ? "up" : "down",
+      icon: TrendingUp,
     },
     {
-      key: "total",
-      icon: FileText,
       label: "Créations sur la période",
       value: String(totalPeriod),
-      change: m4.text,
-      up: m4.isUp,
+      change: mTotal.text,
+      trend: mTotal.up ? "up" : "down",
+      icon: FileText,
     },
+  ] as const;
+
+  // Mini chart 14 jours (créations / jour)
+  const days = 14;
+  const dayBuckets: number[] = Array.from({ length: days }, () => 0);
+  const dayStart = daysAgo(days - 1).getTime();
+  for (const r of rows) {
+    const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (ts < dayStart) continue;
+    const idx = Math.floor(
+      (startOfDay(new Date(ts)).getTime() - dayStart) / (24 * 60 * 60 * 1000),
+    );
+    if (idx >= 0 && idx < days) dayBuckets[idx] += 1;
+  }
+  const maxBucket = Math.max(1, ...dayBuckets);
+  const heights = dayBuckets.map((v) => Math.round((v / maxBucket) * 100));
+
+  // Channels + Types
+  const byChannelMap = new Map<string, number>();
+  const byTypeMap = new Map<string, number>();
+  for (const r of inPeriod) {
+    const ch = r.channel?.trim() ? r.channel!.trim() : "—";
+    byChannelMap.set(ch, (byChannelMap.get(ch) ?? 0) + 1);
+
+    const t = r.type?.trim() ? r.type!.trim() : "Autre";
+    byTypeMap.set(t, (byTypeMap.get(t) ?? 0) + 1);
+  }
+
+  const byChannel = Array.from(byChannelMap.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  const byType = Array.from(byTypeMap.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  const topContents = inPeriod.slice(0, 5).map((r) => ({
+    id: r.id,
+    title: safeTitle(r),
+    type: r.type ?? "—",
+    status: r.status ?? "—",
+  }));
+
+  const periodButtons = [
+    { days: 7, label: "7 jours" },
+    { days: 30, label: "30 jours" },
+    { days: 90, label: "90 jours" },
   ];
 
-  const byType = groupCount(inPeriod, (r) =>
-    r.type?.trim() ? r.type!.trim() : "Autre",
-  );
-  const byChannel = groupCount(inPeriod, (r) =>
-    r.channel?.trim() ? r.channel!.trim() : "—",
-  );
-
-  const topContents = inPeriod
-    .filter((r) => r.id)
-    .slice(0, 8)
-    .map((r) => ({
-      id: r.id,
-      title: safeTitle(r),
-      type: r.type ?? "—",
-      status: r.status ?? "—",
-    }));
-
   return (
-    <AppShell userEmail={userEmail}>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <AppShell
+      userEmail={userEmail}
+      headerTitle="Analytics"
+      headerRight={
+        <Button asChild variant="outline">
+          <a
+            href={`/api/analytics/export?period=${periodDays}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Exporter le rapport
+          </a>
+        </Button>
+      }
+      contentClassName="flex-1 p-0"
+    >
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Period Selector */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-display font-bold">Analytics</h1>
-            <p className="text-sm text-muted-foreground">
-              Période : {periodDays} jours • Basé sur vos contenus
+            <h2 className="text-2xl font-display font-bold">Vos performances</h2>
+            <p className="text-muted-foreground">
+              Suivez et optimisez vos résultats
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl border bg-background p-1">
-              <Link
-                href="/analytics?period=7"
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                  periodDays === 7 ? "bg-muted" : "hover:bg-muted/60"
-                }`}
-              >
-                7 jours
-              </Link>
-              <Link
-                href="/analytics?period=30"
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                  periodDays === 30 ? "bg-muted" : "hover:bg-muted/60"
-                }`}
-              >
-                30 jours
-              </Link>
-              <Link
-                href="/analytics?period=90"
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                  periodDays === 90 ? "bg-muted" : "hover:bg-muted/60"
-                }`}
-              >
-                90 jours
-              </Link>
-            </div>
-
-            <Button asChild variant="outline">
-              <a
-                href={`/api/analytics/export?period=${periodDays}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Exporter le rapport
-              </a>
-            </Button>
-
-            <Button asChild>
-              <Link href="/create">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Créer
-              </Link>
-            </Button>
+          <div className="flex gap-2">
+            {periodButtons.map((p) => {
+              const active = periodDays === p.days;
+              return (
+                <Button
+                  key={p.days}
+                  asChild
+                  variant={active ? "default" : "outline"}
+                  size="sm"
+                >
+                  <Link href={`/analytics?period=${p.days}`}>{p.label}</Link>
+                </Button>
+              );
+            })}
           </div>
         </div>
 
@@ -288,214 +283,227 @@ export default async function AnalyticsPage({
           </div>
         ) : null}
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {metrics.map((m) => (
-            <Card key={m.key} className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="rounded-xl bg-primary/10 p-3">
-                  <m.icon className="h-6 w-6 text-primary" />
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {metrics.map((metric) => {
+            const Icon = metric.icon;
+            const up = metric.trend === "up";
+            return (
+              <Card key={metric.label} className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-primary/10">
+                    <Icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <Badge
+                    variant={up ? "default" : "secondary"}
+                    className="flex items-center gap-1"
+                  >
+                    {up ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {metric.change}
+                  </Badge>
                 </div>
-                <Badge
-                  variant={m.up ? "default" : "secondary"}
-                  className="flex items-center gap-1"
-                >
-                  {m.up ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {m.change}
-                </Badge>
-              </div>
-              <p className="mb-1 text-sm text-muted-foreground">{m.label}</p>
-              <p className="text-3xl font-bold">{m.value}</p>
-            </Card>
-          ))}
+                <p className="text-sm text-muted-foreground mb-1">
+                  {metric.label}
+                </p>
+                <p className="text-3xl font-bold">{metric.value}</p>
+              </Card>
+            );
+          })}
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-xl grid-cols-4">
-            <TabsTrigger value="overview">Aperçu</TabsTrigger>
-            <TabsTrigger value="channels">Canaux</TabsTrigger>
-            <TabsTrigger value="types">Types</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
+        {/* Charts Section */}
+        <Tabs defaultValue="engagement" className="w-full">
+          <TabsList>
+            <TabsTrigger value="engagement">Engagement</TabsTrigger>
+            <TabsTrigger value="traffic">Trafic</TabsTrigger>
+            <TabsTrigger value="conversions">Conversions</TabsTrigger>
+            <TabsTrigger value="social">Réseaux sociaux</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="engagement" className="space-y-6 mt-6">
             <Card className="p-6">
-              <h2 className="mb-2 text-lg font-semibold">Aperçu</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Indicateurs calculés sur la période sélectionnée (sans tracking
-                externe).
-              </p>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs text-muted-foreground">Brouillons</p>
-                  <p className="mt-1 text-2xl font-semibold">{draftsPeriod}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs text-muted-foreground">Planifiés</p>
-                  <p className="mt-1 text-2xl font-semibold">{plannedPeriod}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs text-muted-foreground">Publiés</p>
-                  <p className="mt-1 text-2xl font-semibold">
-                    {publishedPeriod}
-                  </p>
-                </div>
+              <h3 className="text-lg font-bold mb-6">
+                Créations au fil du temps (14 jours)
+              </h3>
+              <div className="h-64 flex items-end justify-between gap-2">
+                {heights.map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-primary/30 to-primary/70 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
+                    style={{ height: `${Math.max(6, h)}%` }}
+                    title={`${dayBuckets[i]} création(s)`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                <span>J-13</span>
+                <span>J-10</span>
+                <span>J-7</span>
+                <span>J-4</span>
+                <span>Aujourd’hui</span>
               </div>
             </Card>
 
             <Card className="p-6">
-              <h2 className="mb-4 text-lg font-semibold">
-                Top contenus (récents)
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold">Contenus récents</h3>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/contents">
+                    Voir tout <ArrowUpRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
 
-              {topContents.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Aucun contenu sur la période.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {topContents.map((c) => (
+              <div className="space-y-3">
+                {topContents.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    Aucun contenu sur la période.
+                  </div>
+                ) : (
+                  topContents.map((c) => (
                     <Link
                       key={c.id}
                       href={`/contents/${c.id}`}
-                      className="block rounded-xl border p-4 transition hover:bg-muted/40"
+                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/60 hover:bg-background transition"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{c.title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {c.type} • {c.status}
-                          </p>
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{c.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {c.type} • {c.status}
+                        </p>
                       </div>
+                      <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
                     </Link>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </Card>
           </TabsContent>
 
-          <TabsContent value="channels" className="space-y-6">
+          <TabsContent value="traffic" className="space-y-6 mt-6">
             <Card className="p-6">
-              <h2 className="mb-4 text-lg font-semibold">Sources (canaux)</h2>
+              <h3 className="text-lg font-bold mb-6">
+                Répartition par canal
+              </h3>
 
               {byChannel.length === 0 ? (
                 <div className="text-sm text-muted-foreground">
                   Aucun contenu sur la période.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {byChannel.slice(0, 10).map((it) => (
-                    <div
-                      key={it.key}
-                      className="flex items-center justify-between rounded-xl border px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-4">
+                  {byChannel.map((it) => {
+                    const pct =
+                      totalPeriod > 0
+                        ? Math.round((it.count / totalPeriod) * 100)
+                        : 0;
+                    return (
+                      <div key={it.source}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">{it.source}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {pct}% • {it.count}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{it.key}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {it.count} contenu(s)
-                          </p>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
-                      <Badge variant="secondary">{it.count}</Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>
           </TabsContent>
 
-          <TabsContent value="types" className="space-y-6">
+          <TabsContent value="conversions" className="space-y-6 mt-6">
             <Card className="p-6">
-              <h2 className="mb-4 text-lg font-semibold">
-                Répartition par type
-              </h2>
+              <h3 className="text-lg font-bold mb-6">Répartition par type</h3>
 
               {byType.length === 0 ? (
                 <div className="text-sm text-muted-foreground">
                   Aucun contenu sur la période.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {byType.slice(0, 10).map((it) => (
-                    <div
-                      key={it.key}
-                      className="flex items-center justify-between rounded-xl border px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-4">
+                  {byType.map((it) => {
+                    const pct =
+                      totalPeriod > 0
+                        ? Math.round((it.count / totalPeriod) * 100)
+                        : 0;
+                    return (
+                      <div key={it.source}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">{it.source}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {pct}% • {it.count}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{it.key}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {it.count} contenu(s)
-                          </p>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
-                      <Badge variant="secondary">{it.count}</Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>
           </TabsContent>
 
-          <TabsContent value="actions" className="space-y-6">
+          <TabsContent value="social" className="space-y-6 mt-6">
             <Card className="p-6">
-              <h2 className="mb-4 text-lg font-semibold">Accès rapides</h2>
+              <h3 className="text-lg font-bold mb-6">Actions recommandées</h3>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-auto justify-between p-4"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link
+                  href="/create"
+                  className="p-4 rounded-xl border border-border bg-background hover:bg-background/80 transition"
                 >
-                  <Link href="/contents">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="text-left">
-                        <p className="font-medium">Mes contenus</p>
+                      <div>
+                        <p className="font-medium">Créer du contenu</p>
                         <p className="text-sm text-muted-foreground">
-                          Organiser & planifier
+                          Augmenter votre régularité
                         </p>
                       </div>
                     </div>
-                    <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                  </Link>
-                </Button>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </Link>
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-auto justify-between p-4"
+                <Link
+                  href="/contents"
+                  className="p-4 rounded-xl border border-border bg-background hover:bg-background/80 transition"
                 >
-                  <Link href="/create">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <Sparkles className="h-5 w-5 text-muted-foreground" />
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <FolderOpen className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="text-left">
-                        <p className="font-medium">Créer</p>
+                      <div>
+                        <p className="font-medium">Planifier</p>
                         <p className="text-sm text-muted-foreground">
-                          Générer du contenu
+                          Transformer les brouillons en publis
                         </p>
                       </div>
                     </div>
-                    <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                  </Link>
-                </Button>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </Link>
               </div>
             </Card>
           </TabsContent>
