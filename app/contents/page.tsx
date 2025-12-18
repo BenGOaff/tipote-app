@@ -2,7 +2,6 @@
 // Page "Mes Contenus" : liste + vue calendrier + accès au détail
 // + Filtres (recherche / statut / type / canal) en query params
 // + Actions : dupliquer / supprimer (API) + toasts
-// Best: compat statut legacy planned/scheduled + fix placeholder + UX stable
 //
 // NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
 // -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR avec aliasing.
@@ -58,7 +57,6 @@ function normalizeTags(tags: ContentListItem["tags"]): string[] {
   if (!tags) return [];
   if (Array.isArray(tags)) return tags.filter(Boolean).map((t) => String(t));
   if (typeof tags === "string") {
-    // support legacy "a,b,c"
     return tags
       .split(",")
       .map((t) => t.trim())
@@ -98,7 +96,6 @@ async function fetchContentList({
     query = query.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
   }
 
-  // statut : support planned/scheduled (legacy)
   if (status) {
     const low = status.toLowerCase();
     if (low === "planned" || low === "scheduled") {
@@ -124,10 +121,7 @@ async function fetchContentList({
 
   let fb = supabase
     .from("content_item")
-    // PostgREST supports alias: newName:oldName
-    .select(
-      "id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at"
-    )
+    .select("id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -179,12 +173,11 @@ export default async function ContentsPage({
     channel,
   });
 
-  // data for calendar
-  const scheduled = items
+  const scheduledDates = items
     .map((i) => i.scheduled_date)
     .filter((d): d is string => Boolean(d));
 
-  const itemsByDate = scheduled.reduce<Record<string, ContentListItem[]>>((acc, d) => {
+  const itemsByDate = scheduledDates.reduce<Record<string, ContentListItem[]>>((acc, d) => {
     acc[d] = acc[d] || [];
     return acc;
   }, {});
@@ -360,7 +353,7 @@ export default async function ContentsPage({
 
             <TabsContent value="calendar">
               <ContentCalendarView
-                scheduledDates={Array.from(new Set(scheduled)).sort()}
+                scheduledDates={Array.from(new Set(scheduledDates)).sort()}
                 itemsByDate={Object.fromEntries(
                   Object.entries(itemsByDate).map(([d, arr]) => [
                     d,

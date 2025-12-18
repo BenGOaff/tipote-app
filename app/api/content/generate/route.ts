@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
@@ -24,6 +25,8 @@ type Body = {
   angle?: string;
   text?: string;
 };
+
+type InsertedRow = { id: string };
 
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
@@ -77,7 +80,7 @@ export async function POST(req: Request) {
       .eq("user_id", session.user.id)
       .maybeSingle();
 
-    const planJson = (plan as any)?.plan_json ?? null;
+    const planJson: unknown = plan?.plan_json ?? null;
 
     // Resolve OpenAI key: user key first (encrypted), else owner key
     let apiKey: string | null = null;
@@ -162,8 +165,8 @@ export async function POST(req: Request) {
       .select("id")
       .single();
 
-    let inserted = insertV2.data as any;
-    let insErr = insertV2.error as any;
+    let inserted: InsertedRow | null = insertV2.data ?? null;
+    let insErr: PostgrestError | null = insertV2.error ?? null;
 
     if (insErr && isMissingColumnError(insErr.message)) {
       const insertFR = await supabase
@@ -181,8 +184,8 @@ export async function POST(req: Request) {
         .select("id")
         .single();
 
-      inserted = insertFR.data as any;
-      insErr = insertFR.error as any;
+      inserted = insertFR.data ?? null;
+      insErr = insertFR.error ?? null;
     }
 
     if (insErr) {
