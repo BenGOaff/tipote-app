@@ -1,107 +1,163 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 
 type Props = {
-  type: string;
-};
+  type: string
+}
 
 type GenerateResponse = {
-  ok: boolean;
-  id?: string;
-  title?: string;
-  content?: string;
-  error?: string;
-  warning?: string;
-  saveError?: string;
-};
+  ok: boolean
+  id?: string
+  title?: string | null
+  content?: string
+  error?: string
+  warning?: string
+  saveError?: string
+  usedUserKey?: boolean
+}
 
-const TYPE_PRESETS: Record<string, { label: string; defaultChannel: string; placeholder: string }> =
-  {
-    post: {
-      label: 'Post',
-      defaultChannel: 'LinkedIn',
-      placeholder: 'Sujet + angle + audience + ton (ex: direct, bienveillant) + CTA…',
-    },
-    email: {
-      label: 'Email',
-      defaultChannel: 'Email',
-      placeholder: 'Objectif (nurture/vente) + contexte + offre éventuelle + ton + longueur…',
-    },
-    blog: {
-      label: 'Blog',
-      defaultChannel: 'Blog',
-      placeholder: 'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
-    },
-    video_script: {
-      label: 'Script vidéo',
-      defaultChannel: 'YouTube/Shorts',
-      placeholder: 'Format (45s/60s) + style + hooks possibles + CTA…',
-    },
-    sales_page: {
-      label: 'Page de vente',
-      defaultChannel: 'Landing',
-      placeholder: 'Produit/offre + avatar + promesse + objections + preuves…',
-    },
-    funnel: {
-      label: 'Funnel',
-      defaultChannel: 'Funnel',
-      placeholder: 'Objectif + offre + étapes attendues + canaux + timing…',
-    },
-  };
+type Preset = {
+  label: string
+  defaultChannel: string
+  placeholder: string
+}
+
+const TYPE_PRESETS: Record<string, Preset> = {
+  post: {
+    label: 'Post',
+    defaultChannel: 'LinkedIn',
+    placeholder: 'Sujet + angle + audience + ton (ex: direct, bienveillant) + CTA…',
+  },
+  email: {
+    label: 'Email',
+    defaultChannel: 'Email',
+    placeholder: 'Objectif (nurture/vente) + contexte + offre éventuelle + ton + longueur…',
+  },
+  blog: {
+    label: 'Blog',
+    defaultChannel: 'Blog',
+    placeholder: 'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
+  },
+  video_script: {
+    label: 'Script vidéo',
+    defaultChannel: 'YouTube/Shorts',
+    placeholder: 'Format (45s/60s) + style + hooks possibles + CTA…',
+  },
+  sales_page: {
+    label: 'Page de vente',
+    defaultChannel: 'Landing',
+    placeholder: 'Produit/offre + avatar + promesse + objections + preuves…',
+  },
+  funnel: {
+    label: 'Funnel',
+    defaultChannel: 'Funnel',
+    placeholder: 'Objectif + offre + étapes attendues + canaux + timing…',
+  },
+}
 
 function isoDateOrNull(v: string): string | null {
-  if (!v) return null;
-  return v;
+  const value = (v ?? '').trim()
+  return value ? value : null
+}
+
+function normalizeType(t: string): string {
+  const raw = (t ?? '').trim()
+  if (!raw) return 'post'
+  if (raw === 'video') return 'video_script'
+  return raw
+}
+
+function normalizeTags(tags: string): string[] {
+  return (tags ?? '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+}
+
+async function safeParseJson<T>(res: Response): Promise<T | null> {
+  try {
+    return (await res.json()) as T
+  } catch {
+    return null
+  }
 }
 
 export function ContentGenerator({ type }: Props) {
-  const preset =
-    TYPE_PRESETS[type] ??
-    ({
-      label: 'Contenu',
-      defaultChannel: 'Général',
-      placeholder: 'Décris précisément ce que tu veux produire…',
-    } as const);
+  const normalizedType = useMemo(() => normalizeType(type), [type])
 
-  const [channel, setChannel] = useState(preset.defaultChannel);
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [tags, setTags] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
+  const preset = useMemo(() => {
+    return (
+      TYPE_PRESETS[normalizedType] ?? {
+        label: 'Contenu',
+        defaultChannel: 'Général',
+        placeholder: 'Décris précisément ce que tu veux produire…',
+      }
+    )
+  }, [normalizedType])
 
-  const [result, setResult] = useState<GenerateResponse | null>(null);
+  const [channel, setChannel] = useState(preset.defaultChannel)
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [tags, setTags] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<GenerateResponse | null>(null)
 
   async function onGenerate() {
-    setLoading(true);
-    setResult(null);
+    if (loading) return
+
+    const safePrompt = prompt.trim()
+    const safeType = normalizeType(type)
+
+    if (!safePrompt) {
+      setResult({ ok: false, error: 'Le brief est requis.' })
+      return
+    }
+
+    setLoading(true)
+    setResult(null)
 
     try {
       const res = await fetch('/api/content/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type,
-          channel,
+          type: safeType,
+          channel: (channel ?? '').trim(),
           scheduledDate: isoDateOrNull(scheduledDate),
-          tags: tags
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean),
-          prompt,
+          tags: normalizeTags(tags),
+          prompt: safePrompt,
         }),
-      });
+      })
 
-      const data = (await res.json()) as GenerateResponse;
-      setResult(data);
+      const data = await safeParseJson<GenerateResponse>(res)
+
+      if (!res.ok) {
+        setResult({
+          ok: false,
+          error:
+            data?.error ||
+            `Erreur API (${res.status})${res.statusText ? `: ${res.statusText}` : ''}`,
+          warning: data?.warning,
+          saveError: data?.saveError,
+        })
+        return
+      }
+
+      setResult(
+        data ?? {
+          ok: false,
+          error: 'Réponse API invalide',
+        }
+      )
     } catch (e) {
       setResult({
         ok: false,
         error: e instanceof Error ? e.message : 'Erreur inconnue',
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -163,16 +219,18 @@ export function ContentGenerator({ type }: Props) {
             type="button"
             onClick={onGenerate}
             disabled={loading || !prompt.trim()}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#b042b4] px-4 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#b042b4] px-4 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
           >
             {loading ? 'Génération…' : 'Générer + sauvegarder'}
           </button>
 
           <div className="flex items-center justify-between">
-            <Link className="text-xs font-semibold text-slate-700 hover:underline" href="/contents">
+            <Link href="/contents" className="text-xs font-semibold text-slate-700 hover:underline">
               Voir mes contenus →
             </Link>
-            <span className="text-[11px] text-slate-500">Type: {preset.label}</span>
+            <div className="text-[11px] text-slate-500">
+              Type: <span className="font-semibold text-slate-700">{preset.label}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -186,14 +244,22 @@ export function ContentGenerator({ type }: Props) {
             </p>
           </div>
 
-          {result?.ok && result.id ? (
-            <Link
-              href={`/contents/${result.id}`}
-              className="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-100 hover:bg-emerald-100"
-            >
-              Ouvrir →
-            </Link>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {result?.usedUserKey ? (
+              <span className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                Clé utilisateur ✅
+              </span>
+            ) : null}
+
+            {result?.ok && result.id ? (
+              <Link
+                href={`/contents/${result.id}`}
+                className="shrink-0 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+              >
+                Ouvrir →
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {!result ? (
@@ -219,7 +285,7 @@ export function ContentGenerator({ type }: Props) {
 
             <div className="rounded-xl border border-slate-200 p-4">
               <p className="text-xs font-semibold text-slate-700">Contenu</p>
-              <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-900 leading-relaxed">
+              <pre className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-900">
                 {result.content ?? ''}
               </pre>
             </div>
@@ -232,5 +298,5 @@ export function ContentGenerator({ type }: Props) {
         )}
       </section>
     </div>
-  );
+  )
 }
