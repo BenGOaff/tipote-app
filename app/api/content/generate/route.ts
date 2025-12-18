@@ -1,6 +1,9 @@
 // app/api/content/generate/route.ts
 // Génération IA + sauvegarde dans content_item (sans toucher au flow auth/onboarding/magic link)
 // V2 : utilise la clé OpenAI utilisateur si configurée (sinon fallback owner key)
+//
+// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
+// -> on tente d'abord l'INSERT v2 (title/content/status/channel/scheduled_date), sinon fallback FR.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -9,15 +12,26 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 
 type Body = {
-  type: string;
+  type?: string;
   channel?: string;
   scheduledDate?: string | null; // YYYY-MM-DD
   tags?: string[];
-  prompt: string;
+  prompt?: string;
+
+  // fallback compat (au cas où le front a un autre champ)
+  brief?: string;
+  consigne?: string;
+  angle?: string;
+  text?: string;
 };
 
-function safeString(v: unknown) {
+function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
+}
+
+function isMissingColumnError(message: string | undefined | null) {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("does not exist") && m.includes("column");
 }
 
 export async function POST(req: Request) {
@@ -37,8 +51,14 @@ export async function POST(req: Request) {
     const type = safeString(body?.type).trim();
     const channel = safeString(body?.channel).trim() || null;
     const scheduledDate = body?.scheduledDate ?? null;
-    const tags = Array.isArray(body?.tags) ? body.tags : [];
-    const prompt = safeString(body?.prompt).trim();
+    const tags = Array.isArray(body?.tags) ? body.tags.filter(Boolean).map(String) : [];
+
+    const prompt =
+      safeString(body?.prompt).trim() ||
+      safeString(body?.brief).trim() ||
+      safeString(body?.consigne).trim() ||
+      safeString(body?.angle).trim() ||
+      safeString(body?.text).trim();
 
     if (!type || !prompt) {
       return NextResponse.json({ ok: false, error: "Missing type or prompt" }, { status: 400 });
@@ -53,32 +73,23 @@ export async function POST(req: Request) {
 
     const { data: plan } = await supabase
       .from("business_plan")
-      .select("*")
+      .select("plan_json")
       .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
 
-    const context = {
-      type,
-      channel,
-      scheduledDate,
-      tags,
-      business_profile: profile ?? null,
-      business_plan: plan ?? null,
-    };
+    const planJson = (plan as any)?.plan_json ?? null;
 
-    // 1) Clé user (si chiffrement + table configurés)
-    let apiKey =
-      process.env.TIPOTE_KEYS_ENCRYPTION_KEY
-        ? await getDecryptedUserApiKey({
-            supabase,
-            userId: session.user.id,
-            provider: "openai",
-          })
-        : null;
+    // Resolve OpenAI key: user key first (encrypted), else owner key
+    let apiKey: string | null = null;
 
-    // 2) Fallback owner key (compat)
+    if (process.env.TIPOTE_KEYS_ENCRYPTION_KEY) {
+      apiKey = await getDecryptedUserApiKey({
+        supabase,
+        userId: session.user.id,
+        provider: "openai",
+      });
+    }
+
     if (!apiKey) {
       apiKey = process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || "";
     }
@@ -86,42 +97,56 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json(
         { ok: false, error: "Missing OpenAI API key (user key or OPENAI_API_KEY_OWNER/OPENAI_API_KEY)" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     const client = new OpenAI({ apiKey });
 
     const system = [
-      "Tu es Tipote™, un assistant expert en création de contenu business pour entrepreneurs.",
-      "Tu produis une sortie directement exploitable, structurée, en français.",
-      "Tu respectes le format demandé par l'utilisateur et le type de contenu.",
+      "Tu es Tipote™, un assistant expert en création de contenu pour entrepreneurs.",
+      "Tu produis un contenu directement utilisable, concret, structuré, sans bla-bla.",
+      "Réponds en français.",
     ].join("\n");
 
     const user = [
-      "CONTEXTE (JSON):",
-      JSON.stringify(context, null, 2),
+      "Contexte entreprise (profil) :",
+      profile ? JSON.stringify(profile) : "Aucun profil.",
       "",
-      "DEMANDE:",
+      "Business plan (si disponible) :",
+      planJson ? JSON.stringify(planJson) : "Aucun plan.",
+      "",
+      "Type de contenu : " + type,
+      channel ? "Canal : " + channel : "",
+      scheduledDate ? "Date planifiée : " + scheduledDate : "",
+      tags.length ? "Tags : " + tags.join(", ") : "",
+      "",
+      "Brief / consigne :",
       prompt,
-    ].join("\n");
+      "",
+      "Donne uniquement le contenu final. Pas de meta-explications.",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    const completion = await client.chat.completions.create({
+    const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.7,
+      temperature: 0.8,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
     });
 
-    const content = completion.choices?.[0]?.message?.content ?? "";
+    const content = resp?.choices?.[0]?.message?.content?.trim() ?? "";
+
     if (!content) {
       return NextResponse.json({ ok: false, error: "Empty response from model" }, { status: 500 });
     }
 
     // Sauvegarde content_item
-    const { data: inserted, error: insErr } = await supabase
+    // - v2 schema attempt, then fallback FR schema if needed
+    const insertV2 = await supabase
       .from("content_item")
       .insert({
         user_id: session.user.id,
@@ -131,10 +156,34 @@ export async function POST(req: Request) {
         channel,
         scheduled_date: scheduledDate,
         tags,
+        prompt,
         content,
       })
       .select("id")
       .single();
+
+    let inserted = insertV2.data as any;
+    let insErr = insertV2.error as any;
+
+    if (insErr && isMissingColumnError(insErr.message)) {
+      const insertFR = await supabase
+        .from("content_item")
+        .insert({
+          user_id: session.user.id,
+          type,
+          titre: null,
+          statut: "draft",
+          canal: channel,
+          date_planifiee: scheduledDate,
+          tags: tags.join(","), // legacy FR schema uses text
+          contenu: content,
+        })
+        .select("id")
+        .single();
+
+      inserted = insertFR.data as any;
+      insErr = insertFR.error as any;
+    }
 
     if (insErr) {
       return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
@@ -145,15 +194,16 @@ export async function POST(req: Request) {
         ok: true,
         id: inserted?.id ?? null,
         content,
-        usedUserKey: Boolean(process.env.TIPOTE_KEYS_ENCRYPTION_KEY) && Boolean(await getDecryptedUserApiKey({ supabase, userId: session.user.id, provider: "openai" })),
+        usedUserKey:
+          Boolean(process.env.TIPOTE_KEYS_ENCRYPTION_KEY) &&
+          Boolean(apiKey && apiKey !== (process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || "")),
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (e) {
-    console.error("[POST /api/content/generate] error", e);
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Internal server error" },
-      { status: 500 },
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 }
     );
   }
 }

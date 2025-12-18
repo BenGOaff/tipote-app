@@ -3,6 +3,9 @@
 // + Filtres (recherche / statut / type / canal) en query params
 // + Actions : dupliquer / supprimer (API) + toasts
 // Best: compat statut legacy planned/scheduled + fix placeholder + UX stable
+//
+// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
+// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR avec aliasing.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,37 +18,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import {
-  FileText,
-  Mail,
-  Video,
-  Image as ImageIcon,
-  Plus,
-  List as ListIcon,
-  CalendarDays,
-  Filter,
-  ArrowRight,
-  Search,
-  X,
-} from "lucide-react";
-
-import { ContentCalendarView, type ContentCalendarItem } from "@/components/content/ContentCalendarView";
+import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { ContentItemActions } from "@/components/content/ContentItemActions";
 
-type Props = {
-  searchParams?: {
-    view?: string;
-    q?: string;
-    status?: string;
-    type?: string;
-    channel?: string;
-  };
+type ContentListItem = {
+  id: string;
+  type: string | null;
+  title: string | null;
+  status: string | null;
+  scheduled_date: string | null; // YYYY-MM-DD
+  channel: string | null;
+  tags: string[] | string | null;
+  created_at: string;
 };
-
-type ContentItem = ContentCalendarItem;
 
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
@@ -61,67 +48,50 @@ function normalizeStatusForLabel(status: string | null): string {
   if (!s) return "—";
   const low = s.toLowerCase();
   if (low === "published") return "Publié";
-  if (low === "scheduled" || low === "planned") return "Planifié";
   if (low === "draft") return "Brouillon";
+  if (low === "planned" || low === "scheduled") return "Planifié";
   if (low === "archived") return "Archivé";
   return s;
 }
 
-function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
-  const s = safeString(status).toLowerCase();
-  if (s.includes("pub") || s === "published") return "default";
-  if (s.includes("plan") || s === "scheduled" || s === "planned") return "secondary";
-  if (s.includes("brou") || s === "draft") return "outline";
-  if (s.includes("arch") || s === "archived") return "outline";
-  if (s.includes("err") || s.includes("fail")) return "destructive";
-  return "outline";
-}
-
-function iconForType(type: string | null) {
-  const t = safeString(type).toLowerCase();
-  if (t.includes("email")) return Mail;
-  if (t.includes("video") || t.includes("vidéo")) return Video;
-  if (t.includes("image") || t.includes("visuel")) return ImageIcon;
-  return FileText;
-}
-
-function formatDateLabel(dateISO: string): string {
-  const d = new Date(`${dateISO}T00:00:00`);
-  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
-}
-
-function buildQueryString(params: Record<string, string | undefined>) {
-  const usp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v && v.trim()) usp.set(k, v);
+function normalizeTags(tags: ContentListItem["tags"]): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.filter(Boolean).map((t) => String(t));
+  if (typeof tags === "string") {
+    // support legacy "a,b,c"
+    return tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
-  const s = usp.toString();
-  return s ? `?${s}` : "";
+  return [];
 }
 
-export default async function MyContentPage({ searchParams }: Props) {
+function isMissingColumnError(message: string | undefined | null) {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("does not exist") && m.includes("column");
+}
+
+async function fetchContentList({
+  userId,
+  q,
+  status,
+  type,
+  channel,
+}: {
+  userId: string;
+  q: string;
+  status: string;
+  type: string;
+  channel: string;
+}) {
   const supabase = await getSupabaseServerClient();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) redirect("/");
-
-  const userEmail = session.user.email ?? "Utilisateur";
-
-  const view = (searchParams?.view ?? "list").toLowerCase();
-  const initialTab = view === "calendar" ? "calendar" : "list";
-
-  const q = safeString(searchParams?.q).trim();
-  const status = normalizeFilterValue(safeString(searchParams?.status));
-  const type = normalizeFilterValue(safeString(searchParams?.type));
-  const channel = normalizeFilterValue(safeString(searchParams?.channel));
-
+  // 1) Try v2 schema (EN columns)
   let query = supabase
     .from("content_item")
     .select("id, type, title, status, scheduled_date, channel, tags, created_at")
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (q) {
@@ -134,281 +104,283 @@ export default async function MyContentPage({ searchParams }: Props) {
     if (low === "planned" || low === "scheduled") {
       query = query.in("status", ["planned", "scheduled"]);
     } else {
-      query = query.ilike("status", status);
+      query = query.eq("status", status);
     }
   }
 
-  if (type) query = query.ilike("type", `%${type}%`);
-  if (channel) query = query.ilike("channel", `%${channel}%`);
+  if (type) query = query.eq("type", type);
+  if (channel) query = query.eq("channel", channel);
 
-  const { data: items, error } = await query;
+  const v2Res = await query;
 
-  if (error) console.error("[contents] list error", error);
-
-  const safeItems: ContentItem[] = Array.isArray(items) ? (items as ContentItem[]) : [];
-
-  const typeOptions = Array.from(new Set(safeItems.map((it) => safeString(it.type).trim()).filter(Boolean).slice(0, 50)))
-    .sort((a, b) => a.localeCompare(b, "fr"));
-
-  const channelOptions = Array.from(
-    new Set(safeItems.map((it) => safeString(it.channel).trim()).filter(Boolean).slice(0, 50))
-  ).sort((a, b) => a.localeCompare(b, "fr"));
-
-  const itemsByDate: Record<string, ContentItem[]> = {};
-  for (const it of safeItems) {
-    if (!it.scheduled_date) continue;
-    if (!itemsByDate[it.scheduled_date]) itemsByDate[it.scheduled_date] = [];
-    itemsByDate[it.scheduled_date].push(it);
+  if (!v2Res.error) {
+    return { data: (v2Res.data ?? []) as ContentListItem[], error: null as string | null };
   }
-  const scheduledDates = Object.keys(itemsByDate).sort();
 
-  const hasActiveFilters = Boolean(q || status || type || channel);
+  // 2) Fallback FR schema with aliasing
+  if (!isMissingColumnError(v2Res.error.message)) {
+    return { data: [] as ContentListItem[], error: v2Res.error.message };
+  }
+
+  let fb = supabase
+    .from("content_item")
+    // PostgREST supports alias: newName:oldName
+    .select(
+      "id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (q) {
+    fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
+  }
+
+  if (status) {
+    const low = status.toLowerCase();
+    if (low === "planned" || low === "scheduled") {
+      fb = fb.in("statut", ["planned", "scheduled"]);
+    } else {
+      fb = fb.eq("statut", status);
+    }
+  }
+
+  if (type) fb = fb.eq("type", type);
+  if (channel) fb = fb.eq("canal", channel);
+
+  const fbRes = await fb;
+
+  if (fbRes.error) return { data: [] as ContentListItem[], error: fbRes.error.message };
+  return { data: (fbRes.data ?? []) as ContentListItem[], error: null as string | null };
+}
+
+export default async function ContentsPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const supabase = await getSupabaseServerClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) redirect("/login");
+
+  const q = safeString(searchParams?.q).trim();
+  const status = normalizeFilterValue(safeString(searchParams?.status));
+  const type = normalizeFilterValue(safeString(searchParams?.type));
+  const channel = normalizeFilterValue(safeString(searchParams?.channel));
+
+  const { data: items, error } = await fetchContentList({
+    userId: session.user.id,
+    q,
+    status,
+    type,
+    channel,
+  });
+
+  // data for calendar
+  const scheduled = items
+    .map((i) => i.scheduled_date)
+    .filter((d): d is string => Boolean(d));
+
+  const itemsByDate = scheduled.reduce<Record<string, ContentListItem[]>>((acc, d) => {
+    acc[d] = acc[d] || [];
+    return acc;
+  }, {});
+
+  for (const item of items) {
+    if (!item.scheduled_date) continue;
+    (itemsByDate[item.scheduled_date] ||= []).push(item);
+  }
+
+  const uniqueTypes = Array.from(new Set(items.map((i) => safeString(i.type)).filter(Boolean))).sort();
+  const uniqueChannels = Array.from(new Set(items.map((i) => safeString(i.channel)).filter(Boolean))).sort();
 
   return (
-    <AppShell userEmail={userEmail}>
-      <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        <div className="flex items-start justify-between gap-4">
+    <AppShell userEmail={session.user.email ?? ""}>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Mes Contenus</h1>
-            <p className="text-sm text-muted-foreground">
-              Retrouvez vos contenus générés et planifiés (publication, statut, canal).
-            </p>
+            <h1 className="text-xl font-bold text-slate-900">Mes contenus</h1>
+            <p className="text-sm text-slate-600">Retrouve, planifie et édite tes contenus.</p>
           </div>
 
-          <Link href="/create">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Créer
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/create">
+              <Button className="rounded-xl bg-[#b042b4] text-white hover:opacity-95">Créer</Button>
+            </Link>
+          </div>
         </div>
 
-        <Tabs defaultValue={initialTab} className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <TabsList>
-              <TabsTrigger asChild value="list">
-                <Link href={`/contents${buildQueryString({ view: "list", q, status, type, channel })}`} className="gap-2">
-                  <ListIcon className="w-4 h-4" />
-                  Liste
-                </Link>
+        <Card className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <form className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <Input
+              name="q"
+              defaultValue={q}
+              placeholder="Rechercher (titre, type, canal)…"
+              className="h-10 rounded-xl"
+            />
+
+            <Select name="status" defaultValue={status || "all"}>
+              <SelectTrigger className="h-10 rounded-xl">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="planned">Planifié</SelectItem>
+                <SelectItem value="published">Publié</SelectItem>
+                <SelectItem value="archived">Archivé</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select name="type" defaultValue={type || "all"}>
+              <SelectTrigger className="h-10 rounded-xl">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                {uniqueTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <Select name="channel" defaultValue={channel || "all"}>
+                <SelectTrigger className="h-10 flex-1 rounded-xl">
+                  <SelectValue placeholder="Canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les canaux</SelectItem>
+                  {uniqueChannels.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button type="submit" variant="outline" className="h-10 rounded-xl">
+                Filtrer
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        {error ? (
+          <Card className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            Erreur : {error}
+          </Card>
+        ) : (
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="mb-4 w-full justify-start rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+              <TabsTrigger value="list" className="rounded-xl">
+                Liste
               </TabsTrigger>
-              <TabsTrigger asChild value="calendar">
-                <Link
-                  href={`/contents${buildQueryString({ view: "calendar", q, status, type, channel })}`}
-                  className="gap-2"
-                >
-                  <CalendarDays className="w-4 h-4" />
-                  Calendrier
-                </Link>
+              <TabsTrigger value="calendar" className="rounded-xl">
+                Calendrier
               </TabsTrigger>
             </TabsList>
 
-            <Button variant="outline" className="gap-2" disabled>
-              <Filter className="w-4 h-4" />
-              Filtres
-            </Button>
-          </div>
-
-          <Card className="p-4">
-            <form action="/contents" method="GET" className="grid gap-4 md:grid-cols-12 items-end">
-              <input type="hidden" name="view" value={initialTab} />
-
-              <div className="md:col-span-5 grid gap-2">
-                <Label htmlFor="q" className="text-xs">
-                  Recherche
-                </Label>
-                <div className="relative">
-                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input id="q" name="q" defaultValue={q} placeholder="Titre, type, canal…" className="pl-9" />
-                </div>
-              </div>
-
-              <div className="md:col-span-2 grid gap-2">
-                <Label className="text-xs">Statut</Label>
-                <Select name="status" defaultValue={status || "all"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="planned">Planifié</SelectItem>
-                    <SelectItem value="published">Publié</SelectItem>
-                    <SelectItem value="archived">Archivé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-2 grid gap-2">
-                <Label className="text-xs">Type</Label>
-                <Select name="type" defaultValue={type || "all"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    {typeOptions.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-2 grid gap-2">
-                <Label className="text-xs">Canal</Label>
-                <Select name="channel" defaultValue={channel || "all"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    {channelOptions.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-1 flex gap-2">
-                <Button type="submit" className="w-full">
-                  Filtrer
-                </Button>
-              </div>
-
-              {hasActiveFilters ? (
-                <div className="md:col-span-12 flex justify-end">
-                  <Link href={`/contents${buildQueryString({ view: initialTab })}`}>
-                    <Button type="button" variant="ghost" className="gap-2">
-                      <X className="w-4 h-4" />
-                      Réinitialiser
-                    </Button>
-                  </Link>
-                </div>
-              ) : null}
-            </form>
-          </Card>
-
-          <TabsContent value="list" className="space-y-4">
-            {safeItems.length === 0 ? (
-              <Card className="p-10 text-center">
-                <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                  <FileText className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <p className="font-semibold">Aucun contenu</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {hasActiveFilters
-                    ? "Aucun résultat avec ces filtres. Essaie de réinitialiser."
-                    : "Lance une génération (Réseaux sociaux, emails, blog, scripts…) et on les retrouvera ici."}
-                </p>
-                <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
-                  {hasActiveFilters ? (
-                    <Link href={`/contents${buildQueryString({ view: initialTab })}`}>
-                      <Button variant="outline" className="gap-2">
-                        <X className="w-4 h-4" />
-                        Réinitialiser
-                      </Button>
+            <TabsContent value="list">
+              <div className="grid gap-3">
+                {items.length === 0 ? (
+                  <Card className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+                    Aucun contenu pour le moment.{" "}
+                    <Link href="/create" className="font-semibold text-slate-900 hover:underline">
+                      Créer un contenu →
                     </Link>
-                  ) : null}
-                  <Link href="/create">
-                    <Button className="gap-2">
-                      <Spark />
-                      Générer un contenu
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {safeItems.map((it) => {
-                  const Icon = iconForType(it.type);
+                  </Card>
+                ) : (
+                  items.map((item) => {
+                    const tags = normalizeTags(item.tags);
+                    return (
+                      <Card
+                        key={item.id}
+                        className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/contents/${item.id}`}
+                              className="truncate font-semibold text-slate-900 hover:underline"
+                            >
+                              {safeString(item.title) || "Sans titre"}
+                            </Link>
+                            <Badge variant="secondary" className="rounded-xl">
+                              {safeString(item.type) || "—"}
+                            </Badge>
+                            <Badge variant="outline" className="rounded-xl">
+                              {normalizeStatusForLabel(item.status)}
+                            </Badge>
+                            {item.scheduled_date ? (
+                              <Badge variant="outline" className="rounded-xl">
+                                {item.scheduled_date}
+                              </Badge>
+                            ) : null}
+                            {safeString(item.channel) ? (
+                              <Badge variant="secondary" className="rounded-xl">
+                                {item.channel}
+                              </Badge>
+                            ) : null}
+                          </div>
 
-                  return (
-                    <Card key={it.id} className="p-5 hover:shadow-sm transition-shadow">
-                      <div className="flex items-start justify-between gap-4">
-                        <Link href={`/contents/${it.id}`} className="flex-1 min-w-0">
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                              <Icon className="w-5 h-5 text-muted-foreground" />
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold truncate">
-                                  {it.title?.trim() || `${it.type || "Contenu"} sans titre`}
-                                </p>
-                                <Badge variant={badgeVariantForStatus(it.status)}>
-                                  {normalizeStatusForLabel(it.status)}
+                          {tags.length ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {tags.slice(0, 6).map((t) => (
+                                <Badge key={t} variant="outline" className="rounded-xl text-[11px]">
+                                  {t}
                                 </Badge>
-                              </div>
-
-                              <div className="mt-1 flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-                                <span>{it.type || "—"}</span>
-                                <span aria-hidden>•</span>
-                                <span>{it.channel || "—"}</span>
-                                <span aria-hidden>•</span>
-                                <span>{it.scheduled_date ? formatDateLabel(it.scheduled_date) : "Non planifié"}</span>
-                              </div>
-
-                              {Array.isArray(it.tags) && it.tags.length > 0 ? (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {it.tags.slice(0, 6).map((t) => (
-                                    <Badge key={t} variant="outline" className="text-xs">
-                                      {t}
-                                    </Badge>
-                                  ))}
-                                  {it.tags.length > 6 ? (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{it.tags.length - 6}
-                                    </Badge>
-                                  ) : null}
-                                </div>
+                              ))}
+                              {tags.length > 6 ? (
+                                <span className="text-[11px] text-slate-500">+{tags.length - 6}</span>
                               ) : null}
                             </div>
-                          </div>
-                        </Link>
+                          ) : null}
+                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Link href={`/contents/${it.id}`}>
-                            <Button variant="ghost" className="gap-2">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/contents/${item.id}`}>
+                            <Button variant="outline" className="h-9 rounded-xl">
                               Ouvrir
-                              <ArrowRight className="w-4 h-4" />
                             </Button>
                           </Link>
-
-                          <ContentItemActions id={it.id} title={it.title} />
+                          <ContentItemActions id={item.id} />
                         </div>
-                      </div>
-                    </Card>
-                  );
-                })}
+                      </Card>
+                    );
+                  })
+                )}
               </div>
-            )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="calendar" className="space-y-4">
-            <ContentCalendarView itemsByDate={itemsByDate} scheduledDates={scheduledDates} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="calendar">
+              <ContentCalendarView
+                scheduledDates={Array.from(new Set(scheduled)).sort()}
+                itemsByDate={Object.fromEntries(
+                  Object.entries(itemsByDate).map(([d, arr]) => [
+                    d,
+                    arr.map((it) => ({
+                      id: it.id,
+                      type: safeString(it.type),
+                      title: safeString(it.title),
+                      status: safeString(it.status),
+                      scheduled_date: it.scheduled_date,
+                      channel: safeString(it.channel),
+                      tags: normalizeTags(it.tags),
+                      created_at: it.created_at,
+                    })),
+                  ])
+                )}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </AppShell>
-  );
-}
-
-function Spark() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
-      <path
-        d="M12 2l1.4 5.2L18 9l-4.6 1.8L12 16l-1.4-5.2L6 9l4.6-1.8L12 2Z"
-        className="fill-current"
-      />
-      <path
-        d="M19 13l.8 3 2.2 1-2.2 1-.8 3-.8-3-2.2-1 2.2-1 .8-3Z"
-        className="fill-current opacity-70"
-      />
-    </svg>
   );
 }
