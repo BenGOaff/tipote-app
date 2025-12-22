@@ -3,7 +3,7 @@
 // Compat DB: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee, tags en text)
 // -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date + tags array), sinon fallback FR (avec alias).
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import type { PostgrestError } from '@supabase/supabase-js'
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
@@ -22,7 +22,6 @@ type PatchBody = Partial<{
 type ContentItemDTO = {
   id: string
   user_id: string
-  type: string | null
   title: string | null
   prompt: string | null
   content: string | null
@@ -39,57 +38,54 @@ function isMissingColumnError(message: string | null | undefined) {
   // PostgREST: "column content_item.title does not exist" / "Could not find the 'title' column"
   return (
     m.includes('does not exist') ||
-    (m.includes('could not find') && m.includes('column')) ||
-    (m.includes('unknown') && m.includes('column'))
+    m.includes("could not find the '") ||
+    m.includes('column') ||
+    m.includes('pgrst') ||
+    m.includes('schema cache')
   )
 }
 
-function safeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.map((v) => String(v ?? '').trim()).filter(Boolean)
-}
-
-function parseTagsFromDb(value: unknown): string[] {
-  if (Array.isArray(value)) return safeStringArray(value)
+function asTagsArray(value: unknown): string[] | null {
+  if (Array.isArray(value)) return value.filter((x) => typeof x === 'string') as string[]
   if (typeof value === 'string') {
-    return value
+    const t = value.trim()
+    if (!t) return []
+    // tags en text : "a,b,c" ou JSON "[]"
+    try {
+      const parsed = JSON.parse(t)
+      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === 'string') as string[]
+    } catch {
+      // ignore
+    }
+    return t
       .split(',')
-      .map((t) => t.trim())
+      .map((x) => x.trim())
       .filter(Boolean)
   }
-  return []
-}
-
-function normalizeItem(raw: Record<string, unknown>): ContentItemDTO {
-  const tags = parseTagsFromDb(raw.tags)
-  return {
-    id: String(raw.id),
-    user_id: String(raw.user_id),
-    type: typeof raw.type === 'string' ? raw.type : null,
-    title: typeof raw.title === 'string' ? raw.title : null,
-    prompt: typeof raw.prompt === 'string' ? raw.prompt : null,
-    content: typeof raw.content === 'string' ? raw.content : null,
-    status: typeof raw.status === 'string' ? raw.status : null,
-    scheduled_date: typeof raw.scheduled_date === 'string' ? raw.scheduled_date : null,
-    channel: typeof raw.channel === 'string' ? raw.channel : null,
-    tags: tags.length ? tags : [],
-    created_at: typeof raw.created_at === 'string' ? raw.created_at : null,
-    updated_at: typeof raw.updated_at === 'string' ? raw.updated_at : null,
-  }
+  return null
 }
 
 async function getAuthedUserId() {
   const supabase = await getSupabaseServerClient()
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data?.user?.id) {
-    return { supabase, userId: null as string | null }
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error) {
+    return { supabase, userId: null, error }
   }
-  return { supabase, userId: data.user.id }
+  if (!user?.id) {
+    return { supabase, userId: null, error: { message: 'No user' } as PostgrestError }
+  }
+  return { supabase, userId: user.id }
 }
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+type Ctx = { params: Promise<{ id: string }> }
+
+export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
-    const id = (ctx?.params?.id ?? '').trim()
+    const id = ((await ctx.params).id ?? '').trim()
     if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
 
     const { supabase, userId } = await getAuthedUserId()
@@ -97,50 +93,83 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
 
     // v2 (EN)
     const v2 = await supabase
-      .from('content_item')
-      .select('id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at')
+      .from('content_items')
+      .select(
+        'id,user_id,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at'
+      )
       .eq('id', id)
       .eq('user_id', userId)
       .maybeSingle()
 
-    if (v2.error && isMissingColumnError(v2.error.message)) {
-      // FR fallback (avec alias, sans prompt/updated_at si absents)
-      const fr = await supabase
-        .from('content_item')
-        .select(
-          'id, user_id, type, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at'
-        )
-        .eq('id', id)
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
-      if (!fr.data) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-
-      const normalized = normalizeItem({
-        ...fr.data,
-        prompt: null,
-        updated_at: null,
-      })
-
-      return NextResponse.json({ ok: true, item: normalized }, { status: 200 })
+    if (!v2.error) {
+      const row = v2.data as any
+      const dto: ContentItemDTO = {
+        id: row.id,
+        user_id: row.user_id,
+        title: row.title ?? null,
+        prompt: row.prompt ?? null,
+        content: row.content ?? null,
+        status: row.status ?? null,
+        scheduled_date: row.scheduled_date ?? null,
+        channel: row.channel ?? null,
+        tags: asTagsArray(row.tags),
+        created_at: row.created_at ?? null,
+        updated_at: row.updated_at ?? null,
+      }
+      return NextResponse.json({ ok: true, item: dto })
     }
 
-    if (v2.error) return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 })
-    if (!v2.data) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
+    if (!isMissingColumnError(v2.error.message)) {
+      return NextResponse.json(
+        { ok: false, error: v2.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json({ ok: true, item: normalizeItem(v2.data as Record<string, unknown>) }, { status: 200 })
-  } catch (e) {
+    // fallback FR
+    const fr = await supabase
+      .from('content_items')
+      .select(
+        'id,user_id,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at'
+      )
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (fr.error) {
+      return NextResponse.json(
+        { ok: false, error: fr.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
+
+    const row = fr.data as any
+    const dto: ContentItemDTO = {
+      id: row.id,
+      user_id: row.user_id,
+      title: row.titre ?? null,
+      prompt: row.prompt ?? null,
+      content: row.contenu ?? null,
+      status: row.statut ?? null,
+      scheduled_date: row.date_planifiee ?? null,
+      channel: row.canal ?? null,
+      tags: asTagsArray(row.tags),
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+    }
+
+    return NextResponse.json({ ok: true, item: dto })
+  } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Unknown error' },
+      { ok: false, error: e?.message || 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
-    const id = (ctx?.params?.id ?? '').trim()
+    const id = ((await ctx.params).id ?? '').trim()
     if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
 
     const { supabase, userId } = await getAuthedUserId()
@@ -148,107 +177,139 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
 
     const body = (await req.json()) as PatchBody
 
-    const patchV2: Record<string, unknown> = {}
-    if (typeof body.title === 'string') patchV2.title = body.title.trim().slice(0, 200)
+    const patchV2: Record<string, any> = {}
+    if (typeof body.title === 'string') patchV2.title = body.title
     if (typeof body.content === 'string') patchV2.content = body.content
     if (typeof body.prompt === 'string') patchV2.prompt = body.prompt
-    if (typeof body.type === 'string') patchV2.type = body.type.trim().slice(0, 50)
-    if (typeof body.status === 'string') patchV2.status = body.status.trim().slice(0, 30)
-    if (typeof body.channel === 'string') patchV2.channel = body.channel.trim().slice(0, 50)
-    if (body.scheduledDate === null || typeof body.scheduledDate === 'string') {
-      patchV2.scheduled_date = body.scheduledDate
-    }
-    if (Array.isArray(body.tags)) patchV2.tags = safeStringArray(body.tags)
+    if (typeof body.type === 'string') patchV2.type = body.type
+    if (typeof body.status === 'string') patchV2.status = body.status
+    if (typeof body.channel === 'string') patchV2.channel = body.channel
+    if (body.scheduledDate !== undefined) patchV2.scheduled_date = body.scheduledDate
+    if (body.tags !== undefined) patchV2.tags = body.tags
 
-    if (Object.keys(patchV2).length === 0) {
-      return NextResponse.json({ ok: false, error: 'Nothing to update' }, { status: 400 })
-    }
-
-    // v2 update
     const v2 = await supabase
-      .from('content_item')
+      .from('content_items')
       .update(patchV2)
       .eq('id', id)
       .eq('user_id', userId)
-      .select('id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at')
+      .select(
+        'id,user_id,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at'
+      )
       .maybeSingle()
 
-    if (v2.error && isMissingColumnError(v2.error.message)) {
-      // FR update (map)
-      const patchFR: Record<string, unknown> = {}
-
-      if (typeof body.title === 'string') patchFR.titre = body.title.trim().slice(0, 200)
-      if (typeof body.content === 'string') patchFR.contenu = body.content
-      // prompt: colonne potentiellement absente en FR -> ignoré
-      if (typeof body.type === 'string') patchFR.type = body.type.trim().slice(0, 50)
-      if (typeof body.status === 'string') patchFR.statut = body.status.trim().slice(0, 30)
-      if (typeof body.channel === 'string') patchFR.canal = body.channel.trim().slice(0, 50)
-      if (body.scheduledDate === null || typeof body.scheduledDate === 'string') {
-        patchFR.date_planifiee = body.scheduledDate
+    if (!v2.error) {
+      const row = v2.data as any
+      const dto: ContentItemDTO = {
+        id: row.id,
+        user_id: row.user_id,
+        title: row.title ?? null,
+        prompt: row.prompt ?? null,
+        content: row.content ?? null,
+        status: row.status ?? null,
+        scheduled_date: row.scheduled_date ?? null,
+        channel: row.channel ?? null,
+        tags: asTagsArray(row.tags),
+        created_at: row.created_at ?? null,
+        updated_at: row.updated_at ?? null,
       }
-      if (Array.isArray(body.tags)) patchFR.tags = safeStringArray(body.tags).join(',')
-
-      if (Object.keys(patchFR).length === 0) {
-        return NextResponse.json({ ok: false, error: 'Nothing to update' }, { status: 400 })
-      }
-
-      const fr = await supabase
-        .from('content_item')
-        .update(patchFR)
-        .eq('id', id)
-        .eq('user_id', userId)
-        .select(
-          'id, user_id, type, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at'
-        )
-        .maybeSingle()
-
-      if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
-      if (!fr.data) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-
-      const normalized = normalizeItem({
-        ...fr.data,
-        prompt: null,
-        updated_at: null,
-      })
-
-      return NextResponse.json({ ok: true, item: normalized }, { status: 200 })
+      return NextResponse.json({ ok: true, item: dto })
     }
 
-    if (v2.error) return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 })
-    if (!v2.data) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
+    if (!isMissingColumnError(v2.error.message)) {
+      return NextResponse.json(
+        { ok: false, error: v2.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json({ ok: true, item: normalizeItem(v2.data as Record<string, unknown>) }, { status: 200 })
-  } catch (e) {
+    // fallback FR
+    const patchFR: Record<string, any> = {}
+    if (typeof body.title === 'string') patchFR.titre = body.title
+    if (typeof body.content === 'string') patchFR.contenu = body.content
+    if (typeof body.prompt === 'string') patchFR.prompt = body.prompt
+    if (typeof body.type === 'string') patchFR.type = body.type
+    if (typeof body.status === 'string') patchFR.statut = body.status
+    if (typeof body.channel === 'string') patchFR.canal = body.channel
+    if (body.scheduledDate !== undefined) patchFR.date_planifiee = body.scheduledDate
+    if (body.tags !== undefined) patchFR.tags = body.tags
+
+    const fr = await supabase
+      .from('content_items')
+      .update(patchFR)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select(
+        'id,user_id,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at'
+      )
+      .maybeSingle()
+
+    if (fr.error) {
+      return NextResponse.json(
+        { ok: false, error: fr.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
+
+    const row = fr.data as any
+    const dto: ContentItemDTO = {
+      id: row.id,
+      user_id: row.user_id,
+      title: row.titre ?? null,
+      prompt: row.prompt ?? null,
+      content: row.contenu ?? null,
+      status: row.statut ?? null,
+      scheduled_date: row.date_planifiee ?? null,
+      channel: row.canal ?? null,
+      tags: asTagsArray(row.tags),
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+    }
+
+    return NextResponse.json({ ok: true, item: dto })
+  } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Unknown error' },
+      { ok: false, error: e?.message || 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
-export async function DELETE(_req: Request, ctx: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
   try {
-    const id = (ctx?.params?.id ?? '').trim()
+    const id = ((await ctx.params).id ?? '').trim()
     if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
 
     const { supabase, userId } = await getAuthedUserId()
     if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
 
-    // v2 delete
-    const v2 = await supabase.from('content_item').delete().eq('id', id).eq('user_id', userId)
+    // v2
+    const v2 = await supabase.from('content_items').delete().eq('id', id).eq('user_id', userId)
 
-    if (v2.error && isMissingColumnError(v2.error.message)) {
-      // FR schema: delete identique (colonnes n'impactent pas DELETE)
-      const fr = await supabase.from('content_item').delete().eq('id', id).eq('user_id', userId)
-      if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
-      return NextResponse.json({ ok: true }, { status: 200 })
+    if (!v2.error) {
+      return NextResponse.json({ ok: true })
     }
 
-    if (v2.error) return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 })
-    return NextResponse.json({ ok: true }, { status: 200 })
-  } catch (e) {
+    if (!isMissingColumnError(v2.error.message)) {
+      return NextResponse.json(
+        { ok: false, error: v2.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
+
+    // fallback FR (même table, delete identique)
+    const fr = await supabase.from('content_items').delete().eq('id', id).eq('user_id', userId)
+
+    if (fr.error) {
+      return NextResponse.json(
+        { ok: false, error: fr.error.message || 'Unknown error' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Unknown error' },
+      { ok: false, error: e?.message || 'Unknown error' },
       { status: 500 }
     )
   }
