@@ -22,7 +22,6 @@ import {
   FileText,
   Calendar,
   CheckCircle2,
-  FolderOpen,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -43,42 +42,86 @@ function startOfDay(d: Date) {
 }
 
 function daysAgo(n: number) {
-  const now = new Date();
-  const d = new Date(now);
-  d.setDate(now.getDate() - n);
-  return startOfDay(d);
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
 }
 
-function normalizeStatus(v: string | null | undefined) {
-  return String(v ?? "").trim().toLowerCase();
+function csvPeriod(p: string) {
+  if (p === "7") return 7;
+  if (p === "90") return 90;
+  return 30;
 }
 
-function isPublished(status: string | null | undefined) {
-  return normalizeStatus(status) === "published";
+function pctDelta(curr: number, prev: number) {
+  if (prev <= 0) return curr > 0 ? 100 : 0;
+  return Math.round(((curr - prev) / prev) * 100);
 }
 
-function isPlanned(
-  status: string | null | undefined,
-  scheduled: string | null | undefined,
-) {
-  const s = normalizeStatus(status);
-  return s === "planned" || Boolean(scheduled);
+function safeString(v: unknown) {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return "";
 }
 
-function clamp01(n: number) {
-  return Math.max(0, Math.min(1, n));
+function formatDateShort(d: Date) {
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
-function formatPct(n: number) {
-  return `${Math.round(n * 100)}%`;
+function labelType(t: string | null) {
+  const x = (t ?? "").toLowerCase();
+  if (x === "post") return "Post";
+  if (x === "email") return "Email";
+  if (x === "blog") return "Blog";
+  if (x === "video_script") return "Script vidéo";
+  if (x === "funnel") return "Funnel";
+  return t || "—";
 }
 
-function safeTitle(r: ContentRow) {
-  return r.title?.trim() || "Sans titre";
+function labelStatus(s: string | null) {
+  const x = (s ?? "").toLowerCase();
+  if (x === "published" || x === "publie" || x === "publié") return "Publié";
+  if (x === "scheduled" || x === "planifie" || x === "planifié")
+    return "Planifié";
+  if (x === "draft" || x === "brouillon") return "Brouillon";
+  return s || "—";
 }
 
-function csvPeriod(p: string | null) {
-  return p === "7" ? 7 : p === "90" ? 90 : 30;
+function statusBadgeVariant(s: string | null) {
+  const x = (s ?? "").toLowerCase();
+  if (x === "published" || x === "publie" || x === "publié") return "default";
+  if (x === "scheduled" || x === "planifie" || x === "planifié")
+    return "secondary";
+  return "outline";
+}
+
+function trendIcon(delta: number) {
+  if (delta >= 0) return <TrendingUp className="h-4 w-4" />;
+  return <TrendingDown className="h-4 w-4" />;
+}
+
+function trendColor(delta: number) {
+  if (delta >= 0) return "text-emerald-600";
+  return "text-rose-600";
+}
+
+function toTime(d: Date) {
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function toIsoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function parseDateMaybe(v: string | null) {
+  if (!v) return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
 }
 
 export default async function AnalyticsPage({
@@ -87,425 +130,399 @@ export default async function AnalyticsPage({
   searchParams?: { period?: string };
 }) {
   const supabase = await getSupabaseServerClient();
-
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) redirect("/");
+  if (!session?.user) redirect("/");
 
   const userEmail = session.user.email ?? "";
   const periodDays = csvPeriod(String(searchParams?.period ?? "30"));
 
-  // KPI rapide : on calcule sur les 800 derniers contenus
-  const { data, error } = await supabase
+  // KPI rapide : on calcule sur les 800 derniers contenus (scope user)
+  const v2 = await supabase
     .from("content_item")
     .select("id, title, type, status, channel, scheduled_date, created_at")
+    .eq("user_id", session.user.id)
     .order("created_at", { ascending: false })
     .limit(800);
 
-  const rows: ContentRow[] = Array.isArray(data) ? (data as ContentRow[]) : [];
+  let rows: ContentRow[] = [];
+
+  if (!v2.error) {
+    rows = Array.isArray(v2.data) ? (v2.data as ContentRow[]) : [];
+  } else {
+    // Fallback FR schema with aliasing (titre/statut/canal/date_planifiee)
+    const fb = await supabase
+      .from("content_item")
+      .select(
+        "id, title:titre, type, status:statut, channel:canal, scheduled_date:date_planifiee, created_at"
+      )
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(800);
+
+    rows = Array.isArray(fb.data) ? (fb.data as ContentRow[]) : [];
+  }
 
   const sincePeriod = daysAgo(periodDays).getTime();
   const sincePrev = daysAgo(periodDays * 2).getTime();
 
   const inPeriod = rows.filter((r) => {
-    const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-    return ts >= sincePeriod;
+    const created = parseDateMaybe(r.created_at)?.getTime() ?? 0;
+    return created >= sincePeriod;
   });
 
   const inPrev = rows.filter((r) => {
-    const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-    return ts < sincePeriod && ts >= sincePrev;
+    const created = parseDateMaybe(r.created_at)?.getTime() ?? 0;
+    return created >= sincePrev && created < sincePeriod;
   });
 
-  const totalPeriod = inPeriod.length;
-  const totalPrev = inPrev.length;
+  const publishedNow = inPeriod.filter((r) => {
+    const s = (r.status ?? "").toLowerCase();
+    return s === "published" || s === "publie" || s === "publié";
+  });
 
-  const publishedPeriod = inPeriod.filter((r) => isPublished(r.status)).length;
-  const publishedPrev = inPrev.filter((r) => isPublished(r.status)).length;
+  const publishedPrev = inPrev.filter((r) => {
+    const s = (r.status ?? "").toLowerCase();
+    return s === "published" || s === "publie" || s === "publié";
+  });
 
-  const plannedPeriod = inPeriod.filter((r) =>
-    isPlanned(r.status, r.scheduled_date),
-  ).length;
-  const plannedPrev = inPrev.filter((r) =>
-    isPlanned(r.status, r.scheduled_date),
-  ).length;
+  const scheduledNow = inPeriod.filter((r) => {
+    const s = (r.status ?? "").toLowerCase();
+    return s === "scheduled" || s === "planifie" || s === "planifié";
+  });
 
-  const completion = totalPeriod > 0 ? clamp01(publishedPeriod / totalPeriod) : 0;
-  const completionPrev =
-    totalPrev > 0 ? clamp01(publishedPrev / totalPrev) : 0;
+  const scheduledPrev = inPrev.filter((r) => {
+    const s = (r.status ?? "").toLowerCase();
+    return s === "scheduled" || s === "planifie" || s === "planifié";
+  });
 
-  function changeBadge(current: number, prev: number) {
-    const delta = current - prev;
-    const up = delta >= 0;
-    const value =
-      prev === 0 ? (current === 0 ? 0 : 100) : Math.round((delta / prev) * 100);
-    return { up, text: `${up ? "+" : ""}${value}%` };
-  }
+  const allNow = inPeriod.length;
+  const allPrev = inPrev.length;
 
-  const mPublished = changeBadge(publishedPeriod, publishedPrev);
-  const mPlanned = changeBadge(plannedPeriod, plannedPrev);
-  const mCompletion = changeBadge(
-    Math.round(completion * 100),
-    Math.round(completionPrev * 100),
-  );
-  const mTotal = changeBadge(totalPeriod, totalPrev);
+  const deltaPublished = pctDelta(publishedNow.length, publishedPrev.length);
+  const deltaAll = pctDelta(allNow, allPrev);
+  const deltaScheduled = pctDelta(scheduledNow.length, scheduledPrev.length);
 
-  const metrics = [
-    {
-      label: "Contenus publiés",
-      value: String(publishedPeriod),
-      change: mPublished.text,
-      trend: mPublished.up ? "up" : "down",
-      icon: CheckCircle2,
-    },
-    {
-      label: "Contenus planifiés",
-      value: String(plannedPeriod),
-      change: mPlanned.text,
-      trend: mPlanned.up ? "up" : "down",
-      icon: Calendar,
-    },
-    {
-      label: "Taux de complétion",
-      value: formatPct(completion),
-      change: mCompletion.text,
-      trend: mCompletion.up ? "up" : "down",
-      icon: TrendingUp,
-    },
-    {
-      label: "Créations sur la période",
-      value: String(totalPeriod),
-      change: mTotal.text,
-      trend: mTotal.up ? "up" : "down",
-      icon: FileText,
-    },
-  ] as const;
+  // prochaine échéance = contenu planifié le plus proche
+  const nextScheduled = rows
+    .map((r) => {
+      const d = parseDateMaybe(r.scheduled_date);
+      if (!d) return null;
+      return { ...r, _d: d };
+    })
+    .filter(Boolean)
+    .map((r) => r as ContentRow & { _d: Date })
+    .filter((r) => r._d.getTime() >= Date.now())
+    .sort((a, b) => a._d.getTime() - b._d.getTime())[0];
 
-  // Mini chart 14 jours (créations / jour)
-  const days = 14;
-  const dayBuckets: number[] = Array.from({ length: days }, () => 0);
-  const dayStart = daysAgo(days - 1).getTime();
-  for (const r of rows) {
-    const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-    if (ts < dayStart) continue;
-    const idx = Math.floor(
-      (startOfDay(new Date(ts)).getTime() - dayStart) / (24 * 60 * 60 * 1000),
+  // series semaine (7 jours) : contenus publiés / planifiés par jour
+  const startWeek = startOfDay(daysAgo(6));
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(startWeek);
+    d.setDate(startWeek.getDate() + i);
+    return d;
+  });
+
+  const publishedByDay = days.map((d) => {
+    const key = toIsoDate(d);
+    return publishedNow.filter((r) => {
+      const created = parseDateMaybe(r.created_at);
+      if (!created) return false;
+      return toIsoDate(created) === key;
+    }).length;
+  });
+
+  const scheduledByDay = days.map((d) => {
+    const key = toIsoDate(d);
+    return scheduledNow.filter((r) => {
+      const sched = parseDateMaybe(r.scheduled_date);
+      if (!sched) return false;
+      return toIsoDate(sched) === key;
+    }).length;
+  });
+
+  // progression plan stratégique (V1 simple) : tasks complétées / total
+  const { data: tasks } = await supabase
+    .from("project_tasks")
+    .select("id, status, due_date, created_at")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false })
+    .limit(400);
+
+  const taskRows = Array.isArray(tasks) ? tasks : [];
+  const tasksDone = taskRows.filter((t) => {
+    const s = (t?.status ?? "").toLowerCase();
+    return (
+      s === "done" ||
+      s === "completed" ||
+      s === "termine" ||
+      s === "terminé"
     );
-    if (idx >= 0 && idx < days) dayBuckets[idx] += 1;
-  }
-  const maxBucket = Math.max(1, ...dayBuckets);
-  const heights = dayBuckets.map((v) => Math.round((v / maxBucket) * 100));
-
-  // Channels + Types
-  const byChannelMap = new Map<string, number>();
-  const byTypeMap = new Map<string, number>();
-  for (const r of inPeriod) {
-    const ch = r.channel?.trim() ? r.channel!.trim() : "—";
-    byChannelMap.set(ch, (byChannelMap.get(ch) ?? 0) + 1);
-
-    const t = r.type?.trim() ? r.type!.trim() : "Autre";
-    byTypeMap.set(t, (byTypeMap.get(t) ?? 0) + 1);
-  }
-
-  const byChannel = Array.from(byChannelMap.entries())
-    .map(([source, count]) => ({ source, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6);
-
-  const byType = Array.from(byTypeMap.entries())
-    .map(([source, count]) => ({ source, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6);
-
-  const topContents = inPeriod.slice(0, 5).map((r) => ({
-    id: r.id,
-    title: safeTitle(r),
-    type: r.type ?? "—",
-    status: r.status ?? "—",
-  }));
-
-  const periodButtons = [
-    { days: 7, label: "7 jours" },
-    { days: 30, label: "30 jours" },
-    { days: 90, label: "90 jours" },
-  ];
+  }).length;
+  const tasksTotal = taskRows.length;
+  const tasksPct =
+    tasksTotal > 0
+      ? clamp(Math.round((tasksDone / tasksTotal) * 100), 0, 100)
+      : 0;
 
   return (
     <AppShell
       userEmail={userEmail}
       headerTitle="Analytics"
       headerRight={
-        <Button asChild variant="outline">
-          <a
-            href={`/api/analytics/export?period=${periodDays}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Exporter le rapport
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a
+              href={`/api/analytics/export?period=${periodDays}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export CSV
+            </a>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/create">Créer</Link>
+          </Button>
+        </div>
       }
       contentClassName="flex-1 p-0"
     >
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        {/* Period Selector */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-display font-bold">Vos performances</h2>
-            <p className="text-muted-foreground">
-              Suivez et optimisez vos résultats
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            {periodButtons.map((p) => {
-              const active = periodDays === p.days;
-              return (
-                <Button
-                  key={p.days}
-                  asChild
-                  variant={active ? "default" : "outline"}
-                  size="sm"
-                >
-                  <Link href={`/analytics?period=${p.days}`}>{p.label}</Link>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-            <p className="text-sm font-semibold text-rose-800">Erreur</p>
-            <p className="mt-1 text-sm text-rose-800">{error.message}</p>
-          </div>
-        ) : null}
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {metrics.map((metric) => {
-            const Icon = metric.icon;
-            const up = metric.trend === "up";
-            return (
-              <Card key={metric.label} className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <Icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <Badge
-                    variant={up ? "default" : "secondary"}
-                    className="flex items-center gap-1"
-                  >
-                    {up ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3" />
-                    )}
-                    {metric.change}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  {metric.label}
-                </p>
-                <p className="text-3xl font-bold">{metric.value}</p>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Charts Section */}
-        <Tabs defaultValue="engagement" className="w-full">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8">
+        <Tabs defaultValue={String(periodDays)} className="mb-6">
           <TabsList>
-            <TabsTrigger value="engagement">Engagement</TabsTrigger>
-            <TabsTrigger value="traffic">Trafic</TabsTrigger>
-            <TabsTrigger value="conversions">Conversions</TabsTrigger>
-            <TabsTrigger value="social">Réseaux sociaux</TabsTrigger>
+            <TabsTrigger asChild value="7">
+              <Link href="/analytics?period=7">7 jours</Link>
+            </TabsTrigger>
+            <TabsTrigger asChild value="30">
+              <Link href="/analytics?period=30">30 jours</Link>
+            </TabsTrigger>
+            <TabsTrigger asChild value="90">
+              <Link href="/analytics?period=90">90 jours</Link>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="engagement" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-6">
-                Créations au fil du temps (14 jours)
-              </h3>
-              <div className="h-64 flex items-end justify-between gap-2">
-                {heights.map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 bg-gradient-to-t from-primary/30 to-primary/70 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
-                    style={{ height: `${Math.max(6, h)}%` }}
-                    title={`${dayBuckets[i]} création(s)`}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-                <span>J-13</span>
-                <span>J-10</span>
-                <span>J-7</span>
-                <span>J-4</span>
-                <span>Aujourd’hui</span>
-              </div>
-            </Card>
+          <TabsContent value={String(periodDays)} className="mt-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">Contenus publiés</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`flex items-center gap-1 ${trendColor(
+                      deltaPublished
+                    )}`}
+                  >
+                    {trendIcon(deltaPublished)}
+                    {Math.abs(deltaPublished)}%
+                  </Badge>
+                </div>
+                <div className="mt-3 text-3xl font-semibold">
+                  {publishedNow.length}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  vs période précédente : {publishedPrev.length}
+                </p>
+              </Card>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold">Contenus récents</h3>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/contents">
-                    Voir tout <ArrowUpRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      Tâches complétées
+                    </span>
+                  </div>
+                  <Badge variant="secondary">{tasksPct}%</Badge>
+                </div>
+                <div className="mt-3 text-3xl font-semibold">
+                  {tasksDone}/{tasksTotal}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Progression globale (V1)
+                </p>
+              </Card>
 
-              <div className="space-y-3">
-                {topContents.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    Aucun contenu sur la période.
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      Contenus planifiés
+                    </span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`flex items-center gap-1 ${trendColor(
+                      deltaScheduled
+                    )}`}
+                  >
+                    {trendIcon(deltaScheduled)}
+                    {Math.abs(deltaScheduled)}%
+                  </Badge>
+                </div>
+                <div className="mt-3 text-3xl font-semibold">
+                  {scheduledNow.length}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  vs période précédente : {scheduledPrev.length}
+                </p>
+              </Card>
+
+              <Card className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">Total contenus</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`flex items-center gap-1 ${trendColor(deltaAll)}`}
+                  >
+                    {trendIcon(deltaAll)}
+                    {Math.abs(deltaAll)}%
+                  </Badge>
+                </div>
+                <div className="mt-3 text-3xl font-semibold">{allNow}</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  vs période précédente : {allPrev}
+                </p>
+              </Card>
+            </div>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-3">
+              <Card className="p-6 lg:col-span-2">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold">Cette semaine</h2>
+                  <Badge variant="secondary">
+                    {formatDateShort(days[0])} → {formatDateShort(days[6])}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {days.map((d, idx) => (
+                    <div key={toIsoDate(d)} className="rounded-lg border p-3">
+                      <div className="text-xs text-muted-foreground">
+                        {d.toLocaleDateString("fr-FR", { weekday: "short" })}
+                      </div>
+                      <div className="mt-1 text-sm font-medium">
+                        {d.getDate()}
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Publiés</span>
+                          <span className="font-medium">
+                            {publishedByDay[idx]}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Planifiés</span>
+                          <span className="font-medium">
+                            {scheduledByDay[idx]}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <Button asChild variant="secondary">
+                    <Link href="/contents">Voir mes contenus</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/create">Créer un contenu</Link>
+                  </Button>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <h2 className="text-base font-semibold">Prochaine échéance</h2>
+
+                {nextScheduled ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">
+                        {labelType(nextScheduled.type)}
+                      </Badge>
+                      <Badge variant="outline">
+                        {safeString(nextScheduled.channel) || "—"}
+                      </Badge>
+                      <Badge variant={statusBadgeVariant(nextScheduled.status)}>
+                        {labelStatus(nextScheduled.status)}
+                      </Badge>
+                    </div>
+
+                    <div className="text-lg font-semibold leading-snug">
+                      {safeString(nextScheduled.title) || "Sans titre"}
+                    </div>
+
+                    <div className="text-sm text-muted-foreground">
+                      {nextScheduled._d.toLocaleDateString("fr-FR", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "long",
+                      })}{" "}
+                      à {toTime(nextScheduled._d)}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button asChild className="w-full">
+                        <Link href={`/contents/${nextScheduled.id}`}>Ouvrir</Link>
+                      </Button>
+                      <Button asChild variant="secondary" className="w-full">
+                        <Link href="/strategy">Voir stratégie</Link>
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  topContents.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/contents/${c.id}`}
-                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/60 hover:bg-background transition"
-                    >
-                      <div>
-                        <p className="font-medium">{c.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {c.type} • {c.status}
-                        </p>
-                      </div>
-                      <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-                    </Link>
-                  ))
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Aucun contenu planifié à venir sur la période.
+                  </p>
                 )}
-              </div>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="traffic" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-6">
-                Répartition par canal
-              </h3>
-
-              {byChannel.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Aucun contenu sur la période.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {byChannel.map((it) => {
-                    const pct =
-                      totalPeriod > 0
-                        ? Math.round((it.count / totalPeriod) * 100)
-                        : 0;
-                    return (
-                      <div key={it.source}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">{it.source}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {pct}% • {it.count}
-                          </span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="conversions" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-6">Répartition par type</h3>
-
-              {byType.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Aucun contenu sur la période.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {byType.map((it) => {
-                    const pct =
-                      totalPeriod > 0
-                        ? Math.round((it.count / totalPeriod) * 100)
-                        : 0;
-                    return (
-                      <div key={it.source}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">{it.source}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {pct}% • {it.count}
-                          </span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="social" className="space-y-6 mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-6">Actions recommandées</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Link
-                  href="/create"
-                  className="p-4 rounded-xl border border-border bg-background hover:bg-background/80 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Créer du contenu</p>
-                        <p className="text-sm text-muted-foreground">
-                          Augmenter votre régularité
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                <div className="mt-8">
+                  <h3 className="text-sm font-semibold">Raccourcis</h3>
+                  <div className="mt-3 grid gap-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="justify-between"
+                    >
+                      <Link href="/create">
+                        Créer
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="justify-between"
+                    >
+                      <Link href="/tasks">
+                        Tâches
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="justify-between"
+                    >
+                      <Link href="/contents">
+                        Mes contenus
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
-                </Link>
-
-                <Link
-                  href="/contents"
-                  className="p-4 rounded-xl border border-border bg-background hover:bg-background/80 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <FolderOpen className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Planifier</p>
-                        <p className="text-sm text-muted-foreground">
-                          Transformer les brouillons en publis
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              </div>
-            </Card>
+                </div>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

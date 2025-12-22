@@ -5,71 +5,82 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type ContentRow = {
-  id: string;
-  title: string | null;
-  type: string | null;
-  status: string | null;
-  channel: string | null;
-  scheduled_date: string | null;
-  created_at: string | null;
-};
+function daysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
+function csvEscape(s: string) {
+  const x = String(s ?? "");
+  if (x.includes('"') || x.includes(",") || x.includes("\n")) {
+    return `"${x.replaceAll('"', '""')}"`;
+  }
   return x;
 }
 
-function daysAgo(n: number) {
-  const now = new Date();
-  const d = new Date(now);
-  d.setDate(now.getDate() - n);
-  return startOfDay(d);
-}
-
-function csvEscape(v: unknown) {
-  const s = String(v ?? "");
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+function safeString(v: unknown) {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return "";
 }
 
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const period = url.searchParams.get("period") ?? "30";
+  const periodDays = period === "7" ? 7 : period === "90" ? 90 : 30;
+
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const supabase = await getSupabaseServerClient();
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json(
-        { ok: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
-    const url = new URL(req.url);
-    const periodRaw = String(url.searchParams.get("period") ?? "30");
-    const periodDays = periodRaw === "7" ? 7 : periodRaw === "90" ? 90 : 30;
-
     const since = daysAgo(periodDays).toISOString();
 
-    const { data, error } = await supabase
+    const v2 = await supabase
       .from("content_item")
       .select("id, title, type, status, channel, scheduled_date, created_at")
+      .eq("user_id", session.user.id)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(5000);
 
+    let data = v2.data;
+    let error = v2.error;
+
+    if (error) {
+      const fb = await supabase
+        .from("content_item")
+        .select(
+          "id, title:titre, type, status:statut, channel:canal, scheduled_date:date_planifiee, created_at"
+        )
+        .eq("user_id", session.user.id)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+
+      data = fb.data;
+      error = fb.error;
+    }
+
     if (error) {
       return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 },
+        {
+          ok: false,
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+        },
+        { status: 400 }
       );
     }
 
-    const rows: ContentRow[] = Array.isArray(data) ? (data as ContentRow[]) : [];
+    const rows = Array.isArray(data) ? data : [];
 
     const header = [
       "id",
@@ -81,36 +92,39 @@ export async function GET(req: Request) {
       "created_at",
     ].join(",");
 
-    const lines = rows.map((r) =>
-      [
-        csvEscape(r.id),
-        csvEscape(r.title),
-        csvEscape(r.type),
-        csvEscape(r.status),
-        csvEscape(r.channel),
-        csvEscape(r.scheduled_date),
-        csvEscape(r.created_at),
-      ].join(","),
-    );
+    const lines = rows.map((r: any) => {
+      const id = safeString(r?.id);
+      const title = safeString(r?.title);
+      const type = safeString(r?.type);
+      const status = safeString(r?.status);
+      const channel = safeString(r?.channel);
+      const scheduled = safeString(r?.scheduled_date);
+      const created = safeString(r?.created_at);
+
+      return [
+        csvEscape(id),
+        csvEscape(title),
+        csvEscape(type),
+        csvEscape(status),
+        csvEscape(channel),
+        csvEscape(scheduled),
+        csvEscape(created),
+      ].join(",");
+    });
 
     const csv = [header, ...lines].join("\n");
-    const filename = `tipote-analytics-${periodDays}j-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
 
     return new NextResponse(csv, {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Cache-Control": "no-store",
+        "Content-Disposition": `attachment; filename="tipote-contents-${periodDays}d.csv"`,
       },
     });
-  } catch (e) {
-    console.error("[GET /api/analytics/export] error", e);
+  } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: "Internal server error" },
-      { status: 500 },
+      { ok: false, error: e?.message ?? "Unknown error" },
+      { status: 500 }
     );
   }
 }
