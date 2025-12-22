@@ -2,8 +2,9 @@
 // Génération IA + sauvegarde dans content_item (sans toucher au flow auth/onboarding/magic link)
 // V2 : utilise la clé OpenAI utilisateur si configurée (sinon fallback owner key)
 //
-// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
-// -> on tente d'abord l'INSERT v2 (title/content/status/channel/scheduled_date), sinon fallback FR.
+// SOURCE OF TRUTH (prod) : schema FR sur public.content_item
+// (titre, contenu, statut, canal, date_planifiee, tags en text)
+// -> on tente d'abord l'INSERT FR (tags en CSV), sinon fallback EN si certaines envs ont un ancien schéma.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -34,7 +35,12 @@ function safeString(v: unknown): string {
 
 function isMissingColumnError(message: string | undefined | null) {
   const m = (message ?? "").toLowerCase();
-  return m.includes("does not exist") && m.includes("column");
+  return (
+    m.includes("does not exist") ||
+    m.includes("schema cache") ||
+    m.includes("could not find the") ||
+    m.includes("pgrst")
+  );
 }
 
 export async function POST(req: Request) {
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
 
     // Récup contexte user (profil + plan)
     const { data: profile } = await supabase
-      .from("business_profile")
+      .from("business_profiles")
       .select("*")
       .eq("user_id", session.user.id)
       .maybeSingle();
@@ -148,44 +154,99 @@ export async function POST(req: Request) {
     }
 
     // Sauvegarde content_item
-    // - v2 schema attempt, then fallback FR schema if needed
-    const insertV2 = await supabase
+    // SOURCE OF TRUTH : schema FR + tags en CSV dans une colonne text
+    const tagsCsv = tags.join(",");
+
+    // 1) Tentative FR (prod)
+    const insertFRWithPrompt = await supabase
       .from("content_item")
       .insert({
         user_id: session.user.id,
         type,
-        title: null,
-        status: "draft",
-        channel,
-        scheduled_date: scheduledDate,
-        tags,
+        titre: null,
+        statut: "draft",
+        canal: channel,
+        date_planifiee: scheduledDate,
+        tags: tagsCsv,
+        // certaines DB ont "prompt" ; si colonne absente => on retry sans
         prompt,
-        content,
-      })
+        contenu: content,
+      } as any)
       .select("id")
       .single();
 
-    let inserted: InsertedRow | null = insertV2.data ?? null;
-    let insErr: PostgrestError | null = insertV2.error ?? null;
+    let inserted: InsertedRow | null = insertFRWithPrompt.data ?? null;
+    let insErr: PostgrestError | null = insertFRWithPrompt.error ?? null;
 
+    // Retry FR sans prompt si colonne manquante
     if (insErr && isMissingColumnError(insErr.message)) {
-      const insertFR = await supabase
+      const msg = (insErr.message ?? "").toLowerCase();
+      if (msg.includes("prompt")) {
+        const insertFR = await supabase
+          .from("content_item")
+          .insert({
+            user_id: session.user.id,
+            type,
+            titre: null,
+            statut: "draft",
+            canal: channel,
+            date_planifiee: scheduledDate,
+            tags: tagsCsv,
+            contenu: content,
+          } as any)
+          .select("id")
+          .single();
+
+        inserted = insertFR.data ?? null;
+        insErr = insertFR.error ?? null;
+      }
+    }
+
+    // 2) Fallback EN si la DB n'a pas les colonnes FR
+    if (insErr && isMissingColumnError(insErr.message)) {
+      const insertEN = await supabase
         .from("content_item")
         .insert({
           user_id: session.user.id,
           type,
-          titre: null,
-          statut: "draft",
-          canal: channel,
-          date_planifiee: scheduledDate,
-          tags: tags.join(","), // legacy FR schema uses text
-          contenu: content,
-        })
+          title: null,
+          status: "draft",
+          channel,
+          scheduled_date: scheduledDate,
+          tags, // array si schema EN prévu comme array/json
+          prompt,
+          content,
+        } as any)
         .select("id")
         .single();
 
-      inserted = insertFR.data ?? null;
-      insErr = insertFR.error ?? null;
+      inserted = insertEN.data ?? null;
+      insErr = insertEN.error ?? null;
+
+      // Retry EN avec tags CSV si la colonne tags est text
+      if (insErr && isMissingColumnError(insErr.message)) {
+        const msg = (insErr.message ?? "").toLowerCase();
+        if (msg.includes("tags")) {
+          const insertEN2 = await supabase
+            .from("content_item")
+            .insert({
+              user_id: session.user.id,
+              type,
+              title: null,
+              status: "draft",
+              channel,
+              scheduled_date: scheduledDate,
+              tags: tagsCsv,
+              prompt,
+              content,
+            } as any)
+            .select("id")
+            .single();
+
+          inserted = insertEN2.data ?? null;
+          insErr = insertEN2.error ?? null;
+        }
+      }
     }
 
     if (insErr) {
