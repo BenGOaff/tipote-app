@@ -2,13 +2,17 @@
 // Page Paramètres v2.1 : Profil / Réglages / IA & API / Abonnement
 // - Protégé par auth Supabase
 // - IA & API : gestion clé OpenAI (chiffrée) via /api/user/api-keys
+// - Abonnement : affichage + annulation via routes billing (Systeme.io)
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
 import SetPasswordForm from "@/components/SetPasswordForm";
 import OpenAIKeyManager from "@/components/settings/OpenAIKeyManager";
+import BillingSection from "@/components/settings/BillingSection";
 
 type Props = {
   searchParams?: { tab?: string };
@@ -30,12 +34,11 @@ export default async function SettingsPage({ searchParams }: Props) {
   if (!session) redirect("/");
 
   const userEmail = session.user.email ?? "";
-
   const activeTab = (searchParams?.tab ?? "profile") as (typeof tabs)[number]["key"];
 
   return (
     <AppShell userEmail={userEmail} headerTitle="Paramètres">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6 p-6">
         <header className="space-y-1">
           <h1 className="text-xl font-semibold text-slate-900">Paramètres</h1>
           <p className="text-sm text-slate-500">Gérez votre compte et vos préférences.</p>
@@ -61,38 +64,48 @@ export default async function SettingsPage({ searchParams }: Props) {
         </nav>
 
         {activeTab === "profile" && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900">Profil</h3>
-            <p className="text-xs text-slate-500">
-              Placeholder — on branchera ensuite les infos profil (Supabase).
-            </p>
-            <div className="rounded-xl border border-slate-100 p-4">
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <p className="text-xs text-slate-500">Email</p>
+              <p className="mt-1 text-sm font-medium text-slate-900">{userEmail}</p>
+            </div>
+
+            <div className="rounded-xl border border-dashed border-slate-200 p-4">
               <p className="text-xs text-slate-600">
-                Email : <span className="font-medium">{userEmail}</span>
+                Prochaine étape : afficher / éditer le profil business (business_profiles) ici.
               </p>
             </div>
           </section>
         )}
 
         {activeTab === "settings" && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">Sécurité</h3>
-            <p className="text-xs text-slate-500">
-              Modifiez votre mot de passe (réutilise le composant existant).
-            </p>
-            <div className="rounded-xl border border-slate-100 p-4">
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900">Réglages</h3>
+
+            <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <p className="text-xs text-slate-600">
+                Sécurité : définissez un mot de passe si vous utilisez Google/OTP.
+              </p>
               {/* ✅ Fix TS : SetPasswordForm exige la prop "mode" */}
-              <SetPasswordForm mode="reset" />
+              <SetPasswordForm mode="first" />
+            </div>
+
+            <div className="rounded-xl border border-dashed border-slate-200 p-4">
+              <p className="text-xs text-slate-600">Prochaine étape : préférences (langue, ton, notifications).</p>
             </div>
           </section>
         )}
 
         {activeTab === "ai" && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">IA & API</h3>
-            <p className="text-xs text-slate-500">
-              Configurez vos clés personnelles (utilisées pour la génération de contenu).
-            </p>
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-slate-900">IA & API</h3>
+              <p className="text-xs text-slate-500">
+                Configurez vos clés personnelles (utilisées pour la génération de contenu).
+              </p>
+            </div>
 
             <OpenAIKeyManager />
 
@@ -104,19 +117,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           </section>
         )}
 
-        {activeTab === "billing" && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">Abonnement</h3>
-            <p className="text-xs text-slate-500">
-              Placeholder — tu as déjà des routes API billing, on branchera l’affichage ici.
-            </p>
-            <div className="rounded-xl border border-dashed border-slate-200 p-4">
-              <p className="text-xs text-slate-600">
-                Prochaine étape : plan, statut, prochain paiement, upgrade/cancel.
-              </p>
-            </div>
-          </section>
-        )}
+        {activeTab === "billing" && <BillingSection email={userEmail} />}
       </div>
     </AppShell>
   );
