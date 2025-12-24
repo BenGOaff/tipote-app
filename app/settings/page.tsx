@@ -8,8 +8,9 @@ import { redirect } from "next/navigation";
 
 import AppShell from "@/components/AppShell";
 import SetPasswordForm from "@/components/SetPasswordForm";
-import OpenAIKeyManager from "@/components/settings/OpenAIKeyManager";
 import BillingSection from "@/components/settings/BillingSection";
+import ApiKeysManager from "@/components/settings/ApiKeysManager";
+import ProfileSection from "@/components/settings/ProfileSection";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 type Props = {
@@ -33,7 +34,6 @@ export default async function SettingsPage({ searchParams }: Props) {
     redirect("/");
   }
 
-  // ✅ AppShell attend un string (pas undefined)
   const userEmail = auth.user.email ?? "";
 
   const rawTab = (searchParams?.tab ?? "profile") as string;
@@ -81,26 +81,7 @@ export default async function SettingsPage({ searchParams }: Props) {
 
         {/* Content */}
         <div className="space-y-4">
-          {activeTab === "profile" && (
-            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-900">Profil</h3>
-
-              <div className="space-y-2 rounded-xl border border-slate-200 p-4">
-                <p className="text-xs text-slate-600">
-                  Email : <span className="font-medium text-slate-900">{userEmail || "—"}</span>
-                </p>
-                <p className="text-xs text-slate-600">
-                  ID : <span className="font-mono text-slate-900">{auth.user.id}</span>
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-slate-200 p-4">
-                <p className="text-xs text-slate-600">
-                  Prochaine étape : édition du profil business (business_profiles).
-                </p>
-              </div>
-            </section>
-          )}
+          {activeTab === "profile" && <ProfileSection />}
 
           {activeTab === "settings" && (
             <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -110,13 +91,12 @@ export default async function SettingsPage({ searchParams }: Props) {
                 <p className="text-xs text-slate-600">
                   Sécurité : définissez un mot de passe si vous utilisez Google/OTP.
                 </p>
-                {/* ✅ conforme au code existant : mode requis ('first' | 'reset') */}
                 <SetPasswordForm mode="first" />
               </div>
 
               <div className="rounded-xl border border-dashed border-slate-200 p-4">
                 <p className="text-xs text-slate-600">
-                  Prochaine étape : préférences (langue, ton, notifications).
+                  Prochaine étape : préférences (langue, notifications) — à brancher si besoin.
                 </p>
               </div>
             </section>
@@ -124,18 +104,18 @@ export default async function SettingsPage({ searchParams }: Props) {
 
           {activeTab === "ai" && (
             <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-900">IA & API</h3>
-
-              <div className="space-y-3 rounded-xl border border-slate-200 p-4">
-                <p className="text-xs text-slate-600">
-                  Gérez votre clé OpenAI (chiffrée). Elle est utilisée pour la génération de contenu.
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-slate-900">IA & API</h3>
+                <p className="text-xs text-slate-500">
+                  Configurez vos clés personnelles (utilisées pour la génération de contenu).
                 </p>
-                <OpenAIKeyManager />
               </div>
+
+              <ApiKeysManager />
 
               <div className="rounded-xl border border-dashed border-slate-200 p-4">
                 <p className="text-xs text-slate-600">
-                  Prochaine étape : ajouter Claude/Gemini + sélection provider par module.
+                  Prochaine étape : activer Claude/Gemini dans la génération (backend).
                 </p>
               </div>
             </section>

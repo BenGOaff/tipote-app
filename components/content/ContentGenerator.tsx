@@ -1,11 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 
 type Props = {
   type: string
 }
+
+type Provider = 'openai' | 'claude' | 'gemini'
 
 type GenerateResponse = {
   ok: boolean
@@ -18,27 +20,41 @@ type GenerateResponse = {
   usedUserKey?: boolean
 }
 
-type Preset = {
-  label: string
-  defaultChannel: string
-  placeholder: string
+type KeyStatusResp = {
+  ok: boolean
+  configured?: boolean
+  hasKey?: boolean
+  masked?: string | null
+  error?: string
 }
 
-const TYPE_PRESETS: Record<string, Preset> = {
+const PROVIDERS: Array<{ key: Provider; label: string; badge: string }> = [
+  { key: 'openai', label: 'OpenAI', badge: 'Recommandé' },
+  { key: 'claude', label: 'Claude', badge: 'Bientôt' },
+  { key: 'gemini', label: 'Gemini', badge: 'Bientôt' },
+]
+
+const TYPE_META: Record<
+  string,
+  { label: string; defaultChannel: string; placeholder: string }
+> = {
   post: {
-    label: 'Post',
+    label: 'Post réseaux sociaux',
     defaultChannel: 'LinkedIn',
-    placeholder: 'Sujet + angle + audience + ton (ex: direct, bienveillant) + CTA…',
+    placeholder:
+      'Sujet + point de vue + structure (hook, valeur, CTA) + style…',
   },
   email: {
     label: 'Email',
-    defaultChannel: 'Email',
-    placeholder: 'Objectif (nurture/vente) + contexte + offre éventuelle + ton + longueur…',
+    defaultChannel: 'Newsletter',
+    placeholder:
+      'Objectif + segment + promesse + structure (objet, intro, bullets, CTA)…',
   },
   blog: {
     label: 'Blog',
     defaultChannel: 'Blog',
-    placeholder: 'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
+    placeholder:
+      'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
   },
   video_script: {
     label: 'Script vidéo',
@@ -48,66 +64,108 @@ const TYPE_PRESETS: Record<string, Preset> = {
   sales_page: {
     label: 'Page de vente',
     defaultChannel: 'Landing',
-    placeholder: 'Produit/offre + avatar + promesse + objections + preuves…',
-  },
-  funnel: {
-    label: 'Funnel',
-    defaultChannel: 'Funnel',
-    placeholder: 'Objectif + offre + étapes attendues + canaux + timing…',
+    placeholder:
+      'Produit/offre + avatar + promesse + objections + preuves…',
   },
 }
 
-function isoDateOrNull(v: string): string | null {
-  const value = (v ?? '').trim()
-  return value ? value : null
+function safeParseJson<T>(res: Response): Promise<T> {
+  return res.json() as Promise<T>
 }
 
-function normalizeType(t: string): string {
-  const raw = (t ?? '').trim()
-  if (!raw) return 'post'
-  if (raw === 'video') return 'video_script'
-  return raw
+function normalizeType(type: string) {
+  const t = (type ?? '').trim().toLowerCase()
+  if (t === 'video' || t === 'script') return 'video_script'
+  if (t === 'sales' || t === 'landing') return 'sales_page'
+  return t
 }
 
-function normalizeTags(tags: string): string[] {
-  return (tags ?? '')
+function normalizeTags(tagsCsv: string) {
+  const s = (tagsCsv ?? '').trim()
+  if (!s) return []
+  return s
     .split(',')
-    .map((t) => t.trim())
+    .map((x) => x.trim())
     .filter(Boolean)
+    .slice(0, 12)
 }
 
-async function safeParseJson<T>(res: Response): Promise<T | null> {
-  try {
-    return (await res.json()) as T
-  } catch {
-    return null
-  }
+function isoDateOrNull(date: string) {
+  const s = (date ?? '').trim()
+  if (!s) return null
+  // accepte YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  return null
 }
 
 export function ContentGenerator({ type }: Props) {
-  const normalizedType = useMemo(() => normalizeType(type), [type])
+  const meta = useMemo(() => {
+    const safeType = normalizeType(type)
+    return TYPE_META[safeType] ?? {
+      label: 'Contenu',
+      defaultChannel: 'Général',
+      placeholder: 'Décris ce que tu veux générer…',
+    }
+  }, [type])
 
-  const preset = useMemo(() => {
-    return (
-      TYPE_PRESETS[normalizedType] ?? {
-        label: 'Contenu',
-        defaultChannel: 'Général',
-        placeholder: 'Décris précisément ce que tu veux produire…',
-      }
-    )
-  }, [normalizedType])
+  const [provider, setProvider] = useState<Provider>('openai')
+  const [providerConfigured, setProviderConfigured] = useState<boolean | null>(null)
+  const [providerMasked, setProviderMasked] = useState<string | null>(null)
 
-  const [channel, setChannel] = useState(preset.defaultChannel)
+  const [channel, setChannel] = useState(meta.defaultChannel)
   const [scheduledDate, setScheduledDate] = useState('')
   const [tags, setTags] = useState('')
+
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<GenerateResponse | null>(null)
 
-  async function onGenerate() {
-    if (loading) return
+  useEffect(() => {
+    setChannel(meta.defaultChannel)
+  }, [meta.defaultChannel])
 
-    const safePrompt = prompt.trim()
+  useEffect(() => {
+    let cancelled = false
+
+    async function run() {
+      setProviderConfigured(null)
+      setProviderMasked(null)
+
+      try {
+        const res = await fetch(`/api/user/api-keys?provider=${provider}`, {
+          method: 'GET',
+        })
+        const json = (await res.json().catch(() => null)) as KeyStatusResp | null
+        if (cancelled) return
+
+        if (!res.ok || !json?.ok) {
+          setProviderConfigured(false)
+          setProviderMasked(null)
+          return
+        }
+
+        const ok = !!json.configured || !!json.hasKey
+        setProviderConfigured(ok)
+        setProviderMasked(json.masked ?? null)
+      } catch {
+        if (cancelled) return
+        setProviderConfigured(false)
+        setProviderMasked(null)
+      }
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [provider])
+
+  const canGenerate = useMemo(() => {
+    return !loading && (prompt ?? '').trim().length > 0
+  }, [loading, prompt])
+
+  const onGenerate = async () => {
+    const safePrompt = (prompt ?? '').trim()
     const safeType = normalizeType(type)
 
     if (!safePrompt) {
@@ -124,6 +182,7 @@ export function ContentGenerator({ type }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: safeType,
+          provider,
           channel: (channel ?? '').trim(),
           scheduledDate: isoDateOrNull(scheduledDate),
           tags: normalizeTags(tags),
@@ -136,25 +195,16 @@ export function ContentGenerator({ type }: Props) {
       if (!res.ok) {
         setResult({
           ok: false,
-          error:
-            data?.error ||
-            `Erreur API (${res.status})${res.statusText ? `: ${res.statusText}` : ''}`,
-          warning: data?.warning,
-          saveError: data?.saveError,
+          error: data?.error ?? 'Erreur lors de la génération.',
         })
         return
       }
 
-      setResult(
-        data ?? {
-          ok: false,
-          error: 'Réponse API invalide',
-        }
-      )
+      setResult(data)
     } catch (e) {
       setResult({
         ok: false,
-        error: e instanceof Error ? e.message : 'Erreur inconnue',
+        error: e instanceof Error ? e.message : 'Erreur lors de la génération.',
       })
     } finally {
       setLoading(false)
@@ -162,14 +212,80 @@ export function ContentGenerator({ type }: Props) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
+    <div className="space-y-4">
+      {/* Provider */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Brief</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Plus tu es précis (objectif, audience, ton, contraintes), mieux c’est.
-        </p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-slate-900">Modèle IA</h3>
+            <p className="text-xs text-slate-500">
+              Choisis le provider. (Claude/Gemini : UI prête, backend à activer).
+            </p>
+          </div>
 
-        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {PROVIDERS.map((p) => {
+              const active = p.key === provider
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setProvider(p.key)}
+                  className={
+                    active
+                      ? 'rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white'
+                      : 'rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50'
+                  }
+                >
+                  {p.label}
+                  <span className="ml-2 text-[10px] opacity-80">{p.badge}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-slate-200 p-4">
+          <p className="text-xs text-slate-600">
+            Clé {provider.toUpperCase()} :{' '}
+            {providerConfigured == null ? (
+              <span className="font-medium">…</span>
+            ) : providerConfigured ? (
+              <span className="font-mono font-medium text-slate-900">
+                {providerMasked ?? 'Configurée'}
+              </span>
+            ) : (
+              <span className="font-medium text-slate-900">
+                non configurée (fallback possible)
+              </span>
+            )}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Gérer tes clés :{' '}
+            <Link href="/settings?tab=ai" className="font-semibold text-[#b042b4]">
+              Paramètres → IA & API
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* Form */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] text-slate-500">Type</p>
+            <h3 className="mt-1 text-sm font-semibold text-slate-900">{meta.label}</h3>
+          </div>
+
+          <Link
+            href="/contents"
+            className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+          >
+            Mes contenus
+          </Link>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="grid gap-2">
             <label className="text-xs font-semibold text-slate-700">Canal</label>
             <input
@@ -201,101 +317,93 @@ export function ContentGenerator({ type }: Props) {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
-              placeholder="Ex: acquisition, offre, mindset"
+              placeholder="Ex: lancement, offre, copywriting"
             />
+            <p className="text-[11px] text-slate-500">Optionnel — max 12 tags.</p>
           </div>
+        </div>
 
-          <div className="grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">Consigne / angle</label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[140px] rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
-              placeholder={preset.placeholder}
-            />
-          </div>
+        <div className="mt-4 grid gap-2">
+          <label className="text-xs font-semibold text-slate-700">Brief</label>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="min-h-[140px] rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
+            placeholder={meta.placeholder}
+          />
+          <p className="text-[11px] text-slate-500">
+            Plus tu es précis (cible, promesse, objections, CTA), meilleur sera le résultat.
+          </p>
+        </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onGenerate}
-            disabled={loading || !prompt.trim()}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#b042b4] px-4 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+            disabled={!canGenerate}
+            className={[
+              'rounded-xl px-4 py-2 text-xs font-semibold text-white',
+              canGenerate ? 'bg-[#b042b4] hover:opacity-95' : 'bg-slate-300',
+            ].join(' ')}
           >
-            {loading ? 'Génération…' : 'Générer + sauvegarder'}
+            {loading ? 'Génération…' : 'Générer'}
           </button>
 
-          <div className="flex items-center justify-between">
-            <Link href="/contents" className="text-xs font-semibold text-slate-700 hover:underline">
-              Voir mes contenus →
-            </Link>
-            <div className="text-[11px] text-slate-500">
-              Type: <span className="font-semibold text-slate-700">{preset.label}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">Résultat</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Le contenu est sauvegardé automatiquement dans “Mes contenus”.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {result?.usedUserKey ? (
-              <span className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-                Clé utilisateur ✅
-              </span>
-            ) : null}
-
-            {result?.ok && result.id ? (
-              <Link
-                href={`/contents/${result.id}`}
-                className="shrink-0 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
-              >
-                Ouvrir →
-              </Link>
-            ) : null}
-          </div>
+          <Link
+            href="/contents"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+          >
+            Voir mes contenus
+          </Link>
         </div>
 
-        {!result ? (
-          <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center">
-            <p className="text-sm text-slate-600">Lance une génération pour voir le contenu ici.</p>
-            <p className="mt-1 text-xs text-slate-500">
-              (On branchera ensuite la sélection de provider + clés chiffrées.)
-            </p>
-          </div>
-        ) : result.ok ? (
-          <div className="mt-4 space-y-3">
-            {result.warning ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                {result.warning}
-                {result.saveError ? <div className="mt-1 text-xs">{result.saveError}</div> : null}
+        {result ? (
+          result.ok ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500">Résultat</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {result.title ?? 'Contenu généré'}
+                  </p>
+                  {result.usedUserKey != null ? (
+                    <p className="text-[11px] text-slate-500">
+                      {result.usedUserKey
+                        ? 'Clé utilisateur utilisée ✅'
+                        : 'Fallback (clé propriétaire) ⚠️'}
+                    </p>
+                  ) : null}
+                  {result.warning ? (
+                    <p className="text-[11px] text-amber-700">{result.warning}</p>
+                  ) : null}
+                  {result.saveError ? (
+                    <p className="text-[11px] text-rose-700">{result.saveError}</p>
+                  ) : null}
+                </div>
+
+                {result.id ? (
+                  <Link
+                    href={`/contents`}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                  >
+                    Ouvrir Content Hub
+                  </Link>
+                ) : null}
               </div>
-            ) : null}
 
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-xs font-semibold text-slate-700">Titre</p>
-              <p className="mt-1 text-sm text-slate-900">{result.title ?? '—'}</p>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <pre className="whitespace-pre-wrap text-sm text-slate-900">
+                  {result.content ?? ''}
+                </pre>
+              </div>
             </div>
-
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="text-xs font-semibold text-slate-700">Contenu</p>
-              <pre className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-900">
-                {result.content ?? ''}
-              </pre>
+          ) : (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+              <p className="text-sm font-semibold text-rose-800">Erreur</p>
+              <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
             </div>
-          </div>
-        ) : (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
-            <p className="text-sm font-semibold text-rose-800">Erreur</p>
-            <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
-          </div>
-        )}
+          )
+        ) : null}
       </section>
     </div>
   )
