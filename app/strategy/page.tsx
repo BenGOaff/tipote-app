@@ -2,7 +2,8 @@
 // Page "Ma Stratégie" : vue unifiée (Plan d'action / Pyramide d'offres / Persona)
 // - Auth obligatoire
 // - Nécessite un business_plan (sinon redirect /onboarding)
-// - Réutilise StrategyClient pour la Pyramide (choix + édition)
+// - Pyramide gérée via StrategyClient (choix + édition)
+// - Sync des tâches depuis le plan via /api/tasks/sync
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import StrategyClient from "./StrategyClient";
+import SyncTasksButton from "./SyncTasksButton";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -92,6 +94,28 @@ function bucketKey(daysFromNow: number) {
   return "p4";
 }
 
+function asRecord(v: unknown): AnyRecord | null {
+  if (!v || typeof v !== "object") return null;
+  return v as AnyRecord;
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function countPlanTasks(planJson: AnyRecord): number {
+  const plan90 = asRecord(planJson.plan_90_days);
+  const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
+
+  if (!grouped) return 0;
+
+  const d30 = asArray(grouped.d30).length;
+  const d60 = asArray(grouped.d60).length;
+  const d90 = asArray(grouped.d90).length;
+
+  return d30 + d60 + d90;
+}
+
 type TaskRow = {
   id: string;
   title: string | null;
@@ -129,9 +153,9 @@ export default async function StrategyPage() {
     redirect("/onboarding");
   }
 
-  // business_profiles (pour badges objectifs/infos)
-  // ⚠️ Important : on évite de typer directement `profileRow` depuis `data` car Supabase
-  // peut inférer un type d'erreur (GenericStringError) selon vos types DB.
+  const planTasksCount = countPlanTasks(planJson);
+
+  // business_profiles (badges objectifs/infos)
   const profileRes = await supabase
     .from("business_profiles")
     .select(
@@ -195,9 +219,11 @@ export default async function StrategyPage() {
   const totalTasks = tasks.length;
   const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
 
+  const strategyTasksCount = tasks.filter((t) => (t.source ?? "").toLowerCase() === "strategy").length;
+
   const today = new Date();
 
-  // Prochaine action = prochaine tâche non done (due_date proche sinon created_at)
+  // Prochaine action = prochaine tâche non done
   const nextTask = tasks.find((t) => (t.status ?? "").toLowerCase() !== "done") ?? null;
   const nextTaskDue = nextTask?.due_date ? parseDateOnly(nextTask.due_date) : null;
   const nextTaskWhen = nextTaskDue ? formatRelativeDays(today, nextTaskDue) : "À planifier";
@@ -237,6 +263,8 @@ export default async function StrategyPage() {
       </span>
     </div>
   );
+
+  const shouldSuggestSync = planTasksCount > 0 && strategyTasksCount === 0;
 
   return (
     <AppShell userEmail={userEmail} headerTitle={headerTitle} headerRight={headerRight}>
@@ -329,6 +357,27 @@ export default async function StrategyPage() {
           </Card>
         </div>
 
+        {/* Suggest sync (si plan a des tâches mais DB n'a pas de tasks "strategy") */}
+        {shouldSuggestSync ? (
+          <Card className="rounded-2xl border-violet-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">On peut synchroniser ton plan en tâches</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Ton plan contient {planTasksCount} action(s) (J30/J60/J90), mais aucune tâche “stratégie” n’est encore
+                créée. Lance la sync pour remplir ton /tasks automatiquement.
+              </p>
+              <div className="flex gap-2">
+                <SyncTasksButton variant="default" after="goTasks" />
+                <Button asChild variant="outline">
+                  <Link href="/tasks">Je le ferai plus tard</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         {/* Tabs */}
         <Tabs defaultValue="plan" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -340,8 +389,14 @@ export default async function StrategyPage() {
           {/* PLAN */}
           <TabsContent value="plan" className="space-y-4">
             <Card className="rounded-2xl">
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <CardTitle>Plan d’action (90 jours)</CardTitle>
+                <div className="flex gap-2">
+                  <Button asChild variant="outline">
+                    <Link href="/tasks">Gérer mes tâches</Link>
+                  </Button>
+                  {planTasksCount > 0 ? <SyncTasksButton variant="outline" /> : null}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
@@ -392,7 +447,9 @@ export default async function StrategyPage() {
                                     ? Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                                     : null;
                                 const label = days !== null ? phaseLabelForDays(days) : "Sans date";
-                                const when = due ? `${toIsoDateOnly(due)} • ${formatRelativeDays(today, due)}` : "Sans date";
+                                const when = due
+                                  ? `${toIsoDateOnly(due)} • ${formatRelativeDays(today, due)}`
+                                  : "Sans date";
                                 return (
                                   <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
                                     <div className="min-w-0">
