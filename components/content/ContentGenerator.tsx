@@ -5,6 +5,11 @@ import Link from 'next/link'
 
 type Props = {
   type: string
+  /**
+   * Pré-remplissage (server) basé sur profil business + plan.
+   * Ne remplace jamais un texte déjà saisi par l’utilisateur.
+   */
+  defaultPrompt?: string
 }
 
 type Provider = 'openai' | 'claude' | 'gemini'
@@ -67,6 +72,12 @@ const TYPE_META: Record<
     placeholder:
       'Produit/offre + avatar + promesse + objections + preuves…',
   },
+  funnel: {
+    label: 'Funnel / Tunnel',
+    defaultChannel: 'Funnel',
+    placeholder:
+      'Objectif funnel + lead magnet + séquence + étapes + messages clés…',
+  },
 }
 
 function safeParseJson<T>(res: Response): Promise<T> {
@@ -93,12 +104,11 @@ function normalizeTags(tagsCsv: string) {
 function isoDateOrNull(date: string) {
   const s = (date ?? '').trim()
   if (!s) return null
-  // accepte YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
   return null
 }
 
-export function ContentGenerator({ type }: Props) {
+export function ContentGenerator({ type, defaultPrompt }: Props) {
   const meta = useMemo(() => {
     const safeType = normalizeType(type)
     return TYPE_META[safeType] ?? {
@@ -116,13 +126,26 @@ export function ContentGenerator({ type }: Props) {
   const [scheduledDate, setScheduledDate] = useState('')
   const [tags, setTags] = useState('')
 
-  const [prompt, setPrompt] = useState('')
+  const [prompt, setPrompt] = useState(() => (defaultPrompt ?? '').trim())
+  const [didPrefill, setDidPrefill] = useState<boolean>(() => !!(defaultPrompt ?? '').trim())
+
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<GenerateResponse | null>(null)
 
   useEffect(() => {
     setChannel(meta.defaultChannel)
   }, [meta.defaultChannel])
+
+  // ✅ Pré-remplissage safe : uniquement si l’utilisateur n’a rien saisi
+  useEffect(() => {
+    const p = (defaultPrompt ?? '').trim()
+    if (!p) return
+    if (didPrefill) return
+    if ((prompt ?? '').trim()) return
+    setPrompt(p)
+    setDidPrefill(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultPrompt, didPrefill])
 
   useEffect(() => {
     let cancelled = false
@@ -383,12 +406,19 @@ export function ContentGenerator({ type }: Props) {
 
                 {result.id ? (
                   <Link
-                    href={`/contents`}
+                    href={`/contents/${result.id}`}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                  >
+                    Ouvrir le détail
+                  </Link>
+                ) : (
+                  <Link
+                    href="/contents"
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
                   >
                     Ouvrir Content Hub
                   </Link>
-                ) : null}
+                )}
               </div>
 
               <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">

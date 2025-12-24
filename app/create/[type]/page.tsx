@@ -1,16 +1,17 @@
 // app/create/[type]/page.tsx
 // Génération de contenu (Niveau 2) + sauvegarde dans content_item
+// ✅ Suite logique : pré-remplissage intelligent du brief basé sur business_profiles (+ plan si dispo)
 
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
-import AppShell from '@/components/AppShell';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import { ContentGenerator } from '@/components/content/ContentGenerator';
+import AppShell from '@/components/AppShell'
+import { getSupabaseServerClient } from '@/lib/supabaseServer'
+import { ContentGenerator } from '@/components/content/ContentGenerator'
 
 type Props = {
-  params: { type: string };
-};
+  params: { type: string }
+}
 
 const TYPE_LABELS: Record<string, { label: string; hint: string }> = {
   post: {
@@ -37,21 +38,105 @@ const TYPE_LABELS: Record<string, { label: string; hint: string }> = {
     label: 'Funnel / Tunnel',
     hint: 'Ex : étapes (lead magnet → nurture → offre) + messages clés.',
   },
-};
+}
+
+function safeString(v: unknown) {
+  return typeof v === 'string' ? v : ''
+}
+
+function safeArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.map((x) => String(x)).filter(Boolean)
+}
+
+function buildDefaultPrompt(args: {
+  type: string
+  profile: Record<string, unknown> | null
+  planJson: unknown
+}) {
+  const { type, profile, planJson } = args
+
+  const firstName = safeString(profile?.first_name) || safeString(profile?.firstName)
+  const niche = safeString(profile?.niche)
+  const mission = safeString(profile?.mission)
+  const tone = safeString(profile?.tone_preference) || safeString(profile?.tonePreference)
+  const goals = safeArray(profile?.main_goals).slice(0, 3)
+
+  const baseContext = [
+    firstName ? `Je m'appelle ${firstName}.` : '',
+    niche ? `Ma niche : ${niche}.` : '',
+    mission ? `Ma mission : ${mission}` : '',
+    goals.length ? `Objectifs : ${goals.join(', ')}.` : '',
+    tone ? `Ton souhaité : ${tone}.` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const planLine = planJson ? `Plan (résumé) : ${JSON.stringify(planJson).slice(0, 700)}` : ''
+
+  const instructionsByType: Record<string, string> = {
+    post:
+      "Génère un post prêt à publier (hook fort, valeur, preuve, CTA soft). Donne aussi 3 variantes d'accroche.",
+    email:
+      "Génère un email prêt à envoyer (objet + préheader + corps). Style clair, punchy, orienté conversion.",
+    blog:
+      "Génère un plan H2/H3 + intro + conclusion + points actionnables. Ton pédagogique, concret.",
+    video_script:
+      "Génère un script 45-60s (hook 0-3s, tension, valeur, CTA). Ajoute 3 idées de hooks.",
+    sales_page:
+      "Génère une structure de page de vente (promesse, preuves, objections, offre, bonus, FAQ, CTA).",
+    funnel:
+      "Propose un mini-funnel (lead magnet → nurture → offre) avec étapes + messages clés + CTA.",
+  }
+
+  const inst = instructionsByType[type] ?? 'Génère un contenu actionnable, structuré, prêt à l’emploi.'
+
+  // ⚠️ Le plan peut être lourd : on en met juste un extrait limité
+  const lines = [
+    baseContext ? `CONTEXTE\n${baseContext}` : '',
+    planLine ? `\nCONTEXTE STRATÉGIE\n${planLine}` : '',
+    `\nDEMANDE\n${inst}`,
+    '\nCONTRAINTES\n- Écris en français\n- Style simple, pro, concret\n- Pas de bla-bla',
+  ].filter(Boolean)
+
+  return lines.join('\n')
+}
 
 export default async function CreateTypePage({ params }: Props) {
-  const supabase = await getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient()
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabase.auth.getSession()
 
-  if (!session) redirect('/');
+  if (!session) redirect('/')
 
-  const userEmail = session.user.email ?? '';
-  const meta = TYPE_LABELS[params.type] ?? {
-    label: 'Génération',
-    hint: 'Décris ce que tu veux produire (objectif, audience, ton, contraintes).',
-  };
+  const userEmail = session.user.email ?? ''
+
+  const safeType = (params.type ?? '').trim().toLowerCase()
+  const meta = TYPE_LABELS[safeType] ?? null
+
+  if (!meta) {
+    redirect('/create')
+  }
+
+  // 🔎 Contexte pour pré-remplir le brief
+  const { data: profileRow } = await supabase
+    .from('business_profiles')
+    .select('first_name, niche, mission, main_goals, tone_preference')
+    .eq('user_id', session.user.id)
+    .maybeSingle()
+
+  const { data: planRow } = await supabase
+    .from('business_plan')
+    .select('plan_json')
+    .eq('user_id', session.user.id)
+    .maybeSingle()
+
+  const defaultPrompt = buildDefaultPrompt({
+    type: safeType,
+    profile: (profileRow ?? null) as unknown as Record<string, unknown> | null,
+    planJson: (planRow?.plan_json ?? null) as unknown,
+  })
 
   return (
     <AppShell userEmail={userEmail}>
@@ -79,8 +164,8 @@ export default async function CreateTypePage({ params }: Props) {
           </div>
         </div>
 
-        <ContentGenerator type={params.type} />
+        <ContentGenerator type={params.type} defaultPrompt={defaultPrompt} />
       </div>
     </AppShell>
-  );
+  )
 }
