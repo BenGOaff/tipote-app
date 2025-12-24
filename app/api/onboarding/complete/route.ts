@@ -2,10 +2,12 @@
 // Rôle : utiliser le profil d'onboarding pour générer un plan stratégique complet via OpenAI,
 // en s'appuyant aussi sur les ressources internes (resources + resource_chunks),
 // puis le sauvegarder dans la table business_plan.
+// ✅ Suite logique cahier des charges : création automatique des tâches (project_tasks) depuis plan_json
 
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { syncStrategyTasksFromPlanJson } from '@/lib/tasksSync';
 
 type UnknownPlan = unknown;
 
@@ -14,58 +16,26 @@ function normalizeOfferPyramids(planJson: UnknownPlan): UnknownPlan {
     return planJson;
   }
 
-  const plan = planJson as Record<string, unknown>;
+  const obj = planJson as Record<string, unknown>;
 
-  const offerPyramids = plan.offer_pyramids;
-  if (!Array.isArray(offerPyramids)) {
-    return plan;
-  }
+  const pyramids = obj.offer_pyramids;
+  if (!Array.isArray(pyramids)) return planJson;
 
-  plan.offer_pyramids = offerPyramids
+  // Ex: certains modèles renvoient des champs vides ou des formats différents
+  const normalized = pyramids
     .map((p) => {
       if (!p || typeof p !== 'object') return null;
-      const pyramid = p as Record<string, unknown>;
-
-      const levels = pyramid.levels;
-      if (!Array.isArray(levels)) {
-        pyramid.levels = [];
-      } else {
-        pyramid.levels = levels.map((lvl) => {
-          if (!lvl || typeof lvl !== 'object') return lvl;
-          const level = lvl as Record<string, unknown>;
-
-          if (!Array.isArray(level.items)) level.items = [];
-          if (!Array.isArray(level.features)) level.features = [];
-
-          return level;
-        });
-      }
-
-      return pyramid;
+      const r = p as Record<string, unknown>;
+      return {
+        lead_magnet: r.lead_magnet ?? r.leadMagnet ?? null,
+        entry_offer: r.entry_offer ?? r.entryOffer ?? null,
+        core_offer: r.core_offer ?? r.coreOffer ?? null,
+        premium_offer: r.premium_offer ?? r.premiumOffer ?? null,
+      };
     })
     .filter(Boolean);
 
-  return plan;
-}
-
-function buildSystemPrompt(): string {
-  return [
-    'Tu es Tipote™, un assistant stratégique pour entrepreneurs.',
-    'Tu dois produire un plan stratégique clair, actionnable et structuré.',
-    'Tu réponds en JSON strict, sans texte hors JSON.',
-    'Le JSON doit contenir :',
-    '- summary (string)',
-    '- persona (object)',
-    '- offer_pyramids (array)',
-    '- selected_offer_pyramid_index (number ou null)',
-    '- selected_offer_pyramid (object ou null)',
-    '- roadmap_90_days (object avec d30/d60/d90 arrays)',
-    '- tasks (array de tâches)',
-    '',
-    'Règles :',
-    '- Les tâches doivent être concrètes, courtes, et actionnables.',
-    '- Le ton est direct, bienveillant, orienté exécution.',
-  ].join('\n');
+  return { ...obj, offer_pyramids: normalized };
 }
 
 function buildUserPrompt(params: {
@@ -82,88 +52,48 @@ function buildUserPrompt(params: {
     'Voici des ressources internes (peuvent aider à enrichir / cadrer) :',
     JSON.stringify(resources ?? [], null, 2),
     '',
-    'Voici des extraits de ressources (resource_chunks) :',
+    'Voici des chunks de ressources internes (peuvent aider à enrichir / cadrer) :',
     JSON.stringify(resourceChunks ?? [], null, 2),
     '',
-    'Objectif : génère un plan stratégique complet pour cet utilisateur.',
-    'Réponds en JSON strict.',
+    "Génère un plan stratégique complet et actionnable pour 90 jours, incluant :",
+    "- positionnement, promesse, avatar/persona, diagnostic, objectifs, pyramide d'offres, plan 30/60/90,",
+    "- et surtout une liste de tâches actionnables (avec title + due_date) pour alimenter le système de tâches.",
+    '',
+    'Réponds STRICTEMENT en JSON.',
   ].join('\n');
 }
 
 export async function POST() {
   try {
-    // On récupère la clé OpenAI côté serveur.
-    // On accepte OPENAI_API_KEY_OWNER en priorité, puis OPENAI_API_KEY en fallback.
-    const apiKey =
-      process.env.OPENAI_API_KEY_OWNER || process.env.OPENAI_API_KEY || '';
-
-    if (!apiKey) {
-      console.error(
-        '[POST /api/onboarding/complete] Missing OpenAI API key (OPENAI_API_KEY_OWNER or OPENAI_API_KEY)',
-      );
-      return NextResponse.json(
-        {
-          error:
-            'Missing OpenAI API key (OPENAI_API_KEY_OWNER or OPENAI_API_KEY)',
-        },
-        { status: 500 },
-      );
-    }
-
-    const openai = new OpenAI({ apiKey });
-
     const supabase = await getSupabaseServerClient();
-
     const {
       data: { session },
-      error: authError,
+      error: sessionError,
     } = await supabase.auth.getSession();
 
-    if (authError) {
-      console.error(
-        '[POST /api/onboarding/complete] Supabase auth error',
-        authError,
-      );
-      return NextResponse.json(
-        { error: 'Authentication error' },
-        { status: 401 },
-      );
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 },
-      );
-    }
-
-    const { data: profile, error: profileError } = await supabase
+    // Charger profil onboarding
+    const { data: profileRow, error: profileError } = await supabase
       .from('business_profiles')
       .select('*')
       .eq('user_id', session.user.id)
       .maybeSingle();
 
     if (profileError) {
-      console.error(
-        '[POST /api/onboarding/complete] Error loading business profile',
-        profileError,
-      );
-      return NextResponse.json(
-        { error: 'Failed to load business profile' },
-        { status: 500 },
-      );
+      console.error('[POST /api/onboarding/complete] profile fetch error', profileError);
+      return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
     }
 
+    // Ressources internes
     const { data: resources, error: resourcesError } = await supabase
       .from('resources')
       .select('*');
 
     if (resourcesError) {
-      console.error(
-        '[POST /api/onboarding/complete] Error loading resources',
-        resourcesError,
-      );
-      // On log, mais on ne bloque pas la génération du plan
+      console.error('[POST /api/onboarding/complete] resources error', resourcesError);
     }
 
     const { data: resourceChunks, error: chunksError } = await supabase
@@ -171,44 +101,52 @@ export async function POST() {
       .select('*');
 
     if (chunksError) {
-      console.error(
-        '[POST /api/onboarding/complete] Error loading resource chunks',
-        chunksError,
-      );
-      // On log, mais on ne bloque pas la génération du plan
+      console.error('[POST /api/onboarding/complete] resource_chunks error', chunksError);
     }
 
-    const systemPrompt = buildSystemPrompt();
+    // OpenAI (niveau stratégie)
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Missing OPENAI_API_KEY' }, { status: 500 });
+    }
+
+    const client = new OpenAI({ apiKey });
+
+    const systemPrompt = [
+      'Tu es Tipote™, un assistant stratégique expert en business pour entrepreneurs.',
+      'Tu produis un plan extrêmement concret, actionnable, structuré.',
+      'Tu réponds en français.',
+      'Tu réponds STRICTEMENT en JSON valide.',
+    ].join('\n');
+
     const userPrompt = buildUserPrompt({
-      profile: (profile ?? null) as Record<string, unknown> | null,
-      resources: (resources ?? null) as unknown[] | null,
-      resourceChunks: (resourceChunks ?? null) as unknown[] | null,
+      profile: (profileRow ?? null) as Record<string, unknown> | null,
+      resources: resources ?? null,
+      resourceChunks: resourceChunks ?? null,
     });
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_STRATEGY_MODEL || 'gpt-4o-mini',
+    const aiResponse = await client.chat.completions.create({
+      model: process.env.OPENAI_STRATEGY_MODEL ?? 'gpt-4o',
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.4,
-      response_format: { type: 'json_object' },
     });
 
-    const content = completion.choices?.[0]?.message?.content ?? '';
+    const content = aiResponse.choices[0]?.message?.content;
+    if (!content) {
+      console.error('[POST /api/onboarding/complete] Empty AI response');
+      return NextResponse.json({ error: 'Empty AI response' }, { status: 500 });
+    }
 
-    let planJson: unknown = null;
+    let planJson: UnknownPlan;
     try {
       planJson = JSON.parse(content);
-    } catch (err) {
-      console.error(
-        '[POST /api/onboarding/complete] Failed to parse OpenAI JSON response',
-        err,
-      );
-      return NextResponse.json(
-        { error: 'Failed to parse generated plan JSON' },
-        { status: 500 },
-      );
+    } catch (e) {
+      console.error('[POST /api/onboarding/complete] JSON parse error', e, content);
+      return NextResponse.json({ error: 'Invalid AI JSON' }, { status: 500 });
     }
 
     // Normalisation (évite les structures inattendues)
@@ -233,27 +171,33 @@ export async function POST() {
         '[POST /api/onboarding/complete] Supabase upsert error',
         upsertError,
       );
+
       return NextResponse.json(
-        {
-          error: 'Failed to save generated plan',
-          details: upsertError?.message ?? 'Unknown upsert error',
-        },
+        { error: 'Failed to save business plan' },
         { status: 500 },
       );
     }
 
-    return NextResponse.json(
-      {
-        ok: true,
-        plan: planRow,
-      },
-      { status: 200 },
-    );
+    // ✅ Suite logique : sync des tâches de stratégie (non bloquant)
+    try {
+      const syncRes = await syncStrategyTasksFromPlanJson({
+        supabase,
+        userId: session.user.id,
+        planJson: (planJson && typeof planJson === 'object'
+          ? (planJson as Record<string, unknown>)
+          : null),
+      });
+
+      if (!syncRes.ok) {
+        console.error('[POST /api/onboarding/complete] tasks sync error', syncRes.error);
+      }
+    } catch (e) {
+      console.error('[POST /api/onboarding/complete] tasks sync exception', e);
+    }
+
+    return NextResponse.json({ ok: true, planId: planRow.id }, { status: 200 });
   } catch (err) {
-    console.error('[POST /api/onboarding/complete] Unexpected error', err);
-    return NextResponse.json(
-      { error: 'Unexpected server error', details: `${err}` },
-      { status: 500 },
-    );
+    console.error('[POST /api/onboarding/complete] Unhandled error', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

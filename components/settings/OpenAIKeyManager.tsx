@@ -1,14 +1,10 @@
-// components/settings/ApiKeysManager.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-type Provider = "openai" | "claude" | "gemini";
 
 type GetResp = {
   ok: boolean;
@@ -24,81 +20,45 @@ type MutResp = {
   error?: string;
 };
 
-const PROVIDERS: Array<{
-  key: Provider;
-  label: string;
-  hint: string;
-  placeholder: string;
-}> = [
-  {
-    key: "openai",
-    label: "OpenAI",
-    hint: "Utilisé pour la génération de contenu (si configuré, prioritaire).",
-    placeholder: "sk-...",
-  },
-  {
-    key: "claude",
-    label: "Claude",
-    hint: "Support UI prêt — génération à activer prochainement.",
-    placeholder: "sk-ant-...",
-  },
-  {
-    key: "gemini",
-    label: "Gemini",
-    hint: "Support UI prêt — génération à activer prochainement.",
-    placeholder: "AIza...",
-  },
-];
-
-function maskKey(key: string) {
-  const s = key.trim();
-  if (s.length <= 8) return "••••••••";
-  return `${s.slice(0, 4)}••••••••${s.slice(-4)}`;
-}
-
-export default function ApiKeysManager() {
-  const [provider, setProvider] = useState<Provider>("openai");
+export default function OpenAIKeyManager() {
+  const provider = "openai";
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [configured, setConfigured] = useState<boolean>(false);
+  const [hasKey, setHasKey] = useState<boolean>(false);
+  const [masked, setMasked] = useState<string | null>(null);
 
   const [apiKey, setApiKey] = useState("");
-  const [configured, setConfigured] = useState(false);
-  const [masked, setMasked] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const currentProviderMeta = useMemo(
-    () => PROVIDERS.find((p) => p.key === provider)!,
-    [provider],
-  );
-
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const res = await fetch(`/api/user/api-keys?provider=${provider}`, {
         method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
 
-      const json = (await res.json().catch(() => null)) as GetResp | null;
+      const json = (await res.json()) as GetResp;
 
-      if (!json || !json.ok) {
+      if (!json.ok) {
         setConfigured(false);
+        setHasKey(false);
         setMasked(null);
-        setError(json?.error ?? "Impossible de charger la configuration.");
+        setError(json.error ?? "Impossible de charger la clé");
         return;
       }
 
-      setConfigured(!!json.configured || !!json.hasKey);
+      setConfigured(Boolean(json.configured));
+      setHasKey(Boolean(json.hasKey));
       setMasked(json.masked ?? null);
     } catch (e) {
-      setConfigured(false);
-      setMasked(null);
       setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setLoading(false);
@@ -109,28 +69,35 @@ export default function ApiKeysManager() {
     void refresh();
   }, [refresh]);
 
+  const statusBadge = useMemo(() => {
+    if (loading) return <Badge variant="secondary">Chargement…</Badge>;
+    if (!configured) return <Badge variant="destructive">Chiffrement non configuré</Badge>;
+    if (hasKey) return <Badge>Enregistrée</Badge>;
+    return <Badge variant="outline">Non renseignée</Badge>;
+  }, [configured, hasKey, loading]);
+
   const onSave = async () => {
-    const clean = apiKey.trim();
-    if (!clean) {
-      setError("La clé est requise.");
+    setError(null);
+    setSuccess(null);
+
+    const trimmed = apiKey.trim();
+    if (trimmed.length < 10) {
+      setError("Clé invalide (trop courte)");
       return;
     }
 
-    setError(null);
-    setSuccess(null);
     setSaving(true);
-
     try {
       const res = await fetch(`/api/user/api-keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: clean }),
+        body: JSON.stringify({ provider, apiKey: trimmed }),
       });
 
-      const json = (await res.json().catch(() => null)) as MutResp | null;
+      const json = (await res.json()) as MutResp;
 
-      if (!json?.ok) {
-        setError(json?.error ?? "Enregistrement impossible");
+      if (!json.ok) {
+        setError(json.error ?? "Enregistrement impossible");
         return;
       }
 
@@ -156,10 +123,10 @@ export default function ApiKeysManager() {
         body: JSON.stringify({ provider }),
       });
 
-      const json = (await res.json().catch(() => null)) as MutResp | null;
+      const json = (await res.json()) as MutResp;
 
-      if (!json?.ok) {
-        setError(json?.error ?? "Suppression impossible");
+      if (!json.ok) {
+        setError(json.error ?? "Suppression impossible");
         return;
       }
 
@@ -174,87 +141,76 @@ export default function ApiKeysManager() {
 
   return (
     <div className="space-y-4">
-      {/* Provider switch */}
-      <div className="flex flex-wrap gap-2">
-        {PROVIDERS.map((p) => {
-          const isActive = p.key === provider;
-          return (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setProvider(p.key)}
-              className={
-                isActive
-                  ? "rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
-                  : "rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              }
-            >
-              {p.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-slate-900">{currentProviderMeta.label}</h4>
-              {loading ? (
-                <Badge variant="secondary">…</Badge>
-              ) : configured ? (
-                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Configuré</Badge>
-              ) : (
-                <Badge variant="secondary">Non configuré</Badge>
-              )}
-            </div>
-            <p className="text-xs text-slate-500">{currentProviderMeta.hint}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Clé OpenAI (contenu)</p>
+            {statusBadge}
           </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading || saving || deleting}>
-              Rafraîchir
-            </Button>
-          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Ta clé est chiffrée côté serveur et utilisée uniquement pour la génération de contenus (niveau “Contenu”).
+          </p>
         </div>
 
-        {configured ? (
-          <div className="rounded-xl border border-slate-200 p-4 space-y-2">
-            <p className="text-xs text-slate-600">
-              Clé enregistrée :{" "}
-              <span className="font-mono text-slate-900">{masked ?? maskKey("xxxxxxxxxxxxxxxx")}</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={onDelete} disabled={deleting || saving}>
-                {deleting ? "Suppression…" : "Supprimer"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3 rounded-xl border border-slate-200 p-4">
-            <div className="space-y-2">
-              <Label className="text-xs" htmlFor="apiKeyInput">
-                Clé API {currentProviderMeta.label}
-              </Label>
-              <Input
-                id="apiKeyInput"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={currentProviderMeta.placeholder}
-                type="password"
-              />
-              <p className="text-[11px] text-slate-500">
-                Elle est chiffrée côté serveur. Tipote l’utilise uniquement pour générer tes contenus.
-              </p>
-            </div>
+        {hasKey ? (
+          <Button variant="outline" onClick={onDelete} disabled={loading || deleting}>
+            {deleting ? "Suppression…" : "Supprimer"}
+          </Button>
+        ) : null}
+      </div>
 
-            <div className="flex gap-2">
-              <Button onClick={onSave} disabled={saving || loading}>
-                {saving ? "Enregistrement…" : "Enregistrer"}
-              </Button>
-            </div>
+      <div className="rounded-xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-slate-600">
+            <span className="font-medium">État :</span>{" "}
+            {loading
+              ? "Chargement…"
+              : configured
+                ? hasKey
+                  ? "Clé enregistrée"
+                  : "Aucune clé"
+                : "Chiffrement non configuré"}
           </div>
-        )}
+
+          {masked ? (
+            <div className="text-xs text-slate-500">
+              <span className="font-medium">Masquée :</span> {masked}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="openai_api_key" className="text-xs">
+            Nouvelle clé OpenAI
+          </Label>
+          <Input
+            id="openai_api_key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk-…"
+            autoComplete="off"
+            disabled={loading || saving || !configured}
+          />
+          {!configured ? (
+            <p className="text-[11px] text-slate-500">
+              Le chiffrement n’est pas configuré côté serveur (variable TIPOTE_KEYS_ENCRYPTION_KEY manquante).
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-500">
+              Astuce : colle ta clé complète, puis clique sur “Enregistrer”. Elle ne sera plus affichée ensuite.
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button onClick={onSave} disabled={loading || saving || !configured}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+          <Button variant="ghost" onClick={() => void refresh()} disabled={loading}>
+            Actualiser
+          </Button>
+        </div>
 
         {error ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">{error}</div>
