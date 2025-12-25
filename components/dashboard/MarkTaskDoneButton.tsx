@@ -27,10 +27,9 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
     return isDone(initialStatus);
   }, [initialStatus, optimisticDone]);
 
-  // ✅ Guard définitif
   if (!taskId) return null;
 
-  // ✅ Narrowing TS explicite (clé de la fix)
+  // ✅ Narrowing TS (évite string | null dans encodeURIComponent)
   const taskIdStr: string = taskId;
 
   async function onClick() {
@@ -40,24 +39,24 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
     setOptimisticDone(true);
 
     try {
-      const res = await fetch(
-        `/api/tasks/${encodeURIComponent(taskIdStr)}/status`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const res = await fetch(`/api/tasks/${encodeURIComponent(taskIdStr)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      });
 
       const json = (await res.json()) as { ok?: boolean; error?: string };
 
       if (!res.ok || !json?.ok) {
         setOptimisticDone(null);
+        // eslint-disable-next-line no-console
         console.error(json?.error || 'Failed to update task');
       } else {
         router.refresh();
       }
     } catch (e) {
       setOptimisticDone(null);
+      // eslint-disable-next-line no-console
       console.error(e);
     } finally {
       setPending(false);
