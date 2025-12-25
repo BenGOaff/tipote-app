@@ -15,9 +15,12 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
-type AnyRecord = Record<string, unknown>;
+import { ExecutionFeedback } from "@/components/dashboard/ExecutionFeedback";
+import { MarkTaskDoneButton } from "@/components/dashboard/MarkTaskDoneButton";
 
-function toNumber(v: unknown, fallback = 0): number {
+type AnyRecord = Record<string, any>;
+
+function toNumber(v: unknown, fallback = 0) {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
     const n = Number(v);
@@ -60,139 +63,99 @@ function parseScheduledDate(item: ContentUpcomingItem): Date | null {
 }
 
 function normalizeContentRowV2(raw: AnyRecord): ContentUpcomingItem {
-  return {
-    id: String(raw["id"]),
-    title: (raw["title"] as string | null) ?? null,
-    type: (raw["type"] as string | null) ?? null,
-    status: (raw["status"] as string | null) ?? null,
-    scheduledDate: (raw["scheduled_date"] as string | null) ?? null,
-    channel: (raw["channel"] as string | null) ?? null,
-  };
+  const id = String(raw?.id ?? "");
+  const title =
+    (typeof raw?.title === "string" ? raw.title : null) ??
+    (typeof raw?.titre === "string" ? raw.titre : null);
+
+  const type = typeof raw?.type === "string" ? raw.type : null;
+  const status = typeof raw?.status === "string" ? raw.status : null;
+
+  const scheduledDate =
+    (typeof raw?.scheduled_date === "string" ? raw.scheduled_date : null) ??
+    (typeof raw?.date_planifiee === "string" ? raw.date_planifiee : null);
+
+  const channel = typeof raw?.channel === "string" ? raw.channel : null;
+
+  return { id, title, type, status, scheduledDate, channel };
 }
 
-function normalizeContentRowFR(raw: AnyRecord): ContentUpcomingItem {
-  return {
-    id: String(raw["id"]),
-    title: (raw["titre"] as string | null) ?? null,
-    type: (raw["type_contenu"] as string | null) ?? null,
-    status: (raw["statut"] as string | null) ?? null,
-    scheduledDate: (raw["date_planifiee"] as string | null) ?? null,
-    channel: (raw["canal"] as string | null) ?? null,
-  };
+function humanizeContentType(type: string | null) {
+  if (!type) return "Contenu";
+  const t = type.toLowerCase();
+  if (t.includes("email")) return "Email";
+  if (t.includes("blog")) return "Article";
+  if (t.includes("video")) return "Script vidéo";
+  if (t.includes("post")) return "Post";
+  if (t.includes("offer")) return "Offre";
+  if (t.includes("funnel")) return "Tunnel";
+  return "Contenu";
 }
 
-async function loadUpcomingContents(args: {
-  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
-  userId: string;
-}): Promise<ContentUpcomingItem[]> {
-  const { supabase, userId } = args;
-
-  const v2 = await supabase
-    .from("content_item")
-    .select("id,title,type,status,scheduled_date,channel")
-    .eq("user_id", userId)
-    .not("scheduled_date", "is", null)
-    .order("scheduled_date", { ascending: true })
-    .limit(25);
-
-  if (!v2.error) {
-    return (v2.data ?? []).map((r) => normalizeContentRowV2(r as AnyRecord));
-  }
-
-  const fr = await supabase
-    .from("content_item")
-    .select("id,titre,type_contenu,statut,date_planifiee,canal")
-    .eq("user_id", userId)
-    .not("date_planifiee", "is", null)
-    .order("date_planifiee", { ascending: true })
-    .limit(25);
-
-  if (fr.error) {
-    console.error("[app/app] Error loading upcoming contents", v2.error, fr.error);
-    return [];
-  }
-
-  return (fr.data ?? []).map((r) => normalizeContentRowFR(r as AnyRecord));
+function humanizeRelativeDate(date: Date) {
+  const now = startOfDay(new Date());
+  const target = startOfDay(date);
+  const diff = Math.round((target.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+  if (diff === 0) return "Aujourd’hui";
+  if (diff === 1) return "Demain";
+  if (diff === -1) return "Hier";
+  if (diff > 1) return `Dans ${diff} jours`;
+  return `Il y a ${Math.abs(diff)} jours`;
 }
 
-export default async function TodayDashboard() {
+export default async function AppTodayPage() {
   const supabase = await getSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect("/auth/login");
+  if (!sessionData?.session) {
+    redirect("/");
   }
 
-  const userEmail = session.user.email ?? "Utilisateur";
+  const userId = sessionData.session.user.id;
+  const userEmail = sessionData.session.user.email ?? "";
 
-  // 1) Charger le plan stratégique
-  const { data: planRow, error: planError } = await supabase
+  // 1) Plan stratégique (business_plan.plan_json)
+  const { data: planRow } = await supabase
     .from("business_plan")
     .select("id, plan_json")
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
-  if (planError) {
-    console.error("[app/app] Error loading plan", planError);
-  }
-
-  if (!planRow?.id) {
+  if (!planRow) {
     redirect("/onboarding");
   }
 
-  const planJson = (planRow.plan_json ?? {}) as AnyRecord;
+  const planJson = (planRow?.plan_json ?? null) as AnyRecord | null;
 
-  // 2) Charger les tâches (project_tasks)
-  const { data: rawTasks, error: tasksError } = await supabase
+  // 2) Tâches (project_tasks)
+  const { data: tasksData } = await supabase
     .from("project_tasks")
-    .select("*")
-    .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false });
+    .select("id, title, status, due_date, priority, source, created_at")
+    .eq("user_id", userId)
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
 
-  if (tasksError) {
-    console.error("[app/app] Error loading tasks", tasksError);
-  }
-
-  const tasks = (rawTasks ?? []) as AnyRecord[];
-
-  // 2b) Charger les contenus planifiés (content_item) — compat FR/EN
-  const allUpcomingContents = await loadUpcomingContents({
-    supabase,
-    userId: session.user.id,
-  });
+  const tasks = (tasksData ?? []) as AnyRecord[];
 
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const tomorrowStart = new Date(
-    todayStart.getFullYear(),
-    todayStart.getMonth(),
-    todayStart.getDate() + 1,
-  );
-  const weekEnd = new Date(
-    todayStart.getFullYear(),
-    todayStart.getMonth(),
-    todayStart.getDate() + 7,
-  );
+  const today0 = startOfDay(now);
+  const today1 = new Date(today0.getTime() + 24 * 60 * 60 * 1000);
+  const week1 = new Date(today0.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const tasksOpen = tasks.filter((t) => !isDone(t.status));
   const tasksDone = tasks.filter((t) => isDone(t.status));
+  const tasksOpen = tasks.filter((t) => !isDone(t.status));
+
   const tasksToday = tasksOpen.filter((t) => {
     const due = parseDueDate(t);
-    return due && due >= todayStart && due < tomorrowStart;
-  });
-  const tasksWeek = tasksOpen.filter((t) => {
-    const due = parseDueDate(t);
-    return due && due >= todayStart && due < weekEnd;
+    if (!due) return false;
+    return due >= today0 && due < today1;
   });
 
-  const contentsWeek = allUpcomingContents
-    .map((c) => ({ c, dt: parseScheduledDate(c) }))
-    .filter((x) => x.dt && x.dt >= todayStart && x.dt < weekEnd)
-    .map((x) => x.c)
-    .slice(0, 5);
+  const tasksWeek = tasksOpen.filter((t) => {
+    const due = parseDueDate(t);
+    if (!due) return false;
+    return due >= today0 && due < week1;
+  });
 
   const doneRate =
     tasks.length === 0 ? 0 : Math.round((tasksDone.length / tasks.length) * 100);
@@ -204,6 +167,10 @@ export default async function TodayDashboard() {
     tasksOpen[0]?.title ||
     "Créer un contenu pour attirer des clients";
 
+  const nextTask = (tasksToday[0] || tasksWeek[0] || tasksOpen[0]) as AnyRecord | undefined;
+  const nextTaskId = typeof nextTask?.id === "string" ? (nextTask.id as string) : null;
+  const nextTaskStatus = typeof nextTask?.status === "string" ? (nextTask.status as string) : null;
+
   const planProgress = Math.min(
     100,
     Math.max(
@@ -212,29 +179,39 @@ export default async function TodayDashboard() {
     ),
   );
 
+  // 4) Contenus à venir (content_item) - fallback FR/EN
+  const { data: contentRows } = await supabase
+    .from("content_item")
+    .select("id, title, titre, type, status, scheduled_date, date_planifiee, channel, created_at")
+    .eq("user_id", userId)
+    .order("scheduled_date", { ascending: true, nullsFirst: false })
+    .limit(8);
+
+  const upcoming = (contentRows ?? [])
+    .map((r) => normalizeContentRowV2(r as AnyRecord))
+    .map((r) => ({ ...r, _d: parseScheduledDate(r) }))
+    .filter((r) => !!r._d)
+    .sort((a, b) => (a._d!.getTime() - b._d!.getTime()))
+    .slice(0, 5);
+
   return (
     <AppShell userEmail={userEmail}>
       <div className="space-y-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">Aujourd’hui</p>
-            <h1 className="text-2xl font-bold">Hello 👋</h1>
+            <h1 className="text-xl font-semibold">Aujourd’hui</h1>
             <p className="text-sm text-muted-foreground">
-              On avance sur ton business, une étape à la fois.
+              Concentre-toi sur une action claire, puis exécute.
             </p>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link href="/strategy">
-              <Button variant="outline">Voir stratégie</Button>
-            </Link>
-            <Link href="/create">
-              <Button className="bg-[#b042b4] hover:opacity-95">Créer du contenu</Button>
-            </Link>
-          </div>
+          <Button asChild variant="secondary">
+            <Link href="/analytics">Analytics détaillés</Link>
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Top grid */}
+        <div className="grid gap-4 md:grid-cols-3">
           <Card className="p-5">
             <p className="text-xs text-muted-foreground">Prochaine action</p>
             <p className="mt-1 text-base font-semibold">{nextAction as string}</p>
@@ -243,6 +220,17 @@ export default async function TodayDashboard() {
               <Badge variant="secondary">{tasksWeek.length} cette semaine</Badge>
               <Badge variant="secondary">{tasksDone.length} terminées</Badge>
             </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <MarkTaskDoneButton taskId={nextTaskId} initialStatus={nextTaskStatus} />
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/create">Créer en 1 clic</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/strategy">Voir la stratégie</Link>
+              </Button>
+            </div>
+
+            <ExecutionFeedback />
           </Card>
 
           <Card className="p-5">
@@ -262,8 +250,32 @@ export default async function TodayDashboard() {
               </p>
             </div>
           </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Taux de complétion</p>
+                <p className="mt-1 text-base font-semibold">{doneRate}%</p>
+              </div>
+              <Badge variant="secondary">
+                {tasksDone.length}/{tasks.length}
+              </Badge>
+            </div>
+            <div className="mt-4">
+              <Progress value={doneRate} />
+              <div className="mt-3 flex gap-2">
+                <Button asChild size="sm">
+                  <Link href="/tasks">Voir mes tâches</Link>
+                </Button>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/create">Créer</Link>
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
+        {/* Tasks of the day */}
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="p-5 lg:col-span-2">
             <div className="flex items-center justify-between">
@@ -273,129 +285,124 @@ export default async function TodayDashboard() {
                   Ce qui doit être fait aujourd’hui
                 </p>
               </div>
-              <Link href="/tasks">
-                <Button variant="outline">Tout voir</Button>
-              </Link>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/tasks">Tout voir</Link>
+              </Button>
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3">
               {tasksToday.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Rien de prévu aujourd’hui. Tu peux avancer sur tes tâches “à venir”.
-                </p>
+                <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  Rien de planifié aujourd’hui. Prends une tâche simple dans “Cette semaine”
+                  ou crée une action manuelle.
+                </div>
               ) : (
-                tasksToday.slice(0, 5).map((t) => (
+                tasksToday.slice(0, 6).map((t) => (
                   <div
                     key={String(t.id)}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {String(t.title ?? "Sans titre")}
+                    <div>
+                      <p className="text-sm font-medium">{t.title ?? "Tâche"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Échéance :{" "}
+                        {parseDueDate(t) ? humanizeRelativeDate(parseDueDate(t)!) : "—"}
                       </p>
-                      <p className="text-xs text-muted-foreground">À faire</p>
                     </div>
-                    <Link href="/tasks">
-                      <Button size="sm" variant="outline">
-                        Ouvrir
-                      </Button>
-                    </Link>
+                    <Badge variant="secondary">{t.priority ?? "—"}</Badge>
                   </div>
                 ))
               )}
             </div>
           </Card>
 
+          {/* Upcoming */}
           <Card className="p-5">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold">À venir</h2>
                 <p className="text-sm text-muted-foreground">
-                  Les prochaines tâches et contenus planifiés
+                  Tâches + contenus planifiés
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href="/contents">
-                  <Button variant="outline">Contenus</Button>
-                </Link>
-                <Link href="/tasks">
-                  <Button variant="outline">Tâches</Button>
-                </Link>
-              </div>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/contents">Tout voir</Link>
+              </Button>
             </div>
 
-            <div className="mt-4 space-y-2">
-              {tasksWeek.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aucune tâche planifiée cette semaine.
-                </p>
+            <div className="mt-4 space-y-3">
+              {upcoming.length === 0 ? (
+                <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  Aucun contenu planifié. Crée un contenu et programme-le.
+                </div>
               ) : (
-                tasksWeek.slice(0, 5).map((t) => (
+                upcoming.map((c) => (
                   <div
-                    key={String(t.id)}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    key={c.id}
+                    className="flex items-start justify-between rounded-lg border p-3"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {String(t.title ?? "Sans titre")}
+                        {c.title ?? "Contenu"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Échéance : {String(t.due_date ?? "—")}
+                        {humanizeContentType(c.type)} •{" "}
+                        {c._d ? humanizeRelativeDate(c._d) : "—"}
+                        {c.channel ? ` • ${c.channel}` : ""}
                       </p>
                     </div>
-                    <Link href="/tasks">
-                      <Button size="sm" variant="outline">
-                        Ouvrir
-                      </Button>
-                    </Link>
+                    <Badge variant="secondary">{c.status ?? "—"}</Badge>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="mt-5 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Contenus planifiés</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ce qui est prévu à publier (7 prochains jours)
-                  </p>
-                </div>
-                <Link href="/contents">
-                  <Button size="sm" variant="outline">
-                    Ouvrir
-                  </Button>
-                </Link>
-              </div>
+            <div className="mt-4 flex gap-2">
+              <Button asChild size="sm">
+                <Link href="/create">Créer</Link>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/strategy">Stratégie</Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
 
-              <div className="mt-3 space-y-2">
-                {contentsWeek.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Aucun contenu planifié cette semaine.
-                  </p>
-                ) : (
-                  contentsWeek.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {String(c.title ?? "Sans titre")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {String(c.type ?? "contenu")} • {String(c.scheduledDate ?? "—")}
-                        </p>
-                      </div>
-                      <Link href={`/contents/${c.id}`}>
-                        <Button size="sm" variant="outline">
-                          Voir
-                        </Button>
-                      </Link>
-                    </div>
-                  ))
-                )}
-              </div>
+        {/* Quick actions */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="p-5">
+            <p className="text-sm font-semibold">Actions rapides</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Gagne du temps avec des raccourcis.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/create/post">Créer un post</Link>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/create/email">Créer un email</Link>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/create/blog">Créer un article</Link>
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-5 md:col-span-2">
+            <p className="text-sm font-semibold">Conseil Tipote</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Une seule priorité claire par jour = progression réelle.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/tasks">Planifier ma semaine</Link>
+              </Button>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/contents">Voir mes contenus</Link>
+              </Button>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/settings">Paramètres</Link>
+              </Button>
             </div>
           </Card>
         </div>
