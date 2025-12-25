@@ -1,11 +1,12 @@
 "use client";
 
 // components/tasks/TaskItem.tsx
-// Élément tâche interactif
+// Élément tâche interactif (Lovable-compatible)
 // ✅ Toggle todo/done (PATCH /api/tasks/[id]/status)
-// ✅ Edit inline (PATCH /api/tasks/[id])
+// ✅ Edit inline (title + due_date) (PATCH /api/tasks/[id])
 // ✅ Delete (DELETE /api/tasks/[id])
 // ✅ Optimistic UI + anti double submit
+// ✅ TS strict (zéro any, zéro as)
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -13,7 +14,18 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 import { Check, Pencil, Trash2, X } from "lucide-react";
 
 type Props = {
@@ -28,13 +40,49 @@ type Props = {
 function isDone(status: string | null): boolean {
   if (!status) return false;
   const low = status.toLowerCase();
-  return low === "done" || low === "completed" || low === "fait" || low === "terminé" || low === "termine";
+  return (
+    low === "done" ||
+    low === "completed" ||
+    low === "fait" ||
+    low === "terminé" ||
+    low === "termine"
+  );
 }
 
-function formatDueDate(dueDate: string): string {
-  // On laisse la valeur telle quelle (Supabase peut renvoyer YYYY-MM-DD)
-  // On évite toute lib date lourde ici.
-  return dueDate;
+function cleanString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const t = value.trim();
+  return t.length > 0 ? t : null;
+}
+
+function toDateInputValue(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // gère ISO (2025-12-25T...) et YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDueDate(raw: string): string {
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function extractErrorMessage(json: unknown, fallback: string): string {
+  if (typeof json !== "object" || json === null) return fallback;
+  if (!("error" in json)) return fallback;
+  const v = (json as { error?: unknown }).error;
+  return typeof v === "string" && v.trim().length > 0 ? v : fallback;
 }
 
 export default function TaskItem({
@@ -54,8 +102,8 @@ export default function TaskItem({
 
   const [editing, setEditing] = useState<boolean>(false);
   const [draftTitle, setDraftTitle] = useState<string>(title);
+  const [draftDueDate, setDraftDueDate] = useState<string>(toDateInputValue(dueDate));
   const [editError, setEditError] = useState<string | null>(null);
-
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +113,10 @@ export default function TaskItem({
   useEffect(() => {
     setDraftTitle(title);
   }, [title]);
+
+  useEffect(() => {
+    setDraftDueDate(toDateInputValue(dueDate));
+  }, [dueDate]);
 
   async function toggleDone() {
     if (isPending) return;
@@ -83,14 +135,8 @@ export default function TaskItem({
         const json: unknown = await res.json().catch(() => null);
 
         if (!res.ok) {
-          // rollback
           setOptimisticDone((v) => !v);
-
-          const msg =
-            typeof json === "object" && json !== null && "error" in json && typeof (json as { error?: unknown }).error === "string"
-              ? (json as { error: string }).error
-              : "Erreur lors de la mise à jour";
-          setEditError(msg);
+          setEditError(extractErrorMessage(json, "Erreur lors de la mise à jour"));
           return;
         }
 
@@ -102,14 +148,17 @@ export default function TaskItem({
     });
   }
 
-  async function saveTitle() {
+  async function saveEdits() {
     if (isPending) return;
 
-    const trimmed = draftTitle.trim();
-    if (!trimmed) {
+    const t = cleanString(draftTitle);
+    if (!t) {
       setEditError("Le titre est requis");
       return;
     }
+
+    // due_date: "" => null
+    const normalizedDueDate: string | null = draftDueDate.trim().length > 0 ? draftDueDate.trim() : null;
 
     setEditError(null);
 
@@ -118,17 +167,13 @@ export default function TaskItem({
         const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: trimmed }),
+          body: JSON.stringify({ title: t, due_date: normalizedDueDate }),
         });
 
         const json: unknown = await res.json().catch(() => null);
 
         if (!res.ok) {
-          const msg =
-            typeof json === "object" && json !== null && "error" in json && typeof (json as { error?: unknown }).error === "string"
-              ? (json as { error: string }).error
-              : "Erreur lors de la sauvegarde";
-          setEditError(msg);
+          setEditError(extractErrorMessage(json, "Erreur lors de la sauvegarde"));
           return;
         }
 
@@ -147,18 +192,11 @@ export default function TaskItem({
 
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        });
-
+        const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
         const json: unknown = await res.json().catch(() => null);
 
         if (!res.ok) {
-          const msg =
-            typeof json === "object" && json !== null && "error" in json && typeof (json as { error?: unknown }).error === "string"
-              ? (json as { error: string }).error
-              : "Erreur lors de la suppression";
-          setDeleteError(msg);
+          setDeleteError(extractErrorMessage(json, "Erreur lors de la suppression"));
           return;
         }
 
@@ -169,11 +207,13 @@ export default function TaskItem({
     });
   }
 
+  const done = optimisticDone;
+
   return (
     <div
       className={cn(
         "rounded-xl border px-4 py-3 transition",
-        optimisticDone ? "bg-slate-50 opacity-70" : "bg-white",
+        done ? "bg-slate-50 opacity-70" : "bg-white",
       )}
     >
       <div className="flex items-start gap-3">
@@ -183,31 +223,54 @@ export default function TaskItem({
           size="icon"
           onClick={toggleDone}
           disabled={isPending}
-          aria-label={optimisticDone ? "Marquer comme à faire" : "Marquer comme faite"}
-          className={cn("mt-0.5 h-8 w-8 rounded-full", optimisticDone ? "border-slate-300" : "")}
+          aria-label={done ? "Marquer comme à faire" : "Marquer comme faite"}
+          className={cn("mt-0.5 h-8 w-8 rounded-full", done ? "border-slate-300" : "")}
         >
-          {optimisticDone ? <Check className="h-4 w-4" /> : null}
+          {done ? <Check className="h-4 w-4" /> : null}
         </Button>
 
         <div className="flex-1">
           {editing ? (
             <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-2">
                 <Input
                   value={draftTitle}
                   onChange={(e) => setDraftTitle(e.target.value)}
                   disabled={isPending}
+                  placeholder="Titre…"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") saveTitle();
+                    if (e.key === "Enter") saveEdits();
                     if (e.key === "Escape") {
                       setDraftTitle(title);
+                      setDraftDueDate(toDateInputValue(dueDate));
                       setEditError(null);
                       setEditing(false);
                     }
                   }}
                 />
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="date"
+                    value={draftDueDate}
+                    onChange={(e) => setDraftDueDate(e.target.value)}
+                    disabled={isPending}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDraftDueDate("")}
+                      disabled={isPending || draftDueDate.length === 0}
+                    >
+                      Effacer date
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <Button type="button" size="sm" onClick={saveTitle} disabled={isPending || !draftTitle.trim()}>
+                  <Button type="button" size="sm" onClick={saveEdits} disabled={isPending || !draftTitle.trim()}>
                     Sauvegarder
                   </Button>
                   <Button
@@ -216,6 +279,7 @@ export default function TaskItem({
                     variant="outline"
                     onClick={() => {
                       setDraftTitle(title);
+                      setDraftDueDate(toDateInputValue(dueDate));
                       setEditError(null);
                       setEditing(false);
                     }}
@@ -225,6 +289,7 @@ export default function TaskItem({
                   </Button>
                 </div>
               </div>
+
               {editError ? <p className="text-xs text-destructive">{editError}</p> : null}
             </div>
           ) : (
@@ -233,14 +298,14 @@ export default function TaskItem({
                 <p
                   className={cn(
                     "text-sm font-medium text-slate-900",
-                    optimisticDone ? "line-through text-slate-500" : "",
+                    done ? "line-through text-slate-500" : "",
                   )}
                 >
                   {title}
                 </p>
-                {dueDate ? (
-                  <p className="text-xs text-slate-500">Échéance : {formatDueDate(dueDate)}</p>
-                ) : null}
+
+                {dueDate ? <p className="text-xs text-slate-500">Échéance : {formatDueDate(dueDate)}</p> : null}
+
                 {editError ? <p className="mt-1 text-xs text-destructive">{editError}</p> : null}
               </div>
 
@@ -257,6 +322,7 @@ export default function TaskItem({
                         setDeleteError(null);
                         setEditError(null);
                         setDraftTitle(title);
+                        setDraftDueDate(toDateInputValue(dueDate));
                         setEditing(true);
                       }}
                     >
@@ -281,14 +347,15 @@ export default function TaskItem({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
+
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Cette action est définitive.
-                          </AlertDialogDescription>
+                          <AlertDialogDescription>Cette action est définitive.</AlertDialogDescription>
                         </AlertDialogHeader>
+
                         {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
+
                         <AlertDialogFooter>
                           <AlertDialogCancel disabled={isPending}>Annuler</AlertDialogCancel>
                           <AlertDialogAction
@@ -320,6 +387,7 @@ export default function TaskItem({
             aria-label="Fermer l'édition"
             onClick={() => {
               setDraftTitle(title);
+              setDraftDueDate(toDateInputValue(dueDate));
               setEditError(null);
               setEditing(false);
             }}
