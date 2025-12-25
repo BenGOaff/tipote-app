@@ -8,26 +8,21 @@
 
 import TaskItem from './TaskItem'
 
-type Task = {
+export type TaskItemType = {
   id: string
   title: string
   status: string | null
   due_date?: string | null
 }
 
+// Alias pour compat avec l'import actuel: `type TaskItem`
+export type TaskItem = TaskItemType
+
 type Props = {
-  tasks: Task[]
+  tasks: TaskItemType[]
 }
 
-export default function TaskList({ tasks }: Props) {
-  if (!tasks.length) {
-    return (
-      <p className="text-sm text-slate-500">
-        Aucune tâche pour le moment.
-      </p>
-    )
-  }
-
+export function TaskList({ tasks }: Props) {
   return (
     <div className="space-y-2">
       {tasks.map((t) => (
@@ -42,3 +37,6 @@ export default function TaskList({ tasks }: Props) {
     </div>
   )
 }
+
+// ✅ Compat avec les imports existants : `import TaskList from ...`
+export default TaskList
