@@ -3,15 +3,22 @@
 // ✅ Aucun impact sur la structure existante
 // ✅ Autorise manual + strategy
 // ✅ Sécurisé user_id
+//
+// FIX PROD (Next.js 15/16 types):
+// context.params est typé Promise<{ id: string }>
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+type Params = { id: string };
+
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: Promise<Params> },
 ) {
   try {
+    const { id } = await context.params;
+
     const supabase = await getSupabaseServerClient();
     const { data: auth } = await supabase.auth.getUser();
 
@@ -19,19 +26,18 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const taskId = params.id;
+    const taskId = id;
     if (!taskId) {
       return NextResponse.json({ ok: false, error: "Missing task id" }, { status: 400 });
     }
 
+    // Body optionnel : si absent => on met "done" par défaut
     const body = await req.json().catch(() => null);
-    const status = body?.status;
+    const statusRaw = body?.status;
+    const status = statusRaw ?? "done";
 
     if (status !== "todo" && status !== "done") {
-      return NextResponse.json(
-        { ok: false, error: "Invalid status" },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: false, error: "Invalid status" }, { status: 400 });
     }
 
     const { data, error } = await supabase
