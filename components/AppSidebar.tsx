@@ -17,7 +17,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 type NavItem = {
@@ -26,13 +25,8 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
-/**
- * Sidebar conforme au cahier des charges : 6 entrées principales max.
- * Workflow : Aujourd’hui → Stratégie → Créer → Mes contenus → Analytics → Paramètres
- * (La page /tasks reste accessible via les boutons internes, mais n’est plus une entrée principale.)
- */
 const mainNav: NavItem[] = [
-  { title: "Aujourd’hui", href: "/app", icon: Sun },
+  { title: "Aujourd’hui", href: "/dashboard", icon: Sun },
   { title: "Stratégie", href: "/strategy", icon: Target },
   { title: "Créer", href: "/create", icon: Sparkles },
   { title: "Mes contenus", href: "/contents", icon: FolderOpen },
@@ -43,14 +37,17 @@ const footerNav: NavItem[] = [{ title: "Paramètres", href: "/settings", icon: S
 
 function SidebarLink({ title, href, icon: Icon }: NavItem) {
   const pathname = usePathname();
-  const isActive = pathname === href || pathname.startsWith(`${href}/`);
+
+  // Compat : on garde /app comme alias historique du dashboard
+  const isDashboardAlias = href === "/dashboard" && pathname === "/app";
+  const isActive = isDashboardAlias || pathname === href || (href !== "/" && pathname?.startsWith(`${href}/`));
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive}>
+      <SidebarMenuButton asChild isActive={isActive} className="rounded-xl">
         <Link href={href} className={cn("flex items-center gap-2")}>
           <Icon className="h-4 w-4" />
-          <span>{title}</span>
+          <span className="text-sm font-medium">{title}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -59,16 +56,18 @@ function SidebarLink({ title, href, icon: Icon }: NavItem) {
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="px-2 py-2">
-          <div className="text-sm font-semibold leading-none">Tipote™</div>
-          <div className="text-xs text-muted-foreground">Business buddy IA</div>
-        </div>
-        <SidebarSeparator />
+    <Sidebar className="border-r">
+      <SidebarHeader className="px-3 py-4">
+        <Link href="/dashboard" className="flex items-center gap-2 px-2">
+          <div className="h-8 w-8 rounded-xl bg-primary/10" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold">Tipote™</span>
+            <span className="text-xs text-muted-foreground">Business Buddy IA</span>
+          </div>
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-3">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -80,7 +79,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="px-3 pb-4">
         <SidebarMenu>
           {footerNav.map((item) => (
             <SidebarLink key={item.href} {...item} />
@@ -92,3 +91,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+export default AppSidebar;
