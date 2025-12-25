@@ -1,56 +1,56 @@
 // app/api/tasks/[id]/route.ts
 // GET / PATCH / DELETE sur public.project_tasks
-// ✅ Fix Next 16: context.params est typé Promise<{ id: string }> dans ton build.
-// (c'est exactement l'erreur que tu vois dans .next/types/validator.ts)
+// ✅ Next.js 15/16: context.params est typé Promise<{ id: string }>
+// ✅ Auth + sécurité user_id
+// ✅ Zéro any, zéro as, TS strict
+// ✅ Contrat JSON standard : { ok, task? , error? }
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type PatchBody = Partial<{
-  status: unknown;
-  done: unknown;
-  title: unknown;
-  due_date: unknown;
-  priority: unknown;
-  importance: unknown; // compat ancienne UI
-}>;
-
-function cleanString(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function cleanNullableString(v: unknown): string | null {
-  if (v === null || v === undefined) return null;
-  const s = cleanString(v);
-  return s ? s : null;
-}
-
-function isIsoDateYYYYMMDD(v: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(v);
-}
-
-function normalizeDueDate(raw: unknown): string | null {
-  const s = cleanNullableString(raw);
-  if (!s) return null;
-  if (isIsoDateYYYYMMDD(s)) return s;
-
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return null;
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function normalizePriority(raw: unknown): string | null {
-  const s = cleanNullableString(raw);
-  if (!s) return null;
-  const low = s.toLowerCase();
-  return low === "high" ? "high" : null;
-}
-
 type Ctx = { params: Promise<{ id: string }> };
+
+type TaskRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  status: string | null;
+  due_date: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function cleanString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeDueDate(value: unknown): string | null {
+  if (value === null) return null;
+  const s = cleanString(value);
+  if (!s) return null;
+
+  // On accepte ISO, YYYY-MM-DD, etc. (Supabase cast si colonne date)
+  return s;
+}
+
+function normalizeStatus(value: unknown): string | null {
+  const s = cleanString(value);
+  if (!s) return null;
+
+  const low = s.toLowerCase();
+  if (low === "todo" || low === "done") return low;
+
+  // Compat tolérante (anciennes valeurs)
+  if (low === "completed" || low === "fait" || low === "terminé" || low === "termine") return "done";
+
+  return null;
+}
 
 export async function GET(_request: NextRequest, context: Ctx) {
   try {
@@ -65,13 +65,13 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const { data, error } = await supabase
       .from("project_tasks")
-      .select("id, title, status, priority, due_date, source, created_at, updated_at")
+      .select("*")
       .eq("id", id)
       .eq("user_id", auth.user.id)
       .maybeSingle();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    if (!data) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    if (!data) return NextResponse.json({ ok: false, error: "Task not found" }, { status: 404 });
 
     return NextResponse.json({ ok: true, task: data }, { status: 200 });
   } catch (e) {
@@ -93,37 +93,48 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const raw = (await request.json()) as PatchBody;
-
-    const update: Record<string, string | null> = {};
-
-    if (raw.done !== undefined) {
-      const done = Boolean(raw.done);
-      update.status = done ? "done" : "todo";
+    let body: unknown = null;
+    try {
+      body = await request.json();
+    } catch {
+      body = null;
     }
 
-    if (raw.status !== undefined) {
-      const st = cleanString(raw.status);
-      if (st) update.status = st;
+    if (!isRecord(body)) {
+      return NextResponse.json({ ok: false, error: "Invalid body" }, { status: 400 });
     }
 
-    if (raw.title !== undefined) {
-      const t = cleanString(raw.title);
-      if (!t) return NextResponse.json({ ok: false, error: "Titre requis" }, { status: 400 });
-      update.title = t;
+    const update: Partial<TaskRow> = {};
+
+    if ("title" in body) {
+      const title = cleanString(body.title);
+      if (!title) return NextResponse.json({ ok: false, error: "Titre requis" }, { status: 400 });
+      update.title = title;
     }
 
-    if (raw.due_date !== undefined) {
-      // on accepte null pour effacer
-      update.due_date = normalizeDueDate(raw.due_date);
+    if ("due_date" in body) {
+      update.due_date = normalizeDueDate(body.due_date);
     }
 
-    if (raw.priority !== undefined || raw.importance !== undefined) {
-      update.priority = normalizePriority(raw.priority ?? raw.importance);
+    // Status (tolérant)
+    if ("status" in body) {
+      const st = normalizeStatus(body.status);
+      if (!st) return NextResponse.json({ ok: false, error: "Status invalide" }, { status: 400 });
+      update.status = st;
+    }
+
+    // Compat ancienne UI : done / completed booleans → status done/todo
+    if ("done" in body) {
+      if (typeof body.done === "boolean") update.status = body.done ? "done" : "todo";
+      if (typeof body.done === "string") {
+        const low = body.done.trim().toLowerCase();
+        if (low === "true") update.status = "done";
+        if (low === "false") update.status = "todo";
+      }
     }
 
     if (Object.keys(update).length === 0) {
-      return NextResponse.json({ ok: false, error: "Nothing to update" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "No fields to update" }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -131,11 +142,11 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       .update(update)
       .eq("id", id)
       .eq("user_id", auth.user.id)
-      .select("id, title, status, priority, due_date, source, created_at, updated_at")
+      .select("*")
       .maybeSingle();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    if (!data) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    if (!data) return NextResponse.json({ ok: false, error: "Task not found" }, { status: 404 });
 
     return NextResponse.json({ ok: true, task: data }, { status: 200 });
   } catch (e) {
