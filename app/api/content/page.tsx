@@ -14,15 +14,13 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { ContentItemActions } from "@/components/content/ContentItemActions";
+import { ContentFiltersBar } from "@/components/content/ContentFiltersBar";
 
-import { CalendarDays, Filter, List, Plus } from "lucide-react";
+import { CalendarDays, List, Plus } from "lucide-react";
 
 type ContentListItem = {
   id: string;
@@ -162,7 +160,10 @@ export default async function ContentsPage({
   const status = normalizeStatusParam(Array.isArray(statusRaw) ? statusRaw[0] : statusRaw);
   const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
   const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
-  const view = safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
+  const view =
+    safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar"
+      ? "calendar"
+      : "list";
 
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
@@ -206,15 +207,17 @@ export default async function ContentsPage({
           <div className="flex flex-wrap items-center gap-2">
             <Tabs defaultValue={view} value={view}>
               <TabsList className="h-10 rounded-xl">
-                <TabsTrigger
-                  value="list"
-                  asChild
-                  className="gap-2 rounded-lg"
-                >
+                <TabsTrigger value="list" asChild className="gap-2 rounded-lg">
                   <Link
                     href={{
                       pathname: "/contents",
-                      query: { q: q || undefined, status: status || undefined, type: type || undefined, channel: channel || undefined, view: "list" },
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "list",
+                      },
                     }}
                   >
                     <List className="h-4 w-4" />
@@ -222,15 +225,17 @@ export default async function ContentsPage({
                   </Link>
                 </TabsTrigger>
 
-                <TabsTrigger
-                  value="calendar"
-                  asChild
-                  className="gap-2 rounded-lg"
-                >
+                <TabsTrigger value="calendar" asChild className="gap-2 rounded-lg">
                   <Link
                     href={{
                       pathname: "/contents",
-                      query: { q: q || undefined, status: status || undefined, type: type || undefined, channel: channel || undefined, view: "calendar" },
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "calendar",
+                      },
                     }}
                   >
                     <CalendarDays className="h-4 w-4" />
@@ -269,71 +274,16 @@ export default async function ContentsPage({
           </Card>
         </div>
 
-        {/* Filters card */}
-        <Card className="p-4">
-          <form className="flex flex-col gap-3 lg:flex-row lg:items-center" action="/contents" method="GET">
-            <input type="hidden" name="view" value={view} />
-
-            <div className="flex flex-1 items-center gap-2">
-              <div className="flex h-10 items-center gap-2 rounded-xl border bg-background px-3 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-                <Input
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Rechercher un contenu…"
-                  className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:items-center">
-              <Select name="status" defaultValue={status || "all"}>
-                <SelectTrigger className="h-10 rounded-xl">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="scheduled">Planifié</SelectItem>
-                  <SelectItem value="published">Publié</SelectItem>
-                  <SelectItem value="archived">Archivé</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select name="type" defaultValue={type || "all"}>
-                <SelectTrigger className="h-10 rounded-xl">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {uniqueTypes.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select name="channel" defaultValue={channel || "all"}>
-                <SelectTrigger className="h-10 rounded-xl">
-                  <SelectValue placeholder="Canal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les canaux</SelectItem>
-                  {uniqueChannels.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button type="submit" variant="outline" className="h-10 rounded-xl">
-                Filtrer
-              </Button>
-            </div>
-          </form>
-        </Card>
+        {/* Filters card (client – pour que Select marche en query params) */}
+        <ContentFiltersBar
+          initialQ={q}
+          initialStatus={status}
+          initialType={type}
+          initialChannel={channel}
+          view={view}
+          typeOptions={uniqueTypes}
+          channelOptions={uniqueChannels}
+        />
 
         {/* Content view */}
         {error ? (
@@ -373,32 +323,36 @@ export default async function ContentsPage({
                               {safeString(item.title) || "Sans titre"}
                             </Link>
 
-                            <Badge variant="secondary" className="rounded-xl">
+                            <span className="inline-flex items-center rounded-xl bg-muted px-2 py-1 text-xs text-muted-foreground">
                               {safeString(item.type) || "—"}
-                            </Badge>
-                            <Badge variant="outline" className="rounded-xl">
+                            </span>
+
+                            <span className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground">
                               {normalizeStatusForLabel(item.status)}
-                            </Badge>
+                            </span>
 
                             {item.scheduled_date ? (
-                              <Badge variant="outline" className="rounded-xl">
+                              <span className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground">
                                 {item.scheduled_date}
-                              </Badge>
+                              </span>
                             ) : null}
 
                             {safeString(item.channel) ? (
-                              <Badge variant="secondary" className="rounded-xl">
+                              <span className="inline-flex items-center rounded-xl bg-muted px-2 py-1 text-xs text-muted-foreground">
                                 {item.channel}
-                              </Badge>
+                              </span>
                             ) : null}
                           </div>
 
                           {tags.length > 0 ? (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {tags.slice(0, 6).map((t) => (
-                                <Badge key={t} variant="outline" className="rounded-xl">
+                                <span
+                                  key={t}
+                                  className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground"
+                                >
                                   {t}
-                                </Badge>
+                                </span>
                               ))}
                             </div>
                           ) : null}
