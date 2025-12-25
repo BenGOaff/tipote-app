@@ -11,6 +11,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import MarkTaskDoneButton from "@/components/dashboard/MarkTaskDoneButton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -221,7 +222,7 @@ export default async function TodayPage() {
       _date: parseDateSafe(c.scheduled_date),
     }))
     .filter((c) => c._date && c._date >= today0 && c._date < weekEnd)
-    .sort((a, b) => (a._date!.getTime() - b._date!.getTime()))
+    .sort((a, b) => a._date!.getTime() - b._date!.getTime())
     .slice(0, 6);
 
   const publishedCount = contents.filter((c) => (c.status ?? "").toLowerCase() === "published").length;
@@ -240,6 +241,20 @@ export default async function TodayPage() {
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
   const nextDueLabel = nextDue ? formatDayLabel(nextDue) : "—";
+
+  const tasksToday = openTasks.filter((t) => {
+    const d = parseDateSafe(t.due_date);
+    if (!d) return false;
+    return d >= today0 && d < tomorrow0;
+  });
+
+  const tasksFocus = (tasksToday.length > 0 ? tasksToday : openTasks).slice(0, 5);
+
+  const tasksFocusTitle =
+    tasksToday.length > 0 ? "Tes tâches du jour" : openTasks.length > 0 ? "Tes prochaines tâches" : "Tâches";
+
+  // “Prochaine échéance” label déjà calculé
+  const nextDueLabelShort = nextDueLabel;
 
   return (
     <AppShell
@@ -349,7 +364,7 @@ export default async function TodayPage() {
                 <Target className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold">{nextDueLabel}</p>
+            <p className="mt-2 text-2xl font-bold">{nextDueLabelShort}</p>
             <p className="mt-1 text-xs text-muted-foreground">Sur tes tâches ouvertes</p>
           </Card>
         </div>
@@ -462,6 +477,53 @@ export default async function TodayPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-semibold">{tasksFocusTitle}</h4>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {tasksToday.length > 0 ? "À faire aujourd’hui" : "À venir"}
+                  </p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="h-8 rounded-xl">
+                  <Link href="/tasks">Voir tout</Link>
+                </Button>
+              </div>
+
+              {tasksFocus.length > 0 ? (
+                <div className="space-y-2">
+                  {tasksFocus.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{t.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {t.due_date ? `Échéance : ${t.due_date}` : "Échéance : —"}
+                        </p>
+                      </div>
+                      <MarkTaskDoneButton taskId={t.id} initialStatus={t.status} className="shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Aucune tâche pour l’instant. Synchronise ou ajoute tes tâches.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button asChild size="sm" className="rounded-xl">
+                      <Link href="/tasks">Ajouter une tâche</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="rounded-xl">
+                      <Link href="/tasks">Sync tâches</Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
