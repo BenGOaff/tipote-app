@@ -20,6 +20,7 @@ type GenerateResponse = {
   title?: string | null
   content?: string
   error?: string
+  code?: string
   warning?: string
   saveError?: string
   usedUserKey?: boolean
@@ -39,27 +40,21 @@ const PROVIDERS: Array<{ key: Provider; label: string; badge: string }> = [
   { key: 'gemini', label: 'Gemini', badge: 'Bientôt' },
 ]
 
-const TYPE_META: Record<
-  string,
-  { label: string; defaultChannel: string; placeholder: string }
-> = {
+const TYPE_META: Record<string, { label: string; defaultChannel: string; placeholder: string }> = {
   post: {
     label: 'Post réseaux sociaux',
     defaultChannel: 'LinkedIn',
-    placeholder:
-      'Sujet + point de vue + structure (hook, valeur, CTA) + style…',
+    placeholder: 'Sujet + point de vue + structure (hook, valeur, CTA) + style…',
   },
   email: {
     label: 'Email',
     defaultChannel: 'Newsletter',
-    placeholder:
-      'Objectif + segment + promesse + structure (objet, intro, bullets, CTA)…',
+    placeholder: 'Objectif + segment + promesse + structure (objet, intro, bullets, CTA)…',
   },
   blog: {
     label: 'Blog',
     defaultChannel: 'Blog',
-    placeholder:
-      'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
+    placeholder: 'Sujet + mots-clés + structure voulue + niveau (débutant/avancé)…',
   },
   video_script: {
     label: 'Script vidéo',
@@ -69,14 +64,12 @@ const TYPE_META: Record<
   sales_page: {
     label: 'Page de vente',
     defaultChannel: 'Landing',
-    placeholder:
-      'Produit/offre + avatar + promesse + objections + preuves…',
+    placeholder: 'Produit/offre + avatar + promesse + objections + preuves…',
   },
   funnel: {
     label: 'Funnel / Tunnel',
     defaultChannel: 'Funnel',
-    placeholder:
-      'Objectif funnel + lead magnet + séquence + étapes + messages clés…',
+    placeholder: 'Objectif funnel + lead magnet + séquence + étapes + messages clés…',
   },
 }
 
@@ -111,11 +104,13 @@ function isoDateOrNull(date: string) {
 export function ContentGenerator({ type, defaultPrompt }: Props) {
   const meta = useMemo(() => {
     const safeType = normalizeType(type)
-    return TYPE_META[safeType] ?? {
-      label: 'Contenu',
-      defaultChannel: 'Général',
-      placeholder: 'Décris ce que tu veux générer…',
-    }
+    return (
+      TYPE_META[safeType] ?? {
+        label: 'Contenu',
+        defaultChannel: 'Général',
+        placeholder: 'Décris ce que tu veux générer…',
+      }
+    )
   }, [type])
 
   const [provider, setProvider] = useState<Provider>('openai')
@@ -218,6 +213,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
       if (!res.ok) {
         setResult({
           ok: false,
+          code: data?.code ?? (res.status === 402 ? 'subscription_required' : undefined),
           error: data?.error ?? 'Erreur lors de la génération.',
         })
         return
@@ -274,13 +270,9 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             {providerConfigured == null ? (
               <span className="font-medium">…</span>
             ) : providerConfigured ? (
-              <span className="font-mono font-medium text-slate-900">
-                {providerMasked ?? 'Configurée'}
-              </span>
+              <span className="font-mono font-medium text-slate-900">{providerMasked ?? 'Configurée'}</span>
             ) : (
-              <span className="font-medium text-slate-900">
-                non configurée (fallback possible)
-              </span>
+              <span className="font-medium text-slate-900">non configurée (fallback possible)</span>
             )}
           </p>
           <p className="mt-1 text-[11px] text-slate-500">
@@ -327,15 +319,11 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               onChange={(e) => setScheduledDate(e.target.value)}
               className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
             />
-            <p className="text-[11px] text-slate-500">
-              Optionnel — si renseigné, le contenu est marqué “planifié”.
-            </p>
+            <p className="text-[11px] text-slate-500">Optionnel — si renseigné, le contenu est marqué “planifié”.</p>
           </div>
 
           <div className="grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">
-              Tags (séparés par des virgules)
-            </label>
+            <label className="text-xs font-semibold text-slate-700">Tags (séparés par des virgules)</label>
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -386,22 +374,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
                   <p className="text-xs text-slate-500">Résultat</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {result.title ?? 'Contenu généré'}
-                  </p>
+                  <p className="text-sm font-semibold text-slate-900">{result.title ?? 'Contenu généré'}</p>
                   {result.usedUserKey != null ? (
                     <p className="text-[11px] text-slate-500">
-                      {result.usedUserKey
-                        ? 'Clé utilisateur utilisée ✅'
-                        : 'Fallback (clé propriétaire) ⚠️'}
+                      {result.usedUserKey ? 'Clé utilisateur utilisée ✅' : 'Fallback (clé propriétaire) ⚠️'}
                     </p>
                   ) : null}
-                  {result.warning ? (
-                    <p className="text-[11px] text-amber-700">{result.warning}</p>
-                  ) : null}
-                  {result.saveError ? (
-                    <p className="text-[11px] text-rose-700">{result.saveError}</p>
-                  ) : null}
+                  {result.warning ? <p className="text-[11px] text-amber-700">{result.warning}</p> : null}
+                  {result.saveError ? <p className="text-[11px] text-rose-700">{result.saveError}</p> : null}
                 </div>
 
                 {result.id ? (
@@ -422,15 +402,30 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               </div>
 
               <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                <pre className="whitespace-pre-wrap text-sm text-slate-900">
-                  {result.content ?? ''}
-                </pre>
+                <pre className="whitespace-pre-wrap text-sm text-slate-900">{result.content ?? ''}</pre>
               </div>
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
               <p className="text-sm font-semibold text-rose-800">Erreur</p>
               <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
+
+              {result.code === 'subscription_required' ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href="/settings?tab=billing"
+                    className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-800"
+                  >
+                    Voir les offres
+                  </Link>
+                  <Link
+                    href="/settings?tab=billing"
+                    className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50"
+                  >
+                    J’ai déjà payé
+                  </Link>
+                </div>
+              ) : null}
             </div>
           )
         ) : null}
@@ -438,3 +433,5 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     </div>
   )
 }
+
+export default ContentGenerator

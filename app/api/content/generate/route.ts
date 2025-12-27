@@ -2,11 +2,6 @@
 // Génération IA + sauvegarde dans content_item
 // ✅ Fix compile TS (vu sur ta capture) : getDecryptedUserApiKey() retourne string|null (pas { ok, key })
 // -> on NE destructure PAS, on récupère directement `userKey`
-//
-// ⚠️ Cohérent avec l’existant :
-// - Auth Supabase server
-// - Fallback sur OPENAI_API_KEY si l’utilisateur n’a pas de clé
-// - On garde une réponse JSON stable { ok, id?, title?, content?, ... }
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -150,9 +145,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Billing gating minimal (A5) : abonnement requis pour générer du contenu
-    // On lit le plan depuis la table `profiles` (rempli par webhook Systeme.io).
-    // Si la table/colonne n’existe pas ou RLS bloque, on n’empêche pas (fail-open) pour ne pas casser en prod.
+    // A5 — Gating minimal (abonnement requis)
+    // Si table/colonne/RLS indisponible => fail-open (ne pas casser la prod)
     try {
       const { data: billingProfile, error: billingError } = await supabase
         .from("profiles")
@@ -166,7 +160,7 @@ export async function POST(req: Request) {
         const hasPlan = p === "basic" || p === "essential" || p === "elite";
         if (!hasPlan) {
           return NextResponse.json(
-            { ok: false, code: "subscription_required", error: "Abonnement requis pour générer du contenu." },
+            { ok: false, code: "subscription_required", error: "Abonnement requis." },
             { status: 402 },
           );
         }
@@ -220,7 +214,6 @@ export async function POST(req: Request) {
 
     const planJson = (planRow?.plan_json ?? null) as unknown;
 
-    // ✅ Fix TS : getDecryptedUserApiKey() retourne string|null
     const ownerKey = process.env.OPENAI_API_KEY ?? "";
     const userKey = await getDecryptedUserApiKey({
       supabase,
@@ -239,7 +232,6 @@ export async function POST(req: Request) {
 
     const client = new OpenAI({ apiKey });
 
-    const typeLabel = type;
     const tagsCsv = joinTagsCsv(tags);
 
     const systemPrompt = [
@@ -250,7 +242,7 @@ export async function POST(req: Request) {
     ].join("\n");
 
     const userContextLines: string[] = [];
-    userContextLines.push(`Type: ${typeLabel}`);
+    userContextLines.push(`Type: ${type}`);
     if (channel) userContextLines.push(`Canal: ${channel}`);
     if (scheduledDate) userContextLines.push(`Date planifiée : ${scheduledDate}`);
     if (tagsCsv) userContextLines.push(`Tags: ${tagsCsv}`);
@@ -287,10 +279,8 @@ export async function POST(req: Request) {
       return t.slice(0, 120);
     })();
 
-    // Status par défaut : draft
     const status = "draft";
 
-    // Insert : essayer EN puis fallback FR si colonnes manquantes
     const tryEN = await insertContentEN({
       supabase,
       userId: session.user.id,
