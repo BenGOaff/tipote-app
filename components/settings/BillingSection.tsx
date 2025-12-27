@@ -43,15 +43,27 @@ function statusLabel(status: string) {
   if (s === "trialing") return "Essai";
   if (s === "paid") return "Payé";
   if (s === "canceled" || s === "cancelled") return "Annulé";
-  if (s === "past_due") return "Paiement en retard";
-  if (s === "unpaid") return "Impayé";
+  if (s === "refunded") return "Remboursé";
   return status;
 }
 
 function formatMaybeDate(v: unknown): string | null {
-  const s = safeString(v);
+  const s = safeString(v).trim();
   if (!s) return null;
 
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const dt = new Date(`${s}T00:00:00.000Z`);
+    if (!Number.isNaN(dt.getTime())) {
+      return dt.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+      });
+    }
+  }
+
+  // ISO
   const dt = new Date(s);
   if (!Number.isNaN(dt.getTime())) {
     return dt.toLocaleDateString("fr-FR", {
@@ -84,10 +96,10 @@ function pickNextBillingDate(sub: any): string | null {
     formatMaybeDate(sub.current_period_end) ||
     formatMaybeDate(sub.nextBillingAt) ||
     formatMaybeDate(sub.next_billing_at) ||
-    formatMaybeDate(sub.renewAt) ||
-    formatMaybeDate(sub.renew_at) ||
     formatMaybeDate(sub.endsAt) ||
     formatMaybeDate(sub.ends_at) ||
+    formatMaybeDate(sub.renewalDate) ||
+    formatMaybeDate(sub.renewal_date) ||
     null
   );
 }
@@ -97,6 +109,7 @@ export default function BillingSection({ email }: Props) {
   const [pending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [data, setData] = useState<SubscriptionPayload | null>(null);
 
   const activeSub = data?.activeSubscription ?? null;
@@ -163,6 +176,38 @@ export default function BillingSection({ email }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email]);
 
+  async function syncNow() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/billing/sync", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Vérification impossible",
+          description: json?.error || "Impossible de vérifier l’abonnement.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Abonnement synchronisé ✅",
+        description: "Votre plan Tipote a été mis à jour.",
+      });
+
+      await refresh();
+    } catch (e) {
+      toast({
+        title: "Vérification impossible",
+        description: e instanceof Error ? e.message : "Impossible de vérifier l’abonnement.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function cancel(cancelMode: "Now" | "WhenBillingCycleEnds") {
     const subscriptionId =
       safeString(sub?.id) || safeString(sub?.subscription_id) || safeString(sub?.subscriptionId);
@@ -176,19 +221,15 @@ export default function BillingSection({ email }: Props) {
       return;
     }
 
-    const confirmMsg =
-      cancelMode === "Now"
-        ? "Confirmer l'annulation immédiate ? (l'accès peut être coupé maintenant)"
-        : "Confirmer l'annulation à la fin de la période en cours ?";
-
-    if (!window.confirm(confirmMsg)) return;
-
     startTransition(async () => {
       try {
         const res = await fetch("/api/billing/cancel", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscriptionId, cancelMode }),
+          body: JSON.stringify({
+            subscriptionId,
+            mode: cancelMode,
+          }),
         });
 
         const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
@@ -236,6 +277,9 @@ export default function BillingSection({ email }: Props) {
           <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading || pending}>
             {loading ? "Chargement…" : "Rafraîchir"}
           </Button>
+          <Button variant="outline" size="sm" onClick={() => syncNow()} disabled={loading || pending || syncing}>
+            {syncing ? "Vérification…" : "J’ai déjà payé"}
+          </Button>
         </div>
       </div>
 
@@ -273,11 +317,11 @@ export default function BillingSection({ email }: Props) {
           Gestion : si vous voulez changer de plan, passez par la page d’abonnement (Systeme.io) ou contactez le support.
         </p>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="text-[11px] text-slate-500">
-            {canCancel
-              ? "Vous pouvez annuler à la fin de la période ou immédiatement."
-              : "Aucune action disponible (pas d'abonnement actif)."}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="rounded-xl">
+              ID subscription: {safeString(sub?.id) || safeString(sub?.subscription_id) || safeString(sub?.subscriptionId) || "—"}
+            </Badge>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -287,7 +331,7 @@ export default function BillingSection({ email }: Props) {
               onClick={() => cancel("WhenBillingCycleEnds")}
               disabled={!canCancel || pending}
             >
-              Annuler fin de période
+              Annuler fin de cycle
             </Button>
             <Button
               variant="destructive"

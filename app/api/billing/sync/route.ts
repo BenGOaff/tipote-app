@@ -1,7 +1,7 @@
 // app/api/billing/sync/route.ts
 // A5 — Sync abonnement (self)
-// Objectif: permettre au client (bouton "J’ai déjà payé") de re-vérifier l’abonnement
-// et backfill profiles.plan/product_id/sio_contact_id à partir de Systeme.io, via la session.
+// Permet à l’utilisateur connecté de re-vérifier son abonnement Systeme.io
+// et de backfill profiles.plan / product_id / sio_contact_id (best-effort).
 
 import { NextResponse } from "next/server";
 
@@ -31,11 +31,9 @@ function inferPlanFromSubscription(sub: any): InternalPlan | null {
       .trim();
 
   if (!name) return null;
-
   if (name.includes("elite")) return "elite";
   if (name.includes("essential")) return "essential";
   if (name.includes("basic")) return "basic";
-
   return null;
 }
 
@@ -65,15 +63,14 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Profil (admin) pour récupérer sio_contact_id (+ plan/product_id existants)
-    const { data: profile, error: profErr } = await supabaseAdmin
+    const { data: profile, error: profileErr } = await supabaseAdmin
       .from("profiles")
       .select("id, email, plan, sio_contact_id, product_id")
       .eq("id", session.user.id)
       .maybeSingle();
 
-    if (profErr) {
-      return NextResponse.json({ ok: false, error: profErr.message }, { status: 500 });
+    if (profileErr) {
+      return NextResponse.json({ ok: false, error: profileErr.message }, { status: 500 });
     }
 
     const contactId = parseContactId((profile as any)?.sio_contact_id);
@@ -81,7 +78,7 @@ export async function POST() {
     if (!contactId) {
       return NextResponse.json(
         { ok: false, error: "sio_contact_id manquant sur le profil (impossible de sync l’abonnement)." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -89,15 +86,14 @@ export async function POST() {
     const subs = (collection.subscriptions ?? []) as any[];
 
     const active =
-      subs.find(
-        (sub) =>
-          String(sub.status ?? "").toLowerCase() === "active" || String(sub.status ?? "").toLowerCase() === "trialing",
-      ) ?? null;
+      subs.find((s) => {
+        const st = String(s?.status ?? "").toLowerCase();
+        return st === "active" || st === "trialing";
+      }) ?? null;
 
     const inferredPlan = active ? inferPlanFromSubscription(active) : null;
     const inferredProductId = active ? inferProductId(active) : null;
 
-    // Backfill best-effort
     const currentPlan = String((profile as any)?.plan ?? "").trim().toLowerCase();
     const currentProduct = String((profile as any)?.product_id ?? "").trim();
     const currentContact = String((profile as any)?.sio_contact_id ?? "").trim();
@@ -123,12 +119,12 @@ export async function POST() {
         plan: inferredPlan ?? (profile as any)?.plan ?? null,
         product_id: inferredProductId ?? (profile as any)?.product_id ?? null,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
