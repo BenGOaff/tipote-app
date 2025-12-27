@@ -7,6 +7,8 @@ import { toast } from "@/components/ui/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,33 +20,49 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-import { MoreVertical, Trash2, Copy, Pencil } from "lucide-react";
+import { MoreVertical, Trash2, Copy, Pencil, Calendar } from "lucide-react";
 
 type Props = {
   id: string;
   title?: string | null;
+  status?: string | null;
+  scheduledDate?: string | null; // YYYY-MM-DD
 };
 
-export function ContentItemActions({ id, title }: Props) {
+type ApiResponse = { ok: true; id?: string | null } | { ok: false; error?: string; code?: string };
+
+export function ContentItemActions({ id, title, status, scheduledDate }: Props) {
   const router = useRouter();
-  const [busy, setBusy] = React.useState<"delete" | "duplicate" | null>(null);
+  const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | null>(null);
+
+  const [planOpen, setPlanOpen] = React.useState(false);
+  const [planDate, setPlanDate] = React.useState<string>(scheduledDate ?? "");
+  const planInputId = React.useMemo(() => `plan-date-${id}`, [id]);
+
+  React.useEffect(() => {
+    if (planOpen) setPlanDate(scheduledDate ?? "");
+  }, [planOpen, scheduledDate]);
 
   const onDuplicate = async () => {
     setBusy("duplicate");
     try {
       const res = await fetch(`/api/content/${id}/duplicate`, { method: "POST" });
-      const json = (await res.json()) as { ok: boolean; id?: string | null; error?: string };
+      const json = (await res.json().catch(() => ({}))) as Partial<ApiResponse>;
 
-      if (!json.ok) {
-        toast({ title: "Duplication impossible", description: json.error ?? "Erreur inconnue", variant: "destructive" });
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Duplication impossible",
+          description: (json as any)?.error ?? "Erreur inconnue",
+          variant: "destructive",
+        });
         return;
       }
 
+      const newId = (json as any)?.id as string | undefined;
       toast({ title: "Dupliqué ✅", description: "Le contenu a été dupliqué en brouillon." });
 
-      if (json.id) {
-        router.push(`/contents/${json.id}`);
+      if (newId) {
+        router.push(`/contents/${newId}`);
         router.refresh();
       } else {
         router.refresh();
@@ -64,15 +82,18 @@ export function ContentItemActions({ id, title }: Props) {
     setBusy("delete");
     try {
       const res = await fetch(`/api/content/${id}`, { method: "DELETE" });
-      const json = (await res.json()) as { ok: boolean; error?: string };
+      const json = (await res.json().catch(() => ({}))) as Partial<ApiResponse>;
 
-      if (!json.ok) {
-        toast({ title: "Suppression impossible", description: json.error ?? "Erreur inconnue", variant: "destructive" });
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Suppression impossible",
+          description: (json as any)?.error ?? "Erreur inconnue",
+          variant: "destructive",
+        });
         return;
       }
 
       toast({ title: "Supprimé ✅", description: "Le contenu a été supprimé." });
-      router.push("/contents");
       router.refresh();
     } catch (e) {
       toast({
@@ -85,69 +106,165 @@ export function ContentItemActions({ id, title }: Props) {
     }
   };
 
+  const onPlan = async () => {
+    if (!planDate) {
+      toast({
+        title: "Date manquante",
+        description: "Choisis une date de planification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBusy("plan");
+    try {
+      // IMPORTANT: dans l'app, le filtre “Planifié” utilise "scheduled".
+      const res = await fetch(`/api/content/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "scheduled",
+          scheduledDate: planDate,
+        }),
+      });
+
+      const json = (await res.json().catch(() => ({}))) as Partial<ApiResponse>;
+
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Planification impossible",
+          description: (json as any)?.error ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Planifié ✅", description: "La date de publication a été enregistrée." });
+      setPlanOpen(false);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Planification impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const isPlanned = (status ?? "").toLowerCase() === "scheduled" || (status ?? "").toLowerCase() === "planned";
+  const planLabel = isPlanned && scheduledDate ? "Modifier date" : "Planifier";
+
   return (
-    <AlertDialog>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Actions" disabled={busy !== null}>
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </DropdownMenuTrigger>
+    <>
+      {/* Dialog planification (séparé du dialog suppression pour éviter les conflits de focus) */}
+      <AlertDialog open={planOpen} onOpenChange={setPlanOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Planifier ce contenu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choisis une date de publication. Le statut sera automatiquement mis sur “Planifié”.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/contents/${id}`} className="flex items-center gap-2">
-              <Pencil className="w-4 h-4" />
-              Voir / éditer
-            </Link>
-          </DropdownMenuItem>
+          <div className="space-y-2">
+            <Label htmlFor={planInputId}>Date</Label>
+            <Input id={planInputId} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+          </div>
 
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              void onDuplicate();
-            }}
-            className="flex items-center gap-2"
-          >
-            <Copy className="w-4 h-4" />
-            {busy === "duplicate" ? "Duplication…" : "Dupliquer"}
-          </DropdownMenuItem>
-
-          <AlertDialogTrigger asChild>
-            <DropdownMenuItem
-              onSelect={(e) => e.preventDefault()}
-              className="flex items-center gap-2 text-rose-600 focus:text-rose-600"
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "plan"}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void onPlan();
+              }}
+              disabled={busy === "plan"}
             >
-              <Trash2 className="w-4 h-4" />
-              Supprimer
-            </DropdownMenuItem>
-          </AlertDialogTrigger>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              {busy === "plan" ? "Planification…" : "Enregistrer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {title?.trim()
-              ? `“${title.trim()}” sera supprimé définitivement. Cette action est irréversible.`
-              : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy === "delete"}>Annuler</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              void onDelete();
-            }}
-            className="bg-rose-600 hover:bg-rose-700"
-            disabled={busy === "delete"}
-          >
-            {busy === "delete" ? "Suppression…" : "Supprimer"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      {/* Dialog suppression + menu actions */}
+      <AlertDialog>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Actions" disabled={busy !== null}>
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild className="flex items-center gap-2">
+              <Link href={`/contents/${id}`} className="flex items-center gap-2">
+                <Pencil className="w-4 h-4" />
+                Voir / éditer
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setPlanOpen(true);
+              }}
+              className="flex items-center gap-2"
+              disabled={busy !== null}
+            >
+              <Calendar className="w-4 h-4" />
+              {planLabel}
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                void onDuplicate();
+              }}
+              className="flex items-center gap-2"
+              disabled={busy !== null}
+            >
+              <Copy className="w-4 h-4" />
+              {busy === "duplicate" ? "Duplication…" : "Dupliquer"}
+            </DropdownMenuItem>
+
+            <AlertDialogTrigger asChild>
+              <DropdownMenuItem
+                onSelect={(e) => e.preventDefault()}
+                className="flex items-center gap-2 text-rose-600 focus:text-rose-600"
+              >
+                <Trash2 className="w-4 h-4" />
+                Supprimer
+              </DropdownMenuItem>
+            </AlertDialogTrigger>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {title?.trim()
+                ? `“${title.trim()}” sera supprimé définitivement. Cette action est irréversible.`
+                : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "delete"}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void onDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700"
+              disabled={busy === "delete"}
+            >
+              {busy === "delete" ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

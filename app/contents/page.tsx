@@ -162,7 +162,8 @@ export default async function ContentsPage({
   const status = normalizeStatusParam(Array.isArray(statusRaw) ? statusRaw[0] : statusRaw);
   const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
   const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
-  const view = safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
+  const view =
+    safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
@@ -206,15 +207,17 @@ export default async function ContentsPage({
           <div className="flex flex-wrap items-center gap-2">
             <Tabs defaultValue={view} value={view}>
               <TabsList className="h-10 rounded-xl">
-                <TabsTrigger
-                  value="list"
-                  asChild
-                  className="gap-2 rounded-lg"
-                >
+                <TabsTrigger value="list" asChild className="gap-2 rounded-lg">
                   <Link
                     href={{
                       pathname: "/contents",
-                      query: { q: q || undefined, status: status || undefined, type: type || undefined, channel: channel || undefined, view: "list" },
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "list",
+                      },
                     }}
                   >
                     <List className="h-4 w-4" />
@@ -222,15 +225,17 @@ export default async function ContentsPage({
                   </Link>
                 </TabsTrigger>
 
-                <TabsTrigger
-                  value="calendar"
-                  asChild
-                  className="gap-2 rounded-lg"
-                >
+                <TabsTrigger value="calendar" asChild className="gap-2 rounded-lg">
                   <Link
                     href={{
                       pathname: "/contents",
-                      query: { q: q || undefined, status: status || undefined, type: type || undefined, channel: channel || undefined, view: "calendar" },
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "calendar",
+                      },
                     }}
                   >
                     <CalendarDays className="h-4 w-4" />
@@ -366,10 +371,7 @@ export default async function ContentsPage({
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={`/contents/${item.id}`}
-                              className="truncate font-semibold text-foreground hover:underline"
-                            >
+                            <Link href={`/contents/${item.id}`} className="truncate font-semibold text-foreground hover:underline">
                               {safeString(item.title) || "Sans titre"}
                             </Link>
 
@@ -409,7 +411,12 @@ export default async function ContentsPage({
                             <Link href={`/contents/${item.id}`}>Voir</Link>
                           </Button>
 
-                          <ContentItemActions id={item.id} title={safeString(item.title) || "Sans titre"} />
+                          <ContentItemActions
+                            id={item.id}
+                            title={safeString(item.title) || "Sans titre"}
+                            status={item.status}
+                            scheduledDate={item.scheduled_date}
+                          />
                         </div>
                       </Card>
                     );
