@@ -24,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { Copy, Save, Trash2, CheckCircle2, CalendarDays, FileText } from "lucide-react";
+import { Copy, Save, Trash2, CheckCircle2, CalendarDays, FileText, CopyPlus } from "lucide-react";
 
 type ContentItem = {
   id: string;
@@ -40,29 +40,28 @@ type ContentItem = {
   updated_at: string | null;
 };
 
+type ApiResponse = { ok: true; item?: any } | { ok: false; error?: string };
+
 type Props = {
   initialItem: ContentItem;
 };
 
-type ApiResponse = { ok: true; item: ContentItem } | { ok: false; error: string };
-
-function normalizeTags(input: string): string[] {
-  return input
+function normalizeTags(raw: string) {
+  return raw
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean)
     .slice(0, 50);
 }
 
-function normalizeStatusForLabel(status: string | null): string {
-  const s = (status ?? "").trim();
+function normalizeStatusLabel(status: string | null): string {
+  const s = (status ?? "").toLowerCase();
   if (!s) return "—";
-  const low = s.toLowerCase();
-  if (low === "published") return "Publié";
-  if (low === "planned" || low === "scheduled") return "Planifié";
-  if (low === "draft") return "Brouillon";
-  if (low === "archived") return "Archivé";
-  return s;
+  if (s === "published") return "Publié";
+  if (s === "planned" || s === "scheduled") return "Planifié";
+  if (s === "draft") return "Brouillon";
+  if (s === "archived") return "Archivé";
+  return status ?? "—";
 }
 
 function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
@@ -83,11 +82,12 @@ export function ContentEditor({ initialItem }: Props) {
   const [scheduledDate, setScheduledDate] = useState(initialItem.scheduled_date ?? "");
   const [status, setStatus] = useState(initialItem.status ?? "draft");
   const [tags, setTags] = useState((initialItem.tags ?? []).join(", "));
-  const [content, setContent] = useState(initialItem.content ?? "");
   const [prompt, setPrompt] = useState(initialItem.prompt ?? "");
+  const [content, setContent] = useState(initialItem.content ?? "");
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const dirty = useMemo(() => {
     const a = initialItem;
@@ -103,7 +103,6 @@ export function ContentEditor({ initialItem }: Props) {
     );
   }, [initialItem, title, channel, type, scheduledDate, status, prompt, content, tags]);
 
-  // Cmd/Ctrl+S
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const isSave = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s";
@@ -114,7 +113,7 @@ export function ContentEditor({ initialItem }: Props) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, channel, type, scheduledDate, status, tags, content, prompt, dirty]);
+  }, [dirty, title, channel, type, scheduledDate, status, tags, prompt, content]);
 
   async function savePatch(next?: Partial<{ status: string }>) {
     setSaving(true);
@@ -126,7 +125,7 @@ export function ContentEditor({ initialItem }: Props) {
           title,
           channel,
           type,
-          scheduledDate: scheduledDate || null,
+          scheduledDate: scheduledDate || null, // ✅ API attend scheduledDate
           status: next?.status ?? status,
           tags: normalizeTags(tags),
           content,
@@ -137,29 +136,31 @@ export function ContentEditor({ initialItem }: Props) {
       const data = (await res.json()) as ApiResponse;
 
       if (!("ok" in data) || !data.ok) {
-        toast({ title: "Enregistrement impossible", description: data.error ?? "Erreur", variant: "destructive" });
-        return;
+        toast({
+          title: "Enregistrement impossible",
+          description: (data as any).error ?? "Erreur",
+          variant: "destructive",
+        });
+        return false;
       }
 
-      setStatus(data.item.status ?? (next?.status ?? status));
-      toast({ title: "Enregistré ✅", description: "Tes modifications ont été sauvegardées." });
+      toast({ title: "Sauvegardé ✅", description: "Les modifications ont été enregistrées." });
       router.refresh();
+      return true;
     } catch (e) {
       toast({
         title: "Enregistrement impossible",
         description: e instanceof Error ? e.message : "Erreur inconnue",
         variant: "destructive",
       });
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function onSave() {
-    if (!dirty) {
-      toast({ title: "Rien à enregistrer", description: "Aucune modification détectée." });
-      return;
-    }
+    if (!dirty) return;
     await savePatch();
   }
 
@@ -171,7 +172,7 @@ export function ContentEditor({ initialItem }: Props) {
     if (!scheduledDate) {
       toast({
         title: "Date manquante",
-        description: "Choisis une date planifiée avant de passer en “Planifié”.",
+        description: "Choisis une date de planification avant de planifier.",
         variant: "destructive",
       });
       return;
@@ -183,10 +184,14 @@ export function ContentEditor({ initialItem }: Props) {
     setDeleting(true);
     try {
       const res = await fetch(`/api/content/${initialItem.id}`, { method: "DELETE" });
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as ApiResponse;
 
-      if (!data.ok) {
-        toast({ title: "Suppression impossible", description: data.error ?? "Erreur", variant: "destructive" });
+      if (!("ok" in data) || !data.ok) {
+        toast({
+          title: "Suppression impossible",
+          description: (data as any).error ?? "Erreur",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -204,7 +209,36 @@ export function ContentEditor({ initialItem }: Props) {
     }
   }
 
-  const statusLabel = normalizeStatusForLabel(status);
+  async function onDuplicate() {
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/content/${initialItem.id}/duplicate`, { method: "POST" });
+      const data = (await res.json()) as { ok: boolean; id?: string | null; error?: string };
+
+      if (!data.ok || !data.id) {
+        toast({
+          title: "Duplication impossible",
+          description: data.error ?? "Erreur",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Dupliqué ✅", description: "Une copie a été créée." });
+      router.push(`/contents/${data.id}`);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Duplication impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
+  const statusLabel = normalizeStatusLabel(status);
   const statusBadgeVariant = badgeVariantForStatus(status);
 
   return (
@@ -224,42 +258,64 @@ export function ContentEditor({ initialItem }: Props) {
               <span aria-hidden>•</span>
               <span className="inline-flex items-center gap-1">
                 <CalendarDays className="w-4 h-4" />
-                {scheduledDate || "Non planifié"}
+                {scheduledDate ? String(scheduledDate).slice(0, 10) : "Non planifié"}
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" className="gap-2" onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(content ?? "");
-                toast({ title: "Copié ✅", description: "Le contenu a été copié dans le presse-papier." });
-              } catch {
-                toast({ title: "Copie impossible", description: "Ton navigateur a bloqué l’accès au presse-papier.", variant: "destructive" });
-              }
-            }}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(content ?? "");
+                  toast({ title: "Copié ✅", description: "Le contenu a été copié dans le presse-papier." });
+                } catch {
+                  toast({
+                    title: "Copie impossible",
+                    description: "Ton navigateur a bloqué l’accès au presse-papier.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
               <Copy className="w-4 h-4" />
               Copier
             </Button>
 
-            <Button onClick={() => void onSave()} disabled={saving || deleting || !dirty} className="gap-2">
+            <Button onClick={() => void onSave()} disabled={saving || deleting || duplicating || !dirty} className="gap-2">
               <Save className="w-4 h-4" />
               {saving ? "Enregistrement…" : "Enregistrer"}
             </Button>
 
-            <Button variant="secondary" onClick={() => void onPlan()} disabled={saving || deleting} className="gap-2">
+            <Button variant="secondary" onClick={() => void onPlan()} disabled={saving || deleting || duplicating} className="gap-2">
               <CalendarDays className="w-4 h-4" />
               Planifier
             </Button>
 
-            <Button onClick={() => void onPublish()} disabled={saving || deleting} className="gap-2">
+            <Button onClick={() => void onPublish()} disabled={saving || deleting || duplicating} className="gap-2">
               <CheckCircle2 className="w-4 h-4" />
               Publier
             </Button>
 
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => void onDuplicate()}
+              disabled={saving || deleting || duplicating}
+            >
+              <CopyPlus className="w-4 h-4" />
+              {duplicating ? "Duplication…" : "Dupliquer"}
+            </Button>
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" className="gap-2 border-rose-200 text-rose-700 hover:bg-rose-50" disabled={saving || deleting}>
+                <Button
+                  variant="outline"
+                  className="gap-2 border-rose-200 text-rose-700 hover:bg-rose-50"
+                  disabled={saving || deleting || duplicating}
+                >
                   <Trash2 className="w-4 h-4" />
                   Supprimer
                 </Button>
@@ -276,12 +332,9 @@ export function ContentEditor({ initialItem }: Props) {
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={(e) => {
-                      e.preventDefault();
-                      void onDelete();
-                    }}
-                    className="bg-rose-600 hover:bg-rose-700"
                     disabled={deleting}
+                    className="bg-rose-600 text-white hover:bg-rose-700"
+                    onClick={() => void onDelete()}
                   >
                     {deleting ? "Suppression…" : "Supprimer"}
                   </AlertDialogAction>
@@ -292,79 +345,83 @@ export function ContentEditor({ initialItem }: Props) {
         </div>
       </Card>
 
-      <Card className="p-5">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="grid gap-2">
-            <Label className="text-xs">Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4 space-y-3">
+          <div className="space-y-2">
+            <Label>Titre</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du contenu" />
           </div>
 
-          <div className="grid gap-2">
-            <Label className="text-xs">Canal</Label>
-            <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="Ex: LinkedIn" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="post / email / blog..." />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Canal</Label>
+              <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="LinkedIn / Email..." />
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label className="text-xs">Type</Label>
-            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Ex: Post LinkedIn" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Brouillon</SelectItem>
+                  <SelectItem value="planned">Planifié</SelectItem>
+                  <SelectItem value="published">Publié</SelectItem>
+                  <SelectItem value="archived">Archivé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date de planification</Label>
+              <Input
+                type="date"
+                value={scheduledDate ? String(scheduledDate).slice(0, 10) : ""}
+                onChange={(e) => setScheduledDate(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Si vide : “Non planifié”.</p>
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label className="text-xs">Date planifiée</Label>
-            <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} />
-          </div>
-
-          <div className="grid gap-2">
-            <Label className="text-xs">Statut</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Brouillon</SelectItem>
-                <SelectItem value="planned">Planifié</SelectItem>
-                <SelectItem value="published">Publié</SelectItem>
-                <SelectItem value="archived">Archivé</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label className="text-xs">Tags</Label>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Ex: acquisition, offre, mindset" />
-          </div>
-
-          <div className="lg:col-span-2 grid gap-2">
-            <Label className="text-xs">Consigne (prompt)</Label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[120px]"
-              placeholder="Brief utilisé pour générer"
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <Input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="ex: lancement, storytelling, preuve sociale"
             />
+            <p className="text-xs text-muted-foreground">Sépare avec des virgules.</p>
           </div>
 
-          <div className="lg:col-span-2 grid gap-2">
-            <Label className="text-xs">Contenu</Label>
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[360px]"
-              placeholder="Contenu généré"
-            />
+          <div className="space-y-2">
+            <Label>Prompt (optionnel)</Label>
+            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Contexte / prompt utilisé" rows={5} />
           </div>
+        </Card>
 
-          <div className="lg:col-span-2 flex items-center justify-between gap-2 flex-wrap pt-2">
-            <p className="text-xs text-muted-foreground">
-              Astuce : <span className="font-semibold">Cmd/Ctrl + S</span> pour enregistrer rapidement.
-            </p>
-
-            <Button variant="outline" onClick={() => router.refresh()} disabled={saving || deleting}>
-              Rafraîchir
-            </Button>
+        <Card className="p-4 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">Contenu</p>
+              <p className="text-sm text-muted-foreground">Édite librement. Cmd/Ctrl+S pour sauvegarder.</p>
+            </div>
           </div>
-        </div>
-      </Card>
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Colle ou écris ton contenu ici…"
+            rows={22}
+          />
+        </Card>
+      </div>
     </div>
   );
 }
