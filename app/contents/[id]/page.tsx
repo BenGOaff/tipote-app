@@ -8,18 +8,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import type { PostgrestError } from "@supabase/supabase-js";
-
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ContentEditor } from "@/components/content/ContentEditor";
 
-type Props = {
-  params: { id: string };
-};
-
 type ContentItem = {
   id: string;
+  user_id: string;
   type: string | null;
   title: string | null;
   prompt: string | null;
@@ -34,123 +29,158 @@ type ContentItem = {
 
 function isMissingColumnError(message: string | undefined | null) {
   const m = (message ?? "").toLowerCase();
-  return m.includes("does not exist") && m.includes("column");
+  return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
 }
 
-function normalizeTags(input: unknown): string[] | null {
-  if (!input) return null;
-  if (Array.isArray(input)) return input.filter(Boolean).map(String);
-  if (typeof input === "string") {
-    const s = input.trim();
-    if (!s) return null;
-    return s
+function normalizeTags(tags: any): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.filter(Boolean).map((t) => String(t));
+  if (typeof tags === "string") {
+    return tags
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean)
       .slice(0, 50);
   }
-  return null;
+  return [];
 }
 
-function normalizeItem(raw: Record<string, unknown>): ContentItem {
-  const tags = normalizeTags(raw["tags"]);
-  return {
-    id: String(raw["id"] ?? ""),
-    type: (raw["type"] as string | null) ?? null,
-    title: (raw["title"] as string | null) ?? null,
-    prompt: (raw["prompt"] as string | null) ?? null,
-    content: (raw["content"] as string | null) ?? null,
-    status: (raw["status"] as string | null) ?? null,
-    scheduled_date: (raw["scheduled_date"] as string | null) ?? null,
-    channel: (raw["channel"] as string | null) ?? null,
-    tags,
-    created_at: (raw["created_at"] as string | null) ?? null,
-    updated_at: (raw["updated_at"] as string | null) ?? null,
-  };
-}
-
-export default async function ContentDetailPage({ params }: Props) {
+async function fetchContentItem(userId: string, id: string): Promise<{ item: ContentItem | null; error?: string }> {
   const supabase = await getSupabaseServerClient();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // V2 (colonnes EN)
+  const v2 = await supabase
+    .from("content_item")
+    .select(
+      "id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at"
+    )
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (!session) redirect("/login");
+  if (!v2.error) {
+    const row = (v2.data ?? null) as any | null;
+    if (!row) return { item: null };
+    const item: ContentItem = {
+      id: String(row.id),
+      user_id: String(row.user_id),
+      type: row.type ?? null,
+      title: row.title ?? null,
+      prompt: row.prompt ?? null,
+      content: row.content ?? null,
+      status: row.status ?? null,
+      scheduled_date: row.scheduled_date ?? null,
+      channel: row.channel ?? null,
+      tags: normalizeTags(row.tags),
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+    };
+    return { item };
+  }
 
-  const userEmail = session.user.email ?? "";
-  const id = params?.id?.trim();
+  // Si erreur autre que colonne manquante => afficher l'erreur
+  if (!isMissingColumnError(v2.error.message)) {
+    return { item: null, error: v2.error.message };
+  }
+
+  // Fallback FR (aliasing)
+  const fr = await supabase
+    .from("content_item")
+    .select(
+      "id, user_id, type, title:titre, prompt, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at, updated_at"
+    )
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (fr.error) return { item: null, error: fr.error.message };
+
+  const row = (fr.data ?? null) as any | null;
+  if (!row) return { item: null };
+
+  const item: ContentItem = {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    type: row.type ?? null,
+    title: row.title ?? null,
+    prompt: row.prompt ?? null,
+    content: row.content ?? null,
+    status: row.status ?? null,
+    scheduled_date: row.scheduled_date ?? null,
+    channel: row.channel ?? null,
+    tags: normalizeTags(row.tags),
+    created_at: row.created_at ?? null,
+    updated_at: row.updated_at ?? null,
+  };
+
+  return { item };
+}
+
+export default async function ContentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: rawId } = await params;
+  const id = (rawId ?? "").trim();
 
   if (!id) redirect("/contents");
 
-  const isProd = process.env.NODE_ENV === "production";
+  const supabase = await getSupabaseServerClient();
+  const { data: auth } = await supabase.auth.getUser();
 
-  // 1) Try v2 schema
-  const v2 = await supabase
-    .from("content_item")
-    .select("id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at")
-    .eq("id", id)
-    .eq("user_id", session.user.id)
-    .maybeSingle();
+  if (!auth?.user) redirect("/");
 
-  let item: ContentItem | null = v2.data ? normalizeItem(v2.data as unknown as Record<string, unknown>) : null;
-  let error: PostgrestError | null = v2.error ?? null;
+  const { item, error } = await fetchContentItem(auth.user.id, id);
 
-  // 2) Fallback FR schema
-  if (error && isMissingColumnError(error.message)) {
-    const fb = await supabase
-      .from("content_item")
-      .select(
-        "id, type, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at"
-      )
-      .eq("id", id)
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-
-    error = fb.error ?? null;
-
-    if (fb.data) {
-      const normalized = normalizeItem(fb.data as unknown as Record<string, unknown>);
-      item = {
-        ...normalized,
-        prompt: normalized.prompt ?? null,
-        updated_at: normalized.updated_at ?? normalized.created_at ?? null,
-      };
-    } else {
-      item = null;
-    }
-  }
+  const email = auth.user.email ?? "";
 
   if (error) {
     return (
-      <AppShell userEmail={userEmail}>
-        <div className="mx-auto w-full max-w-4xl px-4 py-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Link href="/contents" className="text-sm font-semibold text-slate-700 hover:underline">
-              ← Retour
+      <AppShell userEmail={email} headerTitle="Contenu">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Impossible de charger ce contenu</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Une erreur est survenue. Réessaie ou reviens à la liste.
+              </p>
+            </div>
+            <Link
+              href="/contents"
+              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+            >
+              Mes contenus
             </Link>
           </div>
 
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
-            Erreur : {isProd ? "Impossible de charger le contenu." : error.message}
+          <div className="rounded-2xl border bg-white p-5">
+            <p className="text-sm font-semibold">Détail technique</p>
+            <p className="mt-2 break-words text-sm text-muted-foreground">{error}</p>
           </div>
         </div>
       </AppShell>
     );
   }
 
-  if (!item || !item.id) {
+  if (!item) {
     return (
-      <AppShell userEmail={userEmail}>
-        <div className="mx-auto w-full max-w-4xl px-4 py-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Link href="/contents" className="text-sm font-semibold text-slate-700 hover:underline">
-              ← Retour
-            </Link>
-          </div>
+      <AppShell userEmail={email} headerTitle="Contenu introuvable">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Contenu introuvable</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Il a peut-être été supprimé, ou tu n’y as pas accès.
+              </p>
+            </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
-            Contenu introuvable.
+            <Link
+              href="/contents"
+              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+            >
+              Mes contenus
+            </Link>
           </div>
         </div>
       </AppShell>
@@ -158,19 +188,31 @@ export default async function ContentDetailPage({ params }: Props) {
   }
 
   return (
-    <AppShell userEmail={userEmail}>
-      <div className="mx-auto w-full max-w-4xl px-4 py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <Link href="/contents" className="text-sm font-semibold text-slate-700 hover:underline">
-            ← Retour
-          </Link>
+    <AppShell userEmail={email} headerTitle={item.title ?? "Détail contenu"}>
+      <div className="mx-auto w-full max-w-5xl space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{item.title ?? "Sans titre"}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Édite, planifie et organise ce contenu.
+            </p>
+          </div>
 
-          <Link
-            href="/contents"
-            className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-          >
-            Mes contenus
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/create"
+              className="rounded-xl border bg-white px-4 py-2 text-xs font-semibold hover:bg-muted"
+            >
+              Créer
+            </Link>
+
+            <Link
+              href="/contents"
+              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+            >
+              Mes contenus
+            </Link>
+          </div>
         </div>
 
         <ContentEditor initialItem={item} />

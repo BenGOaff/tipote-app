@@ -1,316 +1,181 @@
-// app/api/content/[id]/route.ts
-// CRUD simple pour un content_item (GET, PATCH, DELETE)
+// app/api/content/[id]/duplicate/route.ts
+// Duplique un content_item (POST)
 // Compat DB: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee, tags en text)
-// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date + tags array), sinon fallback FR (avec alias).
+// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date + tags array), sinon fallback FR.
 
-import { NextRequest, NextResponse } from 'next/server'
-import type { PostgrestError } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from "next/server";
+import type { PostgrestError } from "@supabase/supabase-js";
 
-import { getSupabaseServerClient } from '@/lib/supabaseServer'
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type PatchBody = Partial<{
-  title: string
-  content: string
-  prompt: string
-  type: string
-  status: 'draft' | 'planned' | 'published' | 'archived' | string
-  scheduledDate: string | null // YYYY-MM-DD
-  channel: string
-  tags: string[]
-}>
-
-type ContentItemDTO = {
-  id: string
-  user_id: string
-  title: string | null
-  prompt: string | null
-  content: string | null
-  status: string | null
-  scheduled_date: string | null
-  channel: string | null
-  tags: string[] | null
-  created_at: string | null
-  updated_at: string | null
-}
+type ContentRowV2 = {
+  id: string;
+  user_id: string;
+  type: string | null;
+  title: string | null;
+  prompt: string | null;
+  content: string | null;
+  status: string | null;
+  scheduled_date: string | null;
+  channel: string | null;
+  tags: string[] | string | null;
+};
 
 function isMissingColumnError(message: string | null | undefined) {
-  const m = (message ?? '').toLowerCase()
-  // PostgREST: "column content_item.title does not exist" / "Could not find the 'title' column"
-  return (
-    m.includes('does not exist') ||
-    m.includes("could not find the '") ||
-    m.includes('column') ||
-    m.includes('pgrst') ||
-    m.includes('schema cache')
-  )
+  const m = (message ?? "").toLowerCase();
+  return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
 }
 
 function asTagsArray(value: unknown): string[] | null {
-  if (Array.isArray(value)) return value.filter((x) => typeof x === 'string') as string[]
-  if (typeof value === 'string') {
-    const t = value.trim()
-    if (!t) return []
+  if (Array.isArray(value)) return value.filter((x) => typeof x === "string") as string[];
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t) return [];
     // tags en text : "a,b,c" ou JSON "[]"
     try {
-      const parsed = JSON.parse(t)
-      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === 'string') as string[]
+      const parsed = JSON.parse(t);
+      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string") as string[];
     } catch {
       // ignore
     }
     return t
-      .split(',')
+      .split(",")
       .map((x) => x.trim())
       .filter(Boolean)
+      .slice(0, 50);
   }
-  return null
+  return null;
 }
 
-async function getAuthedUserId() {
-  const supabase = await getSupabaseServerClient()
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  if (error) {
-    return { supabase, userId: null, error }
-  }
-  if (!user?.id) {
-    return { supabase, userId: null, error: { message: 'No user' } as PostgrestError }
-  }
-  return { supabase, userId: user.id }
+function withCopySuffix(title: string | null): string {
+  const base = (title ?? "Sans titre").trim() || "Sans titre";
+  // éviter 10x "(copie)" spam
+  if (/\(copie\)\s*$/i.test(base)) return `${base} 2`;
+  return `${base} (copie)`;
 }
 
-type Ctx = { params: Promise<{ id: string }> }
-
-export async function GET(_req: NextRequest, ctx: Ctx) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const id = ((await ctx.params).id ?? '').trim()
-    if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
+    const { id } = await ctx.params;
+    const contentId = (id ?? "").trim();
 
-    const { supabase, userId } = await getAuthedUserId()
-    if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+    if (!contentId) {
+      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+    }
 
-    // v2 (EN)
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+
+    if (userErr) {
+      return NextResponse.json({ ok: false, error: userErr.message }, { status: 401 });
+    }
+    const userId = user?.id;
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 1) Lire la ligne (V2)
     const v2 = await supabase
-      .from('content_items')
-      .select(
-        'id,user_id,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at'
-      )
-      .eq('id', id)
-      .eq('user_id', userId)
-      .maybeSingle()
+      .from("content_item")
+      .select("id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags")
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .maybeSingle();
 
     if (!v2.error) {
-      const row = v2.data as any
-      const dto: ContentItemDTO = {
-        id: row.id,
-        user_id: row.user_id,
-        title: row.title ?? null,
-        prompt: row.prompt ?? null,
-        content: row.content ?? null,
-        status: row.status ?? null,
-        scheduled_date: row.scheduled_date ?? null,
-        channel: row.channel ?? null,
-        tags: asTagsArray(row.tags),
-        created_at: row.created_at ?? null,
-        updated_at: row.updated_at ?? null,
+      const row = v2.data as ContentRowV2 | null;
+      if (!row) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+
+      const insertV2 = await supabase
+        .from("content_item")
+        .insert({
+          user_id: userId,
+          type: row.type ?? null,
+          title: withCopySuffix(row.title ?? null),
+          prompt: row.prompt ?? null,
+          content: row.content ?? null,
+          status: "draft",
+          scheduled_date: null,
+          channel: row.channel ?? null,
+          tags: asTagsArray(row.tags) ?? [],
+        })
+        .select("id")
+        .single();
+
+      if (insertV2.error) {
+        return NextResponse.json({ ok: false, error: insertV2.error.message }, { status: 400 });
       }
-      return NextResponse.json({ ok: true, item: dto })
+
+      return NextResponse.json({ ok: true, id: insertV2.data?.id ?? null }, { status: 200 });
     }
 
-    if (!isMissingColumnError(v2.error.message)) {
-      return NextResponse.json(
-        { ok: false, error: v2.error.message || 'Unknown error' },
-        { status: 500 }
-      )
+    // erreur autre que colonne manquante
+    if (!isMissingColumnError((v2.error as PostgrestError | null)?.message)) {
+      return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 });
     }
 
-    // fallback FR
+    // 2) Fallback FR : lire via alias
     const fr = await supabase
-      .from('content_items')
+      .from("content_item")
       .select(
-        'id,user_id,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at'
+        "id,user_id,type,title:titre,prompt,content:contenu,status:statut,scheduled_date:date_planifiee,channel:canal,tags"
       )
-      .eq('id', id)
-      .eq('user_id', userId)
-      .maybeSingle()
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .maybeSingle();
 
     if (fr.error) {
-      return NextResponse.json(
-        { ok: false, error: fr.error.message || 'Unknown error' },
-        { status: 500 }
-      )
+      return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 });
     }
 
-    const row = fr.data as any
-    const dto: ContentItemDTO = {
-      id: row.id,
-      user_id: row.user_id,
-      title: row.titre ?? null,
-      prompt: row.prompt ?? null,
-      content: row.contenu ?? null,
-      status: row.statut ?? null,
-      scheduled_date: row.date_planifiee ?? null,
-      channel: row.canal ?? null,
-      tags: asTagsArray(row.tags),
-      created_at: row.created_at ?? null,
-      updated_at: row.updated_at ?? null,
+    const row = fr.data as any | null;
+    if (!row) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+
+    // Insert FR : on écrit dans les vraies colonnes FR
+    // (pas d'alias en INSERT)
+    const frTags = asTagsArray(row.tags);
+    const tagsAsText = Array.isArray(frTags) ? JSON.stringify(frTags) : "";
+
+    const insertFR = await supabase
+      .from("content_item")
+      .insert({
+        user_id: userId,
+        type: row.type ?? null,
+        titre: withCopySuffix(row.title ?? null),
+        prompt: row.prompt ?? null,
+        contenu: row.content ?? null,
+        statut: "draft",
+        date_planifiee: null,
+        canal: row.channel ?? null,
+        // tags legacy souvent en text
+        tags: tagsAsText,
+      } as any)
+      .select("id")
+      .single();
+
+    if (insertFR.error) {
+      return NextResponse.json({ ok: false, error: insertFR.error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, item: dto })
-  } catch (e: any) {
+    return NextResponse.json({ ok: true, id: insertFR.data?.id ?? null }, { status: 200 });
+  } catch (e) {
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Unknown error' },
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 }
-    )
+    );
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: Ctx) {
-  try {
-    const id = ((await ctx.params).id ?? '').trim()
-    if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
-
-    const { supabase, userId } = await getAuthedUserId()
-    if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
-
-    const body = (await req.json()) as PatchBody
-
-    const patchV2: Record<string, any> = {}
-    if (typeof body.title === 'string') patchV2.title = body.title
-    if (typeof body.content === 'string') patchV2.content = body.content
-    if (typeof body.prompt === 'string') patchV2.prompt = body.prompt
-    if (typeof body.type === 'string') patchV2.type = body.type
-    if (typeof body.status === 'string') patchV2.status = body.status
-    if (typeof body.channel === 'string') patchV2.channel = body.channel
-    if (body.scheduledDate !== undefined) patchV2.scheduled_date = body.scheduledDate
-    if (body.tags !== undefined) patchV2.tags = body.tags
-
-    const v2 = await supabase
-      .from('content_items')
-      .update(patchV2)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select(
-        'id,user_id,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at'
-      )
-      .maybeSingle()
-
-    if (!v2.error) {
-      const row = v2.data as any
-      const dto: ContentItemDTO = {
-        id: row.id,
-        user_id: row.user_id,
-        title: row.title ?? null,
-        prompt: row.prompt ?? null,
-        content: row.content ?? null,
-        status: row.status ?? null,
-        scheduled_date: row.scheduled_date ?? null,
-        channel: row.channel ?? null,
-        tags: asTagsArray(row.tags),
-        created_at: row.created_at ?? null,
-        updated_at: row.updated_at ?? null,
-      }
-      return NextResponse.json({ ok: true, item: dto })
-    }
-
-    if (!isMissingColumnError(v2.error.message)) {
-      return NextResponse.json(
-        { ok: false, error: v2.error.message || 'Unknown error' },
-        { status: 500 }
-      )
-    }
-
-    // fallback FR
-    const patchFR: Record<string, any> = {}
-    if (typeof body.title === 'string') patchFR.titre = body.title
-    if (typeof body.content === 'string') patchFR.contenu = body.content
-    if (typeof body.prompt === 'string') patchFR.prompt = body.prompt
-    if (typeof body.type === 'string') patchFR.type = body.type
-    if (typeof body.status === 'string') patchFR.statut = body.status
-    if (typeof body.channel === 'string') patchFR.canal = body.channel
-    if (body.scheduledDate !== undefined) patchFR.date_planifiee = body.scheduledDate
-    if (body.tags !== undefined) patchFR.tags = body.tags
-
-    const fr = await supabase
-      .from('content_items')
-      .update(patchFR)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select(
-        'id,user_id,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at'
-      )
-      .maybeSingle()
-
-    if (fr.error) {
-      return NextResponse.json(
-        { ok: false, error: fr.error.message || 'Unknown error' },
-        { status: 500 }
-      )
-    }
-
-    const row = fr.data as any
-    const dto: ContentItemDTO = {
-      id: row.id,
-      user_id: row.user_id,
-      title: row.titre ?? null,
-      prompt: row.prompt ?? null,
-      content: row.contenu ?? null,
-      status: row.statut ?? null,
-      scheduled_date: row.date_planifiee ?? null,
-      channel: row.canal ?? null,
-      tags: asTagsArray(row.tags),
-      created_at: row.created_at ?? null,
-      updated_at: row.updated_at ?? null,
-    }
-
-    return NextResponse.json({ ok: true, item: dto })
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message || 'Unknown error' },
-      { status: 500 }
-    )
-  }
+// (Optionnel) autres méthodes non supportées sur cette route
+export async function GET() {
+  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
 }
-
-export async function DELETE(_req: NextRequest, ctx: Ctx) {
-  try {
-    const id = ((await ctx.params).id ?? '').trim()
-    if (!id) return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 })
-
-    const { supabase, userId } = await getAuthedUserId()
-    if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
-
-    // v2
-    const v2 = await supabase.from('content_items').delete().eq('id', id).eq('user_id', userId)
-
-    if (!v2.error) {
-      return NextResponse.json({ ok: true })
-    }
-
-    if (!isMissingColumnError(v2.error.message)) {
-      return NextResponse.json(
-        { ok: false, error: v2.error.message || 'Unknown error' },
-        { status: 500 }
-      )
-    }
-
-    // fallback FR (même table, delete identique)
-    const fr = await supabase.from('content_items').delete().eq('id', id).eq('user_id', userId)
-
-    if (fr.error) {
-      return NextResponse.json(
-        { ok: false, error: fr.error.message || 'Unknown error' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message || 'Unknown error' },
-      { status: 500 }
-    )
-  }
+export async function PATCH() {
+  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
+}
+export async function DELETE() {
+  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
 }
