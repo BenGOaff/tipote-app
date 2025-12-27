@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
+// app/dashboard/page.tsx
+// Dashboard (Lovable) : on aligne /dashboard sur la vraie page dashboard existante (/app)
+// Sans casser l’existant : /app reste valide, /dashboard devient la route principale du template.
 
-// Route legacy /dashboard : sortie simple vers l'app.
-// (On n'utilise pas `profiles.onboarding_done` car la colonne n'existe pas dans le schéma actuel.)
-export default async function DashboardRedirect() {
-  redirect("/app");
-}
+export { default } from "../app/page";
