@@ -6,9 +6,9 @@ import * as React from "react";
 import { toast } from "@/components/ui/use-toast";
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Trash2, Copy, Pencil, Calendar } from "lucide-react";
+import { MoreVertical, Trash2, Copy, Pencil, Calendar, CalendarX } from "lucide-react";
 
 type Props = {
   id: string;
@@ -33,11 +33,14 @@ type ApiResponse = { ok: true; id?: string | null } | { ok: false; error?: strin
 
 export function ContentItemActions({ id, title, status, scheduledDate }: Props) {
   const router = useRouter();
-  const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | null>(null);
+  const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
 
   const [planOpen, setPlanOpen] = React.useState(false);
   const [planDate, setPlanDate] = React.useState<string>(scheduledDate ?? "");
   const planInputId = React.useMemo(() => `plan-date-${id}`, [id]);
+
+  const normalizedStatus = (status ?? "").toLowerCase().trim();
+  const isPlanned = normalizedStatus === "scheduled" || normalizedStatus === "planned";
 
   React.useEffect(() => {
     if (planOpen) setPlanDate(scheduledDate ?? "");
@@ -118,7 +121,6 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
 
     setBusy("plan");
     try {
-      // IMPORTANT: dans l'app, le filtre “Planifié” utilise "scheduled".
       const res = await fetch(`/api/content/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -153,7 +155,42 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
     }
   };
 
-  const isPlanned = (status ?? "").toLowerCase() === "scheduled" || (status ?? "").toLowerCase() === "planned";
+  const onUnplan = async () => {
+    setBusy("unplan");
+    try {
+      const res = await fetch(`/api/content/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "draft",
+          scheduledDate: null,
+        }),
+      });
+
+      const json = (await res.json().catch(() => ({}))) as Partial<ApiResponse>;
+
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Déplanification impossible",
+          description: (json as any)?.error ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Déplanifié ✅", description: "Le contenu repasse en brouillon." });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Déplanification impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const planLabel = isPlanned && scheduledDate ? "Modifier date" : "Planifier";
 
   return (
@@ -198,7 +235,7 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild className="flex items-center gap-2">
+            <DropdownMenuItem asChild>
               <Link href={`/contents/${id}`} className="flex items-center gap-2">
                 <Pencil className="w-4 h-4" />
                 Voir / éditer
@@ -216,6 +253,20 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
               <Calendar className="w-4 h-4" />
               {planLabel}
             </DropdownMenuItem>
+
+            {isPlanned ? (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  void onUnplan();
+                }}
+                className="flex items-center gap-2"
+                disabled={busy !== null}
+              >
+                <CalendarX className="w-4 h-4" />
+                {busy === "unplan" ? "Déplanification…" : "Déplanifier"}
+              </DropdownMenuItem>
+            ) : null}
 
             <DropdownMenuItem
               onSelect={(e) => {
