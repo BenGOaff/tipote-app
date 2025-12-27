@@ -41,10 +41,7 @@ async function loadSourceContent(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   id: string,
   userId: string
-): Promise<
-  | { ok: true; data: ContentRowV2 }
-  | { ok: false; status: number; error: string }
-> {
+): Promise<{ ok: true; data: ContentRowV2 } | { ok: false; status: number; error: string }> {
   // 1) Try "V2/EN-ish" columns
   const v2 = await supabase
     .from("content_item")
@@ -117,10 +114,7 @@ async function insertDuplicateV2(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   userId: string,
   src: ContentRowV2
-): Promise<
-  | { ok: true; id: string | null }
-  | { ok: false; missingColumns?: boolean; error: string }
-> {
+): Promise<{ ok: true; id: string | null } | { ok: false; missingColumns?: boolean; error: string }> {
   const tagsArray = asTagsArray(src.tags);
 
   const ins = await supabase
@@ -173,7 +167,12 @@ async function insertDuplicateFR(
   return { ok: true, id: insFR.data?.id ?? null };
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+// ✅ Next.js 16 (chez toi) typpe `context.params` en Promise.
+// Donc on accepte Promise<{id:string}> et on await.
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabase = await getSupabaseServerClient();
     const { data: auth, error: authErr } = await supabase.auth.getUser();
@@ -182,7 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!auth?.user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
     const userId = auth.user.id;
-    const id = params.id;
+    const { id } = await context.params;
 
     // A5 — gating minimal (fail-open si profiles.plan indispo)
     try {
