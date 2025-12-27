@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
+import { toast } from '@/hooks/use-toast'
 
 type Props = {
   taskId: string | null
@@ -35,38 +36,50 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
     return isDone(initialStatus)
   }, [initialStatus, optimisticDone])
 
-  if (!taskId) return null
-
-  // ✅ Narrowing TS (évite string | null dans encodeURIComponent)
-  const taskIdStr: string = taskId
+  const disabled = pending || !taskId
 
   async function onClick() {
-    if (pending || done) return
+    if (!taskId || pending) return
+
+    const nextStatus = done ? 'todo' : 'done'
+    const prev = done
 
     setPending(true)
-    setOptimisticDone(true)
+    setOptimisticDone(!done)
 
     try {
-      const res = await fetch(`/api/tasks/${encodeURIComponent(taskIdStr)}/status`, {
+      const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'done' }),
+        body: JSON.stringify({ status: nextStatus }),
       })
 
-      const json: unknown = await res.json().catch(() => null)
-      const parsed = extractOkError(json)
+      const json = (await res.json().catch(() => null)) as unknown
+      const { ok, error } = extractOkError(json)
 
-      if (!res.ok || !parsed.ok) {
-        setOptimisticDone(null)
-        // eslint-disable-next-line no-console
-        console.error(parsed.error || 'Failed to update task')
-      } else {
-        router.refresh()
+      if (!res.ok || !ok) {
+        setOptimisticDone(prev)
+        toast({
+          title: 'Impossible de mettre à jour la tâche',
+          description: error || `Erreur ${res.status}`,
+          variant: 'destructive',
+        })
+        return
       }
+
+      toast({
+        title: done ? 'Tâche remise à faire' : 'Tâche terminée',
+        description: done ? 'Tu peux la reprendre quand tu veux.' : 'Bravo 🎉',
+      })
+
+      router.refresh()
     } catch (e) {
-      setOptimisticDone(null)
-      // eslint-disable-next-line no-console
-      console.error(e)
+      setOptimisticDone(prev)
+      toast({
+        title: 'Erreur réseau',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        variant: 'destructive',
+      })
     } finally {
       setPending(false)
     }
@@ -78,10 +91,10 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
       variant={done ? 'secondary' : 'default'}
       size="sm"
       className={className}
-      disabled={pending || done}
+      disabled={disabled}
       onClick={onClick}
     >
-      {done ? 'Fait ✅' : pending ? '...' : 'Marquer comme faite'}
+      {pending ? '...' : done ? 'Annuler' : 'Marquer comme faite'}
     </Button>
   )
 }

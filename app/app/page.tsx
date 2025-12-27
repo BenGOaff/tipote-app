@@ -2,275 +2,287 @@
 // Dashboard "Aujourd'hui" (aligné Lovable + cahier des charges)
 // - Protégé par l'auth Supabase
 // - Si aucun plan stratégique => redirect /onboarding
-// - UI : banner “Ta prochaine action” + 4 stats + progress semaine + actions rapides + à venir
-// - Zéro nouvelle route/API/table : on lit business_plan / project_tasks / content_item
+// - UI : banner “Ta prochaine action” + stats + progress semaine + actions rapides + à venir
 
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { getSupabaseServerClient } from '@/lib/supabaseServer'
 
-import AppShell from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
-import MarkTaskDoneButton from "@/components/dashboard/MarkTaskDoneButton";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import AppShell from '@/components/AppShell'
+import { Button } from '@/components/ui/button'
+import MarkTaskDoneButton from '@/components/dashboard/MarkTaskDoneButton'
+import DailyFocus from '@/components/dashboard/DailyFocus'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 
 import {
-  ArrowRight,
+  Brain,
+  TrendingUp,
   Calendar,
-  CheckCircle2,
   FileText,
+  CheckCircle2,
+  ArrowRight,
   Sparkles,
   Target,
-  TrendingUp,
-} from "lucide-react";
+  Play,
+} from 'lucide-react'
 
 type TaskItem = {
-  id: string;
-  title: string;
-  status: string | null;
-  due_date: string | null;
-  priority: string | null;
-  source: string | null;
-  created_at: string | null;
-};
+  id: string
+  title: string
+  status: string | null
+  due_date: string | null
+  priority: string | null
+  source: string | null
+  created_at: string | null
+}
 
 type ContentItem = {
-  id: string;
-  type: string | null;
-  title: string | null;
-  status: string | null;
-  scheduled_date: string | null;
-  channel: string | null;
-  created_at: string | null;
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+  id: string
+  type: string | null
+  title: string | null
+  status: string | null
+  scheduled_date: string | null
+  channel: string | null
+  created_at: string | null
 }
 
-function toStringOrNull(v: unknown): string | null {
-  return typeof v === "string" ? v : null;
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null
 }
 
-function toNonEmptyStringOrNull(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const t = v.trim();
-  return t.length > 0 ? t : null;
+function toIdString(x: unknown): string {
+  if (typeof x === 'string') return x
+  if (typeof x === 'number') return String(x)
+  if (typeof x === 'bigint') return String(x)
+  return ''
 }
 
-function toIdString(v: unknown): string | null {
-  if (typeof v === "string") return v;
-  if (typeof v === "number" && Number.isFinite(v)) return String(v);
-  return null;
+function toStrOrNull(x: unknown): string | null {
+  if (typeof x === 'string') return x
+  return null
 }
 
-function parseDateSafe(v: string | null): Date | null {
-  if (!v) return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
+function parseDateSafe(iso: string | null): Date | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d
 }
 
 function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
 }
 
 function isDoneStatus(status: string | null): boolean {
-  if (!status) return false;
-  const s = status.toLowerCase();
-  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
+  const s = (status ?? '').trim().toLowerCase()
+  return s === 'done' || s === 'completed' || s === 'fait' || s === 'terminé' || s === 'termine'
 }
 
-function clamp01(n: number): number {
-  if (n < 0) return 0;
-  if (n > 1) return 1;
-  return n;
+function pct(n: number, d: number): number {
+  if (d <= 0) return 0
+  const v = Math.round((n / d) * 100)
+  return Math.max(0, Math.min(100, v))
 }
 
-function formatDayLabel(d: Date): string {
-  // Format simple FR sans lib (ex: "jeu 25")
-  const days = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
-  return `${days[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function safeNumber(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
+function fmtDateFR(d: Date): string {
+  try {
+    return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long' }).format(d)
+  } catch {
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${dd}/${mm}`
   }
-  return null;
 }
 
-function getPlanProgressPercent(planJson: unknown): number | null {
-  // On reste compatible: si plan_json contient un champ "progress" (0..1 ou 0..100)
-  if (!isRecord(planJson)) return null;
-  const v = planJson.progress;
-  const n = safeNumber(v);
-  if (n === null) return null;
-  if (n > 1) return Math.round(clamp01(n / 100) * 100);
-  return Math.round(clamp01(n) * 100);
+function fmtIsoMaybe(iso: string | null): string {
+  const d = parseDateSafe(iso)
+  if (!d) return '—'
+  return fmtDateFR(d)
+}
+
+function channelLabel(x: string | null): string {
+  const s = (x ?? '').trim().toLowerCase()
+  if (!s) return '—'
+  if (s.includes('instagram')) return 'Instagram'
+  if (s.includes('linkedin')) return 'LinkedIn'
+  if (s.includes('email')) return 'Email'
+  if (s.includes('blog')) return 'Blog'
+  if (s.includes('tiktok')) return 'TikTok'
+  if (s.includes('youtube')) return 'YouTube'
+  if (s.includes('facebook')) return 'Facebook'
+  if (s.includes('twitter') || s === 'x') return 'X'
+  return x ?? '—'
+}
+
+function typeLabel(x: string | null): string {
+  const s = (x ?? '').trim().toLowerCase()
+  if (!s) return 'Contenu'
+  if (s.includes('post')) return 'Post'
+  if (s.includes('email')) return 'Email'
+  if (s.includes('blog')) return 'Article'
+  if (s.includes('script')) return 'Script vidéo'
+  if (s.includes('video')) return 'Vidéo'
+  if (s.includes('carousel')) return 'Carousel'
+  return x ?? 'Contenu'
 }
 
 export default async function TodayPage() {
-  const supabase = await getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient()
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!session) redirect("/");
+  if (!user) redirect('/auth')
 
-  const userId = session.user.id;
-  const userEmail = session.user.email ?? "";
+  const userId = user.id
+  const userEmail = user.email ?? ''
 
-  // 1) Plan stratégique : requis pour accéder à l'app (cahier des charges)
+  // Plan stratégique requis
   const { data: planRow } = await supabase
-    .from("business_plan")
-    .select("id, plan_json")
-    .eq("user_id", userId)
-    .maybeSingle();
+    .from('business_plan')
+    .select('id, plan_json')
+    .eq('user_id', userId)
+    .maybeSingle()
 
-  if (!planRow) {
-    redirect("/onboarding");
-  }
+  if (!planRow) redirect('/onboarding')
 
-  const planJson: unknown = isRecord(planRow) ? planRow.plan_json : null;
+  const planJson: unknown = isRecord(planRow) ? planRow.plan_json : null
 
-  // 2) Tâches (project_tasks)
+  // Tâches
   const { data: tasksData } = await supabase
-    .from("project_tasks")
-    .select("id, title, status, due_date, priority, source, created_at")
-    .eq("user_id", userId)
-    .order("due_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
+    .from('project_tasks')
+    .select('id, title, status, due_date, priority, source, created_at')
+    .eq('user_id', userId)
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true })
 
   const tasks: TaskItem[] = Array.isArray(tasksData)
     ? tasksData
         .map((r: unknown) => {
-          if (!isRecord(r)) return null;
-          const id = toIdString(r.id);
-          const title = toNonEmptyStringOrNull(r.title);
-          if (!id || !title) return null;
-
+          if (!isRecord(r)) return null
+          const id = toIdString(r.id)
+          const title = toStrOrNull(r.title) ?? ''
+          if (!id || !title) return null
           return {
             id,
             title,
-            status: toStringOrNull(r.status),
-            due_date: toStringOrNull(r.due_date),
-            priority: toStringOrNull(r.priority),
-            source: toStringOrNull(r.source),
-            created_at: toStringOrNull(r.created_at),
-          };
+            status: toStrOrNull(r.status),
+            due_date: toStrOrNull(r.due_date),
+            priority: toStrOrNull(r.priority),
+            source: toStrOrNull(r.source),
+            created_at: toStrOrNull(r.created_at),
+          } satisfies TaskItem
         })
         .filter((x: TaskItem | null): x is TaskItem => x !== null)
-    : [];
+    : []
 
-  // 3) Contenus (pour stats + "à venir cette semaine")
+  // Contenus
   const { data: contentsData } = await supabase
-    .from("content_item")
-    .select("id, type, title, status, scheduled_date, channel, created_at")
-    .eq("user_id", userId)
-    .order("scheduled_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .from('content_item')
+    .select('id, type, title, status, scheduled_date, channel, created_at')
+    .eq('user_id', userId)
+    .order('scheduled_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
 
   const contents: ContentItem[] = Array.isArray(contentsData)
     ? contentsData
         .map((r: unknown) => {
-          if (!isRecord(r)) return null;
-          const id = toIdString(r.id);
-          if (!id) return null;
-
+          if (!isRecord(r)) return null
+          const id = toIdString(r.id)
+          if (!id) return null
           return {
             id,
-            type: toStringOrNull(r.type),
-            title: toStringOrNull(r.title),
-            status: toStringOrNull(r.status),
-            scheduled_date: toStringOrNull(r.scheduled_date),
-            channel: toStringOrNull(r.channel),
-            created_at: toStringOrNull(r.created_at),
-          };
+            type: toStrOrNull(r.type),
+            title: toStrOrNull(r.title),
+            status: toStrOrNull(r.status),
+            scheduled_date: toStrOrNull(r.scheduled_date),
+            channel: toStrOrNull(r.channel),
+            created_at: toStrOrNull(r.created_at),
+          } satisfies ContentItem
         })
         .filter((x: ContentItem | null): x is ContentItem => x !== null)
-    : [];
+    : []
 
-  const now = new Date();
-  const today0 = startOfDay(now);
-  const tomorrow0 = new Date(today0.getTime() + 24 * 60 * 60 * 1000);
-  const weekEnd = new Date(today0.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const now = new Date()
+  const today0 = startOfDay(now)
+  const tomorrow0 = new Date(today0.getTime() + 24 * 60 * 60 * 1000)
+  const weekEnd = new Date(today0.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-  const openTasks = tasks.filter((t) => !isDoneStatus(t.status));
-  const doneTasks = tasks.filter((t) => isDoneStatus(t.status));
+  const openTasks = tasks.filter((t) => !isDoneStatus(t.status))
+  const doneTasks = tasks.filter((t) => isDoneStatus(t.status))
 
   const nextTask =
     openTasks.find((t) => {
-      const d = parseDateSafe(t.due_date);
-      if (!d) return false;
-      return d >= today0 && d < tomorrow0;
+      const d = parseDateSafe(t.due_date)
+      if (!d) return false
+      const dd = startOfDay(d)
+      return dd >= today0 && dd < tomorrow0
     }) ??
     openTasks.find((t) => {
-      const d = parseDateSafe(t.due_date);
-      if (!d) return false;
-      return d >= today0 && d < weekEnd;
+      const d = parseDateSafe(t.due_date)
+      if (!d) return false
+      const dd = startOfDay(d)
+      return dd < today0
     }) ??
     openTasks[0] ??
-    null;
+    null
 
   const upcomingThisWeek = contents
-    .map((c) => ({
-      ...c,
-      _date: parseDateSafe(c.scheduled_date),
-    }))
+    .map((c) => ({ ...c, _date: parseDateSafe(c.scheduled_date) }))
     .filter((c) => c._date && c._date >= today0 && c._date < weekEnd)
     .sort((a, b) => a._date!.getTime() - b._date!.getTime())
-    .slice(0, 6);
+    .slice(0, 6)
 
-  const publishedCount = contents.filter((c) => (c.status ?? "").toLowerCase() === "published").length;
-  const scheduledCount = contents.filter((c) => (c.status ?? "").toLowerCase() === "scheduled").length;
+  const publishedCount = contents.filter((c) => (c.status ?? '').toLowerCase() === 'published').length
+  const scheduledCount = contents.filter((c) => (c.status ?? '').toLowerCase() === 'scheduled').length
 
-  const tasksCompletionRatio = tasks.length === 0 ? 0 : doneTasks.length / tasks.length;
-  const tasksCompletionPercent = Math.round(clamp01(tasksCompletionRatio) * 100);
+  const tasksTotal = tasks.length
+  const tasksDone = doneTasks.length
+  const tasksOpen = openTasks.length
 
-  const planProgressPercent = getPlanProgressPercent(planJson);
-  const displayPlanPercent = planProgressPercent ?? tasksCompletionPercent;
+  const weekProgress = pct(tasksDone, Math.max(1, tasksTotal))
 
-  // “Prochaine échéance” : min due_date parmi tâches ouvertes
-  const nextDue = openTasks
-    .map((t) => parseDateSafe(t.due_date))
-    .filter((d: Date | null): d is Date => d !== null)
-    .sort((a, b) => a.getTime() - b.getTime())[0];
-
-  const nextDueLabel = nextDue ? formatDayLabel(nextDue) : "—";
-
-  const tasksToday = openTasks.filter((t) => {
-    const d = parseDateSafe(t.due_date);
-    if (!d) return false;
-    return d >= today0 && d < tomorrow0;
-  });
-
-  const tasksFocus = (tasksToday.length > 0 ? tasksToday : openTasks).slice(0, 5);
-
-  const tasksFocusTitle =
-    tasksToday.length > 0 ? "Tes tâches du jour" : openTasks.length > 0 ? "Tes prochaines tâches" : "Tâches";
-
-  // “Prochaine échéance” label déjà calculé
-  const nextDueLabelShort = nextDueLabel;
+  const mission =
+    isRecord(planJson) && typeof planJson.mission === 'string'
+      ? (planJson.mission as string)
+      : isRecord(planJson) && typeof planJson.objective === 'string'
+        ? (planJson.objective as string)
+        : null
 
   return (
     <AppShell
       userEmail={userEmail}
-      headerTitle="Aujourd’hui"
+      headerTitle={
+        <div className="min-w-0">
+          <div className="truncate text-lg font-semibold">Aujourd’hui</div>
+          <div className="truncate text-sm text-muted-foreground">
+            {mission ? mission : 'Ton cockpit business : next action, stats et contenus à venir.'}
+          </div>
+        </div>
+      }
       headerRight={
-        <Button asChild variant="outline" size="sm" className="gap-2">
-          <Link href="/analytics">
-            <TrendingUp className="h-4 w-4" />
-            Analytics détaillés
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" className="bg-[#b042b4] hover:bg-[#b042b4]/90">
+            <Link href="/create" className="inline-flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Créer en 1 clic
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/analytics" className="inline-flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Analytics
+            </Link>
+          </Button>
+        </div>
       }
     >
       <div className="mx-auto w-full max-w-6xl space-y-6">
-        {/* Banner "Ta prochaine action" (hero) */}
+        {/* Banner "Ta prochaine action" */}
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-600 to-indigo-600 text-white">
           <div className="absolute inset-0 opacity-20">
             <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-white/20" />
@@ -287,214 +299,243 @@ export default async function TodayPage() {
                 <div className="min-w-0">
                   <p className="text-white/80">Ta prochaine action</p>
                   <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
-                    {nextTask ? nextTask.title : "Aucune tâche urgente pour aujourd’hui"}
+                    {nextTask ? nextTask.title : 'Aucune tâche urgente pour aujourd’hui'}
                   </h1>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Badge className="border-0 bg-white/15 text-white hover:bg-white/20">
-                      {nextTask?.source ? nextTask.source : "Tâche"}
+                      <Target className="mr-1.5 h-4 w-4" />
+                      Focus : {nextTask ? 'Tâche' : 'Stratégie / Contenu'}
                     </Badge>
+
                     <Badge className="border-0 bg-white/15 text-white hover:bg-white/20">
-                      {nextTask?.priority ? nextTask.priority : "Priorité"}
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                      {tasksDone}/{tasksTotal} tâches faites
                     </Badge>
+
                     <Badge className="border-0 bg-white/15 text-white hover:bg-white/20">
-                      {nextTask?.due_date ? `Échéance : ${nextTask.due_date}` : "Échéance : —"}
+                      <Calendar className="mr-1.5 h-4 w-4" />
+                      {upcomingThisWeek.length} contenus cette semaine
                     </Badge>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button asChild size="sm" className="gap-2 bg-white text-violet-700 hover:bg-white/90">
-                  <Link href="/create">
-                    Créer en 1 clic
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-
-                <Button asChild size="sm" variant="secondary" className="bg-white/15 text-white hover:bg-white/20">
-                  <Link href="/strategy">Voir la stratégie</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* 4 stats cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Contenus publiés</p>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <FileText className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold">{publishedCount}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Total publiés</p>
-          </Card>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Tâches complétées</p>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold">
-              {doneTasks.length}/{tasks.length}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">{tasksCompletionPercent}% de complétion</p>
-          </Card>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Contenus planifiés</p>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <Calendar className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold">{scheduledCount}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Total planifiés</p>
-          </Card>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Prochaine échéance</p>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <Target className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold">{nextDueLabelShort}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Sur tes tâches ouvertes</p>
-          </Card>
-        </div>
-
-        {/* Progression de la semaine */}
-        <Card className="p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Progression de la semaine</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Garde le cap : stratégie, exécution, contenus.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/strategy">Voir ma stratégie complète</Link>
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            <div>
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Plan stratégique</span>
-                <span className="font-medium">{displayPlanPercent}%</span>
-              </div>
-              <Progress value={displayPlanPercent} />
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Tâches complétées</span>
-                <span className="font-medium">
-                  {doneTasks.length}/{tasks.length}
-                </span>
-              </div>
-              <Progress value={tasksCompletionPercent} />
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Contenus planifiés (semaine)</span>
-                <span className="font-medium">
-                  {upcomingThisWeek.length}/{Math.max(upcomingThisWeek.length, 6)}
-                </span>
-              </div>
-              <Progress value={Math.round(clamp01(upcomingThisWeek.length / 6) * 100)} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Actions rapides + À venir */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="p-6 lg:col-span-1">
-            <h3 className="text-lg font-semibold">Actions rapides</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Les 3 raccourcis qui comptent.</p>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <Button asChild className="justify-between">
-                <Link href="/create">
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Créer du contenu
-                  </span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              <Button asChild variant="outline" className="justify-between">
-                <Link href="/contents">
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Voir mes contenus
-                  </span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              <Button asChild variant="outline" className="justify-between">
-                <Link href="/tasks">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Planifier ma semaine
-                  </span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="mt-5 rounded-xl border bg-muted/30 p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">
-                  <Target className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">Prochaine étape recommandée</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {nextTask ? "Commence par ta tâche du jour, puis génère ton contenu." : "Génère un contenu aujourd’hui pour garder le rythme."}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button asChild size="sm">
-                      <Link href={nextTask ? "/tasks" : "/create"}>
-                        {nextTask ? "Commencer" : "Générer"}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button asChild size="sm" className="bg-white text-violet-700 hover:bg-white/90">
+                      <Link href="/create" className="inline-flex items-center gap-2">
+                        <Play className="h-4 w-4" />
+                        Créer en 1 clic
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline">
+
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="secondary"
+                      className="border-0 bg-white/15 text-white hover:bg-white/20"
+                    >
+                      <Link href="/tasks" className="inline-flex items-center gap-2">
+                        Voir les tâches
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="secondary"
+                      className="border-0 bg-white/15 text-white hover:bg-white/20"
+                    >
                       <Link href="/strategy">Voir la stratégie</Link>
                     </Button>
                   </div>
                 </div>
               </div>
+
+              <div className="hidden shrink-0 md:block">
+                <Brain className="h-20 w-20 text-white/30" />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Focus du jour */}
+        <DailyFocus
+          task={
+            nextTask
+              ? {
+                  id: nextTask.id,
+                  title: nextTask.title,
+                  status: nextTask.status,
+                  due_date: nextTask.due_date,
+                }
+              : null
+          }
+        />
+
+        {/* 4 stats */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Tâches ouvertes</p>
+              <div className="rounded-xl bg-muted/30 p-2">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{tasksOpen}</p>
+            <p className="mt-1 text-xs text-muted-foreground">À terminer</p>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Tâches faites</p>
+              <div className="rounded-xl bg-muted/30 p-2">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{tasksDone}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Au total</p>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Contenus publiés</p>
+              <div className="rounded-xl bg-muted/30 p-2">
+                <FileText className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{publishedCount}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Au total</p>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Contenus planifiés</p>
+              <div className="rounded-xl bg-muted/30 p-2">
+                <Calendar className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{scheduledCount}</p>
+            <p className="mt-1 text-xs text-muted-foreground">À venir</p>
+          </Card>
+        </div>
+
+        {/* Progress semaine + actions rapides */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card className="p-6 lg:col-span-2">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Progression</p>
+                <p className="mt-1 text-sm text-muted-foreground">Reste constant, avance chaque jour.</p>
+              </div>
+              <Badge variant="secondary">{weekProgress}%</Badge>
             </div>
 
-            <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-semibold">{tasksFocusTitle}</h4>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {tasksToday.length > 0 ? "À faire aujourd’hui" : "À venir"}
-                  </p>
-                </div>
-                <Button asChild variant="outline" size="sm" className="h-8 rounded-xl">
-                  <Link href="/tasks">Voir tout</Link>
-                </Button>
+            <div className="mt-4 space-y-2">
+              <Progress value={weekProgress} />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{tasksDone} faites</span>
+                <span>{tasksTotal} total</span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/tasks" className="inline-flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Gérer les tâches
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/create" className="inline-flex items-center gap-2">
+                  <Play className="h-4 w-4" />
+                  Créer en 1 clic
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/contents" className="inline-flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Content Hub
+                </Link>
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">Actions rapides</p>
+                <p className="mt-1 text-sm text-muted-foreground">2 clics & tu es lancé.</p>
+              </div>
+              <div className="rounded-xl bg-muted/30 p-2">
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              <Button asChild variant="secondary" className="justify-between">
+                <Link href="/strategy">
+                  <span className="inline-flex items-center gap-2">
+                    <Brain className="h-4 w-4" />
+                    Voir stratégie
+                  </span>
+                  <ArrowRight className="h-4 w-4 opacity-70" />
+                </Link>
+              </Button>
+
+              <Button asChild variant="secondary" className="justify-between">
+                <Link href="/tasks">
+                  <span className="inline-flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Mes tâches
+                  </span>
+                  <ArrowRight className="h-4 w-4 opacity-70" />
+                </Link>
+              </Button>
+
+              <Button asChild variant="secondary" className="justify-between">
+                <Link href="/contents">
+                  <span className="inline-flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Content Hub
+                  </span>
+                  <ArrowRight className="h-4 w-4 opacity-70" />
+                </Link>
+              </Button>
+
+              <Button asChild variant="outline" className="justify-between">
+                <Link href="/settings">
+                  <span className="inline-flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Paramètres
+                  </span>
+                  <ArrowRight className="h-4 w-4 opacity-70" />
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Tâches + contenus à venir */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Tâches en cours</p>
+                <p className="mt-1 text-sm text-muted-foreground">Ta liste courte pour aujourd’hui.</p>
               </div>
 
-              {tasksFocus.length > 0 ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href="/tasks" className="inline-flex items-center gap-2">
+                  Tout voir
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {openTasks.length > 0 ? (
                 <div className="space-y-2">
-                  {tasksFocus.map((t) => (
+                  {openTasks.slice(0, 5).map((t) => (
                     <div
                       key={t.id}
                       className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3"
@@ -502,7 +543,7 @@ export default async function TodayPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{t.title}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {t.due_date ? `Échéance : ${t.due_date}` : "Échéance : —"}
+                          Échéance : {fmtIsoMaybe(t.due_date)}
                         </p>
                       </div>
                       <MarkTaskDoneButton taskId={t.id} initialStatus={t.status} className="shrink-0" />
@@ -515,11 +556,11 @@ export default async function TodayPage() {
                     Aucune tâche pour l’instant. Synchronise ou ajoute tes tâches.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button asChild size="sm" className="rounded-xl">
-                      <Link href="/tasks">Ajouter une tâche</Link>
+                    <Button asChild size="sm" variant="secondary">
+                      <Link href="/tasks">Voir / Sync</Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="rounded-xl">
-                      <Link href="/tasks">Sync tâches</Link>
+                    <Button asChild size="sm">
+                      <Link href="/create">Créer du contenu</Link>
                     </Button>
                   </div>
                 </div>
@@ -527,105 +568,76 @@ export default async function TodayPage() {
             </div>
           </Card>
 
-          <Card className="p-6 lg:col-span-2">
+          <Card className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold">À venir cette semaine</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Tes contenus planifiés (et ton focus).
-                </p>
+                <p className="text-sm font-medium">À venir cette semaine</p>
+                <p className="mt-1 text-sm text-muted-foreground">Contenus planifiés & idées.</p>
               </div>
 
-              <Button asChild variant="outline" size="sm">
-                <Link href="/contents">Tout voir</Link>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/contents" className="inline-flex items-center gap-2">
+                  Content Hub
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-2">
               {upcomingThisWeek.length > 0 ? (
-                upcomingThisWeek.map((c) => (
-                  <div key={c.id} className="flex items-start justify-between gap-3 rounded-xl border p-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
-                        <Calendar className="h-4 w-4" />
-                      </div>
-
+                <div className="space-y-2">
+                  {upcomingThisWeek.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3"
+                    >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {c.title ?? "Contenu planifié"}
+                        <p className="truncate text-sm font-medium">{c.title ?? 'Sans titre'}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {c._date ? fmtDateFR(c._date) : '—'} • {typeLabel(c.type)} • {channelLabel(c.channel)}
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {c._date ? formatDayLabel(c._date) : "—"} · {c.type ?? "Contenu"} {c.channel ? `· ${c.channel}` : ""}
-                        </p>
-
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <Badge variant="secondary">{c.status ?? "scheduled"}</Badge>
-                          {c.type ? <Badge variant="secondary">{c.type}</Badge> : null}
-                        </div>
                       </div>
-                    </div>
 
-                    <Button asChild size="sm" className="shrink-0">
-                      <Link href={`/contents/${encodeURIComponent(c.id)}`}>Voir</Link>
-                    </Button>
-                  </div>
-                ))
+                      <Badge variant="secondary" className="shrink-0">
+                        {(c.status ?? 'draft').toLowerCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="rounded-xl border bg-muted/20 p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
-                      <Calendar className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Rien de planifié pour l’instant</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Planifie un contenu depuis <span className="font-medium">Créer</span> puis retrouve-le ici.
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button asChild size="sm" className="gap-2">
-                          <Link href="/create">
-                            <Sparkles className="h-4 w-4" />
-                            Créer maintenant
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="outline">
-                          <Link href="/contents">Mes contenus</Link>
-                        </Button>
-                      </div>
-                    </div>
+                <div className="rounded-xl border bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Rien de planifié pour la semaine. Lance une création rapide.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button asChild size="sm">
+                      <Link href="/create">Créer en 1 clic</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="secondary">
+                      <Link href="/contents">Planifier</Link>
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Card className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Focus du jour</p>
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                    <Target className="h-4 w-4" />
-                  </div>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {nextTask ? nextTask.title : "Produire 1 contenu utile pour ton audience."}
-                </p>
-              </Card>
-
-              <Card className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Énergie</p>
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Un petit pas aujourd’hui &rarr; une semaine solide.
-                </p>
-              </Card>
-            </div>
           </Card>
         </div>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Rythme & constance</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Un petit pas aujourd’hui → une semaine solide.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-muted/30 p-3">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+          </div>
+        </Card>
       </div>
     </AppShell>
-  );
+  )
 }
