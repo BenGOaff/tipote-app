@@ -8,16 +8,37 @@ import type { PostgrestError } from '@supabase/supabase-js'
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
 
-type PatchBody = Partial<{
-  title: string
-  content: string
-  prompt: string
-  type: string
-  status: 'draft' | 'planned' | 'published' | 'archived' | string
-  scheduledDate: string | null // YYYY-MM-DD
-  channel: string
-  tags: string[]
-}>
+type RouteContext = { params: Promise<{ id: string }> }
+
+type ContentRowV2 = {
+  id: string
+  user_id: string
+  type: string | null
+  title: string | null
+  prompt: string | null
+  content: string | null
+  status: string | null
+  scheduled_date: string | null
+  channel: string | null
+  tags: unknown
+  created_at: string | null
+  updated_at: string | null
+}
+
+type ContentRowFR = {
+  id: string
+  user_id: string
+  type: string | null
+  titre: string | null
+  prompt: string | null
+  contenu: string | null
+  statut: string | null
+  date_planifiee: string | null
+  canal: string | null
+  tags: unknown
+  created_at: string | null
+  updated_at: string | null
+}
 
 type ContentItemDTO = {
   id: string
@@ -29,56 +50,54 @@ type ContentItemDTO = {
   status: string | null
   scheduled_date: string | null
   channel: string | null
-  tags: string[] | null
+  tags: string[]
   created_at: string | null
   updated_at: string | null
 }
 
-function isMissingColumnError(message: string | null | undefined) {
-  const m = (message ?? '').toLowerCase()
-  // PostgREST: "column content_item.title does not exist" / "Could not find the 'title' column"
+type PatchBody = Partial<{
+  type: string
+  title: string
+  prompt: string
+  content: string
+  status: string
+  channel: string
+  scheduledDate: string | null
+  tags: string[] | string
+}>
+
+function isMissingColumnError(msg: string) {
+  const m = (msg ?? '').toLowerCase()
   return (
-    m.includes('does not exist') ||
-    m.includes("could not find the '") ||
+    m.includes('column') ||
+    m.includes('could not find') ||
     m.includes('schema cache') ||
     m.includes('pgrst')
   )
 }
 
-function asTagsArray(value: unknown): string[] | null {
-  if (Array.isArray(value)) return value.filter((x) => typeof x === 'string') as string[]
-  if (typeof value === 'string') {
-    const t = value.trim()
-    if (!t) return []
-    // tags en text : "a,b,c" ou JSON "[]"
-    try {
-      const parsed = JSON.parse(t)
-      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === 'string') as string[]
-    } catch {
-      // ignore
-    }
-    return t
+function asTagsArray(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.map(String).map((s) => s.trim()).filter(Boolean)
+  if (typeof tags === 'string')
+    return tags
       .split(',')
-      .map((x) => x.trim())
+      .map((s) => s.trim())
       .filter(Boolean)
-  }
-  return null
+  return []
+}
+
+function tagsArrayToLegacyText(tags: unknown): string | null {
+  const arr = asTagsArray(tags)
+  if (!arr.length) return ''
+  return arr.join(', ')
 }
 
 async function getAuthedUserId() {
   const supabase = await getSupabaseServerClient()
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  if (error) return { supabase, userId: null, error }
-  if (!user?.id) return { supabase, userId: null, error: { message: 'No user' } as PostgrestError }
-
-  return { supabase, userId: user.id }
+  const { data, error } = await supabase.auth.getUser()
+  if (error) return { supabase, userId: null as string | null }
+  return { supabase, userId: data.user?.id ?? null }
 }
-
-type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
@@ -89,7 +108,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     const { supabase, userId } = await getAuthedUserId()
     if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
 
-    // v2 (EN)
+    // V2 d'abord
     const v2 = await supabase
       .from('content_item')
       .select('id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at')
@@ -97,8 +116,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       .eq('user_id', userId)
       .maybeSingle()
 
-    if (!v2.error) {
-      const row = v2.data as any
+    if (!v2.error && v2.data) {
+      const row = v2.data as ContentRowV2
       const dto: ContentItemDTO = {
         id: row.id,
         user_id: row.user_id,
@@ -116,7 +135,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ ok: true, item: dto }, { status: 200 })
     }
 
-    if (!isMissingColumnError(v2.error.message)) {
+    if (v2.error && !isMissingColumnError(v2.error.message)) {
       return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 })
     }
 
@@ -131,8 +150,9 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       .maybeSingle()
 
     if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
-    const row = fr.data as any
+    if (!fr.data) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
 
+    const row = fr.data as ContentRowFR
     const dto: ContentItemDTO = {
       id: row.id,
       user_id: row.user_id,
@@ -183,13 +203,11 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       .update(patchV2)
       .eq('id', id)
       .eq('user_id', userId)
-      .select(
-        'id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at'
-      )
+      .select('id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at')
       .maybeSingle()
 
-    if (!v2.error) {
-      const row = v2.data as any
+    if (!v2.error && v2.data) {
+      const row = v2.data as ContentRowV2
       const dto: ContentItemDTO = {
         id: row.id,
         user_id: row.user_id,
@@ -207,7 +225,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ ok: true, item: dto }, { status: 200 })
     }
 
-    if (!isMissingColumnError(v2.error.message)) {
+    if (v2.error && !isMissingColumnError(v2.error.message)) {
       return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 })
     }
 
@@ -222,7 +240,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (body.scheduledDate !== undefined) patchFR.date_planifiee = body.scheduledDate
     if (body.tags !== undefined) patchFR.tags = body.tags
 
-    const fr = await supabase
+    let fr = await supabase
       .from('content_item')
       .update(patchFR)
       .eq('id', id)
@@ -231,6 +249,26 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
         'id, user_id, type, titre, prompt, contenu, statut, date_planifiee, canal, tags, created_at, updated_at'
       )
       .maybeSingle()
+
+    // Compat: sur certaines DB legacy, `tags` est un champ texte (CSV) et refuse les arrays.
+    // Si on a tenté un array et que Postgres refuse, on retente en CSV.
+    if (
+      fr.error &&
+      body.tags !== undefined &&
+      Array.isArray(body.tags) &&
+      /invalid input|array|json|character varying|text/i.test(fr.error.message)
+    ) {
+      const patchRetry = { ...patchFR, tags: tagsArrayToLegacyText(body.tags) }
+      fr = await supabase
+        .from('content_item')
+        .update(patchRetry)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select(
+          'id, user_id, type, titre, prompt, contenu, statut, date_planifiee, canal, tags, created_at, updated_at'
+        )
+        .maybeSingle()
+    }
 
     if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
     const row = fr.data as any
@@ -268,9 +306,7 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
     const { supabase, userId } = await getAuthedUserId()
     if (!userId) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
 
-    // v2
     const v2 = await supabase.from('content_item').delete().eq('id', id).eq('user_id', userId)
-
     if (v2.error && isMissingColumnError(v2.error.message)) {
       const fr = await supabase.from('content_item').delete().eq('id', id).eq('user_id', userId)
       if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 })
@@ -285,4 +321,9 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
       { status: 500 }
     )
   }
+}
+
+export function handleError(error: unknown) {
+  const e = error as PostgrestError | null
+  return NextResponse.json({ ok: false, error: e?.message ?? 'Unknown error' }, { status: 500 })
 }

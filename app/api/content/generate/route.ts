@@ -1,7 +1,9 @@
 // app/api/content/generate/route.ts
 // Génération IA + sauvegarde dans content_item
-// ✅ Fix compile TS (vu sur ta capture) : getDecryptedUserApiKey() retourne string|null (pas { ok, key })
-// -> on NE destructure PAS, on récupère directement `userKey`
+// ✅ Fix compile TS : getDecryptedUserApiKey(params) attend 1 seul argument (objet), et retourne string|null
+// ✅ A5 — Gating minimal : si l'utilisateur a une clé perso, on autorise la génération même sans plan.
+// ✅ Cohérence calendrier : scheduledDate stockée en YYYY-MM-DD et status "scheduled" si date.
+// ✅ Compat DB : tags peut être array OU texte CSV -> insert avec retry.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -42,9 +44,14 @@ function normalizeProvider(x: unknown): Provider {
 function isoDateOrNull(x: unknown): string | null {
   const s = safeString(x).trim();
   if (!s) return null;
+
+  // Accepte YYYY-MM-DD directement
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // Accepte ISO -> convertit en YYYY-MM-DD
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return d.toISOString().slice(0, 10);
 }
 
 function joinTagsCsv(tags: string[]): string {
@@ -57,11 +64,36 @@ function joinTagsCsv(tags: string[]): string {
 
 function maskKey(key: string | null): string {
   const s = (key ?? "").trim();
+  if (!s) return "••••••••";
   if (s.length <= 8) return "••••••••";
   return `${s.slice(0, 4)}••••••••${s.slice(-4)}`;
 }
 
+function isMissingColumnError(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("does not exist") ||
+    m.includes("could not find the '") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
+  );
+}
+
+function isTagsTypeMismatch(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("malformed array") ||
+    m.includes("invalid input") ||
+    m.includes("array") ||
+    m.includes("json") ||
+    m.includes("character varying") ||
+    m.includes("text")
+  );
+}
+
 // Insert EN (schéma older)
+// - certaines DB ont tags en texte, d'autres en array => on tente array puis CSV
 async function insertContentEN(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -69,12 +101,14 @@ async function insertContentEN(params: {
   title: string | null;
   content: string;
   channel: string | null;
-  scheduledDate: string | null;
+  scheduledDate: string | null; // YYYY-MM-DD
+  tags: string[];
   tagsCsv: string;
   status: string;
 }) {
   const { supabase, ...row } = params;
-  const { data, error } = await supabase
+
+  const first = await supabase
     .from("content_item")
     .insert({
       user_id: row.userId,
@@ -84,15 +118,35 @@ async function insertContentEN(params: {
       status: row.status,
       channel: row.channel,
       scheduled_date: row.scheduledDate,
-      tags: row.tagsCsv,
-    })
+      tags: row.tags,
+    } as any)
     .select("id, title")
     .single();
 
-  return { data, error };
+  if (first.error && isTagsTypeMismatch(first.error.message) && row.tagsCsv) {
+    const retry = await supabase
+      .from("content_item")
+      .insert({
+        user_id: row.userId,
+        content_type: row.type,
+        title: row.title,
+        content: row.content,
+        status: row.status,
+        channel: row.channel,
+        scheduled_date: row.scheduledDate,
+        tags: row.tagsCsv,
+      } as any)
+      .select("id, title")
+      .single();
+
+    return { data: retry.data, error: retry.error };
+  }
+
+  return { data: first.data, error: first.error };
 }
 
 // Insert FR (schéma prod)
+// - certaines DB ont tags en texte, d'autres en array => on tente array puis CSV
 async function insertContentFR(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -100,12 +154,14 @@ async function insertContentFR(params: {
   title: string | null;
   content: string;
   channel: string | null;
-  scheduledDate: string | null;
+  scheduledDate: string | null; // YYYY-MM-DD
+  tags: string[];
   tagsCsv: string;
   status: string;
 }) {
   const { supabase, ...row } = params;
-  const { data, error } = await supabase
+
+  const first = await supabase
     .from("content_item")
     .insert({
       user_id: row.userId,
@@ -115,23 +171,31 @@ async function insertContentFR(params: {
       statut: row.status,
       canal: row.channel,
       date_planifiee: row.scheduledDate,
-      tags: row.tagsCsv,
+      tags: row.tags,
     } as any)
     .select("id, titre")
     .single();
 
-  return { data, error };
-}
+  if (first.error && isTagsTypeMismatch(first.error.message) && row.tagsCsv) {
+    const retry = await supabase
+      .from("content_item")
+      .insert({
+        user_id: row.userId,
+        type: row.type,
+        titre: row.title,
+        contenu: row.content,
+        statut: row.status,
+        canal: row.channel,
+        date_planifiee: row.scheduledDate,
+        tags: row.tagsCsv,
+      } as any)
+      .select("id, titre")
+      .single();
 
-function isMissingColumnError(message: string | null | undefined) {
-  const m = (message ?? "").toLowerCase();
-  return (
-    m.includes("does not exist") ||
-    m.includes("could not find the '") ||
-    (m.includes("column") && m.includes("exist")) ||
-    m.includes("schema cache") ||
-    m.includes("pgrst")
-  );
+    return { data: retry.data, error: retry.error };
+  }
+
+  return { data: first.data, error: first.error };
 }
 
 export async function POST(req: Request) {
@@ -141,32 +205,8 @@ export async function POST(req: Request) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    // A5 — Gating minimal (abonnement requis)
-    // Si table/colonne/RLS indisponible => fail-open (ne pas casser la prod)
-    try {
-      const { data: billingProfile, error: billingError } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (!billingError) {
-        const plan = (billingProfile as any)?.plan as string | null | undefined;
-        const p = (plan ?? "").toLowerCase().trim();
-        const hasPlan = p === "basic" || p === "essential" || p === "elite";
-        if (!hasPlan) {
-          return NextResponse.json(
-            { ok: false, code: "subscription_required", error: "Abonnement requis." },
-            { status: 402 },
-          );
-        }
-      }
-    } catch {
-      // fail-open
     }
 
     const body = (await req.json()) as Body;
@@ -199,6 +239,49 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Clé user (si dispo) — si présente, on bypass le gating abonnement
+    const ownerKey = process.env.OPENAI_API_KEY ?? "";
+    const userKey = await getDecryptedUserApiKey({
+      supabase,
+      userId: session.user.id,
+      provider: "openai",
+    });
+
+    // ✅ A5 — Gating minimal (abonnement requis) UNIQUEMENT si pas de clé perso.
+    // Si table/colonne/RLS indisponible => fail-open (ne pas casser la prod)
+    if (!userKey) {
+      try {
+        const { data: billingProfile, error: billingError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!billingError) {
+          const plan = (billingProfile as any)?.plan as string | null | undefined;
+          const p = (plan ?? "").toLowerCase().trim();
+          const hasPlan = p === "basic" || p === "essential" || p === "elite";
+          if (!hasPlan) {
+            return NextResponse.json(
+              { ok: false, code: "subscription_required", error: "Abonnement requis." },
+              { status: 402 },
+            );
+          }
+        }
+      } catch {
+        // fail-open
+      }
+    }
+
+    const apiKey = (userKey ?? ownerKey).trim();
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." },
+        { status: 400 },
+      );
+    }
+
     // Contexte (optionnel) : business profile + plan
     const { data: profile } = await supabase
       .from("business_profiles")
@@ -212,23 +295,7 @@ export async function POST(req: Request) {
       .eq("user_id", session.user.id)
       .maybeSingle();
 
-    const planJson = (planRow?.plan_json ?? null) as unknown;
-
-    const ownerKey = process.env.OPENAI_API_KEY ?? "";
-    const userKey = await getDecryptedUserApiKey({
-      supabase,
-      userId: session.user.id,
-      provider: "openai",
-    });
-
-    const apiKey = (userKey ?? ownerKey).trim();
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." },
-        { status: 400 },
-      );
-    }
+    const planJson = (planRow as any)?.plan_json ?? null;
 
     const client = new OpenAI({ apiKey });
 
@@ -239,6 +306,8 @@ export async function POST(req: Request) {
       "Tu écris en français, avec un style clair, pro, actionnable.",
       "Tu ne mentionnes pas que tu es une IA.",
       "Tu rends un contenu final prêt à publier.",
+      "Format: markdown propre, titres si utile, listes si utile.",
+      "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
     ].join("\n");
 
     const userContextLines: string[] = [];
@@ -279,7 +348,7 @@ export async function POST(req: Request) {
       return t.slice(0, 120);
     })();
 
-    const status = "draft";
+    const status = scheduledDate ? "scheduled" : "draft";
 
     const tryEN = await insertContentEN({
       supabase,
@@ -289,6 +358,7 @@ export async function POST(req: Request) {
       content,
       channel,
       scheduledDate,
+      tags,
       tagsCsv,
       status,
     });
@@ -298,7 +368,7 @@ export async function POST(req: Request) {
         {
           ok: true,
           id: tryEN.data?.id,
-          title: tryEN.data?.title ?? title,
+          title: (tryEN.data as any)?.title ?? title,
           content,
           usedUserKey: Boolean(userKey),
           maskedKey: maskKey(apiKey),
@@ -323,6 +393,7 @@ export async function POST(req: Request) {
       content,
       channel,
       scheduledDate,
+      tags,
       tagsCsv,
       status,
     });
@@ -337,7 +408,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: true,
-        id: tryFR.data?.id,
+        id: (tryFR.data as any)?.id,
         title: (tryFR.data as any)?.titre ?? title,
         content,
         usedUserKey: Boolean(userKey),
