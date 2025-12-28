@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   deleteUserApiKey,
   getDecryptedUserApiKey,
@@ -53,9 +54,10 @@ export async function GET(req: Request) {
     // Indique si le chiffrement est configuré (sinon on désactive côté UI)
     const configured = Boolean(process.env.TIPOTE_KEYS_ENCRYPTION_KEY);
 
+    // IMPORTANT: on lit avec supabaseAdmin pour éviter les faux 400 liés à RLS sur user_api_keys
     const key = configured
       ? await getDecryptedUserApiKey({
-          supabase,
+          supabase: supabaseAdmin,
           userId: session.user.id,
           provider,
         })
@@ -114,8 +116,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Invalid apiKey" }, { status: 400 });
     }
 
+    // IMPORTANT: on écrit avec supabaseAdmin pour éviter les faux 400 liés à RLS sur user_api_keys
     const res = await upsertUserApiKey({
-      supabase,
+      supabase: supabaseAdmin,
       userId: session.user.id,
       provider,
       apiKey,
@@ -160,8 +163,9 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ ok: false, error: "Invalid provider" }, { status: 400 });
     }
 
+    // IMPORTANT: on supprime avec supabaseAdmin pour éviter les blocages RLS sur user_api_keys
     const res = await deleteUserApiKey({
-      supabase,
+      supabase: supabaseAdmin,
       userId: session.user.id,
       provider,
     });
