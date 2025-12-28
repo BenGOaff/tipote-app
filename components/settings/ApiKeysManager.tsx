@@ -12,10 +12,10 @@ type Provider = "openai" | "claude" | "gemini";
 
 type GetResp = {
   ok: boolean;
-  configured?: boolean;
+  configured?: boolean; // = chiffrement côté serveur configuré
   provider?: string;
-  hasKey?: boolean;
-  masked?: string | null;
+  hasKey?: boolean; // = une clé existe pour CE provider
+  masked?: string | null; // = masque de la clé (si hasKey)
   error?: string;
 };
 
@@ -64,7 +64,12 @@ export default function ApiKeysManager() {
   const [deleting, setDeleting] = useState(false);
 
   const [apiKey, setApiKey] = useState("");
-  const [configured, setConfigured] = useState(false);
+
+  // IMPORTANT:
+  // - encryptionConfigured = présence TIPOTE_KEYS_ENCRYPTION_KEY (donc stockage chiffré possible)
+  // - hasKey = la clé utilisateur existe pour CE provider
+  const [encryptionConfigured, setEncryptionConfigured] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
   const [masked, setMasked] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -88,16 +93,19 @@ export default function ApiKeysManager() {
       const json = (await res.json().catch(() => null)) as GetResp | null;
 
       if (!json || !json.ok) {
-        setConfigured(false);
+        setEncryptionConfigured(false);
+        setHasKey(false);
         setMasked(null);
         setError(json?.error ?? "Impossible de charger la configuration.");
         return;
       }
 
-      setConfigured(!!json.configured || !!json.hasKey);
+      setEncryptionConfigured(Boolean(json.configured));
+      setHasKey(Boolean(json.hasKey));
       setMasked(json.masked ?? null);
     } catch (e) {
-      setConfigured(false);
+      setEncryptionConfigured(false);
+      setHasKey(false);
       setMasked(null);
       setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
@@ -172,6 +180,9 @@ export default function ApiKeysManager() {
     }
   };
 
+  const canSave = !loading && encryptionConfigured && !saving && !deleting;
+  const canDelete = !loading && encryptionConfigured && hasKey && !saving && !deleting;
+
   return (
     <div className="space-y-4">
       {/* Provider switch */}
@@ -202,7 +213,7 @@ export default function ApiKeysManager() {
               <h4 className="text-sm font-semibold text-slate-900">{currentProviderMeta.label}</h4>
               {loading ? (
                 <Badge variant="secondary">…</Badge>
-              ) : configured ? (
+              ) : hasKey ? (
                 <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Configuré</Badge>
               ) : (
                 <Badge variant="secondary">Non configuré</Badge>
@@ -211,21 +222,25 @@ export default function ApiKeysManager() {
             <p className="text-xs text-slate-500">{currentProviderMeta.hint}</p>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading || saving || deleting}>
-              Rafraîchir
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading || saving || deleting}>
+            Rafraîchir
+          </Button>
         </div>
 
-        {configured ? (
+        {!encryptionConfigured && !loading ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
+            Encryption not configured (TIPOTE_KEYS_ENCRYPTION_KEY missing)
+          </div>
+        ) : null}
+
+        {hasKey ? (
           <div className="rounded-xl border border-slate-200 p-4 space-y-2">
             <p className="text-xs text-slate-600">
               Clé enregistrée :{" "}
-              <span className="font-mono text-slate-900">{masked ?? maskKey("xxxxxxxxxxxxxxxx")}</span>
+              <span className="font-mono text-slate-900">{masked ? masked : maskKey("xxxxxxxxxxxxxxxx")}</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={onDelete} disabled={deleting || saving}>
+              <Button variant="outline" size="sm" onClick={onDelete} disabled={!canDelete}>
                 {deleting ? "Suppression…" : "Supprimer"}
               </Button>
             </div>
@@ -242,14 +257,15 @@ export default function ApiKeysManager() {
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={currentProviderMeta.placeholder}
                 type="password"
+                disabled={!encryptionConfigured || saving || deleting}
               />
               <p className="text-[11px] text-slate-500">
                 Elle est chiffrée côté serveur. Tipote l’utilise uniquement pour générer tes contenus.
               </p>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={onSave} disabled={saving || loading}>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={onSave} disabled={!canSave}>
                 {saving ? "Enregistrement…" : "Enregistrer"}
               </Button>
             </div>
