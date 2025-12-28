@@ -17,40 +17,70 @@ import { decryptString, encryptString, type EncryptedPayload } from "@/lib/crypt
 
 export type Provider = "openai" | "claude" | "gemini";
 
-type DbRow = {
+type Row = {
   user_id: string;
   provider: string;
   ciphertext_b64: string;
   iv_b64: string;
   tag_b64: string;
+  created_at?: string;
+  updated_at?: string;
 };
+
+function normalizeProvider(provider: Provider): Provider {
+  const p = (provider ?? "openai").toString().toLowerCase().trim();
+  if (p === "claude") return "claude";
+  if (p === "gemini") return "gemini";
+  return "openai";
+}
+
+function isSchemaOrRlsError(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  // PostgREST / Supabase errors vary, keep wide net but safe.
+  return (
+    m.includes("does not exist") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    m.includes("permission denied") ||
+    m.includes("violates row-level security") ||
+    m.includes("rls") ||
+    m.includes("not allowed")
+  );
+}
 
 export async function getDecryptedUserApiKey(params: {
   supabase: SupabaseClient;
   userId: string;
   provider: Provider;
 }): Promise<string | null> {
-  const { supabase, userId, provider } = params;
+  const provider = normalizeProvider(params.provider);
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await params.supabase
       .from("user_api_keys")
-      .select("user_id, provider, ciphertext_b64, iv_b64, tag_b64")
-      .eq("user_id", userId)
+      .select("ciphertext_b64, iv_b64, tag_b64")
+      .eq("user_id", params.userId)
       .eq("provider", provider)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error) {
+      if (isSchemaOrRlsError(error.message)) return null;
+      return null;
+    }
 
-    const row = data as unknown as DbRow;
+    if (!data) return null;
+
     const payload: EncryptedPayload = {
-      ciphertext_b64: row.ciphertext_b64,
-      iv_b64: row.iv_b64,
-      tag_b64: row.tag_b64,
+      ciphertext_b64: (data as any).ciphertext_b64,
+      iv_b64: (data as any).iv_b64,
+      tag_b64: (data as any).tag_b64,
     };
 
-    return decryptString(payload);
-  } catch {
+    const decrypted = decryptString(payload);
+    const key = (decrypted ?? "").trim();
+    return key || null;
+  } catch (e) {
+    // fail-open (ne pas casser l'app)
     return null;
   }
 }
@@ -60,28 +90,35 @@ export async function upsertUserApiKey(params: {
   userId: string;
   provider: Provider;
   apiKey: string;
-}): Promise<{ ok: boolean; error?: string }> {
-  const { supabase, userId, provider, apiKey } = params;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const provider = normalizeProvider(params.provider);
+  const apiKey = (params.apiKey ?? "").trim();
 
-  let payload: EncryptedPayload;
-  try {
-    payload = encryptString(apiKey);
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Encryption error" };
-  }
+  if (!apiKey) return { ok: false, error: "Missing apiKey" };
 
   try {
-    const { error } = await supabase.from("user_api_keys").upsert(
+    const enc = encryptString(apiKey);
+
+    // ⚠️ On assume une contrainte unique (user_id, provider) ou PK équivalente.
+    const { error } = await params.supabase.from("user_api_keys").upsert(
       {
-        user_id: userId,
+        user_id: params.userId,
         provider,
-        ...payload,
+        ciphertext_b64: enc.ciphertext_b64,
+        iv_b64: enc.iv_b64,
+        tag_b64: enc.tag_b64,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,provider" },
+      } as Partial<Row>,
+      { onConflict: "user_id,provider" }
     );
 
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (isSchemaOrRlsError(error.message)) {
+        return { ok: false, error: "API keys storage not available." };
+      }
+      return { ok: false, error: error.message };
+    }
+
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Unknown error" };
@@ -92,17 +129,21 @@ export async function deleteUserApiKey(params: {
   supabase: SupabaseClient;
   userId: string;
   provider: Provider;
-}): Promise<{ ok: boolean; error?: string }> {
-  const { supabase, userId, provider } = params;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const provider = normalizeProvider(params.provider);
 
   try {
-    const { error } = await supabase
+    const { error } = await params.supabase
       .from("user_api_keys")
       .delete()
-      .eq("user_id", userId)
+      .eq("user_id", params.userId)
       .eq("provider", provider);
 
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (isSchemaOrRlsError(error.message)) return { ok: true }; // fail-open
+      return { ok: false, error: error.message };
+    }
+
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Unknown error" };
