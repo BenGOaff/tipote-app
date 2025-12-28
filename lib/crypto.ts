@@ -11,34 +11,55 @@ import dotenv from "dotenv";
 
 let envLoaded = false;
 
+function uniq(arr: string[]) {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+
 /**
  * En prod Next.js "standalone", `.env.local` n'est pas forcément chargé automatiquement.
  * On le charge ici (best effort) pour que process.env.TIPOTE_KEYS_ENCRYPTION_KEY soit dispo
  * sans devoir toucher la commande PM2.
+ *
+ * IMPORTANT: ce loader ne doit JAMAIS casser le runtime (fail-open).
  */
 function loadEnvOnce() {
   if (envLoaded) return;
   envLoaded = true;
 
   try {
-    // Charge d'abord `.env.local` si présent dans le cwd
-    const envLocalPath = path.join(process.cwd(), ".env.local");
-    if (fs.existsSync(envLocalPath)) {
-      dotenv.config({ path: envLocalPath });
-      return;
-    }
+    const argv1 = process.argv?.[1] ? path.dirname(process.argv[1]) : "";
+    const cwd = process.cwd();
 
-    // Sinon fallback: `.env`
-    const envPath = path.join(process.cwd(), ".env");
-    if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath });
-      return;
+    // On tente plusieurs racines possibles, car en standalone le cwd peut varier.
+    // - cwd (si pm2 démarre depuis /home/tipote/tipote-app)
+    // - dossier de server.js (process.argv[1])
+    // - parents (au cas où le cwd serait .next/standalone)
+    const candidates = uniq([
+      cwd,
+      path.resolve(cwd, ".."),
+      path.resolve(cwd, "../.."),
+      argv1,
+      path.resolve(argv1, ".."),
+      path.resolve(argv1, "../.."),
+    ]);
+
+    for (const dir of candidates) {
+      const envLocalPath = path.join(dir, ".env.local");
+      if (fs.existsSync(envLocalPath)) {
+        dotenv.config({ path: envLocalPath });
+        return;
+      }
+      const envPath = path.join(dir, ".env");
+      if (fs.existsSync(envPath)) {
+        dotenv.config({ path: envPath });
+        return;
+      }
     }
 
     // Dernier recours: dotenv sans path (ne fait rien si aucun fichier)
     dotenv.config();
   } catch {
-    // fail-open volontaire (ne doit jamais crasher l'app)
+    // fail-open (ne doit jamais crasher l'app)
   }
 }
 
