@@ -3,7 +3,6 @@
 // ✅ Suite logique : pré-remplissage intelligent du brief basé sur business_profiles (+ plan si dispo)
 // ✅ Templates rapides (via searchParams.template) pour type="post" (CDC)
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/AppShell";
@@ -51,25 +50,22 @@ function safeArray(v: unknown): string[] {
   return v.map((x) => String(x)).filter(Boolean);
 }
 
-function buildTemplatePrompt(type: string, templateKey: string): string | null {
-  const t = type.trim().toLowerCase();
+function buildTemplatePrompt(templateKey: string): string | null {
   const k = templateKey.trim().toLowerCase();
-
-  if (t !== "post") return null;
 
   const templates: Record<string, string> = {
     engagement:
-      "TEMPLATE RAPIDE — Post Engagement\nObjectif : générer des commentaires.\nStructure : hook (question), contexte rapide, 2-3 points de valeur, 1 question finale très précise, CTA soft.\nContraintes : ton naturel, pas de blabla, 120–220 mots, emojis légers (0–3).",
+      "TEMPLATE RAPIDE — Post Engagement\nObjectif : générer des commentaires.\nStructure : hook question + 3–5 lignes de contexte + question finale.\nTon : direct, humain.\nContraintes : pas de blabla, 120–220 mots, emojis légers (0–3).",
     testimonial:
-      "TEMPLATE RAPIDE — Témoignage Client\nObjectif : preuve sociale.\nStructure : situation (avant), action, résultat, leçon, CTA (inviter à DM / lien).\nContraintes : chiffres si possible, crédible, 140–240 mots, 1 punchline finale.",
+      "TEMPLATE RAPIDE — Témoignage Client\nObjectif : preuve sociale.\nStructure : situation → action → résultat → leçon + CTA soft.\nTon : crédible, concret.\nContraintes : 150–260 mots, 1 chiffre si possible, emojis 0–2.",
     expert_tip:
-      "TEMPLATE RAPIDE — Conseil Expert\nObjectif : expertise + confiance.\nStructure : hook (opinion tranchée), 3 conseils actionnables, mini-exemple, CTA (sauvegarder/partager).\nContraintes : concret, phrases courtes, 150–250 mots.",
+      "TEMPLATE RAPIDE — Conseil Expert\nObjectif : valeur instantanée.\nStructure : hook (mythe/erreur) → 3 conseils → mini checklist → CTA soft.\nTon : pédago, actionnable.\nContraintes : 160–260 mots, phrases courtes.",
     product_announce:
-      "TEMPLATE RAPIDE — Annonce Produit\nObjectif : conversion.\nStructure : hook (nouveauté), problème, solution (offre), bénéfices, détails (dates/bonus), CTA clair.\nContraintes : pas agressif, orienté valeur, 140–230 mots.",
+      "TEMPLATE RAPIDE — Annonce Produit\nObjectif : annoncer un lancement / promo / ouverture.\nStructure : hook + bénéfice principal → 3 points (quoi/pour qui/ce que ça change) → preuve/raison → CTA clair.\nTon : enthousiaste, concret.\nContraintes : 140–240 mots, 1 CTA max.",
     behind_scenes:
-      "TEMPLATE RAPIDE — Behind The Scenes\nObjectif : proximité + storytelling.\nStructure : scène (coulisses), difficulté, décision, leçon, CTA (question ou opinion).\nContraintes : authentique, 160–260 mots.",
+      "TEMPLATE RAPIDE — Behind The Scenes\nObjectif : humaniser + crédibilité.\nStructure : coulisses (ce que tu fais) → difficulté/apprentissage → leçon → CTA soft.\nTon : authentique.\nContraintes : 160–280 mots, 1 punchline.",
     cta:
-      "TEMPLATE RAPIDE — Call To Action\nObjectif : action immédiate.\nStructure : contexte (1–2 lignes), promesse, 3 bénéfices, objection traitée, CTA unique.\nContraintes : très clair, 90–170 mots.",
+      "TEMPLATE RAPIDE — Call To Action\nObjectif : pousser à l’action.\nStructure : problème → solution → bénéfices → objection → CTA.\nTon : direct, orienté résultat.\nContraintes : 120–200 mots, CTA clair.",
   };
 
   return templates[k] ?? null;
@@ -77,57 +73,44 @@ function buildTemplatePrompt(type: string, templateKey: string): string | null {
 
 function buildDefaultPrompt(args: {
   type: string;
-  profileRow: Record<string, unknown> | null;
-  planJson: unknown;
+  profile?: any | null;
+  plan?: any | null;
 }) {
-  const type = args.type.trim().toLowerCase();
-  const p = args.profileRow ?? {};
+  const type = args.type;
+  const profile = args.profile ?? null;
+  const plan = args.plan ?? null;
 
-  const niche = safeString(p.niche);
-  const mission = safeString(p.mission || p.persona_input);
-  const goals = safeArray(p.goals || p.objectives || p.objectifs);
-  const tone = safeString(p.tone || p.tone_preference);
+  const profileName = safeString(profile?.business_name || profile?.nom_entreprise || "");
+  const audience = safeString(profile?.audience || profile?.cible || "");
+  const offer = safeString(profile?.offer || profile?.offre || "");
+  const tone = safeString(profile?.tone || profile?.tonalite || profile?.tone_preference || "");
+  const goals = safeArray(profile?.goals || profile?.objectifs || []);
 
-  const baseContext = [
-    niche ? `Ma niche : ${niche}.` : "",
-    mission ? `Ma mission : ${mission}` : "",
-    goals.length ? `Objectifs : ${goals.join(", ")}.` : "",
-    tone ? `Ton souhaité : ${tone}.` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const planJson = plan?.plan_json ?? null;
 
-  const planJson = args.planJson ?? null;
-  const planLine = planJson ? `Plan (résumé) : ${JSON.stringify(planJson).slice(0, 700)}` : "";
+  const lines: string[] = [];
 
-  const instructionsByType: Record<string, string> = {
-    post:
-      "Génère un post prêt à publier (hook fort, valeur, preuve, CTA soft). Donne aussi 3 variantes d'accroche.",
-    email:
-      "Génère un email prêt à envoyer (objet + préheader + corps). Style clair, punchy, orienté conversion.",
-    blog:
-      "Génère un plan H2/H3 + intro + conclusion + points actionnables. Ton pédagogique, concret.",
-    video_script:
-      "Génère un script 45-60s (hook 0-3s, tension, valeur, CTA). Ajoute 3 idées de hooks.",
-    sales_page:
-      "Génère une structure de page de vente (promesse, preuves, objections, offre, bonus, FAQ, CTA).",
-    funnel:
-      "Propose un mini-funnel (lead magnet → nurture → offre) avec étapes + messages clés + CTA.",
-  };
+  lines.push("BRIEF CONTEXTE");
+  if (profileName) lines.push(`- Business : ${profileName}`);
+  if (audience) lines.push(`- Audience : ${audience}`);
+  if (offer) lines.push(`- Offre : ${offer}`);
+  if (tone) lines.push(`- Ton préféré : ${tone}`);
+  if (goals.length) lines.push(`- Objectifs : ${goals.slice(0, 6).join(", ")}`);
 
-  const inst = instructionsByType[type] ?? "Génère un contenu actionnable, structuré, prêt à l’emploi.";
+  if (planJson && typeof planJson === "object") {
+    lines.push("- Plan stratégique : disponible (utilise-le si pertinent).");
+  }
 
-  // ⚠️ Le plan peut être lourd : on en met juste un extrait limité
-  const lines = [
-    baseContext ? `CONTEXTE\n${baseContext}` : "",
-    planLine ? `\nSTRATÉGIE\n${planLine}` : "",
-    `\nINSTRUCTIONS\n${inst}`,
-  ].filter(Boolean);
+  lines.push("");
+  lines.push("DEMANDE");
+  lines.push(`Génère un contenu de type "${type}" prêt à publier. Donne un résultat directement utilisable.`);
 
   return lines.join("\n");
 }
 
-export default async function CreateTypePage({ params, searchParams }: Props) {
+export default async function CreateTypePage(props: Props) {
+  const { params, searchParams } = props;
+
   const supabase = await getSupabaseServerClient();
   const {
     data: { session },
@@ -144,30 +127,45 @@ export default async function CreateTypePage({ params, searchParams }: Props) {
     redirect("/create");
   }
 
-  // 🔎 Contexte pour pré-remplir le brief
-  const { data: profileRow } = await supabase
-    .from("business_profiles")
-    .select("first_name, niche, mission, persona_input, goals, objectives, objectifs, tone, tone_preference")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
+  const sp = (await searchParams) ?? {};
+  const templateKey = safeString(sp.template);
 
-  const { data: planRow } = await supabase
-    .from("business_plan")
-    .select("plan_json")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
+  const templatePrompt =
+    safeType === "post" && templateKey ? buildTemplatePrompt(templateKey) : null;
+
+  // 🔎 Contexte pour pré-remplir le brief (fail-open)
+  let profileRow: any | null = null;
+  let planRow: any | null = null;
+
+  try {
+    const { data } = await supabase
+      .from("business_profiles")
+      .select(
+        "business_name, nom_entreprise, audience, cible, offer, offre, goals, objectifs, tone, tonalite, tone_preference",
+      )
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    profileRow = data ?? null;
+  } catch {
+    profileRow = null;
+  }
+
+  try {
+    const { data } = await supabase
+      .from("business_plan")
+      .select("plan_json")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    planRow = data ?? null;
+  } catch {
+    planRow = null;
+  }
 
   const defaultPromptBase = buildDefaultPrompt({
     type: safeType,
-    profileRow: (profileRow ?? null) as unknown as Record<string, unknown> | null,
-    planJson: (planRow?.plan_json ?? null) as unknown,
+    profile: profileRow,
+    plan: planRow,
   });
-
-  // Template rapide (optionnel)
-  const sp = searchParams ? await searchParams : undefined;
-  const templateRaw = sp?.template;
-  const templateKey = safeString(Array.isArray(templateRaw) ? templateRaw[0] : templateRaw).trim();
-  const templatePrompt = templateKey ? buildTemplatePrompt(safeType, templateKey) : null;
 
   const defaultPrompt = templatePrompt ? `${defaultPromptBase}\n\n${templatePrompt}` : defaultPromptBase;
 
@@ -181,25 +179,27 @@ export default async function CreateTypePage({ params, searchParams }: Props) {
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">{meta.hint}</p>
 
             {templatePrompt ? (
-              <p className="mt-2 inline-flex items-center rounded-xl bg-[#b042b4]/10 px-3 py-1 text-xs font-semibold text-[#b042b4]">
+              <p className="mt-2 inline-flex items-center rounded-full bg-[#b042b4]/10 px-3 py-1 text-xs font-semibold text-[#b042b4]">
                 Template rapide activé
               </p>
             ) : null}
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
+            {/* CONSOLIDATION: hard-nav pour éviter les blocages silencieux */}
+            <a
               href="/create"
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
             >
-              Retour
-            </Link>
-            <Link
+              ← Retour
+            </a>
+
+            <a
               href="/contents"
               className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
             >
               Mes contenus
-            </Link>
+            </a>
           </div>
         </div>
 
