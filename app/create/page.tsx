@@ -1,6 +1,5 @@
 // app/create/page.tsx
-// Hub création (Lovable) : sélection du type + templates + génération dans la même page.
-// Objectif : supprimer le blocage de navigation observé (page /create) en adoptant la logique Lovable.
+// Page Create calquée sur Lovable (UX + design), en branchant la génération Tipote.
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +7,7 @@ import { redirect } from "next/navigation";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { CreateHub } from "@/components/create/CreateHub";
+import CreateHub from "@/components/create/CreateHub";
 
 export default async function CreatePage() {
   const supabase = await getSupabaseServerClient();
@@ -20,7 +19,7 @@ export default async function CreatePage() {
 
   const userEmail = session.user.email ?? "";
 
-  // 🔎 Contexte pour pré-remplir le brief (fail-open)
+  // Contexte onboarding/plan (fail-open)
   let profileRow: any | null = null;
   let planRow: any | null = null;
 
@@ -49,7 +48,7 @@ export default async function CreatePage() {
   }
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Créer">
+    <AppShell userEmail={userEmail} contentClassName="flex-1 p-0">
       <CreateHub profile={profileRow} plan={planRow} />
     </AppShell>
   );
