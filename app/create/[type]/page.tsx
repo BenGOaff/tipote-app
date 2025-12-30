@@ -3,6 +3,9 @@
 // ✅ Suite logique : pré-remplissage intelligent du brief basé sur business_profiles (+ plan si dispo)
 // ✅ Templates rapides (via searchParams.template) pour type="post" (CDC)
 
+// IMPORTANT: on force le mode dynamique (session Supabase + querystring + data dépend user)
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/AppShell";
@@ -186,20 +189,24 @@ export default async function CreateTypePage(props: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* CONSOLIDATION: hard-nav pour éviter les blocages silencieux */}
-            <a
-              href="/create"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-            >
-              ← Retour
-            </a>
+            {/* Navigation native (fiable), sans casser l’UI */}
+            <form action="/create" method="get">
+              <button
+                type="submit"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+              >
+                ← Retour
+              </button>
+            </form>
 
-            <a
-              href="/contents"
-              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-            >
-              Mes contenus
-            </a>
+            <form action="/contents" method="get">
+              <button
+                type="submit"
+                className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+              >
+                Mes contenus
+              </button>
+            </form>
           </div>
         </div>
 

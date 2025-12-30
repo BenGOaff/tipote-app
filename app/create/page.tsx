@@ -114,30 +114,44 @@ export default async function CreatePage() {
               </p>
             </div>
 
-            {/* CONSOLIDATION: hard-nav (full reload) pour éviter les blocages silencieux App Router */}
-            <a
-              href="/strategy"
-              className="shrink-0 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
-            >
-              Voir la stratégie
-            </a>
+            {/* IMPORTANT: on garde le CTA existant, mais on force une navigation "native" fiable */}
+            <form action="/strategy" method="get" className="shrink-0">
+              <button
+                type="submit"
+                className="shrink-0 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
+              >
+                Voir la stratégie
+              </button>
+            </form>
           </div>
         </section>
 
         {/* Grille types (Lovable) */}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tiles.map((t) => (
-            // CONSOLIDATION: hard-nav pour rendre visible toute erreur/redirect côté /create/[type]
-            <a
+            <form
               key={t.slug}
-              href={`/create/${t.slug}`}
-              className="block text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition"
+              action={`/create/${t.slug}`}
+              method="get"
+              className="relative"
             >
-              <p className="text-[11px] text-slate-500">{t.tag}</p>
-              <h2 className="mt-2 text-sm font-semibold text-slate-900">{t.title}</h2>
-              <p className="mt-1 text-xs text-slate-600">{t.desc}</p>
-              <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">Générer →</p>
-            </a>
+              {/* On garde le markup “carte” existant, mais on superpose un submit transparent
+                  pour forcer une navigation native (contourne tout blocage JS/client-router). */}
+              <button
+                type="submit"
+                aria-label={`Créer : ${t.title}`}
+                className="absolute inset-0 z-10 cursor-pointer rounded-2xl"
+                style={{ background: "transparent" }}
+              />
+              <div className="block text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition">
+                <p className="text-[11px] text-slate-500">{t.tag}</p>
+                <h2 className="mt-2 text-sm font-semibold text-slate-900">{t.title}</h2>
+                <p className="mt-1 text-xs text-slate-600">{t.desc}</p>
+                <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">
+                  Générer →
+                </p>
+              </div>
+            </form>
           ))}
         </section>
 
@@ -149,37 +163,53 @@ export default async function CreatePage() {
               <p className="mt-1 text-sm text-slate-500">Génération en 1 clic (brief pré-rempli).</p>
             </div>
 
-            {/* CONSOLIDATION: hard-nav */}
-            <a
-              href="/create/post"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-            >
-              Tous les posts →
-            </a>
+            {/* On garde le bouton existant, navigation native */}
+            <form action="/create/post" method="get">
+              <button
+                type="submit"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+              >
+                Tous les posts →
+              </button>
+            </form>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {quickTemplates.map((tpl) => (
-              // CONSOLIDATION: on remplace href object (Pages Router) par une URL string App Router
-              <a
+              <form
                 key={tpl.key}
-                href={`/create/post?template=${encodeURIComponent(tpl.key)}`}
-                className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition"
+                action="/create/post"
+                method="get"
+                className="relative"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-slate-500">{tpl.badge}</p>
-                    <h3 className="mt-2 text-sm font-semibold text-slate-900">{tpl.title}</h3>
-                    <p className="mt-1 text-xs text-slate-600">{tpl.desc}</p>
+                <input type="hidden" name="template" value={tpl.key} />
+
+                {/* Overlay submit transparent: clic n’importe où => navigation native */}
+                <button
+                  type="submit"
+                  aria-label={`Template : ${tpl.title}`}
+                  className="absolute inset-0 z-10 cursor-pointer rounded-2xl"
+                  style={{ background: "transparent" }}
+                />
+
+                <div className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-slate-500">{tpl.badge}</p>
+                      <h3 className="mt-2 text-sm font-semibold text-slate-900">{tpl.title}</h3>
+                      <p className="mt-1 text-xs text-slate-600">{tpl.desc}</p>
+                    </div>
+
+                    <span className="shrink-0 rounded-xl bg-[#b042b4]/10 px-2 py-1 text-[11px] font-semibold text-[#b042b4]">
+                      1 clic
+                    </span>
                   </div>
 
-                  <span className="shrink-0 rounded-xl bg-[#b042b4]/10 px-2 py-1 text-[11px] font-semibold text-[#b042b4]">
-                    1 clic
-                  </span>
+                  <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">
+                    Générer →
+                  </p>
                 </div>
-
-                <p className="mt-4 inline-flex text-xs font-semibold text-[#b042b4]">Générer →</p>
-              </a>
+              </form>
             ))}
           </div>
         </section>
