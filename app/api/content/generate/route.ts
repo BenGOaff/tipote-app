@@ -1,7 +1,9 @@
 // app/api/content/generate/route.ts
 // Génération IA + sauvegarde dans content_item
 // ✅ Fix compile TS : getDecryptedUserApiKey(params) attend 1 seul argument (objet), et retourne string|null
-// ✅ A5 — Gating minimal : si l'utilisateur a une clé perso, on autorise la génération même sans plan.
+// ✅ A5 — Gating :
+//    - Plans payants (basic/essential/elite) => OK
+//    - Plan free => quota 7 contenus / 7 jours glissants (même si clé user configurée)
 // ✅ Cohérence calendrier : scheduledDate stockée en YYYY-MM-DD et status "scheduled" si date.
 // ✅ Compat DB : tags peut être array OU texte CSV -> insert avec retry.
 // ✅ Output : texte brut (pas de markdown)
@@ -448,6 +450,62 @@ async function getKnowledgeSnippets(args: {
   return out;
 }
 
+async function isPaidOrThrowQuota(params: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+}): Promise<
+  | { ok: true; paid: true }
+  | { ok: true; paid: false; used: number; limit: number; windowDays: number }
+  | { ok: true; paid: false; used: null; limit: number; windowDays: number }
+> {
+  const { supabase, userId } = params;
+
+  // 1) Plan
+  try {
+    const { data: billingProfile, error: billingError } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!billingError) {
+      const plan = (billingProfile as any)?.plan as string | null | undefined;
+      const p = (plan ?? "").toLowerCase().trim();
+      const paid = p === "basic" || p === "essential" || p === "elite";
+      if (paid) return { ok: true, paid: true };
+    }
+  } catch {
+    // fail-open
+    return { ok: true, paid: false, used: null, limit: 7, windowDays: 7 };
+  }
+
+  // 2) Quota free (7 / 7 jours glissants)
+  const limit = 7;
+  const windowDays = 7;
+  try {
+    const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
+
+    // count exact, head: true to avoid fetching rows
+    const { count, error } = await supabase
+      .from("content_item")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", since);
+
+    if (error) {
+      // Si colonne manquante etc => fail-open (ne pas casser)
+      if (isMissingColumnError(error.message)) {
+        return { ok: true, paid: false, used: null, limit, windowDays };
+      }
+      return { ok: true, paid: false, used: null, limit, windowDays };
+    }
+
+    return { ok: true, paid: false, used: typeof count === "number" ? count : 0, limit, windowDays };
+  } catch {
+    return { ok: true, paid: false, used: null, limit, windowDays };
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -489,7 +547,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Clé user (si dispo) — si présente, on bypass le gating abonnement
+    // ✅ Clé user (si dispo) — toujours prioritaire
     const ownerKey = process.env.OPENAI_API_KEY ?? "";
     const userKey = await getDecryptedUserApiKey({
       supabase,
@@ -497,30 +555,24 @@ export async function POST(req: Request) {
       provider: "openai",
     });
 
-    // ✅ A5 — Gating minimal (abonnement requis) UNIQUEMENT si pas de clé perso.
-    // Si table/colonne/RLS indisponible => fail-open (ne pas casser la prod)
-    if (!userKey) {
-      try {
-        const { data: billingProfile, error: billingError } = await supabase
-          .from("profiles")
-          .select("plan")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (!billingError) {
-          const plan = (billingProfile as any)?.plan as string | null | undefined;
-          const p = (plan ?? "").toLowerCase().trim();
-          const hasPlan = p === "basic" || p === "essential" || p === "elite";
-          if (!hasPlan) {
-            return NextResponse.json(
-              { ok: false, code: "subscription_required", error: "Abonnement requis." },
-              { status: 402 },
-            );
-          }
+    // ✅ Nouveau gating : plan payant => OK ; plan free => quota hebdo (même si userKey)
+    const gate = await isPaidOrThrowQuota({ supabase, userId: session.user.id });
+    if (!gate.paid) {
+      // Si on a pu compter, on applique strictement le quota
+      if (typeof gate.used === "number") {
+        if (gate.used >= gate.limit) {
+          return NextResponse.json(
+            {
+              ok: false,
+              code: "free_quota_reached",
+              error: `Limite atteinte : ${gate.limit} contenus / ${gate.windowDays} jours. Choisissez un abonnement pour continuer.`,
+              meta: { limit: gate.limit, windowDays: gate.windowDays, used: gate.used },
+            },
+            { status: 402 },
+          );
         }
-      } catch {
-        // fail-open
       }
+      // Si on ne peut pas compter (fail-open), on laisse passer
     }
 
     const apiKey = (userKey ?? ownerKey).trim();

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 
 type ContentRowV2 = {
   id: string;
@@ -36,6 +35,56 @@ function asTagsArray(tags: unknown): string[] {
       .map((s) => s.trim())
       .filter(Boolean);
   return [];
+}
+
+async function isPaidOrThrowQuota(params: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+}): Promise<
+  | { ok: true; paid: true }
+  | { ok: true; paid: false; used: number; limit: number; windowDays: number }
+  | { ok: true; paid: false; used: null; limit: number; windowDays: number }
+> {
+  const { supabase, userId } = params;
+
+  try {
+    const { data: billingProfile, error: billingError } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!billingError) {
+      const plan = (billingProfile as any)?.plan as string | null | undefined;
+      const p = (plan ?? "").toLowerCase().trim();
+      const paid = p === "basic" || p === "essential" || p === "elite";
+      if (paid) return { ok: true, paid: true };
+    }
+  } catch {
+    return { ok: true, paid: false, used: null, limit: 7, windowDays: 7 };
+  }
+
+  const limit = 7;
+  const windowDays = 7;
+  try {
+    const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
+    const { count, error } = await supabase
+      .from("content_item")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", since);
+
+    if (error) {
+      if (isMissingColumnError(error.message)) {
+        return { ok: true, paid: false, used: null, limit, windowDays };
+      }
+      return { ok: true, paid: false, used: null, limit, windowDays };
+    }
+
+    return { ok: true, paid: false, used: typeof count === "number" ? count : 0, limit, windowDays };
+  } catch {
+    return { ok: true, paid: false, used: null, limit, windowDays };
+  }
 }
 
 async function loadSourceContent(
@@ -184,43 +233,23 @@ export async function POST(
     const userId = auth.user.id;
     const { id } = await context.params;
 
-    // ✅ A5 — aligné avec /api/content/generate : si clé user présente => bypass abonnement
-    let userKey: string | null = null;
-    try {
-      userKey = await getDecryptedUserApiKey({
-        supabase,
-        userId,
-        provider: "openai",
-      });
-    } catch {
-      // fail-open
-      userKey = null;
-    }
-
-    // A5 — gating minimal (fail-open si profiles.plan indispo)
-    // IMPORTANT: seulement si pas de clé perso
-    if (!userKey) {
-      try {
-        const { data: billingProfile, error: billingError } = await supabase
-          .from("profiles")
-          .select("plan")
-          .eq("id", userId)
-          .maybeSingle();
-
-        if (!billingError) {
-          const plan = (billingProfile as any)?.plan as string | null | undefined;
-          const p = (plan ?? "").toLowerCase().trim();
-          const hasPlan = p === "basic" || p === "essential" || p === "elite";
-          if (!hasPlan) {
-            return NextResponse.json(
-              { ok: false, code: "subscription_required", error: "Abonnement requis." },
-              { status: 402 }
-            );
-          }
+    // ✅ Gating cohérent avec generate : plan payant => OK ; plan free => quota 7/7j
+    const gate = await isPaidOrThrowQuota({ supabase, userId });
+    if (!gate.paid) {
+      if (typeof gate.used === "number") {
+        if (gate.used >= gate.limit) {
+          return NextResponse.json(
+            {
+              ok: false,
+              code: "free_quota_reached",
+              error: `Limite atteinte : ${gate.limit} contenus / ${gate.windowDays} jours. Choisissez un abonnement pour continuer.`,
+              meta: { limit: gate.limit, windowDays: gate.windowDays, used: gate.used },
+            },
+            { status: 402 }
+          );
         }
-      } catch {
-        // fail-open
       }
+      // fail-open si on ne peut pas compter
     }
 
     const srcRes = await loadSourceContent(supabase, id, userId);
