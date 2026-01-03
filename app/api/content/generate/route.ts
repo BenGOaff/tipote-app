@@ -4,6 +4,8 @@
 // ✅ A5 — Gating minimal : si l'utilisateur a une clé perso, on autorise la génération même sans plan.
 // ✅ Cohérence calendrier : scheduledDate stockée en YYYY-MM-DD et status "scheduled" si date.
 // ✅ Compat DB : tags peut être array OU texte CSV -> insert avec retry.
+// ✅ Output : texte brut (pas de markdown)
+// ✅ Knowledge : injecte tipote-knowledge via manifest (xlsx) + lecture des ressources
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -11,6 +13,9 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
+
+import fs from "node:fs/promises";
+import path from "node:path";
 
 type Provider = "openai" | "claude" | "gemini";
 
@@ -90,6 +95,39 @@ function isTagsTypeMismatch(message: string | null | undefined) {
     m.includes("character varying") ||
     m.includes("text")
   );
+}
+
+function toPlainText(input: string): string {
+  let s = (input ?? "").replace(/\r\n/g, "\n");
+
+  // Remove fenced code blocks (keep inner content)
+  s = s.replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, (_m, code) => String(code ?? "").trim());
+
+  // Convert markdown links to text: [label](url) -> label
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+
+  // Remove headings, blockquotes
+  s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+  s = s.replace(/^\s{0,3}>\s?/gm, "");
+
+  // Remove list markers (-, *, +, 1.)
+  s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
+  s = s.replace(/^\s{0,3}\d+\.\s+/gm, "");
+
+  // Remove emphasis/bold/code markers
+  s = s.replace(/\*\*(.*?)\*\*/g, "$1");
+  s = s.replace(/__(.*?)__/g, "$1");
+  s = s.replace(/\*(.*?)\*/g, "$1");
+  s = s.replace(/_(.*?)_/g, "$1");
+  s = s.replace(/`([^`]+)`/g, "$1");
+
+  // Normalize bullets (avoid markdown-like)
+  s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
+
+  // Collapse extra blank lines
+  s = s.replace(/\n{3,}/g, "\n\n").trim();
+
+  return s;
 }
 
 // Insert EN (schéma older)
@@ -198,6 +236,218 @@ async function insertContentFR(params: {
   return { data: first.data, error: first.error };
 }
 
+/** ---------------------------
+ * Tipote Knowledge (manifest + ressources)
+ * - On reste fail-open (si xlsx/module/paths manquent => on n'explose pas)
+ * - On limite à quelques snippets pertinents pour ne pas polluer le prompt
+ * -------------------------- */
+
+type KnowledgeEntry = {
+  title: string;
+  tags: string[];
+  relPath: string; // path relatif (depuis root)
+  type?: string;
+  priority?: number;
+};
+
+let knowledgeCache:
+  | {
+      manifestMtimeMs: number;
+      entries: KnowledgeEntry[];
+    }
+  | undefined;
+
+function tokenizeForMatch(input: string): string[] {
+  const s = (input ?? "").toLowerCase();
+  return s
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .split(/\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x.length >= 3)
+    .slice(0, 80);
+}
+
+function normalizeTagsArray(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String).map((x) => x.trim()).filter(Boolean);
+  const s = String(raw);
+  return s
+    .split(/[,;|]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function pickAnyField(obj: Record<string, any>, candidates: string[]): any {
+  for (const c of candidates) {
+    const hit = Object.keys(obj).find((k) => k.toLowerCase() === c.toLowerCase());
+    if (hit) return obj[hit];
+  }
+  for (const c of candidates) {
+    const hit = Object.keys(obj).find((k) => k.toLowerCase().includes(c.toLowerCase()));
+    if (hit) return obj[hit];
+  }
+  return undefined;
+}
+
+async function loadKnowledgeManifestEntries(): Promise<KnowledgeEntry[]> {
+  const root = process.cwd();
+  const manifestPath = path.join(root, "tipote-knowledge", "manifest", "resources_manifest.xlsx");
+
+  let stat: { mtimeMs: number } | null = null;
+  try {
+    stat = await fs.stat(manifestPath);
+  } catch {
+    return [];
+  }
+
+  if (knowledgeCache && knowledgeCache.manifestMtimeMs === stat.mtimeMs) {
+    return knowledgeCache.entries;
+  }
+
+  // Dynamic import pour éviter de casser si module absent
+  let XLSX: any;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    XLSX = require("xlsx");
+  } catch {
+    // Pas de parse xlsx -> fail-open
+    knowledgeCache = { manifestMtimeMs: stat.mtimeMs, entries: [] };
+    return [];
+  }
+
+  let entries: KnowledgeEntry[] = [];
+  try {
+    const wb = XLSX.readFile(manifestPath, { cellDates: false });
+    const firstSheetName = wb.SheetNames?.[0];
+    if (!firstSheetName) {
+      knowledgeCache = { manifestMtimeMs: stat.mtimeMs, entries: [] };
+      return [];
+    }
+
+    const sheet = wb.Sheets[firstSheetName];
+    const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    entries = rows
+      .map((r) => {
+        const titleRaw = pickAnyField(r, ["title", "titre", "name", "nom"]) ?? "";
+        const pathRaw =
+          pickAnyField(r, ["path", "filepath", "file_path", "relative_path", "rel_path", "source"]) ?? "";
+        const tagsRaw = pickAnyField(r, ["tags", "tag", "keywords", "mots_cles"]) ?? "";
+        const typeRaw = pickAnyField(r, ["type", "category", "categorie", "kind"]) ?? "";
+        const prioRaw = pickAnyField(r, ["priority", "prio", "score", "weight"]) ?? "";
+
+        const title = String(titleRaw || "").trim();
+        const relPath = String(pathRaw || "").trim();
+        const tags = normalizeTagsArray(tagsRaw);
+        const type = String(typeRaw || "").trim() || undefined;
+
+        let priority: number | undefined = undefined;
+        const pr = Number(String(prioRaw || "").trim());
+        if (!Number.isNaN(pr)) priority = pr;
+
+        if (!title || !relPath) return null;
+
+        return { title, relPath, tags, type, priority } as KnowledgeEntry;
+      })
+      .filter(Boolean) as KnowledgeEntry[];
+  } catch {
+    entries = [];
+  }
+
+  knowledgeCache = { manifestMtimeMs: stat.mtimeMs, entries };
+  return entries;
+}
+
+async function readKnowledgeFileSnippet(relPath: string, maxChars: number): Promise<string | null> {
+  const root = process.cwd();
+
+  const cleanRel = relPath.replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
+  const abs = path.join(root, cleanRel);
+
+  let buf: string;
+  try {
+    buf = await fs.readFile(abs, "utf8");
+  } catch {
+    // fallback : certaines entrées peuvent être relatives à tipote-knowledge directement
+    try {
+      const alt = path.join(root, "tipote-knowledge", cleanRel);
+      buf = await fs.readFile(alt, "utf8");
+    } catch {
+      return null;
+    }
+  }
+
+  // Nettoyage léger
+  const s = buf
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (!s) return null;
+  return s.slice(0, maxChars);
+}
+
+function scoreEntry(entry: KnowledgeEntry, tokens: string[], tags: string[], type: string): number {
+  let score = 0;
+
+  const t = (entry.title ?? "").toLowerCase();
+  const eTags = (entry.tags ?? []).map((x) => x.toLowerCase());
+  const eType = (entry.type ?? "").toLowerCase();
+  const reqType = (type ?? "").toLowerCase();
+
+  if (eType && reqType && (eType.includes(reqType) || reqType.includes(eType))) score += 8;
+
+  const tagsLower = (tags ?? []).map((x) => x.toLowerCase());
+  for (const tg of tagsLower) {
+    if (!tg) continue;
+    if (eTags.some((x) => x.includes(tg) || tg.includes(x))) score += 6;
+    if (t.includes(tg)) score += 3;
+  }
+
+  for (const tok of tokens) {
+    if (!tok) continue;
+    if (t.includes(tok)) score += 2;
+    if (eTags.some((x) => x.includes(tok))) score += 3;
+  }
+
+  if (typeof entry.priority === "number") score += Math.max(0, Math.min(10, entry.priority));
+
+  return score;
+}
+
+async function getKnowledgeSnippets(args: {
+  type: string;
+  prompt: string;
+  tags: string[];
+}): Promise<Array<{ title: string; snippet: string; source: string }>> {
+  const entries = await loadKnowledgeManifestEntries();
+  if (!entries.length) return [];
+
+  const tokens = tokenizeForMatch(args.prompt);
+  const scored = entries
+    .map((e) => ({ e, s: scoreEntry(e, tokens, args.tags, args.type) }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 6);
+
+  const out: Array<{ title: string; snippet: string; source: string }> = [];
+  for (const it of scored) {
+    const snippet = await readKnowledgeFileSnippet(it.e.relPath, 1800);
+    if (!snippet) continue;
+
+    out.push({
+      title: it.e.title,
+      snippet,
+      source: it.e.relPath,
+    });
+
+    if (out.length >= 4) break;
+  }
+
+  return out;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -301,12 +551,15 @@ export async function POST(req: Request) {
 
     const tagsCsv = joinTagsCsv(tags);
 
+    // ✅ Plain text output
     const systemPrompt = [
       "Tu es Tipote, un assistant business & contenu.",
       "Tu écris en français, avec un style clair, pro, actionnable.",
       "Tu ne mentionnes pas que tu es une IA.",
       "Tu rends un contenu final prêt à publier.",
-      "Format: markdown propre, titres si utile, listes si utile.",
+      "IMPORTANT: format texte brut (plain text).",
+      "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
+      "Si tu structures: sauts de lignes + tirets simples '- ' uniquement.",
       "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
     ].join("\n");
 
@@ -322,6 +575,25 @@ export async function POST(req: Request) {
     userContextLines.push("");
     userContextLines.push("Business plan (si disponible) :");
     userContextLines.push(planJson ? JSON.stringify(planJson) : "Aucun plan.");
+
+    // ✅ Tipote Knowledge injection
+    try {
+      const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt, tags });
+      if (knowledgeSnippets.length) {
+        userContextLines.push("");
+        userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
+        knowledgeSnippets.forEach((k, idx) => {
+          userContextLines.push("");
+          userContextLines.push(`Ressource ${idx + 1}: ${k.title}`);
+          userContextLines.push(`Source: ${k.source}`);
+          userContextLines.push("Extrait:");
+          userContextLines.push(k.snippet);
+        });
+      }
+    } catch {
+      // fail-open
+    }
+
     userContextLines.push("");
     userContextLines.push("Brief :");
     userContextLines.push(prompt);
@@ -335,7 +607,9 @@ export async function POST(req: Request) {
       ],
     });
 
-    const content = completion.choices?.[0]?.message?.content?.trim() ?? "";
+    const raw = completion.choices?.[0]?.message?.content?.trim() ?? "";
+    const content = toPlainText(raw);
+
     if (!content) {
       return NextResponse.json({ ok: false, error: "Empty content from model" }, { status: 502 });
     }
@@ -379,10 +653,7 @@ export async function POST(req: Request) {
 
     const enErr = tryEN.error as PostgrestError | null;
     if (!isMissingColumnError(enErr?.message)) {
-      return NextResponse.json(
-        { ok: false, error: enErr?.message ?? "Insert error" },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
     }
 
     const tryFR = await insertContentFR({

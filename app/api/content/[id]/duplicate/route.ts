@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 
 type ContentRowV2 = {
   id: string;
@@ -183,27 +184,43 @@ export async function POST(
     const userId = auth.user.id;
     const { id } = await context.params;
 
-    // A5 — gating minimal (fail-open si profiles.plan indispo)
+    // ✅ A5 — aligné avec /api/content/generate : si clé user présente => bypass abonnement
+    let userKey: string | null = null;
     try {
-      const { data: billingProfile, error: billingError } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!billingError) {
-        const plan = (billingProfile as any)?.plan as string | null | undefined;
-        const p = (plan ?? "").toLowerCase().trim();
-        const hasPlan = p === "basic" || p === "essential" || p === "elite";
-        if (!hasPlan) {
-          return NextResponse.json(
-            { ok: false, code: "subscription_required", error: "Abonnement requis." },
-            { status: 402 }
-          );
-        }
-      }
+      userKey = await getDecryptedUserApiKey({
+        supabase,
+        userId,
+        provider: "openai",
+      });
     } catch {
       // fail-open
+      userKey = null;
+    }
+
+    // A5 — gating minimal (fail-open si profiles.plan indispo)
+    // IMPORTANT: seulement si pas de clé perso
+    if (!userKey) {
+      try {
+        const { data: billingProfile, error: billingError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!billingError) {
+          const plan = (billingProfile as any)?.plan as string | null | undefined;
+          const p = (plan ?? "").toLowerCase().trim();
+          const hasPlan = p === "basic" || p === "essential" || p === "elite";
+          if (!hasPlan) {
+            return NextResponse.json(
+              { ok: false, code: "subscription_required", error: "Abonnement requis." },
+              { status: 402 }
+            );
+          }
+        }
+      } catch {
+        // fail-open
+      }
     }
 
     const srcRes = await loadSourceContent(supabase, id, userId);
