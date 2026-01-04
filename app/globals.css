@@ -14,54 +14,49 @@
     --primary: 233 66% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 33% 96%;
-    --secondary-foreground: 0 0% 8%;
+    --secondary: 236 79% 96%;
+    --secondary-foreground: 230 41% 28%;
 
-    --muted: 220 33% 96%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 236 79% 96%;
+    --muted-foreground: 236 16% 50%;
 
     --accent: 236 79% 96%;
-    --accent-foreground: 0 0% 8%;
+    --accent-foreground: 230 41% 28%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 42%;
-    --success-foreground: 0 0% 100%;
-
-    --border: 0 0% 76%;
-    --input: 0 0% 76%;
+    --border: 230 30% 92%;
+    --input: 230 30% 92%;
     --ring: 233 66% 62%;
 
     --radius: 0.75rem;
 
-    --primary-light: 233 66% 62%;
-    --primary-dark: 230 41% 28%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(233 66% 62%) 0%, hsl(230 41% 28%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(220 33% 96%) 0%, hsl(220 33% 94%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(233 66% 62% / 0.95) 0%, hsl(230 41% 28% / 0.9) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(280 70% 65% / 0.08));
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.18);
 
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 10px 25px -5px hsl(233 66% 62% / 0.15);
-    --shadow-glow: 0 0 20px hsl(233 66% 62% / 0.3);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 8%;
+    --success: 142 76% 36%;
+    --warning: 45 93% 47%;
+    --info: 204 94% 44%;
+
+    --sidebar-background: 230 41% 14%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 233 66% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 33% 96%;
-    --sidebar-accent-foreground: 0 0% 8%;
-    --sidebar-border: 0 0% 92%;
+    --sidebar-accent: 236 79% 96%;
+    --sidebar-accent-foreground: 230 41% 28%;
+    --sidebar-border: 0 0% 90%;
     --sidebar-ring: 233 66% 62%;
   }
 
   .dark {
-    --background: 214 77% 12%;
+    --background: 230 41% 14%;
     --foreground: 0 0% 95%;
 
-    --card: 230 41% 18%;
+    --card: 230 41% 16%;
     --card-foreground: 0 0% 95%;
 
     --popover: 230 41% 18%;
@@ -74,34 +69,22 @@
     --secondary-foreground: 0 0% 95%;
 
     --muted: 230 41% 22%;
-    --muted-foreground: 0 0% 70%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 230 41% 26%;
-    --accent-foreground: 0 0% 95%;
+    --accent: 233 66% 62%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 42%;
-    --success-foreground: 0 0% 100%;
-
-    --border: 230 30% 30%;
-    --input: 230 30% 30%;
+    --border: 230 30% 25%;
+    --input: 230 30% 25%;
     --ring: 233 66% 62%;
 
-    --primary-light: 233 66% 68%;
-    --primary-dark: 230 41% 35%;
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.15);
 
-    --gradient-primary: linear-gradient(135deg, hsl(233 66% 68%) 0%, hsl(230 41% 35%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(230 41% 22%) 0%, hsl(230 41% 18%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(233 66% 68% / 0.95) 0%, hsl(230 41% 35% / 0.9) 100%);
-
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.15);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.25);
-    --shadow-lg: 0 10px 25px -5px hsl(233 66% 62% / 0.25);
-    --shadow-glow: 0 0 20px hsl(233 66% 62% / 0.4);
-
-    --sidebar-background: 230 41% 14%;
+    --sidebar-background: 230 41% 12%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 233 66% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -125,22 +108,16 @@
   h1,
   h2,
   h3,
-  h4,
-  h5,
-  h6 {
-    font-weight: 700;           /* font-bold */
-    letter-spacing: -0.025em;   /* tracking-tight */
+  h4 {
+    font-weight: 700;
+    letter-spacing: -0.025em;
   }
 }
 
-/* Utilitaires design Lovable */
 @layer utilities {
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .gradient-secondary {
-    background: var(--gradient-secondary);
+  .font-display {
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+      "Segoe UI Emoji";
   }
 
   .gradient-hero {
