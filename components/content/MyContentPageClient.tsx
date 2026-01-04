@@ -1,4 +1,3 @@
-// components/content/MyContentPageClient.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -86,19 +85,6 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
       return s === "scheduled" || s === "planned";
     }).length;
     return { total, published, scheduled, draft };
-  }, [items]);
-
-  const itemsByDate = useMemo(() => {
-    const by: Record<string, ContentListItem[]> = {};
-    const dates: string[] = [];
-    for (const it of items) {
-      const d = safeString(it.scheduled_date).trim();
-      if (!d) continue;
-      if (!by[d]) by[d] = [];
-      by[d].push(it);
-      dates.push(d);
-    }
-    return { by, dates: Array.from(new Set(dates)).sort() };
   }, [items]);
 
   const listItems = useMemo(() => {
@@ -268,24 +254,8 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
         ) : (
           // Calendar View (Lovable)
           <Card className="p-6">
-            <ContentCalendarView
-              scheduledDates={itemsByDate.dates}
-              itemsByDate={Object.fromEntries(
-                Object.entries(itemsByDate.by).map(([d, arr]) => [
-                  d,
-                  arr.map((it) => ({
-                    id: it.id,
-                    type: safeString(it.type),
-                    title: safeString(it.title),
-                    status: safeString(it.status),
-                    scheduled_date: it.scheduled_date,
-                    channel: safeString(it.channel),
-                    tags: [],
-                    created_at: it.created_at,
-                  })),
-                ])
-              )}
-            />
+            {/* IMPORTANT: ContentCalendarView (ton repo) attend `contents`, pas `scheduledDates/itemsByDate` */}
+            <ContentCalendarView contents={items} />
           </Card>
         )}
       </div>
