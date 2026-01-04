@@ -1,21 +1,19 @@
 // components/content/ContentCalendarView.tsx
 "use client";
 
-// Vue Calendrier pour "Mes Contenus" (pixel-perfect Lovable MyContent)
-// - reçoit les données déjà chargées côté server (app/contents/page.tsx)
-// - affiche une grille mensuelle (lundi → dimanche) + navigation mois
-// - affiche les contenus planifiés sur leur date (YYYY-MM-DD)
+// Port exact du composant Lovable src/components/ContentCalendar.tsx
+// Adapté aux types Tipote (scheduled_date au lieu de scheduled_at + channel au lieu de platform)
 
 import { useMemo, useState } from "react";
+import { format, isSameDay } from "date-fns";
+import { fr } from "date-fns/locale";
 import Link from "next/link";
 
-import { addMonths, endOfMonth, format, isSameDay, startOfMonth, subMonths } from "date-fns";
-import { fr } from "date-fns/locale";
-
-import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, FileText, Mail, MessageSquare, Video } from "lucide-react";
 
 export type ContentCalendarItem = {
   id: string;
@@ -28,52 +26,44 @@ export type ContentCalendarItem = {
   created_at: string;
 };
 
+const typeIcons: Record<string, any> = {
+  post: MessageSquare,
+  email: Mail,
+  article: FileText,
+  video: Video,
+};
+
+const statusLabels: Record<string, string> = {
+  draft: "Brouillon",
+  scheduled: "Planifié",
+  published: "Publié",
+};
+
+const statusColors: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700",
+  scheduled: "bg-blue-100 text-blue-700",
+  published: "bg-green-100 text-green-700",
+};
+
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-
-function statusDotClass(status: string | null) {
-  const low = safeString(status).toLowerCase();
-  if (low === "published") return "bg-emerald-500";
-  if (low === "draft") return "bg-slate-400";
-  if (low === "scheduled" || low === "planned") return "bg-primary";
-  return "bg-slate-400";
+function statusKey(status: string | null) {
+  const s = safeString(status).trim().toLowerCase();
+  if (!s) return "draft";
+  if (s === "planned") return "scheduled";
+  if (s === "schedule") return "scheduled";
+  return s;
 }
 
-function buildMonthGrid(month: Date) {
-  // Lundi = 0
-  const first = startOfMonth(month);
-  const last = endOfMonth(month);
-
-  const firstDow = (first.getDay() + 6) % 7; // convert Sunday(0) -> 6
-  const daysInMonth = last.getDate();
-
-  const cells: Array<{ date: Date; inMonth: boolean }> = [];
-
-  // previous month fill
-  for (let i = 0; i < firstDow; i++) {
-    const d = new Date(first);
-    d.setDate(first.getDate() - (firstDow - i));
-    cells.push({ date: d, inMonth: false });
-  }
-
-  // month days
-  for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(first);
-    d.setDate(day);
-    cells.push({ date: d, inMonth: true });
-  }
-
-  // next month fill to complete weeks (7 columns)
-  while (cells.length % 7 !== 0) {
-    const d = new Date(last);
-    d.setDate(last.getDate() + (cells.length - (firstDow + daysInMonth)) + 1);
-    cells.push({ date: d, inMonth: false });
-  }
-
-  return cells;
+function typeKey(type: string | null) {
+  const t = safeString(type).trim().toLowerCase();
+  if (t.includes("email")) return "email";
+  if (t.includes("video") || t.includes("vidéo")) return "video";
+  if (t.includes("article") || t.includes("blog")) return "article";
+  if (t.includes("post") || t.includes("réseau") || t.includes("reseau") || t.includes("social")) return "post";
+  return "article";
 }
 
 export function ContentCalendarView({
@@ -83,122 +73,136 @@ export function ContentCalendarView({
   itemsByDate: Record<string, ContentCalendarItem[]>;
   scheduledDates: string[]; // YYYY-MM-DD
 }) {
-  const today = useMemo(() => new Date(), []);
-  const [month, setMonth] = useState<Date>(startOfMonth(today));
+  const allScheduledDates = useMemo(() => {
+    return scheduledDates
+      .map((d) => safeString(d).trim())
+      .filter(Boolean)
+      .map((d) => new Date(`${d}T00:00:00`));
+  }, [scheduledDates]);
 
-  const grid = useMemo(() => buildMonthGrid(month), [month]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(allScheduledDates[0]);
 
-  const scheduledSet = useMemo(
-    () => new Set(scheduledDates.map((d) => safeString(d).trim()).filter(Boolean)),
-    [scheduledDates]
-  );
+  const datesWithContent = useMemo(() => {
+    // Rebuild from itemsByDate to also add published markers if present
+    const acc: Record<
+      string,
+      { date: Date; count: number; hasScheduled: boolean; hasPublished: boolean }
+    > = {};
+
+    for (const [dateStr, arr] of Object.entries(itemsByDate)) {
+      const date = new Date(`${dateStr}T00:00:00`);
+      if (!acc[dateStr]) acc[dateStr] = { date, count: 0, hasScheduled: false, hasPublished: false };
+      acc[dateStr].count += arr.length;
+
+      for (const content of arr) {
+        const sk = statusKey(content.status);
+        if (sk === "scheduled") acc[dateStr].hasScheduled = true;
+        if (sk === "published") acc[dateStr].hasPublished = true;
+      }
+    }
+
+    return acc;
+  }, [itemsByDate]);
+
+  const scheduledDays = useMemo(() => {
+    return Object.values(datesWithContent)
+      .filter((d) => d.hasScheduled)
+      .map((d) => d.date);
+  }, [datesWithContent]);
+
+  const publishedDays = useMemo(() => {
+    return Object.values(datesWithContent)
+      .filter((d) => d.hasPublished && !d.hasScheduled)
+      .map((d) => d.date);
+  }, [datesWithContent]);
+
+  const selectedKey = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+  const selectedItems = selectedKey ? itemsByDate[selectedKey] ?? [] : [];
 
   return (
-    <div className="space-y-6">
-      {/* Header (Lovable) */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-bold">{format(month, "MMMM yyyy", { locale: fr })}</h2>
-        </div>
+    <div className="grid md:grid-cols-[350px_1fr] gap-6">
+      <Card className="p-4">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={setSelectedDate}
+          locale={fr}
+          modifiers={{
+            scheduled: scheduledDays,
+            published: publishedDays,
+          }}
+          modifiersClassNames={{
+            scheduled: "bg-blue-100 dark:bg-blue-900/50 font-bold",
+            published: "bg-green-100 dark:bg-green-900/50",
+          }}
+          className="rounded-md"
+        />
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setMonth((m) => startOfMonth(subMonths(m, 1)))}
-              aria-label="Mois précédent"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setMonth((m) => startOfMonth(addMonths(m, 1)))}
-              aria-label="Mois suivant"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+        <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50" />
+            <span>Planifié</span>
           </div>
-
-          {/* Range buttons (UI only, pour coller à Lovable) */}
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => setMonth(startOfMonth(today))}>
-              Aujourd&apos;hui
-            </Button>
-            <Button variant="outline" size="sm" disabled>
-              Semaine
-            </Button>
-            <Button variant="default" size="sm" disabled>
-              Mois
-            </Button>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50" />
+            <span>Publié</span>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Calendar Grid (Lovable) */}
-      <div className="border border-border rounded-lg overflow-hidden">
-        {/* Days header */}
-        <div className="grid grid-cols-7 border-b border-border bg-muted/50">
-          {DAYS.map((day) => (
-            <div key={day} className="p-3 text-center text-sm font-semibold text-muted-foreground">
-              {day}
-            </div>
-          ))}
-        </div>
+      <Card className="p-6">
+        {!selectedDate ? (
+          <div className="text-muted-foreground">Sélectionne une date.</div>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold mb-4 capitalize">
+              {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
+            </h2>
 
-        {/* Cells */}
-        <div className="grid grid-cols-7">
-          {grid.map(({ date, inMonth }, idx) => {
-            const key = format(date, "yyyy-MM-dd");
-            const isToday = isSameDay(date, today);
-            const dayItems = itemsByDate[key] ?? [];
-            const hasItems = scheduledSet.has(key) && dayItems.length > 0;
+            {selectedItems.length === 0 ? (
+              <div className="text-muted-foreground">Aucun contenu sur cette date.</div>
+            ) : (
+              <div className="space-y-3">
+                {selectedItems.map((content) => {
+                  const Icon = typeIcons[typeKey(content.type)] || FileText;
+                  const sk = statusKey(content.status);
+                  const label = statusLabels[sk] ?? (safeString(content.status) || "—");
+                  const klass = statusColors[sk] ?? "bg-gray-100 text-gray-700";
 
-            return (
-              <div
-                key={`${key}-${idx}`}
-                className={`min-h-[120px] p-2 border-b border-border border-r border-border ${
-                  idx % 7 === 6 ? "border-r-0" : ""
-                } ${!inMonth ? "bg-muted/10 text-muted-foreground" : ""}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold ${
-                      isToday ? "bg-primary text-primary-foreground" : ""
-                    }`}
-                  >
-                    {date.getDate()}
-                  </div>
+                  return (
+                    <Link key={content.id} href={`/contents/${content.id}`} className="block">
+                      <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            <Icon className="w-5 h-5 text-muted-foreground" />
+                          </div>
 
-                  {hasItems ? (
-                    <Badge variant="secondary" className="text-xs">
-                      {dayItems.length}
-                    </Badge>
-                  ) : null}
-                </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              {safeString(content.channel) ? (
+                                <span className="capitalize">{content.channel}</span>
+                              ) : null}
+                              {content.scheduled_date ? (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {content.scheduled_date}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
 
-                {/* Items */}
-                <div className="mt-2 space-y-1">
-                  {dayItems.slice(0, 3).map((it) => (
-                    <Link key={it.id} href={`/contents/${it.id}`} className="block">
-                      <div className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/50 transition-colors">
-                        <span className={`w-2 h-2 rounded-full ${statusDotClass(it.status)}`} />
-                        <p className="text-xs truncate flex-1">{safeString(it.title) || "Sans titre"}</p>
-                      </div>
+                          <Badge className={klass}>{label}</Badge>
+                        </div>
+                      </Card>
                     </Link>
-                  ))}
-
-                  {dayItems.length > 3 ? (
-                    <p className="text-xs text-muted-foreground px-2">+{dayItems.length - 3} autres</p>
-                  ) : null}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </>
+        )}
+      </Card>
     </div>
   );
 }

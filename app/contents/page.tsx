@@ -1,15 +1,16 @@
 // app/contents/page.tsx
-// Page "Mes Contenus" : liste + vue calendrier + accès au détail
-// + Filtres (recherche / statut / type / canal) en query params
-// + Actions : dupliquer / supprimer (API) + toasts
+// Page "Mes Contenus" : UI alignée sur Lovable (MyContent)
+// - Search + toggle (Liste/Calendrier)
+// - Stats (Total/Brouillons/Planifiés/Publiés)
+// - Vue Liste groupée par date de création
+// - Vue Calendrier split (mini calendrier + panel jour sélectionné)
 //
-// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
-// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR avec aliasing.
+// Data: Supabase content_item (compat FR via aliasing)
 
 import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import MyContentPageClient from "@/components/content/MyContentPageClient";
+import MyContentLovableClient from "@/components/content/MyContentLovableClient";
 
 export type ContentListItem = {
   id: string;
@@ -132,12 +133,12 @@ export default async function ContentsPage({
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
   return (
-    <MyContentPageClient
+    <MyContentLovableClient
       userEmail={session.user.email ?? ""}
       initialView={initialView}
+      initialSearch={q}
       items={items}
       error={error}
-      initialFilters={{ q, status, type, channel }}
     />
   );
 }
