@@ -1,18 +1,28 @@
 // app/contents/page.tsx
-// Page "Mes Contenus" : UI alignée sur Lovable (MyContent)
-// - Search + toggle (Liste/Calendrier)
-// - Stats (Total/Brouillons/Planifiés/Publiés)
-// - Vue Liste groupée par date de création
-// - Vue Calendrier split (mini calendrier + panel jour sélectionné)
+// Page "Mes Contenus" : liste + vue calendrier + accès au détail
+// + Filtres (recherche / statut / type / canal) en query params
+// + Actions : dupliquer / supprimer (API) + toasts
 //
-// Data: Supabase content_item (compat FR via aliasing)
+// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
+// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR avec aliasing.
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import MyContentLovableClient from "@/components/content/MyContentLovableClient";
 
-export type ContentListItem = {
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { ContentCalendarView } from "@/components/content/ContentCalendarView";
+import { ContentItemActions } from "@/components/content/ContentItemActions";
+import { ContentFiltersBar } from "@/components/content/ContentFiltersBar";
+
+import { CalendarDays, List, Plus } from "lucide-react";
+
+type ContentListItem = {
   id: string;
   type: string | null;
   title: string | null;
@@ -42,6 +52,29 @@ function normalizeTypeParam(type: string | undefined): string {
 function normalizeChannelParam(channel: string | undefined): string {
   const s = safeString(channel).trim();
   return s === "all" ? "" : s;
+}
+
+function normalizeStatusForLabel(status: string | null): string {
+  const s = safeString(status).trim();
+  if (!s) return "—";
+  const low = s.toLowerCase();
+  if (low === "published") return "Publié";
+  if (low === "draft") return "Brouillon";
+  if (low === "planned" || low === "scheduled") return "Planifié";
+  if (low === "archived") return "Archivé";
+  return s;
+}
+
+function normalizeTags(tags: ContentListItem["tags"]): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.filter(Boolean).map((t) => String(t));
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function isMissingColumnError(message: string | undefined | null) {
@@ -127,18 +160,211 @@ export default async function ContentsPage({
   const status = normalizeStatusParam(Array.isArray(statusRaw) ? statusRaw[0] : statusRaw);
   const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
   const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
-  const initialView =
+  const view =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
+  const uniqueTypes = Array.from(new Set(items.map((i) => safeString(i.type)).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const uniqueChannels = Array.from(new Set(items.map((i) => safeString(i.channel)).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  // Stats cards
+  const totalCount = items.length;
+  const publishedCount = items.filter((i) => safeString(i.status).toLowerCase() === "published").length;
+  const draftCount = items.filter((i) => safeString(i.status).toLowerCase() === "draft").length;
+  const scheduledCount = items.filter((i) => {
+    const s = safeString(i.status).toLowerCase();
+    return s === "scheduled" || s === "planned";
+  }).length;
+
   return (
-    <MyContentLovableClient
-      userEmail={session.user.email ?? ""}
-      initialView={initialView}
-      initialSearch={q}
-      items={items}
-      error={error}
-    />
+    <AppShell userEmail={session.user.email ?? ""} headerTitle="Mes contenus">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        {/* Header (Lovable) : titre + toggle + bouton créer */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Mes contenus</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Retrouve, planifie et édite tes contenus.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs defaultValue={view} value={view}>
+              <TabsList className="h-10 rounded-xl">
+                <TabsTrigger value="list" asChild className="gap-2 rounded-lg">
+                  <Link
+                    href={{
+                      pathname: "/contents",
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "list",
+                      },
+                    }}
+                  >
+                    <List className="h-4 w-4" />
+                    Liste
+                  </Link>
+                </TabsTrigger>
+
+                <TabsTrigger value="calendar" asChild className="gap-2 rounded-lg">
+                  <Link
+                    href={{
+                      pathname: "/contents",
+                      query: {
+                        q: q || undefined,
+                        status: status || undefined,
+                        type: type || undefined,
+                        channel: channel || undefined,
+                        view: "calendar",
+                      },
+                    }}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Calendrier
+                  </Link>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <Button asChild className="h-10 rounded-xl gap-2">
+              <Link href="/create">
+                <Plus className="h-4 w-4" />
+                Créer
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats cards (Lovable) */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Total contenus</p>
+            <p className="mt-2 text-2xl font-bold">{totalCount}</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Publiés</p>
+            <p className="mt-2 text-2xl font-bold">{publishedCount}</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Planifiés</p>
+            <p className="mt-2 text-2xl font-bold">{scheduledCount}</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm text-muted-foreground">Brouillons</p>
+            <p className="mt-2 text-2xl font-bold">{draftCount}</p>
+          </Card>
+        </div>
+
+        {/* Filters card (client – pour que Select marche en query params) */}
+        <ContentFiltersBar
+          initialQ={q}
+          initialStatus={status}
+          initialType={type}
+          initialChannel={channel}
+          view={view}
+          typeOptions={uniqueTypes}
+          channelOptions={uniqueChannels}
+        />
+
+        {/* Content view */}
+        {error ? (
+          <Card className="p-6">
+            <p className="text-sm text-destructive">Erreur : {error}</p>
+          </Card>
+        ) : (
+          <Tabs value={view} defaultValue={view} className="w-full">
+            {/* (Les triggers sont dans le header pour coller au template) */}
+            <TabsContent value="list" className="mt-0">
+              <div className="space-y-3">
+                {items.length === 0 ? (
+                  <Card className="p-8">
+                    <p className="text-sm text-muted-foreground">
+                      Aucun contenu trouvé. Essaie de modifier tes filtres, ou crée ton premier contenu.
+                    </p>
+                    <div className="mt-4">
+                      <Button asChild className="rounded-xl">
+                        <Link href="/create">Créer un contenu</Link>
+                      </Button>
+                    </div>
+                  </Card>
+                ) : (
+                  items.map((item) => {
+                    const tags = normalizeTags(item.tags);
+                    return (
+                      <Card
+                        key={item.id}
+                        className="flex flex-col gap-3 rounded-2xl border-border/50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/contents/${item.id}`}
+                              className="truncate font-semibold text-foreground hover:underline"
+                            >
+                              {safeString(item.title) || "Sans titre"}
+                            </Link>
+
+                            <span className="inline-flex items-center rounded-xl bg-muted px-2 py-1 text-xs text-muted-foreground">
+                              {safeString(item.type) || "—"}
+                            </span>
+
+                            <span className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground">
+                              {normalizeStatusForLabel(item.status)}
+                            </span>
+
+                            {item.scheduled_date ? (
+                              <span className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground">
+                                {item.scheduled_date}
+                              </span>
+                            ) : null}
+
+                            {safeString(item.channel) ? (
+                              <span className="inline-flex items-center rounded-xl bg-muted px-2 py-1 text-xs text-muted-foreground">
+                                {item.channel}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {tags.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {tags.slice(0, 6).map((t) => (
+                                <span
+                                  key={t}
+                                  className="inline-flex items-center rounded-xl border px-2 py-1 text-xs text-muted-foreground"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2">
+                          <Button asChild variant="outline" className="rounded-xl">
+                            <Link href={`/contents/${item.id}`}>Voir</Link>
+                          </Button>
+
+                          <ContentItemActions id={item.id} title={safeString(item.title) || "Sans titre"} />
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-0">
+              <ContentCalendarView contents={items} />
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
+    </AppShell>
   );
 }

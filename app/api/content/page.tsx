@@ -161,9 +161,7 @@ export default async function ContentsPage({
   const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
   const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
   const view =
-    safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar"
-      ? "calendar"
-      : "list";
+    safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
@@ -182,17 +180,6 @@ export default async function ContentsPage({
     const s = safeString(i.status).toLowerCase();
     return s === "scheduled" || s === "planned";
   }).length;
-
-  // Calendar mapping
-  const itemsByDate: Record<string, ContentListItem[]> = {};
-  const scheduledDates: string[] = [];
-  for (const it of items) {
-    const d = safeString(it.scheduled_date).trim();
-    if (!d) continue;
-    if (!itemsByDate[d]) itemsByDate[d] = [];
-    itemsByDate[d].push(it);
-    scheduledDates.push(d);
-  }
 
   return (
     <AppShell userEmail={session.user.email ?? ""} headerTitle="Mes contenus">
@@ -373,24 +360,7 @@ export default async function ContentsPage({
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-0">
-              <ContentCalendarView
-                scheduledDates={Array.from(new Set(scheduledDates)).sort()}
-                itemsByDate={Object.fromEntries(
-                  Object.entries(itemsByDate).map(([d, arr]) => [
-                    d,
-                    arr.map((it) => ({
-                      id: it.id,
-                      type: safeString(it.type),
-                      title: safeString(it.title),
-                      status: safeString(it.status),
-                      scheduled_date: it.scheduled_date,
-                      channel: safeString(it.channel),
-                      tags: normalizeTags(it.tags),
-                      created_at: it.created_at,
-                    })),
-                  ])
-                )}
-              />
+              <ContentCalendarView contents={items} />
             </TabsContent>
           </Tabs>
         )}
