@@ -22,7 +22,7 @@ import { ContentFiltersBar } from "@/components/content/ContentFiltersBar";
 
 import { CalendarDays, List, Plus } from "lucide-react";
 
-type ContentListItem = {
+export type ContentListItem = {
   id: string;
   type: string | null;
   title: string | null;
