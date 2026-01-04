@@ -1,9 +1,5 @@
 // app/contents/page.tsx
-// Page "Mes Contenus" : pixel-perfect Lovable via client 1:1
-// Server wrapper ONLY : auth + fetch Supabase + passe les items au client.
-//
-// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
-// -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR avec aliasing.
+// Wrapper server ONLY : auth + fetch Supabase + passe au client "Lovable 1:1"
 
 import { redirect } from "next/navigation";
 
@@ -15,10 +11,10 @@ export type ContentListItem = {
   type: string | null;
   title: string | null;
   status: string | null;
-  scheduled_date: string | null; // YYYY-MM-DD
-  channel: string | null; // platform in Lovable
+  scheduled_date: string | null; // YYYY-MM-DD (ou ISO)
+  channel: string | null;
   tags: string[] | string | null;
-  created_at: string; // datetime
+  created_at: string;
 };
 
 function safeString(v: unknown): string {
@@ -63,9 +59,7 @@ async function fetchContentsForUser(
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (q) {
-    v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
-  }
+  if (q) v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
   if (status) v2 = v2.eq("status", status);
   if (type) v2 = v2.eq("type", type);
   if (channel) v2 = v2.eq("channel", channel);
@@ -86,9 +80,7 @@ async function fetchContentsForUser(
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (q) {
-    fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
-  }
+  if (q) fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
   if (status) fb = fb.eq("statut", status);
   if (type) fb = fb.eq("type", type);
   if (channel) fb = fb.eq("canal", channel);
@@ -135,7 +127,6 @@ export default async function ContentsPage({
     <MyContentLovableClient
       userEmail={session.user.email ?? ""}
       initialView={initialView}
-      initialSearch={q}
       items={items}
       error={error}
     />
