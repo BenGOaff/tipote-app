@@ -1,5 +1,8 @@
 // app/contents/page.tsx
-// Wrapper server ONLY : auth + fetch Supabase + passe au client "Lovable 1:1"
+// Page "Mes Contenus" (pixel layout Lovable).
+// Server component: auth + fetch Supabase + passe les items au client.
+// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/statut/canal/date_planifiee)
+// -> on tente d'abord la "v2" (title/status/channel/scheduled_date), sinon fallback FR avec aliasing.
 
 import { redirect } from "next/navigation";
 
@@ -11,7 +14,7 @@ export type ContentListItem = {
   type: string | null;
   title: string | null;
   status: string | null;
-  scheduled_date: string | null; // YYYY-MM-DD (ou ISO)
+  scheduled_date: string | null; // YYYY-MM-DD (ou ISO date)
   channel: string | null;
   tags: string[] | string | null;
   created_at: string;
@@ -59,7 +62,9 @@ async function fetchContentsForUser(
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (q) v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
+  if (q) {
+    v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
+  }
   if (status) v2 = v2.eq("status", status);
   if (type) v2 = v2.eq("type", type);
   if (channel) v2 = v2.eq("channel", channel);
@@ -80,7 +85,9 @@ async function fetchContentsForUser(
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (q) fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
+  if (q) {
+    fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
+  }
   if (status) fb = fb.eq("statut", status);
   if (type) fb = fb.eq("type", type);
   if (channel) fb = fb.eq("canal", channel);
@@ -103,7 +110,7 @@ export default async function ContentsPage({
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session?.user?.id) redirect("/auth/login");
+  if (!session) redirect("/");
 
   const sp = await searchParams;
 
@@ -118,7 +125,7 @@ export default async function ContentsPage({
   const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
   const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
 
-  const initialView: "list" | "calendar" =
+  const initialView =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
   const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);

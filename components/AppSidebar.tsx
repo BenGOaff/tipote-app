@@ -1,11 +1,9 @@
 "use client";
 
-import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sun, Target, Sparkles, FolderOpen, Settings, BarChart3 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -16,78 +14,109 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 
-type NavItem = {
-  title: string;
-  href: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
-const mainNav: NavItem[] = [
-  { title: "Aujourd’hui", href: "/dashboard", icon: Sun },
-  { title: "Stratégie", href: "/strategy", icon: Target },
+const mainItems = [
+  { title: "Aujourd'hui", href: "/dashboard", icon: Sun },
+  { title: "Ma Stratégie", href: "/strategy", icon: Target },
   { title: "Créer", href: "/create", icon: Sparkles },
-  { title: "Mes contenus", href: "/contents", icon: FolderOpen },
-  { title: "Analytics", href: "/analytics", icon: BarChart3 },
-];
+  { title: "Mes Contenus", href: "/contents", icon: FolderOpen },
+] as const;
 
-const footerNav: NavItem[] = [{ title: "Paramètres", href: "/settings", icon: Settings }];
+function isActivePath(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/app";
+  if (pathname === href) return true;
+  if (href !== "/" && pathname.startsWith(`${href}/`)) return true;
+  return false;
+}
 
-function SidebarLink({ title, href, icon: Icon }: NavItem) {
+function NavItemLink({
+  href,
+  className,
+  activeClassName,
+  children,
+}: {
+  href: string;
+  className: string;
+  activeClassName: string;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
-
-  // Compat : on garde /app comme alias historique du dashboard
-  const isDashboardAlias = href === "/dashboard" && pathname === "/app";
-  const isActive = isDashboardAlias || pathname === href || (href !== "/" && pathname?.startsWith(`${href}/`));
-
+  const active = isActivePath(pathname ?? "", href);
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive} className="rounded-xl">
-        <Link href={href} className={cn("flex items-center gap-2")}>
-          <Icon className="h-4 w-4" />
-          <span className="text-sm font-medium">{title}</span>
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <Link href={href} className={active ? `${className} ${activeClassName}` : className}>
+      {children}
+    </Link>
   );
 }
 
 export function AppSidebar() {
   return (
-    <Sidebar className="border-r">
-      <SidebarHeader className="px-3 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2 px-2">
-          <div className="h-8 w-8 rounded-xl bg-primary/10" />
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold">Tipote™</span>
-            <span className="text-xs text-muted-foreground">Business Buddy IA</span>
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-primary-foreground" />
           </div>
-        </Link>
+          <div>
+            <h2 className="text-lg font-display font-bold">Tipote™</h2>
+            <p className="text-xs text-muted-foreground">SaaS Business AI</p>
+          </div>
+        </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className="overflow-y-auto px-3 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarLink key={item.href} {...item} />
+            <SidebarMenu className="space-y-1">
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavItemLink
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </NavItemLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="px-3 pb-4">
+      <SidebarFooter className="border-t border-sidebar-border p-4 space-y-1">
         <SidebarMenu>
-          {footerNav.map((item) => (
-            <SidebarLink key={item.href} {...item} />
-          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavItemLink
+                href="/analytics"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Analytics</span>
+              </NavItemLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavItemLink
+                href="/settings"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              >
+                <Settings className="w-5 h-5" />
+                <span>Paramètres</span>
+              </NavItemLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-
-      <SidebarRail />
     </Sidebar>
   );
 }
