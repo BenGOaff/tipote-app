@@ -1,5 +1,9 @@
 "use client";
 
+// Port 1:1 Lovable "MyContent" (src/pages/MyContent.tsx)
+// NOTE: on garde AppShell Tipote (sidebar + header identiques à Lovable),
+// et on reproduit exactement le JSX/classes de la page Lovable dans le body.
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -12,7 +16,18 @@ import { Input } from "@/components/ui/input";
 import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { ContentItemActions } from "@/components/content/ContentItemActions";
 
-import { CalendarDays, Clock, FileText, Mail, MessageSquare, Plus, Search, Video } from "lucide-react";
+import {
+  CalendarDays,
+  List as ListIcon,
+  Plus,
+  Search,
+  FileText,
+  Mail,
+  Video,
+  MessageSquare,
+  Clock,
+} from "lucide-react";
+
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -21,23 +36,27 @@ import type { ContentListItem } from "@/app/contents/page";
 type Props = {
   userEmail: string;
   initialView: "list" | "calendar";
-  initialSearch: string;
   items: ContentListItem[];
   error?: string;
+};
+
+const typeIcons: Record<string, any> = {
+  post: MessageSquare,
+  email: Mail,
+  article: FileText,
+  video: Video,
 };
 
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
   scheduled: "Planifié",
   published: "Publié",
-  archived: "Archivé",
 };
 
-const statusClasses: Record<string, string> = {
+const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
   scheduled: "bg-blue-100 text-blue-700",
   published: "bg-green-100 text-green-700",
-  archived: "bg-gray-100 text-gray-700",
 };
 
 function safeString(v: unknown): string {
@@ -46,43 +65,47 @@ function safeString(v: unknown): string {
 
 function normalizeStatusKey(status: string | null) {
   const s = safeString(status).trim().toLowerCase();
-  if (!s) return "";
+  if (!s) return "draft";
   if (s === "planned") return "scheduled";
   return s;
 }
 
-function iconForType(type: string | null) {
-  const t = safeString(type).toLowerCase();
-  if (t.includes("post") || t.includes("réseau") || t.includes("reseau") || t.includes("social")) return MessageSquare;
-  if (t.includes("email")) return Mail;
-  if (t.includes("article") || t.includes("blog")) return FileText;
-  if (t.includes("video") || t.includes("vidéo")) return Video;
-  return FileText;
+function normalizeTypeKey(type: string | null) {
+  const t = safeString(type).trim().toLowerCase();
+  if (t.includes("email")) return "email";
+  if (t.includes("video") || t.includes("vidéo")) return "video";
+  if (t.includes("article") || t.includes("blog")) return "article";
+  if (t.includes("post") || t.includes("réseau") || t.includes("reseau") || t.includes("social")) return "post";
+  // fallback Lovable
+  return "article";
 }
 
-function groupByCreatedDate(items: ContentListItem[]) {
+const groupByDate = (items: ContentListItem[]) => {
   const groups: Record<string, ContentListItem[]> = {};
-  for (const item of items) {
+  items.forEach((item) => {
     const date = format(new Date(item.created_at), "yyyy-MM-dd");
     if (!groups[date]) groups[date] = [];
     groups[date].push(item);
-  }
+  });
   return groups;
+};
+
+function getTimeFromCreatedAt(createdAt: string) {
+  try {
+    return format(new Date(createdAt), "HH:mm");
+  } catch {
+    return "";
+  }
 }
 
-export default function MyContentLovableClient({
-  userEmail,
-  initialView,
-  initialSearch,
-  items,
-  error,
-}: Props) {
+export default function MyContentLovableClient({ userEmail, initialView, items, error }: Props) {
   const [view, setView] = useState<"list" | "calendar">(initialView);
-  const [search, setSearch] = useState(initialSearch ?? "");
+  const [search, setSearch] = useState("");
 
-  const filtered = useMemo(() => {
+  const filteredContents = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
+
     return items.filter((c) => {
       const title = safeString(c.title).toLowerCase();
       const type = safeString(c.type).toLowerCase();
@@ -91,28 +114,7 @@ export default function MyContentLovableClient({
     });
   }, [items, search]);
 
-  const stats = useMemo(() => {
-    const total = filtered.length;
-    const drafts = filtered.filter((c) => normalizeStatusKey(c.status) === "draft").length;
-    const scheduled = filtered.filter((c) => normalizeStatusKey(c.status) === "scheduled").length;
-    const published = filtered.filter((c) => normalizeStatusKey(c.status) === "published").length;
-    return { total, drafts, scheduled, published };
-  }, [filtered]);
-
-  const grouped = useMemo(() => groupByCreatedDate(filtered), [filtered]);
-
-  const calendarItemsByDate = useMemo(() => {
-    const by: Record<string, ContentListItem[]> = {};
-    const dates: string[] = [];
-    for (const it of filtered) {
-      const d = safeString(it.scheduled_date).trim();
-      if (!d) continue;
-      if (!by[d]) by[d] = [];
-      by[d].push(it);
-      dates.push(d);
-    }
-    return { by, dates: Array.from(new Set(dates)).sort() };
-  }, [filtered]);
+  const grouped = useMemo(() => groupByDate(filteredContents), [filteredContents]);
 
   return (
     <AppShell
@@ -126,10 +128,10 @@ export default function MyContentLovableClient({
           </Button>
         </Link>
       }
-      contentClassName="flex-1 p-0"
+      contentClassName="flex-1 overflow-auto bg-muted/30 p-0"
     >
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
-        {/* Filters & Toggle (Lovable) */}
+      <div className="p-6 space-y-6 max-w-6xl mx-auto">
+        {/* Search + Toggle (Lovable) */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -147,9 +149,10 @@ export default function MyContentLovableClient({
               size="sm"
               onClick={() => setView("list")}
             >
-              <MessageSquare className="w-4 h-4 mr-2" />
+              <ListIcon className="w-4 h-4 mr-2" />
               Liste
             </Button>
+
             <Button
               variant={view === "calendar" ? "default" : "outline"}
               size="sm"
@@ -161,23 +164,29 @@ export default function MyContentLovableClient({
           </div>
         </div>
 
-        {/* Stats (Lovable order) */}
+        {/* Stats (Lovable) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <p className="text-sm text-muted-foreground">Total</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-2xl font-bold">{filteredContents.length}</p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-muted-foreground">Brouillons</p>
-            <p className="text-2xl font-bold">{stats.drafts}</p>
+            <p className="text-2xl font-bold">
+              {filteredContents.filter((c) => normalizeStatusKey(c.status) === "draft").length}
+            </p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-muted-foreground">Planifiés</p>
-            <p className="text-2xl font-bold">{stats.scheduled}</p>
+            <p className="text-2xl font-bold">
+              {filteredContents.filter((c) => normalizeStatusKey(c.status) === "scheduled").length}
+            </p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-muted-foreground">Publiés</p>
-            <p className="text-2xl font-bold">{stats.published}</p>
+            <p className="text-2xl font-bold">
+              {filteredContents.filter((c) => normalizeStatusKey(c.status) === "published").length}
+            </p>
           </Card>
         </div>
 
@@ -185,11 +194,11 @@ export default function MyContentLovableClient({
           <Card className="p-6">
             <p className="text-sm text-destructive">Erreur : {error}</p>
           </Card>
-        ) : filtered.length === 0 ? (
+        ) : filteredContents.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-muted-foreground">Aucun contenu trouvé</p>
+            <p className="text-muted-foreground mb-4">Commencez par créer votre premier contenu</p>
             <Link href="/create">
-              <Button className="mt-4">
+              <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 Créer du contenu
               </Button>
@@ -197,22 +206,7 @@ export default function MyContentLovableClient({
           </Card>
         ) : view === "calendar" ? (
           <ContentCalendarView
-            itemsByDate={Object.fromEntries(
-              Object.entries(calendarItemsByDate.by).map(([d, arr]) => [
-                d,
-                arr.map((it) => ({
-                  id: it.id,
-                  type: it.type,
-                  title: it.title,
-                  status: it.status,
-                  scheduled_date: it.scheduled_date,
-                  channel: it.channel,
-                  tags: null,
-                  created_at: it.created_at,
-                })),
-              ])
-            )}
-            scheduledDates={calendarItemsByDate.dates}
+            contents={filteredContents}
           />
         ) : (
           <div className="space-y-6">
@@ -226,10 +220,15 @@ export default function MyContentLovableClient({
 
                   <div className="space-y-2">
                     {dayItems.map((item) => {
-                      const Icon = iconForType(item.type);
-                      const statusKey = normalizeStatusKey(item.status);
-                      const statusLabel = statusLabels[statusKey] ?? (safeString(item.status) || "—");
-                      const statusClass = statusClasses[statusKey] ?? "bg-gray-100 text-gray-700";
+                      const typeKey = normalizeTypeKey(item.type);
+                      const Icon = typeIcons[typeKey] || FileText;
+
+                      const sk = normalizeStatusKey(item.status);
+                      const statusLabel = statusLabels[sk] ?? "Brouillon";
+                      const statusClass = statusColors[sk] ?? statusColors.draft;
+
+                      const time = getTimeFromCreatedAt(item.created_at);
+                      const channel = safeString(item.channel);
 
                       return (
                         <Card key={item.id} className="p-4 hover:shadow-md transition-shadow">
@@ -244,11 +243,11 @@ export default function MyContentLovableClient({
                               </Link>
 
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                {safeString(item.channel) ? <span className="capitalize">{item.channel}</span> : null}
-                                {item.scheduled_date ? (
+                                {channel ? <span className="capitalize">{channel}</span> : null}
+                                {time ? (
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {item.scheduled_date}
+                                    {time}
                                   </span>
                                 ) : null}
                               </div>

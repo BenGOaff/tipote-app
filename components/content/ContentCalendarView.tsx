@@ -1,30 +1,23 @@
-// components/content/ContentCalendarView.tsx
 "use client";
 
-// Port exact du composant Lovable src/components/ContentCalendar.tsx
-// Adapté aux types Tipote (scheduled_date au lieu de scheduled_at + channel au lieu de platform)
+// Port 1:1 Lovable "ContentCalendar" (src/components/ContentCalendar.tsx)
+// Adaptation Tipote:
+// - Lovable: scheduled_at (datetime) -> Tipote: scheduled_date (date string)
+// - Pour l'heure affichée, on utilise created_at (comme fallback UX), car Tipote n'a pas scheduled_at.
 
 import { useMemo, useState } from "react";
-import { format, isSameDay } from "date-fns";
-import { fr } from "date-fns/locale";
 import Link from "next/link";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { Clock, FileText, Mail, MessageSquare, Video } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-export type ContentCalendarItem = {
-  id: string;
-  type: string | null;
-  title: string | null;
-  status: string | null;
-  scheduled_date: string | null; // YYYY-MM-DD
-  channel: string | null;
-  tags: string[] | null;
-  created_at: string;
-};
+import { FileText, Mail, Video, MessageSquare, Clock } from "lucide-react";
+
+import type { ContentListItem } from "@/app/contents/page";
 
 const typeIcons: Record<string, any> = {
   post: MessageSquare,
@@ -49,15 +42,14 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function statusKey(status: string | null) {
+function normalizeStatusKey(status: string | null) {
   const s = safeString(status).trim().toLowerCase();
   if (!s) return "draft";
   if (s === "planned") return "scheduled";
-  if (s === "schedule") return "scheduled";
   return s;
 }
 
-function typeKey(type: string | null) {
+function normalizeTypeKey(type: string | null) {
   const t = safeString(type).trim().toLowerCase();
   if (t.includes("email")) return "email";
   if (t.includes("video") || t.includes("vidéo")) return "video";
@@ -66,43 +58,39 @@ function typeKey(type: string | null) {
   return "article";
 }
 
-export function ContentCalendarView({
-  itemsByDate,
-  scheduledDates,
-}: {
-  itemsByDate: Record<string, ContentCalendarItem[]>;
-  scheduledDates: string[]; // YYYY-MM-DD
-}) {
-  const allScheduledDates = useMemo(() => {
-    return scheduledDates
-      .map((d) => safeString(d).trim())
-      .filter(Boolean)
-      .map((d) => new Date(`${d}T00:00:00`));
-  }, [scheduledDates]);
+function getDateForCalendar(content: ContentListItem) {
+  // Lovable: scheduled_at ? scheduled_at : created_at
+  // Tipote: scheduled_date ? scheduled_date : created_at
+  if (content.scheduled_date) return new Date(`${content.scheduled_date}T00:00:00`);
+  return new Date(content.created_at);
+}
 
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(allScheduledDates[0]);
+function getTimeForDisplay(content: ContentListItem) {
+  try {
+    return format(new Date(content.created_at), "HH:mm");
+  } catch {
+    return "";
+  }
+}
 
+export function ContentCalendarView({ contents }: { contents: ContentListItem[] }) {
   const datesWithContent = useMemo(() => {
-    // Rebuild from itemsByDate to also add published markers if present
-    const acc: Record<
-      string,
-      { date: Date; count: number; hasScheduled: boolean; hasPublished: boolean }
-    > = {};
+    return contents.reduce((acc, content) => {
+      const date = getDateForCalendar(content);
+      const dateStr = format(date, "yyyy-MM-dd");
 
-    for (const [dateStr, arr] of Object.entries(itemsByDate)) {
-      const date = new Date(`${dateStr}T00:00:00`);
-      if (!acc[dateStr]) acc[dateStr] = { date, count: 0, hasScheduled: false, hasPublished: false };
-      acc[dateStr].count += arr.length;
-
-      for (const content of arr) {
-        const sk = statusKey(content.status);
-        if (sk === "scheduled") acc[dateStr].hasScheduled = true;
-        if (sk === "published") acc[dateStr].hasPublished = true;
+      if (!acc[dateStr]) {
+        acc[dateStr] = { date, count: 0, hasScheduled: false, hasPublished: false };
       }
-    }
 
-    return acc;
-  }, [itemsByDate]);
+      acc[dateStr].count++;
+      const sk = normalizeStatusKey(content.status);
+      if (sk === "scheduled") acc[dateStr].hasScheduled = true;
+      if (sk === "published") acc[dateStr].hasPublished = true;
+
+      return acc;
+    }, {} as Record<string, { date: Date; count: number; hasScheduled: boolean; hasPublished: boolean }>);
+  }, [contents]);
 
   const scheduledDays = useMemo(() => {
     return Object.values(datesWithContent)
@@ -116,8 +104,25 @@ export function ContentCalendarView({
       .map((d) => d.date);
   }, [datesWithContent]);
 
+  const initialSelected = useMemo(() => {
+    // même logique que Lovable: première date dispo sinon undefined
+    const all = Object.values(datesWithContent)
+      .map((d) => d.date)
+      .sort((a, b) => a.getTime() - b.getTime());
+    return all[0];
+  }, [datesWithContent]);
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialSelected);
+
   const selectedKey = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-  const selectedItems = selectedKey ? itemsByDate[selectedKey] ?? [] : [];
+
+  const selectedContents = useMemo(() => {
+    if (!selectedDate) return [];
+    return contents.filter((content) => {
+      const date = getDateForCalendar(content);
+      return format(date, "yyyy-MM-dd") === selectedKey;
+    });
+  }, [contents, selectedDate, selectedKey]);
 
   return (
     <div className="grid md:grid-cols-[350px_1fr] gap-6">
@@ -152,22 +157,27 @@ export function ContentCalendarView({
 
       <Card className="p-6">
         {!selectedDate ? (
-          <div className="text-muted-foreground">Sélectionne une date.</div>
+          <div className="text-muted-foreground">Sélectionnez une date.</div>
         ) : (
           <>
             <h2 className="text-lg font-semibold mb-4 capitalize">
               {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
             </h2>
 
-            {selectedItems.length === 0 ? (
-              <div className="text-muted-foreground">Aucun contenu sur cette date.</div>
+            {selectedContents.length === 0 ? (
+              <div className="text-muted-foreground">Aucun contenu pour cette date.</div>
             ) : (
               <div className="space-y-3">
-                {selectedItems.map((content) => {
-                  const Icon = typeIcons[typeKey(content.type)] || FileText;
-                  const sk = statusKey(content.status);
-                  const label = statusLabels[sk] ?? (safeString(content.status) || "—");
-                  const klass = statusColors[sk] ?? "bg-gray-100 text-gray-700";
+                {selectedContents.map((content) => {
+                  const typeKey = normalizeTypeKey(content.type);
+                  const Icon = typeIcons[typeKey] || FileText;
+
+                  const sk = normalizeStatusKey(content.status);
+                  const label = statusLabels[sk] ?? "Brouillon";
+                  const klass = statusColors[sk] ?? statusColors.draft;
+
+                  const time = getTimeForDisplay(content);
+                  const channel = safeString(content.channel);
 
                   return (
                     <Link key={content.id} href={`/contents/${content.id}`} className="block">
@@ -180,13 +190,11 @@ export function ContentCalendarView({
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {safeString(content.channel) ? (
-                                <span className="capitalize">{content.channel}</span>
-                              ) : null}
-                              {content.scheduled_date ? (
+                              {channel ? <span className="capitalize">{channel}</span> : null}
+                              {time ? (
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {content.scheduled_date}
+                                  {time}
                                 </span>
                               ) : null}
                             </div>
@@ -206,3 +214,5 @@ export function ContentCalendarView({
     </div>
   );
 }
+
+export default ContentCalendarView;
