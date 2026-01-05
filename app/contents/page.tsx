@@ -1,24 +1,14 @@
 // app/contents/page.tsx
-// Page "Mes Contenus" — UI Lovable pixel-perfect + data Tipote
+// Page "Mes Contenus" (pixel layout Lovable).
 // Server component: auth + fetch Supabase + passe les items au client.
-// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/statut/canal/date_planifiee/contenu)
-// -> on tente d'abord la "v2" (title/status/channel/scheduled_date/content), sinon fallback FR avec aliasing.
+// NOTE DB compat: certaines instances ont encore les colonnes FR (titre/statut/canal/date_planifiee)
+// -> on tente d'abord la "v2" (title/status/channel/scheduled_date), sinon fallback FR avec aliasing.
 
 import { redirect } from "next/navigation";
+
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import MyContentLovableClient from "@/components/content/MyContentLovableClient";
-
-export type ContentListItem = {
-  id: string;
-  type: string | null;
-  title: string | null;
-  content: string | null;
-  status: string | null;
-  scheduled_date: string | null; // YYYY-MM-DD ou ISO
-  channel: string | null;
-  tags: string[] | string | null;
-  created_at: string;
-};
+import type { ContentListItem } from "@/lib/types/content";
 
 function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
@@ -63,7 +53,7 @@ async function fetchContentsForUser(
     .order("created_at", { ascending: false });
 
   if (q) {
-    v2 = v2.or(`title.ilike.%${q}%,content.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
+    v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
   }
   if (status) v2 = v2.eq("status", status);
   if (type) v2 = v2.eq("type", type);
@@ -71,7 +61,19 @@ async function fetchContentsForUser(
 
   const v2Res = await v2;
   if (!v2Res.error) {
-    return { data: (v2Res.data ?? []) as ContentListItem[] };
+    const mapped = (v2Res.data ?? []).map((r: any) => ({
+      id: String(r.id),
+      type: r.type ?? null,
+      title: r.title ?? null,
+      content: r.content ?? null,
+      status: r.status ?? null,
+      scheduled_date: r.scheduled_date ?? null,
+      channel: r.channel ?? null,
+      tags: r.tags ?? null,
+      created_at: String(r.created_at),
+    })) as ContentListItem[];
+
+    return { data: mapped };
   }
 
   // Si erreur colonne manquante => fallback FR
@@ -88,15 +90,30 @@ async function fetchContentsForUser(
     .order("created_at", { ascending: false });
 
   if (q) {
-    fb = fb.or(`titre.ilike.%${q}%,contenu.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
+    fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
   }
   if (status) fb = fb.eq("statut", status);
   if (type) fb = fb.eq("type", type);
   if (channel) fb = fb.eq("canal", channel);
 
   const fbRes = await fb;
-  if (fbRes.error) return { data: [] as ContentListItem[], error: fbRes.error.message };
-  return { data: (fbRes.data ?? []) as ContentListItem[] };
+  if (fbRes.error) {
+    return { data: [] as ContentListItem[], error: fbRes.error.message };
+  }
+
+  const mapped = (fbRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    type: r.type ?? null,
+    title: r.title ?? null,
+    content: r.content ?? null,
+    status: r.status ?? null,
+    scheduled_date: r.scheduled_date ?? null,
+    channel: r.channel ?? null,
+    tags: r.tags ?? null,
+    created_at: String(r.created_at),
+  })) as ContentListItem[];
+
+  return { data: mapped };
 }
 
 export default async function ContentsPage({
@@ -106,28 +123,34 @@ export default async function ContentsPage({
 }) {
   const supabase = await getSupabaseServerClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user?.id) redirect("/");
+  if (!session) redirect("/");
 
   const sp = await searchParams;
 
-  const q = safeString(Array.isArray(sp.q) ? sp.q[0] : sp.q);
-  const status = normalizeStatusParam(Array.isArray(sp.status) ? sp.status[0] : sp.status);
-  const type = normalizeTypeParam(Array.isArray(sp.type) ? sp.type[0] : sp.type);
-  const channel = normalizeChannelParam(Array.isArray(sp.channel) ? sp.channel[0] : sp.channel);
+  const qRaw = sp.q;
+  const statusRaw = sp.status;
+  const typeRaw = sp.type;
+  const channelRaw = sp.channel;
+  const viewRaw = sp.view;
 
-  const viewRaw = safeString(Array.isArray(sp.view) ? sp.view[0] : sp.view);
-  const initialView = viewRaw === "calendar" ? "calendar" : "list";
+  const q = safeString(Array.isArray(qRaw) ? qRaw[0] : qRaw).trim();
+  const status = normalizeStatusParam(Array.isArray(statusRaw) ? statusRaw[0] : statusRaw);
+  const type = normalizeTypeParam(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw);
+  const channel = normalizeChannelParam(Array.isArray(channelRaw) ? channelRaw[0] : channelRaw);
 
-  const { data, error } = await fetchContentsForUser(user.id, q, status, type, channel);
+  const initialView =
+    safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
+
+  const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
 
   return (
     <MyContentLovableClient
-      userEmail={user.email ?? ""}
+      userEmail={session.user.email ?? ""}
       initialView={initialView}
-      items={data}
+      items={items}
       error={error}
     />
   );

@@ -11,12 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Users, Mail, MousePointer, Eye, ArrowUpRight } from "lucide-react";
 
 function clamp(n: number, min: number, max: number) {
-  return Math.min(Math.max(n, min), max);
-}
-
-
-function trendIcon(delta: number) {
-  return delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />;
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
 }
 
 function trendBadgeVariant(delta: number) {
@@ -57,7 +53,7 @@ export default function AnalyticsLovableClient(props: {
     deltaScheduled: number;
     deltaAll: number;
   };
-  bars: number[]; // 14 values [8..100]
+  bars: number[];
   topContents: Array<{
     id: string;
     title: string;
@@ -78,13 +74,12 @@ export default function AnalyticsLovableClient(props: {
 }) {
   const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } = props;
 
-  // Mapping “Lovable cards” → Tipote data (vraies données, labels cohérents)
   const metrics = [
     {
       label: "Contenus publiés",
       value: String(kpis.publishedNow),
       change: `${kpis.deltaPublished >= 0 ? "+" : ""}${kpis.deltaPublished}%`,
-      trend: kpis.deltaPublished >= 0 ? "up" : "down",
+      delta: kpis.deltaPublished,
       icon: Mail,
       color: "text-primary",
     },
@@ -92,7 +87,7 @@ export default function AnalyticsLovableClient(props: {
       label: "Tâches complétées",
       value: `${kpis.tasksPct}%`,
       change: `${kpis.tasksDone}/${kpis.tasksTotal}`,
-      trend: "up" as const,
+      delta: 0,
       icon: MousePointer,
       color: "text-success",
     },
@@ -100,7 +95,7 @@ export default function AnalyticsLovableClient(props: {
       label: "Contenus planifiés",
       value: String(kpis.scheduledNow),
       change: `${kpis.deltaScheduled >= 0 ? "+" : ""}${kpis.deltaScheduled}%`,
-      trend: kpis.deltaScheduled >= 0 ? "up" : "down",
+      delta: kpis.deltaScheduled,
       icon: Users,
       color: "text-secondary",
     },
@@ -108,7 +103,7 @@ export default function AnalyticsLovableClient(props: {
       label: "Total contenus",
       value: String(kpis.totalNow),
       change: `${kpis.deltaAll >= 0 ? "+" : ""}${kpis.deltaAll}%`,
-      trend: kpis.deltaAll >= 0 ? "up" : "down",
+      delta: kpis.deltaAll,
       icon: Eye,
       color: "text-primary",
     },
@@ -162,11 +157,8 @@ export default function AnalyticsLovableClient(props: {
                       <metric.icon className="w-5 h-5" />
                     </div>
 
-                    <Badge
-                      variant={trendBadgeVariant(metric.trend === "down" ? -1 : 1)}
-                      className="flex items-center gap-1"
-                    >
-                      {metric.trend === "down" ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                    <Badge variant={trendBadgeVariant(metric.delta)} className="flex items-center gap-1">
+                      {metric.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       {metric.change}
                     </Badge>
                   </div>
@@ -187,7 +179,6 @@ export default function AnalyticsLovableClient(props: {
               </TabsList>
 
               <TabsContent value="engagement" className="space-y-6 mt-6">
-                {/* “Engagement” proxy chart */}
                 <Card className="p-6">
                   <h3 className="text-lg font-bold mb-6">Engagement au fil du temps</h3>
                   <div className="h-64 flex items-end justify-between gap-2">
@@ -209,16 +200,11 @@ export default function AnalyticsLovableClient(props: {
                 </Card>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                  {/* Top contents (proxy: derniers contenus) */}
                   <Card className="p-6">
                     <h3 className="text-lg font-bold mb-6">Top contenus</h3>
                     <div className="space-y-4">
                       {topContents.slice(0, 4).map((c) => (
-                        <Link
-                          key={c.id}
-                          href={`/contents/${c.id}`}
-                          className="block"
-                        >
+                        <Link key={c.id} href={`/contents/${c.id}`} className="block">
                           <div className="flex items-start justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                             <div className="flex-1">
                               <p className="font-medium mb-1">{c.title}</p>
@@ -233,7 +219,6 @@ export default function AnalyticsLovableClient(props: {
                     </div>
                   </Card>
 
-                  {/* Traffic sources (proxy: channels repartition) */}
                   <Card className="p-6">
                     <h3 className="text-lg font-bold mb-6">Sources de trafic</h3>
                     <div className="space-y-4">
@@ -282,7 +267,7 @@ export default function AnalyticsLovableClient(props: {
               </TabsContent>
             </Tabs>
 
-            {/* Goals Progress (proxy: tasks + content cadence) */}
+            {/* Goals Progress */}
             <Card className="p-6">
               <h3 className="text-lg font-bold mb-6">Progression des objectifs</h3>
               <div className="space-y-6">
@@ -299,9 +284,7 @@ export default function AnalyticsLovableClient(props: {
                     target: `${Math.max(kpis.publishedNow, kpis.publishedPrev, 1)}`,
                     progress: clamp(
                       Math.round(
-                        (kpis.publishedNow /
-                          Math.max(kpis.publishedNow, kpis.publishedPrev, 1)) *
-                          100
+                        (kpis.publishedNow / Math.max(kpis.publishedNow, kpis.publishedPrev, 1)) * 100
                       ),
                       0,
                       100
@@ -313,9 +296,7 @@ export default function AnalyticsLovableClient(props: {
                     target: `${Math.max(kpis.scheduledNow, kpis.scheduledPrev, 1)}`,
                     progress: clamp(
                       Math.round(
-                        (kpis.scheduledNow /
-                          Math.max(kpis.scheduledNow, kpis.scheduledPrev, 1)) *
-                          100
+                        (kpis.scheduledNow / Math.max(kpis.scheduledNow, kpis.scheduledPrev, 1)) * 100
                       ),
                       0,
                       100
@@ -345,7 +326,6 @@ export default function AnalyticsLovableClient(props: {
               </div>
             </Card>
 
-            {/* Next scheduled (bonus card, utile “Tipote vrai”) */}
             {nextScheduled && (
               <Card className="p-6">
                 <h3 className="text-lg font-bold mb-4">Prochaine échéance</h3>
@@ -375,7 +355,6 @@ export default function AnalyticsLovableClient(props: {
               </Card>
             )}
 
-            {/* Update Reminder */}
             <Card className="p-6 gradient-hero border-border/50">
               <div className="flex items-start justify-between">
                 <div>

@@ -6,11 +6,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+
 import { format, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
 import { FileText, Mail, Video, MessageSquare, Clock } from "lucide-react";
-import type { ContentListItem } from "@/app/contents/page";
+import type { ContentListItem } from "@/lib/types/content";
 
 const typeIcons: Record<string, any> = {
   post: MessageSquare,

@@ -15,7 +15,7 @@ import { ContentItemActions } from "@/components/content/ContentItemActions";
 
 import { CalendarDays, FileText, Filter, Image as ImageIcon, List, Mail, Plus, Video } from "lucide-react";
 
-import type { ContentListItem } from "@/app/contents/page";
+import type { ContentListItem } from "@/lib/types/content";
 
 type Props = {
   userEmail: string;
