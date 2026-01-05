@@ -3,7 +3,9 @@
 
 // Vue Calendrier pour "Mes Contenus" (pixel perfect Lovable)
 // - reçoit les données déjà chargées côté server (app/contents/page.tsx)
-// - ne touche pas aux pages : on conserve l'API props actuelle (itemsByDate / scheduledDates)
+// - API compatible :
+//   - soit { itemsByDate, scheduledDates } (ancienne API)
+//   - soit { contents } (API pratique utilisée par MyContentLovableClient)
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,31 +16,34 @@ import { Badge } from "@/components/ui/badge";
 
 import { format, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
-
-import { FileText, Mail, Video, MessageSquare, Clock, Image as ImageIcon } from "lucide-react";
+import { CalendarDays, Clock, FileText, Mail, MessageSquare, Video } from "lucide-react";
 
 export type ContentCalendarItem = {
   id: string;
   type: string | null;
   title: string | null;
-  status: string | null; // "draft" | "scheduled" | "published" | autres
+  status: string | null;
   scheduled_date: string | null; // YYYY-MM-DD
   channel: string | null;
   tags: string[] | null;
   created_at: string;
 };
 
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  published: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-};
+type Props =
+  | {
+      itemsByDate: Record<string, ContentCalendarItem[]>;
+      scheduledDates: string[]; // YYYY-MM-DD
+      contents?: never;
+    }
+  | {
+      contents: ContentCalendarItem[];
+      itemsByDate?: never;
+      scheduledDates?: never;
+    };
 
-const statusLabels: Record<string, string> = {
-  draft: "Brouillon",
-  scheduled: "Planifié",
-  published: "Publié",
-};
+function safeString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
 
 function normalizeStatus(status: string | null | undefined) {
   const s = (status ?? "").trim().toLowerCase();
@@ -49,162 +54,168 @@ function normalizeStatus(status: string | null | undefined) {
   return s || "draft";
 }
 
-function iconForType(type: string | null | undefined) {
+function normalizeType(type: string | null | undefined) {
   const t = (type ?? "").trim().toLowerCase();
-  if (!t) return FileText;
-
-  if (t.includes("email") || t.includes("mail") || t.includes("newsletter")) return Mail;
-  if (t.includes("video") || t.includes("youtube") || t.includes("tiktok") || t.includes("reel")) return Video;
-  if (t.includes("article") || t.includes("blog") || t.includes("seo")) return FileText;
-  if (t.includes("image") || t.includes("visuel") || t.includes("carousel")) return ImageIcon;
-
-  // défaut "post"
-  return MessageSquare;
+  if (t.includes("email") || t.includes("mail") || t.includes("newsletter")) return "email";
+  if (t.includes("video") || t.includes("youtube") || t.includes("vidéo")) return "video";
+  if (t.includes("post") || t.includes("réseau") || t.includes("reseau") || t.includes("social")) return "post";
+  if (t.includes("article") || t.includes("blog")) return "article";
+  return "article";
 }
 
-function contentDate(content: ContentCalendarItem): Date {
-  // Tipote: scheduled_date (YYYY-MM-DD). On fallback created_at.
-  // Compat future: si un jour on a scheduled_at, on l'utilise sans casser.
-  const anyContent = content as unknown as { scheduled_at?: string | null };
-  if (anyContent.scheduled_at) return new Date(anyContent.scheduled_at);
-  if (content.scheduled_date) return new Date(`${content.scheduled_date}T00:00:00`);
-  return new Date(content.created_at);
+function iconForType(type: string | null | undefined) {
+  const t = normalizeType(type);
+  if (t === "email") return Mail;
+  if (t === "video") return Video;
+  if (t === "post") return MessageSquare;
+  return FileText;
 }
 
-export function ContentCalendarView({
-  itemsByDate,
-  scheduledDates,
-}: {
-  itemsByDate: Record<string, ContentCalendarItem[]>;
-  scheduledDates: string[]; // YYYY-MM-DD
-}) {
+function contentDate(content: { scheduled_date: string | null; created_at: string }) {
+  const raw = content.scheduled_date || content.created_at;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return new Date(content.created_at);
+  return d;
+}
+
+function statusBadge(status: string | null | undefined) {
+  const s = normalizeStatus(status);
+  if (s === "published") return { label: "Publié", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" };
+  if (s === "scheduled") return { label: "Planifié", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" };
+  if (s === "draft") return { label: "Brouillon", className: "bg-muted text-muted-foreground" };
+  if (s === "archived") return { label: "Archivé", className: "bg-muted text-muted-foreground" };
+  return { label: safeString(status) || "—", className: "bg-muted text-muted-foreground" };
+}
+
+export function ContentCalendarView({ itemsByDate, scheduledDates, contents }: Props) {
   const router = useRouter();
 
-  const contents = useMemo(() => Object.values(itemsByDate).flat(), [itemsByDate]);
+  const derived = useMemo(() => {
+    if (contents) return contents;
+    return Object.values(itemsByDate ?? {}).flat();
+  }, [contents, itemsByDate]);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const getContentsForDate = (date: Date) => {
-    return contents.filter((content) => isSameDay(contentDate(content), date));
+    return derived.filter((content) => isSameDay(contentDate(content), date));
   };
 
   const selectedContents = selectedDate ? getContentsForDate(selectedDate) : [];
 
-  // Create modifiers for dates with content (Lovable logic)
-  const datesWithContent = useMemo(() => {
-    return contents.reduce(
-      (acc, content) => {
-        const date = contentDate(content);
-        const dateStr = format(date, "yyyy-MM-dd");
-        if (!acc[dateStr]) {
-          acc[dateStr] = { date, count: 0, hasScheduled: false, hasPublished: false };
-        }
-        acc[dateStr].count++;
-        const st = normalizeStatus(content.status);
-        if (st === "scheduled") acc[dateStr].hasScheduled = true;
-        if (st === "published") acc[dateStr].hasPublished = true;
+  const modifiers = useMemo(() => {
+    return derived.reduce(
+      (acc, c) => {
+        const d = contentDate(c);
+        if (Number.isNaN(d.getTime())) return acc;
+        acc.hasContent.push(d);
         return acc;
       },
-      {} as Record<string, { date: Date; count: number; hasScheduled: boolean; hasPublished: boolean }>
+      { hasContent: [] as Date[] }
     );
-  }, [contents]);
+  }, [derived]);
 
-  const scheduledDays = useMemo(
-    () =>
-      Object.values(datesWithContent)
-        .filter((d) => d.hasScheduled)
-        .map((d) => d.date),
-    [datesWithContent]
-  );
-
-  const publishedDays = useMemo(
-    () =>
-      Object.values(datesWithContent)
-        .filter((d) => d.hasPublished && !d.hasScheduled)
-        .map((d) => d.date),
-    [datesWithContent]
-  );
+  const modifiersClassNames = {
+    hasContent: "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary",
+  };
 
   return (
-    <div className="grid md:grid-cols-[350px_1fr] gap-6">
-      <Card className="p-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Card className="p-4 lg:col-span-2">
+        <div className="flex items-center gap-2 mb-4">
+          <CalendarDays className="w-5 h-5 text-muted-foreground" />
+          <h3 className="font-semibold">Calendrier</h3>
+        </div>
+
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={setSelectedDate}
           locale={fr}
-          modifiers={{
-            scheduled: scheduledDays,
-            published: publishedDays,
-          }}
-          modifiersClassNames={{
-            scheduled: "bg-blue-100 dark:bg-blue-900/50 font-bold",
-            published: "bg-green-100 dark:bg-green-900/50",
-          }}
+          modifiers={modifiers}
+          modifiersClassNames={modifiersClassNames}
           className="rounded-md"
         />
-        <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50" />
-            <span>Planifié</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50" />
-            <span>Publié</span>
-          </div>
-        </div>
       </Card>
 
-      <Card className="p-6">
-        {selectedDate && (
-          <>
-            <h3 className="text-lg font-bold mb-4 capitalize">
-              {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
-            </h3>
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Contenus du</p>
+            <p className="font-semibold truncate">
+              {selectedDate ? format(selectedDate, "EEEE d MMMM", { locale: fr }) : "—"}
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {selectedContents.length} item{selectedContents.length > 1 ? "s" : ""}
+          </div>
+        </div>
 
-            {selectedContents.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">Aucun contenu pour cette date</p>
-            ) : (
-              <div className="space-y-3">
-                {selectedContents.map((content) => {
-                  const Icon = iconForType(content.type);
-                  const st = normalizeStatus(content.status);
-                  const badgeClass = statusColors[st] ?? statusColors.draft;
-                  const badgeLabel = statusLabels[st] ?? statusLabels.draft;
+        {selectedContents.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <p className="text-sm text-muted-foreground">Aucun contenu planifié ce jour.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {selectedContents
+              .slice()
+              .sort((a, b) => contentDate(a).getTime() - contentDate(b).getTime())
+              .map((content) => {
+                const Icon = iconForType(content.type);
+                const badge = statusBadge(content.status);
 
-                  // Compat future: si un jour on stocke une heure (scheduled_at), on l'affiche comme Lovable
-                  const anyContent = content as unknown as { scheduled_at?: string | null };
+                const timeStr = new Date(content.created_at);
+                const time = Number.isNaN(timeStr.getTime())
+                  ? ""
+                  : timeStr.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
-                  return (
-                    <div
-                      key={content.id}
-                      className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/contents/${content.id}`)}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-muted-foreground" />
+                return (
+                  <div
+                    key={content.id}
+                    className="rounded-xl border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/contents/${content.id}`)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {content.title?.trim() || `${content.type || "Contenu"} sans titre`}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {content.channel && <span className="capitalize">{content.channel}</span>}
-                          {anyContent.scheduled_at && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {format(new Date(anyContent.scheduled_at), "HH:mm")}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">
+                            {safeString(content.title) || "Sans titre"}
+                          </p>
+                          <Badge className={`rounded-xl ${badge.className}`}>{badge.label}</Badge>
+                        </div>
+
+                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                          {safeString(content.channel) ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                              {content.channel}
                             </span>
-                          )}
+                          ) : null}
+
+                          {time ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {time}
+                            </span>
+                          ) : null}
+
+                          {content.scheduled_date ? (
+                            <span className="inline-flex items-center gap-1">
+                              <CalendarDays className="w-3.5 h-3.5" />
+                              {content.scheduled_date}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
-                      <Badge className={badgeClass}>{badgeLabel}</Badge>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
+                  </div>
+                );
+              })}
+          </div>
         )}
       </Card>
     </div>
