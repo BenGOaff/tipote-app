@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,74 +15,72 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreateFormProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-};
+import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
 
-const LENGTHS = [
-  { id: "short", label: "Court" },
-  { id: "medium", label: "Moyen" },
-  { id: "long", label: "Long" },
+const articleTypes = [
+  { id: "guide", label: "Guide complet" },
+  { id: "howto", label: "Tutoriel (How-to)" },
+  { id: "list", label: "Liste / Checklist" },
 ] as const;
 
-export function ArticleForm(props: CreateFormProps) {
+export function ArticleForm(props: CreateFormCommonProps) {
   const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
 
-  const [length, setLength] = useState<(typeof LENGTHS)[number]["id"]>("medium");
+  const [articleType, setArticleType] = useState<string>("guide");
   const [title, setTitle] = useState("");
   const [instructions, setInstructions] = useState("");
   const [preview, setPreview] = useState("");
 
-  const canGenerate = useMemo(() => true, []);
-  const canSave = title.trim().length > 0;
+  const canSave = useMemo(() => title.trim().length > 0, [title]);
 
   async function handleGenerate() {
-    const generated = await onGenerate({
-      type: "blog",
-      length,
+    const content = await onGenerate({
+      type: "article",
+      article_type: articleType,
+      title: title || undefined,
       instructions: instructions || undefined,
+      context: buildTipoteContext({ articleType }),
     });
-    if (typeof generated === "string") setPreview(generated);
+    setPreview(content || "");
   }
 
-  async function handleSaveDraft() {
+  async function handleSaveClick() {
     await onSave({
+      type: "article",
+      status: "draft",
       title,
       content: preview,
-      type: "blog",
-      channel: "blog",
-      status: "draft",
-      meta: { length, instructions },
+      meta: { articleType, instructions },
     });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">Blog</h2>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
-          <X className="w-5 h-5" />
-        </Button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
+        aria-label="Fermer"
+      >
+        <X className="h-5 w-5 text-muted-foreground" />
+      </button>
+
+      <div className="mb-4">
+        <div className="text-xl font-bold">Blog</div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Longueur</Label>
-            <Select value={length} onValueChange={(v) => setLength(v as any)}>
+            <Label>Type d'article</Label>
+            <Select value={articleType} onValueChange={setArticleType}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir..." />
+                <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>
               <SelectContent>
-                {LENGTHS.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    {l.label}
+                {articleTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -90,25 +88,36 @@ export function ArticleForm(props: CreateFormProps) {
           </div>
 
           <div className="space-y-2">
+            <Label>Sujet (optionnel)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de l'article"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>Instructions (optionnel)</Label>
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Angle, structure, éléments obligatoires..."
-              rows={7}
+              placeholder="Structure, longueur, sections obligatoires..."
+              className="min-h-[180px]"
             />
           </div>
 
           <Button
-            className="w-full"
+            type="button"
+            className="w-full h-12"
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating}
+            disabled={isGenerating}
           >
+            <Wand2 className="w-4 h-4 mr-2" />
             {isGenerating ? "Génération..." : "Générer"}
           </Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
@@ -124,16 +133,19 @@ export function ArticleForm(props: CreateFormProps) {
               value={preview}
               onChange={(e) => setPreview(e.target.value)}
               placeholder="Le contenu généré apparaîtra ici..."
-              rows={12}
-              className="resize-none"
+              className="min-h-[260px]"
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+            <Button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={isSaving || !canSave}
+            >
               {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>

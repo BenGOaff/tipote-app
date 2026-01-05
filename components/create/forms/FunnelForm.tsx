@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { ExternalLink, X, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -15,127 +16,132 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreateFormProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-};
+import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
 
-const FUNNEL_TYPES = [
-  { id: "lead_magnet", label: "Lead magnet → Email → Offer" },
-  { id: "webinar", label: "Webinar → Offer" },
-  { id: "tripwire", label: "Tripwire → Upsell" },
+const funnelPages = [
+  { id: "capture", label: "Page de capture" },
+  { id: "sales", label: "Page de vente" },
 ] as const;
 
-export function FunnelForm(props: CreateFormProps) {
+export function FunnelForm(props: CreateFormCommonProps) {
   const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
 
-  const [funnelType, setFunnelType] =
-    useState<(typeof FUNNEL_TYPES)[number]["id"]>("lead_magnet");
-
+  const [pageType, setPageType] = useState<string>("sales");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
   const [preview, setPreview] = useState("");
 
-  const canGenerate = useMemo(() => true, []);
-  const canSave = title.trim().length > 0;
+  const canSave = useMemo(() => title.trim().length > 0, [title]);
 
   async function handleGenerate() {
-    const generated = await onGenerate({
+    const content = await onGenerate({
       type: "funnel",
-      funnel_type: funnelType,
-      instructions: instructions || undefined,
+      funnel_page_type: pageType,
+      title: title || undefined,
+      context: buildTipoteContext({ pageType }),
     });
-    if (typeof generated === "string") setPreview(generated);
+    setPreview(content || "");
   }
 
-  async function handleSaveDraft() {
+  async function handleSaveClick() {
     await onSave({
+      type: "funnel",
+      status: "draft",
       title,
       content: preview,
-      type: "funnel",
-      channel: "funnel",
-      status: "draft",
-      meta: { funnelType, instructions },
+      meta: { pageType },
     });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">Funnels</h2>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
-          <X className="w-5 h-5" />
-        </Button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
+        aria-label="Fermer"
+      >
+        <X className="h-5 w-5 text-muted-foreground" />
+      </button>
+
+      <div className="mb-4">
+        <div className="text-xl font-bold">Créer un Funnel</div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* LEFT */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Type de funnel</Label>
-            <Select value={funnelType} onValueChange={(v) => setFunnelType(v as any)}>
+            <Label>Type de page</Label>
+            <Select value={pageType} onValueChange={setPageType}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir..." />
+                <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>
               <SelectContent>
-                {FUNNEL_TYPES.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
+                {funnelPages.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Cible, offre, objections, canaux..."
-              rows={7}
-            />
+          <div className="text-xs text-muted-foreground">
+            Vous pouvez créer une nouvelle offre dans la section "Offres" puis revenir ici.
           </div>
 
           <Button
-            className="w-full"
+            type="button"
+            className="w-full h-12"
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating}
+            disabled={isGenerating}
           >
-            {isGenerating ? "Génération..." : "Générer"}
+            <Wand2 className="w-4 h-4 mr-2" />
+            {isGenerating ? "Génération..." : "Générer (copywriting complet)"}
           </Button>
+
+          <Card className="p-4 bg-muted/30">
+            <div className="font-medium mb-1">Templates Systeme.io</div>
+            <div className="text-sm text-muted-foreground mb-3">
+              Utilisez le copywriting généré avec les templates Systeme.io pour créer vos pages rapidement.
+            </div>
+            <Button type="button" variant="outline" onClick={() => window.open("https://systeme.io", "_blank")}>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Ouvrir Systeme.io
+            </Button>
+          </Card>
         </div>
 
-        <div className="space-y-4">
+        {/* RIGHT */}
+        <div className="space-y-3">
           <div className="space-y-2">
-            <Label>Titre (pour sauvegarde)</Label>
+            <Label>Titre du funnel</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de votre funnel"
+              placeholder="Titre pour identification"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Prévisualisation</Label>
+            <Label>Prévisualisation du copywriting</Label>
             <Textarea
               value={preview}
               onChange={(e) => setPreview(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici..."
-              rows={12}
-              className="resize-none"
+              placeholder="Le contenu généré apparaîtra ici (headline, sous-titres, sections, bénéfices, CTA)..."
+              className="min-h-[260px]"
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+            <Button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={isSaving || !canSave}
+            >
               {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,86 +15,71 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreateFormProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-};
+import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
 
-const VIDEO_PLATFORMS = [
+const videoTypes = [
   { id: "youtube", label: "YouTube" },
+  { id: "reels", label: "Reels / Shorts" },
   { id: "tiktok", label: "TikTok" },
-  { id: "reels", label: "Reels" },
 ] as const;
 
-const DURATIONS = [
-  { id: "short", label: "Court (15–30s)" },
-  { id: "medium", label: "Moyen (45–90s)" },
-  { id: "long", label: "Long (3–8min)" },
-] as const;
-
-export function VideoForm(props: CreateFormProps) {
+export function VideoForm(props: CreateFormCommonProps) {
   const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
 
-  const [platform, setPlatform] =
-    useState<(typeof VIDEO_PLATFORMS)[number]["id"]>("youtube");
-  const [duration, setDuration] =
-    useState<(typeof DURATIONS)[number]["id"]>("short");
-
+  const [videoType, setVideoType] = useState<string>("youtube");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
+  const [topic, setTopic] = useState("");
   const [preview, setPreview] = useState("");
 
-  const canGenerate = useMemo(() => true, []);
-  const canSave = title.trim().length > 0;
+  const canSave = useMemo(() => title.trim().length > 0, [title]);
 
   async function handleGenerate() {
-    const generated = await onGenerate({
-      type: "video_script",
-      platform,
-      duration,
-      instructions: instructions || undefined,
+    const content = await onGenerate({
+      type: "video",
+      video_type: videoType,
+      topic: topic || undefined,
+      context: buildTipoteContext({ videoType }),
     });
-    if (typeof generated === "string") setPreview(generated);
+    setPreview(content || "");
   }
 
-  async function handleSaveDraft() {
+  async function handleSaveClick() {
     await onSave({
+      type: "video",
+      status: "draft",
       title,
       content: preview,
-      type: "video_script",
-      channel: platform,
-      platform,
-      status: "draft",
-      meta: { duration, instructions },
+      meta: { videoType, topic },
     });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">Scripts vidéo</h2>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
-          <X className="w-5 h-5" />
-        </Button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
+        aria-label="Fermer"
+      >
+        <X className="h-5 w-5 text-muted-foreground" />
+      </button>
+
+      <div className="mb-4">
+        <div className="text-xl font-bold">Scripts vidéo</div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Plateforme</Label>
-            <Select value={platform} onValueChange={(v) => setPlatform(v as any)}>
+            <Label>Format</Label>
+            <Select value={videoType} onValueChange={setVideoType}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir..." />
+                <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>
               <SelectContent>
-                {VIDEO_PLATFORMS.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.label}
+                {videoTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -102,41 +87,26 @@ export function VideoForm(props: CreateFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Durée</Label>
-            <Select value={duration} onValueChange={(v) => setDuration(v as any)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir..." />
-              </SelectTrigger>
-              <SelectContent>
-                {DURATIONS.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Ton, structure, éléments obligatoires..."
-              rows={7}
+            <Label>Sujet</Label>
+            <Input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="De quoi parle la vidéo ?"
             />
           </div>
 
           <Button
-            className="w-full"
+            type="button"
+            className="w-full h-12"
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating}
+            disabled={isGenerating}
           >
+            <Wand2 className="w-4 h-4 mr-2" />
             {isGenerating ? "Génération..." : "Générer"}
           </Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
@@ -152,16 +122,19 @@ export function VideoForm(props: CreateFormProps) {
               value={preview}
               onChange={(e) => setPreview(e.target.value)}
               placeholder="Le contenu généré apparaîtra ici..."
-              rows={12}
-              className="resize-none"
+              className="min-h-[260px]"
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+            <Button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={isSaving || !canSave}
+            >
               {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>

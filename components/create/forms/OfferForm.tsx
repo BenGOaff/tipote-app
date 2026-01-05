@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,74 +15,69 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreateFormProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-};
+import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
 
-const OFFER_TYPES = [
+const offerTypes = [
   { id: "lead_magnet", label: "Lead magnet" },
   { id: "middle_ticket", label: "Middle ticket" },
   { id: "high_ticket", label: "High ticket" },
 ] as const;
 
-export function OfferForm(props: CreateFormProps) {
+export function OfferForm(props: CreateFormCommonProps) {
   const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
 
-  const [offerType, setOfferType] =
-    useState<(typeof OFFER_TYPES)[number]["id"]>("lead_magnet");
-
+  const [offerType, setOfferType] = useState<string>("middle_ticket");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
+  const [offerName, setOfferName] = useState("");
   const [preview, setPreview] = useState("");
 
-  const canGenerate = useMemo(() => true, []);
-  const canSave = title.trim().length > 0;
+  const canSave = useMemo(() => title.trim().length > 0, [title]);
 
   async function handleGenerate() {
-    const generated = await onGenerate({
+    const content = await onGenerate({
       type: "offer",
       offer_type: offerType,
-      instructions: instructions || undefined,
+      offer_name: offerName || undefined,
+      context: buildTipoteContext({ offerType, offerName }),
     });
-    if (typeof generated === "string") setPreview(generated);
+    setPreview(content || "");
   }
 
-  async function handleSaveDraft() {
+  async function handleSaveClick() {
     await onSave({
+      type: "offer",
+      status: "draft",
       title,
       content: preview,
-      type: "offer",
-      channel: "offer",
-      status: "draft",
-      meta: { offerType, instructions },
+      meta: { offerType, offerName },
     });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">Offres</h2>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
-          <X className="w-5 h-5" />
-        </Button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
+        aria-label="Fermer"
+      >
+        <X className="h-5 w-5 text-muted-foreground" />
+      </button>
+
+      <div className="mb-4">
+        <div className="text-xl font-bold">Offres</div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Type d’offre</Label>
-            <Select value={offerType} onValueChange={(v) => setOfferType(v as any)}>
+            <Label>Type d'offre</Label>
+            <Select value={offerType} onValueChange={setOfferType}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir..." />
+                <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>
               <SelectContent>
-                {OFFER_TYPES.map((t) => (
+                {offerTypes.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.label}
                   </SelectItem>
@@ -92,25 +87,26 @@ export function OfferForm(props: CreateFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Cible, promesse, objections, structure..."
-              rows={7}
+            <Label>Nom de l'offre (optionnel)</Label>
+            <Input
+              value={offerName}
+              onChange={(e) => setOfferName(e.target.value)}
+              placeholder="Ex : Programme XYZ"
             />
           </div>
 
           <Button
-            className="w-full"
+            type="button"
+            className="w-full h-12"
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating}
+            disabled={isGenerating}
           >
+            <Wand2 className="w-4 h-4 mr-2" />
             {isGenerating ? "Génération..." : "Générer"}
           </Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
@@ -126,16 +122,19 @@ export function OfferForm(props: CreateFormProps) {
               value={preview}
               onChange={(e) => setPreview(e.target.value)}
               placeholder="Le contenu généré apparaîtra ici..."
-              rows={12}
-              className="resize-none"
+              className="min-h-[260px]"
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+            <Button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={isSaving || !canSave}
+            >
               {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
