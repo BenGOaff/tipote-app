@@ -230,13 +230,12 @@ const TodayLovable = () => {
                   { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
                   { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
                 ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex-shrink-0">
                       <Badge
-                        variant={item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"}
+                        variant={
+                          item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"
+                        }
                       >
                         {item.type}
                       </Badge>

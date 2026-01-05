@@ -1,5 +1,5 @@
 // app/dashboard/page.tsx
-// Dashboard pixel-perfect (Lovable Today.tsx) — route de test
+// Dashboard pixel-perfect (Lovable Today.tsx)
 // - Auth Supabase obligatoire
 // - UI 1:1 via component client TodayLovable
 
