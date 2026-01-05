@@ -1,195 +1,198 @@
 "use client";
 
-import * as React from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sparkles, X, CalendarDays } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-type BaseFormProps = {
+type CreateFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
-  isGenerating?: boolean;
-  isSaving?: boolean;
+  isGenerating: boolean;
+  isSaving: boolean;
 };
 
-export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: BaseFormProps) {
-  const [title, setTitle] = React.useState("");
-  const [channel, setChannel] = React.useState("LinkedIn");
-  const [angle, setAngle] = React.useState("");
-  const [audience, setAudience] = React.useState("");
-  const [cta, setCta] = React.useState("");
-  const [scheduledDate, setScheduledDate] = React.useState<string>("");
+const PLATFORMS = [
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "instagram", label: "Instagram" },
+  { id: "twitter", label: "X (Twitter)" },
+  { id: "facebook", label: "Facebook" },
+  { id: "tiktok", label: "TikTok" },
+] as const;
 
-  const [prompt, setPrompt] = React.useState("");
-  const [content, setContent] = React.useState("");
+const THEMES = [
+  { id: "engagement", label: "Engagement" },
+  { id: "educate", label: "Éducatif" },
+  { id: "storytelling", label: "Storytelling" },
+  { id: "social_proof", label: "Preuve sociale" },
+  { id: "sell", label: "Vente / CTA" },
+] as const;
 
-  const canGenerate = Boolean(title.trim() || prompt.trim());
-  const canSave = Boolean(title.trim() && content.trim());
+export function PostForm(props: CreateFormProps) {
+  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
+
+  const [platform, setPlatform] =
+    useState<(typeof PLATFORMS)[number]["id"]>("linkedin");
+  const [theme, setTheme] = useState<(typeof THEMES)[number]["id"]>("engagement");
+  const [pronoun, setPronoun] = useState<"tu" | "vous">("vous");
+
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [preview, setPreview] = useState("");
+
+  const canGenerate = useMemo(() => true, []);
+  const canSave = title.trim().length > 0;
 
   async function handleGenerate() {
-    const params = {
-      kind: "post",
+    const generated = await onGenerate({
       type: "post",
-      channel,
-      title,
-      angle,
-      audience,
-      cta,
-      prompt,
-    };
-    const generated = await onGenerate(params);
-    if (generated) setContent(generated);
+      platform,
+      theme,
+      pronoun,
+      instructions: instructions || undefined,
+    });
+    if (typeof generated === "string") setPreview(generated);
   }
 
-  async function handleSave(status: "draft" | "scheduled" = "draft") {
+  async function handleSaveDraft() {
     await onSave({
       title,
+      content: preview,
       type: "post",
-      channel,
-      status,
-      scheduledDate: status === "scheduled" ? scheduledDate || null : null,
-      prompt: prompt || null,
-      content,
-      tags: [],
-      meta: { angle, audience, cta },
+      channel: platform,
+      platform,
+      status: "draft",
+      meta: { theme, pronoun, instructions },
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Créer un post</h2>
-            <Badge variant="secondary" className="rounded-xl">
-              Réseaux sociaux
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Renseigne 2–3 infos, puis génère. Tu peux ensuite modifier avant de sauvegarder.
-          </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Réseaux sociaux</h2>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* LEFT */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: 3 erreurs qui ruinent ton acquisition"
-              className="rounded-xl"
-            />
+            <Label>Plateforme</Label>
+            <Select value={platform} onValueChange={(v) => setPlatform(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PLATFORMS.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Réseau</Label>
-            <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="LinkedIn / Instagram…" className="rounded-xl" />
-            <p className="text-xs text-muted-foreground">Tu peux écrire librement (pas besoin de select).</p>
+            <Label>Type de post</Label>
+            <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {THEMES.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Angle (optionnel)</Label>
-            <Input
-              value={angle}
-              onChange={(e) => setAngle(e.target.value)}
-              placeholder="Ex: contrarian / étude de cas / checklist…"
-              className="rounded-xl"
-            />
+            <Label>Tu / Vous</Label>
+            <RadioGroup
+              value={pronoun}
+              onValueChange={(v) => setPronoun(v as any)}
+              className="flex items-center gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="tu" id="post-tu" />
+                <Label htmlFor="post-tu" className="font-normal">
+                  Tu
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="vous" id="post-vous" />
+                <Label htmlFor="post-vous" className="font-normal">
+                  Vous
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Audience (optionnel)</Label>
-            <Input
-              value={audience}
-              onChange={(e) => setAudience(e.target.value)}
-              placeholder="Ex: coachs, infopreneurs, SaaS B2B…"
-              className="rounded-xl"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>CTA (optionnel)</Label>
-            <Input value={cta} onChange={(e) => setCta(e.target.value)} placeholder="Ex: ‘Commente X’ / ‘DM moi’…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="inline-flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Date de planification (optionnel)
-            </Label>
-            <Input
-              type="date"
-              value={scheduledDate}
-              onChange={(e) => setScheduledDate(e.target.value)}
-              className="rounded-xl"
-            />
-            <p className="text-xs text-muted-foreground">
-              Si tu sauvegardes en “Planifié”, la date est requise.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Instructions (optionnel)</Label>
             <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ex: style direct, phrases courtes, 1 idée par paragraphe, ajoute un hook fort…"
-              className="min-h-[140px] rounded-xl resize-none"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Ton, structure, éléments obligatoires..."
+              rows={5}
+            />
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? "Génération..." : "Générer"}
+          </Button>
+        </div>
+
+        {/* RIGHT */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de votre post"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Contenu</Label>
+            <Label>Prévisualisation</Label>
             <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici…"
-              className="min-h-[240px] rounded-xl resize-none"
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              placeholder="Le contenu généré apparaîtra ici..."
+              rows={12}
+              className="resize-none"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button
-              onClick={handleGenerate}
-              disabled={!canGenerate || !!isGenerating}
-              className="rounded-xl gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Génération…" : "Générer"}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
             </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => void handleSave("draft")}
-              disabled={!canSave || !!isSaving}
-              className="rounded-xl"
-            >
-              {isSaving ? "Sauvegarde…" : "Sauver (brouillon)"}
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={() => void handleSave("scheduled")}
-              disabled={!canSave || !!isSaving || !scheduledDate}
-              className="rounded-xl"
-              title={!scheduledDate ? "Choisis une date pour planifier" : undefined}
-            >
-              Planifier
+            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
         </div>

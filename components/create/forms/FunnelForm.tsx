@@ -1,129 +1,142 @@
 "use client";
 
-import * as React from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sparkles, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type BaseFormProps = {
+type CreateFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
-  isGenerating?: boolean;
-  isSaving?: boolean;
+  isGenerating: boolean;
+  isSaving: boolean;
 };
 
-export function FunnelForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: BaseFormProps) {
-  const [title, setTitle] = React.useState("");
-  const [offer, setOffer] = React.useState("");
-  const [steps, setSteps] = React.useState("");
-  const [audience, setAudience] = React.useState("");
-  const [prompt, setPrompt] = React.useState("");
-  const [content, setContent] = React.useState("");
+const FUNNEL_TYPES = [
+  { id: "lead_magnet", label: "Lead magnet → Email → Offer" },
+  { id: "webinar", label: "Webinar → Offer" },
+  { id: "tripwire", label: "Tripwire → Upsell" },
+] as const;
 
-  const canGenerate = Boolean(title.trim() || prompt.trim());
-  const canSave = Boolean(title.trim() && content.trim());
+export function FunnelForm(props: CreateFormProps) {
+  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
+
+  const [funnelType, setFunnelType] =
+    useState<(typeof FUNNEL_TYPES)[number]["id"]>("lead_magnet");
+
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [preview, setPreview] = useState("");
+
+  const canGenerate = useMemo(() => true, []);
+  const canSave = title.trim().length > 0;
 
   async function handleGenerate() {
-    const params = {
-      kind: "funnel",
+    const generated = await onGenerate({
       type: "funnel",
-      channel: "Funnel",
-      title,
-      offer,
-      steps,
-      audience,
-      prompt,
-    };
-    const generated = await onGenerate(params);
-    if (generated) setContent(generated);
+      funnel_type: funnelType,
+      instructions: instructions || undefined,
+    });
+    if (typeof generated === "string") setPreview(generated);
   }
 
-  async function handleSave() {
+  async function handleSaveDraft() {
     await onSave({
       title,
+      content: preview,
       type: "funnel",
-      channel: "Funnel",
+      channel: "funnel",
       status: "draft",
-      scheduledDate: null,
-      prompt: prompt || null,
-      content,
-      tags: [],
-      meta: { offer, steps, audience },
+      meta: { funnelType, instructions },
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Créer un funnel</h2>
-            <Badge variant="secondary" className="rounded-xl">
-              Funnels
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">Tunnel complet : pages + emails + séquences…</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Funnels</h2>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Funnel — Lead magnet → call" className="rounded-xl" />
+            <Label>Type de funnel</Label>
+            <Select value={funnelType} onValueChange={(v) => setFunnelType(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {FUNNEL_TYPES.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Offre / Promesse (optionnel)</Label>
-            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Ex: Audit gratuit, mini-formation…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Étapes (optionnel)</Label>
+            <Label>Instructions (optionnel)</Label>
             <Textarea
-              value={steps}
-              onChange={(e) => setSteps(e.target.value)}
-              placeholder="Ex: Landing → Thank you → Email J+0 → J+1 → Call…"
-              className="min-h-[140px] rounded-xl resize-none"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Cible, offre, objections, canaux..."
+              rows={7}
+            />
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? "Génération..." : "Générer"}
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de votre funnel"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Audience (optionnel)</Label>
-            <Input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="À qui s’adresse ce funnel ?" className="rounded-xl" />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ton, style, objections, CTA…" className="min-h-[140px] rounded-xl resize-none" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Contenu</Label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Le contenu généré apparaîtra ici…" className="min-h-[240px] rounded-xl resize-none" />
+            <Label>Prévisualisation</Label>
+            <Textarea
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              placeholder="Le contenu généré apparaîtra ici..."
+              rows={12}
+              className="resize-none"
+            />
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={handleGenerate} disabled={!canGenerate || !!isGenerating} className="rounded-xl gap-2">
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Génération…" : "Générer"}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
             </Button>
-
-            <Button variant="outline" onClick={() => void handleSave()} disabled={!canSave || !!isSaving} className="rounded-xl">
-              {isSaving ? "Sauvegarde…" : "Sauver (brouillon)"}
+            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
         </div>

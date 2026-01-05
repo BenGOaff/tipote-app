@@ -1,123 +1,168 @@
 "use client";
 
-import * as React from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sparkles, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type BaseFormProps = {
+type CreateFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
-  isGenerating?: boolean;
-  isSaving?: boolean;
+  isGenerating: boolean;
+  isSaving: boolean;
 };
 
-export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: BaseFormProps) {
-  const [title, setTitle] = React.useState("");
-  const [platform, setPlatform] = React.useState("YouTube");
-  const [duration, setDuration] = React.useState("60s");
-  const [structure, setStructure] = React.useState("");
-  const [prompt, setPrompt] = React.useState("");
-  const [content, setContent] = React.useState("");
+const VIDEO_PLATFORMS = [
+  { id: "youtube", label: "YouTube" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "reels", label: "Reels" },
+] as const;
 
-  const canGenerate = Boolean(title.trim() || prompt.trim());
-  const canSave = Boolean(title.trim() && content.trim());
+const DURATIONS = [
+  { id: "short", label: "Court (15–30s)" },
+  { id: "medium", label: "Moyen (45–90s)" },
+  { id: "long", label: "Long (3–8min)" },
+] as const;
+
+export function VideoForm(props: CreateFormProps) {
+  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
+
+  const [platform, setPlatform] =
+    useState<(typeof VIDEO_PLATFORMS)[number]["id"]>("youtube");
+  const [duration, setDuration] =
+    useState<(typeof DURATIONS)[number]["id"]>("short");
+
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [preview, setPreview] = useState("");
+
+  const canGenerate = useMemo(() => true, []);
+  const canSave = title.trim().length > 0;
 
   async function handleGenerate() {
-    const params = {
-      kind: "video",
-      type: "video",
-      channel: platform,
-      title,
+    const generated = await onGenerate({
+      type: "video_script",
+      platform,
       duration,
-      structure,
-      prompt,
-    };
-    const generated = await onGenerate(params);
-    if (generated) setContent(generated);
+      instructions: instructions || undefined,
+    });
+    if (typeof generated === "string") setPreview(generated);
   }
 
-  async function handleSave() {
+  async function handleSaveDraft() {
     await onSave({
       title,
-      type: "video",
+      content: preview,
+      type: "video_script",
       channel: platform,
+      platform,
       status: "draft",
-      scheduledDate: null,
-      prompt: prompt || null,
-      content,
-      tags: [],
-      meta: { duration, structure },
+      meta: { duration, instructions },
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Créer un script vidéo</h2>
-            <Badge variant="secondary" className="rounded-xl">
-              Vidéo
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">YouTube, Reels, TikTok…</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Scripts vidéo</h2>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: 5 hacks pour écrire plus vite" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
             <Label>Plateforme</Label>
-            <Input value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="YouTube / TikTok / Reels…" className="rounded-xl" />
+            <Select value={platform} onValueChange={(v) => setPlatform(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {VIDEO_PLATFORMS.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Durée (optionnel)</Label>
-            <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="30s / 60s / 3min…" className="rounded-xl" />
+            <Label>Durée</Label>
+            <Select value={duration} onValueChange={(v) => setDuration(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {DURATIONS.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Structure (optionnel)</Label>
-            <Textarea value={structure} onChange={(e) => setStructure(e.target.value)} placeholder="Hook → points → CTA, ou plan détaillé…" className="min-h-[140px] rounded-xl resize-none" />
+            <Label>Instructions (optionnel)</Label>
+            <Textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Ton, structure, éléments obligatoires..."
+              rows={7}
+            />
           </div>
+
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? "Génération..." : "Générer"}
+          </Button>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ton, rythme, phrases à dire, style, etc." className="min-h-[140px] rounded-xl resize-none" />
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de votre script"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Script</Label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Le script généré apparaîtra ici…" className="min-h-[240px] rounded-xl resize-none" />
+            <Label>Prévisualisation</Label>
+            <Textarea
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              placeholder="Le contenu généré apparaîtra ici..."
+              rows={12}
+              className="resize-none"
+            />
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={handleGenerate} disabled={!canGenerate || !!isGenerating} className="rounded-xl gap-2">
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Génération…" : "Générer"}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
             </Button>
-
-            <Button variant="outline" onClick={() => void handleSave()} disabled={!canSave || !!isSaving} className="rounded-xl">
-              {isSaving ? "Sauvegarde…" : "Sauver (brouillon)"}
+            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
         </div>

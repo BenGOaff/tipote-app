@@ -1,150 +1,162 @@
 "use client";
 
-import * as React from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sparkles, X, CalendarDays } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-type BaseFormProps = {
+type CreateFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
-  isGenerating?: boolean;
-  isSaving?: boolean;
+  isGenerating: boolean;
+  isSaving: boolean;
 };
 
-export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: BaseFormProps) {
-  const [title, setTitle] = React.useState("");
-  const [emailType, setEmailType] = React.useState("Newsletter");
-  const [audience, setAudience] = React.useState("");
-  const [goal, setGoal] = React.useState("");
-  const [cta, setCta] = React.useState("");
-  const [scheduledDate, setScheduledDate] = React.useState<string>("");
+const EMAIL_TYPES = [
+  { id: "nurturing", label: "Nurturing" },
+  { id: "sales_sequence", label: "Séquence de vente" },
+  { id: "onboarding", label: "Onboarding" },
+] as const;
 
-  const [prompt, setPrompt] = React.useState("");
-  const [content, setContent] = React.useState("");
+export function EmailForm(props: CreateFormProps) {
+  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
 
-  const canGenerate = Boolean(title.trim() || prompt.trim());
-  const canSave = Boolean(title.trim() && content.trim());
+  const [emailType, setEmailType] = useState<(typeof EMAIL_TYPES)[number]["id"]>(
+    "nurturing"
+  );
+  const [pronoun, setPronoun] = useState<"tu" | "vous">("vous");
+
+  const [title, setTitle] = useState("");
+  const [preview, setPreview] = useState("");
+
+  const canGenerate = useMemo(() => true, []);
+  const canSave = title.trim().length > 0;
 
   async function handleGenerate() {
-    const params = {
-      kind: "email",
+    const generated = await onGenerate({
       type: "email",
-      channel: "Email",
-      title,
-      emailType,
-      audience,
-      goal,
-      cta,
-      prompt,
-    };
-    const generated = await onGenerate(params);
-    if (generated) setContent(generated);
+      email_type: emailType,
+      pronoun,
+    });
+
+    if (typeof generated === "string") setPreview(generated);
   }
 
-  async function handleSave(status: "draft" | "scheduled" = "draft") {
+  async function handleSaveDraft() {
     await onSave({
       title,
+      content: preview,
       type: "email",
-      channel: "Email",
-      status,
-      scheduledDate: status === "scheduled" ? scheduledDate || null : null,
-      prompt: prompt || null,
-      content,
-      tags: [],
-      meta: { emailType, audience, goal, cta },
+      status: "draft",
+      // compat Tipote (si ton API lit channel / platform)
+      channel: "email",
+      platform: "email",
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Créer un email</h2>
-            <Badge variant="secondary" className="rounded-xl">
-              Email
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">Newsletter, séquence, campagne…</p>
+      {/* Header (pixel-perfect style Lovable) */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Email Marketing</h2>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* 2 columns */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* LEFT */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre / Sujet</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Ta checklist pour doubler ton taux d’ouverture" className="rounded-xl" />
+            <Label>Type d&apos;email</Label>
+            <Select value={emailType} onValueChange={(v) => setEmailType(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {EMAIL_TYPES.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Type d’email</Label>
-            <Input value={emailType} onChange={(e) => setEmailType(e.target.value)} placeholder="Newsletter / Séquence / Promo…" className="rounded-xl" />
+            <Label>Tu / Vous</Label>
+            <RadioGroup
+              value={pronoun}
+              onValueChange={(v) => setPronoun(v as any)}
+              className="flex items-center gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="tu" id="tu" />
+                <Label htmlFor="tu" className="font-normal">
+                  Tu
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="vous" id="vous" />
+                <Label htmlFor="vous" className="font-normal">
+                  Vous
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Audience (optionnel)</Label>
-            <Input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="Ex: prospects froids / clients…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Objectif (optionnel)</Label>
-            <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ex: éduquer, vendre, réactiver…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>CTA (optionnel)</Label>
-            <Input value={cta} onChange={(e) => setCta(e.target.value)} placeholder="Ex: ‘Réponds à ce mail’, ‘Clique ici’…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="inline-flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Date de planification (optionnel)
-            </Label>
-            <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="rounded-xl" />
-          </div>
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? "Génération..." : "Générer (objet + contenu + 3 variantes)"}
+          </Button>
         </div>
 
+        {/* RIGHT */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ton, structure, longueur, éléments obligatoires…" className="min-h-[140px] rounded-xl resize-none" />
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de votre email"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Contenu</Label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Le contenu généré apparaîtra ici…" className="min-h-[240px] rounded-xl resize-none" />
+            <Label>Prévisualisation</Label>
+            <Textarea
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              placeholder="Le contenu généré apparaîtra ici (objet + contenu + variantes)..."
+              rows={12}
+              className="resize-none"
+            />
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={handleGenerate} disabled={!canGenerate || !!isGenerating} className="rounded-xl gap-2">
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Génération…" : "Générer"}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
             </Button>
-
-            <Button variant="outline" onClick={() => void handleSave("draft")} disabled={!canSave || !!isSaving} className="rounded-xl">
-              {isSaving ? "Sauvegarde…" : "Sauver (brouillon)"}
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={() => void handleSave("scheduled")}
-              disabled={!canSave || !!isSaving || !scheduledDate}
-              className="rounded-xl"
-            >
-              Planifier
+            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
         </div>

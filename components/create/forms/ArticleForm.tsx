@@ -1,127 +1,140 @@
 "use client";
 
-import * as React from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sparkles, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type BaseFormProps = {
+type CreateFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
-  isGenerating?: boolean;
-  isSaving?: boolean;
+  isGenerating: boolean;
+  isSaving: boolean;
 };
 
-export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: BaseFormProps) {
-  const [title, setTitle] = React.useState("");
-  const [keywords, setKeywords] = React.useState("");
-  const [target, setTarget] = React.useState("");
-  const [outline, setOutline] = React.useState("");
-  const [prompt, setPrompt] = React.useState("");
-  const [content, setContent] = React.useState("");
+const LENGTHS = [
+  { id: "short", label: "Court" },
+  { id: "medium", label: "Moyen" },
+  { id: "long", label: "Long" },
+] as const;
 
-  const canGenerate = Boolean(title.trim() || prompt.trim());
-  const canSave = Boolean(title.trim() && content.trim());
+export function ArticleForm(props: CreateFormProps) {
+  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
+
+  const [length, setLength] = useState<(typeof LENGTHS)[number]["id"]>("medium");
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [preview, setPreview] = useState("");
+
+  const canGenerate = useMemo(() => true, []);
+  const canSave = title.trim().length > 0;
 
   async function handleGenerate() {
-    const params = {
-      kind: "article",
-      type: "article",
-      channel: "Blog",
-      title,
-      keywords,
-      target,
-      outline,
-      prompt,
-    };
-    const generated = await onGenerate(params);
-    if (generated) setContent(generated);
+    const generated = await onGenerate({
+      type: "blog",
+      length,
+      instructions: instructions || undefined,
+    });
+    if (typeof generated === "string") setPreview(generated);
   }
 
-  async function handleSave() {
+  async function handleSaveDraft() {
     await onSave({
       title,
-      type: "article",
-      channel: "Blog",
+      content: preview,
+      type: "blog",
+      channel: "blog",
       status: "draft",
-      scheduledDate: null,
-      prompt: prompt || null,
-      content,
-      tags: keywords
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      meta: { target, outline },
+      meta: { length, instructions },
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Créer un article</h2>
-            <Badge variant="secondary" className="rounded-xl">
-              Blog
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">Articles, guides, tutoriels…</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Blog</h2>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Comment structurer une offre irrésistible" className="rounded-xl" />
+            <Label>Longueur</Label>
+            <Select value={length} onValueChange={(v) => setLength(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                {LENGTHS.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Mots-clés (séparés par virgules)</Label>
-            <Input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="ex: offre, positionnement, conversion" className="rounded-xl" />
+            <Label>Instructions (optionnel)</Label>
+            <Textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Angle, structure, éléments obligatoires..."
+              rows={7}
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label>Cible (optionnel)</Label>
-            <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Ex: freelances, coachs, SaaS…" className="rounded-xl" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Plan / Outline (optionnel)</Label>
-            <Textarea value={outline} onChange={(e) => setOutline(e.target.value)} placeholder="H2 / H3, sections, points clés…" className="min-h-[140px] rounded-xl resize-none" />
-          </div>
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? "Génération..." : "Générer"}
+          </Button>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ton, longueur, style, exemples, CTA…" className="min-h-[140px] rounded-xl resize-none" />
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titre de votre article"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Contenu</Label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Le contenu généré apparaîtra ici…" className="min-h-[240px] rounded-xl resize-none" />
+            <Label>Prévisualisation</Label>
+            <Textarea
+              value={preview}
+              onChange={(e) => setPreview(e.target.value)}
+              placeholder="Le contenu généré apparaîtra ici..."
+              rows={12}
+              className="resize-none"
+            />
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={handleGenerate} disabled={!canGenerate || !!isGenerating} className="rounded-xl gap-2">
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Génération…" : "Générer"}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
             </Button>
-
-            <Button variant="outline" onClick={() => void handleSave()} disabled={!canSave || !!isSaving} className="rounded-xl">
-              {isSaving ? "Sauvegarde…" : "Sauver (brouillon)"}
+            <Button onClick={handleSaveDraft} disabled={!canSave || isSaving}>
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
         </div>
