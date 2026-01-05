@@ -45,8 +45,10 @@ const TodayLovable = () => {
           <header className="h-16 border-b border-border flex items-center px-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Aujourd&apos;hui</h1>
+              <h1 className="text-xl font-display font-bold">Aujourd'hui</h1>
             </div>
+
+            {/* Lovable: /dashboard/analytics -> Tipote: /analytics (si ta route est /analytics) */}
             <Link href="/analytics">
               <Button variant="outline" size="sm">
                 <BarChart3 className="w-4 h-4 mr-2" />
@@ -77,17 +79,21 @@ const TodayLovable = () => {
                   </div>
 
                   <div className="flex gap-3">
+                    {/* Lovable: /dashboard/create -> Tipote: /create */}
                     <Link href="/create">
                       <Button variant="secondary" size="lg">
                         <Play className="w-4 h-4 mr-2" />
                         Créer en 1 clic
                       </Button>
                     </Link>
+
+                    {/* Lovable bouton ghost (sans Link). On le garde tel quel. */}
                     <Button variant="ghost" className="text-primary-foreground hover:bg-background/10">
                       Voir la stratégie
                     </Button>
                   </div>
                 </div>
+
                 <Brain className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
               </div>
             </Card>
@@ -145,6 +151,7 @@ const TodayLovable = () => {
                   </div>
                 </div>
 
+                {/* Lovable: /dashboard/strategy -> Tipote: /strategy */}
                 <Link href="/strategy" className="block mt-6">
                   <Button variant="outline" className="w-full">
                     Voir ma stratégie complète
@@ -173,6 +180,7 @@ const TodayLovable = () => {
                     </div>
                   </Link>
 
+                  {/* Lovable: /dashboard/content -> Tipote: /contents */}
                   <Link href="/contents" className="block">
                     <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
@@ -196,7 +204,7 @@ const TodayLovable = () => {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold group-hover:text-primary transition-colors">Ma stratégie</p>
-                          <p className="text-sm text-muted-foreground">Plan d&apos;action & checklist</p>
+                          <p className="text-sm text-muted-foreground">Plan d'action & checklist</p>
                         </div>
                         <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
@@ -226,15 +234,40 @@ const TodayLovable = () => {
                     time: "09:00",
                     status: "À faire",
                   },
-                  { title: "Newsletter hebdomadaire", type: "Email", day: "Demain", time: "14:00", status: "Planifié" },
-                  { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
-                  { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
+                  {
+                    title: "Newsletter hebdomadaire",
+                    type: "Email",
+                    day: "Demain",
+                    time: "14:00",
+                    status: "Planifié",
+                  },
+                  {
+                    title: "Article blog : Guide IA",
+                    type: "Article",
+                    day: "Mercredi",
+                    time: "10:00",
+                    status: "Brouillon",
+                  },
+                  {
+                    title: "Finaliser lead magnet PDF",
+                    type: "Tâche",
+                    day: "Vendredi",
+                    time: "-",
+                    status: "En cours",
+                  },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
                     <div className="flex-shrink-0">
                       <Badge
                         variant={
-                          item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"
+                          item.status === "À faire"
+                            ? "default"
+                            : item.status === "Planifié"
+                            ? "secondary"
+                            : "outline"
                         }
                       >
                         {item.type}
