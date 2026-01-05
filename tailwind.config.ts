@@ -9,9 +9,7 @@ const config = {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      screens: { "2xl": "1400px" },
     },
     extend: {
       colors: {
@@ -65,8 +63,7 @@ const config = {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        // On garde Inter (Lovable) + on ajoute la variable (Tipote) en tête si dispo
-        display: ["var(--font-display)", "Inter", "system-ui", "sans-serif"],
+        display: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

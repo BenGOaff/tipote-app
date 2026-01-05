@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@config "../tailwind.config.ts";
+@import "tailwindcss";
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
    All colors MUST be HSL.
@@ -115,7 +114,9 @@
     --sidebar-border: 230 30% 25%;
     --sidebar-ring: 233 66% 62%;
   }
+}
 
+@layer base {
   * {
     border-color: hsl(var(--border));
   }
@@ -145,7 +146,7 @@
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar (conservé : utile pour Tipote) */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -181,7 +182,7 @@
   z-index: 50 !important;
 }
 
-/* Custom animations */
+/* Custom animations (conservées) */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -203,8 +204,8 @@
 
 @layer utilities {
   .font-display {
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-      "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   }
 
   .gradient-primary {
