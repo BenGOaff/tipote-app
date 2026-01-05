@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 
-import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import CreateHub from "@/components/create/CreateHub";
 
@@ -16,8 +15,6 @@ export default async function CreatePage() {
   } = await supabase.auth.getSession();
 
   if (!session) redirect("/");
-
-  const userEmail = session.user.email ?? "";
 
   // Contexte onboarding/plan (fail-open)
   let profileRow: any | null = null;
@@ -47,9 +44,5 @@ export default async function CreatePage() {
     planRow = null;
   }
 
-  return (
-    <AppShell userEmail={userEmail} contentClassName="flex-1 p-0">
-      <CreateHub profile={profileRow} plan={planRow} />
-    </AppShell>
-  );
+  return <CreateHub profile={profileRow} plan={planRow} />;
 }
