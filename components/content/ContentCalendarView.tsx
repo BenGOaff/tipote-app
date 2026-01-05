@@ -1,11 +1,10 @@
 // components/content/ContentCalendarView.tsx
 "use client";
 
-// Vue Calendrier pour "Mes Contenus" (pixel perfect Lovable)
-// - reçoit les données déjà chargées côté server (app/contents/page.tsx)
-// - API compatible :
-//   - soit { itemsByDate, scheduledDates } (ancienne API)
-//   - soit { contents } (API pratique utilisée par MyContentLovableClient)
+// Vue Calendrier pour "Mes Contenus" (Lovable-like / Tipote)
+// IMPORTANT: on accepte `tags` en `string | string[] | null` car la DB peut renvoyer
+// soit un array, soit une string CSV, et `ContentListItem` est typé comme ça.
+// -> On normalise en interne si besoin.
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,7 +24,7 @@ export type ContentCalendarItem = {
   status: string | null;
   scheduled_date: string | null; // YYYY-MM-DD
   channel: string | null;
-  tags: string[] | null;
+  tags: string[] | string | null; // <-- FIX: compatible ContentListItem
   created_at: string;
 };
 
@@ -80,8 +79,10 @@ function contentDate(content: { scheduled_date: string | null; created_at: strin
 
 function statusBadge(status: string | null | undefined) {
   const s = normalizeStatus(status);
-  if (s === "published") return { label: "Publié", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" };
-  if (s === "scheduled") return { label: "Planifié", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" };
+  if (s === "published")
+    return { label: "Publié", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" };
+  if (s === "scheduled")
+    return { label: "Planifié", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" };
   if (s === "draft") return { label: "Brouillon", className: "bg-muted text-muted-foreground" };
   if (s === "archived") return { label: "Archivé", className: "bg-muted text-muted-foreground" };
   return { label: safeString(status) || "—", className: "bg-muted text-muted-foreground" };
@@ -116,7 +117,8 @@ export function ContentCalendarView({ itemsByDate, scheduledDates, contents }: P
   }, [derived]);
 
   const modifiersClassNames = {
-    hasContent: "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary",
+    hasContent:
+      "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary",
   };
 
   return (
@@ -182,9 +184,7 @@ export function ContentCalendarView({ itemsByDate, scheduledDates, contents }: P
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium truncate">
-                            {safeString(content.title) || "Sans titre"}
-                          </p>
+                          <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
                           <Badge className={`rounded-xl ${badge.className}`}>{badge.label}</Badge>
                         </div>
 
