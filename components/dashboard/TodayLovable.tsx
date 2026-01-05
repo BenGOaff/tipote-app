@@ -36,12 +36,6 @@ const TodayLovable = () => {
     { label: "Prochaine échéance", value: "2j", trend: "Lead magnet", icon: Calendar },
   ];
 
-  const weekProgress = {
-    percentage: 75,
-    planned: { value: "5/7" },
-    engagement: { value: "2.4K/3K" },
-  };
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -51,7 +45,7 @@ const TodayLovable = () => {
           <header className="h-16 border-b border-border flex items-center px-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Aujourd'hui</h1>
+              <h1 className="text-xl font-display font-bold">Aujourd&apos;hui</h1>
             </div>
             <Link href="/analytics">
               <Button variant="outline" size="sm">
@@ -62,166 +56,206 @@ const TodayLovable = () => {
           </header>
 
           <div className="p-6 space-y-6 max-w-6xl mx-auto">
-            {/* Welcome Card */}
+            {/* Welcome Card with Next Action */}
             <Card className="p-8 gradient-hero border-border/50">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <Target className="w-6 h-6 text-primary" />
+                    <div className="w-12 h-12 rounded-xl bg-background/20 backdrop-blur-sm flex items-center justify-center">
+                      <Target className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm text-primary-foreground/80">Ta prochaine action</p>
-                      <h2 className="text-2xl font-display font-bold text-primary-foreground">{nextTask.title}</h2>
+                      <p className="text-primary-foreground/80 text-sm">Ta prochaine action</p>
+                      <h2 className="text-2xl font-bold text-primary-foreground">{nextTask.title}</h2>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-6">
-                    <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20">
-                      {nextTask.type}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20">
-                      {nextTask.platform}
-                    </Badge>
+                  <div className="flex items-center gap-3 mb-6">
+                    <Badge className="bg-background/20 text-primary-foreground border-none">{nextTask.type}</Badge>
+                    <Badge className="bg-background/20 text-primary-foreground border-none">{nextTask.platform}</Badge>
                     <span className="text-primary-foreground/80 text-sm">Planifié pour {nextTask.dueTime}</span>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <Link href="/create" className="block">
-                      <Button className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+                  <div className="flex gap-3">
+                    <Link href="/create">
+                      <Button variant="secondary" size="lg">
                         <Play className="w-4 h-4 mr-2" />
                         Créer en 1 clic
                       </Button>
                     </Link>
-
-                    <Link href="/strategy" className="block">
-                      <Button variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10">
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        Voir la stratégie
-                      </Button>
-                    </Link>
+                    <Button variant="ghost" className="text-primary-foreground hover:bg-background/10">
+                      Voir la stratégie
+                    </Button>
                   </div>
                 </div>
-
-                <div className="hidden lg:block">
-                  <Brain className="w-20 h-20 text-primary-foreground/20" />
-                </div>
+                <Brain className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
               </div>
             </Card>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <Card key={index} className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-primary" />
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {stat.trend}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                      </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((stat, index) => (
+                <Card key={index} className="p-5 hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-muted">
+                      <stat.icon className="w-5 h-5 text-primary" />
                     </div>
-                  </Card>
-                );
-              })}
+                    <Badge variant="outline" className="text-xs">
+                      {stat.trend}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                </Card>
+              ))}
             </div>
 
-            {/* Progress + Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-display font-bold">Progression de la semaine</h3>
-                  <Badge variant="secondary">Semaine 50</Badge>
+            {/* Progress & Actions */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Weekly Progress */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold">Progression de la semaine</h3>
+                  <Badge variant="outline">Semaine 50</Badge>
                 </div>
 
                 <div className="space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Plan stratégique</span>
-                      <span className="text-sm text-muted-foreground">{weekProgress.percentage}%</span>
+                      <span className="text-sm text-muted-foreground">Plan stratégique</span>
+                      <span className="text-sm font-medium">75%</span>
                     </div>
-                    <Progress value={weekProgress.percentage} className="h-2" />
+                    <Progress value={75} className="h-2" />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Contenus planifiés</span>
-                      <span className="text-sm text-muted-foreground">{weekProgress.planned.value}</span>
+                      <span className="text-sm text-muted-foreground">Contenus planifiés</span>
+                      <span className="text-sm font-medium">5/7</span>
                     </div>
                     <Progress value={71} className="h-2" />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Objectif engagement</span>
-                      <span className="text-sm text-muted-foreground">{weekProgress.engagement.value}</span>
+                      <span className="text-sm text-muted-foreground">Objectif engagement</span>
+                      <span className="text-sm font-medium">2.4K/3K</span>
                     </div>
                     <Progress value={80} className="h-2" />
                   </div>
                 </div>
+
+                <Link href="/strategy" className="block mt-6">
+                  <Button variant="outline" className="w-full">
+                    Voir ma stratégie complète
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
               </Card>
 
-              <Card className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-display font-bold">Actions rapides</h3>
-                </div>
+              {/* Quick Actions */}
+              <Card className="p-6">
+                <h3 className="text-lg font-bold mb-6">Actions rapides</h3>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <Link href="/create" className="block">
-                    <div className="p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors flex items-center justify-between group">
+                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-                          <Sparkles className="w-6 h-6 text-primary-foreground" />
+                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="w-5 h-5 text-primary-foreground" />
                         </div>
-                        <div>
-                          <h4 className="font-semibold">Créer du contenu</h4>
+                        <div className="flex-1">
+                          <p className="font-semibold group-hover:text-primary transition-colors">Créer du contenu</p>
                           <p className="text-sm text-muted-foreground">Posts, emails, articles, vidéos...</p>
                         </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </div>
                   </Link>
 
                   <Link href="/contents" className="block">
-                    <div className="p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors flex items-center justify-between group">
+                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                          <Calendar className="w-6 h-6 text-primary" />
+                        <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center flex-shrink-0">
+                          <Calendar className="w-5 h-5 text-secondary-foreground" />
                         </div>
-                        <div>
-                          <h4 className="font-semibold">Voir mes contenus</h4>
+                        <div className="flex-1">
+                          <p className="font-semibold group-hover:text-primary transition-colors">Voir mes contenus</p>
                           <p className="text-sm text-muted-foreground">Liste & calendrier éditorial</p>
                         </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </div>
                   </Link>
 
                   <Link href="/strategy" className="block">
-                    <div className="p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors flex items-center justify-between group">
+                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                          <Target className="w-6 h-6 text-primary" />
+                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
+                          <Target className="w-5 h-5 text-primary-foreground" />
                         </div>
-                        <div>
-                          <h4 className="font-semibold">Stratégie</h4>
-                          <p className="text-sm text-muted-foreground">Business plan & objectifs</p>
+                        <div className="flex-1">
+                          <p className="font-semibold group-hover:text-primary transition-colors">Ma stratégie</p>
+                          <p className="text-sm text-muted-foreground">Plan d&apos;action & checklist</p>
                         </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </div>
                   </Link>
                 </div>
               </Card>
             </div>
+
+            {/* Upcoming Tasks */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold">À venir cette semaine</h3>
+                <Link href="/contents">
+                  <Button variant="ghost" size="sm">
+                    Tout voir
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  {
+                    title: "Post LinkedIn : Stratégie 2025",
+                    type: "Post",
+                    day: "Aujourd'hui",
+                    time: "09:00",
+                    status: "À faire",
+                  },
+                  { title: "Newsletter hebdomadaire", type: "Email", day: "Demain", time: "14:00", status: "Planifié" },
+                  { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
+                  { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-shrink-0">
+                      <Badge
+                        variant={item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"}
+                      >
+                        {item.type}
+                      </Badge>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.day} {item.time !== "-" && `• ${item.time}`}
+                      </p>
+                    </div>
+                    <CheckCircle2
+                      className={`w-5 h-5 flex-shrink-0 ${
+                        item.status === "En cours" ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         </main>
       </div>
