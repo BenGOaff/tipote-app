@@ -5,37 +5,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const AgeRangeSchema = z.enum(["18-24", "25-34", "35-44", "45-54", "55+"]).or(z.literal("")).default("");
 const GenderSchema = z
-  .enum(["feminin", "masculin", "non_genre", "prefere_ne_pas_repondre"])
+  .enum(["masculin", "feminin", "non_genre", "prefere_ne_pas_repondre"])
   .or(z.literal(""))
   .default("");
+
+const NicheSchema = z.enum(["argent", "sante_bien_etre", "dev_perso", "relations"]).or(z.literal("")).default("");
+
+const BusinessTypeSchema = z
+  .enum(["physique", "coaching", "formation", "saas", "freelance", "ecommerce", "autre"])
+  .or(z.literal(""))
+  .default("");
+
+const RevenueMaturitySchema = z.enum(["0-500", "500-5000", "5000+"]).or(z.literal("")).default("");
+
+const ContentPreferenceSchema = z.enum(["ecriture", "video"]).or(z.literal("")).default("");
 
 const OnboardingSchema = z.object({
   // Step 1
   firstName: z.string().default(""),
-  ageRange: AgeRangeSchema,
+  ageRange: z.string().default(""),
   gender: GenderSchema,
   country: z.string().default(""),
 
   // Step 2
-  niche: z.string().default(""),
-  nicheOther: z.string().default(""),
-
-  persona: z.string().default(""),
-
-  businessType: z.string().default(""),
+  niche: NicheSchema,
+  personaQuestion: z.string().default(""),
+  businessType: BusinessTypeSchema,
   businessTypeOther: z.string().default(""),
-
-  businessMaturity: z.string().default(""),
+  revenueMaturity: RevenueMaturitySchema,
 
   audienceSocial: z.string().default(""),
   audienceEmail: z.string().default(""),
 
   hasOffers: z.boolean().default(false),
-  offerPrice: z.string().default(""),
+  offerPriceRange: z.string().default(""),
   offerSalesCount: z.string().default(""),
-  offerSalesPageLinks: z.string().default(""),
+  salesPageUrl: z.string().default(""),
 
   toolsUsed: z.array(z.string()).default([]),
   toolsOther: z.string().default(""),
@@ -43,11 +49,11 @@ const OnboardingSchema = z.object({
   timeAvailable: z.string().default(""),
 
   // Step 3
-  financialGoal: z.string().default(""),
+  monthlyNetGoal: z.string().default(""),
   psychologicalGoals: z.array(z.string()).default([]),
   psychologicalGoalsOther: z.string().default(""),
 
-  contentPreference: z.string().default(""),
+  contentPreference: ContentPreferenceSchema,
   preferredTone: z.string().default(""),
 });
 
@@ -62,34 +68,11 @@ function cleanString(v: unknown) {
   return v.trim();
 }
 
-function rangeToInt(v: string): number | null {
-  const s = (v || "").trim();
-  if (!s) return null;
-
-  // formats: "0-500", "500-2000", "2000-10000", "10000+"
-  if (s.endsWith("+")) {
-    const n = Number(s.replace("+", ""));
-    return Number.isFinite(n) ? n : null;
-  }
-
-  const parts = s.split("-");
-  if (parts.length === 2) {
-    const high = Number(parts[1]);
-    return Number.isFinite(high) ? high : null;
-  }
-
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function parseLinksCsv(v: string): string[] {
-  const s = (v || "").trim();
-  if (!s) return [];
-  return s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .slice(0, 10);
+function toIntOrNull(v: string) {
+  const n = Number(String(v).replace(/[^\d]/g, ""));
+  if (!Number.isFinite(n)) return null;
+  if (Number.isNaN(n)) return null;
+  return n;
 }
 
 export async function POST(req: NextRequest) {
@@ -117,65 +100,63 @@ export async function POST(req: NextRequest) {
 
     const d = parsed.data;
 
+    // Store offers info as JSONB (column exists in your screenshot)
     const offers = {
       has_offers: Boolean(d.hasOffers),
-      average_price: cleanNullableString(d.offerPrice),
-      sales_count: cleanNullableString(d.offerSalesCount),
-      sales_page_links: parseLinksCsv(d.offerSalesPageLinks),
-      business_type: cleanNullableString(d.businessType),
-      business_type_other: cleanNullableString(d.businessTypeOther),
-      tools_used: (d.toolsUsed || []).map((t) => t.trim()).filter(Boolean),
-      tools_other: cleanNullableString(d.toolsOther),
+      offer_price_range: cleanNullableString(d.offerPriceRange),
+      offer_sales_count: cleanNullableString(d.offerSalesCount),
+      sales_page_url: cleanNullableString(d.salesPageUrl),
     };
 
+    // Tools: keep list, add "other" if provided
+    const tools_used = Array.isArray(d.toolsUsed) ? d.toolsUsed : [];
+    const tools_other = cleanNullableString(d.toolsOther);
+    const tools_payload = tools_other ? { tools_used, tools_other } : { tools_used };
+
+    // camelCase (front) -> snake_case (DB)
     const row: Record<string, unknown> = {
       user_id: user.id,
 
-      // profil perso
+      // Step 1
       first_name: cleanString(d.firstName),
-      age_range: d.ageRange || null,
+      age_range: cleanNullableString(d.ageRange),
       gender: d.gender || null,
       country: cleanString(d.country),
 
-      // business
+      // Step 2
       niche: cleanString(d.niche),
-      niche_other: cleanNullableString(d.nicheOther),
+      mission: cleanString(d.personaQuestion), // ✅ CDC persona question -> mission (col exists)
+      business_maturity: cleanString(d.revenueMaturity),
 
-      // CDC persona -> mission (colonne existante)
-      mission: cleanString(d.persona),
+      // Audience (columns from your screenshot: audience_soci, audience_ema)
+      audience_soci: toIntOrNull(d.audienceSocial),
+      audience_ema: toIntOrNull(d.audienceEmail),
 
-      // maturité CA
-      business_maturity: cleanString(d.businessMaturity),
-
-      // audience
-      audience_soci: rangeToInt(d.audienceSocial),
-      audience_ema: rangeToInt(d.audienceEmail),
-      audience_size: cleanString(d.audienceSocial),
-      email_list_size: cleanString(d.audienceEmail),
-
-      // offres
-      offers_status: d.hasOffers ? "oui" : "non",
-      offers,
-
-      // outils -> colonne existante text (working_strategy)
-      working_strategy: [
-        ...(d.toolsUsed || []),
-        d.toolsOther ? `Autre: ${cleanString(d.toolsOther)}` : "",
-      ]
-        .map((x) => x.trim())
-        .filter(Boolean)
-        .join(", "),
-
-      // temps dispo
       time_available: cleanString(d.timeAvailable),
 
-      // objectifs
-      main_goal: cleanString(d.financialGoal),
-      main_goals: d.psychologicalGoals ?? [],
-      main_goals_other: cleanNullableString(d.psychologicalGoalsOther),
+      // Offers (jsonb col exists)
+      offers,
 
-      preferred_content_types: d.contentPreference ? [cleanString(d.contentPreference)] : [],
-      tone_preference: cleanString(d.preferredTone),
+      // Step 3 (map on closest existing cols)
+      main_goal: cleanNullableString(d.monthlyNetGoal),
+      main_goals: d.psychologicalGoals ?? [],
+      main_goals_ot: cleanNullableString(d.psychologicalGoalsOther),
+
+      preferred_con: tools_payload, // ✅ store tools payload in existing json-ish slot if present
+      tone_preferen: cleanNullableString(d.preferredTone),
+
+      // Add context (business type etc)
+      additional_cor: cleanNullableString(
+        JSON.stringify(
+          {
+            business_type: d.businessType,
+            business_type_other: d.businessTypeOther || null,
+            content_preference: d.contentPreference,
+          },
+          null,
+          0,
+        ),
+      ),
 
       updated_at: new Date().toISOString(),
     };
@@ -186,7 +167,9 @@ export async function POST(req: NextRequest) {
       .select("*")
       .maybeSingle();
 
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
 
     return NextResponse.json({ ok: true, profile: saved ?? null }, { status: 200 });
   } catch (e) {
