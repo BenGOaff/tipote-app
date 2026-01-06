@@ -11,76 +11,44 @@ const GenderSchema = z
   .or(z.literal(""))
   .default("");
 
-const SocialLinksSchema = z
-  .object({
-    instagram: z.string().optional().nullable(),
-    tiktok: z.string().optional().nullable(),
-    linkedin: z.string().optional().nullable(),
-    youtube: z.string().optional().nullable(),
-    website: z.string().optional().nullable(),
-  })
-  .partial();
-
 const OnboardingSchema = z.object({
+  // Step 1
   firstName: z.string().default(""),
   ageRange: AgeRangeSchema,
   gender: GenderSchema,
   country: z.string().default(""),
 
+  // Step 2
   niche: z.string().default(""),
   nicheOther: z.string().default(""),
-  mission: z.string().default(""),
+
+  persona: z.string().default(""),
+
+  businessType: z.string().default(""),
+  businessTypeOther: z.string().default(""),
 
   businessMaturity: z.string().default(""),
-  offersStatus: z.string().default(""),
 
-  offerNames: z.string().default(""),
-  offerPriceRange: z.string().default(""),
-  offerDelivery: z.string().default(""),
+  audienceSocial: z.string().default(""),
+  audienceEmail: z.string().default(""),
 
-  audienceSize: z.string().default(""),
-  emailListSize: z.string().default(""),
+  hasOffers: z.boolean().default(false),
+  offerPrice: z.string().default(""),
+  offerSalesCount: z.string().default(""),
+  offerSalesPageLinks: z.string().default(""),
+
+  toolsUsed: z.array(z.string()).default([]),
+  toolsOther: z.string().default(""),
+
   timeAvailable: z.string().default(""),
 
-  mainGoals: z.array(z.string()).default([]),
-  mainGoalsOther: z.string().default(""),
+  // Step 3
+  financialGoal: z.string().default(""),
+  psychologicalGoals: z.array(z.string()).default([]),
+  psychologicalGoalsOther: z.string().default(""),
 
-  preferredContentTypes: z.array(z.string()).default([]),
-  tonePreference: z.string().default(""),
-
-  instagramUrl: z.string().default(""),
-  tiktokUrl: z.string().default(""),
-  linkedinUrl: z.string().default(""),
-  youtubeUrl: z.string().default(""),
-  websiteUrl: z.string().default(""),
-
-  hasExistingBranding: z.boolean().default(false),
-
-  biggestBlocker: z.string().default(""),
-  additionalContext: z.string().default(""),
-
-  // -----------------------------
-  // Champs "deep dive" (business_profiles)
-  // (Tous optionnels -> ne casse pas l'existant)
-  // -----------------------------
-  energySource: z.string().default(""),
-  uniqueValue: z.string().default(""),
-  untappedStrategy: z.string().default(""),
-  communication: z.string().default(""),
-  successDefinition: z.string().default(""),
-  sixMonthVision: z.string().default(""),
-
-  innerDialogue: z.string().default(""),
-  ifCertainSuccess: z.string().default(""),
-  biggestFears: z.string().default(""),
-  biggestChallenges: z.string().default(""),
-  workingStrategy: z.string().default(""),
-  recentClient: z.string().default(""),
-
-  // Conserver compat si tu l’ajoutes ensuite côté UI
-  offers: z.any().optional(), // jsonb éventuel (si tu décides de l’utiliser)
-  audienceSocial: z.union([z.string(), z.number()]).optional(),
-  audienceEmail: z.union([z.string(), z.number()]).optional(),
+  contentPreference: z.string().default(""),
+  preferredTone: z.string().default(""),
 });
 
 function cleanNullableString(v: unknown) {
@@ -94,9 +62,34 @@ function cleanString(v: unknown) {
   return v.trim();
 }
 
-function cleanNullableText(v: unknown) {
-  const s = cleanString(v);
-  return s.length ? s : null;
+function rangeToInt(v: string): number | null {
+  const s = (v || "").trim();
+  if (!s) return null;
+
+  // formats: "0-500", "500-2000", "2000-10000", "10000+"
+  if (s.endsWith("+")) {
+    const n = Number(s.replace("+", ""));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const parts = s.split("-");
+  if (parts.length === 2) {
+    const high = Number(parts[1]);
+    return Number.isFinite(high) ? high : null;
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseLinksCsv(v: string): string[] {
+  const s = (v || "").trim();
+  if (!s) return [];
+  return s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 10);
 }
 
 export async function POST(req: NextRequest) {
@@ -124,75 +117,70 @@ export async function POST(req: NextRequest) {
 
     const d = parsed.data;
 
-    const social_links = SocialLinksSchema.parse({
-      instagram: cleanNullableString(d.instagramUrl),
-      tiktok: cleanNullableString(d.tiktokUrl),
-      linkedin: cleanNullableString(d.linkedinUrl),
-      youtube: cleanNullableString(d.youtubeUrl),
-      website: cleanNullableString(d.websiteUrl),
-    });
+    const offers = {
+      has_offers: Boolean(d.hasOffers),
+      average_price: cleanNullableString(d.offerPrice),
+      sales_count: cleanNullableString(d.offerSalesCount),
+      sales_page_links: parseLinksCsv(d.offerSalesPageLinks),
+      business_type: cleanNullableString(d.businessType),
+      business_type_other: cleanNullableString(d.businessTypeOther),
+      tools_used: (d.toolsUsed || []).map((t) => t.trim()).filter(Boolean),
+      tools_other: cleanNullableString(d.toolsOther),
+    };
 
-    // camelCase (front) -> snake_case (DB)
-    // IMPORTANT: les colonnes doivent exister côté DB (sinon Supabase renverra une erreur).
     const row: Record<string, unknown> = {
       user_id: user.id,
 
+      // profil perso
       first_name: cleanString(d.firstName),
       age_range: d.ageRange || null,
       gender: d.gender || null,
       country: cleanString(d.country),
 
+      // business
       niche: cleanString(d.niche),
       niche_other: cleanNullableString(d.nicheOther),
 
-      mission: cleanString(d.mission),
+      // CDC persona -> mission (colonne existante)
+      mission: cleanString(d.persona),
+
+      // maturité CA
       business_maturity: cleanString(d.businessMaturity),
-      offers_status: cleanString(d.offersStatus),
 
-      offer_names: cleanString(d.offerNames),
-      offer_price_range: cleanString(d.offerPriceRange),
-      offer_delivery: cleanString(d.offerDelivery),
+      // audience
+      audience_soci: rangeToInt(d.audienceSocial),
+      audience_ema: rangeToInt(d.audienceEmail),
+      audience_size: cleanString(d.audienceSocial),
+      email_list_size: cleanString(d.audienceEmail),
 
-      audience_size: cleanString(d.audienceSize),
-      email_list_size: cleanString(d.emailListSize),
+      // offres
+      offers_status: d.hasOffers ? "oui" : "non",
+      offers,
+
+      // outils -> colonne existante text (working_strategy)
+      working_strategy: [
+        ...(d.toolsUsed || []),
+        d.toolsOther ? `Autre: ${cleanString(d.toolsOther)}` : "",
+      ]
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .join(", "),
+
+      // temps dispo
       time_available: cleanString(d.timeAvailable),
 
-      main_goals: d.mainGoals ?? [],
-      main_goals_other: cleanNullableString(d.mainGoalsOther),
+      // objectifs
+      main_goal: cleanString(d.financialGoal),
+      main_goals: d.psychologicalGoals ?? [],
+      main_goals_other: cleanNullableString(d.psychologicalGoalsOther),
 
-      preferred_content_types: d.preferredContentTypes ?? [],
-      tone_preference: cleanString(d.tonePreference),
-
-      social_links,
-
-      has_existing_branding: Boolean(d.hasExistingBranding),
-
-      biggest_blocker: cleanString(d.biggestBlocker),
-      additional_context: cleanNullableString(d.additionalContext),
-
-      // -----------------------------
-      // Deep dive mapping (snake_case)
-      // Ajuste les noms EXACTS si besoin (selon ta table)
-      // -----------------------------
-      energy_source: cleanNullableText(d.energySource),
-      unique_value: cleanNullableText(d.uniqueValue),
-      untapped_strategy: cleanNullableText(d.untappedStrategy),
-      communication: cleanNullableText(d.communication),
-      success_definition: cleanNullableText(d.successDefinition),
-      six_month_vision: cleanNullableText(d.sixMonthVision),
-
-      inner_dialogue: cleanNullableText(d.innerDialogue),
-      if_certain_success: cleanNullableText(d.ifCertainSuccess),
-      biggest_fears: cleanNullableText(d.biggestFears),
-      biggest_challenges: cleanNullableText(d.biggestChallenges),
-      working_strategy: cleanNullableText(d.workingStrategy),
-      recent_client: cleanNullableText(d.recentClient),
+      preferred_content_types: d.contentPreference ? [cleanString(d.contentPreference)] : [],
+      tone_preference: cleanString(d.preferredTone),
 
       updated_at: new Date().toISOString(),
     };
 
-    // Upsert: one row per user_id
-    const { data, error } = await supabase
+    const { data: saved, error } = await supabase
       .from("business_profiles")
       .upsert(row, { onConflict: "user_id" })
       .select("*")
@@ -200,7 +188,7 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
-    return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
+    return NextResponse.json({ ok: true, profile: saved ?? null }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
