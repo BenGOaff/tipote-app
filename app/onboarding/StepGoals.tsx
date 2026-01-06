@@ -1,165 +1,181 @@
-"use client";
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
-import type { ContentPreferenceValue, OnboardingData } from "./OnboardingFlow";
+import { Target, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { OnboardingData } from "./OnboardingFlow";
 
 interface StepGoalsProps {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
   onComplete: () => void;
   onBack: () => void;
-  isSubmitting?: boolean;
+  isSubmitting: boolean;
 }
 
-const psychologicalChoices = [
-  "Se sentir fier",
-  "Se sentir utile",
-  "Avoir du temps libre",
-  "Quitter le salariat",
-  "Améliorer la retraite",
-  "Aider les autres",
-  "Liberté financière",
-  "Autre",
+// ✅ CDC: objectif financier net mensuel (input libre)
+const psychologicalGoals = [
+  { value: "fier", label: "Se sentir fier" },
+  { value: "utile", label: "Se sentir utile" },
+  { value: "temps_libre", label: "Avoir du temps libre" },
+  { value: "quitter_salariat", label: "Quitter le salariat" },
+  { value: "retraite", label: "Améliorer la retraite" },
+  { value: "aider_autres", label: "Aider les autres" },
+  { value: "liberte_financiere", label: "Liberté financière" },
+  { value: "autre", label: "Autre" },
 ];
 
-const contentPreferences: { value: ContentPreferenceValue; label: string }[] = [
-  { value: "ecriture", label: "Écriture" },
-  { value: "video", label: "Vidéo" },
+// ✅ CDC: préférence contenu écriture / vidéo
+const contentPreferences = [
+  { value: "ecriture", label: "✍️ Écriture (posts, articles, emails)" },
+  { value: "video", label: "🎬 Vidéo (YouTube, TikTok, Reels)" },
 ];
 
 const tones = [
-  { value: "direct", label: "Direct" },
-  { value: "bienveillant", label: "Bienveillant" },
-  { value: "expert", label: "Expert" },
+  { value: "professionnel", label: "Professionnel" },
+  { value: "decontracte", label: "Décontracté" },
+  { value: "inspirant", label: "Inspirant" },
   { value: "humoristique", label: "Humoristique" },
+  { value: "educatif", label: "Éducatif" },
+  { value: "provocateur", label: "Provocateur" },
 ];
 
-export function StepGoals({ data, updateData, onComplete, onBack, isSubmitting }: StepGoalsProps) {
-  const togglePsyGoal = (label: string) => {
+export const StepGoals = ({ data, updateData, onComplete, onBack, isSubmitting }: StepGoalsProps) => {
+  const togglePsychGoal = (goal: string) => {
     const current = data.psychologicalGoals || [];
-    if (current.includes(label)) {
-      updateData({ psychologicalGoals: current.filter((g) => g !== label) });
+    if (current.includes(goal)) {
+      updateData({ psychologicalGoals: current.filter((g) => g !== goal) });
     } else {
-      updateData({ psychologicalGoals: [...current, label] });
+      updateData({ psychologicalGoals: [...current, goal] });
     }
   };
 
-  const isValid = true;
+  const isValid =
+    !!data.financialGoal &&
+    (data.psychologicalGoals?.length ?? 0) > 0 &&
+    !!data.contentPreference &&
+    !!data.preferredTone;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold mb-2">Vos objectifs</h1>
-        <p className="text-muted-foreground">
-          Dernière étape : on aligne vos objectifs pour générer votre stratégie.
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+          <Target className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-3xl font-display font-bold mb-2">Vos objectifs</h2>
+        <p className="text-muted-foreground text-lg">
+          Pour configurer votre plan d'action personnalisé
         </p>
       </div>
 
-      <Card className="p-6 space-y-6">
+      <Card className="p-8 shadow-lg border-0 bg-background/80 backdrop-blur-sm space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="monthlyNetGoal">Objectif financier mensuel net</Label>
+          <Label htmlFor="financialGoal">Objectif financier mensuel net *</Label>
           <Input
-            id="monthlyNetGoal"
-            placeholder="Ex : 5000€"
-            value={data.monthlyNetGoal}
-            onChange={(e) => updateData({ monthlyNetGoal: e.target.value })}
+            id="financialGoal"
+            placeholder="Ex: 5000"
+            value={data.financialGoal}
+            onChange={(e) => updateData({ financialGoal: e.target.value })}
           />
+          <p className="text-xs text-muted-foreground">Montant en euros, net mensuel.</p>
         </div>
 
         <div className="space-y-3">
-          <Label>Objectif psychologique (plusieurs choix possibles)</Label>
-          <div className="flex flex-wrap gap-2">
-            {psychologicalChoices.map((p) => {
-              const active = (data.psychologicalGoals || []).includes(p);
+          <Label>Objectif psychologique (plusieurs choix possibles) *</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {psychologicalGoals.map((g) => {
+              const checked = (data.psychologicalGoals || []).includes(g.value);
               return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => togglePsyGoal(p)}
-                  className={[
-                    "px-3 py-2 rounded-lg border text-sm font-medium transition-colors",
-                    active ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted",
-                  ].join(" ")}
-                >
-                  {p}
-                </button>
+                <div key={g.value} className="flex items-center gap-3 rounded-lg border-2 border-muted bg-background p-4">
+                  <Checkbox
+                    id={`psy-${g.value}`}
+                    checked={checked}
+                    onCheckedChange={() => togglePsychGoal(g.value)}
+                  />
+                  <Label htmlFor={`psy-${g.value}`} className="cursor-pointer font-medium">
+                    {g.label}
+                  </Label>
+                </div>
               );
             })}
           </div>
 
-          {(data.psychologicalGoals || []).includes("Autre") && (
+          {(data.psychologicalGoals || []).includes("autre") && (
             <div className="space-y-2">
-              <Label htmlFor="psychologicalGoalsOther">Précisez</Label>
-              <Textarea
-                id="psychologicalGoalsOther"
-                placeholder="Votre objectif psychologique…"
+              <Label htmlFor="psychOther">Précisez</Label>
+              <Input
+                id="psychOther"
+                placeholder="Ex: voyager 3 mois par an..."
                 value={data.psychologicalGoalsOther}
                 onChange={(e) => updateData({ psychologicalGoalsOther: e.target.value })}
-                rows={3}
               />
             </div>
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Préférence contenu</Label>
-            <Select
-              value={data.contentPreference}
-              onValueChange={(v) => updateData({ contentPreference: v as ContentPreferenceValue })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choisissez" />
-              </SelectTrigger>
-              <SelectContent>
-                {contentPreferences.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Ton préféré pour les contenus</Label>
-            <Select value={data.preferredTone} onValueChange={(v) => updateData({ preferredTone: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisissez un ton" />
-              </SelectTrigger>
-              <SelectContent>
-                {tones.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-3">
+          <Label>Préférence contenu *</Label>
+          <RadioGroup
+            value={data.contentPreference}
+            onValueChange={(value) => updateData({ contentPreference: value })}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          >
+            {contentPreferences.map((p) => (
+              <div key={p.value} className="flex items-center">
+                <RadioGroupItem value={p.value} id={p.value} className="peer sr-only" />
+                <Label
+                  htmlFor={p.value}
+                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-4 text-center text-sm font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                >
+                  {p.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} disabled={Boolean(isSubmitting)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
-          <Button onClick={onComplete} disabled={!isValid || Boolean(isSubmitting)} size="lg">
-            Terminer
-          </Button>
+        <div className="space-y-3">
+          <Label>Ton préféré *</Label>
+          <Select value={data.preferredTone} onValueChange={(value) => updateData({ preferredTone: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choisissez un ton" />
+            </SelectTrigger>
+            <SelectContent>
+              {tones.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </Card>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour
+        </Button>
+
+        <Button onClick={onComplete} disabled={!isValid || isSubmitting} size="lg">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Configuration...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Commencer avec Tipote™
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
-}
+};
+
+export default StepGoals;

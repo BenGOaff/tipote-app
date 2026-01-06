@@ -1,54 +1,56 @@
-"use client";
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowRight } from "lucide-react";
-import type { OnboardingData, GenderValue } from "./OnboardingFlow";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { User, ArrowRight } from "lucide-react";
+import { OnboardingData } from "./OnboardingFlow";
 
 interface StepProfileProps {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
   onNext: () => void;
-  loading?: boolean;
 }
 
-const ageRanges = [
-  { value: "18-24", label: "18-24" },
-  { value: "25-34", label: "25-34" },
-  { value: "35-44", label: "35-44" },
-  { value: "45-54", label: "45-54" },
-  { value: "55+", label: "55+" },
+const countries = [
+  "France",
+  "Belgique",
+  "Suisse",
+  "Canada",
+  "Luxembourg",
+  "Autre",
 ];
 
-const genders: { value: GenderValue; label: string }[] = [
-  { value: "masculin", label: "Masculin" },
+const ageRanges = ["18-24", "25-34", "35-44", "45-54", "55+"];
+
+const genderOptions = [
   { value: "feminin", label: "Féminin" },
+  { value: "masculin", label: "Masculin" },
   { value: "non_genre", label: "Non genré" },
   { value: "prefere_ne_pas_repondre", label: "Je préfère ne pas répondre" },
 ];
 
-export function StepProfile({ data, updateData, onNext, loading }: StepProfileProps) {
+export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
+  const isValid = data.firstName && data.ageRange && data.gender && data.country;
+
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold mb-2">Commençons par vous</h1>
-        <p className="text-muted-foreground">
-          Ces informations nous aideront à personnaliser votre expérience Tipote™.
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-3xl font-display font-bold mb-2">
+          Commençons par faire connaissance
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Ces informations nous aideront à personnaliser votre expérience
         </p>
       </div>
 
-      <Card className="p-6 space-y-6">
+      <Card className="p-8 space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="firstName">Prénom</Label>
+          <Label htmlFor="firstName">Prénom *</Label>
           <Input
             id="firstName"
             placeholder="Votre prénom"
@@ -57,60 +59,71 @@ export function StepProfile({ data, updateData, onNext, loading }: StepProfilePr
           />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Tranche d’âge</Label>
-            <Select value={data.ageRange} onValueChange={(v) => updateData({ ageRange: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez une tranche" />
-              </SelectTrigger>
-              <SelectContent>
-                {ageRanges.map((a) => (
-                  <SelectItem key={a.value} value={a.value}>
-                    {a.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-3">
+          <Label>Tranche d'âge *</Label>
+          <RadioGroup
+            value={data.ageRange}
+            onValueChange={(value) => updateData({ ageRange: value })}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+          >
+            {ageRanges.map((range) => (
+              <div key={range} className="flex items-center space-x-2">
+                <RadioGroupItem value={range} id={range} className="peer sr-only" />
+                <Label
+                  htmlFor={range}
+                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 text-center font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                >
+                  {range}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
 
-          <div className="space-y-2">
-            <Label>Sexe</Label>
-            <Select
-              value={data.gender}
-              onValueChange={(v) => updateData({ gender: v as GenderValue })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent>
-                {genders.map((g) => (
-                  <SelectItem key={g.value} value={g.value}>
-                    {g.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-3">
+          <Label>Genre *</Label>
+          <RadioGroup
+            value={data.gender}
+            onValueChange={(value) => updateData({ gender: value })}
+            className="grid grid-cols-1 gap-2"
+          >
+            {genderOptions.map((option) => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <RadioGroupItem value={option.value} id={option.value} className="peer sr-only" />
+                <Label
+                  htmlFor={option.value}
+                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                >
+                  {option.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="country">Pays</Label>
-          <Input
-            id="country"
-            placeholder="France"
-            value={data.country}
-            onChange={(e) => updateData({ country: e.target.value })}
-          />
-        </div>
-
-        <div className="flex justify-end">
-          <Button onClick={onNext} disabled={Boolean(loading)}>
-            Continuer
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          <Label>Pays *</Label>
+          <Select value={data.country} onValueChange={(value) => updateData({ country: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez votre pays" />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map((country) => (
+                <SelectItem key={country} value={country}>
+                  {country}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={onNext} disabled={!isValid} size="lg">
+          Continuer
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
     </div>
   );
-}
+};

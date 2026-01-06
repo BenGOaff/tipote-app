@@ -1,150 +1,148 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
 import { StepGoals } from "./StepGoals";
 
-export type NicheValue = "argent" | "sante_bien_etre" | "dev_perso" | "relations" | "";
-export type BusinessTypeValue = "physique" | "coaching" | "formation" | "saas" | "freelance" | "ecommerce" | "autre" | "";
-export type RevenueMaturityValue = "0-500" | "500-5000" | "5000+" | "";
-export type ContentPreferenceValue = "ecriture" | "video" | "";
-export type GenderValue = "masculin" | "feminin" | "non_genre" | "prefere_ne_pas_repondre" | "";
-
 export interface OnboardingData {
-  // Écran 1 - Profil personnel
+  // Step 1
   firstName: string;
   ageRange: string;
-  gender: GenderValue;
+  gender: string;
   country: string;
 
-  // Écran 2 - Business
-  niche: NicheValue;
-  personaQuestion: string; // "Qui veux-tu aider à faire quoi et comment ?"
-  businessType: BusinessTypeValue;
+  // Step 2
+  niche: string;
+  nicheOther: string;
+  persona: string;
+  businessType: string;
   businessTypeOther: string;
-  revenueMaturity: RevenueMaturityValue;
+  businessMaturity: string;
 
-  audienceSocial: string; // on garde string côté UI, cast côté API
-  audienceEmail: string; // idem
+  audienceSocial: string;
+  audienceEmail: string;
+
   hasOffers: boolean;
-  offerPriceRange: string;
+  offerPrice: string;
   offerSalesCount: string;
-  salesPageUrl: string;
+  offerSalesPageLinks: string;
 
   toolsUsed: string[];
   toolsOther: string;
 
   timeAvailable: string;
 
-  // Écran 3 - Objectifs
-  monthlyNetGoal: string;
+  // Step 3
+  financialGoal: string;
   psychologicalGoals: string[];
   psychologicalGoalsOther: string;
-
-  contentPreference: ContentPreferenceValue;
+  contentPreference: string;
   preferredTone: string;
 }
 
-const DEFAULT_DATA: OnboardingData = {
+const defaultData: OnboardingData = {
   firstName: "",
   ageRange: "",
   gender: "",
   country: "",
 
   niche: "",
-  personaQuestion: "",
+  nicheOther: "",
+  persona: "",
   businessType: "",
   businessTypeOther: "",
-  revenueMaturity: "",
+  businessMaturity: "",
 
   audienceSocial: "",
   audienceEmail: "",
+
   hasOffers: false,
-  offerPriceRange: "",
+  offerPrice: "",
   offerSalesCount: "",
-  salesPageUrl: "",
+  offerSalesPageLinks: "",
 
   toolsUsed: [],
   toolsOther: "",
 
   timeAvailable: "",
 
-  monthlyNetGoal: "",
+  financialGoal: "",
   psychologicalGoals: [],
   psychologicalGoalsOther: "",
-
   contentPreference: "",
   preferredTone: "",
 };
 
-export function OnboardingFlow() {
+export const OnboardingFlow = () => {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<OnboardingData>(DEFAULT_DATA);
+  const [data, setData] = useState<OnboardingData>(defaultData);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const updateData = useCallback((updates: Partial<OnboardingData>) => {
+  const updateData = (updates: Partial<OnboardingData>) =>
     setData((prev) => ({ ...prev, ...updates }));
-  }, []);
 
-  const canGoNextProfile = useMemo(() => {
-    return true;
-  }, []);
+  const saveAnswers = async () => {
+    const res = await fetch("/api/onboarding/answers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-  const handleComplete = useCallback(async () => {
-    if (loading) return;
+    if (!res.ok) {
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new Error(json?.error || "Erreur sauvegarde onboarding");
+    }
+  };
 
-    setLoading(true);
+  const handleComplete = async () => {
     try {
-      // 1) Save answers
-      const res = await fetch("/api/onboarding/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      setLoading(true);
+      setError(null);
 
-      const json = await res.json().catch(() => ({}));
+      // 1) Sauvegarde réponses
+      await saveAnswers();
 
+      // 2) Marquer onboarding comme complété
+      const res = await fetch("/api/onboarding/complete", { method: "POST" });
       if (!res.ok) {
-        console.error("[onboarding] /api/onboarding/answers failed", res.status, json);
-        setLoading(false);
-        return;
+        let json: any = null;
+        try {
+          json = await res.json();
+        } catch {
+          // ignore
+        }
+        throw new Error(json?.error || "Impossible de finaliser l’onboarding");
       }
 
-      // 2) Mark onboarding complete (profil)
-      const res2 = await fetch("/api/onboarding/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const json2 = await res2.json().catch(() => ({}));
-      if (!res2.ok) {
-        console.error("[onboarding] /api/onboarding/complete failed", res2.status, json2);
-        setLoading(false);
-        return;
-      }
-
-      // 3) Redirect
+      // 3) Redirection
       router.replace("/dashboard");
-    } catch (e) {
-      console.error("[onboarding] complete error", e);
+    } catch (err: any) {
+      console.error("Onboarding error:", err);
+      setError(err?.message || "Erreur inconnue");
     } finally {
       setLoading(false);
     }
-  }, [data, loading, router]);
+  };
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="max-w-xl mx-auto py-12">
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-destructive/10 text-destructive">
+          {error}
+        </div>
+      )}
+
       {step === 0 && (
-        <StepProfile
-          data={data}
-          updateData={updateData}
-          onNext={() => setStep(1)}
-          loading={loading}
-        />
+        <StepProfile data={data} updateData={updateData} onNext={() => setStep(1)} />
       )}
 
       {step === 1 && (
@@ -153,7 +151,6 @@ export function OnboardingFlow() {
           updateData={updateData}
           onNext={() => setStep(2)}
           onBack={() => setStep(0)}
-          loading={loading}
         />
       )}
 
@@ -168,4 +165,4 @@ export function OnboardingFlow() {
       )}
     </div>
   );
-}
+};
