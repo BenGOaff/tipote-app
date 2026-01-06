@@ -13,18 +13,26 @@ export default async function TodayPage() {
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/");
+  if (userError || !user) redirect("/login");
 
   const userId = user.id;
 
-  // Garde l’invariant historique : si pas de plan stratégique => onboarding
-  const { data: planRow } = await supabase
-    .from("strategic_plan")
+  // ✅ Invariant produit : si pas de plan stratégique => onboarding
+  // Or Tipote crée le plan via /api/onboarding/complete dans `business_plan`
+  const { data: planRow, error: planError } = await supabase
+    .from("business_plan")
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (planError) {
+    // En cas d’erreur DB, on évite un false-positive "onboarding incomplet"
+    // mais on sécurise l'app (pas de crash page)
+    redirect("/onboarding");
+  }
 
   if (!planRow) redirect("/onboarding");
 
