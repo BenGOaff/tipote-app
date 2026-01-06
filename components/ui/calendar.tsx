@@ -14,17 +14,18 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  // Objectif : rendu pixel-perfect Lovable (shadcn) dans Tipote,
+  // tout en étant compatible avec react-day-picker v9 (noms de clés différents).
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        // ✅ 1:1 Lovable (shadcn) – avec compat react-day-picker v9
+        // ✅ Base Lovable (shadcn)
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
-
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -32,15 +33,14 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-
         table: "w-full border-collapse space-y-1",
 
-        // v8 keys (Lovable)
+        // ✅ Lovable keys (v8)
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
 
-        // v9 keys (pour éviter le bug 'mamejevesadi' sans spacing)
+        // ✅ Compat v9 (sinon weekday colle / layout casse)
         weekdays: "flex",
         weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         week: "flex w-full mt-2",
@@ -54,11 +54,11 @@ function Calendar({
           "last:[&:has([aria-selected])]:rounded-r-md " +
           "focus-within:relative focus-within:z-20",
 
-        // v8 key
+        // ✅ day (v8) + day_button (v9)
         day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
-        // v9 key (button interne)
         day_button: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
 
+        // ✅ États Lovable (v8)
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
@@ -69,10 +69,21 @@ function Calendar({
         day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
 
+        // ✅ Compat v9 (noms d’états)
+        selected:
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        today: "bg-accent text-accent-foreground",
+        outside:
+          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+        disabled: "text-muted-foreground opacity-50",
+        range_end: "day-range-end",
+        range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        hidden: "invisible",
+
         ...classNames,
       }}
       components={{
-        // ✅ react-day-picker v9 (type-safe)
+        // ✅ react-day-picker v9 : un seul composant Chevron (type-safe)
         Chevron: ({ orientation, ...chevronProps }) => {
           if (orientation === "left") return <ChevronLeft className="h-4 w-4" {...chevronProps} />;
           if (orientation === "right") return <ChevronRight className="h-4 w-4" {...chevronProps} />;
