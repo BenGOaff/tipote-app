@@ -58,6 +58,29 @@ const OnboardingSchema = z.object({
 
   biggestBlocker: z.string().default(""),
   additionalContext: z.string().default(""),
+
+  // -----------------------------
+  // Champs "deep dive" (business_profiles)
+  // (Tous optionnels -> ne casse pas l'existant)
+  // -----------------------------
+  energySource: z.string().default(""),
+  uniqueValue: z.string().default(""),
+  untappedStrategy: z.string().default(""),
+  communication: z.string().default(""),
+  successDefinition: z.string().default(""),
+  sixMonthVision: z.string().default(""),
+
+  innerDialogue: z.string().default(""),
+  ifCertainSuccess: z.string().default(""),
+  biggestFears: z.string().default(""),
+  biggestChallenges: z.string().default(""),
+  workingStrategy: z.string().default(""),
+  recentClient: z.string().default(""),
+
+  // Conserver compat si tu l’ajoutes ensuite côté UI
+  offers: z.any().optional(), // jsonb éventuel (si tu décides de l’utiliser)
+  audienceSocial: z.union([z.string(), z.number()]).optional(),
+  audienceEmail: z.union([z.string(), z.number()]).optional(),
 });
 
 function cleanNullableString(v: unknown) {
@@ -69,6 +92,11 @@ function cleanNullableString(v: unknown) {
 function cleanString(v: unknown) {
   if (typeof v !== "string") return "";
   return v.trim();
+}
+
+function cleanNullableText(v: unknown) {
+  const s = cleanString(v);
+  return s.length ? s : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -105,6 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
     // camelCase (front) -> snake_case (DB)
+    // IMPORTANT: les colonnes doivent exister côté DB (sinon Supabase renverra une erreur).
     const row: Record<string, unknown> = {
       user_id: user.id,
 
@@ -140,6 +169,24 @@ export async function POST(req: NextRequest) {
 
       biggest_blocker: cleanString(d.biggestBlocker),
       additional_context: cleanNullableString(d.additionalContext),
+
+      // -----------------------------
+      // Deep dive mapping (snake_case)
+      // Ajuste les noms EXACTS si besoin (selon ta table)
+      // -----------------------------
+      energy_source: cleanNullableText(d.energySource),
+      unique_value: cleanNullableText(d.uniqueValue),
+      untapped_strategy: cleanNullableText(d.untappedStrategy),
+      communication: cleanNullableText(d.communication),
+      success_definition: cleanNullableText(d.successDefinition),
+      six_month_vision: cleanNullableText(d.sixMonthVision),
+
+      inner_dialogue: cleanNullableText(d.innerDialogue),
+      if_certain_success: cleanNullableText(d.ifCertainSuccess),
+      biggest_fears: cleanNullableText(d.biggestFears),
+      biggest_challenges: cleanNullableText(d.biggestChallenges),
+      working_strategy: cleanNullableText(d.workingStrategy),
+      recent_client: cleanNullableText(d.recentClient),
 
       updated_at: new Date().toISOString(),
     };

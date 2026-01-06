@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
+import { StepDeepDive } from "./StepDeepDive";
 import { StepGoals } from "./StepGoals";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles } from "lucide-react";
@@ -15,22 +16,53 @@ export interface OnboardingData {
   ageRange: string;
   gender: string;
   country: string;
+
   // Écran 2 - Business
   niche: string;
-  persona: string;
-  businessType: string;
-  maturity: string;
+  nicheOther: string;
+  mission: string;
+  businessMaturity: string;
+
+  offersStatus: string;
+  offerNames: string;
+  offerPriceRange: string;
+  offerDelivery: string;
+
   audienceSize: string;
-  hasOffers: boolean;
-  offerPrice: string;
-  offerSalesCount: string;
-  toolsUsed: string[];
-  weeklyTime: string;
-  // Écran 3 - Objectifs
-  financialGoal: string;
-  psychologicalGoal: string;
-  contentPreference: string;
-  preferredTone: string;
+  emailListSize: string;
+  timeAvailable: string;
+
+  // Écran 3 - Deep dive (table business_profiles)
+  energySource: string;
+  uniqueValue: string;
+  untappedStrategy: string;
+  communication: string;
+  successDefinition: string;
+  sixMonthVision: string;
+
+  innerDialogue: string;
+  ifCertainSuccess: string;
+  biggestFears: string;
+  biggestChallenges: string;
+  workingStrategy: string;
+  recentClient: string;
+
+  mainGoals: string[];
+  mainGoalsOther: string;
+
+  preferredContentTypes: string[];
+  tonePreference: string;
+
+  instagramUrl: string;
+  tiktokUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  websiteUrl: string;
+
+  hasExistingBranding: boolean;
+
+  biggestBlocker: string;
+  additionalContext: string;
 }
 
 const initialData: OnboardingData = {
@@ -38,20 +70,51 @@ const initialData: OnboardingData = {
   ageRange: "",
   gender: "",
   country: "",
+
   niche: "",
-  persona: "",
-  businessType: "",
-  maturity: "",
+  nicheOther: "",
+  mission: "",
+  businessMaturity: "",
+
+  offersStatus: "",
+  offerNames: "",
+  offerPriceRange: "",
+  offerDelivery: "",
+
   audienceSize: "",
-  hasOffers: false,
-  offerPrice: "",
-  offerSalesCount: "",
-  toolsUsed: [],
-  weeklyTime: "",
-  financialGoal: "",
-  psychologicalGoal: "",
-  contentPreference: "",
-  preferredTone: "",
+  emailListSize: "",
+  timeAvailable: "",
+
+  energySource: "",
+  uniqueValue: "",
+  untappedStrategy: "",
+  communication: "",
+  successDefinition: "",
+  sixMonthVision: "",
+
+  innerDialogue: "",
+  ifCertainSuccess: "",
+  biggestFears: "",
+  biggestChallenges: "",
+  workingStrategy: "",
+  recentClient: "",
+
+  mainGoals: [],
+  mainGoalsOther: "",
+
+  preferredContentTypes: [],
+  tonePreference: "",
+
+  instagramUrl: "",
+  tiktokUrl: "",
+  linkedinUrl: "",
+  youtubeUrl: "",
+  websiteUrl: "",
+
+  hasExistingBranding: false,
+
+  biggestBlocker: "",
+  additionalContext: "",
 };
 
 async function postJSON<T>(url: string, body: unknown): Promise<T> {
@@ -66,20 +129,18 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
     const message = data?.error ?? "Une erreur est survenue.";
     throw new Error(message);
   }
-
-  return (await res.json().catch(() => ({}))) as T;
+  return (await res.json()) as T;
 }
 
-export const OnboardingFlow = () => {
+export function OnboardingFlow() {
   const router = useRouter();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
+  const totalSteps = 4;
+
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const totalSteps = 3;
-  const progress = (step / totalSteps) * 100;
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...updates }));
@@ -93,53 +154,16 @@ export const OnboardingFlow = () => {
     if (step > 1) setStep(step - 1);
   };
 
+  const progress = (step / totalSteps) * 100;
+
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
-      // ✅ Logique Tipote conservée : on persiste via API (Supabase server-side)
-      const payload = {
-        // Profil
-        firstName: data.firstName,
-        ageRange: data.ageRange,
-        gender: data.gender,
-        country: data.country,
+      // ✅ Save business_profiles (server-side)
+      await postJSON("/api/onboarding/answers", data);
 
-        // Business
-        niche: data.niche,
-        nicheOther: "",
-        mission: data.persona,
-
-        businessMaturity: data.maturity,
-        offersStatus: data.hasOffers ? "one_paid" : "none",
-        offerNames: data.hasOffers ? (data.businessType || "") : "",
-        offerPriceRange: data.hasOffers ? (data.offerPrice || "") : "",
-        offerDelivery: "",
-
-        audienceSize: data.audienceSize,
-        emailListSize: "",
-
-        timeAvailable: data.weeklyTime,
-
-        mainGoals: [data.financialGoal, data.psychologicalGoal].filter(Boolean),
-        mainGoalsOther: "",
-        preferredContentTypes: data.contentPreference ? [data.contentPreference] : [],
-        tonePreference: data.preferredTone,
-
-        socialLinks: {
-          instagram: null,
-          tiktok: null,
-          linkedin: null,
-          youtube: null,
-          website: null,
-        },
-
-        hasExistingBranding: false,
-        biggestBlocker: "",
-        additionalContext: "",
-      };
-
-      await postJSON<{ ok: boolean }>("/api/onboarding/answers", payload);
-      await postJSON<{ ok: boolean }>("/api/onboarding/complete", {});
+      // ✅ Generate plan + tasks
+      await postJSON("/api/onboarding/complete", {});
 
       toast({
         title: "Onboarding terminé !",
@@ -152,7 +176,7 @@ export const OnboardingFlow = () => {
       console.error("Onboarding completion error:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder votre profil.",
+        description: error instanceof Error ? error.message : "Impossible de sauvegarder votre profil.",
         variant: "destructive",
       });
     } finally {
@@ -187,23 +211,19 @@ export const OnboardingFlow = () => {
       {/* Content */}
       <main className="flex-1 p-6 overflow-auto">
         <div className="max-w-2xl mx-auto">
-          {step === 1 && (
-            <StepProfile data={data} updateData={updateData} onNext={nextStep} />
-          )}
+          {step === 1 && <StepProfile data={data} updateData={updateData} onNext={nextStep} />}
           {step === 2 && (
-            <StepBusiness
-              data={data}
-              updateData={updateData}
-              onNext={nextStep}
-              onBack={prevStep}
-            />
+            <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />
           )}
           {step === 3 && (
+            <StepDeepDive data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />
+          )}
+          {step === 4 && (
             <StepGoals
               data={data}
               updateData={updateData}
-              onComplete={handleComplete}
               onBack={prevStep}
+              onComplete={handleComplete}
               isSubmitting={isSubmitting}
             />
           )}
@@ -211,4 +231,4 @@ export const OnboardingFlow = () => {
       </main>
     </div>
   );
-};
+}

@@ -1,157 +1,133 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, CheckCircle, Loader2, Target } from "lucide-react";
 import { OnboardingData } from "./OnboardingFlow";
 
 interface StepGoalsProps {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
-  onComplete: () => void;
   onBack: () => void;
+  onComplete: () => void;
   isSubmitting: boolean;
 }
 
-const financialGoals = [
-  { value: "1000", label: "1 000€/mois" },
-  { value: "3000", label: "3 000€/mois" },
-  { value: "5000", label: "5 000€/mois" },
-  { value: "10000", label: "10 000€/mois" },
-  { value: "20000+", label: "20 000€+/mois" },
-];
-
-const psychologicalGoals = [
-  { value: "liberte", label: "🏖️ Plus de liberté" },
-  { value: "reconnaissance", label: "⭐ Reconnaissance & impact" },
-  { value: "securite", label: "🛡️ Sécurité financière" },
-  { value: "passion", label: "❤️ Vivre de ma passion" },
-  { value: "famille", label: "👨‍👩‍👧‍👦 Temps avec ma famille" },
-];
-
-const contentPreferences = [
-  { value: "posts", label: "Posts réseaux sociaux" },
-  { value: "emails", label: "Emails" },
-  { value: "articles", label: "Articles de blog" },
-  { value: "videos", label: "Scripts vidéo" },
-];
-
-const tones = [
-  { value: "professionnel", label: "Professionnel" },
-  { value: "amical", label: "Amical" },
-  { value: "direct", label: "Direct" },
-  { value: "inspirant", label: "Inspirant" },
-];
-
-export const StepGoals = ({ data, updateData, onComplete, onBack, isSubmitting }: StepGoalsProps) => {
-  const isValid = data.financialGoal && data.psychologicalGoal && data.contentPreference && data.preferredTone;
-
+export const StepGoals = ({ data, updateData, onBack, onComplete, isSubmitting }: StepGoalsProps) => {
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-          <Target className="w-8 h-8 text-primary" />
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+          <Target className="w-8 h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-3xl font-display font-bold mb-2">
-          Définissez vos objectifs
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Dernière étape ! Aidons Tipote™ à comprendre vos ambitions
-        </p>
+        <h1 className="text-2xl font-display font-bold mb-2">Dernières questions</h1>
+        <p className="text-muted-foreground">On finalise votre profil et on génère votre plan stratégique</p>
       </div>
 
-      <Card className="p-8 space-y-6">
+      <Card className="p-6 space-y-6">
         <div className="space-y-2">
-          <Label>Objectif financier *</Label>
-          <Select value={data.financialGoal} onValueChange={(value) => updateData({ financialGoal: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Quel revenu mensuel visez-vous ?" />
-            </SelectTrigger>
-            <SelectContent>
-              {financialGoals.map((goal) => (
-                <SelectItem key={goal.value} value={goal.value}>
-                  {goal.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-3">
-          <Label>Objectif personnel *</Label>
-          <RadioGroup
-            value={data.psychologicalGoal}
-            onValueChange={(value) => updateData({ psychologicalGoal: value })}
-            className="space-y-2"
-          >
-            {psychologicalGoals.map((goal) => (
-              <div key={goal.value} className="flex items-center space-x-2">
-                <RadioGroupItem value={goal.value} id={goal.value} className="peer sr-only" />
-                <Label
-                  htmlFor={goal.value}
-                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                >
-                  {goal.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+          <Label htmlFor="innerDialogue">Dialogue intérieur (ce que vous vous dites souvent)</Label>
+          <Textarea
+            id="innerDialogue"
+            value={data.innerDialogue}
+            onChange={(e) => updateData({ innerDialogue: e.target.value })}
+            rows={3}
+            placeholder="Ex : Je ne suis pas légitime..., etc."
+          />
         </div>
 
         <div className="space-y-2">
-          <Label>Type de contenu préféré *</Label>
-          <Select value={data.contentPreference} onValueChange={(value) => updateData({ contentPreference: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Quel contenu voulez-vous créer ?" />
-            </SelectTrigger>
-            <SelectContent>
-              {contentPreferences.map((pref) => (
-                <SelectItem key={pref.value} value={pref.value}>
-                  {pref.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="ifCertainSuccess">Si vous étiez certain(e) de réussir, vous feriez quoi ?</Label>
+          <Textarea
+            id="ifCertainSuccess"
+            value={data.ifCertainSuccess}
+            onChange={(e) => updateData({ ifCertainSuccess: e.target.value })}
+            rows={3}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label>Tonalité préférée *</Label>
-          <Select value={data.preferredTone} onValueChange={(value) => updateData({ preferredTone: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Quel ton souhaitez-vous ?" />
-            </SelectTrigger>
-            <SelectContent>
-              {tones.map((tone) => (
-                <SelectItem key={tone.value} value={tone.value}>
-                  {tone.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="biggestFears">Plus grandes peurs</Label>
+          <Textarea
+            id="biggestFears"
+            value={data.biggestFears}
+            onChange={(e) => updateData({ biggestFears: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="biggestChallenges">Plus grands challenges</Label>
+          <Textarea
+            id="biggestChallenges"
+            value={data.biggestChallenges}
+            onChange={(e) => updateData({ biggestChallenges: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="workingStrategy">Stratégie actuelle (ce que vous faites aujourd’hui)</Label>
+          <Textarea
+            id="workingStrategy"
+            value={data.workingStrategy}
+            onChange={(e) => updateData({ workingStrategy: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="recentClient">Résultat client récent (preuve)</Label>
+          <Textarea
+            id="recentClient"
+            value={data.recentClient}
+            onChange={(e) => updateData({ recentClient: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="biggestBlocker">Blocage principal</Label>
+          <Input
+            id="biggestBlocker"
+            value={data.biggestBlocker}
+            onChange={(e) => updateData({ biggestBlocker: e.target.value })}
+            placeholder="Ex : manque de temps, dispersion, offre floue..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="additionalContext">Contexte additionnel (optionnel)</Label>
+          <Textarea
+            id="additionalContext"
+            value={data.additionalContext}
+            onChange={(e) => updateData({ additionalContext: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <Button onClick={onComplete} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Génération...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Terminer
+              </>
+            )}
+          </Button>
         </div>
       </Card>
-
-      <div className="flex justify-between">
-        <Button onClick={onBack} variant="outline" size="lg" disabled={isSubmitting}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-
-        <Button onClick={onComplete} disabled={!isValid || isSubmitting} size="lg">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Configuration...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Commencer avec Tipote™
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 };

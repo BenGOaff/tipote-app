@@ -19,36 +19,32 @@ const countries = [
   "Suisse",
   "Canada",
   "Luxembourg",
+  "Monaco",
+  "Maroc",
+  "Tunisie",
+  "Algérie",
+  "Sénégal",
   "Autre",
 ];
 
-const ageRanges = ["18-24", "25-34", "35-44", "45-54", "55+"];
-
-const genderOptions = [
-  { value: "feminin", label: "Féminin" },
-  { value: "masculin", label: "Masculin" },
-  { value: "non_genre", label: "Non genré" },
-  { value: "prefere_ne_pas_repondre", label: "Je préfère ne pas répondre" },
-];
+const ageRanges = ["18-25 ans", "26-35 ans", "36-45 ans", "46-55 ans", "56+ ans"];
 
 export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
   const isValid = data.firstName && data.ageRange && data.gender && data.country;
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-          <User className="w-8 h-8 text-primary" />
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-3xl font-display font-bold mb-2">
-          Commençons par faire connaissance
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Ces informations nous aideront à personnaliser votre expérience
+        <h1 className="text-2xl font-display font-bold mb-2">Commençons par faire connaissance</h1>
+        <p className="text-muted-foreground">
+          Ces informations nous permettront de personnaliser votre expérience Tipote™
         </p>
       </div>
 
-      <Card className="p-8 space-y-6">
+      <Card className="p-6 space-y-6">
         <div className="space-y-2">
           <Label htmlFor="firstName">Prénom *</Label>
           <Input
@@ -60,48 +56,44 @@ export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
         </div>
 
         <div className="space-y-3">
-          <Label>Tranche d'âge *</Label>
-          <RadioGroup
-            value={data.ageRange}
-            onValueChange={(value) => updateData({ ageRange: value })}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-2"
-          >
-            {ageRanges.map((range) => (
-              <div key={range} className="flex items-center space-x-2">
-                <RadioGroupItem value={range} id={range} className="peer sr-only" />
-                <Label
-                  htmlFor={range}
-                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 text-center font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                >
-                  {range}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+          <Label>Tranche d&apos;âge *</Label>
+          <Select value={data.ageRange} onValueChange={(value) => updateData({ ageRange: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez votre tranche d'âge" />
+            </SelectTrigger>
+            <SelectContent>
+              {ageRanges.map((age) => (
+                <SelectItem key={age} value={age}>
+                  {age}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-3">
           <Label>Genre *</Label>
-          <RadioGroup
-            value={data.gender}
-            onValueChange={(value) => updateData({ gender: value })}
-            className="grid grid-cols-1 gap-2"
-          >
-            {genderOptions.map((option) => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <RadioGroupItem value={option.value} id={option.value} className="peer sr-only" />
-                <Label
-                  htmlFor={option.value}
-                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                >
-                  {option.label}
-                </Label>
-              </div>
-            ))}
+          <RadioGroup value={data.gender} onValueChange={(value) => updateData({ gender: value })} className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="feminin" id="feminin" />
+              <Label htmlFor="feminin">Féminin</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="masculin" id="masculin" />
+              <Label htmlFor="masculin">Masculin</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="non_genre" id="non_genre" />
+              <Label htmlFor="non_genre">Non-genré / Autre</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="prefere_ne_pas_repondre" id="no_answer" />
+              <Label htmlFor="no_answer">Je préfère ne pas répondre</Label>
+            </div>
           </RadioGroup>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label>Pays *</Label>
           <Select value={data.country} onValueChange={(value) => updateData({ country: value })}>
             <SelectTrigger>
@@ -116,14 +108,12 @@ export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
             </SelectContent>
           </Select>
         </div>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!isValid} size="lg">
+        <Button className="w-full" onClick={onNext} disabled={!isValid}>
           Continuer
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
-      </div>
+      </Card>
     </div>
   );
 };
