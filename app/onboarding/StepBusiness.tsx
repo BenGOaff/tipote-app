@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Briefcase, ArrowRight, ArrowLeft } from "lucide-react";
-import { OnboardingData } from "./OnboardingForm";
+import { OnboardingData } from "./OnboardingFlow";
 
 interface StepBusinessProps {
   data: OnboardingData;
@@ -58,9 +58,8 @@ const tools = [
   "Podcast",
 ];
 
-export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessProps) {
-  const isValid =
-    data.niche && data.persona && data.businessType && data.maturity && data.weeklyTime;
+export const StepBusiness = ({ data, updateData, onNext, onBack }: StepBusinessProps) => {
+  const isValid = data.niche && data.persona && data.businessType && data.maturity && data.weeklyTime;
 
   const toggleTool = (tool: string) => {
     const current = data.toolsUsed || [];
@@ -73,32 +72,32 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center">
         <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
           <Briefcase className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-display font-bold mb-2">
-          Parle-moi de ton business
-        </h2>
-        <p className="text-muted-foreground">
-          Ces informations permettront à Tipote de créer ta stratégie personnalisée
+        <h1 className="text-3xl font-display font-bold mb-2">
+          Parlez-nous de votre business
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Ces informations nous aideront à créer votre stratégie personnalisée
         </p>
       </div>
 
-      <Card className="p-6 space-y-6">
-        <div className="space-y-2">
-          <Label>Dans quel domaine tu évolues ? *</Label>
+      <Card className="p-8 space-y-6">
+        <div className="space-y-3">
+          <Label>Dans quel domaine évoluez-vous ? *</Label>
           <RadioGroup
             value={data.niche}
             onValueChange={(value) => updateData({ niche: value })}
-            className="grid grid-cols-1 gap-3"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2"
           >
             {niches.map((niche) => (
               <div key={niche.value} className="flex items-center space-x-2">
                 <RadioGroupItem value={niche.value} id={niche.value} className="peer sr-only" />
                 <Label
                   htmlFor={niche.value}
-                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-4 font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-3 font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
                 >
                   {niche.label}
                 </Label>
@@ -109,7 +108,7 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
 
         <div className="space-y-2">
           <Label htmlFor="persona">
-            Décris en 1 phrase qui tu aides et comment (ta mission) *
+            Décrivez en 1 phrase qui vous aidez et comment *
           </Label>
           <Textarea
             id="persona"
@@ -121,10 +120,10 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
         </div>
 
         <div className="space-y-2">
-          <Label>Quel type de business ? *</Label>
+          <Label>Type de business *</Label>
           <Select value={data.businessType} onValueChange={(value) => updateData({ businessType: value })}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Sélectionne ton type de business" />
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez votre type de business" />
             </SelectTrigger>
             <SelectContent>
               {businessTypes.map((type) => (
@@ -139,8 +138,8 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
         <div className="space-y-2">
           <Label>Niveau de maturité *</Label>
           <Select value={data.maturity} onValueChange={(value) => updateData({ maturity: value })}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Où en es-tu ?" />
+            <SelectTrigger>
+              <SelectValue placeholder="Où en êtes-vous ?" />
             </SelectTrigger>
             <SelectContent>
               {maturityLevels.map((level) => (
@@ -152,23 +151,22 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="audience">Taille de ton audience</Label>
+            <Label htmlFor="audience">Taille de votre audience</Label>
             <Input
               id="audience"
               placeholder="Ex: 1000"
               value={data.audienceSize}
               onChange={(e) => updateData({ audienceSize: e.target.value })}
-              className="h-12"
             />
           </div>
 
           <div className="space-y-2">
             <Label>Temps disponible par semaine *</Label>
             <Select value={data.weeklyTime} onValueChange={(value) => updateData({ weeklyTime: value })}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Temps disponible" />
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionnez" />
               </SelectTrigger>
               <SelectContent>
                 {timeOptions.map((option) => (
@@ -189,12 +187,12 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
               onCheckedChange={(checked) => updateData({ hasOffers: !!checked })}
             />
             <Label htmlFor="hasOffers" className="font-medium">
-              J'ai déjà une offre payante
+              J&apos;ai déjà une offre payante
             </Label>
           </div>
 
           {data.hasOffers && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
               <div className="space-y-2">
                 <Label htmlFor="offerPrice">Prix moyen (€)</Label>
                 <Input
@@ -218,7 +216,7 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
         </div>
 
         <div className="space-y-3">
-          <Label>Outils que tu utilises (optionnel)</Label>
+          <Label>Outils utilisés (optionnel)</Label>
           <div className="grid grid-cols-2 gap-3">
             {tools.map((tool) => (
               <div key={tool} className="flex items-center space-x-2">
@@ -234,22 +232,18 @@ export function StepBusiness({ data, updateData, onNext, onBack }: StepBusinessP
             ))}
           </div>
         </div>
-
-        <div className="flex gap-3 pt-4">
-          <Button onClick={onBack} variant="outline" className="flex-1 h-12">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Retour
-          </Button>
-          <Button
-            onClick={onNext}
-            disabled={!isValid}
-            className="flex-1 h-12 gradient-primary text-white font-semibold"
-          >
-            Continuer
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-        </div>
       </Card>
+
+      <div className="flex justify-between">
+        <Button onClick={onBack} variant="outline" size="lg">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour
+        </Button>
+        <Button onClick={onNext} disabled={!isValid} size="lg">
+          Continuer
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
     </div>
   );
-}
+};

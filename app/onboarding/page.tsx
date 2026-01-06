@@ -1,6 +1,6 @@
 // app/onboarding/page.tsx
-import OnboardingForm from "./OnboardingForm";
+import { OnboardingFlow } from "./OnboardingFlow";
 
 export default function OnboardingPage() {
-  return <OnboardingForm />;
+  return <OnboardingFlow />;
 }
