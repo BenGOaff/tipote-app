@@ -6,7 +6,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-
 import { format, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -53,11 +52,31 @@ function normalizeKeyStatus(status: string | null) {
   return s || "draft";
 }
 
+function parseDateMaybeLocal(v: string | null | undefined): Date | null {
+  const s = safeString(v);
+  if (!s) return null;
+
+  // If date-only (YYYY-MM-DD), parse as local date to avoid timezone shifts.
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(s);
+  if (m) {
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const d = new Date(year, month - 1, day);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
 function contentDate(content: ContentListItem) {
   // Lovable: scheduled_at ? created_at fallback
   const raw = content.scheduled_date ? content.scheduled_date : content.created_at;
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return new Date(content.created_at);
+
+  const d = parseDateMaybeLocal(raw) ?? parseDateMaybeLocal(content.created_at) ?? new Date();
   return d;
 }
 
@@ -132,9 +151,7 @@ export function ContentCalendarView({
       <Card className="p-6">
         {selectedDate && (
           <>
-            <h3 className="text-lg font-bold mb-4 capitalize">
-              {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
-            </h3>
+            <h3 className="text-lg font-bold mb-4 capitalize">{format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}</h3>
 
             {selectedContents.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Aucun contenu pour cette date</p>
@@ -147,8 +164,9 @@ export function ContentCalendarView({
                   const badgeClass = statusColors[stKey] ?? statusColors.draft;
                   const badgeLabel = statusLabels[stKey] ?? safeString(content.status) ?? "—";
 
-                  const scheduled = content.scheduled_date ? new Date(content.scheduled_date) : null;
-                  const showTime = !!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime());
+                  const scheduled = content.scheduled_date ? parseDateMaybeLocal(content.scheduled_date) : null;
+                  const showTime =
+                    !!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime());
 
                   return (
                     <div
@@ -166,11 +184,14 @@ export function ContentCalendarView({
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {safeString(content.channel) ? <span className="capitalize">{safeString(content.channel)}</span> : null}
 
-                          {showTime ? (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {format(scheduled as Date, "HH:mm")}
-                            </span>
+                          {scheduled ? (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {showTime ? format(scheduled, "d MMM à HH:mm", { locale: fr }) : format(scheduled, "d MMM", { locale: fr })}
+                              </span>
+                            </>
                           ) : null}
                         </div>
                       </div>

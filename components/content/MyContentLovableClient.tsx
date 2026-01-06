@@ -103,11 +103,23 @@ function normalizeKeyType(type: string | null) {
 function normalizeKeyStatus(status: string | null) {
   const s = safeString(status).toLowerCase();
   if (s === "planned") return "scheduled";
-  return s;
+  return s || "draft";
 }
 
 function toDateSafe(v: string | null | undefined): Date | null {
   if (!v) return null;
+
+  // If date-only (YYYY-MM-DD), parse as local date to avoid timezone shifts.
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(v);
+  if (m) {
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const d = new Date(year, month - 1, day);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return null;
   return d;
@@ -236,7 +248,6 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30">
-          {/* Header Lovable 1:1 */}
           <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
@@ -264,11 +275,7 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  variant={view === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setView("list")}
-                >
+                <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
                   <List className="w-4 h-4 mr-2" />
                   Liste
                 </Button>
@@ -303,12 +310,15 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
               </Card>
             </div>
 
-            {/* Content Display (Lovable behavior) */}
+            {/* Error banner (Tipote) */}
             {error ? (
-              <Card className="p-8">
-                <p className="text-muted-foreground">Erreur : {error}</p>
+              <Card className="p-4 border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-100">
+                <p className="text-sm">{error}</p>
               </Card>
-            ) : filteredContents.length === 0 ? (
+            ) : null}
+
+            {/* Content Display */}
+            {filteredContents.length === 0 ? (
               <Card className="p-8 text-center">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-bold mb-2">Aucun contenu</h3>
@@ -321,30 +331,24 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
                 </Link>
               </Card>
             ) : view === "calendar" ? (
-              <ContentCalendarView contents={filteredContents as any} onSelectContent={(c) => openEdit(c as any)} />
+              <ContentCalendarView contents={filteredContents} onSelectContent={(content) => openEdit(content)} />
             ) : (
               <div className="space-y-6">
                 {Object.entries(grouped)
                   .sort(([a], [b]) => b.localeCompare(a))
-                  .map(([date, dayItems]) => (
+                  .map(([date, itemsForDate]) => (
                     <div key={date}>
                       <p className="text-sm font-medium text-muted-foreground mb-3 capitalize">
-                        {format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })}
+                        {format(toDateSafe(date) ?? new Date(date), "EEEE d MMMM yyyy", { locale: fr })}
                       </p>
 
                       <div className="space-y-2">
-                        {dayItems.map((item) => {
+                        {itemsForDate.map((item) => {
                           const Icon = typeIcons[normalizeKeyType(item.type)] || FileText;
-
-                          const statusKey = normalizeKeyStatus(item.status);
-                          const badgeClass = statusColors[statusKey] ?? statusColors.draft;
-                          const badgeLabel = statusLabels[statusKey] ?? safeString(item.status) ?? "—";
-
-                          const scheduled = toDateSafe(item.scheduled_date);
-                          const scheduledTime =
-                            scheduled && item.scheduled_date?.includes("T")
-                              ? format(scheduled, "HH:mm")
-                              : "";
+                          const stKey = normalizeKeyStatus(item.status);
+                          const badgeClass = statusColors[stKey] ?? statusColors.draft;
+                          const badgeLabel = statusLabels[stKey] ?? safeString(item.status) ?? "—";
+                          const scheduled = item.scheduled_date ? toDateSafe(item.scheduled_date) : null;
 
                           return (
                             <Card key={item.id} className="p-4 hover:shadow-md transition-shadow">
@@ -355,41 +359,48 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
 
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium truncate">{safeString(item.title) || "Sans titre"}</p>
+
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     {safeString(item.channel) ? (
                                       <span className="capitalize">{safeString(item.channel)}</span>
                                     ) : null}
-                                    {scheduledTime ? (
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        {scheduledTime}
-                                      </span>
+
+                                    {scheduled ? (
+                                      <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          {format(scheduled, "d MMM", { locale: fr })}
+                                        </span>
+                                      </>
                                     ) : null}
                                   </div>
                                 </div>
 
-                                <Badge className={badgeClass}>{badgeLabel}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={badgeClass}>{badgeLabel}</Badge>
 
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => openEdit(item)}>
-                                      <Edit className="w-4 h-4 mr-2" />
-                                      Modifier
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => setDeleteConfirm(item)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Supprimer
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => openEdit(item)}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Modifier
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-rose-600 focus:text-rose-600"
+                                        onClick={() => setDeleteConfirm(item)}
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Supprimer
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               </div>
                             </Card>
                           );
@@ -400,64 +411,59 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
               </div>
             )}
           </div>
+
+          {/* Edit Dialog (Lovable 1:1) */}
+          <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Modifier le contenu</DialogTitle>
+                <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Titre</Label>
+                  <Input id="title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="body">Contenu</Label>
+                  <Textarea id="body" value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={10} />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
+                  Annuler
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
+                  {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirm Dialog (Lovable 1:1) */}
+          <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
+            <DialogContent className="sm:max-w-[450px]">
+              <DialogHeader>
+                <DialogTitle>Supprimer le contenu</DialogTitle>
+                <DialogDescription>
+                  Cette action est irréversible. Voulez-vous vraiment supprimer ce contenu ?
+                </DialogDescription>
+              </DialogHeader>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
+                  Annuler
+                </Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
+                  {busy === "delete" ? "Suppression..." : "Supprimer"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
-
-      {/* Edit Dialog (Lovable 1:1) */}
-      <Dialog open={!!editingContent} onOpenChange={() => setEditingContent(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Modifier le contenu</DialogTitle>
-            <DialogDescription>Modifiez les informations de votre contenu</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Titre</Label>
-              <Input id="edit-title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-content">Contenu</Label>
-              <Textarea
-                id="edit-content"
-                value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
-                rows={8}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
-              Annuler
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
-              {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation (Lovable 1:1) */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Supprimer ce contenu ?</DialogTitle>
-            <DialogDescription>
-              Cette action est irréversible. Le contenu sera définitivement supprimé.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
-              {busy === "delete" ? "Suppression..." : "Supprimer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </SidebarProvider>
   );
 }
