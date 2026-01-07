@@ -16,6 +16,20 @@ interface StepProfileProps {
 
 const countries = ["France", "Belgique", "Suisse", "Canada", "Autre"];
 
+const ageRanges = [
+  { value: "18-24", label: "18-24" },
+  { value: "25-34", label: "25-34" },
+  { value: "35-44", label: "35-44" },
+  { value: "45-54", label: "45-54" },
+  { value: "55+", label: "55+" },
+];
+
+const genderOptions = [
+  { value: "female", label: "Elle" },
+  { value: "male", label: "Il" },
+  { value: "neutral", label: "Neutre" },
+];
+
 const niches = [
   { value: "Argent & business", label: "Argent & business" },
   { value: "Santé & bien-être", label: "Santé & bien-être" },
@@ -42,6 +56,8 @@ const blockers = [
 export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
   const isValid =
     !!data.firstName &&
+    !!data.ageRange &&
+    !!data.gender &&
     !!data.country &&
     !!data.niche &&
     !!data.missionStatement &&
@@ -64,11 +80,40 @@ export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
         <div className="space-y-6">
           <div className="space-y-2">
             <Label>Prénom *</Label>
-            <Input
-              value={data.firstName}
-              onChange={(e) => updateData({ firstName: e.target.value })}
-              placeholder="Ton prénom"
-            />
+            <Input value={data.firstName} onChange={(e) => updateData({ firstName: e.target.value })} placeholder="Ton prénom" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tranche d'âge *</Label>
+            <Select value={data.ageRange} onValueChange={(value) => updateData({ ageRange: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionne une tranche" />
+              </SelectTrigger>
+              <SelectContent>
+                {ageRanges.map((a) => (
+                  <SelectItem key={a.value} value={a.value}>
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Comment veux-tu que je m'adresse à toi ? *</Label>
+            <RadioGroup value={data.gender} onValueChange={(value) => updateData({ gender: value })} className="grid gap-3">
+              {genderOptions.map((g) => (
+                <div
+                  key={g.value}
+                  className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                >
+                  <RadioGroupItem value={g.value} id={`gender-${g.value}`} />
+                  <Label htmlFor={`gender-${g.value}`} className="cursor-pointer font-normal">
+                    {g.label}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
 
           <div className="space-y-2">

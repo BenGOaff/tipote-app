@@ -16,26 +16,21 @@ export async function POST() {
 
     if (sessionError) {
       console.error("Error getting session:", sessionError);
-      return NextResponse.json(
-        { error: "Failed to get session" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to get session" }, { status: 500 });
     }
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const userId = session.user.id;
 
+    if (!openai) {
+      return NextResponse.json({ error: "OPENAI_API_KEY_OWNER is not set" }, { status: 500 });
+    }
+
     // 0. Vérifier si une stratégie existe déjà pour cet utilisateur
-    const {
-      data: existingStrategies,
-      error: existingStrategyError,
-    } = await supabase
+    const { data: existingStrategies, error: existingStrategyError } = await supabase
       .from("strategies")
       .select("id")
       .eq("user_id", userId)
@@ -43,10 +38,7 @@ export async function POST() {
 
     if (existingStrategyError) {
       console.error("Error checking existing strategy:", existingStrategyError);
-      return NextResponse.json(
-        { error: "Failed to check existing strategy" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to check existing strategy" }, { status: 500 });
     }
 
     if (existingStrategies && existingStrategies.length > 0) {
@@ -59,10 +51,7 @@ export async function POST() {
     }
 
     // 1. Lire le business profile
-    const {
-      data: businessProfile,
-      error: profileError,
-    } = await supabase
+    const { data: businessProfile, error: profileError } = await supabase
       .from("business_profiles")
       .select("*")
       .eq("user_id", userId)
@@ -70,25 +59,18 @@ export async function POST() {
 
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
-      return NextResponse.json(
-        { error: "Business profile missing" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Business profile missing" }, { status: 400 });
     }
 
     // 2. Lire les ressources internes (resources + resource_chunks)
-    const { data: resources, error: resourcesError } = await supabase
-      .from("resources")
-      .select("*");
+    const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
 
     if (resourcesError) {
       console.error("Error loading resources:", resourcesError);
       // On log, mais on ne bloque pas forcément la génération
     }
 
-    const { data: resourceChunks, error: chunksError } = await supabase
-      .from("resource_chunks")
-      .select("*");
+    const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
 
     if (chunksError) {
       console.error("Error loading resource_chunks:", chunksError);
@@ -98,9 +80,7 @@ export async function POST() {
     // On limite le volume envoyé à l'IA pour éviter les prompts gigantesques
     const MAX_CHUNKS = 50;
     const limitedChunks =
-      resourceChunks && resourceChunks.length > MAX_CHUNKS
-        ? resourceChunks.slice(0, MAX_CHUNKS)
-        : resourceChunks || [];
+      resourceChunks && resourceChunks.length > MAX_CHUNKS ? resourceChunks.slice(0, MAX_CHUNKS) : resourceChunks || [];
 
     // 3. Construire le prompt stratégique (on force un retour JSON)
     const systemPrompt = `
@@ -116,11 +96,7 @@ ${JSON.stringify(businessProfile, null, 2)}
 
 Voici des ressources internes (frameworks, méthodologies, exemples) :
 - resources (métadonnées) : ${JSON.stringify(resources || [], null, 2)}
-- resource_chunks (contenu découpé, max ${MAX_CHUNKS} chunks) : ${JSON.stringify(
-      limitedChunks,
-      null,
-      2
-    )}
+- resource_chunks (contenu découpé, max ${MAX_CHUNKS} chunks) : ${JSON.stringify(limitedChunks, null, 2)}
 
 À partir de ces informations, génère une stratégie complète avec la structure JSON suivante :
 
@@ -175,10 +151,7 @@ Contraintes :
     const content = aiResponse.choices[0]?.message?.content;
     if (!content) {
       console.error("Empty AI response");
-      return NextResponse.json(
-        { error: "Empty AI response" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Empty AI response" }, { status: 500 });
     }
 
     let strategyJson: any;
@@ -186,17 +159,11 @@ Contraintes :
       strategyJson = JSON.parse(content);
     } catch (parseError) {
       console.error("Error parsing AI JSON:", parseError, content);
-      return NextResponse.json(
-        { error: "Failed to parse AI JSON" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to parse AI JSON" }, { status: 500 });
     }
 
     // 5. Insérer la stratégie principale
-    const {
-      data: insertedStrategies,
-      error: strategyError,
-    } = await supabase
+    const { data: insertedStrategies, error: strategyError } = await supabase
       .from("strategies")
       .insert({
         user_id: userId,
@@ -210,10 +177,7 @@ Contraintes :
 
     if (strategyError || !insertedStrategies || insertedStrategies.length === 0) {
       console.error("Error inserting strategy:", strategyError);
-      return NextResponse.json(
-        { error: "Failed to insert strategy" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to insert strategy" }, { status: 500 });
     }
 
     const strategyId = insertedStrategies[0].id;
@@ -227,9 +191,7 @@ Contraintes :
         goal: g.goal,
       }));
 
-      const { error: goalsError } = await supabase
-        .from("strategy_goals")
-        .insert(goalsToInsert);
+      const { error: goalsError } = await supabase.from("strategy_goals").insert(goalsToInsert);
 
       if (goalsError) {
         console.error("Error inserting strategy_goals:", goalsError);
@@ -239,16 +201,14 @@ Contraintes :
 
     // 7. Pyramide d’offres (offer_pyramids)
     if (strategyJson.offer_pyramid) {
-      const { error: pyramidError } = await supabase
-        .from("offer_pyramids")
-        .insert({
-          user_id: userId,
-          strategy_id: strategyId,
-          lead_magnet: strategyJson.offer_pyramid.lead_magnet,
-          entry_offer: strategyJson.offer_pyramid.entry_offer,
-          core_offer: strategyJson.offer_pyramid.core_offer,
-          premium_offer: strategyJson.offer_pyramid.premium_offer,
-        });
+      const { error: pyramidError } = await supabase.from("offer_pyramids").insert({
+        user_id: userId,
+        strategy_id: strategyId,
+        lead_magnet: strategyJson.offer_pyramid.lead_magnet,
+        entry_offer: strategyJson.offer_pyramid.entry_offer,
+        core_offer: strategyJson.offer_pyramid.core_offer,
+        premium_offer: strategyJson.offer_pyramid.premium_offer,
+      });
 
       if (pyramidError) {
         console.error("Error inserting offer_pyramids:", pyramidError);
@@ -264,9 +224,7 @@ Contraintes :
         description: p.description,
       }));
 
-      const { error: personasError } = await supabase
-        .from("personas")
-        .insert(personasToInsert);
+      const { error: personasError } = await supabase.from("personas").insert(personasToInsert);
 
       if (personasError) {
         console.error("Error inserting personas:", personasError);
@@ -278,9 +236,6 @@ Contraintes :
     return NextResponse.json({ success: true, strategyId });
   } catch (err) {
     console.error("Unhandled error in /api/strategy:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

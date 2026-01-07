@@ -25,36 +25,40 @@ export interface SocialLink {
 }
 
 export interface OnboardingData {
-  // ÉCRAN 1 — Toi & ton business (doc onboarding)
-  firstName: string; // -> business_profiles.first_name
-  country: string; // -> country
-  niche: string; // -> niche
-  missionStatement: string; // -> mission
-  maturity: string; // -> business_maturity
-  biggestBlocker: string; // -> biggest_blocker
+  // ÉCRAN 1 — Toi & ton business
+  firstName: string;
+  ageRange: string;
+  gender: string;
+  country: string;
+  niche: string;
+  missionStatement: string;
+  maturity: string;
+  biggestBlocker: string;
 
-  // ÉCRAN 2 — Ta situation actuelle (doc onboarding)
-  hasOffers: boolean | null; // -> has_offers
-  offers: Offer[]; // -> offers (JSON)
-  socialAudience: string; // -> audience_social
-  socialLinks: SocialLink[]; // -> social_links (JSON, max 2)
-  emailListSize: string; // -> audience_email (texte libre)
-  weeklyHours: string; // -> time_available
-  mainGoal90Days: string; // -> main_goal
-  mainGoals: string[]; // -> main_goals (max 2)
+  // ÉCRAN 2 — Ta situation actuelle
+  hasOffers: boolean | null;
+  offers: Offer[];
+  socialAudience: string;
+  socialLinks: SocialLink[];
+  emailListSize: string;
+  weeklyHours: string;
+  mainGoal90Days: string;
+  mainGoals: string[];
 
-  // ÉCRAN 3 — Ce qui te rend unique (doc onboarding)
-  uniqueValue: string; // -> unique_value
-  untappedStrength: string; // -> untapped_strength
-  biggestChallenge: string; // -> biggest_challenge
-  successDefinition: string; // -> success_definition
-  clientFeedback: string[]; // -> recent_client_feedback (concat)
-  preferredContentType: string; // -> content_preference
-  tonePreference: string[]; // -> preferred_tone (concat)
+  // ÉCRAN 3 — Ce qui te rend unique
+  uniqueValue: string;
+  untappedStrength: string;
+  biggestChallenge: string;
+  successDefinition: string;
+  clientFeedback: string[];
+  preferredContentType: string;
+  tonePreference: string[];
 }
 
 const initialData: OnboardingData = {
   firstName: "",
+  ageRange: "",
+  gender: "",
   country: "",
   niche: "",
   missionStatement: "",
@@ -145,13 +149,29 @@ const OnboardingFlow = () => {
       // 2) mark onboarding completed
       await postJSON("/api/onboarding/complete");
 
-      // 3) generate persona + pyramide d'offres + plan (IA niveau 1)
-      // (backend existant: app/api/strategy/route.ts)
-      await postJSON("/api/strategy");
-
-      // 4) go to main dashboard
+      // 3) go to main dashboard NOW (do not block user on AI generation)
       router.push("/app");
       router.refresh();
+
+      // 4) generate persona + pyramide d'offres + plan (IA niveau 1) in background
+      // (backend existant: app/api/strategy/route.ts)
+      postJSON("/api/strategy")
+        .then(() => {
+          toast({
+            title: "Configuration terminée ✅",
+            description: "Ton persona et ta stratégie sont prêts.",
+          });
+        })
+        .catch((err) => {
+          toast({
+            title: "Génération en cours (à vérifier)",
+            description:
+              err instanceof Error
+                ? err.message
+                : "La génération IA a échoué. Tu peux utiliser le dashboard et relancer plus tard.",
+            variant: "destructive",
+          });
+        });
     } catch (error) {
       toast({
         title: "Erreur",
@@ -176,7 +196,8 @@ const OnboardingFlow = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Réponds à quelques questions pour que je puisse créer ton persona, tes offres et un plan d’action adapté à ton business.
+            Réponds à quelques questions pour que je puisse créer ton persona, tes offres et un plan d’action adapté à ton
+            business.
           </p>
         </div>
 

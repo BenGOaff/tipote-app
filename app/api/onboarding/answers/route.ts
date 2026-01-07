@@ -5,6 +5,7 @@
 //
 // ✅ Fix: always send numbers for audience_social / audience_email (never "").
 // ✅ Keep existing robustness (json/text fallback, JSON errors).
+// ✅ Adds: age_range + gender + offer_* analytics columns
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -28,6 +29,8 @@ const OnboardingSchema = z
   .object({
     // Step 1
     firstName: z.string().optional().default(""),
+    ageRange: z.string().optional().default(""),
+    gender: z.string().optional().default(""),
     country: z.string().optional().default(""),
     niche: z.string().optional().default(""),
     missionStatement: z.string().optional().default(""),
@@ -37,9 +40,9 @@ const OnboardingSchema = z
     // Step 2
     hasOffers: z.boolean().nullable().optional().default(null),
     offers: z.array(OfferSchema).optional().default([]),
-    socialAudience: z.string().optional().default(""), // UI range OR number as string
+    socialAudience: z.string().optional().default(""),
     socialLinks: z.array(SocialLinkSchema).max(2).optional().default([]),
-    emailListSize: z.string().optional().default(""), // UI input
+    emailListSize: z.string().optional().default(""),
     weeklyHours: z.string().optional().default(""),
     mainGoal90Days: z.string().optional().default(""),
     mainGoals: z.array(z.string()).max(2).optional().default([]),
@@ -74,19 +77,16 @@ function parseAudienceSocial(value: string): number {
   const v = cleanString(value, 50).replace(/\s+/g, "");
   if (!v) return 0;
 
-  // direct number
   const direct = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
   if (!Number.isNaN(direct) && /^\d+$/.test(v.replace(/[^\d]/g, "")) && !v.includes("-") && !v.includes("+")) {
     return direct;
   }
 
-  // ranges (representative midpoint-ish)
   if (v === "0-500") return 250;
   if (v === "500-2000") return 1250;
   if (v === "2000-10000") return 6000;
   if (v === "10000+") return 15000;
 
-  // fallback: extract first number
   const n = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -98,6 +98,23 @@ function parseAudienceEmail(value: string): number {
   const digits = v.replace(/[^\d]/g, "");
   const n = Number.parseInt(digits, 10);
   return Number.isNaN(n) ? 0 : n;
+}
+
+// For analytics columns (offer_price / offer_sales_count / offer_sales_page_links)
+function parsePrice(value: string): number | null {
+  const v = cleanString(value, 80);
+  if (!v) return null;
+  const normalized = v.replace(",", ".").replace(/[^0-9.]/g, "");
+  const n = Number.parseFloat(normalized);
+  return Number.isNaN(n) ? null : n;
+}
+
+function parseIntSafe(value: string): number | null {
+  const v = cleanString(value, 80);
+  if (!v) return null;
+  const digits = v.replace(/[^0-9]/g, "");
+  const n = Number.parseInt(digits, 10);
+  return Number.isNaN(n) ? null : n;
 }
 
 export async function POST(req: NextRequest) {
@@ -143,6 +160,20 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  const firstOffer = (normalizedOffers ?? [])[0] as any;
+
+  const offerPrice = d.hasOffers && firstOffer ? parsePrice(String(firstOffer.price ?? "")) : null;
+
+  const offerSalesCount = d.hasOffers && firstOffer ? parseIntSafe(String(firstOffer.salesCount ?? "")) : null;
+
+  const offerSalesPageLinks =
+    d.hasOffers && normalizedOffers.length > 0
+      ? normalizedOffers
+          .map((o) => cleanString(o.link, 500))
+          .filter(Boolean)
+          .join(", ")
+      : null;
+
   const normalizedSocialLinks = (d.socialLinks ?? []).slice(0, 2).map((s) => ({
     platform: cleanString(s.platform, 50),
     url: cleanString(s.url, 500),
@@ -158,6 +189,8 @@ export async function POST(req: NextRequest) {
 
     // Step 1
     first_name: cleanString(d.firstName, 120),
+    age_range: cleanString(d.ageRange, 50),
+    gender: cleanString(d.gender, 50),
     country: cleanString(d.country, 120),
     niche: cleanString(d.niche, 200),
     mission: cleanString(d.missionStatement, 1500),
@@ -167,9 +200,12 @@ export async function POST(req: NextRequest) {
     // Step 2 (IMPORTANT: ints)
     has_offers: d.hasOffers ?? false,
     offers: d.hasOffers ? normalizedOffers : [],
-    audience_social: audienceSocialInt, // ✅ int
+    offer_price: offerPrice,
+    offer_sales_count: offerSalesCount,
+    offer_sales_page_links: offerSalesPageLinks,
+    audience_social: audienceSocialInt,
     social_links: normalizedSocialLinks,
-    audience_email: audienceEmailInt, // ✅ int
+    audience_email: audienceEmailInt,
     time_available: cleanString(d.weeklyHours, 120),
     main_goal: cleanString(d.mainGoal90Days, 200),
     main_goals: compactArray(d.mainGoals ?? [], 2),
@@ -183,7 +219,6 @@ export async function POST(req: NextRequest) {
       .map((x) => cleanString(x, 2000))
       .filter(Boolean)
       .join("\n\n"),
-    preferred_content_type: cleanString(d.preferredContentType, 200),
     content_preference: cleanString(d.preferredContentType, 200),
     preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
 
@@ -192,7 +227,6 @@ export async function POST(req: NextRequest) {
 
   const rowFallback: Record<string, unknown> = {
     ...rowNative,
-    // Keep ints as ints. Only stringify JSON fields.
     offers: JSON.stringify(d.hasOffers ? normalizedOffers : []),
     social_links: JSON.stringify(normalizedSocialLinks),
     main_goals: compactArray(d.mainGoals ?? [], 2).join(", "),
@@ -202,11 +236,7 @@ export async function POST(req: NextRequest) {
     const rowForUpdate = { ...row };
     delete (rowForUpdate as any).user_id;
 
-    const upd = await supabase
-      .from("business_profiles")
-      .update(rowForUpdate)
-      .eq("user_id", userId)
-      .select("id");
+    const upd = await supabase.from("business_profiles").update(rowForUpdate).eq("user_id", userId).select("id");
 
     if (upd.error) return { ok: false as const, stage: "update" as const, error: upd.error };
 
@@ -225,13 +255,11 @@ export async function POST(req: NextRequest) {
     return { ok: true as const, stage: "insert" as const, id: (ins.data as any)?.id ?? null };
   }
 
-  // Native try
   const nativeRes = await updateThenInsert(rowNative);
   if (nativeRes.ok) {
     return NextResponse.json({ ok: true, id: nativeRes.id }, { status: 200 });
   }
 
-  // Fallback stringify
   const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
     return NextResponse.json({ ok: true, id: fallbackRes.id }, { status: 200 });
