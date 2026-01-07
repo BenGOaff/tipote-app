@@ -1,26 +1,21 @@
 // app/api/onboarding/answers/route.ts
-// Save onboarding answers into `public.business_profiles` (one row per user_id)
+// Fix prod: Supabase Postgres error "invalid input syntax for type integer: """
+// Root cause: business_profiles.audience_social + audience_email are INT in DB,
+// but onboarding was sending strings (ranges / empty string).
 //
-// ✅ FIX BLOCKER (step 1 -> step 2): en prod, le 400 vient très souvent de la RLS Supabase
-//    ("new row violates row-level security policy" / update denied) sur business_profiles.
-//    => On garde l’auth via supabaseServer (user session), MAIS on écrit en DB via supabaseAdmin (service_role)
-//    pour bypass RLS, tout en écrivant UNIQUEMENT la ligne du user connecté.
-//
-// ✅ Toujours JSON en erreur
-// ✅ Tolérant types (jsonb vs text) via fallback stringify
-// ✅ Tolérant colonnes différentes selon env via auto-drop "column not found"
+// ✅ Fix: always send numbers for audience_social / audience_email (never "").
+// ✅ Keep existing robustness (json/text fallback, JSON errors).
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const OfferSchema = z.object({
   name: z.string().optional().default(""),
   type: z.string().optional().default(""),
   price: z.union([z.string(), z.number()]).optional().default(""),
   salesCount: z.union([z.string(), z.number()]).optional().default(""),
-  sales: z.union([z.string(), z.number()]).optional(), // tolère anciennes clés
+  sales: z.union([z.string(), z.number()]).optional(),
   link: z.string().optional().default(""),
 });
 
@@ -42,9 +37,9 @@ const OnboardingSchema = z
     // Step 2
     hasOffers: z.boolean().nullable().optional().default(null),
     offers: z.array(OfferSchema).optional().default([]),
-    socialAudience: z.string().optional().default(""),
+    socialAudience: z.string().optional().default(""), // UI range OR number as string
     socialLinks: z.array(SocialLinkSchema).max(2).optional().default([]),
-    emailListSize: z.string().optional().default(""),
+    emailListSize: z.string().optional().default(""), // UI input
     weeklyHours: z.string().optional().default(""),
     mainGoal90Days: z.string().optional().default(""),
     mainGoals: z.array(z.string()).max(2).optional().default([]),
@@ -74,23 +69,40 @@ function compactArray(arr: string[], maxItems: number): string[] {
   return arr.map((x) => cleanString(x, 200)).filter(Boolean).slice(0, maxItems);
 }
 
-function pickColumnNotFound(errMsg: string): string | null {
-  const m = errMsg.match(/column\s+"([^"]+)"\s+of\s+relation\s+"[^"]+"\s+does\s+not\s+exist/i);
-  if (m?.[1]) return m[1];
+// Convert UI socialAudience ("0-500", "500-2000", "2000-10000", "10000+") OR "1200" -> integer
+function parseAudienceSocial(value: string): number {
+  const v = cleanString(value, 50).replace(/\s+/g, "");
+  if (!v) return 0;
 
-  const m2 = errMsg.match(/Could not find the '([^']+)' column of '([^']+)'/i);
-  if (m2?.[1]) return m2[1];
+  // direct number
+  const direct = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
+  if (!Number.isNaN(direct) && /^\d+$/.test(v.replace(/[^\d]/g, "")) && !v.includes("-") && !v.includes("+")) {
+    return direct;
+  }
 
-  return null;
+  // ranges (representative midpoint-ish)
+  if (v === "0-500") return 250;
+  if (v === "500-2000") return 1250;
+  if (v === "2000-10000") return 6000;
+  if (v === "10000+") return 15000;
+
+  // fallback: extract first number
+  const n = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
+  return Number.isNaN(n) ? 0 : n;
 }
 
-function cloneRow(row: Record<string, unknown>) {
-  return JSON.parse(JSON.stringify(row)) as Record<string, unknown>;
+// Convert UI emailListSize (input "0", "120", "1 200", etc) -> integer (never "")
+function parseAudienceEmail(value: string): number {
+  const v = cleanString(value, 80);
+  if (!v) return 0;
+  const digits = v.replace(/[^\d]/g, "");
+  const n = Number.parseInt(digits, 10);
+  return Number.isNaN(n) ? 0 : n;
 }
 
 export async function POST(req: NextRequest) {
-  // 1) Auth via supabase server client (RLS ON / session user)
   const supabase = await getSupabaseServerClient();
+
   const {
     data: { user },
     error: userError,
@@ -100,7 +112,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  // IMPORTANT: fige userId (évite tout souci de narrowing / ref)
   const userId = user.id;
 
   let body: unknown = {};
@@ -139,6 +150,9 @@ export async function POST(req: NextRequest) {
 
   const nowIso = new Date().toISOString();
 
+  const audienceSocialInt = parseAudienceSocial(d.socialAudience ?? "");
+  const audienceEmailInt = parseAudienceEmail(d.emailListSize ?? "");
+
   const rowNative: Record<string, unknown> = {
     user_id: userId,
 
@@ -150,12 +164,12 @@ export async function POST(req: NextRequest) {
     business_maturity: cleanString(d.maturity, 120),
     biggest_blocker: cleanString(d.biggestBlocker, 200),
 
-    // Step 2
+    // Step 2 (IMPORTANT: ints)
     has_offers: d.hasOffers ?? false,
     offers: d.hasOffers ? normalizedOffers : [],
-    audience_social: cleanString(d.socialAudience, 120),
+    audience_social: audienceSocialInt, // ✅ int
     social_links: normalizedSocialLinks,
-    audience_email: cleanString(d.emailListSize, 120),
+    audience_email: audienceEmailInt, // ✅ int
     time_available: cleanString(d.weeklyHours, 120),
     main_goal: cleanString(d.mainGoal90Days, 200),
     main_goals: compactArray(d.mainGoals ?? [], 2),
@@ -169,29 +183,26 @@ export async function POST(req: NextRequest) {
       .map((x) => cleanString(x, 2000))
       .filter(Boolean)
       .join("\n\n"),
-
-    // selon env: parfois une seule des 2 colonnes existe => auto-drop
     preferred_content_type: cleanString(d.preferredContentType, 200),
     content_preference: cleanString(d.preferredContentType, 200),
-
     preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
+
     updated_at: nowIso,
   };
 
   const rowFallback: Record<string, unknown> = {
     ...rowNative,
+    // Keep ints as ints. Only stringify JSON fields.
     offers: JSON.stringify(d.hasOffers ? normalizedOffers : []),
     social_links: JSON.stringify(normalizedSocialLinks),
     main_goals: compactArray(d.mainGoals ?? [], 2).join(", "),
   };
 
-  // 2) DB write via supabaseAdmin (service_role) => bypass RLS
   async function updateThenInsert(row: Record<string, unknown>) {
-    // UPDATE ne doit pas modifier user_id
     const rowForUpdate = { ...row };
     delete (rowForUpdate as any).user_id;
 
-    const upd = await supabaseAdmin
+    const upd = await supabase
       .from("business_profiles")
       .update(rowForUpdate)
       .eq("user_id", userId)
@@ -203,7 +214,7 @@ export async function POST(req: NextRequest) {
       return { ok: true as const, stage: "update" as const, id: (upd.data[0] as any)?.id ?? null };
     }
 
-    const ins = await supabaseAdmin
+    const ins = await supabase
       .from("business_profiles")
       .insert({ ...row, user_id: userId })
       .select("id")
@@ -214,36 +225,14 @@ export async function POST(req: NextRequest) {
     return { ok: true as const, stage: "insert" as const, id: (ins.data as any)?.id ?? null };
   }
 
-  async function tryWithAutoDropColumns(initialRow: Record<string, unknown>) {
-    let row = cloneRow(initialRow);
-    let lastErrMsg = "";
-    let lastStage: "update" | "insert" = "update";
-
-    for (let attempt = 1; attempt <= 6; attempt++) {
-      const res = await updateThenInsert(row);
-      if (res.ok) return { ok: true as const, id: res.id, stage: res.stage, attempts: attempt };
-
-      lastStage = res.stage;
-      lastErrMsg = res.error?.message || "Unknown error";
-
-      const col = pickColumnNotFound(lastErrMsg);
-      if (col && col in row) {
-        delete (row as any)[col];
-        continue;
-      }
-
-      return { ok: false as const, error: lastErrMsg, stage: lastStage, attempts: attempt };
-    }
-
-    return { ok: false as const, error: lastErrMsg || "Unknown error", stage: lastStage, attempts: 6 };
-  }
-
-  const nativeRes = await tryWithAutoDropColumns(rowNative);
+  // Native try
+  const nativeRes = await updateThenInsert(rowNative);
   if (nativeRes.ok) {
     return NextResponse.json({ ok: true, id: nativeRes.id }, { status: 200 });
   }
 
-  const fallbackRes = await tryWithAutoDropColumns(rowFallback);
+  // Fallback stringify
+  const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
     return NextResponse.json({ ok: true, id: fallbackRes.id }, { status: 200 });
   }
@@ -251,10 +240,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(
     {
       ok: false,
-      error: fallbackRes.error || nativeRes.error || "Unable to save onboarding answers",
+      error: fallbackRes.error?.message || nativeRes.error?.message || "Unable to save onboarding answers",
       details: {
-        native: { stage: nativeRes.stage, attempts: nativeRes.attempts, error: nativeRes.error },
-        fallback: { stage: fallbackRes.stage, attempts: fallbackRes.attempts, error: fallbackRes.error },
+        native: { stage: nativeRes.stage, message: nativeRes.error?.message },
+        fallback: { stage: fallbackRes.stage, message: fallbackRes.error?.message },
       },
     },
     { status: 400 },
