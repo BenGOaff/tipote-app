@@ -1,9 +1,3 @@
-// app/api/onboarding/answers/route.ts
-// Save onboarding answers into `public.business_profiles` (one row per user_id)
-// ✅ Robust: always returns JSON on errors (no HTML)
-// ✅ Robust: tolerant to column types (jsonb vs text) for offers/social_links/main_goals
-// ✅ Writes BOTH preferred_content_type and content_preference (table has both in CSV)
-
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -67,6 +61,21 @@ function compactArray(arr: string[], maxItems: number): string[] {
   return arr.map((x) => cleanString(x, 200)).filter(Boolean).slice(0, maxItems);
 }
 
+function pickColumnNotFound(errMsg: string): string | null {
+  // PostgREST / Postgres message patterns
+  // ex: 'column "preferred_content_type" of relation "business_profiles" does not exist'
+  const m = errMsg.match(/column\s+"([^"]+)"\s+of\s+relation\s+"[^"]+"\s+does\s+not\s+exist/i);
+  if (m?.[1]) return m[1];
+  // ex: 'Could not find the 'foo' column of 'business_profiles' in the schema cache'
+  const m2 = errMsg.match(/Could not find the '([^']+)' column of '([^']+)'/i);
+  if (m2?.[1]) return m2[1];
+  return null;
+}
+
+function cloneRow(row: Record<string, unknown>) {
+  return JSON.parse(JSON.stringify(row)) as Record<string, unknown>;
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
 
@@ -78,6 +87,9 @@ export async function POST(req: NextRequest) {
   if (userError || !user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
+
+  // IMPORTANT: fige userId pour éviter “user possibly null” dans les fonctions internes
+  const userId = user.id;
 
   let body: unknown = {};
   try {
@@ -97,7 +109,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: msg }, { status: 400 });
   }
 
-  // Normalisation (DB CSV montre offers parfois en { price:number, sales:number })
   const normalizedOffers = (d.offers ?? []).map((o) => {
     const salesCount = o.salesCount ?? o.sales ?? "";
     return {
@@ -116,9 +127,9 @@ export async function POST(req: NextRequest) {
 
   const nowIso = new Date().toISOString();
 
-  // Row "native" (json types) — on tente d'abord ça
+  // Row "native" (json) — on tente d'abord ça
   const rowNative: Record<string, unknown> = {
-    user_id: user.id,
+    user_id: userId,
 
     // Step 1
     first_name: cleanString(d.firstName, 120),
@@ -147,14 +158,16 @@ export async function POST(req: NextRequest) {
       .map((x) => cleanString(x, 2000))
       .filter(Boolean)
       .join("\n\n"),
-    preferred_content_type: cleanString(d.preferredContentType, 200),
-    content_preference: cleanString(d.preferredContentType, 200), // table contient aussi content_preference
-    preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
 
+    // selon env: parfois une seule des 2 colonnes existe => on gère via retry “column not found”
+    preferred_content_type: cleanString(d.preferredContentType, 200),
+    content_preference: cleanString(d.preferredContentType, 200),
+
+    preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
     updated_at: nowIso,
   };
 
-  // Row "fallback" (stringified json + main_goals string)
+  // Row fallback (stringify json + main_goals string)
   const rowFallback: Record<string, unknown> = {
     ...rowNative,
     offers: JSON.stringify(d.hasOffers ? normalizedOffers : []),
@@ -162,37 +175,79 @@ export async function POST(req: NextRequest) {
     main_goals: compactArray(d.mainGoals ?? [], 2).join(", "),
   };
 
-  // Helper: try upsert
-  async function tryUpsert(row: Record<string, unknown>) {
-    return supabase
+  async function updateThenInsert(row: Record<string, unknown>) {
+    // UPDATE ne doit pas modifier user_id
+    const rowForUpdate = { ...row };
+    delete (rowForUpdate as any).user_id;
+
+    const upd = await supabase
       .from("business_profiles")
-      .upsert(row, { onConflict: "user_id" })
+      .update(rowForUpdate)
+      .eq("user_id", userId)
+      .select("id");
+
+    if (upd.error) return { ok: false as const, stage: "update" as const, error: upd.error };
+
+    if (Array.isArray(upd.data) && upd.data.length > 0) {
+      return { ok: true as const, stage: "update" as const, id: (upd.data[0] as any)?.id ?? null };
+    }
+
+    const ins = await supabase
+      .from("business_profiles")
+      .insert({ ...row, user_id: userId })
       .select("id")
       .maybeSingle();
+
+    if (ins.error) return { ok: false as const, stage: "insert" as const, error: ins.error };
+
+    return { ok: true as const, stage: "insert" as const, id: (ins.data as any)?.id ?? null };
   }
 
-  // 1) Try native
-  const { data: savedNative, error: errNative } = await tryUpsert(rowNative);
+  async function tryWithAutoDropColumns(initialRow: Record<string, unknown>) {
+    let row = cloneRow(initialRow);
+    let lastErrMsg = "";
+    let lastStage: "update" | "insert" = "update";
 
-  if (!errNative) {
-    return NextResponse.json({ ok: true, id: savedNative?.id ?? null }, { status: 200 });
+    // jusqu’à 6 retries : assez pour drop 1-2 colonnes selon env
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      const res = await updateThenInsert(row);
+      if (res.ok) return { ok: true as const, id: res.id, stage: res.stage, attempts: attempt };
+
+      lastStage = res.stage;
+      lastErrMsg = res.error?.message || "Unknown error";
+
+      const col = pickColumnNotFound(lastErrMsg);
+      if (col && col in row) {
+        delete (row as any)[col];
+        continue;
+      }
+
+      // si on n'a pas une erreur “column not found”, on stop
+      return { ok: false as const, error: lastErrMsg, stage: lastStage, attempts: attempt };
+    }
+
+    return { ok: false as const, error: lastErrMsg || "Unknown error", stage: lastStage, attempts: 6 };
   }
 
-  // 2) Fallback (handles text columns)
-  const { data: savedFallback, error: errFallback } = await tryUpsert(rowFallback);
-
-  if (!errFallback) {
-    return NextResponse.json({ ok: true, id: savedFallback?.id ?? null }, { status: 200 });
+  // 1) Try native (avec auto-drop colonnes inconnues)
+  const nativeRes = await tryWithAutoDropColumns(rowNative);
+  if (nativeRes.ok) {
+    return NextResponse.json({ ok: true, id: nativeRes.id }, { status: 200 });
   }
 
-  // Return explicit JSON error so UI can show it (and user can pass step 1 once fixed)
+  // 2) Try fallback (stringify json) (avec auto-drop colonnes inconnues)
+  const fallbackRes = await tryWithAutoDropColumns(rowFallback);
+  if (fallbackRes.ok) {
+    return NextResponse.json({ ok: true, id: fallbackRes.id }, { status: 200 });
+  }
+
   return NextResponse.json(
     {
       ok: false,
-      error: errFallback.message || errNative.message || "Unable to save onboarding answers",
+      error: fallbackRes.error || nativeRes.error || "Unable to save onboarding answers",
       details: {
-        native: errNative.message,
-        fallback: errFallback.message,
+        native: { stage: nativeRes.stage, attempts: nativeRes.attempts, error: nativeRes.error },
+        fallback: { stage: fallbackRes.stage, attempts: fallbackRes.attempts, error: fallbackRes.error },
       },
     },
     { status: 400 },
