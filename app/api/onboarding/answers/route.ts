@@ -1,77 +1,63 @@
 // app/api/onboarding/answers/route.ts
 // Save onboarding answers into `public.business_profiles` (one row per user_id)
+// ✅ UI Lovable (camelCase) → DB business_profiles (snake_case)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const OnboardingSchema = z.object({
-  // Step 1
-  firstName: z.string().default(""),
-  ageRange: z.string().default(""),
-  gender: z.string().default(""),
-  country: z.string().default(""),
-
-  // Step 2
-  niche: z.string().default(""),
-  nicheOther: z.string().default(""),
-  persona: z.string().default(""),
-
-  businessType: z.string().default(""),
-  businessTypeOther: z.string().default(""),
-  businessMaturity: z.string().default(""),
-
-  audienceSocial: z.string().default(""),
-  audienceEmail: z.string().default(""),
-
-  hasOffers: z.boolean().default(false),
-  offerPrice: z.string().default(""),
-  offerSalesCount: z.string().default(""),
-  offerSalesPageLinks: z.string().default(""),
-
-  toolsUsed: z.array(z.string()).default([]),
-  toolsOther: z.string().default(""),
-
-  timeAvailable: z.string().default(""),
-
-  // Step 3
-  financialGoal: z.string().default(""),
-  psychologicalGoals: z.array(z.string()).default([]),
-  psychologicalGoalsOther: z.string().default(""),
-
-  contentPreference: z.string().default(""),
-  preferredTone: z.string().default(""),
+const OfferSchema = z.object({
+  name: z.string().default(""),
+  type: z.string().default(""),
+  price: z.string().default(""),
+  salesCount: z.string().default(""),
+  link: z.string().default(""),
 });
 
-function cleanNullableString(v: unknown) {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  return s.length ? s : null;
-}
+const SocialLinkSchema = z.object({
+  platform: z.string().default(""),
+  url: z.string().default(""),
+});
 
-function cleanString(v: unknown) {
-  if (typeof v !== "string") return "";
-  return v.trim();
-}
+const OnboardingSchema = z
+  .object({
+    // Écran 1
+    firstName: z.string().default(""),
+    country: z.string().default(""),
+    niche: z.string().default(""),
+    missionStatement: z.string().default(""),
+    maturity: z.string().default(""),
+    biggestBlocker: z.string().default(""),
 
-// optionnel: si tes colonnes audience_soci / audience_ema sont en int4,
-// on mappe tes ranges vers un "upper bound" numérique
-function audienceRangeToInt(v: string): number | null {
-  const s = (v || "").trim();
-  if (!s) return null;
-  if (s === "0-500") return 500;
-  if (s === "500-2000") return 2000;
-  if (s === "2000-10000") return 10000;
-  if (s === "10000+") return 10000;
-  // fallback: essaie de parser un nombre
-  const n = Number(s.replace(/[^\d]/g, ""));
-  return Number.isFinite(n) && n > 0 ? n : null;
+    // Écran 2
+    hasOffers: z.boolean().default(false),
+    offers: z.array(OfferSchema).default([]),
+    socialAudience: z.string().default(""),
+    socialLinks: z.array(SocialLinkSchema).default([]),
+    emailListSize: z.string().default(""),
+    weeklyHours: z.string().default(""),
+    mainGoal90Days: z.string().default(""),
+    mainGoals: z.array(z.string()).default([]),
+
+    // Écran 3
+    uniqueValue: z.string().default(""),
+    untappedStrength: z.string().default(""),
+    biggestChallenge: z.string().default(""),
+    successDefinition: z.string().default(""),
+    clientFeedback: z.string().default(""),
+    communicationStyle: z.string().default(""),
+    preferredTones: z.array(z.string()).default([]),
+  })
+  .passthrough();
+
+function cleanString(v: unknown, max = 5000): string {
+  const s = typeof v === "string" ? v : "";
+  return s.trim().slice(0, max);
 }
 
 export async function POST(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
-
     const {
       data: { user },
       error: userError,
@@ -81,81 +67,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const raw = await req.json();
-    const parsed = OnboardingSchema.safeParse(raw);
+    const body = await req.json().catch(() => ({}));
+    const d = OnboardingSchema.parse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid payload", details: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
-
-    const d = parsed.data;
-
-    // JSONB offers (colonne `offers`)
-    const offers = {
-      has_offers: Boolean(d.hasOffers),
-      offer_price: cleanNullableString(d.offerPrice),
-      offer_sales_count: cleanNullableString(d.offerSalesCount),
-      offer_sales_page_links: cleanNullableString(d.offerSalesPageLinks),
-    };
-
-    // ⚠️ IMPORTANT :
-    // - ICI on n'envoie QUE des colonnes qui existent.
-    // - Fix majeur: additional_context (PAS additional_cor)
-    //
-    // Mapping minimal cohérent avec ton CDC + tes colonnes visibles:
+    // Mapping Lovable → business_profiles (table actuelle)
     const row: Record<string, unknown> = {
       user_id: user.id,
 
-      first_name: cleanString(d.firstName),
-      age_range: cleanNullableString(d.ageRange),
-      gender: cleanNullableString(d.gender),
-      country: cleanString(d.country),
+      // Écran 1
+      first_name: cleanString(d.firstName, 120),
+      country: cleanString(d.country, 120),
+      niche: cleanString(d.niche, 200),
+      mission: cleanString(d.missionStatement, 1000),
+      business_maturity: cleanString(d.maturity, 120),
+      biggest_blocker: cleanString(d.biggestBlocker, 200),
 
-      niche: cleanString(d.niche),
-      niche_other: cleanNullableString(d.nicheOther),
+      // Écran 2
+      has_offers: !!d.hasOffers,
+      offers: d.offers ?? [],
+      audience_social: cleanString(d.socialAudience, 200),
+      social_links: d.socialLinks ?? [],
+      audience_email: cleanString(d.emailListSize, 200),
+      time_available: cleanString(d.weeklyHours, 200),
+      main_goal: cleanString(d.mainGoal90Days, 200),
+      main_goals: (d.mainGoals ?? []).slice(0, 10).map((g) => cleanString(g, 200)),
 
-      // persona question → on l'enregistre dans mission (colonne existante)
-      mission: cleanString(d.persona),
-
-      // business maturity → colonne business_mat (d'après ton screenshot)
-      business_mat: cleanString(d.businessMaturity),
-
-      // audience (d'après ton screenshot: audience_soci / audience_ema en int4)
-      audience_soci: audienceRangeToInt(d.audienceSocial),
-      audience_ema: audienceRangeToInt(d.audienceEmail),
-
-      time_available: cleanString(d.timeAvailable),
-
-      // objectif financier → main_goal
-      main_goal: cleanString(d.financialGoal),
-
-      // objectifs psycho → main_goals (et main_goals_ot pour "autre")
-      main_goals: d.psychologicalGoals ?? [],
-      main_goals_ot: cleanNullableString(d.psychologicalGoalsOther),
-
-      // préférence contenu / ton (d'après ton screenshot tronqué: preferred_con / tone_preferen)
-      preferred_con: cleanString(d.contentPreference),
-      tone_preferen: cleanString(d.preferredTone),
-
-      // offres
-      offers_status: d.hasOffers ? "yes" : "no",
-      offers,
-
-      // contexte additionnel / outils : on évite d'inventer des colonnes
-      // ➜ on stocke dans additional_context (colonne existante)
-      additional_context: cleanNullableString(
-        [
-          (d.toolsUsed?.length ? `Outils: ${d.toolsUsed.join(", ")}` : ""),
-          (d.toolsOther ? `Outils (autre): ${d.toolsOther}` : ""),
-          (d.businessType ? `Type business: ${d.businessType}` : ""),
-          (d.businessTypeOther ? `Type business (autre): ${d.businessTypeOther}` : ""),
-        ]
-          .filter(Boolean)
-          .join(" | "),
-      ),
+      // Écran 3
+      unique_value: cleanString(d.uniqueValue, 1500),
+      untapped_strength: cleanString(d.untappedStrength, 1500),
+      biggest_challenge: cleanString(d.biggestChallenge, 1500),
+      success_definition: cleanString(d.successDefinition, 1500),
+      recent_client_feedback: cleanString(d.clientFeedback, 1500),
+      content_preference: cleanString(d.communicationStyle, 200),
+      preferred_tone: (d.preferredTones ?? []).slice(0, 6).map((t) => cleanString(t, 80)).join(", "),
 
       updated_at: new Date().toISOString(),
     };

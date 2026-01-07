@@ -1,11 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Target, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, ArrowLeft, Check } from "lucide-react";
 import { OnboardingData } from "./OnboardingFlow";
 
 interface StepGoalsProps {
@@ -16,166 +13,156 @@ interface StepGoalsProps {
   isSubmitting: boolean;
 }
 
-// ✅ CDC: objectif financier net mensuel (input libre)
-const psychologicalGoals = [
-  { value: "fier", label: "Se sentir fier" },
-  { value: "utile", label: "Se sentir utile" },
-  { value: "temps_libre", label: "Avoir du temps libre" },
-  { value: "quitter_salariat", label: "Quitter le salariat" },
-  { value: "retraite", label: "Améliorer la retraite" },
-  { value: "aider_autres", label: "Aider les autres" },
-  { value: "liberte_financiere", label: "Liberté financière" },
-  { value: "autre", label: "Autre" },
-];
-
-// ✅ CDC: préférence contenu écriture / vidéo
-const contentPreferences = [
-  { value: "ecriture", label: "✍️ Écriture (posts, articles, emails)" },
-  { value: "video", label: "🎬 Vidéo (YouTube, TikTok, Reels)" },
-];
-
-const tones = [
-  { value: "professionnel", label: "Professionnel" },
-  { value: "decontracte", label: "Décontracté" },
-  { value: "inspirant", label: "Inspirant" },
-  { value: "humoristique", label: "Humoristique" },
-  { value: "educatif", label: "Éducatif" },
-  { value: "provocateur", label: "Provocateur" },
-];
-
 export const StepGoals = ({ data, updateData, onComplete, onBack, isSubmitting }: StepGoalsProps) => {
-  const togglePsychGoal = (goal: string) => {
-    const current = data.psychologicalGoals || [];
-    if (current.includes(goal)) {
-      updateData({ psychologicalGoals: current.filter((g) => g !== goal) });
-    } else {
-      updateData({ psychologicalGoals: [...current, goal] });
+  const toggleTone = (tone: string) => {
+    const current = data.preferredTones || [];
+    if (current.includes(tone)) {
+      updateData({ preferredTones: current.filter(t => t !== tone) });
+    } else if (current.length < 3) {
+      updateData({ preferredTones: [...current, tone] });
     }
   };
 
   const isValid =
-    !!data.financialGoal &&
-    (data.psychologicalGoals?.length ?? 0) > 0 &&
-    !!data.contentPreference &&
-    !!data.preferredTone;
+    data.uniqueValue &&
+    data.untappedStrength &&
+    data.biggestChallenge &&
+    data.successDefinition &&
+    data.clientFeedback &&
+    data.communicationStyle &&
+    data.preferredTones.length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
-          <Target className="w-8 h-8 text-white" />
+    <Card className="p-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-3 bg-primary/10 rounded-full">
+          <Sparkles className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-3xl font-display font-bold mb-2">Vos objectifs</h2>
-        <p className="text-muted-foreground text-lg">
-          Pour configurer votre plan d'action personnalisé
-        </p>
+        <div>
+          <h2 className="text-2xl font-bold">Ce qui te rend unique</h2>
+          <p className="text-muted-foreground">Dernière étape !</p>
+        </div>
       </div>
 
-      <Card className="p-8 shadow-lg border-0 bg-background/80 backdrop-blur-sm space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="financialGoal">Objectif financier mensuel net *</Label>
-          <Input
-            id="financialGoal"
-            placeholder="Ex: 5000"
-            value={data.financialGoal}
-            onChange={(e) => updateData({ financialGoal: e.target.value })}
+      <div className="space-y-6">
+        <div>
+          <Label className="text-sm font-medium">
+            Quelle est ta valeur unique ? *
+          </Label>
+          <Textarea
+            value={data.uniqueValue}
+            onChange={(e) => updateData({ uniqueValue: e.target.value })}
+            placeholder="Qu'est-ce qui te distingue des autres dans ton domaine ?"
+            className="mt-2 min-h-[80px]"
           />
-          <p className="text-xs text-muted-foreground">Montant en euros, net mensuel.</p>
         </div>
 
-        <div className="space-y-3">
-          <Label>Objectif psychologique (plusieurs choix possibles) *</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {psychologicalGoals.map((g) => {
-              const checked = (data.psychologicalGoals || []).includes(g.value);
-              return (
-                <div key={g.value} className="flex items-center gap-3 rounded-lg border-2 border-muted bg-background p-4">
-                  <Checkbox
-                    id={`psy-${g.value}`}
-                    checked={checked}
-                    onCheckedChange={() => togglePsychGoal(g.value)}
-                  />
-                  <Label htmlFor={`psy-${g.value}`} className="cursor-pointer font-medium">
-                    {g.label}
-                  </Label>
-                </div>
-              );
-            })}
-          </div>
-
-          {(data.psychologicalGoals || []).includes("autre") && (
-            <div className="space-y-2">
-              <Label htmlFor="psychOther">Précisez</Label>
-              <Input
-                id="psychOther"
-                placeholder="Ex: voyager 3 mois par an..."
-                value={data.psychologicalGoalsOther}
-                onChange={(e) => updateData({ psychologicalGoalsOther: e.target.value })}
-              />
-            </div>
-          )}
+        <div>
+          <Label className="text-sm font-medium">
+            Quel est ton talent inexploité ? *
+          </Label>
+          <Textarea
+            value={data.untappedStrength}
+            onChange={(e) => updateData({ untappedStrength: e.target.value })}
+            placeholder="Quelle compétence ou expérience as-tu que tu n'utilises pas assez ?"
+            className="mt-2 min-h-[80px]"
+          />
         </div>
 
-        <div className="space-y-3">
-          <Label>Préférence contenu *</Label>
-          <RadioGroup
-            value={data.contentPreference}
-            onValueChange={(value) => updateData({ contentPreference: value })}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-          >
-            {contentPreferences.map((p) => (
-              <div key={p.value} className="flex items-center">
-                <RadioGroupItem value={p.value} id={p.value} className="peer sr-only" />
-                <Label
-                  htmlFor={p.value}
-                  className="flex-1 cursor-pointer rounded-lg border-2 border-muted bg-background p-4 text-center text-sm font-medium transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                >
-                  {p.label}
-                </Label>
-              </div>
+        <div>
+          <Label className="text-sm font-medium">
+            Ton plus gros défi actuellement ? *
+          </Label>
+          <Textarea
+            value={data.biggestChallenge}
+            onChange={(e) => updateData({ biggestChallenge: e.target.value })}
+            placeholder="Qu'est-ce qui t'empêche le plus d'avancer aujourd'hui ?"
+            className="mt-2 min-h-[80px]"
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">
+            Comment définirais-tu le succès ? *
+          </Label>
+          <Textarea
+            value={data.successDefinition}
+            onChange={(e) => updateData({ successDefinition: e.target.value })}
+            placeholder="À quoi ressemblerait ta vie/business idéal ?"
+            className="mt-2 min-h-[80px]"
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">
+            Que disent tes clients récents ? *
+          </Label>
+          <Textarea
+            value={data.clientFeedback}
+            onChange={(e) => updateData({ clientFeedback: e.target.value })}
+            placeholder="Quels retours as-tu eu récemment (même informels) ?"
+            className="mt-2 min-h-[80px]"
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">
+            Ton style de communication naturel ? *
+          </Label>
+          <Textarea
+            value={data.communicationStyle}
+            onChange={(e) => updateData({ communicationStyle: e.target.value })}
+            placeholder="Ex: Direct et authentique, drôle et léger, pédagogique..."
+            className="mt-2 min-h-[80px]"
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">
+            Quel ton préfères-tu pour tes contenus ? * (max 3)
+          </Label>
+          <p className="text-xs text-muted-foreground mt-1">Sélectionne jusqu'à 3 tons</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              "Motivant",
+              "Inspirant",
+              "Pédagogique",
+              "Humoristique",
+              "Direct",
+              "Bienveillant",
+              "Storytelling",
+              "Expert"
+            ].map((tone) => (
+              <button
+                key={tone}
+                onClick={() => toggleTone(tone)}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  data.preferredTones.includes(tone)
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-white/50 hover:bg-white/80"
+                }`}
+              >
+                {tone}
+              </button>
             ))}
-          </RadioGroup>
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <Label>Ton préféré *</Label>
-          <Select value={data.preferredTone} onValueChange={(value) => updateData({ preferredTone: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisissez un ton" />
-            </SelectTrigger>
-            <SelectContent>
-              {tones.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex gap-4 pt-4">
+          <Button onClick={onBack} variant="outline" className="flex-1 h-12 gap-2" disabled={isSubmitting}>
+            <ArrowLeft className="h-5 w-5" />
+            Retour
+          </Button>
+          <Button
+            onClick={onComplete}
+            disabled={!isValid || isSubmitting}
+            className="flex-1 h-12 gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+          >
+            {isSubmitting ? "Finalisation..." : "Terminer"}
+            <Check className="h-5 w-5" />
+          </Button>
         </div>
-      </Card>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-
-        <Button onClick={onComplete} disabled={!isValid || isSubmitting} size="lg">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Configuration...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Commencer avec Tipote™
-            </>
-          )}
-        </Button>
       </div>
-    </div>
+    </Card>
   );
 };
-
-export default StepGoals;

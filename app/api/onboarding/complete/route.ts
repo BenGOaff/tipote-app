@@ -1,5 +1,5 @@
 // app/api/onboarding/complete/route.ts
-// Mark onboarding as completed (profile flag), used by middleware/guards.
+// Mark onboarding as completed (business_profiles.onboarding_completed)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -17,23 +17,24 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // If your app uses `profiles` with onboarding_completed, keep it.
-    const { error } = await supabase
-      .from("profiles")
+    const { data, error } = await supabase
+      .from("business_profiles")
       .upsert(
         {
-          id: user.id,
+          user_id: user.id,
           onboarding_completed: true,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "id" },
-      );
+        { onConflict: "user_id" },
+      )
+      .select("onboarding_completed")
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: true, onboarding_completed: data?.onboarding_completed ?? true }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
