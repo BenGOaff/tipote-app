@@ -17,7 +17,7 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("business_profiles")
       .upsert(
         {
@@ -26,15 +26,13 @@ export async function POST() {
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" },
-      )
-      .select("onboarding_completed")
-      .maybeSingle();
+      );
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, onboarding_completed: data?.onboarding_completed ?? true }, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

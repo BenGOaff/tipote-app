@@ -4,11 +4,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles } from "lucide-react";
+
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
 import { StepGoals } from "./StepGoals";
-import { Progress } from "@/components/ui/progress";
-import { Sparkles } from "lucide-react";
 
 export interface Offer {
   name: string;
@@ -24,32 +25,32 @@ export interface SocialLink {
 }
 
 export interface OnboardingData {
-  // Écran 1 - Toi & ton business
-  firstName: string;
-  country: string;
-  niche: string;
-  missionStatement: string;
-  maturity: string;
-  biggestBlocker: string;
+  // ÉCRAN 1 — Toi & ton business (doc onboarding)
+  firstName: string; // -> business_profiles.first_name
+  country: string; // -> country
+  niche: string; // -> niche
+  missionStatement: string; // -> mission
+  maturity: string; // -> business_maturity
+  biggestBlocker: string; // -> biggest_blocker
 
-  // Écran 2 - Ta situation actuelle
-  hasOffers: boolean;
-  offers: Offer[];
-  socialAudience: string;
-  socialLinks: SocialLink[];
-  emailListSize: string;
-  weeklyHours: string;
-  mainGoal90Days: string;
-  mainGoals: string[];
+  // ÉCRAN 2 — Ta situation actuelle (doc onboarding)
+  hasOffers: boolean | null; // -> has_offers
+  offers: Offer[]; // -> offers (JSON)
+  socialAudience: string; // -> audience_social
+  socialLinks: SocialLink[]; // -> social_links (JSON, max 2)
+  emailListSize: string; // -> audience_email (texte libre)
+  weeklyHours: string; // -> time_available
+  mainGoal90Days: string; // -> main_goal
+  mainGoals: string[]; // -> main_goals (max 2)
 
-  // Écran 3 - Ce qui te rend unique
-  uniqueValue: string;
-  untappedStrength: string;
-  biggestChallenge: string;
-  successDefinition: string;
-  clientFeedback: string;
-  communicationStyle: string;
-  preferredTones: string[];
+  // ÉCRAN 3 — Ce qui te rend unique (doc onboarding)
+  uniqueValue: string; // -> unique_value
+  untappedStrength: string; // -> untapped_strength
+  biggestChallenge: string; // -> biggest_challenge
+  successDefinition: string; // -> success_definition
+  clientFeedback: string[]; // -> recent_client_feedback (concat)
+  preferredContentType: string; // -> content_preference
+  tonePreference: string[]; // -> preferred_tone (concat)
 }
 
 const initialData: OnboardingData = {
@@ -60,7 +61,7 @@ const initialData: OnboardingData = {
   maturity: "",
   biggestBlocker: "",
 
-  hasOffers: false,
+  hasOffers: null,
   offers: [],
   socialAudience: "",
   socialLinks: [],
@@ -73,9 +74,9 @@ const initialData: OnboardingData = {
   untappedStrength: "",
   biggestChallenge: "",
   successDefinition: "",
-  clientFeedback: "",
-  communicationStyle: "",
-  preferredTones: [],
+  clientFeedback: [""],
+  preferredContentType: "",
+  tonePreference: [],
 };
 
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
@@ -88,14 +89,13 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
 
   if (!res.ok) {
-    const msg = (json as any)?.error || `HTTP ${res.status}`;
-    throw new Error(msg);
+    throw new Error((json as any)?.error || `HTTP ${res.status}`);
   }
 
   return json as T;
 }
 
-export const OnboardingFlow = () => {
+const OnboardingFlow = () => {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -139,15 +139,18 @@ export const OnboardingFlow = () => {
     setIsSubmitting(true);
 
     try {
+      // 1) save answers
       await saveCurrent();
+
+      // 2) mark onboarding completed
       await postJSON("/api/onboarding/complete");
 
-      toast({
-        title: "Onboarding terminé 🎉",
-        description: "Ton profil est enregistré. On peut commencer !",
-      });
+      // 3) generate persona + pyramide d'offres + plan (IA niveau 1)
+      // (backend existant: app/api/strategy/route.ts)
+      await postJSON("/api/strategy");
 
-      router.push("/dashboard");
+      // 4) go to main dashboard
+      router.push("/app");
       router.refresh();
     } catch (error) {
       toast({
@@ -173,7 +176,7 @@ export const OnboardingFlow = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Réponds à quelques questions pour que je puisse t'aider à créer une stratégie et du contenu parfaitement adaptés à ton business.
+            Réponds à quelques questions pour que je puisse créer ton persona, tes offres et un plan d’action adapté à ton business.
           </p>
         </div>
 
@@ -194,8 +197,8 @@ export const OnboardingFlow = () => {
             <StepGoals
               data={data}
               updateData={updateData}
-              onComplete={handleComplete}
               onBack={prevStep}
+              onComplete={handleComplete}
               isSubmitting={isSubmitting}
             />
           )}
@@ -204,3 +207,6 @@ export const OnboardingFlow = () => {
     </div>
   );
 };
+
+export default OnboardingFlow;
+export { OnboardingFlow };

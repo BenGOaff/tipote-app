@@ -14,124 +14,146 @@ interface StepProfileProps {
   onNext: () => void;
 }
 
+const countries = ["France", "Belgique", "Suisse", "Canada", "Autre"];
+
+const niches = [
+  { value: "Argent & business", label: "Argent & business" },
+  { value: "Santé & bien-être", label: "Santé & bien-être" },
+  { value: "Dev perso", label: "Dev perso" },
+  { value: "Relations", label: "Relations" },
+  { value: "Autre", label: "Autre" },
+];
+
+const maturities = [
+  { value: "Pas encore lancé", label: "Pas encore lancé" },
+  { value: "Lancé mais pas vendu", label: "Lancé mais pas vendu" },
+  { value: "< 500€/mois", label: "< 500€/mois" },
+  { value: "500-2000€/mois", label: "500-2000€/mois" },
+  { value: "> 2000€/mois", label: "> 2000€/mois" },
+];
+
+const blockers = [
+  { value: "manque de temps", label: "Manque de temps" },
+  { value: "manque d’argent", label: "Manque d’argent" },
+  { value: "manque de connaissance", label: "Manque de connaissance" },
+  { value: "manque d’organisation", label: "Manque d’organisation" },
+];
+
 export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
-  const isValid = data.firstName && data.country && data.niche && data.missionStatement && data.maturity && data.biggestBlocker;
+  const isValid =
+    !!data.firstName &&
+    !!data.country &&
+    !!data.niche &&
+    !!data.missionStatement &&
+    !!data.maturity &&
+    !!data.biggestBlocker;
 
   return (
-    <Card className="p-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-primary/10 rounded-full">
-          <User className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold">Toi & ton business</h2>
-          <p className="text-muted-foreground">Commençons par les bases</p>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <Label htmlFor="firstName" className="text-sm font-medium">
-            Prénom *
-          </Label>
-          <Input
-            id="firstName"
-            value={data.firstName}
-            onChange={(e) => updateData({ firstName: e.target.value })}
-            placeholder="Ton prénom"
-            className="mt-2"
-          />
+    <div className="space-y-6">
+      <Card className="p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Toi & ton business</h2>
+            <p className="text-muted-foreground">Questions essentielles (obligatoire)</p>
+          </div>
         </div>
 
-        <div>
-          <Label className="text-sm font-medium">Pays *</Label>
-          <Select value={data.country} onValueChange={(value) => updateData({ country: value })}>
-            <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Sélectionne ton pays" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="France">France</SelectItem>
-              <SelectItem value="Belgique">Belgique</SelectItem>
-              <SelectItem value="Suisse">Suisse</SelectItem>
-              <SelectItem value="Canada">Canada</SelectItem>
-              <SelectItem value="Autre">Autre</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>Prénom *</Label>
+            <Input
+              value={data.firstName}
+              onChange={(e) => updateData({ firstName: e.target.value })}
+              placeholder="Ton prénom"
+            />
+          </div>
 
-        <div>
-          <Label className="text-sm font-medium">Dans quel domaine exerces-tu ? *</Label>
-          <Select value={data.niche} onValueChange={(value) => updateData({ niche: value })}>
-            <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Sélectionne ton domaine" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Argent & business">Argent & business</SelectItem>
-              <SelectItem value="Santé & bien-être">Santé & bien-être</SelectItem>
-              <SelectItem value="Développement personnel">Développement personnel</SelectItem>
-              <SelectItem value="Relations">Relations</SelectItem>
-              <SelectItem value="Autre">Autre</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label>Pays *</Label>
+            <Select value={data.country} onValueChange={(value) => updateData({ country: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionne ton pays" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <Label htmlFor="missionStatement" className="text-sm font-medium">
-            Décris en une phrase : qui aides-tu à faire quoi ? *
-          </Label>
-          <Textarea
-            id="missionStatement"
-            value={data.missionStatement}
-            onChange={(e) => updateData({ missionStatement: e.target.value })}
-            placeholder="J'aide les plombiers à trouver plus de clients grâce à leur fiche Google My Business"
-            className="mt-2 min-h-[80px]"
-          />
-        </div>
+          <div className="space-y-2">
+            <Label>Dans quel domaine exerces-tu ? *</Label>
+            <Select value={data.niche} onValueChange={(value) => updateData({ niche: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionne ton domaine" />
+              </SelectTrigger>
+              <SelectContent>
+                {niches.map((n) => (
+                  <SelectItem key={n.value} value={n.value}>
+                    {n.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <Label className="text-sm font-medium">Où en es-tu aujourd'hui ? *</Label>
-          <RadioGroup value={data.maturity} onValueChange={(value) => updateData({ maturity: value })} className="mt-3 space-y-2">
-            {[
-              { value: "not_launched", label: "Pas encore lancé" },
-              { value: "launched_no_sales", label: "Lancé mais pas vendu" },
-              { value: "under_500", label: "< 500€/mois" },
-              { value: "500_2000", label: "500-2000€/mois" },
-              { value: "over_2000", label: "> 2000€/mois" }
-            ].map((option) => (
-              <div key={option.value} className="flex items-center space-x-2 p-3 rounded-lg border bg-white/50 hover:bg-white/80 transition-colors">
-                <RadioGroupItem value={option.value} id={option.value} />
-                <Label htmlFor={option.value} className="flex-1 cursor-pointer">
-                  {option.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
+          <div className="space-y-2">
+            <Label>Décris en une phrase : qui aides-tu à faire quoi ? *</Label>
+            <Textarea
+              value={data.missionStatement}
+              onChange={(e) => updateData({ missionStatement: e.target.value })}
+              placeholder="J'aide les plombiers à trouver plus de clients grâce à leur fiche Google My Business"
+              className="min-h-[96px]"
+            />
+          </div>
 
-        <div>
-          <Label className="text-sm font-medium">Ton plus gros blocage aujourd'hui *</Label>
-          <Select value={data.biggestBlocker} onValueChange={(value) => updateData({ biggestBlocker: value })}>
-            <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Sélectionne ton blocage principal" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="time">Manque de temps</SelectItem>
-              <SelectItem value="money">Manque d'argent</SelectItem>
-              <SelectItem value="knowledge">Manque de connaissance</SelectItem>
-              <SelectItem value="organization">Manque d'organisation</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label>Où en es-tu aujourd'hui ? *</Label>
+            <RadioGroup value={data.maturity} onValueChange={(value) => updateData({ maturity: value })} className="grid gap-3">
+              {maturities.map((m) => (
+                <div
+                  key={m.value}
+                  className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                >
+                  <RadioGroupItem value={m.value} id={`maturity-${m.value}`} />
+                  <Label htmlFor={`maturity-${m.value}`} className="cursor-pointer font-normal">
+                    {m.label}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
 
-        <Button
-          onClick={onNext}
-          disabled={!isValid}
-          className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all"
-        >
+          <div className="space-y-2">
+            <Label>Ton plus gros blocage aujourd’hui *</Label>
+            <Select value={data.biggestBlocker} onValueChange={(value) => updateData({ biggestBlocker: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionne ton blocage" />
+              </SelectTrigger>
+              <SelectContent>
+                {blockers.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={onNext} disabled={!isValid} size="lg">
           Continuer
-          <ArrowRight className="ml-2 h-5 w-5" />
+          <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
-    </Card>
+    </div>
   );
 };
