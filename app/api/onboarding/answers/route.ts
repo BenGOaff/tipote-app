@@ -5,43 +5,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const GenderSchema = z
-  .enum(["masculin", "feminin", "non_genre", "prefere_ne_pas_repondre"])
-  .or(z.literal(""))
-  .default("");
-
-const NicheSchema = z.enum(["argent", "sante_bien_etre", "dev_perso", "relations"]).or(z.literal("")).default("");
-
-const BusinessTypeSchema = z
-  .enum(["physique", "coaching", "formation", "saas", "freelance", "ecommerce", "autre"])
-  .or(z.literal(""))
-  .default("");
-
-const RevenueMaturitySchema = z.enum(["0-500", "500-5000", "5000+"]).or(z.literal("")).default("");
-
-const ContentPreferenceSchema = z.enum(["ecriture", "video"]).or(z.literal("")).default("");
-
 const OnboardingSchema = z.object({
   // Step 1
   firstName: z.string().default(""),
   ageRange: z.string().default(""),
-  gender: GenderSchema,
+  gender: z.string().default(""),
   country: z.string().default(""),
 
   // Step 2
-  niche: NicheSchema,
-  personaQuestion: z.string().default(""),
-  businessType: BusinessTypeSchema,
+  niche: z.string().default(""),
+  nicheOther: z.string().default(""),
+  persona: z.string().default(""),
+
+  businessType: z.string().default(""),
   businessTypeOther: z.string().default(""),
-  revenueMaturity: RevenueMaturitySchema,
+  businessMaturity: z.string().default(""),
 
   audienceSocial: z.string().default(""),
   audienceEmail: z.string().default(""),
 
   hasOffers: z.boolean().default(false),
-  offerPriceRange: z.string().default(""),
+  offerPrice: z.string().default(""),
   offerSalesCount: z.string().default(""),
-  salesPageUrl: z.string().default(""),
+  offerSalesPageLinks: z.string().default(""),
 
   toolsUsed: z.array(z.string()).default([]),
   toolsOther: z.string().default(""),
@@ -49,11 +35,11 @@ const OnboardingSchema = z.object({
   timeAvailable: z.string().default(""),
 
   // Step 3
-  monthlyNetGoal: z.string().default(""),
+  financialGoal: z.string().default(""),
   psychologicalGoals: z.array(z.string()).default([]),
   psychologicalGoalsOther: z.string().default(""),
 
-  contentPreference: ContentPreferenceSchema,
+  contentPreference: z.string().default(""),
   preferredTone: z.string().default(""),
 });
 
@@ -68,11 +54,18 @@ function cleanString(v: unknown) {
   return v.trim();
 }
 
-function toIntOrNull(v: string) {
-  const n = Number(String(v).replace(/[^\d]/g, ""));
-  if (!Number.isFinite(n)) return null;
-  if (Number.isNaN(n)) return null;
-  return n;
+// optionnel: si tes colonnes audience_soci / audience_ema sont en int4,
+// on mappe tes ranges vers un "upper bound" numérique
+function audienceRangeToInt(v: string): number | null {
+  const s = (v || "").trim();
+  if (!s) return null;
+  if (s === "0-500") return 500;
+  if (s === "500-2000") return 2000;
+  if (s === "2000-10000") return 10000;
+  if (s === "10000+") return 10000;
+  // fallback: essaie de parser un nombre
+  const n = Number(s.replace(/[^\d]/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -100,68 +93,74 @@ export async function POST(req: NextRequest) {
 
     const d = parsed.data;
 
-    // Store offers info as JSONB (column exists in your screenshot)
+    // JSONB offers (colonne `offers`)
     const offers = {
       has_offers: Boolean(d.hasOffers),
-      offer_price_range: cleanNullableString(d.offerPriceRange),
+      offer_price: cleanNullableString(d.offerPrice),
       offer_sales_count: cleanNullableString(d.offerSalesCount),
-      sales_page_url: cleanNullableString(d.salesPageUrl),
+      offer_sales_page_links: cleanNullableString(d.offerSalesPageLinks),
     };
 
-    // Tools: keep list, add "other" if provided
-    const tools_used = Array.isArray(d.toolsUsed) ? d.toolsUsed : [];
-    const tools_other = cleanNullableString(d.toolsOther);
-    const tools_payload = tools_other ? { tools_used, tools_other } : { tools_used };
-
-    // camelCase (front) -> snake_case (DB)
+    // ⚠️ IMPORTANT :
+    // - ICI on n'envoie QUE des colonnes qui existent.
+    // - Fix majeur: additional_context (PAS additional_cor)
+    //
+    // Mapping minimal cohérent avec ton CDC + tes colonnes visibles:
     const row: Record<string, unknown> = {
       user_id: user.id,
 
-      // Step 1
       first_name: cleanString(d.firstName),
       age_range: cleanNullableString(d.ageRange),
-      gender: d.gender || null,
+      gender: cleanNullableString(d.gender),
       country: cleanString(d.country),
 
-      // Step 2
       niche: cleanString(d.niche),
-      mission: cleanString(d.personaQuestion), // ✅ CDC persona question -> mission (col exists)
-      business_maturity: cleanString(d.revenueMaturity),
+      niche_other: cleanNullableString(d.nicheOther),
 
-      // Audience (columns from your screenshot: audience_soci, audience_ema)
-      audience_soci: toIntOrNull(d.audienceSocial),
-      audience_ema: toIntOrNull(d.audienceEmail),
+      // persona question → on l'enregistre dans mission (colonne existante)
+      mission: cleanString(d.persona),
+
+      // business maturity → colonne business_mat (d'après ton screenshot)
+      business_mat: cleanString(d.businessMaturity),
+
+      // audience (d'après ton screenshot: audience_soci / audience_ema en int4)
+      audience_soci: audienceRangeToInt(d.audienceSocial),
+      audience_ema: audienceRangeToInt(d.audienceEmail),
 
       time_available: cleanString(d.timeAvailable),
 
-      // Offers (jsonb col exists)
-      offers,
+      // objectif financier → main_goal
+      main_goal: cleanString(d.financialGoal),
 
-      // Step 3 (map on closest existing cols)
-      main_goal: cleanNullableString(d.monthlyNetGoal),
+      // objectifs psycho → main_goals (et main_goals_ot pour "autre")
       main_goals: d.psychologicalGoals ?? [],
       main_goals_ot: cleanNullableString(d.psychologicalGoalsOther),
 
-      preferred_con: tools_payload, // ✅ store tools payload in existing json-ish slot if present
-      tone_preferen: cleanNullableString(d.preferredTone),
+      // préférence contenu / ton (d'après ton screenshot tronqué: preferred_con / tone_preferen)
+      preferred_con: cleanString(d.contentPreference),
+      tone_preferen: cleanString(d.preferredTone),
 
-      // Add context (business type etc)
-      additional_cor: cleanNullableString(
-        JSON.stringify(
-          {
-            business_type: d.businessType,
-            business_type_other: d.businessTypeOther || null,
-            content_preference: d.contentPreference,
-          },
-          null,
-          0,
-        ),
+      // offres
+      offers_status: d.hasOffers ? "yes" : "no",
+      offers,
+
+      // contexte additionnel / outils : on évite d'inventer des colonnes
+      // ➜ on stocke dans additional_context (colonne existante)
+      additional_context: cleanNullableString(
+        [
+          (d.toolsUsed?.length ? `Outils: ${d.toolsUsed.join(", ")}` : ""),
+          (d.toolsOther ? `Outils (autre): ${d.toolsOther}` : ""),
+          (d.businessType ? `Type business: ${d.businessType}` : ""),
+          (d.businessTypeOther ? `Type business (autre): ${d.businessTypeOther}` : ""),
+        ]
+          .filter(Boolean)
+          .join(" | "),
       ),
 
       updated_at: new Date().toISOString(),
     };
 
-    const { data: saved, error } = await supabase
+    const { data, error } = await supabase
       .from("business_profiles")
       .upsert(row, { onConflict: "user_id" })
       .select("*")
@@ -171,7 +170,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, profile: saved ?? null }, { status: 200 });
+    return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
