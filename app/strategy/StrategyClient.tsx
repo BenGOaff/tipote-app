@@ -2,13 +2,12 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
-import PyramidChooser from "./PyramidChooser";
-import type { OfferPyramid as PyramidType } from "./PyramidCard";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 type AnyRecord = Record<string, unknown>;
 
-type OfferLevel = {
+export type OfferLevel = {
   name?: string;
   title?: string;
   description?: string;
@@ -17,13 +16,19 @@ type OfferLevel = {
   type?: string;
 };
 
+export type OfferPyramid = {
+  name: string;
+  label: string;
+  levels: OfferLevel[];
+};
+
 type Props = {
   offerPyramids: AnyRecord[];
   initialSelectedIndex: number;
   initialSelectedPyramid?: AnyRecord;
 };
 
-function normalisePyramid(raw?: AnyRecord): PyramidType {
+function normalisePyramid(raw?: AnyRecord): OfferPyramid {
   if (!raw) {
     return {
       name: "",
@@ -37,9 +42,12 @@ function normalisePyramid(raw?: AnyRecord): PyramidType {
     (raw.offers as OfferLevel[] | undefined) ||
     [];
 
+  const name = (raw.name as string) || (raw.label as string) || "";
+  const label = (raw.label as string) || (raw.name as string) || name;
+
   return {
-    name: (raw.name as string) || (raw.label as string) || "",
-    label: (raw.label as string) || (raw.name as string) || "",
+    name,
+    label,
     levels,
   };
 }
@@ -49,32 +57,44 @@ export default function StrategyClient({
   initialSelectedIndex,
   initialSelectedPyramid,
 }: Props) {
+  const router = useRouter();
+
   const hasInitial = !!initialSelectedPyramid;
 
-  const [mode, setMode] = useState<"choose" | "edit">(
-    hasInitial ? "edit" : "choose",
-  );
+  const [mode, setMode] = useState<"choose" | "edit">(hasInitial ? "edit" : "choose");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(
     hasInitial ? initialSelectedIndex ?? 0 : null,
   );
-  const [draft, setDraft] = useState<PyramidType | null>(
+  const [draft, setDraft] = useState<OfferPyramid | null>(
     hasInitial ? normalisePyramid(initialSelectedPyramid) : null,
   );
+
+  // on garde l’état (anti-régression) même si le choix est désormais sur /strategy/pyramids
   const [chooserOpen, setChooserOpen] = useState<boolean>(
     !hasInitial && offerPyramids.length > 0,
   );
+
   const [saving, startSaving] = useTransition();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const scenarios: PyramidType[] = offerPyramids.map((p) => normalisePyramid(p));
+  const scenarios: OfferPyramid[] = useMemo(
+    () => (offerPyramids || []).map((p) => normalisePyramid(p)),
+    [offerPyramids],
+  );
 
-  function updateLevel(
-    levelIndex: number,
-    field: keyof OfferLevel,
-    value: string,
-  ) {
+  // ✅ Si aucune pyramide n’a été choisie, le flow officiel = page Lovable /strategy/pyramids
+  useEffect(() => {
+    if (!hasInitial) {
+      router.push("/strategy/pyramids");
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function updateLevel(levelIndex: number, field: keyof OfferLevel, value: string) {
     if (!draft) return;
-    setDraft((prev) => {
+
+    setDraft((prev: OfferPyramid | null) => {
       if (!prev) return prev;
       const levels = [...(prev.levels || [])];
       if (!levels[levelIndex]) levels[levelIndex] = {};
@@ -85,15 +105,15 @@ export default function StrategyClient({
 
   function updateName(value: string) {
     if (!draft) return;
-    setDraft((prev) =>
+    setDraft((prev: OfferPyramid | null) =>
       prev ? { ...prev, name: value, label: value } : prev,
     );
   }
 
-  async function handleChoose(index: number, pyramid: PyramidType) {
+  // (compat) gardée au cas où — actuellement le choix se fait sur /strategy/pyramids
+  async function handleChoose(index: number, pyramid: OfferPyramid) {
     setStatusMessage(null);
 
-    // Mise à jour optimiste : on ferme la popup et on passe en mode édition
     setSelectedIndex(index);
     setDraft(pyramid);
     setMode("edit");
@@ -114,7 +134,7 @@ export default function StrategyClient({
           const body = await res.json().catch(() => ({}));
           console.error("Save pyramid error", body);
           setStatusMessage(
-            body?.error ||
+            (body as any)?.error ||
               "Erreur lors de la sauvegarde de la pyramide. Réessaie.",
           );
           return;
@@ -132,9 +152,7 @@ export default function StrategyClient({
     setStatusMessage(null);
 
     if (mode !== "edit" || draft == null || selectedIndex === null) {
-      setStatusMessage(
-        "Choisis d'abord un scénario de pyramide avant de le modifier.",
-      );
+      setStatusMessage("Choisis d'abord un scénario de pyramide avant de le modifier.");
       return;
     }
 
@@ -153,7 +171,7 @@ export default function StrategyClient({
           const body = await res.json().catch(() => ({}));
           console.error("Save pyramid error", body);
           setStatusMessage(
-            body?.error ||
+            (body as any)?.error ||
               "Erreur lors de la sauvegarde de la pyramide. Réessaie.",
           );
           return;
@@ -171,18 +189,9 @@ export default function StrategyClient({
 
   return (
     <>
-      {/* MODAL de choix : visible tant qu'aucune pyramide n'est choisie */}
-      <PyramidChooser
-        open={mode === "choose" && chooserOpen}
-        offerPyramids={scenarios}
-        onClose={() => {
-          // On ne permet pas vraiment de fermer sans choisir, mais on laisse le bouton au cas où
-          setChooserOpen(false);
-        }}
-        onChoose={(idx, pyramid) => handleChoose(idx, normalisePyramid(pyramid))}
-      />
+      {/* Le choix se fait sur la page Lovable dédiée (/strategy/pyramids).
+          On conserve l'UX via le bouton "Changer de scénario". */}
 
-      {/* Carte principale (édition) */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -193,12 +202,14 @@ export default function StrategyClient({
               L&apos;offre de base, l&apos;offre coeur et l&apos;offre premium vont
               structurer tout ton contenu, ton tunnel et tes automatisations.
             </p>
+
             {mode === "choose" && (
               <p className="mt-2 text-xs font-semibold text-[#a855f7]">
-                Commence par choisir un scénario dans la fenêtre qui s&apos;ouvre,
-                puis personnalise les offres.
+                Commence par choisir un scénario sur la page dédiée, puis
+                personnalise les offres.
               </p>
             )}
+
             {mode === "edit" && (
               <p className="mt-2 text-xs text-slate-500">
                 Tu peux ajuster les noms, descriptions et prix pour coller à ton
@@ -208,7 +219,6 @@ export default function StrategyClient({
           </div>
         </div>
 
-        {/* Récap scénario choisi / bouton de re-choix */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#f5f3ff] text-[11px] font-semibold text-[#7c3aed]">
@@ -229,6 +239,8 @@ export default function StrategyClient({
             onClick={() => {
               setMode("choose");
               setChooserOpen(true);
+              router.push("/strategy/pyramids");
+              router.refresh();
             }}
             className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
           >
@@ -238,7 +250,6 @@ export default function StrategyClient({
 
         {mode === "edit" && draft && (
           <>
-            {/* Nom global de la pyramide */}
             <div className="mb-4">
               <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
                 Nom de ta pyramide
@@ -251,7 +262,6 @@ export default function StrategyClient({
               />
             </div>
 
-            {/* Niveaux d'offres */}
             <div className="grid gap-3 md:grid-cols-2">
               {["Lead Magnet", "Entrée", "Offre Core", "Premium"].map(
                 (label, idx) => {
@@ -352,6 +362,17 @@ export default function StrategyClient({
           <p className="mt-2 text-xs text-slate-600">{statusMessage}</p>
         )}
       </div>
+
+      {/* compat dev: on ne supprime pas la fonction sans l’utiliser (évite refacto risqué) */}
+      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+      {false && handleChoose}
+
+      {/* (optionnel) info silencieuse */}
+      {draft == null && scenarios.length > 0 && chooserOpen && (
+        <p className="mt-3 text-[11px] text-slate-400">
+          {scenarios.length} scénarios disponibles — choix sur /strategy/pyramids.
+        </p>
+      )}
     </>
   );
 }
