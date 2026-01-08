@@ -14,47 +14,76 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-function cleanString(v: unknown, max = 5000): string {
-  const s = typeof v === "string" ? v : v == null ? "" : String(v);
-  return s.trim().slice(0, max);
+function cleanString(v: unknown, maxLen = 4000): string {
+  if (typeof v !== "string") return "";
+  const s = v.trim().replace(/\s+/g, " ");
+  return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
-function safeJsonParse(s: string): AnyRecord | null {
+function safeJsonParse(raw: string): AnyRecord | null {
   try {
-    const o = JSON.parse(s);
-    return asRecord(o);
+    const parsed = JSON.parse(raw);
+    return asRecord(parsed);
   } catch {
     return null;
   }
 }
 
-function isMeaningfulOfferPyramid(p: unknown): boolean {
-  const r = asRecord(p);
-  if (!r) return false;
+function normalizeOffer(o: AnyRecord | null): AnyRecord {
+  const title = cleanString(o?.title, 120);
+  const composition = cleanString(o?.composition, 2000);
+  const purpose = cleanString(o?.purpose, 800);
+  const format = cleanString(o?.format, 200);
 
-  const name = cleanString((r as any).name ?? (r as any).label, 200);
-  if (!name) return false;
+  return {
+    title,
+    composition,
+    purpose,
+    format,
+  };
+}
 
-  const lead = asRecord((r as any).lead_magnet);
-  const low = asRecord((r as any).low_ticket);
-  const core = asRecord((r as any).core_offer);
-  const premium = asRecord((r as any).premium_offer);
+function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
+  const name = cleanString(p?.name, 120) || `Stratégie ${idx + 1}`;
+  const strategy_summary = cleanString(p?.strategy_summary, 4000);
 
-  const hasAnyLevelText =
-    !!cleanString((lead as any)?.composition, 500) ||
-    !!cleanString((lead as any)?.goal, 500) ||
-    !!cleanString((lead as any)?.format, 200) ||
-    !!cleanString((low as any)?.composition, 500) ||
-    !!cleanString((low as any)?.goal, 500) ||
-    !!cleanString((low as any)?.format, 200) ||
-    !!cleanString((core as any)?.composition, 500) ||
-    !!cleanString((core as any)?.goal, 500) ||
-    !!cleanString((core as any)?.format, 200) ||
-    !!cleanString((premium as any)?.composition, 500) ||
-    !!cleanString((premium as any)?.goal, 500) ||
-    !!cleanString((premium as any)?.format, 200);
+  const leadMagnet = asRecord(p?.lead_magnet);
+  const lowTicket = asRecord(p?.low_ticket);
+  const highTicket = asRecord(p?.high_ticket);
 
-  return hasAnyLevelText;
+  return {
+    id: String(p?.id ?? idx),
+    name,
+    strategy_summary,
+    lead_magnet: normalizeOffer(leadMagnet),
+    low_ticket: normalizeOffer(lowTicket),
+    high_ticket: normalizeOffer(highTicket),
+  };
+}
+
+function pyramidsLookUseful(pyramids: unknown[]): boolean {
+  if (!Array.isArray(pyramids) || pyramids.length < 3) return false;
+
+  const first = asRecord(pyramids[0]);
+  const second = asRecord(pyramids[1]);
+  const third = asRecord(pyramids[2]);
+
+  const hasAnyLevelText = (p: AnyRecord | null) => {
+    const lead = asRecord(p?.lead_magnet);
+    const low = asRecord(p?.low_ticket);
+    const high = asRecord(p?.high_ticket);
+
+    const hasOffer = (o: AnyRecord | null) =>
+      !!cleanString((o as any)?.title, 120) ||
+      !!cleanString((o as any)?.composition, 500) ||
+      !!cleanString((o as any)?.purpose, 500) ||
+      !!cleanString((o as any)?.format, 200);
+
+    const hasSummary = !!cleanString((p as any)?.strategy_summary, 300);
+    return hasSummary || hasOffer(lead) || hasOffer(low) || hasOffer(high);
+  };
+
+  return hasAnyLevelText(first) && hasAnyLevelText(second) && hasAnyLevelText(third);
 }
 
 export async function POST() {
@@ -66,15 +95,16 @@ export async function POST() {
       error: sessionError,
     } = await supabase.auth.getSession();
 
-    // ⚠️ Important : cette route est appelée en “non-bloquant” depuis l'onboarding.
-    // On renvoie toujours 200 avec { success:false } plutôt qu’un 500 dur, pour ne pas bloquer l'UX.
     if (sessionError) {
-      console.error("Error getting session:", sessionError);
-      return NextResponse.json({ success: false, error: "Failed to get session" }, { status: 200 });
+      console.error("Session error:", sessionError);
+      return NextResponse.json(
+        { success: false, error: `Failed to get session: ${sessionError.message}` },
+        { status: 500 },
+      );
     }
 
     if (!session?.user) {
-      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 200 });
+      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -82,39 +112,40 @@ export async function POST() {
     // 0) Check existing business_plan : si pyramides déjà “utiles” ou choix déjà fait, on ne régénère pas
     const { data: existingPlan, error: existingPlanError } = await supabase
       .from("business_plan")
-      .select("id, plan_json")
+      .select("plan_json")
       .eq("user_id", userId)
       .maybeSingle();
 
     if (existingPlanError) {
       console.error("Error checking existing business_plan:", existingPlanError);
+      // Non bloquant : on laisse tenter la génération, mais on log.
     }
 
-    const existingPlanJson = asRecord(existingPlan?.plan_json);
+    const existingPlanJson = (existingPlan?.plan_json ?? null) as any;
     const existingOfferPyramids = existingPlanJson ? asArray((existingPlanJson as any).offer_pyramids) : [];
-
     const existingSelectedIndex =
       typeof (existingPlanJson as any)?.selected_offer_pyramid_index === "number"
-        ? ((existingPlanJson as any).selected_offer_pyramid_index as number)
+        ? (existingPlanJson as any).selected_offer_pyramid_index
         : null;
+    const existingSelectedPyramid = (existingPlanJson as any)?.selected_offer_pyramid ?? null;
 
-    const existingSelectedPyramid =
-      (existingPlanJson as any)?.selected_offer_pyramid && typeof (existingPlanJson as any).selected_offer_pyramid === "object"
-        ? ((existingPlanJson as any).selected_offer_pyramid as AnyRecord)
-        : null;
-
-    const hasUsableOfferPyramids =
-      existingOfferPyramids.length >= 3 && existingOfferPyramids.some((p) => isMeaningfulOfferPyramid(p));
-
-    if (existingPlan && (existingSelectedIndex !== null || hasUsableOfferPyramids)) {
-      return NextResponse.json({
-        success: true,
-        alreadyExists: true,
-        planId: (existingPlan as any)?.id ?? null,
-      });
+    // Si l'user a déjà choisi une pyramide, on ne régénère pas
+    if (typeof existingSelectedIndex === "number") {
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_selected" },
+        { status: 200 },
+      );
     }
 
-    // 1) Lire business profile
+    // Si on a déjà 3 pyramides “utiles”, on ne régénère pas (idempotent)
+    if (pyramidsLookUseful(existingOfferPyramids)) {
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_generated" },
+        { status: 200 },
+      );
+    }
+
+    // 1) Lire business_profile (onboarding)
     const { data: businessProfile, error: profileError } = await supabase
       .from("business_profiles")
       .select("*")
@@ -123,7 +154,10 @@ export async function POST() {
 
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
-      return NextResponse.json({ success: false, error: "Business profile missing" }, { status: 200 });
+      return NextResponse.json(
+        { success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` },
+        { status: 400 },
+      );
     }
 
     // 2) Lire ressources
@@ -133,52 +167,38 @@ export async function POST() {
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    const MAX_CHUNKS = 50;
-    const limitedChunks =
-      resourceChunks && resourceChunks.length > MAX_CHUNKS ? resourceChunks.slice(0, MAX_CHUNKS) : resourceChunks || [];
+    const MAX_CHUNKS = 30;
+    const limitedChunks = Array.isArray(resourceChunks) ? resourceChunks.slice(0, MAX_CHUNKS) : [];
 
-    // 3) Prompt JSON strict (inclut les 3 pyramides)
-    const systemPrompt = `
-Tu es un stratège business senior. Tu aides des solopreneurs et petites équipes
-à clarifier leur stratégie, leurs offres et leurs priorités.
+    // 3) Prompt + call IA
+    const systemPrompt = `Tu es Tipote, un expert en stratégie business et marketing.
+Tu dois produire un plan stratégique très concret à partir des données onboarding et des ressources internes.
+Tu dois répondre en JSON strict.
 
-Tu dois STRICTEMENT répondre au format JSON valide, sans texte autour.
-`;
-
-    const userPrompt = `
-Voici le profil business de l'utilisateur (réponses d'onboarding) :
-${JSON.stringify(businessProfile, null, 2)}
-
-Voici des ressources internes (frameworks, méthodologies, exemples) :
-- resources (métadonnées) : ${JSON.stringify(resources || [], null, 2)}
-- resource_chunks (contenu découpé, max ${MAX_CHUNKS} chunks) : ${JSON.stringify(limitedChunks, null, 2)}
-
-Génère un plan stratégique complet au format JSON avec exactement cette structure :
-
+Structure JSON attendue (exemple de shape, pas de valeurs fixes) :
 {
   "mission": "string",
   "promise": "string",
   "positioning": "string",
   "summary": "string",
   "personas": [{"name":"string","description":"string"}],
-  "goals": [{"horizon":"30j | 90j | 12m","goal":"string"}],
-
+  "goals": [{"title":"string","metric":"string","target":"string","deadline":"string"}],
   "offer_pyramids": [
     {
+      "id": "string",
       "name": "string",
       "strategy_summary": "string",
-      "lead_magnet": {"composition":"string","goal":"string","format":"string"},
-      "low_ticket": {"composition":"string","goal":"string","format":"string"},
-      "core_offer": {"composition":"string","goal":"string","format":"string"},
-      "premium_offer": {"composition":"string","goal":"string","format":"string"}
+      "lead_magnet": {"title":"string","composition":"string","purpose":"string","format":"string"},
+      "low_ticket": {"title":"string","composition":"string","purpose":"string","format":"string"},
+      "high_ticket": {"title":"string","composition":"string","purpose":"string","format":"string"}
     }
   ],
-
   "plan_90_days": {
     "tasks_by_timeframe": {
-      "7d": [{"title":"string","due_date":"YYYY-MM-DD"}],
-      "30d": [{"title":"string","due_date":"YYYY-MM-DD"}],
-      "90d": [{"title":"string","due_date":"YYYY-MM-DD"}]
+      "week_1_2": [{"title":"string","description":"string","priority":"low|medium|high"}],
+      "week_3_4": [{"title":"string","description":"string","priority":"low|medium|high"}],
+      "month_2": [{"title":"string","description":"string","priority":"low|medium|high"}],
+      "month_3": [{"title":"string","description":"string","priority":"low|medium|high"}]
     }
   }
 }
@@ -190,12 +210,22 @@ Contraintes impératives :
 - Ne renvoie QUE un JSON valide.
 `;
 
+    const userPrompt = `Données onboarding (business_profiles) :
+${JSON.stringify(businessProfile, null, 2)}
+
+Ressources internes (métadonnées) :
+${JSON.stringify(resources || [], null, 2)}
+
+resource_chunks (contenu découpé, max ${MAX_CHUNKS} chunks) :
+${JSON.stringify(limitedChunks, null, 2)}
+`;
+
     // ✅ Fix TS + robustesse: openai peut être null (clé owner absente)
     const ai = openai;
     if (!ai) {
       return NextResponse.json(
         { success: false, error: "OPENAI_API_KEY_OWNER is not set (strategy generation disabled)" },
-        { status: 200 },
+        { status: 500 },
       );
     }
 
@@ -211,52 +241,41 @@ Contraintes impératives :
     const content = aiResponse.choices[0]?.message?.content;
     if (!content) {
       console.error("Empty AI response");
-      return NextResponse.json({ success: false, error: "Empty AI response" }, { status: 200 });
+      return NextResponse.json(
+        { success: false, error: "Empty AI response" },
+        { status: 502 },
+      );
     }
 
     const strategyJson = safeJsonParse(content);
     if (!strategyJson) {
       console.error("Error parsing AI JSON:", content);
-      return NextResponse.json({ success: false, error: "Failed to parse AI JSON" }, { status: 200 });
+      return NextResponse.json(
+        { success: false, error: "Failed to parse AI JSON (see server logs for raw output)" },
+        { status: 502 },
+      );
     }
 
-    // Normalisation pyramides
+    // 3-bis) Normalisation + validation
     const offerPyramidsRaw = asArray((strategyJson as any).offer_pyramids);
-    const offerPyramids = offerPyramidsRaw.slice(0, 3).map((p) => {
-      const r = asRecord(p) ?? {};
-      const lead = asRecord((r as any).lead_magnet) ?? {};
-      const low = asRecord((r as any).low_ticket) ?? {};
-      const core = asRecord((r as any).core_offer) ?? {};
-      const prem = asRecord((r as any).premium_offer) ?? {};
+    const offerPyramids = offerPyramidsRaw.slice(0, 3).map((p: any, idx: number) => normalizePyramid(asRecord(p), idx));
 
-      return {
-        name: cleanString((r as any).name, 200),
-        strategy_summary: cleanString((r as any).strategy_summary, 1200),
+    // Si l’IA n’en a pas retourné 3, on force une erreur (sinon UX incohérente)
+    if (offerPyramids.length !== 3) {
+      console.error("Invalid offer_pyramids count:", offerPyramidsRaw);
+      return NextResponse.json(
+        { success: false, error: "AI returned invalid offer_pyramids (must be exactly 3)" },
+        { status: 502 },
+      );
+    }
 
-        lead_magnet: {
-          composition: cleanString((lead as any).composition, 2000),
-          goal: cleanString((lead as any).goal, 1200),
-          format: cleanString((lead as any).format, 300),
-        },
-        low_ticket: {
-          composition: cleanString((low as any).composition, 2000),
-          goal: cleanString((low as any).goal, 1200),
-          format: cleanString((low as any).format, 300),
-        },
-        core_offer: {
-          composition: cleanString((core as any).composition, 2000),
-          goal: cleanString((core as any).goal, 1200),
-          format: cleanString((core as any).format, 300),
-        },
-        premium_offer: {
-          composition: cleanString((prem as any).composition, 2000),
-          goal: cleanString((prem as any).goal, 1200),
-          format: cleanString((prem as any).format, 300),
-        },
-      };
-    });
-
-    const tasks_by_timeframe = (strategyJson as any).plan_90_days?.tasks_by_timeframe || {};
+    const tasksByTimeframe = asRecord((strategyJson as any).plan_90_days)?.tasks_by_timeframe;
+    const tasks_by_timeframe: AnyRecord = {
+      week_1_2: asArray((tasksByTimeframe as any)?.week_1_2),
+      week_3_4: asArray((tasksByTimeframe as any)?.week_3_4),
+      month_2: asArray((tasksByTimeframe as any)?.month_2),
+      month_3: asArray((tasksByTimeframe as any)?.month_3),
+    };
 
     // 4) Construire plan_json final
     const plan_json: AnyRecord = {
@@ -294,7 +313,10 @@ Contraintes impératives :
 
     if (planError) {
       console.error("Error upserting business_plan:", planError);
-      return NextResponse.json({ success: false, error: "Failed to save business plan" }, { status: 200 });
+      return NextResponse.json(
+        { success: false, error: `Failed to save business plan: ${planError.message}` },
+        { status: 500 },
+      );
     }
 
     // Legacy inserts : on garde si ton projet les exploite encore, mais non bloquant
@@ -310,7 +332,7 @@ Contraintes impératives :
     console.error("Unhandled error in /api/strategy:", err);
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 200 },
+      { status: 500 },
     );
   }
 }

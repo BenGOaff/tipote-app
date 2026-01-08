@@ -3,6 +3,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+function isRecord(v: unknown): v is Record<string, any> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
 export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -15,22 +19,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = (await request.json().catch(() => ({}))) as any;
 
     // Compat payloads:
     // - Nouveau (Lovable /strategy/pyramids): { selectedIndex, pyramid }
     // - Ancien (StrategyClient legacy): { selected_offer_pyramid_index, selected_offer_pyramid }
     const selectedIndex =
-      typeof (body as any)?.selectedIndex === "number"
-        ? (body as any).selectedIndex
-        : typeof (body as any)?.selected_offer_pyramid_index === "number"
-          ? (body as any).selected_offer_pyramid_index
+      typeof body?.selectedIndex === "number"
+        ? body.selectedIndex
+        : typeof body?.selected_offer_pyramid_index === "number"
+          ? body.selected_offer_pyramid_index
           : undefined;
 
-    const pyramid =
-      (body as any)?.pyramid ?? (body as any)?.selected_offer_pyramid ?? undefined;
+    // Peut être absent : on prendra la pyramide depuis plan_json.offer_pyramids[selectedIndex]
+    const pyramid = body?.pyramid ?? body?.selected_offer_pyramid ?? undefined;
 
-    if (!pyramid || typeof selectedIndex !== "number") {
+    if (typeof selectedIndex !== "number" || selectedIndex < 0) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
@@ -53,13 +57,34 @@ export async function PATCH(request: Request) {
     const currentPlan = (planRow.plan_json || {}) as Record<string, any>;
     const currentIndex = currentPlan.selected_offer_pyramid_index as number | null | undefined;
 
+    const offerPyramids = Array.isArray(currentPlan.offer_pyramids) ? currentPlan.offer_pyramids : [];
+    if (offerPyramids.length > 0 && selectedIndex >= offerPyramids.length) {
+      return NextResponse.json({ error: "selectedIndex out of range" }, { status: 400 });
+    }
+
+    const chosenPyramid =
+      pyramid !== undefined
+        ? pyramid
+        : offerPyramids.length > 0
+          ? offerPyramids[selectedIndex]
+          : undefined;
+
+    if (!chosenPyramid || (!isRecord(chosenPyramid) && !Array.isArray(chosenPyramid))) {
+      // On accepte record/array (selon format), mais pas undefined
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+
     // Logique de verrouillage :
     // - si aucune pyramide choisie → on accepte l'index (CHOIX INITIAL)
     // - si déjà une pyramide choisie → on refuse tout changement d'index
     if (currentIndex === undefined || currentIndex === null) {
       // Premier choix
       currentPlan.selected_offer_pyramid_index = selectedIndex;
-      currentPlan.selected_offer_pyramid = pyramid;
+      currentPlan.selected_offer_pyramid = chosenPyramid;
+
+      // Compat (au cas où)
+      currentPlan.selected_pyramid_index = selectedIndex;
+      currentPlan.selected_pyramid = chosenPyramid;
     } else {
       // Pyramide déjà choisie
       if (currentIndex !== selectedIndex) {
@@ -72,7 +97,8 @@ export async function PATCH(request: Request) {
         );
       }
       // Index identique → on met simplement à jour le contenu
-      currentPlan.selected_offer_pyramid = pyramid;
+      currentPlan.selected_offer_pyramid = chosenPyramid;
+      currentPlan.selected_pyramid = chosenPyramid;
     }
 
     const { error: updateError } = await supabase

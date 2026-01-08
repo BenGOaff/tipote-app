@@ -14,7 +14,6 @@ interface PyramidOffer {
   composition: string;
   purpose: string;
   format: string;
-  price_range?: string;
 }
 
 interface Pyramid {
@@ -24,6 +23,78 @@ interface Pyramid {
   lead_magnet: PyramidOffer;
   low_ticket: PyramidOffer;
   high_ticket: PyramidOffer;
+}
+
+function asString(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
+  return "";
+}
+
+function normalizeNewSchema(p: any, idx: number): Pyramid {
+  return {
+    id: String(p?.id ?? idx),
+    name: String(p?.name ?? `Stratégie ${idx + 1}`),
+    strategy_summary: String(p?.strategy_summary ?? ""),
+    lead_magnet: {
+      title: asString(p?.lead_magnet?.title ?? ""),
+      composition: asString(p?.lead_magnet?.composition ?? ""),
+      purpose: asString(p?.lead_magnet?.purpose ?? ""),
+      format: asString(p?.lead_magnet?.format ?? ""),
+    },
+    low_ticket: {
+      title: asString(p?.low_ticket?.title ?? ""),
+      composition: asString(p?.low_ticket?.composition ?? ""),
+      purpose: asString(p?.low_ticket?.purpose ?? ""),
+      format: asString(p?.low_ticket?.format ?? ""),
+    },
+    high_ticket: {
+      title: asString(p?.high_ticket?.title ?? ""),
+      composition: asString(p?.high_ticket?.composition ?? ""),
+      purpose: asString(p?.high_ticket?.purpose ?? ""),
+      format: asString(p?.high_ticket?.format ?? ""),
+    },
+  };
+}
+
+/**
+ * Legacy schema support (ce que tu as dans business_plan.plan_json aujourd’hui):
+ * offer_pyramids: [{ scenario, rationale, offers: [{name,type,price,description?}, ...] }]
+ *
+ * Mapping:
+ * - lead_magnet = offers[0]
+ * - low_ticket  = offers[1]
+ * - high_ticket = last offer
+ */
+function normalizeLegacySchema(p: any, idx: number): Pyramid {
+  const offers = Array.isArray(p?.offers) ? p.offers : [];
+  const lead = offers[0] ?? {};
+  const low = offers[1] ?? offers[0] ?? {};
+  const high = offers.length ? offers[offers.length - 1] : offers[1] ?? offers[0] ?? {};
+
+  const scenario = asString(p?.scenario ?? `Scénario ${idx + 1}`);
+  const rationale = asString(p?.rationale ?? "");
+
+  const toOffer = (o: any): PyramidOffer => ({
+    title: asString(o?.name ?? o?.title ?? ""),
+    composition: asString(o?.description ?? ""),
+    purpose: "",
+    format: asString(o?.type ?? o?.format ?? ""),
+  });
+
+  return {
+    id: String(idx),
+    name: scenario,
+    strategy_summary: rationale,
+    lead_magnet: toOffer(lead),
+    low_ticket: toOffer(low),
+    high_ticket: toOffer(high),
+  };
+}
+
+function looksLikeNewSchema(p: any): boolean {
+  return !!p && (p.lead_magnet || p.low_ticket || p.high_ticket);
 }
 
 export default function PyramidSelection() {
@@ -62,14 +133,10 @@ export default function PyramidSelection() {
       return { ok: false as const, reason: "no_pyramids" as const };
     }
 
-    const normalized: Pyramid[] = offerPyramids.slice(0, 3).map((p: any, idx: number) => ({
-      id: String(p?.id ?? idx),
-      name: String(p?.name ?? `Stratégie ${idx + 1}`),
-      strategy_summary: String(p?.strategy_summary ?? ""),
-      lead_magnet: p?.lead_magnet ?? {},
-      low_ticket: p?.low_ticket ?? {},
-      high_ticket: p?.high_ticket ?? {},
-    }));
+    const normalized: Pyramid[] = offerPyramids.slice(0, 3).map((p: any, idx: number) => {
+      if (looksLikeNewSchema(p)) return normalizeNewSchema(p, idx);
+      return normalizeLegacySchema(p, idx);
+    });
 
     setPyramids(normalized);
     return { ok: true as const };
@@ -117,20 +184,24 @@ export default function PyramidSelection() {
     };
   }, [router, supabase, toast]);
 
-  const handleSelectPyramid = async () => {
-    if (!selectedPyramid) return;
-    const pyramid = pyramids.find((p) => p.id === selectedPyramid);
-    if (!pyramid) return;
+  const selected = useMemo(() => {
+    if (!selectedPyramid) return null;
+    return pyramids.find((p) => p.id === selectedPyramid) ?? null;
+  }, [pyramids, selectedPyramid]);
 
-    setSubmitting(true);
+  const handleSelectPyramid = async () => {
+    if (!selected) return;
 
     try {
-      const selectedIndex = pyramids.findIndex((p) => p.id === selectedPyramid);
+      setSubmitting(true);
+
+      const selectedIndex = pyramids.findIndex((p) => p.id === selected.id);
+      if (selectedIndex < 0) throw new Error("Index de pyramide introuvable.");
 
       const patchRes = await fetch("/api/strategy/offer-pyramid", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedIndex, pyramid }),
+        body: JSON.stringify({ selectedIndex, pyramid: selected }),
       });
 
       const patchJson = await patchRes.json().catch(() => ({} as any));
@@ -166,136 +237,127 @@ export default function PyramidSelection() {
   // === UI Lovable (structure JSX + className) ===
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-primary/5 flex flex-col items-center justify-center p-6">
         <div className="text-center space-y-6">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto animate-pulse">
-            <Sparkles className="w-8 h-8 text-primary-foreground" />
+          <div className="flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-display font-bold">Génération de vos stratégies...</h2>
-            <p className="text-muted-foreground">
-              L&apos;IA analyse votre profil pour créer 3 pyramides d&apos;offres personnalisées
+            <h1 className="text-2xl font-bold">Création de ta stratégie...</h1>
+            <p className="text-muted-foreground max-w-md">
+              Nous préparons 3 scénarios de pyramide d’offres adaptés à ton business.
             </p>
           </div>
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
-      <header className="p-6 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-xl">Tipote™</span>
-          </div>
-          <Badge variant="secondary">Dernière étape</Badge>
-        </div>
-      </header>
-
-      <main className="flex-1 p-6 overflow-auto">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-background to-primary/5">
+      <main className="container mx-auto px-4 py-10 max-w-6xl">
+        <div className="space-y-8">
           <div className="text-center space-y-3">
-            <h1 className="text-3xl font-display font-bold">Choisissez votre stratégie</h1>
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <h1 className="text-3xl font-bold tracking-tight">Choisis ta pyramide d’offres</h1>
+            </div>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Basé sur votre profil, l&apos;IA a créé 3 pyramides d&apos;offres adaptées à votre situation. Choisissez celle qui
-              correspond le mieux à votre vision.
+              Tipote™ te propose 3 scénarios. Choisis celui qui te ressemble le plus pour générer ton plan d’action.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {pyramids.map((pyramid) => (
-              <Card
-                key={pyramid.id}
-                className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                  selectedPyramid === pyramid.id ? "ring-2 ring-primary shadow-lg scale-[1.02]" : "hover:scale-[1.01]"
-                }`}
-                onClick={() => setSelectedPyramid(pyramid.id)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{pyramid.name}</CardTitle>
-                    {selectedPyramid === pyramid.id && (
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-4 h-4 text-primary-foreground" />
+          <div className="grid gap-6 lg:grid-cols-3">
+            {pyramids.map((pyramid, idx) => {
+              const isSelected = selectedPyramid === pyramid.id;
+
+              const Icon = idx === 0 ? Gift : idx === 1 ? Zap : Crown;
+              const badge =
+                idx === 0 ? "Accessible" : idx === 1 ? "Ambitieux" : "Premium";
+
+              return (
+                <Card
+                  key={pyramid.id}
+                  className={`relative transition-all cursor-pointer hover:shadow-lg ${
+                    isSelected ? "ring-2 ring-primary shadow-lg" : ""
+                  }`}
+                  onClick={() => setSelectedPyramid(pyramid.id)}
+                >
+                  <CardHeader className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon className="w-5 h-5 text-primary" />
+                          </div>
+                          <Badge variant="secondary">{badge}</Badge>
+                        </div>
+                        <CardTitle className="text-xl">{pyramid.name}</CardTitle>
+                        <CardDescription className="text-sm">
+                          {pyramid.strategy_summary}
+                        </CardDescription>
                       </div>
-                    )}
-                  </div>
-                  <CardDescription className="text-sm italic">&quot;{pyramid.strategy_summary}&quot;</CardDescription>
-                </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Gift className="w-4 h-4 text-green-500" />
-                      <span className="text-xs font-medium uppercase text-muted-foreground">Lead Magnet</span>
-                      <Badge variant="outline" className="text-xs ml-auto">
-                        Gratuit
-                      </Badge>
+                      {isSelected && (
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-4 h-4 text-primary-foreground" />
+                        </div>
+                      )}
                     </div>
-                    <p className="font-medium text-sm">{pyramid.lead_magnet?.title}</p>
-                    <p className="text-xs text-muted-foreground">{pyramid.lead_magnet?.format}</p>
-                    <p className="text-xs">{pyramid.lead_magnet?.purpose}</p>
-                  </div>
+                  </CardHeader>
 
-                  <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs font-medium uppercase text-muted-foreground">Low Ticket</span>
-                      <Badge variant="outline" className="text-xs ml-auto">
-                        {pyramid.low_ticket?.price_range}
-                      </Badge>
-                    </div>
-                    <p className="font-medium text-sm">{pyramid.low_ticket?.title}</p>
-                    <p className="text-xs text-muted-foreground">{pyramid.low_ticket?.format}</p>
-                    <p className="text-xs">{pyramid.low_ticket?.purpose}</p>
-                  </div>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="rounded-lg border bg-card p-3">
+                        <p className="text-xs font-medium text-muted-foreground">Lead magnet</p>
+                        <p className="font-semibold">{pyramid.lead_magnet.title}</p>
+                        <p className="text-sm text-muted-foreground">{pyramid.lead_magnet.composition}</p>
+                      </div>
 
-                  <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs font-medium uppercase text-muted-foreground">High Ticket</span>
-                      <Badge variant="outline" className="text-xs ml-auto">
-                        {pyramid.high_ticket?.price_range}
-                      </Badge>
+                      <div className="rounded-lg border bg-card p-3">
+                        <p className="text-xs font-medium text-muted-foreground">Low ticket</p>
+                        <p className="font-semibold">{pyramid.low_ticket.title}</p>
+                        <p className="text-sm text-muted-foreground">{pyramid.low_ticket.composition}</p>
+                      </div>
+
+                      <div className="rounded-lg border bg-card p-3">
+                        <p className="text-xs font-medium text-muted-foreground">High ticket</p>
+                        <p className="font-semibold">{pyramid.high_ticket.title}</p>
+                        <p className="text-sm text-muted-foreground">{pyramid.high_ticket.composition}</p>
+                      </div>
                     </div>
-                    <p className="font-medium text-sm">{pyramid.high_ticket?.title}</p>
-                    <p className="text-xs text-muted-foreground">{pyramid.high_ticket?.format}</p>
-                    <p className="text-xs">{pyramid.high_ticket?.purpose}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-col items-center gap-4">
             <Button
               size="lg"
               disabled={!selectedPyramid || submitting}
               onClick={handleSelectPyramid}
-              className="min-w-[250px]"
+              className="w-full max-w-md"
             >
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Création des tâches...
+                  Validation...
                 </>
               ) : (
                 <>
-                  Choisir cette stratégie
+                  Valider cette stratégie
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
             </Button>
-          </div>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Vous pourrez modifier vos offres à tout moment dans les paramètres.
-          </p>
+            <p className="text-center text-xs text-muted-foreground">
+              Vous pourrez modifier vos offres à tout moment dans les paramètres.
+            </p>
+          </div>
         </div>
       </main>
     </div>

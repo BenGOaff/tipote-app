@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
 
@@ -30,6 +30,26 @@ export async function POST() {
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
+
+    // Non-bloquant : on déclenche la génération stratégie + sync tâches.
+    // (Le client le fait déjà, mais on double-sécurise si jamais l’utilisateur ferme l’onglet.)
+    try {
+      const origin = new URL(req.url).origin;
+      const cookie = req.headers.get("cookie") ?? "";
+
+      void fetch(`${origin}/api/strategy`, {
+        method: "POST",
+        headers: cookie ? { cookie } : undefined,
+      });
+
+      void fetch(`${origin}/api/tasks/sync`, {
+        method: "POST",
+        headers: cookie ? { cookie } : undefined,
+      });
+    } catch (e) {
+      // On ne bloque jamais la complétion onboarding
+      console.error("Non-blocking post-onboarding triggers failed:", e);
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
