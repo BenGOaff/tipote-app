@@ -4,11 +4,6 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import PyramidSelection from "./PyramidSelection";
 
-const ADMIN_FORCE_USER_IDS = new Set<string>([
-  // Béné (prod) — autorise /strategy/pyramids?force=1 même en production
-  "32d0e96f-f541-4fa4-bb6e-6ea23cdd7532",
-]);
-
 export default async function StrategyPyramidsPage({
   searchParams,
 }: {
@@ -32,14 +27,22 @@ export default async function StrategyPyramidsPage({
   const planJson = planRow.plan_json as any;
 
   /**
-   * Bypass test :
-   * - En dev : /strategy/pyramids?force=1 (comme avant)
-   * - En prod : /strategy/pyramids?force=1 uniquement pour ADMIN_FORCE_USER_IDS
+   * Dev/test bypass:
+   * - Avant: seulement en non-prod
+   * - Maintenant: autorisé en prod MAIS uniquement pour un user test (toi),
+   *   pour pouvoir retester le flow sans créer 50 fake profils.
    */
-  const force = searchParams?.force === "1";
-  const isDevBypass = process.env.NODE_ENV !== "production" && force;
-  const isAdminProdBypass = process.env.NODE_ENV === "production" && force && ADMIN_FORCE_USER_IDS.has(auth.user.id);
-  const isBypass = isDevBypass || isAdminProdBypass;
+  const TEST_USER_IDS_ALLOW_FORCE_BYPASS = new Set<string>([
+    "32d0e96f-f541-4fa4-bb6e-6ea23cdd7532", // Béné (test)
+  ]);
+
+  const isForce = searchParams?.force === "1";
+  const isAllowedTester = TEST_USER_IDS_ALLOW_FORCE_BYPASS.has(auth.user.id);
+
+  const isDevBypass = process.env.NODE_ENV !== "production" && isForce;
+  const isProdTesterBypass = process.env.NODE_ENV === "production" && isForce && isAllowedTester;
+
+  const isBypass = isDevBypass || isProdTesterBypass;
 
   // Blocage normal (user réel) : si une pyramide a déjà été choisie, on renvoie vers l’app
   // Compat: accepte plusieurs clés possibles (au cas où)
