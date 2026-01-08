@@ -149,29 +149,15 @@ const OnboardingFlow = () => {
       // 2) mark onboarding completed
       await postJSON("/api/onboarding/complete");
 
-      // 3) go to main dashboard NOW (do not block user on AI generation)
-      router.push("/app");
+      // 3) suite logique : choix des 3 pyramides d'offres (Lovable)
+      router.push("/strategy/pyramids");
       router.refresh();
 
-      // 4) generate persona + pyramide d'offres + plan (IA niveau 1) in background
-      // (backend existant: app/api/strategy/route.ts)
-      postJSON("/api/strategy")
-        .then(() => {
-          toast({
-            title: "Configuration terminée ✅",
-            description: "Ton persona et ta stratégie sont prêts.",
-          });
-        })
-        .catch((err) => {
-          toast({
-            title: "Génération en cours (à vérifier)",
-            description:
-              err instanceof Error
-                ? err.message
-                : "La génération IA a échoué. Tu peux utiliser le dashboard et relancer plus tard.",
-            variant: "destructive",
-          });
-        });
+      // 4) generate persona + 3 pyramides + plan en background (ne bloque pas l'UX)
+      // Important: cette route doit écrire business_plan.plan_json.offer_pyramids
+      postJSON("/api/strategy").catch(() => {
+        // On ne casse pas le flow si l'IA échoue; la page /strategy/pyramids gère l'état.
+      });
     } catch (error) {
       toast({
         title: "Erreur",

@@ -67,7 +67,7 @@ function bucketKey(daysFromNow: number) {
 }
 
 function countPlanTasks(planJson: AnyRecord): number {
-  const plan90 = asRecord(planJson.plan_90_days);
+  const plan90 = asRecord(planJson.plan_90_days) || asRecord(planJson.plan90);
   const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
   if (!grouped) return 0;
 
@@ -109,19 +109,25 @@ export default async function StrategyPage() {
 
   if (!Object.keys(planJson).length) redirect("/onboarding");
 
+  // ✅ si pas de pyramide choisie -> page Lovable de choix
+  const selectedIndex = planJson.selected_offer_pyramid_index;
+  if (selectedIndex === null || typeof selectedIndex === "undefined") {
+    redirect("/strategy/pyramids");
+  }
+
   const planTasksCount = countPlanTasks(planJson);
 
-  // business_profiles (quelques infos)
+  // ✅ business_profiles : colonnes snake_case réelles
   const profileRes = await supabase
     .from("business_profiles")
     .select(
       [
-        "firstName",
+        "first_name",
         "niche",
-        "businessType",
-        "revenueMaturity",
-        "goals",
-        "preferredContentTypes",
+        "business_maturity",
+        "main_goals",
+        "content_preference",
+        "preferred_content_type",
         "created_at",
         "updated_at",
       ].join(","),
@@ -131,9 +137,15 @@ export default async function StrategyPage() {
 
   const profileRow = (profileRes.data ?? null) as AnyRecord | null;
 
-  const firstName = asString(profileRow?.firstName);
-  const goals = asStringArray(profileRow?.goals);
-  const preferredContentTypes = asStringArray(profileRow?.preferredContentTypes);
+  const firstName = asString(profileRow?.first_name);
+
+  const goals =
+    asStringArray(profileRow?.main_goals) ||
+    asStringArray(profileRow?.goals);
+
+  const preferredContentTypes = asStringArray(
+    profileRow?.content_preference ?? profileRow?.preferred_content_type,
+  );
 
   // Persona (depuis plan_json)
   const personaRaw = (planJson.persona ?? {}) as AnyRecord;
@@ -154,8 +166,8 @@ export default async function StrategyPage() {
   const hasExplicitSelection =
     typeof planJson.selected_offer_pyramid_index === "number" && !!planJson.selected_offer_pyramid;
 
-  const selectedIndex = hasExplicitSelection ? (planJson.selected_offer_pyramid_index as number) : 0;
-  const selectedPyramid = hasExplicitSelection ? (planJson.selected_offer_pyramid as AnyRecord) : undefined;
+  const initialSelectedIndex = hasExplicitSelection ? (planJson.selected_offer_pyramid_index as number) : 0;
+  const initialSelectedPyramid = hasExplicitSelection ? (planJson.selected_offer_pyramid as AnyRecord) : undefined;
 
   // Tâches (depuis DB project_tasks)
   const tasksRes = await supabase
@@ -171,7 +183,6 @@ export default async function StrategyPage() {
   const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
   const progressAll = totalTasks ? clamp01(doneTasks / totalTasks) : 0;
 
-  // Group phases (J1-30 / J31-60 / J61-90) basé sur due_date
   const today = new Date();
 
   const byPhase = {
@@ -190,7 +201,6 @@ export default async function StrategyPage() {
     if (key === "p3") byPhase.p3.push(t);
   }
 
-  // Vision numbers
   const revenueGoal =
     asString((planJson as AnyRecord)?.revenue_goal) ||
     asString((planJson as AnyRecord)?.goal_revenue) ||
@@ -199,7 +209,6 @@ export default async function StrategyPage() {
   const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
 
-  // Plan summary
   const totalPlanTasks = totalTasks || planTasksCount || 0;
 
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
@@ -213,7 +222,7 @@ export default async function StrategyPage() {
       progressionPercent={progressionPercent}
       totalDone={doneTasks}
       totalAll={totalPlanTasks}
-      daysRemaining={Math.max(0, 90 - 34)} // (si tu as un startDate réel dans plan_json, je te le brancherai)
+      daysRemaining={Math.max(0, 90 - 34)}
       currentPhase={currentPhase}
       currentPhaseLabel={currentPhaseLabel}
       phases={[
@@ -223,8 +232,8 @@ export default async function StrategyPage() {
       ]}
       persona={persona}
       offerPyramids={offerPyramids}
-      initialSelectedIndex={selectedIndex}
-      initialSelectedPyramid={selectedPyramid}
+      initialSelectedIndex={initialSelectedIndex}
+      initialSelectedPyramid={initialSelectedPyramid}
       planTasksCount={planTasksCount}
     />
   );
