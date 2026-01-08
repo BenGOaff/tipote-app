@@ -12,23 +12,26 @@ export async function PATCH(request: Request) {
     } = await supabase.auth.getSession();
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const body = await request.json().catch(() => ({}));
-    const { selectedIndex, pyramid } = body as {
-      selectedIndex?: number;
-      pyramid?: any;
-    };
+
+    // Compat payloads:
+    // - Nouveau (Lovable /strategy/pyramids): { selectedIndex, pyramid }
+    // - Ancien (StrategyClient legacy): { selected_offer_pyramid_index, selected_offer_pyramid }
+    const selectedIndex =
+      typeof (body as any)?.selectedIndex === "number"
+        ? (body as any).selectedIndex
+        : typeof (body as any)?.selected_offer_pyramid_index === "number"
+          ? (body as any).selected_offer_pyramid_index
+          : undefined;
+
+    const pyramid =
+      (body as any)?.pyramid ?? (body as any)?.selected_offer_pyramid ?? undefined;
 
     if (!pyramid || typeof selectedIndex !== "number") {
-      return NextResponse.json(
-        { error: "Invalid payload" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
     // Charger le business_plan actuel
@@ -38,19 +41,17 @@ export async function PATCH(request: Request) {
       .eq("user_id", session.user.id)
       .maybeSingle();
 
-    if (planError || !planRow) {
+    if (planError) {
       console.error("Error loading business_plan:", planError);
-      return NextResponse.json(
-        { error: "Business plan not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Failed to load business plan" }, { status: 500 });
+    }
+
+    if (!planRow) {
+      return NextResponse.json({ error: "Business plan not found" }, { status: 404 });
     }
 
     const currentPlan = (planRow.plan_json || {}) as Record<string, any>;
-    const currentIndex = currentPlan.selected_offer_pyramid_index as
-      | number
-      | null
-      | undefined;
+    const currentIndex = currentPlan.selected_offer_pyramid_index as number | null | undefined;
 
     // Logique de verrouillage :
     // - si aucune pyramide choisie → on accepte l'index (CHOIX INITIAL)
@@ -67,7 +68,7 @@ export async function PATCH(request: Request) {
             error:
               "Une pyramide est déjà choisie. Tu peux modifier son contenu, mais pas changer de scénario.",
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
       // Index identique → on met simplement à jour le contenu
@@ -76,15 +77,16 @@ export async function PATCH(request: Request) {
 
     const { error: updateError } = await supabase
       .from("business_plan")
-      .update({ plan_json: currentPlan })
-      .eq("id", planRow.id);
+      .update({
+        plan_json: currentPlan,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", planRow.id)
+      .eq("user_id", session.user.id);
 
     if (updateError) {
       console.error("Error updating business_plan:", updateError);
-      return NextResponse.json(
-        { error: "Failed to save pyramid" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to update plan" }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -93,9 +95,6 @@ export async function PATCH(request: Request) {
     });
   } catch (err) {
     console.error("Unhandled error in PATCH /api/strategy/offer-pyramid:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

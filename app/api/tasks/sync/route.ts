@@ -16,22 +16,21 @@ function toArray(x: unknown): unknown[] {
   return Array.isArray(x) ? x : [];
 }
 
-function norm(s: string): string {
-  return s.trim().toLowerCase();
+function toStringArray(x: unknown): string[] {
+  return toArray(x)
+    .map((v) => (typeof v === "string" ? v : ""))
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
-function isDoneStatus(status: string | null): boolean {
-  const s = norm(status ?? "");
-  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
+function toIsoDateOrNull(x: unknown): string | null {
+  const s = toStr(x);
+  if (!s) return null;
+  // Accept YYYY-MM-DD or ISO
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
-
-type TaskInDb = {
-  id: string;
-  title: string;
-  status: string | null;
-  due_date: string | null;
-  source: string | null;
-};
 
 type TaskFromPlan = {
   title: string;
@@ -45,81 +44,77 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
   const out: TaskFromPlan[] = [];
 
   // Heuristiques : plan_json peut avoir des sections variées.
-  // On récupère tout champ "tasks" qui ressemble à une liste d'objets avec title.
-  const stack: unknown[] = [planJson];
+  // On récupère tout ce qui ressemble à des tasks dans plan_90_days.tasks_by_timeframe
+  const plan90 = isRecord(planJson.plan_90_days) ? planJson.plan_90_days : null;
+  const tbt = plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? (plan90 as any).tasks_by_timeframe : null;
 
-  while (stack.length) {
-    const cur = stack.pop();
-    if (!cur) continue;
-
-    if (Array.isArray(cur)) {
-      for (const v of cur) stack.push(v);
-      continue;
-    }
-
-    if (!isRecord(cur)) continue;
-
-    for (const [k, v] of Object.entries(cur)) {
-      if (k === "tasks" && Array.isArray(v)) {
-        for (const item of v) {
-          if (!isRecord(item)) continue;
-          const title = (toStr(item.title) ?? toStr(item.name) ?? "").trim();
-          if (!title) continue;
-          const due = toStr((item as any).due_date) ?? toStr((item as any).dueDate) ?? null;
-          out.push({ title, due_date: due, source: "business_plan" });
-        }
-      } else {
-        // continue DFS
-        stack.push(v);
+  if (tbt && isRecord(tbt)) {
+    for (const timeframe of Object.keys(tbt)) {
+      const arr = toArray((tbt as any)[timeframe]);
+      for (const t of arr) {
+        if (!isRecord(t)) continue;
+        const title = toStr((t as any).title) || toStr((t as any).task) || "";
+        if (!title.trim()) continue;
+        const due = toIsoDateOrNull((t as any).due_date) || toIsoDateOrNull((t as any).dueDate) || null;
+        out.push({
+          title: title.trim(),
+          due_date: due,
+          source: `plan_90_days:${timeframe}`,
+        });
       }
     }
   }
 
-  // dédupe par titre normalisé
+  // Autres sections possibles
+  const tasks = toArray((planJson as any).tasks);
+  for (const t of tasks) {
+    if (!isRecord(t)) continue;
+    const title = toStr((t as any).title) || toStr((t as any).task) || "";
+    if (!title.trim()) continue;
+    const due = toIsoDateOrNull((t as any).due_date) || toIsoDateOrNull((t as any).dueDate) || null;
+    out.push({
+      title: title.trim(),
+      due_date: due,
+      source: "tasks",
+    });
+  }
+
+  // Dédoublonnage simple par title+due_date
   const seen = new Set<string>();
   const deduped: TaskFromPlan[] = [];
   for (const t of out) {
-    const key = norm(t.title);
-    if (!key) continue;
+    const key = `${t.title}__${t.due_date ?? ""}__${t.source}`;
     if (seen.has(key)) continue;
     seen.add(key);
     deduped.push(t);
   }
+
   return deduped;
+}
+
+function normalizeTitle(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .slice(0, 240);
 }
 
 export async function POST() {
   try {
     const supabase = await getSupabaseServerClient();
-    const { data: auth } = await supabase.auth.getUser();
 
-    if (!auth?.user) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // A5 — Gating minimal (abonnement requis)
-    // Si table/colonne/RLS indisponible => fail-open (ne pas casser la prod)
-    try {
-      const { data: billingProfile, error: billingError } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", auth.user.id)
-        .maybeSingle();
+    const auth = { user: session.user };
 
-      if (!billingError) {
-        const plan = (billingProfile as any)?.plan as string | null | undefined;
-        const p = (plan ?? "").toLowerCase().trim();
-        const hasPlan = p === "basic" || p === "essential" || p === "elite";
-        if (!hasPlan) {
-          return NextResponse.json(
-            { ok: false, code: "subscription_required", error: "Abonnement requis." },
-            { status: 402 },
-          );
-        }
-      }
-    } catch {
-      // fail-open
-    }
+    // A5 — Pas de gating abonnement ici : le sync de tâches fait partie du coeur produit (onboarding/plan)
 
     const { data: bp, error: bpErr } = await supabase
       .from("business_plan")
@@ -129,67 +124,95 @@ export async function POST() {
       .limit(1)
       .maybeSingle();
 
-    if (bpErr) return NextResponse.json({ ok: false, error: bpErr.message }, { status: 400 });
-    if (!bp?.plan_json) return NextResponse.json({ ok: true, inserted: 0, updated: 0 }, { status: 200 });
-
-    const tasksFromPlan = extractTasksFromPlan(bp.plan_json);
-
-    if (tasksFromPlan.length === 0) {
-      return NextResponse.json({ ok: true, inserted: 0, updated: 0 }, { status: 200 });
+    if (bpErr) {
+      console.error("Error loading business_plan:", bpErr);
+      return NextResponse.json({ ok: false, error: "Failed to load business_plan" }, { status: 500 });
     }
 
-    const { data: existingData, error: exErr } = await supabase
+    const tasks = extractTasksFromPlan((bp as any)?.plan_json);
+    if (tasks.length === 0) {
+      return NextResponse.json({ ok: true, synced: 0, message: "No tasks found in plan_json" }, { status: 200 });
+    }
+
+    // Charger tâches existantes (pour dédupe)
+    const { data: existing, error: existingErr } = await supabase
       .from("project_tasks")
-      .select("id,title,status,due_date,source")
+      .select("id, title, due_date, source")
       .eq("user_id", auth.user.id);
 
-    if (exErr) return NextResponse.json({ ok: false, error: exErr.message }, { status: 400 });
+    if (existingErr) {
+      console.error("Error loading existing project_tasks:", existingErr);
+      return NextResponse.json({ ok: false, error: "Failed to load existing tasks" }, { status: 500 });
+    }
 
-    const existing: TaskInDb[] = Array.isArray(existingData) ? (existingData as TaskInDb[]) : [];
-    const byTitle = new Map<string, TaskInDb>();
-    for (const t of existing) {
-      const key = norm(t.title ?? "");
-      if (!key) continue;
-      if (!byTitle.has(key)) byTitle.set(key, t);
+    const existingRows = Array.isArray(existing) ? existing : [];
+    const existingIndex = new Map<string, { id: string; title: string; due_date: string | null; source: string | null }>();
+
+    for (const row of existingRows) {
+      const title = typeof (row as any).title === "string" ? (row as any).title : "";
+      const due = typeof (row as any).due_date === "string" ? (row as any).due_date : null;
+      const source = typeof (row as any).source === "string" ? (row as any).source : null;
+
+      const key = `${normalizeTitle(title)}__${due ?? ""}__${source ?? ""}`;
+      existingIndex.set(key, { id: (row as any).id, title, due_date: due, source });
+    }
+
+    // Préparer upserts : si existe -> update soft (title/due_date/source), sinon insert
+    const toInsert: any[] = [];
+    const toUpdate: { id: string; patch: any }[] = [];
+
+    for (const t of tasks) {
+      const key = `${normalizeTitle(t.title)}__${t.due_date ?? ""}__${t.source}`;
+      const ex = existingIndex.get(key);
+
+      if (ex) {
+        // Update soft : on laisse l’utilisateur modifier ailleurs, on évite de tout écraser.
+        // Ici on ne met à jour que des champs “safe”.
+        toUpdate.push({
+          id: ex.id,
+          patch: {
+            title: t.title,
+            due_date: t.due_date,
+            source: t.source,
+            updated_at: new Date().toISOString(),
+          },
+        });
+      } else {
+        toInsert.push({
+          user_id: auth.user.id,
+          title: t.title,
+          due_date: t.due_date,
+          source: t.source,
+          status: "todo",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Batch updates (séquentiel pour limiter les soucis RLS / timeouts)
+    let updated = 0;
+    for (const u of toUpdate) {
+      const { error } = await supabase.from("project_tasks").update(u.patch).eq("id", u.id).eq("user_id", auth.user.id);
+      if (!error) updated += 1;
     }
 
     let inserted = 0;
-    let updated = 0;
-
-    for (const t of tasksFromPlan) {
-      const key = norm(t.title);
-      const inDb = byTitle.get(key);
-
-      if (!inDb) {
-        const { error: insErr } = await supabase.from("project_tasks").insert({
-          user_id: auth.user.id,
-          title: t.title,
-          status: "todo",
-          due_date: t.due_date,
-          source: t.source,
-        });
-
-        if (!insErr) inserted += 1;
-        continue;
+    if (toInsert.length > 0) {
+      const { error: insErr } = await supabase.from("project_tasks").insert(toInsert);
+      if (insErr) {
+        console.error("Insert tasks error:", insErr);
+        return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
       }
-
-      // Update uniquement si pas done + due_date vide dans DB et présente dans plan
-      if (!isDoneStatus(inDb.status)) {
-        const shouldUpdateDue = !toStr(inDb.due_date) && !!t.due_date;
-        if (shouldUpdateDue) {
-          const { error: upErr } = await supabase
-            .from("project_tasks")
-            .update({ due_date: t.due_date })
-            .eq("id", inDb.id)
-            .eq("user_id", auth.user.id);
-
-          if (!upErr) updated += 1;
-        }
-      }
+      inserted = toInsert.length;
     }
 
-    return NextResponse.json({ ok: true, inserted, updated }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, synced: inserted + updated, inserted, updated, source: "business_plan.plan_json" },
+      { status: 200 },
+    );
   } catch (e) {
+    console.error("Unhandled error in /api/tasks/sync:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
