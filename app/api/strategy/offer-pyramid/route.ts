@@ -57,10 +57,14 @@ function keyOf(title: string, due: string | null) {
   return `${title}__${due ?? ""}`;
 }
 
+type SyncOk = { ok: true; inserted: number };
+type SyncErr = { ok: false; error: string };
+type SyncResult = SyncOk | SyncErr;
+
 async function syncStrategyTasksToProjectTasks(args: {
   userId: string;
   tasks: { title: string; due_date: string | null; priority: "low" | "medium" | "high" }[];
-}) {
+}): Promise<SyncResult> {
   const { userId, tasks } = args;
 
   // 1) read existing strategy tasks to preserve status
@@ -83,7 +87,7 @@ async function syncStrategyTasksToProjectTasks(args: {
   // 2) delete old strategy tasks
   const delRes = await supabaseAdmin.from("project_tasks").delete().eq("user_id", userId).eq("source", "strategy");
   if (delRes.error) {
-    return { ok: false as const, error: delRes.error.message };
+    return { ok: false, error: delRes.error.message };
   }
 
   // 3) insert new
@@ -99,14 +103,15 @@ async function syncStrategyTasksToProjectTasks(args: {
     };
   });
 
-  if (!payload.length) return { ok: true as const, inserted: 0 as const };
+  if (!payload.length) return { ok: true, inserted: 0 };
 
   const insRes = await supabaseAdmin.from("project_tasks").insert(payload);
   if (insRes.error) {
-    return { ok: false as const, error: insRes.error.message };
+    return { ok: false, error: insRes.error.message };
   }
 
-  return { ok: true as const, inserted: payload.length as const };
+  // ✅ fix TS: pas de "as const" sur payload.length (ce n'est pas un literal)
+  return { ok: true, inserted: payload.length };
 }
 
 export async function PATCH(request: Request) {
@@ -171,9 +176,7 @@ export async function PATCH(request: Request) {
     // generate missing parts only
     const hasPersona = isRecord(currentPlan.persona) && Object.keys(currentPlan.persona).length > 0;
     const hasPlan90 =
-      isRecord(currentPlan.plan_90_days) ||
-      isRecord(currentPlan.plan90) ||
-      isRecord(currentPlan.tasks_by_timeframe);
+      isRecord(currentPlan.plan_90_days) || isRecord(currentPlan.plan90) || isRecord(currentPlan.tasks_by_timeframe);
 
     let generated = false;
 
