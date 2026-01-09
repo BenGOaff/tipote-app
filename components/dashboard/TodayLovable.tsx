@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
+type StatIcon = React.ComponentType<{ className?: string }>;
+
 type NextTask = {
   title: string;
   type: string;
@@ -30,8 +32,6 @@ type NextTask = {
   dueTime: string;
   priority: "high" | "medium" | "low";
 };
-
-type StatIcon = React.ComponentType<{ className?: string }>;
 
 type DashboardStat = {
   label: string;
@@ -52,7 +52,6 @@ type CombinedUpcoming = {
   kind: "content" | "task";
   title: string;
   type: string;
-  platform: string;
   statusRaw: string;
   dt: Date;
   priority?: "high" | "medium" | "low";
@@ -64,6 +63,12 @@ function toStr(v: unknown): string {
 
 function toLower(v: unknown): string {
   return toStr(v).toLowerCase();
+}
+
+function safePriority(v: unknown): "high" | "medium" | "low" {
+  const p = toLower(v);
+  if (p === "high" || p === "medium" || p === "low") return p;
+  return "medium";
 }
 
 function parseDate(v: unknown): Date | null {
@@ -79,23 +84,20 @@ function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function formatDayLabel(date: Date, now: Date): string {
-  const d0 = startOfDay(now).getTime();
-  const d1 = startOfDay(date).getTime();
-  const diffDays = Math.round((d1 - d0) / 86400000);
-
-  if (diffDays === 0) return "Aujourd'hui";
-  if (diffDays === 1) return "Demain";
-
-  const weekdays = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-  return weekdays[date.getDay()] ?? "Cette semaine";
+function daysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
 }
 
-function formatTimeOrDash(date: Date): string {
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  if (hh === "00" && mm === "00") return "-";
-  return `${hh}:${mm}`;
+function pctDelta(curr: number, prev: number) {
+  if (prev <= 0) return curr > 0 ? 100 : 0;
+  return Math.round(((curr - prev) / prev) * 100);
+}
+
+function clampPercent(v: number): number {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(100, Math.round(v)));
 }
 
 function isPublishedStatus(s: unknown): boolean {
@@ -136,45 +138,69 @@ function mapTaskStatusToUi(raw: string): UpcomingItem["status"] {
   return "À faire";
 }
 
-function clampPercent(v: number): number {
-  if (!Number.isFinite(v)) return 0;
-  return Math.max(0, Math.min(100, Math.round(v)));
+function formatDayLabel(date: Date, now: Date): string {
+  const d0 = startOfDay(now).getTime();
+  const d1 = startOfDay(date).getTime();
+  const diffDays = Math.round((d1 - d0) / 86400000);
+
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return "Demain";
+
+  const weekdays = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  return weekdays[date.getDay()] ?? "Cette semaine";
 }
 
-function safePriority(v: unknown): "high" | "medium" | "low" {
-  const p = toLower(v);
-  if (p === "high" || p === "medium" || p === "low") return p;
-  return "medium";
+function formatTimeOrDash(date: Date): string {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  if (hh === "00" && mm === "00") return "-";
+  return `${hh}:${mm}`;
+}
+
+function pyramidsLookUseful(pyramids: unknown): boolean {
+  if (!Array.isArray(pyramids) || pyramids.length < 3) return false;
+  const p0 = pyramids[0] as any;
+  const p1 = pyramids[1] as any;
+  const p2 = pyramids[2] as any;
+
+  const ok = (p: any) => {
+    const name = typeof p?.name === "string" ? p.name.trim() : "";
+    const sum = typeof p?.strategy_summary === "string" ? p.strategy_summary.trim() : "";
+    return name.length > 0 && sum.length > 0;
+  };
+
+  return ok(p0) && ok(p1) && ok(p2);
 }
 
 const TodayLovable = () => {
+  // Ne plus afficher “LinkedIn du jour” par défaut : neutral/guide
   const [nextTask, setNextTask] = useState<NextTask>({
-    title: "Rédiger le post LinkedIn du jour",
-    type: "Post",
-    platform: "LinkedIn",
-    dueTime: "09:00",
+    title: "Découvrir Tipote et démarrer",
+    type: "Onboarding",
+    platform: "Tipote",
+    dueTime: "Maintenant",
     priority: "high",
   });
 
   const [stats, setStats] = useState<DashboardStat[]>([
-    { label: "Contenus publiés", value: "24", trend: "+12%", icon: FileText },
-    { label: "Tâches complétées", value: "67%", trend: "16/24", icon: CheckCircle2 },
-    { label: "Engagement", value: "2.4K", trend: "+18%", icon: TrendingUp },
-    { label: "Prochaine échéance", value: "2j", trend: "Lead magnet", icon: Calendar },
+    { label: "Contenus publiés", value: "0", trend: "0%", icon: FileText },
+    { label: "Tâches complétées", value: "0%", trend: "0/0", icon: CheckCircle2 },
+    { label: "Engagement", value: "0", trend: "0%", icon: TrendingUp },
+    { label: "Prochaine échéance", value: "—", trend: "—", icon: Calendar },
   ]);
 
-  const [planProgressPercent, setPlanProgressPercent] = useState<number>(75);
-  const [plannedLabel, setPlannedLabel] = useState<string>("5/7");
-  const [plannedPercent, setPlannedPercent] = useState<number>(71);
-
-  const [engagementLabel, setEngagementLabel] = useState<string>("2.4K/3K");
-  const [engagementPercent, setEngagementPercent] = useState<number>(80);
+  // Progression : on remplace l’objectif fake “2.4K/3K” par un proxy cohérent : contenus publiés sur 7 jours / objectif 7
+  const [planProgressPercent, setPlanProgressPercent] = useState<number>(0);
+  const [plannedLabel, setPlannedLabel] = useState<string>("0/7");
+  const [plannedPercent, setPlannedPercent] = useState<number>(0);
+  const [engagementLabel, setEngagementLabel] = useState<string>("0/7");
+  const [engagementPercent, setEngagementPercent] = useState<number>(0);
 
   const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([
-    { title: "Post LinkedIn : Stratégie 2025", type: "Post", day: "Aujourd'hui", time: "09:00", status: "À faire" },
-    { title: "Newsletter hebdomadaire", type: "Email", day: "Demain", time: "14:00", status: "Planifié" },
-    { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
-    { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
+    { title: "Compléter l'onboarding", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" },
+    { title: "Générer ma stratégie", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" },
+    { title: "Choisir ma pyramide d'offres", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" },
+    { title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" },
   ]);
 
   useEffect(() => {
@@ -184,16 +210,33 @@ const TodayLovable = () => {
       try {
         const supabase = getSupabaseBrowserClient();
 
-        // content_item (RLS)
+        // 0) Lire état onboarding + plan (pour proposer une “première action” logique)
+        const profileRes = await supabase
+          .from("business_profiles")
+          .select("onboarding_completed")
+          .maybeSingle();
+
+        const onboardingCompleted = !!profileRes.data?.onboarding_completed;
+
+        const planRes = await supabase
+          .from("business_plan")
+          .select("plan_json")
+          .maybeSingle();
+
+        const planJson = (planRes.data?.plan_json ?? null) as any;
+        const selectedIdx = typeof planJson?.selected_offer_pyramid_index === "number" ? planJson.selected_offer_pyramid_index : null;
+        const pyramidsOk = pyramidsLookUseful(planJson?.offer_pyramids);
+
+        // 1) content_item
         const contentRes = await supabase
           .from("content_item")
           .select("id, type, title, status, scheduled_date, channel, created_at")
           .order("scheduled_date", { ascending: true, nullsFirst: false })
-          .limit(80);
+          .limit(200);
 
         const contentRows: any[] = Array.isArray(contentRes.data) ? contentRes.data : [];
 
-        // project_tasks via API (session cookies)
+        // 2) project_tasks via API (cookies)
         const tasksStatsRes = await fetch("/api/tasks/stats", { method: "GET" }).catch(() => null);
         const tasksStatsJson = tasksStatsRes ? await tasksStatsRes.json().catch(() => null) : null;
 
@@ -205,6 +248,7 @@ const TodayLovable = () => {
         const now = new Date();
         const next7 = new Date(now.getTime() + 7 * 86400000);
 
+        // A) Construire upcoming réels (contenus planifiés + tâches datées)
         const combined: CombinedUpcoming[] = [];
 
         for (const r of contentRows) {
@@ -217,7 +261,6 @@ const TodayLovable = () => {
             kind: "content",
             title: toStr(r?.title) || "Sans titre",
             type: toStr(r?.type) || "Contenu",
-            platform: toStr(r?.channel) || "—",
             statusRaw: toStr(r?.status) || "",
             dt,
           });
@@ -233,7 +276,6 @@ const TodayLovable = () => {
             kind: "task",
             title: toStr(r?.title) || "Sans titre",
             type: "Tâche",
-            platform: "Projet",
             statusRaw: toStr(r?.status) || "",
             dt,
             priority: safePriority(r?.priority),
@@ -241,105 +283,204 @@ const TodayLovable = () => {
         }
 
         combined.sort((a: CombinedUpcoming, b: CombinedUpcoming) => a.dt.getTime() - b.dt.getTime());
-
         const first = combined[0] ?? null;
-        if (!cancelled && first) {
-          const day = formatDayLabel(first.dt, now);
-          const time = formatTimeOrDash(first.dt);
-          setNextTask({
-            title: first.title,
-            type: first.kind === "content" ? first.type : "Tâche",
-            platform: first.kind === "content" ? first.platform : "Projet",
-            dueTime: time === "-" ? day : time,
-            priority: first.kind === "task" ? (first.priority ?? "medium") : "high",
-          });
-        }
 
-        // Upcoming (4 items) – preserve exact list length for layout
-        const mapped: UpcomingItem[] = combined.slice(0, 4).map((x: CombinedUpcoming) => {
-          const day = formatDayLabel(x.dt, now);
-          const time = formatTimeOrDash(x.dt);
-
-          const status =
-            x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
-
-          return {
-            title: x.title,
-            type: x.kind === "content" ? x.type : "Tâche",
-            day,
-            time,
-            status,
-          };
-        });
-
-        // If empty, keep previous placeholders (Lovable) instead of showing blank UI.
-        if (!cancelled && mapped.length > 0) {
-          while (mapped.length < 4) {
-            mapped.push({ title: "—", type: "Tâche", day: "—", time: "-", status: "À faire" });
-          }
-          setUpcomingItems(mapped);
-        }
-
-        // Stats
-        const publishedCount = contentRows.filter((r) => isPublishedStatus(r?.status)).length;
-
-        const completionRate =
-          typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : null;
-        const totalTasks = typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : null;
-        const doneTasks = typeof tasksStatsJson?.done === "number" ? tasksStatsJson.done : null;
-
+        // B) Première action prioritaire (logique produit) :
+        // - onboarding incomplet => onboarding
+        // - onboarding ok mais stratégie pas générée => “Générer ma stratégie”
+        // - pyramides générées mais pas choisies => “Choisir ma pyramide”
+        // - sinon => prochain contenu/tâche datée (ou fallback)
         if (!cancelled) {
-          if (completionRate !== null) setPlanProgressPercent(clampPercent(completionRate));
+          if (!onboardingCompleted) {
+            setNextTask({
+              title: "Compléter l'onboarding",
+              type: "Onboarding",
+              platform: "Tipote",
+              dueTime: "Maintenant",
+              priority: "high",
+            });
+          } else if (!pyramidsOk) {
+            setNextTask({
+              title: "Générer ma stratégie",
+              type: "Stratégie",
+              platform: "Tipote",
+              dueTime: "Maintenant",
+              priority: "high",
+            });
+          } else if (selectedIdx === null) {
+            setNextTask({
+              title: "Choisir ma pyramide d'offres",
+              type: "Stratégie",
+              platform: "Tipote",
+              dueTime: "Maintenant",
+              priority: "high",
+            });
+          } else if (first) {
+            const day = formatDayLabel(first.dt, now);
+            const time = formatTimeOrDash(first.dt);
+            setNextTask({
+              title: first.title,
+              type: first.kind === "content" ? first.type : "Tâche",
+              platform: first.kind === "content" ? "Contenu" : "Projet",
+              dueTime: time === "-" ? day : time,
+              priority: first.kind === "task" ? (first.priority ?? "medium") : "high",
+            });
+          } else {
+            setNextTask({
+              title: "Créer mon 1er contenu",
+              type: "Contenu",
+              platform: "Tipote",
+              dueTime: "Maintenant",
+              priority: "high",
+            });
+          }
         }
 
-        // Planned ratio over next 7 days (target 7)
-        const plannedNext7 = combined.filter((x: CombinedUpcoming) => {
-          if (x.kind !== "content") return false;
-          return isPlannedStatus(x.statusRaw);
+        // C) “À venir cette semaine”
+        if (!cancelled) {
+          if (combined.length > 0) {
+            const mapped: UpcomingItem[] = combined.slice(0, 4).map((x: CombinedUpcoming) => {
+              const day = formatDayLabel(x.dt, now);
+              const time = formatTimeOrDash(x.dt);
+              const status =
+                x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
+
+              return {
+                title: x.title,
+                type: x.kind === "content" ? x.type : "Tâche",
+                day,
+                time,
+                status,
+              };
+            });
+
+            while (mapped.length < 4) {
+              mapped.push({ title: "—", type: "Tâche", day: "—", time: "-", status: "À faire" });
+            }
+            setUpcomingItems(mapped);
+          } else {
+            // Pas de data : on montre une checklist d’arrivée (sans changer le layout)
+            const fallback: UpcomingItem[] = [];
+            if (!onboardingCompleted) {
+              fallback.push({ title: "Compléter l'onboarding", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+            } else {
+              if (!pyramidsOk) {
+                fallback.push({ title: "Générer ma stratégie", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+              } else if (selectedIdx === null) {
+                fallback.push({ title: "Choisir ma pyramide d'offres", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+              }
+              fallback.push({ title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
+              fallback.push({ title: "Planifier la semaine", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
+            }
+
+            while (fallback.length < 4) {
+              fallback.push({ title: "—", type: "Tâche", day: "—", time: "-", status: "À faire" });
+            }
+
+            setUpcomingItems(fallback.slice(0, 4));
+          }
+        }
+
+        // D) Stats + Progress (vraies données / proxys cohérents)
+        // Contenus publiés : total + delta 7j vs 7j précédents
+        const start7 = startOfDay(daysAgo(6));
+        const prevStart7 = startOfDay(daysAgo(13));
+        const prevEnd7 = startOfDay(daysAgo(7));
+
+        const publishedTotal = contentRows.filter((r) => isPublishedStatus(r?.status)).length;
+
+        const published7 = contentRows.filter((r) => {
+          if (!isPublishedStatus(r?.status)) return false;
+          const d = parseDate(r?.created_at) ?? parseDate(r?.scheduled_date);
+          if (!d) return false;
+          return d.getTime() >= start7.getTime();
         }).length;
 
-        const target = 7;
-        const plannedPct = clampPercent((plannedNext7 / target) * 100);
+        const publishedPrev7 = contentRows.filter((r) => {
+          if (!isPublishedStatus(r?.status)) return false;
+          const d = parseDate(r?.created_at) ?? parseDate(r?.scheduled_date);
+          if (!d) return false;
+          const t = d.getTime();
+          return t >= prevStart7.getTime() && t < prevEnd7.getTime();
+        }).length;
 
-        if (!cancelled) {
-          setPlannedLabel(`${plannedNext7}/${target}`);
-          setPlannedPercent(plannedPct);
-        }
+        const publishedDelta = pctDelta(published7, publishedPrev7);
 
-        // Next due (days)
+        // Tâches : completionRate + done/total
+        const completionRate =
+          typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : 0;
+        const totalTasks = typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : 0;
+        const doneTasks = typeof tasksStatsJson?.done === "number" ? tasksStatsJson.done : 0;
+
+        // Engagement proxy : contenus publiés 7j (objectif 7)
+        const engagementGoal = 7;
+        const engagementCurr = published7;
+        const engagementPrev = publishedPrev7;
+        const engagementDelta = pctDelta(engagementCurr, engagementPrev);
+
+        // Contenus planifiés : sur 7j (objectif 7)
+        const plannedNext7 = contentRows.filter((r) => {
+          const dt = parseDate(r?.scheduled_date);
+          if (!dt) return false;
+          const t = dt.getTime();
+          if (t < startOfDay(now).getTime() || t > next7.getTime()) return false;
+          return isPlannedStatus(r?.status);
+        }).length;
+
+        // Prochaine échéance : si on a une vraie échéance (contenu/tâche), sinon "—"
         let nextDueValue = "—";
-        let nextDueTrend = "";
+        let nextDueTrend = "—";
         if (first) {
           const days = Math.max(
             0,
             Math.round((startOfDay(first.dt).getTime() - startOfDay(now).getTime()) / 86400000),
           );
           nextDueValue = `${days}j`;
-          nextDueTrend = first.title;
+          nextDueTrend = first.title || "—";
         }
 
-        const tasksValue =
-          completionRate !== null ? `${clampPercent(completionRate)}%` : stats[1]?.value ?? "—";
-        const tasksTrend =
-          doneTasks !== null && totalTasks !== null ? `${doneTasks}/${totalTasks}` : stats[1]?.trend ?? "—";
-
         if (!cancelled) {
+          const planPct = clampPercent(completionRate);
+          setPlanProgressPercent(planPct);
+
+          const plannedPct = clampPercent((plannedNext7 / 7) * 100);
+          setPlannedLabel(`${plannedNext7}/7`);
+          setPlannedPercent(plannedPct);
+
+          const engagementPct = clampPercent((engagementCurr / engagementGoal) * 100);
+          setEngagementLabel(`${engagementCurr}/${engagementGoal}`);
+          setEngagementPercent(engagementPct);
+
           setStats([
-            { label: "Contenus publiés", value: `${publishedCount}`, trend: stats[0]?.trend ?? "", icon: FileText },
-            { label: "Tâches complétées", value: tasksValue, trend: tasksTrend, icon: CheckCircle2 },
-            { label: "Engagement", value: stats[2]?.value ?? "—", trend: stats[2]?.trend ?? "", icon: TrendingUp },
-            { label: "Prochaine échéance", value: nextDueValue, trend: nextDueTrend || (stats[3]?.trend ?? ""), icon: Calendar },
+            {
+              label: "Contenus publiés",
+              value: `${publishedTotal}`,
+              trend: `${publishedDelta >= 0 ? "+" : ""}${publishedDelta}%`,
+              icon: FileText,
+            },
+            {
+              label: "Tâches complétées",
+              value: `${planPct}%`,
+              trend: `${doneTasks}/${totalTasks}`,
+              icon: CheckCircle2,
+            },
+            {
+              label: "Engagement",
+              value: `${engagementCurr}`,
+              trend: `${engagementDelta >= 0 ? "+" : ""}${engagementDelta}%`,
+              icon: TrendingUp,
+            },
+            {
+              label: "Prochaine échéance",
+              value: nextDueValue,
+              trend: nextDueTrend,
+              icon: Calendar,
+            },
           ]);
         }
-
-        // Engagement stays Lovable placeholder until analytics are wired
-        if (!cancelled) {
-          setEngagementLabel("2.4K/3K");
-          setEngagementPercent(80);
-        }
       } catch (e) {
-        // On ne casse jamais l'UI du dashboard : on garde les placeholders Lovable si une erreur survient
         console.error("TodayLovable load error:", e);
+        // Ne jamais casser l’UI : on garde les valeurs initiales (mais elles ne sont plus “LinkedIn/2.4K”)
       }
     }
 
@@ -348,7 +489,6 @@ const TodayLovable = () => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
