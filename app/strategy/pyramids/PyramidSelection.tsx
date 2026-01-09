@@ -78,7 +78,7 @@ function normalizeLegacySchema(p: any, idx: number): Pyramid {
 
   const toOffer = (o: any): PyramidOffer => ({
     title: asString(o?.name ?? o?.title ?? ""),
-    composition: asString(o?.description ?? ""),
+    composition: asString(o?.description ?? o?.composition ?? ""),
     purpose: "",
     format: asString(o?.type ?? o?.format ?? ""),
   });
@@ -161,7 +161,7 @@ export default function PyramidSelection() {
         const secondTry = await loadFromPlan();
         if (!secondTry.ok) {
           toast({
-            title: "Génération en cours...",
+            title: "Génération en cours.",
             description: "Nous préparons tes 3 stratégies. Réessaie dans quelques secondes.",
           });
         }
@@ -209,6 +209,14 @@ export default function PyramidSelection() {
         throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
       }
 
+      // ✅ Générer la stratégie complète (mission/persona/plan 90j) si nécessaire (idempotent)
+      const fullRes = await fetch("/api/strategy", { method: "POST" }).catch(() => null);
+      const fullJson = fullRes ? await fullRes.json().catch(() => ({} as any)) : null;
+      if (!fullRes || !fullRes.ok) {
+        throw new Error(fullJson?.error || "Impossible de générer la stratégie complète.");
+      }
+
+      // ✅ Puis seulement synchroniser les tâches depuis le plan (idempotent)
       const syncRes = await fetch("/api/tasks/sync", { method: "POST" });
       const syncJson = await syncRes.json().catch(() => ({} as any));
       if (!syncRes.ok || syncJson?.ok === false) {
@@ -217,7 +225,7 @@ export default function PyramidSelection() {
 
       toast({
         title: "Stratégie sélectionnée ✅",
-        description: "Tes tâches ont été générées. Bienvenue dans Tipote™ !",
+        description: "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote™ !",
       });
 
       router.push("/app");
@@ -258,106 +266,125 @@ export default function PyramidSelection() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-primary/5">
       <main className="container mx-auto px-4 py-10 max-w-6xl">
-        <div className="space-y-8">
-          <div className="text-center space-y-3">
-            <div className="flex items-center justify-center gap-2">
-              <Sparkles className="w-6 h-6 text-primary" />
-              <h1 className="text-3xl font-bold tracking-tight">Choisis ta pyramide d’offres</h1>
-            </div>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Tipote™ te propose 3 scénarios. Choisis celui qui te ressemble le plus pour générer ton plan d’action.
-            </p>
+        <div className="text-center space-y-4 mb-10">
+          <div className="flex items-center justify-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="text-primary font-medium">Étape 1</span>
           </div>
+          <h1 className="text-4xl font-bold tracking-tight">Choisis ta pyramide d’offres</h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
+          </p>
+        </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {pyramids.map((pyramid, idx) => {
-              const isSelected = selectedPyramid === pyramid.id;
-
-              const Icon = idx === 0 ? Gift : idx === 1 ? Zap : Crown;
-              const badge =
-                idx === 0 ? "Accessible" : idx === 1 ? "Ambitieux" : "Premium";
-
-              return (
-                <Card
-                  key={pyramid.id}
-                  className={`relative transition-all cursor-pointer hover:shadow-lg ${
-                    isSelected ? "ring-2 ring-primary shadow-lg" : ""
-                  }`}
-                  onClick={() => setSelectedPyramid(pyramid.id)}
-                >
-                  <CardHeader className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-primary" />
-                          </div>
-                          <Badge variant="secondary">{badge}</Badge>
-                        </div>
-                        <CardTitle className="text-xl">{pyramid.name}</CardTitle>
-                        <CardDescription className="text-sm">
-                          {pyramid.strategy_summary}
-                        </CardDescription>
-                      </div>
-
-                      {isSelected && (
-                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="w-4 h-4 text-primary-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="rounded-lg border bg-card p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Lead magnet</p>
-                        <p className="font-semibold">{pyramid.lead_magnet.title}</p>
-                        <p className="text-sm text-muted-foreground">{pyramid.lead_magnet.composition}</p>
-                      </div>
-
-                      <div className="rounded-lg border bg-card p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Low ticket</p>
-                        <p className="font-semibold">{pyramid.low_ticket.title}</p>
-                        <p className="text-sm text-muted-foreground">{pyramid.low_ticket.composition}</p>
-                      </div>
-
-                      <div className="rounded-lg border bg-card p-3">
-                        <p className="text-xs font-medium text-muted-foreground">High ticket</p>
-                        <p className="font-semibold">{pyramid.high_ticket.title}</p>
-                        <p className="text-sm text-muted-foreground">{pyramid.high_ticket.composition}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col items-center gap-4">
-            <Button
-              size="lg"
-              disabled={!selectedPyramid || submitting}
-              onClick={handleSelectPyramid}
-              className="w-full max-w-md"
+        <div className="grid md:grid-cols-3 gap-6 mb-10">
+          {pyramids.map((pyramid) => (
+            <Card
+              key={pyramid.id}
+              className={`relative overflow-hidden transition-all cursor-pointer ${
+                selectedPyramid === pyramid.id ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"
+              }`}
+              onClick={() => setSelectedPyramid(pyramid.id)}
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Validation...
-                </>
-              ) : (
-                <>
-                  Valider cette stratégie
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
+              {selectedPyramid === pyramid.id && (
+                <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                  <Check className="w-5 h-5 text-primary-foreground" />
+                </div>
               )}
-            </Button>
 
-            <p className="text-center text-xs text-muted-foreground">
-              Vous pourrez modifier vos offres à tout moment dans les paramètres.
-            </p>
-          </div>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      pyramid.id === "A"
+                        ? "bg-primary/10"
+                        : pyramid.id === "B"
+                          ? "bg-secondary/10"
+                          : "bg-accent/10"
+                    }`}
+                  >
+                    {pyramid.id === "A" ? (
+                      <Gift className="w-6 h-6 text-primary" />
+                    ) : pyramid.id === "B" ? (
+                      <Zap className="w-6 h-6 text-secondary" />
+                    ) : (
+                      <Crown className="w-6 h-6 text-accent" />
+                    )}
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">{pyramid.name}</CardTitle>
+                    <Badge
+                      variant="outline"
+                      className={`mt-1 ${
+                        pyramid.id === "A"
+                          ? "border-primary/20 text-primary"
+                          : pyramid.id === "B"
+                            ? "border-secondary/20 text-secondary"
+                            : "border-accent/20 text-accent"
+                      }`}
+                    >
+                      {pyramid.id === "A"
+                        ? "Simplicité"
+                        : pyramid.id === "B"
+                          ? "Expertise"
+                          : "Scalabilité"}
+                    </Badge>
+                  </div>
+                </div>
+                <CardDescription className="text-sm">{pyramid.strategy_summary}</CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Lead Magnet</p>
+                    <p className="font-medium text-sm">{pyramid.lead_magnet.title}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Low Ticket</p>
+                    <p className="font-medium text-sm">{pyramid.low_ticket.title}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">High Ticket</p>
+                    <p className="font-medium text-sm">{pyramid.high_ticket.title}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    variant={selectedPyramid === pyramid.id ? "default" : "outline"}
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPyramid(pyramid.id);
+                    }}
+                  >
+                    {selectedPyramid === pyramid.id ? "Sélectionné" : "Choisir cette stratégie"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center space-y-4">
+          <Button size="lg" className="px-8" disabled={!selectedPyramid || submitting} onClick={handleSelectPyramid}>
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Validation...
+              </>
+            ) : (
+              <>
+                Continuer avec cette stratégie
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
+
+          <p className="text-sm text-muted-foreground">
+            Tu pourras modifier ta pyramide d’offres plus tard dans l’onglet “Ma Stratégie”.
+          </p>
         </div>
       </main>
     </div>
