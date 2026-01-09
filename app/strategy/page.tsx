@@ -17,46 +17,26 @@ function asString(v: unknown): string {
 }
 
 function asStringArray(v: unknown): string[] {
-  if (!v) return [];
   if (Array.isArray(v)) return v.map(asString).map((s) => s.trim()).filter(Boolean);
   if (typeof v === "string") {
     const s = v.trim();
     if (!s) return [];
-    if (s.includes("\n")) return s.split("\n").map((x) => x.trim()).filter(Boolean);
-    if (s.includes(",")) return s.split(",").map((x) => x.trim()).filter(Boolean);
-    return [s];
+    // support "a, b, c" ou "a|b|c"
+    const parts = s.includes("|") ? s.split("|") : s.split(",");
+    return parts.map((x) => x.trim()).filter(Boolean);
   }
   return [];
 }
 
-function asRecord(v: unknown): AnyRecord | null {
-  if (!v || typeof v !== "object") return null;
-  return v as AnyRecord;
-}
-function asArray(v: unknown): unknown[] {
-  return Array.isArray(v) ? v : [];
-}
-
 function clamp01(n: number) {
-  if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
-  if (n < 0) return 0;
-  if (n > 1) return 1;
-  return n;
+  return Math.max(0, Math.min(1, n));
 }
 
-function parseDateOnly(raw: unknown): Date | null {
-  if (typeof raw !== "string") return null;
-  const s = raw.trim();
-  if (!s) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const [y, m, d] = s.split("-").map((n) => Number(n));
-    const dt = new Date(y, m - 1, d);
-    return Number.isNaN(dt.getTime()) ? null : dt;
-  }
-
-  const dt = new Date(s);
-  return Number.isNaN(dt.getTime()) ? null : dt;
+function parseDateOnly(raw: string): Date | null {
+  if (!raw) return null;
+  // accepte YYYY-MM-DD ou ISO
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function bucketKey(daysFromNow: number) {
@@ -67,13 +47,14 @@ function bucketKey(daysFromNow: number) {
 }
 
 function countPlanTasks(planJson: AnyRecord): number {
-  const plan90 = asRecord(planJson.plan_90_days) || asRecord(planJson.plan90);
-  const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
+  const plan90 = (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
+  const grouped =
+    (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
   if (!grouped) return 0;
 
-  const d30 = asArray(grouped.d30).length;
-  const d60 = asArray(grouped.d60).length;
-  const d90 = asArray(grouped.d90).length;
+  const d30 = Array.isArray(grouped.d30) ? grouped.d30.length : 0;
+  const d60 = Array.isArray(grouped.d60) ? grouped.d60.length : 0;
+  const d90 = Array.isArray(grouped.d90) ? grouped.d90.length : 0;
 
   return d30 + d60 + d90;
 }
@@ -91,15 +72,18 @@ type TaskRow = {
 
 export default async function StrategyPage() {
   const supabase = await getSupabaseServerClient();
-  const { data: auth } = await supabase.auth.getUser();
 
-  if (!auth?.user) redirect("/");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // business_plan (source vérité)
+  if (!user) redirect("/");
+
+  // Plan
   const planRes = await supabase
     .from("business_plan")
     .select("id, plan_json, created_at, updated_at")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (planRes.error) redirect("/onboarding");
@@ -115,9 +99,7 @@ export default async function StrategyPage() {
     redirect("/strategy/pyramids");
   }
 
-  const planTasksCount = countPlanTasks(planJson);
-
-  // ✅ business_profiles : colonnes snake_case réelles
+  // ✅ business_profiles : retirer colonne inexistante preferred_content_type (causait 400)
   const profileRes = await supabase
     .from("business_profiles")
     .select(
@@ -127,25 +109,20 @@ export default async function StrategyPage() {
         "business_maturity",
         "main_goals",
         "content_preference",
-        "preferred_content_type",
         "created_at",
         "updated_at",
       ].join(","),
     )
-    .eq("user_id", auth.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   const profileRow = (profileRes.data ?? null) as AnyRecord | null;
 
   const firstName = asString(profileRow?.first_name);
 
-  const goals =
-    asStringArray(profileRow?.main_goals) ||
-    asStringArray(profileRow?.goals);
+  const goals = asStringArray(profileRow?.main_goals) || asStringArray(profileRow?.goals);
 
-  const preferredContentTypes = asStringArray(
-    profileRow?.content_preference ?? profileRow?.preferred_content_type,
-  );
+  const preferredContentTypes = asStringArray(profileRow?.content_preference);
 
   // Persona (depuis plan_json)
   const personaRaw = (planJson.persona ?? {}) as AnyRecord;
@@ -173,7 +150,7 @@ export default async function StrategyPage() {
   const tasksRes = await supabase
     .from("project_tasks")
     .select("id, title, status, priority, due_date, source, created_at, updated_at")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", user.id)
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(500);
 
@@ -209,6 +186,7 @@ export default async function StrategyPage() {
   const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
 
+  const planTasksCount = countPlanTasks(planJson);
   const totalPlanTasks = totalTasks || planTasksCount || 0;
 
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
