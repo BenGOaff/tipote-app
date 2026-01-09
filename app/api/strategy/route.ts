@@ -247,11 +247,21 @@ Si des offres existantes sont présentes dans le profil (name/type/price/sales),
 - ou explique pourquoi tu proposes une alternative et en quoi elle est meilleure pour l'objectif et la maturité.
 `;
 
+    // ✅ IMPORTANT : ici on est sur la clé propriétaire Tipote.
+    // L'endpoint peut être déclenché très tôt (post-onboarding), donc il ne doit JAMAIS bloquer l'UX.
+    // Si la clé owner n'est pas configurée, on "skip" proprement au lieu de 500.
     const ai = openai;
     if (!ai) {
+      console.warn("Strategy generation skipped: OPENAI_API_KEY_OWNER is not set");
       return NextResponse.json(
-        { success: false, error: "OPENAI_API_KEY_OWNER is not set (strategy generation disabled)" },
-        { status: 500 },
+        {
+          success: true,
+          planId: null,
+          skipped: true,
+          reason: "strategy_generation_disabled",
+          error: "OPENAI_API_KEY_OWNER is not set (strategy generation disabled)",
+        },
+        { status: 200 },
       );
     }
 
@@ -281,7 +291,9 @@ Si des offres existantes sont présentes dans le profil (name/type/price/sales),
     }
 
     const offerPyramidsRaw = asArray(parsed.offer_pyramids);
-    const normalizedOfferPyramids = offerPyramidsRaw.slice(0, 3).map((p: any, idx: number) => normalizePyramid(asRecord(p), idx));
+    const normalizedOfferPyramids = offerPyramidsRaw
+      .slice(0, 3)
+      .map((p: any, idx: number) => normalizePyramid(asRecord(p), idx));
 
     if (normalizedOfferPyramids.length !== 3) {
       console.error("Invalid offer_pyramids count:", offerPyramidsRaw);

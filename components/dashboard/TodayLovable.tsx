@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -19,22 +21,335 @@ import {
   Play,
   BarChart3,
 } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+
+type NextTask = {
+  title: string;
+  type: string;
+  platform: string;
+  dueTime: string;
+  priority: "high" | "medium" | "low";
+};
+
+type StatIcon = React.ComponentType<{ className?: string }>;
+
+type DashboardStat = {
+  label: string;
+  value: string;
+  trend: string;
+  icon: StatIcon;
+};
+
+type UpcomingItem = {
+  title: string;
+  type: string;
+  day: string;
+  time: string;
+  status: "À faire" | "Planifié" | "Brouillon" | "En cours" | "Terminé";
+};
+
+type CombinedUpcoming = {
+  kind: "content" | "task";
+  title: string;
+  type: string;
+  platform: string;
+  statusRaw: string;
+  dt: Date;
+  priority?: "high" | "medium" | "low";
+};
+
+function toStr(v: unknown): string {
+  return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+}
+
+function toLower(v: unknown): string {
+  return toStr(v).toLowerCase();
+}
+
+function parseDate(v: unknown): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const s = toStr(v);
+  if (!s) return null;
+  const dt = new Date(s);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatDayLabel(date: Date, now: Date): string {
+  const d0 = startOfDay(now).getTime();
+  const d1 = startOfDay(date).getTime();
+  const diffDays = Math.round((d1 - d0) / 86400000);
+
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return "Demain";
+
+  const weekdays = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  return weekdays[date.getDay()] ?? "Cette semaine";
+}
+
+function formatTimeOrDash(date: Date): string {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  if (hh === "00" && mm === "00") return "-";
+  return `${hh}:${mm}`;
+}
+
+function isPublishedStatus(s: unknown): boolean {
+  const v = toLower(s);
+  return v === "published" || v === "publié" || v === "publie";
+}
+
+function isPlannedStatus(s: unknown): boolean {
+  const v = toLower(s);
+  return v === "scheduled" || v === "planned" || v === "planifié" || v === "planifie";
+}
+
+function isDraftStatus(s: unknown): boolean {
+  const v = toLower(s);
+  return v === "draft" || v === "brouillon";
+}
+
+function isDoingStatus(s: unknown): boolean {
+  const v = toLower(s);
+  return v === "doing" || v === "in_progress" || v === "en cours" || v === "encours";
+}
+
+function isDoneStatus(s: unknown): boolean {
+  const v = toLower(s);
+  return v === "done" || v === "completed" || v === "fait" || v === "terminé" || v === "termine";
+}
+
+function mapContentStatusToUi(raw: string): UpcomingItem["status"] {
+  if (isPlannedStatus(raw)) return "Planifié";
+  if (isDraftStatus(raw)) return "Brouillon";
+  if (isPublishedStatus(raw)) return "Terminé";
+  return "À faire";
+}
+
+function mapTaskStatusToUi(raw: string): UpcomingItem["status"] {
+  if (isDoneStatus(raw)) return "Terminé";
+  if (isDoingStatus(raw)) return "En cours";
+  return "À faire";
+}
+
+function clampPercent(v: number): number {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(100, Math.round(v)));
+}
+
+function safePriority(v: unknown): "high" | "medium" | "low" {
+  const p = toLower(v);
+  if (p === "high" || p === "medium" || p === "low") return p;
+  return "medium";
+}
 
 const TodayLovable = () => {
-  const nextTask = {
+  const [nextTask, setNextTask] = useState<NextTask>({
     title: "Rédiger le post LinkedIn du jour",
     type: "Post",
     platform: "LinkedIn",
     dueTime: "09:00",
     priority: "high",
-  };
+  });
 
-  const stats = [
+  const [stats, setStats] = useState<DashboardStat[]>([
     { label: "Contenus publiés", value: "24", trend: "+12%", icon: FileText },
     { label: "Tâches complétées", value: "67%", trend: "16/24", icon: CheckCircle2 },
     { label: "Engagement", value: "2.4K", trend: "+18%", icon: TrendingUp },
     { label: "Prochaine échéance", value: "2j", trend: "Lead magnet", icon: Calendar },
-  ];
+  ]);
+
+  const [planProgressPercent, setPlanProgressPercent] = useState<number>(75);
+  const [plannedLabel, setPlannedLabel] = useState<string>("5/7");
+  const [plannedPercent, setPlannedPercent] = useState<number>(71);
+
+  const [engagementLabel, setEngagementLabel] = useState<string>("2.4K/3K");
+  const [engagementPercent, setEngagementPercent] = useState<number>(80);
+
+  const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([
+    { title: "Post LinkedIn : Stratégie 2025", type: "Post", day: "Aujourd'hui", time: "09:00", status: "À faire" },
+    { title: "Newsletter hebdomadaire", type: "Email", day: "Demain", time: "14:00", status: "Planifié" },
+    { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
+    { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const supabase = getSupabaseBrowserClient();
+
+        // content_item (RLS)
+        const contentRes = await supabase
+          .from("content_item")
+          .select("id, type, title, status, scheduled_date, channel, created_at")
+          .order("scheduled_date", { ascending: true, nullsFirst: false })
+          .limit(80);
+
+        const contentRows: any[] = Array.isArray(contentRes.data) ? contentRes.data : [];
+
+        // project_tasks via API (session cookies)
+        const tasksStatsRes = await fetch("/api/tasks/stats", { method: "GET" }).catch(() => null);
+        const tasksStatsJson = tasksStatsRes ? await tasksStatsRes.json().catch(() => null) : null;
+
+        const tasksRes = await fetch("/api/tasks", { method: "GET" }).catch(() => null);
+        const tasksJson = tasksRes ? await tasksRes.json().catch(() => null) : null;
+
+        const taskRows: any[] = Array.isArray(tasksJson?.tasks) ? tasksJson.tasks : [];
+
+        const now = new Date();
+        const next7 = new Date(now.getTime() + 7 * 86400000);
+
+        const combined: CombinedUpcoming[] = [];
+
+        for (const r of contentRows) {
+          const dt = parseDate(r?.scheduled_date);
+          if (!dt) continue;
+          const t = dt.getTime();
+          if (t < startOfDay(now).getTime() || t > next7.getTime()) continue;
+
+          combined.push({
+            kind: "content",
+            title: toStr(r?.title) || "Sans titre",
+            type: toStr(r?.type) || "Contenu",
+            platform: toStr(r?.channel) || "—",
+            statusRaw: toStr(r?.status) || "",
+            dt,
+          });
+        }
+
+        for (const r of taskRows) {
+          const dt = parseDate(r?.due_date);
+          if (!dt) continue;
+          const t = dt.getTime();
+          if (t < startOfDay(now).getTime() || t > next7.getTime()) continue;
+
+          combined.push({
+            kind: "task",
+            title: toStr(r?.title) || "Sans titre",
+            type: "Tâche",
+            platform: "Projet",
+            statusRaw: toStr(r?.status) || "",
+            dt,
+            priority: safePriority(r?.priority),
+          });
+        }
+
+        combined.sort((a: CombinedUpcoming, b: CombinedUpcoming) => a.dt.getTime() - b.dt.getTime());
+
+        const first = combined[0] ?? null;
+        if (!cancelled && first) {
+          const day = formatDayLabel(first.dt, now);
+          const time = formatTimeOrDash(first.dt);
+          setNextTask({
+            title: first.title,
+            type: first.kind === "content" ? first.type : "Tâche",
+            platform: first.kind === "content" ? first.platform : "Projet",
+            dueTime: time === "-" ? day : time,
+            priority: first.kind === "task" ? (first.priority ?? "medium") : "high",
+          });
+        }
+
+        // Upcoming (4 items) – preserve exact list length for layout
+        const mapped: UpcomingItem[] = combined.slice(0, 4).map((x: CombinedUpcoming) => {
+          const day = formatDayLabel(x.dt, now);
+          const time = formatTimeOrDash(x.dt);
+
+          const status =
+            x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
+
+          return {
+            title: x.title,
+            type: x.kind === "content" ? x.type : "Tâche",
+            day,
+            time,
+            status,
+          };
+        });
+
+        // If empty, keep previous placeholders (Lovable) instead of showing blank UI.
+        if (!cancelled && mapped.length > 0) {
+          while (mapped.length < 4) {
+            mapped.push({ title: "—", type: "Tâche", day: "—", time: "-", status: "À faire" });
+          }
+          setUpcomingItems(mapped);
+        }
+
+        // Stats
+        const publishedCount = contentRows.filter((r) => isPublishedStatus(r?.status)).length;
+
+        const completionRate =
+          typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : null;
+        const totalTasks = typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : null;
+        const doneTasks = typeof tasksStatsJson?.done === "number" ? tasksStatsJson.done : null;
+
+        if (!cancelled) {
+          if (completionRate !== null) setPlanProgressPercent(clampPercent(completionRate));
+        }
+
+        // Planned ratio over next 7 days (target 7)
+        const plannedNext7 = combined.filter((x: CombinedUpcoming) => {
+          if (x.kind !== "content") return false;
+          return isPlannedStatus(x.statusRaw);
+        }).length;
+
+        const target = 7;
+        const plannedPct = clampPercent((plannedNext7 / target) * 100);
+
+        if (!cancelled) {
+          setPlannedLabel(`${plannedNext7}/${target}`);
+          setPlannedPercent(plannedPct);
+        }
+
+        // Next due (days)
+        let nextDueValue = "—";
+        let nextDueTrend = "";
+        if (first) {
+          const days = Math.max(
+            0,
+            Math.round((startOfDay(first.dt).getTime() - startOfDay(now).getTime()) / 86400000),
+          );
+          nextDueValue = `${days}j`;
+          nextDueTrend = first.title;
+        }
+
+        const tasksValue =
+          completionRate !== null ? `${clampPercent(completionRate)}%` : stats[1]?.value ?? "—";
+        const tasksTrend =
+          doneTasks !== null && totalTasks !== null ? `${doneTasks}/${totalTasks}` : stats[1]?.trend ?? "—";
+
+        if (!cancelled) {
+          setStats([
+            { label: "Contenus publiés", value: `${publishedCount}`, trend: stats[0]?.trend ?? "", icon: FileText },
+            { label: "Tâches complétées", value: tasksValue, trend: tasksTrend, icon: CheckCircle2 },
+            { label: "Engagement", value: stats[2]?.value ?? "—", trend: stats[2]?.trend ?? "", icon: TrendingUp },
+            { label: "Prochaine échéance", value: nextDueValue, trend: nextDueTrend || (stats[3]?.trend ?? ""), icon: Calendar },
+          ]);
+        }
+
+        // Engagement stays Lovable placeholder until analytics are wired
+        if (!cancelled) {
+          setEngagementLabel("2.4K/3K");
+          setEngagementPercent(80);
+        }
+      } catch (e) {
+        // On ne casse jamais l'UI du dashboard : on garde les placeholders Lovable si une erreur survient
+        console.error("TodayLovable load error:", e);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SidebarProvider>
@@ -125,25 +440,25 @@ const TodayLovable = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Plan stratégique</span>
-                      <span className="text-sm font-medium">75%</span>
+                      <span className="text-sm font-medium">{planProgressPercent}%</span>
                     </div>
-                    <Progress value={75} className="h-2" />
+                    <Progress value={planProgressPercent} className="h-2" />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Contenus planifiés</span>
-                      <span className="text-sm font-medium">5/7</span>
+                      <span className="text-sm font-medium">{plannedLabel}</span>
                     </div>
-                    <Progress value={71} className="h-2" />
+                    <Progress value={plannedPercent} className="h-2" />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Objectif engagement</span>
-                      <span className="text-sm font-medium">2.4K/3K</span>
+                      <span className="text-sm font-medium">{engagementLabel}</span>
                     </div>
-                    <Progress value={80} className="h-2" />
+                    <Progress value={engagementPercent} className="h-2" />
                   </div>
                 </div>
 
@@ -220,12 +535,7 @@ const TodayLovable = () => {
               </div>
 
               <div className="space-y-3">
-                {[
-                  { title: "Post LinkedIn : Stratégie 2025", type: "Post", day: "Aujourd'hui", time: "09:00", status: "À faire" },
-                  { title: "Newsletter hebdomadaire", type: "Email", day: "Demain", time: "14:00", status: "Planifié" },
-                  { title: "Article blog : Guide IA", type: "Article", day: "Mercredi", time: "10:00", status: "Brouillon" },
-                  { title: "Finaliser lead magnet PDF", type: "Tâche", day: "Vendredi", time: "-", status: "En cours" },
-                ].map((item, i) => (
+                {upcomingItems.map((item, i) => (
                   <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex-shrink-0">
                       <Badge
@@ -236,7 +546,9 @@ const TodayLovable = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">{item.day} {item.time !== "-" && `• ${item.time}`}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.day} {item.time !== "-" && `• ${item.time}`}
+                      </p>
                     </div>
                     <CheckCircle2
                       className={`w-5 h-5 flex-shrink-0 ${item.status === "En cours" ? "text-primary" : "text-muted-foreground"}`}
