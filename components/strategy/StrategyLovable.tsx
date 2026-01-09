@@ -8,19 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import {
   Target,
+  TrendingUp,
+  Users,
+  DollarSign,
   CheckCircle2,
   ArrowRight,
   Layers,
   Clock,
   Plus,
-  Users,
 } from "lucide-react";
 
-import StrategyClient from "@/app/strategy/StrategyClient";
-import SyncTasksButton from "@/app/strategy/SyncTasksButton";
+type AnyRecord = Record<string, any>;
 
 type TaskRow = {
   id: string;
@@ -33,6 +33,12 @@ type TaskRow = {
   updated_at: string | null;
 };
 
+type Phase = {
+  title: string;
+  period: string;
+  tasks: TaskRow[];
+};
+
 type Persona = {
   title: string;
   pains: string[];
@@ -40,65 +46,88 @@ type Persona = {
   channels: string[];
 };
 
-type AnyRecord = Record<string, unknown>;
-
-type Phase = {
-  title: string;
-  period: string;
-  tasks: TaskRow[];
-};
-
-type Props = {
+type StrategyLovableProps = {
   firstName: string;
   revenueGoal: string;
   horizon: string;
   progressionPercent: number;
-
   totalDone: number;
   totalAll: number;
-
   daysRemaining: number;
   currentPhase: number;
   currentPhaseLabel: string;
-
   phases: Phase[];
-
   persona: Persona;
-
   offerPyramids: AnyRecord[];
   initialSelectedIndex: number;
   initialSelectedPyramid?: AnyRecord;
-
   planTasksCount: number;
 };
 
-function isDone(t: TaskRow) {
-  return (t.status ?? "").toLowerCase() === "done";
+function toStr(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (Array.isArray(v)) return v.map(toStr).filter(Boolean).join(", ");
+  return "";
 }
 
-function phaseProgress(tasks: TaskRow[]) {
-  if (!tasks.length) return 0;
-  const done = tasks.filter(isDone).length;
-  return Math.round((done / tasks.length) * 100);
+function cleanRevenueGoal(raw: string): string {
+  const s = (raw || "").trim();
+  if (!s) return "—";
+  // évite l'affichage moche type ["devenir riche"]
+  if (s.startsWith('["') && s.endsWith('"]')) {
+    try {
+      const arr = JSON.parse(s);
+      if (Array.isArray(arr) && arr.length) return String(arr[0]);
+    } catch {
+      // ignore
+    }
+  }
+  return s;
 }
 
-export default function StrategyLovable(props: Props) {
-  const {
-    revenueGoal,
-    horizon,
-    progressionPercent,
-    totalDone,
-    totalAll,
-    daysRemaining,
-    currentPhase,
-    currentPhaseLabel,
-    phases,
-    persona,
-    offerPyramids,
-    initialSelectedIndex,
-    initialSelectedPyramid,
-    planTasksCount,
-  } = props;
+function isDoneStatus(v: unknown) {
+  const s = toStr(v).toLowerCase();
+  return s === "done" || s === "completed" || s === "terminé" || s === "termine";
+}
+
+function pickSelectedPyramid(offerPyramids: AnyRecord[], initialSelectedIndex: number, initialSelectedPyramid?: AnyRecord) {
+  if (initialSelectedPyramid && typeof initialSelectedPyramid === "object") return initialSelectedPyramid;
+  if (Array.isArray(offerPyramids) && offerPyramids[initialSelectedIndex]) return offerPyramids[initialSelectedIndex];
+  if (Array.isArray(offerPyramids) && offerPyramids[0]) return offerPyramids[0];
+  return null;
+}
+
+function offerTitle(o: AnyRecord | null, fallback: string) {
+  const t = (o && (o.title || o.name || o.nom)) ? toStr(o.title ?? o.name ?? o.nom) : "";
+  return t || fallback;
+}
+function offerDesc(o: AnyRecord | null) {
+  const s = o ? toStr(o.composition || o.purpose || o.description || o.insight) : "";
+  return s || "—";
+}
+function offerPrice(o: AnyRecord | null) {
+  const p = o ? (typeof o.price === "number" ? o.price : typeof o.prix === "number" ? o.prix : null) : null;
+  if (p === null || typeof p !== "number") return "—";
+  return `${p.toLocaleString("fr-FR")}€`;
+}
+
+export default function StrategyLovable(props: StrategyLovableProps) {
+  const selectedPyramid = pickSelectedPyramid(
+    (props.offerPyramids || []) as AnyRecord[],
+    props.initialSelectedIndex ?? 0,
+    props.initialSelectedPyramid as AnyRecord | undefined,
+  );
+
+  const lead = (selectedPyramid?.lead_magnet ?? null) as AnyRecord | null;
+  const mid = (selectedPyramid?.low_ticket ?? null) as AnyRecord | null;
+  const high = (selectedPyramid?.high_ticket ?? null) as AnyRecord | null;
+
+  const personaTitle = props.persona?.title || "—";
+  const personaPains = Array.isArray(props.persona?.pains) ? props.persona.pains : [];
+  const personaGoals = Array.isArray(props.persona?.desires) ? props.persona.desires : [];
+  const personaChannels = Array.isArray(props.persona?.channels) ? props.persona.channels : [];
 
   return (
     <SidebarProvider>
@@ -111,45 +140,43 @@ export default function StrategyLovable(props: Props) {
             <div className="ml-4 flex-1">
               <h1 className="text-xl font-display font-bold">Ma Stratégie</h1>
             </div>
-
-            {/* bouton Lovable "Personnaliser" (on garde sans casser le flow) */}
-            <Button variant="outline">Personnaliser</Button>
+            <Button variant="outline" size="sm">
+              Personnaliser
+            </Button>
           </header>
 
-          <div className="p-6 space-y-6 max-w-7xl mx-auto">
-            {/* Strategic Overview — Lovable 1:1 */}
+          <div className="p-6 space-y-6 max-w-6xl mx-auto">
+            {/* Hero Section */}
             <Card className="p-8 gradient-hero border-border/50">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-4xl font-display font-bold text-primary-foreground mb-2">
                     Votre Vision Stratégique
                   </h2>
-                  <p className="text-primary-foreground/90 text-lg max-w-2xl">
+                  <p className="text-primary-foreground/80 text-lg mb-8">
                     Plan personnalisé généré par l'IA pour atteindre vos objectifs business
                   </p>
-                </div>
-                <Target className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
-              </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Objectif Revenue</p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {revenueGoal || "—"}
-                  </p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                      <p className="text-sm text-primary-foreground/70 mb-1">Objectif Revenue</p>
+                      <p className="text-2xl font-bold text-primary-foreground">{cleanRevenueGoal(props.revenueGoal)}</p>
+                    </div>
+                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                      <p className="text-sm text-primary-foreground/70 mb-1">Horizon</p>
+                      <p className="text-2xl font-bold text-primary-foreground">{props.horizon}</p>
+                    </div>
+                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                      <p className="text-sm text-primary-foreground/70 mb-1">Progression</p>
+                      <p className="text-2xl font-bold text-primary-foreground">{props.progressionPercent}%</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Horizon</p>
-                  <p className="text-2xl font-bold text-primary-foreground">{horizon}</p>
-                </div>
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Progression</p>
-                  <p className="text-2xl font-bold text-primary-foreground">{progressionPercent}%</p>
-                </div>
+                <Target className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
               </div>
             </Card>
 
-            {/* Tabs — Lovable 1:1 */}
+            {/* Tabs for different views */}
             <Tabs defaultValue="plan" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="plan">Plan d'action</TabsTrigger>
@@ -157,111 +184,99 @@ export default function StrategyLovable(props: Props) {
                 <TabsTrigger value="persona">Persona cible</TabsTrigger>
               </TabsList>
 
-              {/* Plan d'action — Lovable 1:1 */}
+              {/* Action Plan Tab */}
               <TabsContent value="plan" className="space-y-6">
-                {/* Progress Overview — Lovable 1:1 */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Card className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
+                <div className="grid grid-cols-3 gap-6">
+                  <Card className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                         <CheckCircle2 className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">Tâches complétées</span>
+                      <h3 className="font-semibold">Tâches complétées</h3>
                     </div>
-                    <p className="text-3xl font-bold">
-                      {totalAll ? `${totalDone}/${totalAll}` : `${totalDone}/—`}
+                    <p className="text-3xl font-bold mb-2">
+                      {props.totalDone}/{props.totalAll || "—"}
                     </p>
-                    <Progress value={totalAll ? Math.round((totalDone / totalAll) * 100) : 0} className="mt-3" />
+                    <Progress
+                      value={props.totalAll ? Math.round((props.totalDone / Math.max(1, props.totalAll)) * 100) : 0}
+                      className="h-2"
+                    />
                   </Card>
 
-                  <Card className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Clock className="w-5 h-5 text-primary" />
+                  <Card className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-secondary-foreground" />
                       </div>
-                      <span className="font-semibold">Jours restants</span>
+                      <h3 className="font-semibold">Jours restants</h3>
                     </div>
-                    <p className="text-3xl font-bold">{daysRemaining}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Sur 90 jours</p>
+                    <p className="text-3xl font-bold mb-2">{props.daysRemaining}</p>
+                    <p className="text-muted-foreground">Sur 90 jours</p>
                   </Card>
 
-                  <Card className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Target className="w-5 h-5 text-primary" />
+                  <Card className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-success" />
                       </div>
-                      <span className="font-semibold">Phase actuelle</span>
+                      <h3 className="font-semibold">Phase actuelle</h3>
                     </div>
-                    <p className="text-3xl font-bold">{currentPhase}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{currentPhaseLabel}</p>
+                    <p className="text-3xl font-bold mb-2">{props.currentPhase}</p>
+                    <p className="text-muted-foreground">{props.currentPhaseLabel}</p>
                   </Card>
                 </div>
 
-                {/* Boutons utiles (sans casser) */}
-                <div className="flex flex-wrap gap-2">
-                  {planTasksCount > 0 ? <SyncTasksButton variant="outline" /> : null}
-                </div>
+                {(props.phases || []).map((phase, index) => {
+                  const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
+                  const done = tasks.filter((t) => isDoneStatus(t.status)).length;
+                  const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
 
-                {/* Phases — Lovable 1:1 (mêmes cards + checkbox list) */}
-                <div className="space-y-6">
-                  {phases.map((phase, phaseIndex) => {
-                    const prog = phaseProgress(phase.tasks);
-                    return (
-                      <Card key={phaseIndex} className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg font-bold">{phase.title}</h3>
-                            <p className="text-sm text-muted-foreground">{phase.period}</p>
-                          </div>
-                          <Badge variant={prog === 100 ? "default" : prog > 0 ? "secondary" : "outline"}>
-                            {prog}%
-                          </Badge>
+                  return (
+                    <Card key={index} className="p-6">
+                      <div className="flex items-start justify-between mb-6">
+                        <div>
+                          <h3 className="text-xl font-bold">{phase.title}</h3>
+                          <p className="text-muted-foreground">{phase.period}</p>
                         </div>
+                        <Badge variant="outline">{pct}%</Badge>
+                      </div>
 
-                        <Progress value={prog} className="mb-4" />
+                      <Progress value={pct} className="h-2 mb-6" />
 
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {phase.tasks.length ? (
-                            phase.tasks.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                              >
-                                <Checkbox checked={isDone(item)} />
-                                <span className={isDone(item) ? "line-through text-muted-foreground" : ""}>
-                                  {item.title || "—"}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-sm text-muted-foreground">
-                              Aucune tâche dans cette phase pour l’instant.
+                      <div className="grid grid-cols-2 gap-4">
+                        {tasks.length ? (
+                          tasks.map((task) => (
+                            <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                              <Checkbox checked={isDoneStatus(task.status)} />
+                              <span className={isDoneStatus(task.status) ? "line-through text-muted-foreground" : ""}>
+                                {task.title || "—"}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground">Aucune tâche dans cette phase pour l'instant.</p>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
 
-                {/* Next Step — Lovable 1:1 (on garde le visuel, mais texte générique minimal) */}
-                <Card className="p-5 bg-primary/5 border-primary/20">
-                  <div className="flex items-start gap-4">
-                    <Target className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-primary mb-1">Prochaine étape recommandée</p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Continue l’exécution : synchronise ton plan puis avance phase par phase.
-                      </p>
-                      <Button variant="default" size="sm">
-                        Commencer <ArrowRight className="ml-2 w-4 h-4" />
-                      </Button>
-                    </div>
+                <Card className="p-6 bg-primary/5 border-primary/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Target className="w-6 h-6 text-primary" />
+                    <h3 className="text-lg font-bold text-primary">Prochaine étape recommandée</h3>
                   </div>
+                  <p className="text-muted-foreground mb-4">
+                    Continue l'exécution : synchronise ton plan puis avance phase par phase.
+                  </p>
+                  <Button className="bg-primary hover:bg-primary/90">
+                    Commencer
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </Card>
               </TabsContent>
 
-              {/* Pyramide — Lovable 1:1 wrapper visuel, contenu fonctionnel Tipote conservé */}
+              {/* Offer Pyramid Tab */}
               <TabsContent value="pyramid" className="space-y-6">
                 <Card className="p-6">
                   <div className="flex items-center gap-3 mb-6">
@@ -271,22 +286,52 @@ export default function StrategyLovable(props: Props) {
                     <h3 className="text-xl font-bold">Pyramide d'Offres</h3>
                   </div>
 
-                  {/* Ici on garde TA logique (choose + edit + save supabase via API) */}
-                  <StrategyClient
-                    offerPyramids={offerPyramids}
-                    initialSelectedIndex={initialSelectedIndex}
-                    initialSelectedPyramid={initialSelectedPyramid}
-                  />
+                  <div className="space-y-4">
+                    <div className="p-5 rounded-lg border-2 border-success bg-success/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-success">High Ticket</p>
+                          <p className="text-3xl font-bold mt-1">{offerPrice(high)}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{offerTitle(high, "—")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(high)}</p>
+                    </div>
 
-                  {/* Bouton Lovable visuel (optionnel), ne casse rien */}
-                  <Button variant="outline" className="w-full mt-6" disabled>
+                    <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-primary">Middle Ticket</p>
+                          <p className="text-3xl font-bold mt-1">{offerPrice(mid)}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{offerTitle(mid, "—")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(mid)}</p>
+                    </div>
+
+                    <div className="p-5 rounded-lg border-2 border-secondary bg-secondary/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-secondary-foreground">Lead Magnet</p>
+                          <p className="text-3xl font-bold mt-1">{offerPrice(lead)}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-secondary-foreground" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{offerTitle(lead, "—")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(lead)}</p>
+                    </div>
+                  </div>
+
+                  <Button variant="outline" className="w-full mt-6">
                     <Plus className="w-4 h-4 mr-2" />
                     Ajouter une offre
                   </Button>
                 </Card>
               </TabsContent>
 
-              {/* Persona — Lovable 1:1 mais alimenté par plan_json */}
+              {/* Persona Tab */}
               <TabsContent value="persona" className="space-y-6">
                 <Card className="p-6">
                   <div className="flex items-center gap-3 mb-6">
@@ -296,53 +341,45 @@ export default function StrategyLovable(props: Props) {
                     <h3 className="text-xl font-bold">Persona Cible</h3>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">Profil Principal</p>
-                        <p className="font-semibold text-lg">{persona.title || "—"}</p>
-                      </div>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Profil Principal</h4>
+                      <p className="text-lg font-bold mb-4">{personaTitle}</p>
 
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-3">Problèmes Principaux</p>
-                        <ul className="space-y-2">
-                          {(persona.pains?.length ? persona.pains : ["—"]).map((p, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="w-2 h-2 rounded-full bg-destructive mt-2 flex-shrink-0" />
-                              <span>{p}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Problèmes Principaux</h4>
+                      <div className="space-y-2">
+                        {(personaPains.length ? personaPains : ["—"]).map((pain, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-destructive" />
+                            <span>{pain}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-3">Objectifs</p>
-                        <ul className="space-y-2">
-                          {(persona.desires?.length ? persona.desires : ["—"]).map((d, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
-                              <span>{d}</span>
-                            </li>
-                          ))}
-                        </ul>
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Objectifs</h4>
+                      <div className="space-y-2 mb-6">
+                        {(personaGoals.length ? personaGoals : ["—"]).map((goal, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-success" />
+                            <span>{goal}</span>
+                          </div>
+                        ))}
                       </div>
 
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">Canaux préférés</p>
-                        <div className="flex flex-wrap gap-2">
-                          {(persona.channels?.length ? persona.channels : ["—"]).map((c, idx) => (
-                            <Badge key={idx} variant="outline">
-                              {c}
-                            </Badge>
-                          ))}
-                        </div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Canaux préférés</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(personaChannels.length ? personaChannels : ["—"]).map((c, i) => (
+                          <Badge key={i} variant="secondary">
+                            {c}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full mt-6" disabled>
+                  <Button variant="outline" className="w-full mt-6">
                     Modifier le persona
                   </Button>
                 </Card>
