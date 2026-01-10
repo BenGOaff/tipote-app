@@ -1,5 +1,3 @@
-// app/api/strategy/route.ts
-
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
@@ -18,14 +16,6 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-function isNonNullRecord(v: AnyRecord | null): v is AnyRecord {
-  return !!v;
-}
-
-function isNonNull<T>(v: T | null | undefined): v is T {
-  return v !== null && v !== undefined;
-}
-
 function cleanString(v: unknown, maxLen = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
   if (!s) return "";
@@ -39,6 +29,75 @@ function toNumber(v: unknown): number | null {
     return Number.isFinite(n) ? n : null;
   }
   return null;
+}
+
+function parseMoneyFromText(raw: unknown): number | null {
+  const s = cleanString(raw, 240);
+  if (!s) return null;
+  const compact = s.replace(/\s+/g, "").toLowerCase();
+  const mK = compact.match(/(\d+(?:[\.,]\d+)?)k/);
+  if (mK) {
+    const n = Number(mK[1].replace(",", "."));
+    return Number.isFinite(n) ? Math.round(n * 1000) : null;
+  }
+  const m = compact.match(/(\d+(?:[\.,]\d+)?)/);
+  if (!m) return null;
+  const n = Number(m[1].replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n);
+}
+
+function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
+  const direct =
+    cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
+  if (direct) return direct;
+  const mg = cleanString(businessProfile.main_goal, 240) || cleanString(businessProfile.mainGoal90Days, 240);
+  if (mg) return mg;
+  const goals = asArray(businessProfile.main_goals);
+  if (goals.length) return cleanString(goals[0], 240);
+  return "";
+}
+
+async function persistStrategyRow(params: {
+  supabase: any;
+  userId: string;
+  businessProfile: AnyRecord;
+  planJson: AnyRecord;
+}): Promise<void> {
+  const { supabase, userId, businessProfile, planJson } = params;
+  try {
+    const businessProfileId = cleanString(businessProfile.id, 80) || null;
+    const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
+    const targetMonthlyRev =
+      toNumber(planJson.target_monthly_rev) ??
+      toNumber(planJson.target_monthly_revenue) ??
+      parseMoneyFromText(planJson.revenue_goal) ??
+      parseMoneyFromText(planJson.goal_revenue) ??
+      parseMoneyFromText(planJson.main_goal);
+
+    const title =
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+
+    const payload: AnyRecord = {
+      user_id: userId,
+      ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
+      title,
+      horizon_days: horizonDays,
+      ...(targetMonthlyRev !== null ? { target_monthly_rev: targetMonthlyRev } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
+    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+
+    if (upsertRes?.error) {
+      const insRes = await supabase.from("strategies").insert(payload).select("id").maybeSingle();
+      if (insRes?.error) {
+        console.error("persistStrategyRow failed:", insRes.error);
+      }
+    }
+  } catch (e) {
+    console.error("persistStrategyRow unexpected error:", e);
+  }
 }
 
 function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
@@ -67,25 +126,13 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
-    asRecord(p?.lead_magnet) ??
-    asRecord(p?.leadMagnet) ??
-    asRecord(p?.lead) ??
-    asRecord(p?.lead_offer) ??
-    null;
+    asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
 
   const low =
-    asRecord(p?.low_ticket) ??
-    asRecord(p?.lowTicket) ??
-    asRecord(p?.mid) ??
-    asRecord(p?.middle_offer) ??
-    null;
+    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
 
   const high =
-    asRecord(p?.high_ticket) ??
-    asRecord(p?.highTicket) ??
-    asRecord(p?.high) ??
-    asRecord(p?.high_offer) ??
-    null;
+    asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
   return {
     id,
@@ -105,36 +152,39 @@ function pyramidsLookUseful(pyramids: unknown[]): boolean {
   return ok.length >= 1;
 }
 
-function normalizeTitleFromTask(v: AnyRecord): string {
+function normalizeTaskTitle(v: AnyRecord): string {
   return cleanString(v.title ?? v.task ?? v.name, 180);
 }
 
-function normalizeTaskObject(v: AnyRecord): AnyRecord | null {
-  const title = normalizeTitleFromTask(v);
+function normalizeTaskItem(v: AnyRecord | null): AnyRecord | null {
+  if (!v) return null;
+  const title = normalizeTaskTitle(v);
   if (!title) return null;
+
   const due_date = cleanString(v.due_date ?? v.scheduled_for ?? v.date, 32);
   const priority = cleanString(v.priority ?? v.importance ?? "", 12);
-  return { title, ...(due_date ? { due_date } : {}), ...(priority ? { priority } : {}) };
+
+  return {
+    title,
+    ...(due_date ? { due_date } : {}),
+    ...(priority ? { priority } : {}),
+  };
 }
 
-function normalizeTasksByTimeframe(grouped: AnyRecord | null): AnyRecord {
-  const d30 = asArray(grouped?.d30)
-    .map(asRecord)
-    .filter(isNonNullRecord)
-    .map(normalizeTaskObject)
-    .filter(isNonNull);
-
-  const d60 = asArray(grouped?.d60)
-    .map(asRecord)
-    .filter(isNonNullRecord)
-    .map(normalizeTaskObject)
-    .filter(isNonNull);
-
-  const d90 = asArray(grouped?.d90)
-    .map(asRecord)
-    .filter(isNonNullRecord)
-    .map(normalizeTaskObject)
-    .filter(isNonNull);
+function normalizeTasksByTimeframe(raw: AnyRecord | null): AnyRecord {
+  const grouped = asRecord(raw) ?? {};
+  const d30 = asArray(grouped.d30)
+    .map((x) => normalizeTaskItem(asRecord(x)))
+    .filter(Boolean)
+    .slice(0, 30);
+  const d60 = asArray(grouped.d60)
+    .map((x) => normalizeTaskItem(asRecord(x)))
+    .filter(Boolean)
+    .slice(0, 30);
+  const d90 = asArray(grouped.d90)
+    .map((x) => normalizeTaskItem(asRecord(x)))
+    .filter(Boolean)
+    .slice(0, 30);
 
   return { d30, d60, d90 };
 }
@@ -142,7 +192,6 @@ function normalizeTasksByTimeframe(grouped: AnyRecord | null): AnyRecord {
 function addDaysISO(base: Date, days: number): string {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
-  // YYYY-MM-DD (date only)
   return d.toISOString().slice(0, 10);
 }
 
@@ -207,18 +256,10 @@ function personaLooksUseful(persona: AnyRecord | null): boolean {
 function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
   if (!persona) return null;
   const title = cleanString(persona.title ?? persona.profile ?? persona.name, 180);
-  const pains = asArray(persona.pains)
-    .map((x) => cleanString(x, 160))
-    .filter(Boolean);
-  const desires = asArray(persona.desires)
-    .map((x) => cleanString(x, 160))
-    .filter(Boolean);
-  const channels = asArray(persona.channels)
-    .map((x) => cleanString(x, 64))
-    .filter(Boolean);
-  const tags = asArray(persona.tags)
-    .map((x) => cleanString(x, 64))
-    .filter(Boolean);
+  const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
+  const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
+  const channels = asArray(persona.channels).map((x) => cleanString(x, 64)).filter(Boolean);
+  const tags = asArray(persona.tags).map((x) => cleanString(x, 64)).filter(Boolean);
   const result = { title, pains, desires, channels, tags };
   return personaLooksUseful(result) ? result : null;
 }
@@ -231,7 +272,7 @@ function tasksByTimeframeLooksUseful(planJson: AnyRecord | null): boolean {
   const d30 = asArray(grouped.d30).length;
   const d60 = asArray(grouped.d60).length;
   const d90 = asArray(grouped.d90).length;
-  return d30 + d60 + d90 >= 6; // assez pour alimenter le dashboard + strategy
+  return d30 + d60 + d90 >= 6;
 }
 
 function strategyTextLooksUseful(planJson: AnyRecord | null): boolean {
@@ -284,7 +325,6 @@ export async function POST(req: Request) {
 
     const userId = session.user.id;
 
-    // 0) Lire plan existant (idempotence)
     const { data: existingPlan, error: existingPlanError } = await supabase
       .from("business_plan")
       .select("plan_json")
@@ -309,18 +349,14 @@ export async function POST(req: Request) {
     const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
     const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
 
-    // ✅ Si l'user a déjà choisi ET que la stratégie complète existe => on ne régénère rien
     if (hasSelected && !needFullStrategy) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
     }
 
-    // ✅ Si pas encore choisi, mais déjà généré les 3 pyramides proprement => on ne régénère pas
-    // (on attend le choix user sur /strategy/pyramids)
     if (!hasSelected && hasUsefulPyramids) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
-    // 1) Lire business_profile (onboarding)
     const { data: businessProfile, error: profileError } = await supabase
       .from("business_profiles")
       .select("*")
@@ -335,14 +371,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) Charger ressources (pour améliorer la qualité)
+    const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
+    const targetMonthlyRevGuess = parseMoneyFromText(revenueGoalLabel);
+
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
     if (resourcesError) console.error("Error loading resources:", resourcesError);
 
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    // On limite la taille envoyée au modèle (qualité > quantité)
     const MAX_CHUNKS = 24;
     const limitedChunks = Array.isArray(resourceChunks) ? resourceChunks.slice(0, MAX_CHUNKS) : [];
 
@@ -354,7 +391,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3) Si pas de pyramides utiles -> générer les 3 propositions de pyramides
     if (!hasUsefulPyramids) {
       const systemPrompt = `Tu es un expert en stratégie business et funnels.
 Tu dois proposer 3 pyramides d'offres adaptées à la niche de l'utilisateur.
@@ -407,23 +443,27 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
       const parsed = JSON.parse(raw) as AnyRecord;
 
       const pyramidsRaw = asArray(parsed.offer_pyramids);
-      const normalized = pyramidsRaw.map((p, idx) => normalizePyramid(asRecord(p), idx));
+      const normalizedOfferPyramids = pyramidsRaw.map((p, idx) => normalizePyramid(asRecord(p), idx));
 
-      if (!pyramidsLookUseful(normalized)) {
+      if (!pyramidsLookUseful(normalizedOfferPyramids)) {
         console.error("AI returned incomplete offer_pyramids payload:", parsed);
         return NextResponse.json({ success: false, error: "AI returned incomplete offer_pyramids" }, { status: 502 });
       }
 
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
-      const nextPlan: AnyRecord = {
+      const plan_json: AnyRecord = {
         ...basePlan,
-        offer_pyramids: normalized,
-        // compat
-        selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
+        offer_pyramids: normalizedOfferPyramids,
+        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
+          ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
+          : {}),
+        horizon_days: toNumber(basePlan.horizon_days) ?? 90,
+        ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
         selected_offer_pyramid_index:
           typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
-        selected_pyramid: basePlan.selected_pyramid ?? null,
         selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
+        selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
+        selected_pyramid: basePlan.selected_pyramid ?? null,
         updated_at: new Date().toISOString(),
       };
 
@@ -432,7 +472,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
         .upsert(
           {
             user_id: userId,
-            plan_json: nextPlan,
+            plan_json,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id" },
@@ -448,7 +488,6 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
       return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
     }
 
-    // 4) Si l'user a choisi une pyramide -> générer la stratégie complète + persona + plan 90j
     const selectedPyramid = pickSelectedPyramidFromPlan(existingPlanJson);
 
     if (!selectedPyramid) {
@@ -537,7 +576,6 @@ Consignes importantes :
 
     const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
 
-    // ✅ Robustesse : si l'IA renvoie un payload incomplet, on complète sans bloquer.
     const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
 
     const fallbackTasksByTf = hasUsefulTasks
@@ -557,13 +595,18 @@ Consignes importantes :
 
     const safeTasksByTf = normalizeTasksByTimeframe((fallbackTasksByTf ?? tasksByTf) as unknown as AnyRecord);
 
-    // ✅ Merge “meilleur des deux mondes” : on ne remplace pas si déjà rempli
     const nextPlan: AnyRecord = {
       ...basePlan,
+      ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
+        ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
+        : {}),
+      horizon_days: toNumber(basePlan.horizon_days) ?? 90,
+      ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
       mission: cleanString(basePlan.mission, 240) || mission,
       promise: cleanString(basePlan.promise, 240) || promise,
       positioning: cleanString(basePlan.positioning, 320) || positioning,
-      summary: cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
+      summary:
+        cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
       persona: personaLooksUseful(asRecord(basePlan.persona)) ? basePlan.persona : safePersona,
       plan_90_days: {
         ...(asRecord(basePlan.plan_90_days) ?? {}),
@@ -595,9 +638,11 @@ Consignes importantes :
       return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
     }
 
+    await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
+
     return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
   } catch (err) {
-    console.error("Unhandled error in /api/strategy:", err);
+    console.error("Unhandled error in /api/strategy/offer-pyramid:", err);
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : "Internal server error" },
       { status: 500 },
