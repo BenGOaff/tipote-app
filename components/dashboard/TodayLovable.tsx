@@ -224,15 +224,24 @@ const TodayLovable = () => {
           .maybeSingle();
 
         const planJson = (planRes.data?.plan_json ?? null) as any;
-        const selectedIdx = typeof planJson?.selected_offer_pyramid_index === "number" ? planJson.selected_offer_pyramid_index : null;
+        const selectedIdx =
+          typeof planJson?.selected_offer_pyramid_index === "number" ? planJson.selected_offer_pyramid_index : null;
         const pyramidsOk = pyramidsLookUseful(planJson?.offer_pyramids);
 
-        // 1) content_item
-        const contentRes = await supabase
+        // 1) content_item (✅ fallback title/titre sans toucher l’UI)
+        let contentRes = await supabase
           .from("content_item")
           .select("id, type, title, status, scheduled_date, channel, created_at")
           .order("scheduled_date", { ascending: true, nullsFirst: false })
           .limit(200);
+
+        if (contentRes.error && /content_item\.title/i.test(contentRes.error.message)) {
+          contentRes = await supabase
+            .from("content_item")
+            .select("id, type, title:titre, status, scheduled_date, channel, created_at")
+            .order("scheduled_date", { ascending: true, nullsFirst: false })
+            .limit(200);
+        }
 
         const contentRows: any[] = Array.isArray(contentRes.data) ? contentRes.data : [];
 
@@ -342,8 +351,7 @@ const TodayLovable = () => {
             const mapped: UpcomingItem[] = combined.slice(0, 4).map((x: CombinedUpcoming) => {
               const day = formatDayLabel(x.dt, now);
               const time = formatTimeOrDash(x.dt);
-              const status =
-                x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
+              const status = x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
 
               return {
                 title: x.title,
@@ -362,12 +370,30 @@ const TodayLovable = () => {
             // Pas de data : on montre une checklist d’arrivée (sans changer le layout)
             const fallback: UpcomingItem[] = [];
             if (!onboardingCompleted) {
-              fallback.push({ title: "Compléter l'onboarding", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+              fallback.push({
+                title: "Compléter l'onboarding",
+                type: "Tâche",
+                day: "Aujourd'hui",
+                time: "-",
+                status: "À faire",
+              });
             } else {
               if (!pyramidsOk) {
-                fallback.push({ title: "Générer ma stratégie", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+                fallback.push({
+                  title: "Générer ma stratégie",
+                  type: "Tâche",
+                  day: "Aujourd'hui",
+                  time: "-",
+                  status: "À faire",
+                });
               } else if (selectedIdx === null) {
-                fallback.push({ title: "Choisir ma pyramide d'offres", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+                fallback.push({
+                  title: "Choisir ma pyramide d'offres",
+                  type: "Tâche",
+                  day: "Aujourd'hui",
+                  time: "-",
+                  status: "À faire",
+                });
               }
               fallback.push({ title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
               fallback.push({ title: "Planifier la semaine", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
@@ -407,8 +433,7 @@ const TodayLovable = () => {
         const publishedDelta = pctDelta(published7, publishedPrev7);
 
         // Tâches : completionRate + done/total
-        const completionRate =
-          typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : 0;
+        const completionRate = typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : 0;
         const totalTasks = typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : 0;
         const doneTasks = typeof tasksStatsJson?.done === "number" ? tasksStatsJson.done : 0;
 
@@ -676,10 +701,15 @@ const TodayLovable = () => {
 
               <div className="space-y-3">
                 {upcomingItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
                     <div className="flex-shrink-0">
                       <Badge
-                        variant={item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"}
+                        variant={
+                          item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"
+                        }
                       >
                         {item.type}
                       </Badge>
