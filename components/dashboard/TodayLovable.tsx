@@ -211,46 +211,52 @@ const TodayLovable = () => {
         const supabase = getSupabaseBrowserClient();
 
         // 0) Lire état onboarding + plan (pour proposer une “première action” logique)
-        const profileRes = await supabase
-          .from("business_profiles")
-          .select("onboarding_completed")
-          .maybeSingle();
+        const profileRes = await supabase.from("business_profiles").select("onboarding_completed").maybeSingle();
 
         const onboardingCompleted = !!profileRes.data?.onboarding_completed;
 
-        const planRes = await supabase
-          .from("business_plan")
-          .select("plan_json")
-          .maybeSingle();
+        const planRes = await supabase.from("business_plan").select("plan_json").maybeSingle();
 
         const planJson = (planRes.data?.plan_json ?? null) as any;
         const selectedIdx =
           typeof planJson?.selected_offer_pyramid_index === "number" ? planJson.selected_offer_pyramid_index : null;
         const pyramidsOk = pyramidsLookUseful(planJson?.offer_pyramids);
 
-        // 1) content_item (✅ compat DB : FR/EN + colonnes variables, sans toucher l’UI)
-        const contentRows: any[] = await (async () => {
-          type Attempt = { select: string; orderCol: string };
-          const attempts: Attempt[] = [
-            { select: "id, type, title, status, scheduled_date, channel, created_at", orderCol: "scheduled_date" },
-            {
-              select:
-                "id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, created_at",
-              orderCol: "date_planifiee",
-            },
-          ];
+        // 1) content_item (compat schéma prod FR/EN) — IMPORTANT : on évite de provoquer un 400 en prod
+        type Attempt = { select: string; orderCol: string };
 
-          function isSchemaError(message: string | null | undefined) {
-            const m = (message ?? "").toLowerCase();
-            return (
-              m.includes("does not exist") ||
-              m.includes("could not find the '") ||
-              m.includes("schema cache") ||
-              m.includes("pgrst") ||
-              (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
-            );
-          }
+        const isSchemaError = (m: string) => {
+          const s = (m || "").toLowerCase();
+          return (
+            s.includes("column") &&
+            (s.includes("does not exist") || s.includes("not exist") || s.includes("unknown"))
+          );
+        };
 
+        const attempts: Attempt[] = [
+          {
+            // ✅ Prod (FR) : colonnes "titre/statut/date_planifiee/canal"
+            select: "id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, created_at",
+            orderCol: "date_planifiee",
+          },
+          {
+            // ✅ Compat (EN) : colonnes "title/status/scheduled_date/channel"
+            select: "id, type, title, status, scheduled_date, channel, created_at",
+            orderCol: "scheduled_date",
+          },
+          {
+            // ✅ Ultime fallback (FR) : pas de date_planifiee
+            select: "id, type, title:titre, status:statut, created_at",
+            orderCol: "created_at",
+          },
+          {
+            // ✅ Ultime fallback (EN)
+            select: "id, type, title, status, created_at",
+            orderCol: "created_at",
+          },
+        ];
+
+        async function loadContentRows() {
           for (const a of attempts) {
             const res = await supabase
               .from("content_item")
@@ -263,14 +269,15 @@ const TodayLovable = () => {
             }
 
             if (!isSchemaError(res.error.message)) {
-              // Erreur non liée au schéma (RLS, etc.) => on la log et on sort avec fallback vide
-              console.error("content_item query error:", res.error);
+              // Erreur non liée au schéma (RLS, etc.) => on log et on sort
+              console.error("TodayLovable content_item error:", res.error);
               return [];
             }
           }
-
           return [];
-        })();
+        }
+
+        const contentRows: any[] = await loadContentRows();
 
         // 2) project_tasks via API (cookies)
         const tasksStatsRes = await fetch("/api/tasks/stats", { method: "GET" }).catch(() => null);
@@ -378,8 +385,7 @@ const TodayLovable = () => {
             const mapped: UpcomingItem[] = combined.slice(0, 4).map((x: CombinedUpcoming) => {
               const day = formatDayLabel(x.dt, now);
               const time = formatTimeOrDash(x.dt);
-              const status =
-                x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
+              const status = x.kind === "content" ? mapContentStatusToUi(x.statusRaw) : mapTaskStatusToUi(x.statusRaw);
 
               return {
                 title: x.title,
@@ -398,12 +404,30 @@ const TodayLovable = () => {
             // Pas de data : on montre une checklist d’arrivée (sans changer le layout)
             const fallback: UpcomingItem[] = [];
             if (!onboardingCompleted) {
-              fallback.push({ title: "Compléter l'onboarding", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+              fallback.push({
+                title: "Compléter l'onboarding",
+                type: "Tâche",
+                day: "Aujourd'hui",
+                time: "-",
+                status: "À faire",
+              });
             } else {
               if (!pyramidsOk) {
-                fallback.push({ title: "Générer ma stratégie", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+                fallback.push({
+                  title: "Générer ma stratégie",
+                  type: "Tâche",
+                  day: "Aujourd'hui",
+                  time: "-",
+                  status: "À faire",
+                });
               } else if (selectedIdx === null) {
-                fallback.push({ title: "Choisir ma pyramide d'offres", type: "Tâche", day: "Aujourd'hui", time: "-", status: "À faire" });
+                fallback.push({
+                  title: "Choisir ma pyramide d'offres",
+                  type: "Tâche",
+                  day: "Aujourd'hui",
+                  time: "-",
+                  status: "À faire",
+                });
               }
               fallback.push({ title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
               fallback.push({ title: "Planifier la semaine", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" });
@@ -443,8 +467,7 @@ const TodayLovable = () => {
         const publishedDelta = pctDelta(published7, publishedPrev7);
 
         // Tâches : completionRate + done/total
-        const completionRate =
-          typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : 0;
+        const completionRate = typeof tasksStatsJson?.completionRate === "number" ? tasksStatsJson.completionRate : 0;
         const totalTasks = typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : 0;
         const doneTasks = typeof tasksStatsJson?.done === "number" ? tasksStatsJson.done : 0;
 
@@ -467,10 +490,7 @@ const TodayLovable = () => {
         let nextDueValue = "—";
         let nextDueTrend = "—";
         if (first) {
-          const days = Math.max(
-            0,
-            Math.round((startOfDay(first.dt).getTime() - startOfDay(now).getTime()) / 86400000),
-          );
+          const days = Math.max(0, Math.round((startOfDay(first.dt).getTime() - startOfDay(now).getTime()) / 86400000));
           nextDueValue = `${days}j`;
           nextDueTrend = first.title || "—";
         }
@@ -719,11 +739,7 @@ const TodayLovable = () => {
                     <div className="flex-shrink-0">
                       <Badge
                         variant={
-                          item.status === "À faire"
-                            ? "default"
-                            : item.status === "Planifié"
-                              ? "secondary"
-                              : "outline"
+                          item.status === "À faire" ? "default" : item.status === "Planifié" ? "secondary" : "outline"
                         }
                       >
                         {item.type}
