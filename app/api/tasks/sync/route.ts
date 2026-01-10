@@ -1,12 +1,24 @@
 // app/api/tasks/sync/route.ts
-// Sync “smart” : business_plan -> project_tasks (dédupe + update safe)
+// Sync “smart” : business_plan.plan_json -> project_tasks (dédupe + update safe)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === "object" && x !== null;
+type AnyRecord = Record<string, unknown>;
+
+type Priority = "low" | "medium" | "high";
+type Status = "todo" | "in_progress" | "blocked" | "done";
+
+type TaskFromPlan = {
+  title: string;
+  due_date: string | null; // YYYY-MM-DD
+  priority?: Priority | null;
+  source: string; // e.g. 'strategy'
+};
+
+function isRecord(x: unknown): x is AnyRecord {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
 function toStr(x: unknown): string | null {
@@ -17,93 +29,125 @@ function toArray(x: unknown): unknown[] {
   return Array.isArray(x) ? x : [];
 }
 
-function parseDueDate(input: unknown): string | null {
-  const s = toStr(input)?.trim();
-  if (!s) return null;
-
-  // Accept YYYY-MM-DD or ISO
-  const iso = new Date(s);
-  if (!Number.isNaN(iso.getTime())) return iso.toISOString();
-
-  // Very safe fallback: try YYYY-MM-DD
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+function clampLen(s: string, max: number): string {
+  const t = s.trim();
+  return t.length > max ? t.slice(0, max) : t;
 }
 
 function normalizeTitle(title: string): string {
-  return title.trim().replace(/\s+/g, " ").toLowerCase();
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[’'"]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "");
 }
 
-type TaskFromPlan = {
-  title: string;
-  due_date: string | null;
-  source: string;
-};
+function parseDueDate(x: unknown): string | null {
+  // On accepte:
+  // - YYYY-MM-DD
+  // - ISO string
+  // - Date string
+  const s = toStr(x);
+  if (!s) return null;
+
+  const t = s.trim();
+  if (!t) return null;
+
+  // YYYY-MM-DD (strict-ish)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+
+  // ISO
+  const d = new Date(t);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
+function normalizePriority(x: unknown): Priority | null {
+  const s = (toStr(x) ?? "").trim().toLowerCase();
+  if (!s) return null;
+
+  if (s === "high" || s === "haute" || s === "urgent" || s === "h") return "high";
+  if (s === "medium" || s === "moyenne" || s === "mid" || s === "m") return "medium";
+  if (s === "low" || s === "basse" || s === "l") return "low";
+
+  return null;
+}
 
 function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
   if (!isRecord(planJson)) return [];
 
   const out: TaskFromPlan[] = [];
 
-  // Heuristiques : plan_json peut avoir des sections variées.
-  // On récupère:
-  // - plan_90_days.tasks_by_timeframe (nouveau)
-  // - action_plan_30_90.weeks_* (legacy)
-  // - tasks[] (legacy simple)
-  const plan90 = isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as Record<string, unknown>) : null;
+  // 1) Nouveau schéma : plan_90_days.tasks_by_timeframe (objet de arrays)
+  const plan90 = isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as AnyRecord) : null;
 
-  // New schema: plan_90_days.tasks_by_timeframe (objet)
-  const tasksByTimeframe = plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? ((plan90 as any).tasks_by_timeframe as Record<string, unknown>) : null;
+  const tasksByTimeframe =
+    plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? ((plan90 as any).tasks_by_timeframe as AnyRecord) : null;
+
   if (tasksByTimeframe) {
     for (const [, v] of Object.entries(tasksByTimeframe)) {
       const arr = toArray(v);
       for (const item of arr) {
         if (!isRecord(item)) continue;
-        const title = toStr((item as any).task) ?? toStr((item as any).title);
+        const title =
+          toStr((item as any).title) ??
+          toStr((item as any).task) ??
+          toStr((item as any).name) ??
+          toStr((item as any).label);
+
         if (!title) continue;
+
         out.push({
-          title: title.trim(),
+          title: clampLen(title, 180),
           due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
-          source: "plan_90_days",
+          priority: normalizePriority((item as any).priority ?? (item as any).importance),
+          // IMPORTANT : on aligne le source avec le reste du produit (offer-pyramid route delete/insert source='strategy')
+          source: "strategy",
         });
       }
     }
   }
 
-  // Legacy: action_plan_30_90.weeks_1_4.actions etc.
-  const actionPlan = isRecord((planJson as any).action_plan_30_90) ? ((planJson as any).action_plan_30_90 as Record<string, unknown>) : null;
-  if (actionPlan) {
-    for (const [k, v] of Object.entries(actionPlan)) {
+  // 2) Legacy : action_plan_30_90.weeks_* -> arrays
+  const ap = isRecord((planJson as any).action_plan_30_90) ? ((planJson as any).action_plan_30_90 as AnyRecord) : null;
+  if (ap) {
+    for (const [k, v] of Object.entries(ap)) {
       if (!k.startsWith("weeks_")) continue;
-      if (!isRecord(v)) continue;
-      const actions = toArray((v as any).actions);
-      for (const a of actions) {
-        if (typeof a !== "string") continue;
-        const title = a.trim();
+      const arr = toArray(v);
+      for (const item of arr) {
+        if (!isRecord(item)) continue;
+        const title = toStr((item as any).title) ?? toStr((item as any).task) ?? toStr((item as any).name);
         if (!title) continue;
+
         out.push({
-          title,
-          due_date: null,
+          title: clampLen(title, 180),
+          due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
+          priority: normalizePriority((item as any).priority ?? (item as any).importance),
           source: `action_plan_30_90:${k}`,
         });
       }
     }
   }
 
-  // Legacy: top-level tasks
-  const tasks = toArray((planJson as any).tasks);
-  for (const t of tasks) {
-    if (!isRecord(t)) continue;
-    const title = toStr((t as any).task) ?? toStr((t as any).title);
-    if (!title) continue;
-    out.push({
-      title: title.trim(),
-      due_date: parseDueDate((t as any).due_date ?? (t as any).date),
-      source: "tasks",
-    });
+  // 3) Legacy simple : tasks: []
+  const legacyTasks = toArray((planJson as any).tasks);
+  if (legacyTasks.length > 0) {
+    for (const item of legacyTasks) {
+      if (!isRecord(item)) continue;
+      const title = toStr((item as any).title) ?? toStr((item as any).task) ?? toStr((item as any).name);
+      if (!title) continue;
+
+      out.push({
+        title: clampLen(title, 180),
+        due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
+        priority: normalizePriority((item as any).priority ?? (item as any).importance),
+        source: "tasks",
+      });
+    }
   }
 
   // Dédoublonnage basique (title + due_date + source)
@@ -136,39 +180,51 @@ export async function POST() {
     // Charger business_plan (via session user)
     const { data: planRow, error: planErr } = await supabase
       .from("business_plan")
-      .select("id, plan_json")
+      .select("plan_json")
       .eq("user_id", userId)
-      .maybeSingle();
+      .maybeSingle<{ plan_json: unknown }>();
 
     if (planErr) {
-      return NextResponse.json({ ok: false, error: planErr.message }, { status: 500 });
-    }
-    if (!planRow?.plan_json) {
-      return NextResponse.json({ ok: false, error: "Business plan not found" }, { status: 404 });
+      return NextResponse.json({ ok: false, error: planErr.message }, { status: 400 });
     }
 
-    const tasks = extractTasksFromPlan(planRow.plan_json);
-    if (tasks.length === 0) {
+    const planJson = planRow?.plan_json ?? null;
+    const tasks = extractTasksFromPlan(planJson);
+
+    if (!tasks.length) {
       return NextResponse.json({ ok: true, inserted: 0, updated: 0, total: 0 }, { status: 200 });
     }
 
-    // IMPORTANT:
-    // On fait les writes sur project_tasks avec supabaseAdmin (service_role) pour éviter les blocages RLS.
-    // On garde l'auth user + on force user_id = auth.user.id dans toutes les écritures.
+    // Lire existantes (uniquement sur les sources présentes dans le plan)
+    const sources = Array.from(new Set(tasks.map((t) => t.source))).filter(Boolean);
+
     const { data: existing, error: existingErr } = await supabaseAdmin
       .from("project_tasks")
-      .select("id, title, due_date, source")
-      .eq("user_id", userId);
+      .select("id,title,due_date,source,priority,status")
+      .eq("user_id", userId)
+      .in("source", sources);
 
     if (existingErr) {
-      console.error("Load existing tasks error:", existingErr);
       return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
     }
 
-    const existingIndex = new Map<string, { id: string; title: string; due_date: string | null; source: string }>();
+    const existingIndex = new Map<
+      string,
+      { id: string; title: string; due_date: string | null; source: string; priority: Priority | null; status: Status | null }
+    >();
+
     for (const row of existing ?? []) {
-      const key = `${normalizeTitle(row.title)}__${row.due_date ?? ""}__${row.source ?? ""}`;
-      existingIndex.set(key, row as any);
+      const key = `${normalizeTitle(String((row as any).title ?? ""))}__${String((row as any).due_date ?? "")}__${String(
+        (row as any).source ?? "",
+      )}`;
+      existingIndex.set(key, {
+        id: String((row as any).id),
+        title: String((row as any).title ?? ""),
+        due_date: (row as any).due_date ? String((row as any).due_date) : null,
+        source: String((row as any).source ?? ""),
+        priority: (row as any).priority ? (String((row as any).priority) as Priority) : null,
+        status: (row as any).status ? (String((row as any).status) as Status) : null,
+      });
     }
 
     const toUpdate: { id: string; patch: Record<string, any> }[] = [];
@@ -180,40 +236,42 @@ export async function POST() {
 
       if (ex) {
         // Update soft : champs “safe” uniquement.
-        toUpdate.push({
-          id: ex.id,
-          patch: {
-            title: t.title,
-            due_date: t.due_date,
-            source: t.source,
-            updated_at: new Date().toISOString(),
-          },
-        });
+        // - On met à jour title/due_date si diff
+        // - On complète priority si vide
+        const patch: Record<string, any> = {};
+
+        if (t.title && t.title !== ex.title) patch.title = t.title;
+        if ((t.due_date ?? null) !== (ex.due_date ?? null)) patch.due_date = t.due_date;
+
+        if (!ex.priority && t.priority) patch.priority = t.priority;
+
+        if (Object.keys(patch).length > 0) {
+          toUpdate.push({ id: ex.id, patch });
+        }
       } else {
         toInsert.push({
           user_id: userId,
           title: t.title,
           due_date: t.due_date,
+          priority: t.priority ?? null,
+          status: "todo" satisfies Status,
           source: t.source,
-          status: "todo",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         });
       }
     }
 
-    // Batch updates (séquentiel pour limiter les soucis timeouts)
+    // Appliquer updates
     let updated = 0;
     for (const u of toUpdate) {
-      const { error } = await supabaseAdmin
-        .from("project_tasks")
-        .update(u.patch)
-        .eq("id", u.id)
-        .eq("user_id", userId);
-
-      if (!error) updated += 1;
+      const { error: upErr } = await supabaseAdmin.from("project_tasks").update(u.patch).eq("id", u.id).eq("user_id", userId);
+      if (upErr) {
+        console.error("Update task error:", upErr);
+        return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
+      }
+      updated += 1;
     }
 
+    // Insert new
     let inserted = 0;
     if (toInsert.length > 0) {
       const { error: insErr } = await supabaseAdmin.from("project_tasks").insert(toInsert);
