@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import StrategyLovable from "@/components/strategy/StrategyLovable";
+import AutoSyncTasks from "./AutoSyncTasks";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -48,8 +49,7 @@ function bucketKey(daysFromNow: number) {
 
 function countPlanTasks(planJson: AnyRecord): number {
   const plan90 = (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
-  const grouped =
-    (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
+  const grouped = (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
   if (!grouped) return 0;
 
   const d30 = Array.isArray(grouped.d30) ? grouped.d30.length : 0;
@@ -127,11 +127,7 @@ export default async function StrategyPage() {
   // Persona (depuis plan_json)
   const personaRaw = (planJson.persona ?? {}) as AnyRecord;
   const persona = {
-    title:
-      asString(personaRaw.title) ||
-      asString(personaRaw.profile) ||
-      asString(personaRaw.name) ||
-      "",
+    title: asString(personaRaw.title) || asString(personaRaw.profile) || asString(personaRaw.name) || "",
     pains: asStringArray(personaRaw.pains),
     desires: asStringArray(personaRaw.desires),
     channels: preferredContentTypes.length ? preferredContentTypes : asStringArray(personaRaw.channels),
@@ -192,27 +188,34 @@ export default async function StrategyPage() {
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
   const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
 
+  // ✅ Auto-sync côté CLIENT (safe, pas de cookies() server, pas de TS errors)
+  const shouldAutoSync = totalTasks === 0 && planTasksCount > 0;
+
   return (
-    <StrategyLovable
-      firstName={firstName}
-      revenueGoal={revenueGoal}
-      horizon={horizon}
-      progressionPercent={progressionPercent}
-      totalDone={doneTasks}
-      totalAll={totalPlanTasks}
-      daysRemaining={Math.max(0, 90 - 34)}
-      currentPhase={currentPhase}
-      currentPhaseLabel={currentPhaseLabel}
-      phases={[
-        { title: "Phase 1 : Fondations", period: "Jours 1-30", tasks: byPhase.p1 },
-        { title: "Phase 2 : Croissance", period: "Jours 31-60", tasks: byPhase.p2 },
-        { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: byPhase.p3 },
-      ]}
-      persona={persona}
-      offerPyramids={offerPyramids}
-      initialSelectedIndex={initialSelectedIndex}
-      initialSelectedPyramid={initialSelectedPyramid}
-      planTasksCount={planTasksCount}
-    />
+    <>
+      <AutoSyncTasks enabled={shouldAutoSync} />
+
+      <StrategyLovable
+        firstName={firstName}
+        revenueGoal={revenueGoal}
+        horizon={horizon}
+        progressionPercent={progressionPercent}
+        totalDone={doneTasks}
+        totalAll={totalPlanTasks}
+        daysRemaining={Math.max(0, 90 - 34)}
+        currentPhase={currentPhase}
+        currentPhaseLabel={currentPhaseLabel}
+        phases={[
+          { title: "Phase 1 : Fondations", period: "Jours 1-30", tasks: byPhase.p1 },
+          { title: "Phase 2 : Croissance", period: "Jours 31-60", tasks: byPhase.p2 },
+          { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: byPhase.p3 },
+        ]}
+        persona={persona}
+        offerPyramids={offerPyramids}
+        initialSelectedIndex={initialSelectedIndex}
+        initialSelectedPyramid={initialSelectedPyramid}
+        planTasksCount={planTasksCount}
+      />
+    </>
   );
 }
