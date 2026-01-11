@@ -119,6 +119,7 @@ export const StepBusiness = ({ data, updateData, onNext, onBack }: StepBusinessP
     !!data.emailListSize &&
     !!data.weeklyHours &&
     !!data.mainGoal90Days &&
+    !!data.revenueGoalMonthly &&
     (data.mainGoals?.length ?? 0) > 0;
 
   return (
@@ -341,6 +342,26 @@ export const StepBusiness = ({ data, updateData, onNext, onBack }: StepBusinessP
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* ✅ NOUVELLE QUESTION (avant les objectifs "devenir riche...") */}
+          <div className="space-y-2">
+            <Label>Quel est ton objectif de revenus mensuels ? *</Label>
+            <div className="relative">
+              <Input
+                value={data.revenueGoalMonthly}
+                onChange={(e) => {
+                  const next = (e.target.value ?? "").replace(/[^\d]/g, "");
+                  updateData({ revenueGoalMonthly: next });
+                }}
+                placeholder="Ex : 5000"
+                inputMode="numeric"
+                className="pr-16"
+              />
+              <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted-foreground">
+                € / mois
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">

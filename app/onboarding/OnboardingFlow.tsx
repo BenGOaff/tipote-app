@@ -1,4 +1,3 @@
-// app/onboarding/OnboardingFlow.tsx
 "use client";
 
 import { useState } from "react";
@@ -43,6 +42,11 @@ export interface OnboardingData {
   emailListSize: string;
   weeklyHours: string;
   mainGoal90Days: string;
+
+  // ✅ NOUVEAU — Objectif de revenus mensuels (stocké en texte côté DB)
+  revenueGoalMonthly: string;
+
+  // Objectifs "symboliques" (devenir riche, aider les autres, etc.)
   mainGoals: string[];
 
   // ÉCRAN 3 — Ce qui te rend unique
@@ -72,6 +76,9 @@ const initialData: OnboardingData = {
   emailListSize: "",
   weeklyHours: "",
   mainGoal90Days: "",
+
+  revenueGoalMonthly: "",
+
   mainGoals: [],
 
   uniqueValue: "",
@@ -112,7 +119,11 @@ const OnboardingFlow = () => {
   };
 
   const saveCurrent = async () => {
-    await postJSON("/api/onboarding/answers", data);
+    // Compat DB: colonne ajoutée en snake_case (texte)
+    await postJSON("/api/onboarding/answers", {
+      ...data,
+      revenue_goal_monthly: data.revenueGoalMonthly,
+    });
   };
 
   const nextStep = async () => {
