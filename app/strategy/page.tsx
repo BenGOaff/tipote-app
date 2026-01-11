@@ -59,6 +59,31 @@ function countPlanTasks(planJson: AnyRecord): number {
   return d30 + d60 + d90;
 }
 
+function normalizeRevenueGoalText(raw: unknown): string {
+  /**
+     Objectif revenu:
+     - plan_json.revenue_goal (source de vérité côté stratégie)
+     - fallback: business_profiles.revenue_goal_monthly (ajout onboarding)
+     Valeur DB = texte (tu l’as mis en text), donc on:
+     - garde les digits
+     - formatte en fr-FR si possible
+  */
+  const s = asString(raw).trim();
+  if (!s) return "";
+
+  const digits = s.replace(/[^\d]/g, "");
+  if (!digits) return "";
+
+  const n = Number(digits);
+  if (!Number.isFinite(n)) return digits;
+
+  try {
+    return new Intl.NumberFormat("fr-FR").format(n);
+  } catch {
+    return String(n);
+  }
+}
+
 type TaskRow = {
   id: string;
   title: string | null;
@@ -99,7 +124,8 @@ export default async function StrategyPage() {
     redirect("/strategy/pyramids");
   }
 
-  // ✅ business_profiles : retirer colonne inexistante preferred_content_type (causait 400)
+  // ✅ business_profiles : on lit uniquement ce dont l’UI a besoin
+  // + ajout revenue_goal_monthly (texte en DB) pour l’afficher dans Ma Stratégie
   const profileRes = await supabase
     .from("business_profiles")
     .select(
@@ -109,6 +135,7 @@ export default async function StrategyPage() {
         "business_maturity",
         "main_goals",
         "content_preference",
+        "revenue_goal_monthly",
         "created_at",
         "updated_at",
       ].join(","),
@@ -174,10 +201,19 @@ export default async function StrategyPage() {
     if (key === "p3") byPhase.p3.push(t);
   }
 
+  // ✅ Objectif revenu :
+  // 1) priorité à plan_json.revenue_goal
+  // 2) fallback à business_profiles.revenue_goal_monthly (tant que plan_json n’est pas enrichi)
+  // 3) sinon "—"
+  const revenueFromPlan = normalizeRevenueGoalText((planJson as AnyRecord)?.revenue_goal);
+  const revenueFromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
+
   const revenueGoal =
-    asString((planJson as AnyRecord)?.revenue_goal) ||
-    asString((planJson as AnyRecord)?.goal_revenue) ||
-    (goals[0] ? goals[0] : "—");
+    revenueFromPlan
+      ? `${revenueFromPlan} € / mois`
+      : revenueFromProfile
+        ? `${revenueFromProfile} € / mois`
+        : "—";
 
   const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
@@ -187,6 +223,17 @@ export default async function StrategyPage() {
 
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
   const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
+
+  // ✅ Jours restants : basé sur created_at du business_plan (approche stable, sans inventer d’autre date)
+  const createdAt = asString(planRow?.created_at);
+  const createdDate = createdAt ? parseDateOnly(createdAt) : null;
+
+  const daysElapsed =
+    createdDate
+      ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+  const daysRemaining = Math.max(0, 90 - daysElapsed);
 
   // ✅ Auto-sync côté CLIENT (safe, pas de cookies() server, pas de TS errors)
   const shouldAutoSync = totalTasks === 0 && planTasksCount > 0;
@@ -202,7 +249,7 @@ export default async function StrategyPage() {
         progressionPercent={progressionPercent}
         totalDone={doneTasks}
         totalAll={totalPlanTasks}
-        daysRemaining={Math.max(0, 90 - 34)}
+        daysRemaining={daysRemaining}
         currentPhase={currentPhase}
         currentPhaseLabel={currentPhaseLabel}
         phases={[

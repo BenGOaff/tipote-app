@@ -48,13 +48,26 @@ function parseMoneyFromText(raw: unknown): number | null {
 }
 
 function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
+  /**
+   * ✅ Priorités (suite logique)
+   * 1) business_profiles.revenue_goal_monthly (champ onboarding ajouté, TEXT)
+   * 2) business_profiles.target_monthly_revenue / revenue_goal (anciens champs)
+   * 3) business_profiles.main_goal (objectif 90 jours)
+   * 4) business_profiles.main_goals[0] (objectif "symbolique")
+   */
+  const monthly = cleanString(businessProfile.revenue_goal_monthly, 64);
+  if (monthly) return monthly;
+
   const direct =
     cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
   if (direct) return direct;
+
   const mg = cleanString(businessProfile.main_goal, 240) || cleanString(businessProfile.mainGoal90Days, 240);
   if (mg) return mg;
+
   const goals = asArray(businessProfile.main_goals);
   if (goals.length) return cleanString(goals[0], 240);
+
   return "";
 }
 
@@ -68,15 +81,23 @@ async function persistStrategyRow(params: {
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
     const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
+
+    // ✅ priorité à revenue_goal_monthly (onboarding)
     const targetMonthlyRev =
       toNumber(planJson.target_monthly_rev) ??
       toNumber(planJson.target_monthly_revenue) ??
+      parseMoneyFromText(planJson.target_monthly_rev) ??
+      parseMoneyFromText(planJson.target_monthly_revenue) ??
       parseMoneyFromText(planJson.revenue_goal) ??
       parseMoneyFromText(planJson.goal_revenue) ??
-      parseMoneyFromText(planJson.main_goal);
+      parseMoneyFromText(planJson.main_goal) ??
+      parseMoneyFromText(businessProfile.revenue_goal_monthly) ??
+      parseMoneyFromText(businessProfile.target_monthly_revenue) ??
+      parseMoneyFromText(businessProfile.revenue_goal);
 
     const title =
-      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) ||
+      "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -87,7 +108,11 @@ async function persistStrategyRow(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    const upsertRes = await supabase
+      .from("strategies")
+      .upsert(payload, { onConflict: "user_id" })
+      .select("id")
+      .maybeSingle();
 
     if (upsertRes?.error) {
       const insRes = await supabase.from("strategies").insert(payload).select("id").maybeSingle();
@@ -350,11 +375,17 @@ export async function POST(req: Request) {
     const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
 
     if (hasSelected && !needFullStrategy) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_complete" },
+        { status: 200 },
+      );
     }
 
     if (!hasSelected && hasUsefulPyramids) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_generated" },
+        { status: 200 },
+      );
     }
 
     const { data: businessProfile, error: profileError } = await supabase
@@ -371,6 +402,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ NEW: revenue_goal_monthly en priorité
     const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
     const targetMonthlyRevGuess = parseMoneyFromText(revenueGoalLabel);
 
@@ -588,6 +620,7 @@ Consignes importantes :
           mainGoal:
             cleanString((businessProfile as any)?.main_goal, 120) ||
             cleanString((businessProfile as any)?.goal, 120) ||
+            cleanString((businessProfile as any)?.revenue_goal_monthly, 120) ||
             cleanString((businessProfile as any)?.revenue_goal, 120),
         });
 
@@ -605,8 +638,7 @@ Consignes importantes :
       mission: cleanString(basePlan.mission, 240) || mission,
       promise: cleanString(basePlan.promise, 240) || promise,
       positioning: cleanString(basePlan.positioning, 320) || positioning,
-      summary:
-        cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
+      summary: cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
       persona: personaLooksUseful(asRecord(basePlan.persona)) ? basePlan.persona : safePersona,
       plan_90_days: {
         ...(asRecord(basePlan.plan_90_days) ?? {}),
