@@ -77,16 +77,31 @@ function normalizePriority(x: unknown): Priority | null {
   return null;
 }
 
+function getPlan90Container(planJson: AnyRecord): AnyRecord | null {
+  // Compat: certains endpoints/historiques utilisent plan90 / plan_90 au lieu de plan_90_days
+  const p90days = isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as AnyRecord) : null;
+  if (p90days) return p90days;
+
+  const p90 = isRecord((planJson as any).plan90) ? ((planJson as any).plan90 as AnyRecord) : null;
+  if (p90) return p90;
+
+  const p_90 = isRecord((planJson as any).plan_90) ? ((planJson as any).plan_90 as AnyRecord) : null;
+  if (p_90) return p_90;
+
+  return null;
+}
+
 function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
   if (!isRecord(planJson)) return [];
 
   const out: TaskFromPlan[] = [];
 
-  // 1) Nouveau schéma : plan_90_days.tasks_by_timeframe (objet de arrays)
-  const plan90 = isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as AnyRecord) : null;
+  // 1) Nouveau schéma : plan_90_days|plan90|plan_90 .tasks_by_timeframe (objet de arrays)
+  const plan90 = getPlan90Container(planJson);
 
   const tasksByTimeframe =
-    plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? ((plan90 as any).tasks_by_timeframe as AnyRecord) : null;
+    (plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? ((plan90 as any).tasks_by_timeframe as AnyRecord) : null) ||
+    (isRecord((planJson as any).tasks_by_timeframe) ? ((planJson as any).tasks_by_timeframe as AnyRecord) : null);
 
   if (tasksByTimeframe) {
     for (const [, v] of Object.entries(tasksByTimeframe)) {
@@ -112,12 +127,17 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
     }
   }
 
-  // 2) Legacy : action_plan_30_90.weeks_* -> arrays
+  // 2) Legacy : action_plan_30_90.weeks_* -> arrays OU { tasks: [] }
   const ap = isRecord((planJson as any).action_plan_30_90) ? ((planJson as any).action_plan_30_90 as AnyRecord) : null;
   if (ap) {
     for (const [k, v] of Object.entries(ap)) {
       if (!k.startsWith("weeks_")) continue;
-      const arr = toArray(v);
+
+      const arrDirect = toArray(v);
+      const arrFromObject = isRecord(v) ? toArray((v as any).tasks) : [];
+
+      const arr = arrDirect.length > 0 ? arrDirect : arrFromObject;
+
       for (const item of arr) {
         if (!isRecord(item)) continue;
         const title = toStr((item as any).title) ?? toStr((item as any).task) ?? toStr((item as any).name);
