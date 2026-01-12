@@ -1,5 +1,8 @@
 "use client";
 
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card } from "@/components/ui/card";
@@ -14,13 +17,12 @@ import {
   Users,
   DollarSign,
   CheckCircle2,
-  ArrowRight,
-  Layers,
   Clock,
-  Plus,
+  ArrowRight,
+  Edit3,
 } from "lucide-react";
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
 
 type TaskRow = {
   id: string;
@@ -39,13 +41,6 @@ type Phase = {
   tasks: TaskRow[];
 };
 
-type Persona = {
-  title: string;
-  pains: string[];
-  desires: string[];
-  channels: string[];
-};
-
 type StrategyLovableProps = {
   firstName: string;
   revenueGoal: string;
@@ -57,7 +52,12 @@ type StrategyLovableProps = {
   currentPhase: number;
   currentPhaseLabel: string;
   phases: Phase[];
-  persona: Persona;
+  persona: {
+    title: string;
+    pains: string[];
+    desires: string[];
+    channels: string[];
+  };
   offerPyramids: AnyRecord[];
   initialSelectedIndex: number;
   initialSelectedPyramid?: AnyRecord;
@@ -72,48 +72,22 @@ function toStr(v: unknown): string {
   return "";
 }
 
-function cleanRevenueGoal(raw: string): string {
-  const s = (raw || "").trim();
-  if (!s) return "—";
-  // évite l'affichage moche type ["devenir riche"]
-  if (s.startsWith('["') && s.endsWith('"]')) {
-    try {
-      const arr = JSON.parse(s);
-      if (Array.isArray(arr) && arr.length) return String(arr[0]);
-    } catch {
-      // ignore
-    }
-  }
-  return s;
-}
-
 function isDoneStatus(v: unknown) {
   const s = toStr(v).toLowerCase();
-  return s === "done" || s === "completed" || s === "terminé" || s === "termine";
+  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
 }
 
-function pickSelectedPyramid(offerPyramids: AnyRecord[], initialSelectedIndex: number, initialSelectedPyramid?: AnyRecord) {
-  if (initialSelectedPyramid && typeof initialSelectedPyramid === "object") return initialSelectedPyramid;
-  if (Array.isArray(offerPyramids) && offerPyramids[initialSelectedIndex]) return offerPyramids[initialSelectedIndex];
-  if (Array.isArray(offerPyramids) && offerPyramids[0]) return offerPyramids[0];
-  return null;
-}
-
-function offerTitle(o: AnyRecord | null, fallback: string) {
-  const t = (o && (o.title || o.name || o.nom)) ? toStr(o.title ?? o.name ?? o.nom) : "";
-  return t || fallback;
-}
-function offerDesc(o: AnyRecord | null) {
-  const s = o ? toStr(o.composition || o.purpose || o.description || o.insight) : "";
-  return s || "—";
-}
-function offerPrice(o: AnyRecord | null) {
-  const p = o ? (typeof o.price === "number" ? o.price : typeof o.prix === "number" ? o.prix : null) : null;
-  if (p === null || typeof p !== "number") return "—";
-  return `${p.toLocaleString("fr-FR")}€`;
+function pickSelectedPyramid(offerPyramids: AnyRecord[], index: number, explicit?: AnyRecord) {
+  if (explicit) return explicit;
+  if (!Array.isArray(offerPyramids) || offerPyramids.length === 0) return null;
+  if (typeof index !== "number" || index < 0 || index >= offerPyramids.length) return offerPyramids[0];
+  return offerPyramids[index];
 }
 
 export default function StrategyLovable(props: StrategyLovableProps) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
   const selectedPyramid = pickSelectedPyramid(
     (props.offerPyramids || []) as AnyRecord[],
     props.initialSelectedIndex ?? 0,
@@ -129,259 +103,311 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const personaGoals = Array.isArray(props.persona?.desires) ? props.persona.desires : [];
   const personaChannels = Array.isArray(props.persona?.channels) ? props.persona.channels : [];
 
+  // ✅ Local state: permet de cocher/décocher sans casser le DOM Lovable
+  const initialStatusById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const ph of props.phases || []) {
+      for (const t of ph.tasks || []) {
+        if (!t?.id) continue;
+        map[String(t.id)] = String(t.status ?? "");
+      }
+    }
+    return map;
+  }, [props.phases]);
+
+  const [statusById, setStatusById] = useState<Record<string, string>>(initialStatusById);
+
+  const toggleTask = useCallback(
+    (taskId: string, nextChecked: boolean) => {
+      const nextStatus = nextChecked ? "done" : "todo";
+
+      setStatusById((prev) => ({ ...prev, [taskId]: nextStatus }));
+
+      startTransition(async () => {
+        try {
+          const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: nextStatus }),
+          });
+
+          const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+          if (!res.ok || !json?.ok) {
+            // rollback
+            setStatusById((prev) => ({ ...prev, [taskId]: nextChecked ? "todo" : "done" }));
+            return;
+          }
+
+          // refresh pour recalcul server-side progress / compteurs si besoin
+          router.refresh();
+        } catch {
+          setStatusById((prev) => ({ ...prev, [taskId]: nextChecked ? "todo" : "done" }));
+        }
+      });
+    },
+    [router, startTransition],
+  );
+
+  // Pas d'UI pending (Lovable)
+  void pending;
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
+        <main className="flex-1">
+          <div className="flex h-16 items-center gap-4 border-b bg-background px-6">
             <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Ma Stratégie</h1>
+            <h1 className="text-xl font-semibold">Ma Stratégie</h1>
+            <div className="ml-auto">
+              <Button variant="outline" size="sm" className="rounded-full">
+                <Edit3 className="mr-2 h-4 w-4" />
+                Personnaliser
+              </Button>
             </div>
-            <Button variant="outline" size="sm">
-              Personnaliser
-            </Button>
-          </header>
+          </div>
 
-          <div className="p-6 space-y-6 max-w-6xl mx-auto">
-            {/* Hero Section */}
-            <Card className="p-8 gradient-hero border-border/50">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="text-4xl font-display font-bold text-primary-foreground mb-2">
-                    Votre Vision Stratégique
-                  </h2>
-                  <p className="text-primary-foreground/80 text-lg mb-8">
-                    Plan personnalisé généré par l'IA pour atteindre vos objectifs business
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                      <p className="text-sm text-primary-foreground/70 mb-1">Objectif Revenue</p>
-                      <p className="text-2xl font-bold text-primary-foreground">{cleanRevenueGoal(props.revenueGoal)}</p>
-                    </div>
-                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                      <p className="text-sm text-primary-foreground/70 mb-1">Horizon</p>
-                      <p className="text-2xl font-bold text-primary-foreground">{props.horizon}</p>
-                    </div>
-                    <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                      <p className="text-sm text-primary-foreground/70 mb-1">Progression</p>
-                      <p className="text-2xl font-bold text-primary-foreground">{props.progressionPercent}%</p>
-                    </div>
-                  </div>
-                </div>
-                <Target className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
+          <div className="p-6 space-y-6">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-900 p-8 text-white">
+              <div className="absolute right-8 top-8 opacity-20">
+                <Target className="h-16 w-16" />
               </div>
-            </Card>
 
-            {/* Tabs for different views */}
-            <Tabs defaultValue="plan" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="plan">Plan d'action</TabsTrigger>
-                <TabsTrigger value="pyramid">Pyramide d'offres</TabsTrigger>
+              <h2 className="text-4xl font-bold mb-2">Votre Vision Stratégique</h2>
+              <p className="text-indigo-100 text-lg mb-8">
+                Plan personnalisé généré par l&apos;IA pour atteindre vos objectifs business
+              </p>
+
+              <div className="grid grid-cols-3 gap-6">
+                <div className="bg-white/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4" />
+                    <span className="text-sm opacity-90">Objectif Revenu</span>
+                  </div>
+                  <div className="text-2xl font-bold">{props.revenueGoal}</div>
+                </div>
+
+                <div className="bg-white/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm opacity-90">Horizon</span>
+                  </div>
+                  <div className="text-2xl font-bold">{props.horizon}</div>
+                </div>
+
+                <div className="bg-white/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm opacity-90">Progression</span>
+                  </div>
+                  <div className="text-2xl font-bold">{props.progressionPercent}%</div>
+                </div>
+              </div>
+            </div>
+
+            <Tabs defaultValue="action" className="w-full">
+              <TabsList className="grid w-fit grid-cols-3">
+                <TabsTrigger value="action">Plan d&apos;action</TabsTrigger>
+                <TabsTrigger value="pyramid">Pyramide d&apos;offres</TabsTrigger>
                 <TabsTrigger value="persona">Persona cible</TabsTrigger>
               </TabsList>
 
-              {/* Action Plan Tab */}
-              <TabsContent value="plan" className="space-y-6">
+              <TabsContent value="action" className="space-y-6">
                 <div className="grid grid-cols-3 gap-6">
                   <Card className="p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      <div className="bg-indigo-100 p-2 rounded-lg">
+                        <CheckCircle2 className="h-5 w-5 text-indigo-600" />
                       </div>
-                      <h3 className="font-semibold">Tâches complétées</h3>
+                      <span className="font-medium">Tâches complétées</span>
                     </div>
-                    <p className="text-3xl font-bold mb-2">
-                      {props.totalDone}/{props.totalAll || "—"}
-                    </p>
-                    <Progress
-                      value={props.totalAll ? Math.round((props.totalDone / Math.max(1, props.totalAll)) * 100) : 0}
-                      className="h-2"
-                    />
+                    <div className="text-3xl font-bold mb-2">
+                      {props.totalDone}/{props.totalAll}
+                    </div>
+                    <Progress value={props.progressionPercent} className="h-2" />
                   </Card>
 
                   <Card className="p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-secondary-foreground" />
+                      <div className="bg-indigo-100 p-2 rounded-lg">
+                        <Clock className="h-5 w-5 text-indigo-600" />
                       </div>
-                      <h3 className="font-semibold">Jours restants</h3>
+                      <span className="font-medium">Jours restants</span>
                     </div>
-                    <p className="text-3xl font-bold mb-2">{props.daysRemaining}</p>
-                    <p className="text-muted-foreground">Sur 90 jours</p>
+                    <div className="text-3xl font-bold mb-2">{props.daysRemaining}</div>
+                    <div className="text-sm text-muted-foreground">Sur 90 jours</div>
                   </Card>
 
                   <Card className="p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-success" />
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-green-600" />
                       </div>
-                      <h3 className="font-semibold">Phase actuelle</h3>
+                      <span className="font-medium">Phase actuelle</span>
                     </div>
-                    <p className="text-3xl font-bold mb-2">{props.currentPhase}</p>
-                    <p className="text-muted-foreground">{props.currentPhaseLabel}</p>
+                    <div className="text-3xl font-bold mb-2">{props.currentPhase}</div>
+                    <div className="text-sm text-muted-foreground">{props.currentPhaseLabel}</div>
                   </Card>
                 </div>
 
-                {(props.phases || []).map((phase, index) => {
+                {props.phases.map((phase, idx) => {
                   const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
-                  const done = tasks.filter((t) => isDoneStatus(t.status)).length;
-                  const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+                  const doneInPhase = tasks.filter((t) => isDoneStatus(statusById[String(t.id)] ?? t.status)).length;
+                  const phaseProgress = tasks.length ? Math.round((doneInPhase / tasks.length) * 100) : 0;
 
                   return (
-                    <Card key={index} className="p-6">
+                    <Card key={idx} className="p-6">
                       <div className="flex items-start justify-between mb-6">
                         <div>
-                          <h3 className="text-xl font-bold">{phase.title}</h3>
+                          <h3 className="text-xl font-semibold">{phase.title}</h3>
                           <p className="text-muted-foreground">{phase.period}</p>
                         </div>
-                        <Badge variant="outline">{pct}%</Badge>
+                        <Badge variant="secondary" className="rounded-full">
+                          {phaseProgress}%
+                        </Badge>
                       </div>
 
-                      <Progress value={pct} className="h-2 mb-6" />
+                      <Progress value={phaseProgress} className="h-2 mb-6" />
 
                       <div className="grid grid-cols-2 gap-4">
                         {tasks.length ? (
                           tasks.map((task) => (
                             <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                              <Checkbox checked={isDoneStatus(task.status)} />
-                              <span className={isDoneStatus(task.status) ? "line-through text-muted-foreground" : ""}>
+                              <Checkbox
+                                checked={isDoneStatus(statusById[String(task.id)] ?? task.status)}
+                                onCheckedChange={(v) => toggleTask(String(task.id), Boolean(v))}
+                              />
+                              <span
+                                className={
+                                  isDoneStatus(statusById[String(task.id)] ?? task.status)
+                                    ? "line-through text-muted-foreground"
+                                    : ""
+                                }
+                              >
                                 {task.title || "—"}
                               </span>
                             </div>
                           ))
                         ) : (
-                          <p className="text-muted-foreground">Aucune tâche dans cette phase pour l'instant.</p>
+                          <div className="col-span-2 text-sm text-muted-foreground">
+                            Aucune tâche dans cette phase pour l&apos;instant.
+                          </div>
                         )}
                       </div>
                     </Card>
                   );
                 })}
 
-                <Card className="p-6 bg-primary/5 border-primary/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Target className="w-6 h-6 text-primary" />
-                    <h3 className="text-lg font-bold text-primary">Prochaine étape recommandée</h3>
+                <Card className="p-6 bg-indigo-50 border-indigo-100">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-indigo-100 p-2 rounded-lg">
+                      <Target className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-indigo-900 mb-2">Prochaine étape recommandée</h3>
+                      <p className="text-indigo-700 mb-4">
+                        Continue l&apos;exécution : synchronise ton plan puis avance phase par phase.
+                      </p>
+                      <Button className="bg-indigo-600 hover:bg-indigo-700">
+                        Commencer
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    Continue l'exécution : synchronise ton plan puis avance phase par phase.
-                  </p>
-                  <Button className="bg-primary hover:bg-primary/90">
-                    Commencer
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
                 </Card>
               </TabsContent>
 
-              {/* Offer Pyramid Tab */}
               <TabsContent value="pyramid" className="space-y-6">
                 <Card className="p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                      <Layers className="w-5 h-5 text-primary-foreground" />
-                    </div>
-                    <h3 className="text-xl font-bold">Pyramide d'Offres</h3>
+                  <h3 className="text-xl font-semibold mb-2">Pyramide d&apos;offres sélectionnée</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Voici la structure recommandée pour maximiser la conversion à chaque niveau.
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-6">
+                    <Card className="p-4 bg-green-50 border-green-100">
+                      <h4 className="font-semibold text-green-900 mb-2">Lead Magnet</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="font-medium">{toStr(lead?.title) || "—"}</div>
+                        <div className="text-green-700">{toStr(lead?.format) || ""}</div>
+                        <div className="text-green-600">{toStr(lead?.composition) || ""}</div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 bg-blue-50 border-blue-100">
+                      <h4 className="font-semibold text-blue-900 mb-2">Low Ticket</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="font-medium">{toStr(mid?.title) || "—"}</div>
+                        <div className="text-blue-700">{toStr(mid?.format) || ""}</div>
+                        <div className="text-blue-600">{toStr(mid?.composition) || ""}</div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 bg-purple-50 border-purple-100">
+                      <h4 className="font-semibold text-purple-900 mb-2">High Ticket</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="font-medium">{toStr(high?.title) || "—"}</div>
+                        <div className="text-purple-700">{toStr(high?.format) || ""}</div>
+                        <div className="text-purple-600">{toStr(high?.composition) || ""}</div>
+                      </div>
+                    </Card>
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="p-5 rounded-lg border-2 border-success bg-success/5">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-success">High Ticket</p>
-                          <p className="text-3xl font-bold mt-1">{offerPrice(high)}</p>
-                        </div>
-                        <CheckCircle2 className="w-5 h-5 text-success" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">{offerTitle(high, "—")}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(high)}</p>
-                    </div>
-
-                    <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-primary">Middle Ticket</p>
-                          <p className="text-3xl font-bold mt-1">{offerPrice(mid)}</p>
-                        </div>
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">{offerTitle(mid, "—")}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(mid)}</p>
-                    </div>
-
-                    <div className="p-5 rounded-lg border-2 border-secondary bg-secondary/5">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-secondary-foreground">Lead Magnet</p>
-                          <p className="text-3xl font-bold mt-1">{offerPrice(lead)}</p>
-                        </div>
-                        <CheckCircle2 className="w-5 h-5 text-secondary-foreground" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">{offerTitle(lead, "—")}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{offerDesc(lead)}</p>
-                    </div>
-                  </div>
-
-                  <Button variant="outline" className="w-full mt-6">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter une offre
-                  </Button>
                 </Card>
               </TabsContent>
 
-              {/* Persona Tab */}
               <TabsContent value="persona" className="space-y-6">
                 <Card className="p-6">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center">
-                      <Users className="w-5 h-5 text-secondary-foreground" />
+                    <div className="bg-indigo-100 p-2 rounded-lg">
+                      <Users className="h-5 w-5 text-indigo-600" />
                     </div>
-                    <h3 className="text-xl font-bold">Persona Cible</h3>
+                    <h3 className="text-xl font-semibold">Persona cible</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-6">
                     <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Profil Principal</h4>
-                      <p className="text-lg font-bold mb-4">{personaTitle}</p>
+                      <h4 className="font-semibold mb-2">Profil</h4>
+                      <p className="text-muted-foreground">{personaTitle}</p>
+                    </div>
 
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Problèmes Principaux</h4>
-                      <div className="space-y-2">
-                        {(personaPains.length ? personaPains : ["—"]).map((pain, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-destructive" />
-                            <span>{pain}</span>
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-3">Points de douleur</h4>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          {personaPains.length ? (
+                            personaPains.map((p, i) => <li key={i}>• {p}</li>)
+                          ) : (
+                            <li>—</li>
+                          )}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-3">Désirs / objectifs</h4>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          {personaGoals.length ? personaGoals.map((g, i) => <li key={i}>• {g}</li>) : <li>—</li>}
+                        </ul>
                       </div>
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Objectifs</h4>
-                      <div className="space-y-2 mb-6">
-                        {(personaGoals.length ? personaGoals : ["—"]).map((goal, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-success" />
-                            <span>{goal}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">Canaux préférés</h4>
+                      <h4 className="font-semibold mb-3">Canaux de communication</h4>
                       <div className="flex flex-wrap gap-2">
-                        {(personaChannels.length ? personaChannels : ["—"]).map((c, i) => (
-                          <Badge key={i} variant="secondary">
-                            {c}
+                        {personaChannels.length ? (
+                          personaChannels.map((c, i) => (
+                            <Badge key={i} variant="secondary" className="rounded-full">
+                              {c}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="secondary" className="rounded-full">
+                            —
                           </Badge>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </div>
-
-                  <Button variant="outline" className="w-full mt-6">
-                    Modifier le persona
-                  </Button>
                 </Card>
               </TabsContent>
             </Tabs>

@@ -1,12 +1,12 @@
 // app/api/tasks/[id]/route.ts
 // GET / PATCH / DELETE sur public.project_tasks
-// ✅ Next.js 15/16: context.params est typé Promise<{ id: string }>
 // ✅ Auth + sécurité user_id
-// ✅ Zéro any, zéro as, TS strict
+// ✅ Zéro any, TS strict
 // ✅ Contrat JSON standard : { ok, task? , error? }
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,10 +14,12 @@ type TaskRow = {
   id: string;
   user_id: string;
   title: string;
-  status: string | null;
   due_date: string | null;
-  created_at?: string;
-  updated_at?: string;
+  priority: string | null;
+  status: string | null;
+  source: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -63,12 +65,13 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // ✅ RLS-safe read (service_role) + filtre user_id
+    const { data, error } = await supabaseAdmin
       .from("project_tasks")
       .select("*")
       .eq("id", id)
       .eq("user_id", auth.user.id)
-      .maybeSingle();
+      .maybeSingle<TaskRow>();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     if (!data) return NextResponse.json({ ok: false, error: "Task not found" }, { status: 404 });
@@ -107,27 +110,28 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     const update: Partial<TaskRow> = {};
 
     if ("title" in body) {
-      const title = cleanString(body.title);
+      const title = cleanString((body as Record<string, unknown>).title);
       if (!title) return NextResponse.json({ ok: false, error: "Titre requis" }, { status: 400 });
       update.title = title;
     }
 
     if ("due_date" in body) {
-      update.due_date = normalizeDueDate(body.due_date);
+      update.due_date = normalizeDueDate((body as Record<string, unknown>).due_date);
     }
 
     // Status (tolérant)
     if ("status" in body) {
-      const st = normalizeStatus(body.status);
+      const st = normalizeStatus((body as Record<string, unknown>).status);
       if (!st) return NextResponse.json({ ok: false, error: "Status invalide" }, { status: 400 });
       update.status = st;
     }
 
-    // Compat ancienne UI : done / completed booleans → status done/todo
+    // Compat ancienne UI : done booleans → status done/todo
     if ("done" in body) {
-      if (typeof body.done === "boolean") update.status = body.done ? "done" : "todo";
-      if (typeof body.done === "string") {
-        const low = body.done.trim().toLowerCase();
+      const doneVal = (body as Record<string, unknown>).done;
+      if (typeof doneVal === "boolean") update.status = doneVal ? "done" : "todo";
+      if (typeof doneVal === "string") {
+        const low = doneVal.trim().toLowerCase();
         if (low === "true") update.status = "done";
         if (low === "false") update.status = "todo";
       }
@@ -137,13 +141,14 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "No fields to update" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    // ✅ RLS-safe write + filtre user_id
+    const { data, error } = await supabaseAdmin
       .from("project_tasks")
-      .update(update)
+      .update({ ...update, updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("user_id", auth.user.id)
       .select("*")
-      .maybeSingle();
+      .maybeSingle<TaskRow>();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     if (!data) return NextResponse.json({ ok: false, error: "Task not found" }, { status: 404 });
@@ -168,7 +173,12 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { error } = await supabase.from("project_tasks").delete().eq("id", id).eq("user_id", auth.user.id);
+    // ✅ RLS-safe delete + filtre user_id
+    const { error } = await supabaseAdmin
+      .from("project_tasks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", auth.user.id);
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
