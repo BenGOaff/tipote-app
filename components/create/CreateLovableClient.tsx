@@ -23,6 +23,52 @@ import { VideoForm } from "@/components/create/forms/VideoForm";
 import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
 
+type AnyParams = Record<string, any>;
+
+function buildFallbackPrompt(params: AnyParams): string {
+  const type = String(params?.type ?? "").trim();
+  const theme = String(params?.theme ?? "").trim();
+  const title = String(params?.title ?? "").trim();
+  const topic = String(params?.topic ?? "").trim();
+  const platform = String(params?.platform ?? "").trim();
+  const instructions = String(params?.instructions ?? "").trim();
+  const brief = String(params?.brief ?? "").trim();
+
+  const lines = [
+    type ? `Génère un contenu de type "${type}".` : "Génère un contenu.",
+    title ? `Titre: ${title}` : "",
+    topic ? `Sujet: ${topic}` : "",
+    platform ? `Plateforme: ${platform}` : "",
+    theme ? `Thème: ${theme}` : "",
+    instructions ? `Instructions: ${instructions}` : "",
+    brief ? `Brief: ${brief}` : "",
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function normalizeGenerateParams(raw: unknown): AnyParams {
+  const params = (raw && typeof raw === "object" ? (raw as AnyParams) : {}) as AnyParams;
+
+  const hasAnyText =
+    (typeof params.prompt === "string" && params.prompt.trim().length > 0) ||
+    (typeof params.brief === "string" && params.brief.trim().length > 0) ||
+    (typeof params.consigne === "string" && params.consigne.trim().length > 0) ||
+    (typeof params.angle === "string" && params.angle.trim().length > 0) ||
+    (typeof params.text === "string" && params.text.trim().length > 0) ||
+    (typeof params.instructions === "string" && params.instructions.trim().length > 0);
+
+  // On standardise "prompt" car l'API /api/content/generate attend souvent un champ texte
+  if (hasAnyText) {
+    if (!params.prompt && typeof params.instructions === "string" && params.instructions.trim()) {
+      return { ...params, prompt: params.instructions.trim() };
+    }
+    return params;
+  }
+
+  return { ...params, prompt: buildFallbackPrompt(params) };
+}
+
 const contentTypes = [
   {
     id: "post",
@@ -69,12 +115,48 @@ const contentTypes = [
 ] as const;
 
 const quickTemplates = [
-  { id: "engagement", label: "Post Engagement", description: "Question pour engager l'audience", theme: "engagement", type: "post" },
-  { id: "testimonial", label: "Témoignage Client", description: "Mise en avant d'un succès client", theme: "social_proof", type: "post" },
-  { id: "expert", label: "Conseil Expert", description: "Partage d'expertise et de valeur", theme: "educate", type: "post" },
-  { id: "announcement", label: "Annonce Produit", description: "Lancement ou promotion d'offre", theme: "sell", type: "post" },
-  { id: "bts", label: "Behind The Scenes", description: "Coulisses du business", theme: "storytelling", type: "post" },
-  { id: "cta", label: "Call To Action", description: "Invitation à l'action claire", theme: "sell", type: "post" },
+  {
+    id: "engagement",
+    label: "Post Engagement",
+    description: "Question pour engager l'audience",
+    theme: "engagement",
+    type: "post",
+  },
+  {
+    id: "testimonial",
+    label: "Témoignage Client",
+    description: "Mise en avant d'un succès client",
+    theme: "social_proof",
+    type: "post",
+  },
+  {
+    id: "expert",
+    label: "Conseil Expert",
+    description: "Partage d'expertise et de valeur",
+    theme: "educate",
+    type: "post",
+  },
+  {
+    id: "announcement",
+    label: "Annonce Produit",
+    description: "Lancement ou promotion d'offre",
+    theme: "sell",
+    type: "post",
+  },
+  {
+    id: "bts",
+    label: "Behind The Scenes",
+    description: "Coulisses du business",
+    theme: "storytelling",
+    type: "post",
+  },
+  {
+    id: "cta",
+    label: "Call To Action",
+    description: "Invitation à l'action claire",
+    theme: "sell",
+    type: "post",
+  },
 ] as const;
 
 type ContentType = (typeof contentTypes)[number]["id"] | null;
@@ -94,7 +176,7 @@ export default function CreateLovableClient() {
       const res = await fetch("/api/content/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        body: JSON.stringify(normalizeGenerateParams(params)),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -167,7 +249,7 @@ export default function CreateLovableClient() {
       isGenerating,
       isSaving,
     }),
-    [isGenerating, isSaving]
+    [isGenerating, isSaving],
   );
 
   const renderForm = () => {
