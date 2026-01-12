@@ -3,6 +3,7 @@
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 import StrategyLovable from "@/components/strategy/StrategyLovable";
 import AutoSyncTasks from "./AutoSyncTasks";
@@ -61,12 +62,12 @@ function countPlanTasks(planJson: AnyRecord): number {
 
 function normalizeRevenueGoalText(raw: unknown): string {
   /**
-     Objectif revenu:
-     - plan_json.revenue_goal (source de vérité côté stratégie)
-     - fallback: business_profiles.revenue_goal_monthly (ajout onboarding)
-     Valeur DB = texte (tu l’as mis en text), donc on:
-     - garde les digits
-     - formatte en fr-FR si possible
+   Objectif revenu:
+   - plan_json.revenue_goal (source de vérité côté stratégie)
+   - fallback: business_profiles.revenue_goal_monthly (ajout onboarding)
+   Valeur DB = texte, donc on:
+   - garde les digits
+   - formatte en fr-FR si possible
   */
   const s = asString(raw).trim();
   if (!s) return "";
@@ -125,7 +126,6 @@ export default async function StrategyPage() {
   }
 
   // ✅ business_profiles : on lit uniquement ce dont l’UI a besoin
-  // + ajout revenue_goal_monthly (texte en DB) pour l’afficher dans Ma Stratégie
   const profileRes = await supabase
     .from("business_profiles")
     .select(
@@ -169,8 +169,10 @@ export default async function StrategyPage() {
   const initialSelectedIndex = hasExplicitSelection ? (planJson.selected_offer_pyramid_index as number) : 0;
   const initialSelectedPyramid = hasExplicitSelection ? (planJson.selected_offer_pyramid as AnyRecord) : undefined;
 
-  // Tâches (depuis DB project_tasks)
-  const tasksRes = await supabase
+  // ✅ IMPORTANT (prod/RLS-safe):
+  // Lecture des tâches via supabaseAdmin (service_role) car les policies RLS peuvent renvoyer [] sans erreur.
+  // On filtre STRICTEMENT par user_id -> aucune fuite de données.
+  const tasksRes = await supabaseAdmin
     .from("project_tasks")
     .select("id, title, status, priority, due_date, source, created_at, updated_at")
     .eq("user_id", user.id)
@@ -235,7 +237,7 @@ export default async function StrategyPage() {
 
   const daysRemaining = Math.max(0, 90 - daysElapsed);
 
-  // ✅ Auto-sync côté CLIENT (safe, pas de cookies() server, pas de TS errors)
+  // ✅ Auto-sync côté CLIENT (safe)
   const shouldAutoSync = totalTasks === 0 && planTasksCount > 0;
 
   return (

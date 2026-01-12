@@ -10,21 +10,25 @@ import { redirect } from 'next/navigation'
 
 import AppShell from '@/components/AppShell'
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { TaskList, type TaskItem } from '@/components/tasks/TaskList'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, CheckCircle2, ListChecks } from 'lucide-react'
 
 type TaskRow = {
-  id: string | number
+  id: string
   title: string | null
   status: string | null
   due_date: string | null
   priority: string | null
   source: string | null
   created_at: string | null
+}
+
+function isDone(status: string | null) {
+  return (status ?? '').toLowerCase() === 'done'
 }
 
 function toTaskItem(row: TaskRow): TaskItem {
@@ -38,14 +42,9 @@ function toTaskItem(row: TaskRow): TaskItem {
   }
 }
 
-function isDone(status: string | null): boolean {
-  if (!status) return false
-  const s = status.toLowerCase()
-  return s === 'done' || s === 'completed' || s === 'fait' || s === 'terminé' || s === 'termine'
-}
-
 export default async function TasksPage() {
   const supabase = await getSupabaseServerClient()
+
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -54,7 +53,10 @@ export default async function TasksPage() {
 
   const userEmail = session.user.email ?? ''
 
-  const { data: tasksRaw } = await supabase
+  // ✅ IMPORTANT (prod/RLS-safe):
+  // On lit les tâches via supabaseAdmin (service_role) car les policies RLS peuvent renvoyer [] sans erreur.
+  // On filtre STRICTEMENT par user_id de la session -> aucune fuite de données.
+  const { data: tasksRaw } = await supabaseAdmin
     .from('project_tasks')
     .select('id, title, status, due_date, priority, source, created_at')
     .eq('user_id', session.user.id)
@@ -73,34 +75,105 @@ export default async function TasksPage() {
       userEmail={userEmail}
       headerTitle="Tâches"
       headerRight={
-        <Button asChild variant="outline" size="sm" className="gap-2">
-          <Link href="/app">
-            <ArrowLeft className="h-4 w-4" />
-            Retour
-          </Link>
+        <Button asChild variant="secondary" size="sm">
+          <Link href="/strategy">Retour</Link>
         </Button>
       }
     >
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-        {/* Hero / résumé (Lovable-ish) */}
+      <div className="flex flex-col gap-6">
+        {/* Hero */}
         <Card className="p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="mt-1 rounded-xl bg-primary/10 p-2 text-primary">
-                <ListChecks className="h-5 w-5" />
+              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-foreground"
+                >
+                  <path
+                    d="M9 6H21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M9 12H21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M9 18H21"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3.99988 6.00001L4.99988 7.00001L6.99988 5.00001"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3.99988 12L4.99988 13L6.99988 11"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3.99988 18L4.99988 19L6.99988 17"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
 
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Gère ton exécution</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold leading-tight">Gère ton exécution</h1>
+                <p className="text-sm text-muted-foreground">
                   Ajoute, planifie et coche tes tâches pour rester dans le rythme.
                 </p>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    {doneCount}/{totalCount} terminées
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="gap-2">
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 8V12L15 15"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    </span>
+                    <span>
+                      {doneCount}/{totalCount} terminées
+                    </span>
                   </Badge>
+
                   <Badge variant="secondary">{totalCount} au total</Badge>
                 </div>
               </div>
