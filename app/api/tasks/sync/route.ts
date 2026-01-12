@@ -1,5 +1,5 @@
 // app/api/tasks/sync/route.ts
-// Sync “smart” : business_plan.plan_json -> project_tasks (dédupe + update safe)
+// Sync “smart” : business_plan -> project_tasks (dédupe + update safe)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -43,27 +43,19 @@ function normalizeTitle(title: string): string {
     .replace(/[^\p{L}\p{N}\s-]/gu, "");
 }
 
-function parseDueDate(x: unknown): string | null {
-  // On accepte:
-  // - YYYY-MM-DD
-  // - ISO string
-  // - Date string
-  const s = toStr(x);
+function parseDueDate(input: unknown): string | null {
+  const s = toStr(input)?.trim();
   if (!s) return null;
 
-  const t = s.trim();
-  if (!t) return null;
+  // Accept YYYY-MM-DD or ISO
+  const iso = new Date(s);
+  if (!Number.isNaN(iso.getTime())) return iso.toISOString().slice(0, 10);
 
-  // YYYY-MM-DD (strict-ish)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  // Very safe fallback: try YYYY-MM-DD
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
 
-  // ISO
-  const d = new Date(t);
-  if (!Number.isNaN(d.getTime())) {
-    return d.toISOString().slice(0, 10);
-  }
-
-  return null;
+  return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
 function normalizePriority(x: unknown): Priority | null {
@@ -77,28 +69,23 @@ function normalizePriority(x: unknown): Priority | null {
   return null;
 }
 
-function getPlan90Container(planJson: AnyRecord): AnyRecord | null {
-  // Compat: certains endpoints/historiques utilisent plan90 / plan_90 au lieu de plan_90_days
-  const p90days = isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as AnyRecord) : null;
-  if (p90days) return p90days;
-
-  const p90 = isRecord((planJson as any).plan90) ? ((planJson as any).plan90 as AnyRecord) : null;
-  if (p90) return p90;
-
-  const p_90 = isRecord((planJson as any).plan_90) ? ((planJson as any).plan_90 as AnyRecord) : null;
-  if (p_90) return p_90;
-
-  return null;
-}
-
 function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
   if (!isRecord(planJson)) return [];
 
   const out: TaskFromPlan[] = [];
 
-  // 1) Nouveau schéma : plan_90_days|plan90|plan_90 .tasks_by_timeframe (objet de arrays)
-  const plan90 = getPlan90Container(planJson);
+  // Heuristiques : plan_json peut avoir des sections variées.
+  // On récupère:
+  // - plan_90_days|plan90|plan_90.tasks_by_timeframe (nouveau)
+  // - action_plan_30_90.weeks_* (legacy)
+  // - tasks[] (legacy simple)
+  const plan90 =
+    (isRecord((planJson as any).plan_90_days) ? ((planJson as any).plan_90_days as AnyRecord) : null) ||
+    (isRecord((planJson as any).plan90) ? ((planJson as any).plan90 as AnyRecord) : null) ||
+    (isRecord((planJson as any).plan_90) ? ((planJson as any).plan_90 as AnyRecord) : null);
 
+  // New schema: plan_90_days|plan90|plan_90.tasks_by_timeframe (objet)
+  // Fallback: plan_json.tasks_by_timeframe (certains payloads historiques)
   const tasksByTimeframe =
     (plan90 && isRecord((plan90 as any).tasks_by_timeframe) ? ((plan90 as any).tasks_by_timeframe as AnyRecord) : null) ||
     (isRecord((planJson as any).tasks_by_timeframe) ? ((planJson as any).tasks_by_timeframe as AnyRecord) : null);
@@ -108,6 +95,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       const arr = toArray(v);
       for (const item of arr) {
         if (!isRecord(item)) continue;
+
         const title =
           toStr((item as any).title) ??
           toStr((item as any).task) ??
@@ -120,44 +108,45 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
           title: clampLen(title, 180),
           due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
           priority: normalizePriority((item as any).priority ?? (item as any).importance),
-          // IMPORTANT : on aligne le source avec le reste du produit (offer-pyramid route delete/insert source='strategy')
+          // IMPORTANT : on aligne le source avec le reste du produit
           source: "strategy",
         });
       }
     }
   }
 
-  // 2) Legacy : action_plan_30_90.weeks_* -> arrays OU { tasks: [] }
-  const ap = isRecord((planJson as any).action_plan_30_90) ? ((planJson as any).action_plan_30_90 as AnyRecord) : null;
-  if (ap) {
-    for (const [k, v] of Object.entries(ap)) {
+  // Legacy: action_plan_30_90.weeks_*.[actions|string[]]
+  const actionPlan = isRecord((planJson as any).action_plan_30_90)
+    ? ((planJson as any).action_plan_30_90 as Record<string, unknown>)
+    : null;
+
+  if (actionPlan) {
+    for (const [k, v] of Object.entries(actionPlan)) {
       if (!k.startsWith("weeks_")) continue;
+      if (!isRecord(v)) continue;
 
-      const arrDirect = toArray(v);
-      const arrFromObject = isRecord(v) ? toArray((v as any).tasks) : [];
-
-      const arr = arrDirect.length > 0 ? arrDirect : arrFromObject;
-
-      for (const item of arr) {
-        if (!isRecord(item)) continue;
-        const title = toStr((item as any).title) ?? toStr((item as any).task) ?? toStr((item as any).name);
+      const actions = toArray((v as any).actions);
+      for (const a of actions) {
+        if (typeof a !== "string") continue;
+        const title = a.trim();
         if (!title) continue;
 
         out.push({
           title: clampLen(title, 180),
-          due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
-          priority: normalizePriority((item as any).priority ?? (item as any).importance),
+          due_date: null,
+          priority: null,
           source: `action_plan_30_90:${k}`,
         });
       }
     }
   }
 
-  // 3) Legacy simple : tasks: []
+  // Legacy: tasks[]
   const legacyTasks = toArray((planJson as any).tasks);
   if (legacyTasks.length > 0) {
     for (const item of legacyTasks) {
       if (!isRecord(item)) continue;
+
       const title = toStr((item as any).title) ?? toStr((item as any).task) ?? toStr((item as any).name);
       if (!title) continue;
 
@@ -283,7 +272,12 @@ export async function POST() {
     // Appliquer updates
     let updated = 0;
     for (const u of toUpdate) {
-      const { error: upErr } = await supabaseAdmin.from("project_tasks").update(u.patch).eq("id", u.id).eq("user_id", userId);
+      const { error: upErr } = await supabaseAdmin
+        .from("project_tasks")
+        .update(u.patch)
+        .eq("id", u.id)
+        .eq("user_id", userId);
+
       if (upErr) {
         console.error("Update task error:", upErr);
         return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
