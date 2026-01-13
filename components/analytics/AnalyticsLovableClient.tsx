@@ -65,6 +65,58 @@ function formatDateTime(iso?: string | null) {
   });
 }
 
+/**
+ * NOTE: on accepte ici les 2 shapes:
+ * - Lovable/Tipote UI: scheduledAt / createdAt + type
+ * - DB (content_item): scheduled_date / created_at (snake_case) + type parfois absent
+ * => On normalise à l'affichage, sans casser la page analytics qui passe les champs DB.
+ */
+type TopContentInput = {
+  id: string;
+  title: string;
+  channel: string;
+  status: string;
+
+  // "type" peut manquer selon la requête côté page.tsx
+  type?: string | null;
+
+  // camelCase (UI)
+  scheduledAt?: string | null | undefined;
+  createdAt?: string | null | undefined;
+
+  // snake_case (DB)
+  scheduled_date?: string | null | undefined;
+  created_at?: string | null | undefined;
+};
+
+type NextScheduledInput =
+  | {
+      id: string;
+      title: string;
+      channel: string;
+      status: string;
+      type?: string | null;
+
+      scheduledAt?: string | null | undefined;
+      scheduled_date?: string | null | undefined;
+    }
+  | null;
+
+function getScheduledAt(c: TopContentInput | (NextScheduledInput extends infer T ? T : never)) {
+  const anyC: any = c as any;
+  return (anyC?.scheduledAt ?? anyC?.scheduled_date ?? null) as string | null;
+}
+
+function getCreatedAt(c: TopContentInput) {
+  const anyC: any = c as any;
+  return (anyC?.createdAt ?? anyC?.created_at ?? null) as string | null;
+}
+
+function getType(c: TopContentInput | (NextScheduledInput extends infer T ? T : never)) {
+  const anyC: any = c as any;
+  return (anyC?.type ?? null) as string | null;
+}
+
 export default function AnalyticsLovableClient(props: {
   periodDays: number;
   kpis: {
@@ -82,29 +134,14 @@ export default function AnalyticsLovableClient(props: {
     deltaAll: number;
   };
   bars: number[];
-  topContents: Array<{
-    id: string;
-    title: string;
-    type: string;
-    channel: string;
-    status: string;
-    scheduledAt?: string | null;
-    createdAt?: string | null;
-  }>;
+  topContents: TopContentInput[];
   trafficSources: Array<{
     source: string;
     percentage: number;
     visitors: string;
     color?: string;
   }>;
-  nextScheduled: {
-    id: string;
-    title: string;
-    type: string;
-    channel: string;
-    status: string;
-    scheduledAt: string;
-  } | null;
+  nextScheduled: NextScheduledInput;
 }) {
   const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } = props;
 
@@ -200,10 +237,7 @@ export default function AnalyticsLovableClient(props: {
                     >
                       <metric.icon className="w-5 h-5" />
                     </div>
-                    <Badge
-                      variant={trendVariant(metric.delta)}
-                      className="flex items-center gap-1"
-                    >
+                    <Badge variant={trendVariant(metric.delta)} className="flex items-center gap-1">
                       {metric.delta >= 0 ? (
                         <TrendingUp className="w-3 h-3" />
                       ) : (
@@ -253,19 +287,28 @@ export default function AnalyticsLovableClient(props: {
                   <Card className="p-6">
                     <h3 className="text-lg font-bold mb-6">Top contenus</h3>
                     <div className="space-y-4">
-                      {topContents.slice(0, 4).map((c) => (
-                        <Link key={c.id} href={`/contents/${c.id}`} className="block">
-                          <div className="flex items-start justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                            <div className="flex-1">
-                              <p className="font-medium mb-1">{c.title}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {c.channel} • {labelType(c.type)} • {labelStatus(c.status)}
-                              </p>
+                      {topContents.slice(0, 4).map((c) => {
+                        const type = getType(c);
+                        return (
+                          <Link key={c.id} href={`/contents/${c.id}`} className="block">
+                            <div className="flex items-start justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                              <div className="flex-1">
+                                <p className="font-medium mb-1">{c.title}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {c.channel} • {labelType(type)} • {labelStatus(c.status)}
+                                </p>
+                                {/* on garde la date dispo si la page la fournit */}
+                                {getCreatedAt(c) ? (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Créé : {formatDateTime(getCreatedAt(c))}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <ArrowUpRight className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
                             </div>
-                            <ArrowUpRight className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        );
+                      })}
                       {!topContents.length && (
                         <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
                           Pas encore de contenus sur la période.
@@ -279,9 +322,7 @@ export default function AnalyticsLovableClient(props: {
                     <div className="space-y-4">
                       {(trafficSources.length
                         ? trafficSources
-                        : [
-                            { source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" },
-                          ]
+                        : [{ source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" }]
                       ).map((source, i) => (
                         <div key={`${source.source}-${i}`}>
                           <div className="flex items-center justify-between mb-2">
@@ -397,16 +438,14 @@ export default function AnalyticsLovableClient(props: {
             <Card className="p-6 gradient-hero border-border/50">
               <div className="flex items-start justify-between">
                 <div className="w-full">
-                  <h3 className="text-xl font-bold text-primary-foreground mb-2">
-                    Mettre à jour vos données
-                  </h3>
+                  <h3 className="text-xl font-bold text-primary-foreground mb-2">Mettre à jour vos données</h3>
                   <p className="text-primary-foreground/90 mb-4">
                     Prochaine publication planifiée :{" "}
                     {nextScheduled ? (
                       <>
                         <span className="font-semibold">{nextScheduled.title}</span> •{" "}
-                        {labelType(nextScheduled.type)} • {nextScheduled.channel} •{" "}
-                        {formatDateTime(nextScheduled.scheduledAt)}
+                        {labelType(getType(nextScheduled as any))} • {nextScheduled.channel} •{" "}
+                        {formatDateTime(getScheduledAt(nextScheduled as any))}
                       </>
                     ) : (
                       "aucune pour l’instant."
