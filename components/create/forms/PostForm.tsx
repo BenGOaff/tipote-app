@@ -1,214 +1,221 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, Wand2 } from "lucide-react";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
 
-import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
+interface PostFormProps {
+  onGenerate: (params: any) => Promise<string>;
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+}
 
 const platforms = [
   { id: "linkedin", label: "LinkedIn" },
   { id: "instagram", label: "Instagram" },
-  { id: "facebook", label: "Facebook" },
   { id: "twitter", label: "X (Twitter)" },
+  { id: "facebook", label: "Facebook" },
   { id: "tiktok", label: "TikTok" },
-  { id: "youtube", label: "YouTube" },
-] as const;
+];
 
 const themes = [
-  { id: "engagement", label: "Engagement" },
-  { id: "social_proof", label: "Preuve sociale" },
-  { id: "educate", label: "Éducation" },
-  { id: "sell", label: "Vente" },
+  { id: "educate", label: "Éduquer" },
+  { id: "sell", label: "Vendre" },
+  { id: "entertain", label: "Divertir" },
   { id: "storytelling", label: "Storytelling" },
-] as const;
+  { id: "social_proof", label: "Preuve sociale" },
+];
 
-export function PostForm(props: CreateFormCommonProps) {
-  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
+const tones = [
+  { id: "professional", label: "Professionnel" },
+  { id: "casual", label: "Décontracté" },
+  { id: "inspirational", label: "Inspirant" },
+  { id: "educational", label: "Éducatif" },
+  { id: "humorous", label: "Humoristique" },
+];
 
-  const [platform, setPlatform] = useState<string>("linkedin");
-  const [theme, setTheme] = useState<string>("engagement");
-  const [tuVous, setTuVous] = useState<"tu" | "vous">("vous");
-
+export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {
+  const [platform, setPlatform] = useState("linkedin");
+  const [theme, setTheme] = useState("educate");
+  const [subject, setSubject] = useState("");
+  const [tone, setTone] = useState("professional");
+  const [batchCount, setBatchCount] = useState<"1" | "5">("1");
+  const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [preview, setPreview] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
 
-  const canGenerate = useMemo(() => true, []);
-  const canSave = useMemo(() => title.trim().length > 0, [title]);
-
-  async function handleGenerate() {
+  const handleGenerate = async () => {
     const content = await onGenerate({
       type: "post",
       platform,
       theme,
-      formality: tuVous,
-      instructions: instructions || undefined,
-      context: buildTipoteContext({ platform, theme, formality: tuVous }),
+      subject,
+      tone,
+      batchCount: parseInt(batchCount),
     });
-    setPreview(content || "");
-  }
+    if (content) {
+      setGeneratedContent(content);
+      if (!title) setTitle(subject || `Post ${platform}`);
+    }
+  };
 
-  async function handleSaveClick() {
+  const handleSave = async (status: "draft" | "scheduled" | "published") => {
     await onSave({
+      title,
+      content: generatedContent,
       type: "post",
       platform,
-      status: "draft",
-      title,
-      content: preview,
-      meta: { theme, formality: tuVous, instructions },
+      status,
+      scheduled_at: scheduledAt || undefined,
     });
-  }
+  };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
-        aria-label="Fermer"
-      >
-        <X className="h-5 w-5 text-muted-foreground" />
-      </button>
-
-      <div className="mb-4">
-        <div className="text-xl font-bold">Réseaux sociaux</div>
-        <div className="text-sm text-muted-foreground">
-          Posts LinkedIn, Instagram, Twitter...
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Post Réseaux Sociaux</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* LEFT */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Plateforme</Label>
             <Select value={platform} onValueChange={setPlatform}>
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionner..." />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {platforms.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.label}
-                  </SelectItem>
+                  <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Type de post</Label>
+            <Label>Objectif du post</Label>
             <Select value={theme} onValueChange={setTheme}>
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionner..." />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {themes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
+                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Tu / Vous</Label>
-            <RadioGroup
-              value={tuVous}
-              onValueChange={(v) => setTuVous(v as any)}
-              className="flex items-center gap-6"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="tu" id="tu" />
-                <Label htmlFor="tu" className="font-normal">
-                  Tu
-                </Label>
+            <Label>Sujet *</Label>
+            <Input
+              placeholder="Ex: Les 5 erreurs à éviter..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Ton</Label>
+            <Select value={tone} onValueChange={setTone}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {tones.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Nombre de posts</Label>
+            <RadioGroup value={batchCount} onValueChange={(v) => setBatchCount(v as any)} className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="1" id="one" />
+                <Label htmlFor="one">1</Label>
               </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="vous" id="vous" />
-                <Label htmlFor="vous" className="font-normal">
-                  Vous
-                </Label>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="5" id="five" />
+                <Label htmlFor="five">5</Label>
               </div>
             </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
-            <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Ton, structure, longueur, éléments obligatoires..."
-              className="min-h-[160px]"
-            />
-          </div>
-
-          <Button
-            type="button"
-            className="w-full h-12"
-            onClick={handleGenerate}
-            disabled={isGenerating || !canGenerate}
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? "Génération..." : "Générer (objet + contenu + 3 variantes)"}
+          <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
+            {isGenerating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+            )}
           </Button>
         </div>
 
-        {/* RIGHT */}
-        <div className="space-y-3">
+        {/* Right: Preview */}
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
+              placeholder="Titre de votre contenu"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de votre post"
             />
           </div>
 
           <div className="space-y-2">
             <Label>Prévisualisation</Label>
             <Textarea
-              value={preview}
-              onChange={(e) => setPreview(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici (hook + post + variantes)..."
-              className="min-h-[260px]"
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              rows={10}
+              placeholder="Le contenu généré apparaîtra ici..."
+              className="resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={isSaving || !canSave}
-            >
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
-          </div>
+          {generatedContent && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Programmer (optionnel)</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+              </div>
 
-          <div className="pt-2">
-            <Badge variant="secondary">Astuce</Badge>
-            <span className="ml-2 text-xs text-muted-foreground">
-              Ajoute une instruction claire pour un rendu plus “Tipote”.
-            </span>
-          </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                  Brouillon
+                </Button>
+
+                {scheduledAt && (
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
+                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
+                  <Send className="w-4 h-4 mr-1" />Publier
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
+                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,154 +1,174 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, Wand2 } from "lucide-react";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
 
-import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
+interface ArticleFormProps {
+  onGenerate: (params: any) => Promise<string>;
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+}
 
-const articleTypes = [
-  { id: "guide", label: "Guide complet" },
-  { id: "howto", label: "Tutoriel (How-to)" },
-  { id: "list", label: "Liste / Checklist" },
-] as const;
-
-export function ArticleForm(props: CreateFormCommonProps) {
-  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
-
-  const [articleType, setArticleType] = useState<string>("guide");
+export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: ArticleFormProps) {
+  const [subject, setSubject] = useState("");
+  const [seoKeyword, setSeoKeyword] = useState("");
+  const [links, setLinks] = useState("");
+  const [cta, setCta] = useState("");
+  const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [preview, setPreview] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
 
-  const canSave = useMemo(() => title.trim().length > 0, [title]);
-
-  async function handleGenerate() {
+  const handleGenerate = async () => {
     const content = await onGenerate({
       type: "article",
-      article_type: articleType,
-      title: title || undefined,
-      instructions: instructions || undefined,
-      context: buildTipoteContext({ articleType }),
+      subject,
+      seoKeyword,
+      links: links || undefined,
+      cta,
     });
-    setPreview(content || "");
-  }
+    if (content) {
+      setGeneratedContent(content);
+      if (!title) setTitle(subject || seoKeyword);
+    }
+  };
 
-  async function handleSaveClick() {
+  const handleSave = async (status: "draft" | "scheduled" | "published") => {
     await onSave({
-      type: "article",
-      status: "draft",
       title,
-      content: preview,
-      meta: { articleType, instructions },
+      content: generatedContent,
+      type: "article",
+      platform: "blog",
+      status,
+      scheduled_at: scheduledAt || undefined,
     });
-  }
+  };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
-        aria-label="Fermer"
-      >
-        <X className="h-5 w-5 text-muted-foreground" />
-      </button>
-
-      <div className="mb-4">
-        <div className="text-xl font-bold">Blog</div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Article de Blog</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Type d'article</Label>
-            <Select value={articleType} onValueChange={setArticleType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner..." />
-              </SelectTrigger>
-              <SelectContent>
-                {articleTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sujet (optionnel)</Label>
+            <Label>Sujet ou mot-clé SEO *</Label>
             <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de l'article"
+              placeholder="Ex: Comment augmenter son trafic organique"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Instructions (optionnel)</Label>
+            <Label>Mot-clé SEO principal</Label>
+            <Input
+              placeholder="Ex: trafic organique"
+              value={seoKeyword}
+              onChange={(e) => setSeoKeyword(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Liens à placer (optionnel)</Label>
             <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Structure, longueur, sections obligatoires..."
-              className="min-h-[180px]"
+              placeholder="Collez les URLs importantes"
+              value={links}
+              onChange={(e) => setLinks(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>CTA / objectif de conversion</Label>
+            <Input
+              placeholder="Ex: Télécharger le guide gratuit"
+              value={cta}
+              onChange={(e) => setCta(e.target.value)}
             />
           </div>
 
           <Button
-            type="button"
-            className="w-full h-12"
+            className="w-full"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={!subject && !seoKeyword || isGenerating}
           >
-            <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? "Génération..." : "Générer"}
+            {isGenerating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+            )}
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
+              placeholder="Titre de votre article"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de votre article"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Prévisualisation</Label>
+            <Label>Contenu généré</Label>
             <Textarea
-              value={preview}
-              onChange={(e) => setPreview(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici..."
-              className="min-h-[260px]"
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              rows={12}
+              placeholder="Le contenu apparaîtra ici..."
+              className="resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={isSaving || !canSave}
-            >
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
-          </div>
+          {generatedContent && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Programmer (optionnel)</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                  Brouillon
+                </Button>
+
+                {scheduledAt && (
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
+                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  </Button>
+                )}
+
+                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
+                  <Send className="w-4 h-4 mr-1" />Publier
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                >
+                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,72 +1,71 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, Wand2 } from "lucide-react";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Wand2, RefreshCw, Save, Send, X, Package } from "lucide-react";
 
-import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
+interface OfferFormProps {
+  onGenerate: (params: any) => Promise<string>;
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+}
 
 const offerTypes = [
-  { id: "lead_magnet", label: "Lead magnet" },
-  { id: "middle_ticket", label: "Middle ticket" },
-  { id: "high_ticket", label: "High ticket" },
-] as const;
+  { id: "lead_magnet", label: "Lead Magnet (gratuit)" },
+  { id: "paid_training", label: "Formation payante" },
+];
 
-export function OfferForm(props: CreateFormCommonProps) {
-  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
-
-  const [offerType, setOfferType] = useState<string>("middle_ticket");
+export function OfferForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: OfferFormProps) {
+  const [offerType, setOfferType] = useState("lead_magnet");
+  const [theme, setTheme] = useState("");
+  const [target, setTarget] = useState("");
+  const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [offerName, setOfferName] = useState("");
-  const [preview, setPreview] = useState("");
 
-  const canSave = useMemo(() => title.trim().length > 0, [title]);
-
-  async function handleGenerate() {
+  const handleGenerate = async () => {
     const content = await onGenerate({
       type: "offer",
-      offer_type: offerType,
-      offer_name: offerName || undefined,
-      context: buildTipoteContext({ offerType, offerName }),
+      offerType,
+      theme,
+      target,
     });
-    setPreview(content || "");
-  }
+    if (content) {
+      setGeneratedContent(content);
+      if (!title) setTitle(theme || `Offre ${offerType}`);
+    }
+  };
 
-  async function handleSaveClick() {
+  const handleSave = async (status: "draft" | "published") => {
     await onSave({
-      type: "offer",
-      status: "draft",
       title,
-      content: preview,
-      meta: { offerType, offerName },
+      content: generatedContent,
+      type: "offer",
+      platform: offerType,
+      status,
     });
-  }
+  };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
-        aria-label="Fermer"
-      >
-        <X className="h-5 w-5 text-muted-foreground" />
-      </button>
-
-      <div className="mb-4">
-        <div className="text-xl font-bold">Offres</div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Package className="w-5 h-5" />
+          Créer une Offre
+        </h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
       </div>
+
+      <p className="text-sm text-muted-foreground">
+        L'offre créée sera automatiquement ajoutée à votre pyramide d'offres.
+      </p>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
@@ -74,70 +73,78 @@ export function OfferForm(props: CreateFormCommonProps) {
             <Label>Type d'offre</Label>
             <Select value={offerType} onValueChange={setOfferType}>
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionner..." />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {offerTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
+                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Nom de l'offre (optionnel)</Label>
+            <Label>Thème / sujet</Label>
             <Input
-              value={offerName}
-              onChange={(e) => setOfferName(e.target.value)}
-              placeholder="Ex : Programme XYZ"
+              placeholder="Ex: Apprendre à vendre en DM"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
             />
           </div>
 
-          <Button
-            type="button"
-            className="w-full h-12"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? "Génération..." : "Générer"}
+          <div className="space-y-2">
+            <Label>Cible</Label>
+            <Input
+              placeholder="Ex: Coachs débutants"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+
+          <Button className="w-full" onClick={handleGenerate} disabled={!theme || isGenerating}>
+            {isGenerating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+            )}
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
+              placeholder="Nom interne"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de votre offre"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Prévisualisation</Label>
+            <Label>Structure générée</Label>
             <Textarea
-              value={preview}
-              onChange={(e) => setPreview(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici..."
-              className="min-h-[260px]"
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              rows={12}
+              placeholder="L'offre apparaîtra ici..."
+              className="resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={isSaving || !canSave}
-            >
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
-          </div>
+          {generatedContent && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Brouillon
+              </Button>
+              <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
+                <Send className="w-4 h-4 mr-1" />Valider
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
+                <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

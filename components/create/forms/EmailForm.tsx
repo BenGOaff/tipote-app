@@ -1,160 +1,184 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, Wand2 } from "lucide-react";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
 
-import { CreateFormCommonProps, buildTipoteContext } from "./_shared";
+interface EmailFormProps {
+  onGenerate: (params: any) => Promise<string>;
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+}
 
 const emailTypes = [
   { id: "nurturing", label: "Nurturing" },
   { id: "sales_sequence", label: "Séquence de vente" },
   { id: "onboarding", label: "Onboarding" },
-] as const;
+];
 
-export function EmailForm(props: CreateFormCommonProps) {
-  const { onGenerate, onSave, onClose, isGenerating, isSaving } = props;
-
-  const [emailType, setEmailType] = useState<string>("nurturing");
-  const [tuVous, setTuVous] = useState<"tu" | "vous">("vous");
-
+export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: EmailFormProps) {
+  const [emailType, setEmailType] = useState("nurturing");
+  const [offer, setOffer] = useState("");
+  const [formality, setFormality] = useState<"tu" | "vous">("vous");
+  const [subject, setSubject] = useState("");
+  const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [preview, setPreview] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
 
-  const canSave = useMemo(() => title.trim().length > 0, [title]);
-
-  async function handleGenerate() {
+  const handleGenerate = async () => {
     const content = await onGenerate({
       type: "email",
-      email_type: emailType,
-      formality: tuVous,
-      context: buildTipoteContext({ emailType, formality: tuVous }),
+      emailType,
+      offer: emailType === "sales_sequence" ? offer : undefined,
+      formality,
+      subject,
     });
-    setPreview(content || "");
-  }
+    if (content) {
+      setGeneratedContent(content);
+      if (!title) setTitle(subject || `Email ${emailType}`);
+    }
+  };
 
-  async function handleSaveClick() {
+  const handleSave = async (status: "draft" | "scheduled" | "published") => {
     await onSave({
-      type: "email",
-      status: "draft",
       title,
-      content: preview,
-      meta: { emailType, formality: tuVous },
+      content: generatedContent,
+      type: "email",
+      platform: "newsletter",
+      status,
+      scheduled_at: scheduledAt || undefined,
     });
-  }
+  };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-0 top-0 p-2 rounded-md hover:bg-muted"
-        aria-label="Fermer"
-      >
-        <X className="h-5 w-5 text-muted-foreground" />
-      </button>
-
-      <div className="mb-4">
-        <div className="text-xl font-bold">Email Marketing</div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Email Marketing</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* LEFT */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Type d'email</Label>
             <Select value={emailType} onValueChange={setEmailType}>
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionner..." />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {emailTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
+                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {emailType === "sales_sequence" && (
+            <div className="space-y-2">
+              <Label>Offre à vendre</Label>
+              <Input
+                placeholder="Nom de votre offre"
+                value={offer}
+                onChange={(e) => setOffer(e.target.value)}
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Tu / Vous</Label>
-            <RadioGroup
-              value={tuVous}
-              onValueChange={(v) => setTuVous(v as any)}
-              className="flex items-center gap-6"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="tu" id="email-tu" />
-                <Label htmlFor="email-tu" className="font-normal">
-                  Tu
-                </Label>
+            <Label>Tutoiement / Vouvoiement</Label>
+            <RadioGroup value={formality} onValueChange={(v) => setFormality(v as any)} className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="vous" id="vous" />
+                <Label htmlFor="vous">Vous</Label>
               </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="vous" id="email-vous" />
-                <Label htmlFor="email-vous" className="font-normal">
-                  Vous
-                </Label>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tu" id="tu" />
+                <Label htmlFor="tu">Tu</Label>
               </div>
             </RadioGroup>
           </div>
 
-          <Button
-            type="button"
-            className="w-full h-12"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? "Génération..." : "Générer (objet + contenu + 3 variantes)"}
+          <div className="space-y-2">
+            <Label>Sujet / intention *</Label>
+            <Input
+              placeholder="Ex: Relancer les prospects froids"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </div>
+
+          <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
+            {isGenerating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+            ) : (
+              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+            )}
           </Button>
         </div>
 
-        {/* RIGHT */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
             <Input
+              placeholder="Titre interne"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titre de votre email"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Prévisualisation</Label>
+            <Label>Email généré</Label>
             <Textarea
-              value={preview}
-              onChange={(e) => setPreview(e.target.value)}
-              placeholder="Le contenu généré apparaîtra ici (objet + contenu + variantes)..."
-              className="min-h-[260px]"
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              rows={12}
+              placeholder="L'email apparaîtra ici..."
+              className="resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={isSaving || !canSave}
-            >
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
-          </div>
+          {generatedContent && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Programmer (optionnel)</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                  Brouillon
+                </Button>
+
+                {scheduledAt && (
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
+                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  </Button>
+                )}
+
+                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
+                  <Send className="w-4 h-4 mr-1" />Publier
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
+                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

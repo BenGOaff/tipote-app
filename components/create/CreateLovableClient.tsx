@@ -15,7 +15,6 @@ import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route } from "
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 import { QuickTemplateCard } from "@/components/create/QuickTemplateCard";
 
-// ✅ Ces imports doivent correspondre aux fichiers dans components/create/forms/
 import { PostForm } from "@/components/create/forms/PostForm";
 import { EmailForm } from "@/components/create/forms/EmailForm";
 import { ArticleForm } from "@/components/create/forms/ArticleForm";
@@ -26,15 +25,15 @@ import { FunnelForm } from "@/components/create/forms/FunnelForm";
 const contentTypes = [
   {
     id: "post",
-    label: "Réseaux sociaux",
-    description: "Posts LinkedIn, Instagram, Twitter...",
+    label: "Réseaux Sociaux",
+    description: "Posts LinkedIn, Instagram, X...",
     icon: MessageSquare,
     color: "bg-blue-500",
   },
   {
     id: "email",
-    label: "Email",
-    description: "Newsletters, séquences, campagnes...",
+    label: "Emails Marketing",
+    description: "Nurturing, séquences, newsletters...",
     icon: Mail,
     color: "bg-green-500",
   },
@@ -55,43 +54,50 @@ const contentTypes = [
   {
     id: "offer",
     label: "Offres",
-    description: "Pages de vente, descriptions...",
+    description: "Créer une offre irrésistible",
     icon: Package,
-    color: "bg-amber-500",
+    color: "bg-orange-500",
   },
   {
     id: "funnel",
     label: "Funnels",
-    description: "Tunnels de vente complets...",
+    description: "Pages de vente, séquences...",
     icon: Route,
-    color: "bg-pink-500",
+    color: "bg-indigo-500",
   },
 ] as const;
 
 const quickTemplates = [
   {
-    id: "engagement",
-    label: "Post Engagement",
-    description: "Question pour engager l'audience",
-    theme: "engagement",
-    type: "post",
-  },
-  {
-    id: "testimonial",
-    label: "Témoignage Client",
-    description: "Mise en avant d'un succès client",
-    theme: "social_proof",
-    type: "post",
-  },
-  {
-    id: "expert",
-    label: "Conseil Expert",
-    description: "Partage d'expertise et de valeur",
+    id: "hook",
+    label: "Hook accrocheur",
+    description: "Début percutant pour capter l'attention",
     theme: "educate",
     type: "post",
   },
   {
-    id: "announcement",
+    id: "story",
+    label: "Storytelling",
+    description: "Histoire engageante avec une leçon",
+    theme: "storytelling",
+    type: "post",
+  },
+  {
+    id: "tip",
+    label: "Conseil rapide",
+    description: "Astuce actionable en 1 minute",
+    theme: "educate",
+    type: "post",
+  },
+  {
+    id: "myth",
+    label: "Casser un mythe",
+    description: "Idée reçue + vérité surprenante",
+    theme: "educate",
+    type: "post",
+  },
+  {
+    id: "launch",
     label: "Annonce Produit",
     description: "Lancement ou promotion d'offre",
     theme: "sell",
@@ -114,54 +120,46 @@ const quickTemplates = [
 ] as const;
 
 type ContentType = (typeof contentTypes)[number]["id"] | null;
-
 type AnyParams = Record<string, any>;
 
 function buildFallbackPrompt(params: AnyParams): string {
-  const type = String(params?.type ?? "").trim();
-  const formality = params?.formality ? `Ton: ${String(params.formality)}` : "";
-  const platform = params?.platform ? `Plateforme: ${String(params.platform)}` : "";
-  const theme = params?.theme ? `Thème: ${String(params.theme)}` : "";
-  const emailType = params?.email_type ? `Type d'email: ${String(params.email_type)}` : "";
-  const articleType = params?.article_type ? `Type d'article: ${String(params.article_type)}` : "";
-  const videoType = params?.video_type ? `Type de vidéo: ${String(params.video_type)}` : "";
-  const topic = params?.topic ? `Sujet: ${String(params.topic)}` : "";
-  const title = params?.title ? `Titre: ${String(params.title)}` : "";
-  const instructions = params?.instructions ? String(params.instructions) : "";
-  const brief = params?.brief ? String(params.brief) : "";
+  const type = typeof params.type === "string" ? params.type : "content";
+  const platform = typeof params.platform === "string" ? params.platform : "";
+  const title = typeof params.title === "string" ? params.title : "";
+  const subject = typeof params.subject === "string" ? params.subject : "";
+  const theme = typeof params.theme === "string" ? params.theme : "";
+  const tone = typeof params.tone === "string" ? params.tone : "";
+  const formality = typeof params.formality === "string" ? params.formality : "";
+  const instructions = typeof params.instructions === "string" ? params.instructions : "";
+  const brief = typeof params.brief === "string" ? params.brief : "";
 
-  const lines = [
-    type ? `Génère un contenu de type "${type}".` : "Génère un contenu.",
-    title,
-    topic,
-    platform,
-    theme,
-    emailType,
-    articleType,
-    videoType,
-    formality,
-    instructions ? `Instructions: ${instructions}` : "",
-    brief ? `Brief: ${brief}` : "",
-  ].filter(Boolean);
+  const head = `Génère un contenu de type "${type}"${platform ? ` pour ${platform}` : ""}.`;
+  const intent = [
+    title ? `Titre: ${title}` : "",
+    subject ? `Sujet: ${subject}` : "",
+    theme ? `Thème/Objectif: ${theme}` : "",
+    tone ? `Ton: ${tone}` : "",
+    formality ? `Style: ${formality}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  return lines.join("\n");
+  const extra = [
+    brief ? `Brief:\n${brief}` : "",
+    instructions ? `Contraintes:\n${instructions}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return [head, intent, extra].filter(Boolean).join("\n\n").trim();
 }
 
-function normalizeGenerateParams(raw: unknown): AnyParams {
-  const params = (raw && typeof raw === "object" ? (raw as AnyParams) : {}) as AnyParams;
-
+function ensurePrompt(params: AnyParams): AnyParams {
   const hasPrompt =
-    typeof params.prompt === "string" && params.prompt.trim().length > 0
-      ? true
-      : typeof params.brief === "string" && params.brief.trim().length > 0
-        ? true
-        : typeof params.consigne === "string" && params.consigne.trim().length > 0
-          ? true
-          : typeof params.angle === "string" && params.angle.trim().length > 0
-            ? true
-            : typeof params.text === "string" && params.text.trim().length > 0
-              ? true
-              : typeof params.instructions === "string" && params.instructions.trim().length > 0;
+    (typeof params.prompt === "string" && params.prompt.trim().length > 0) ||
+    (typeof params.brief === "string" && params.brief.trim().length > 0) ||
+    (typeof params.text === "string" && params.text.trim().length > 0) ||
+    (typeof params.instructions === "string" && params.instructions.trim().length > 0);
 
   if (hasPrompt) {
     if (!params.prompt && typeof params.instructions === "string" && params.instructions.trim()) {
@@ -178,34 +176,50 @@ export default function CreateLovableClient() {
   const { toast } = useToast();
 
   const [selectedType, setSelectedType] = useState<ContentType>(null);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ branche ton endpoint Tipote de génération IA
   const handleGenerate = async (params: any): Promise<string> => {
     setIsGenerating(true);
     try {
+      const payload = ensurePrompt(params);
+
       const res = await fetch("/api/content/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(normalizeGenerateParams(params)),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
-      const generated = data?.content ?? "";
-      if (generated) {
+      const text =
+        typeof data?.content === "string"
+          ? data.content
+          : typeof data?.text === "string"
+            ? data.text
+            : typeof data?.result === "string"
+              ? data.result
+              : typeof data?.output === "string"
+                ? data.output
+                : typeof data?.message === "string"
+                  ? data.message
+                  : "";
+
+      if (!text) {
         toast({
-          title: "Contenu généré !",
-          description: "Vous pouvez maintenant le modifier avant de le sauvegarder",
+          title: "Génération",
+          description: "Aucun contenu retourné.",
+          variant: "destructive",
         });
       }
-      return generated;
+
+      return text;
     } catch (e: any) {
       toast({
-        title: "Erreur de génération",
-        description: e?.message || "Impossible de générer le contenu",
+        title: "Erreur",
+        description: e?.message || "Impossible de générer",
         variant: "destructive",
       });
       return "";
@@ -214,7 +228,6 @@ export default function CreateLovableClient() {
     }
   };
 
-  // ✅ branche ton endpoint Tipote de création contenu
   const handleSave = async (payload: any): Promise<void> => {
     if (!payload?.title?.trim()) {
       toast({
@@ -227,8 +240,7 @@ export default function CreateLovableClient() {
 
     setIsSaving(true);
     try {
-      // ✅ Endpoint réel : /api/content (pas /api/contents)
-      const res = await fetch("/api/content", {
+      const res = await fetch("/api/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -250,54 +262,52 @@ export default function CreateLovableClient() {
   };
 
   const handleQuickTemplate = (_t: (typeof quickTemplates)[number]) => {
-    // Lovable: ouvre le PostForm
     setSelectedType("post");
   };
 
-  const commonProps = useMemo(
-    () => ({
+  const ActiveForm = useMemo(() => {
+    if (!selectedType) return null;
+
+    const common = {
       onGenerate: handleGenerate,
       onSave: handleSave,
       onClose: () => setSelectedType(null),
       isGenerating,
       isSaving,
-    }),
-    [isGenerating, isSaving],
-  );
+    };
 
-  const renderForm = () => {
     switch (selectedType) {
       case "post":
-        return <PostForm {...commonProps} />;
+        return <PostForm {...common} />;
       case "email":
-        return <EmailForm {...commonProps} />;
+        return <EmailForm {...common} />;
       case "article":
-        return <ArticleForm {...commonProps} />;
+        return <ArticleForm {...common} />;
       case "video":
-        return <VideoForm {...commonProps} />;
+        return <VideoForm {...common} />;
       case "offer":
-        return <OfferForm {...commonProps} />;
+        return <OfferForm {...common} />;
       case "funnel":
-        return <FunnelForm {...commonProps} />;
+        return <FunnelForm {...common} />;
       default:
         return null;
     }
-  };
+  }, [selectedType, isGenerating, isSaving]);
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
+        <main className="flex-1 flex flex-col">
+          <header className="h-16 flex items-center px-6 border-b bg-background">
             <SidebarTrigger />
-            <div className="ml-4 flex-1">
+            <div className="ml-4 flex items-center gap-2">
               <h1 className="text-xl font-display font-bold">Créer</h1>
             </div>
           </header>
 
-          <div className="p-6 max-w-6xl mx-auto space-y-8">
+          <div className="p-6 max-w-6xl mx-auto space-y-8 w-full">
             {!selectedType ? (
               <>
                 <Card className="p-6 gradient-primary text-primary-foreground relative overflow-hidden">
@@ -311,26 +321,22 @@ export default function CreateLovableClient() {
                   </p>
                 </Card>
 
-                <section>
-                  <h3 className="text-lg font-bold mb-4">Types de contenu</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {contentTypes.map((t) => (
-                      <ContentTypeCard
-                        key={t.id}
-                        label={t.label}
-                        description={t.description}
-                        icon={t.icon}
-                        color={t.color}
-                        onClick={() => setSelectedType(t.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {contentTypes.map((type) => (
+                    <ContentTypeCard
+                      key={type.id}
+                      label={type.label}
+                      description={type.description}
+                      icon={type.icon}
+                      color={type.color}
+                      onClick={() => setSelectedType(type.id)}
+                    />
+                  ))}
+                </div>
 
-                <section>
-                  <h3 className="text-lg font-bold mb-2">Templates rapides</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Génération en 1 clic avec paramètres pré-définis</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Templates rapides</h3>
+                  <div className="grid md:grid-cols-2 gap-3">
                     {quickTemplates.map((t) => (
                       <QuickTemplateCard
                         key={t.id}
@@ -340,10 +346,10 @@ export default function CreateLovableClient() {
                       />
                     ))}
                   </div>
-                </section>
+                </div>
               </>
             ) : (
-              <Card className="p-6">{renderForm()}</Card>
+              <Card className="p-6">{ActiveForm}</Card>
             )}
           </div>
         </main>
