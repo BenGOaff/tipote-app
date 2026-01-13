@@ -1,0 +1,117 @@
+// components/tutorial/WelcomeModal.tsx
+"use client";
+
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Rocket } from "lucide-react";
+import { useTutorial } from "@/hooks/useTutorial";
+import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+export function WelcomeModal() {
+  const { showWelcome, setShowWelcome, setPhase, skipTutorial, tutorialOptOut, setTutorialOptOut } =
+    useTutorial();
+
+  const [firstName, setFirstName] = useState<string>("");
+  const [disableGuide, setDisableGuide] = useState<boolean>(tutorialOptOut);
+
+  useEffect(() => {
+    // Load profile (first_name) via Tipote API (business_profiles)
+    const loadProfile = async () => {
+      try {
+        const res = await fetch("/api/profile", { method: "GET" });
+        if (!res.ok) return;
+        const json = await res.json();
+        const profile = json?.profile;
+        if (profile?.first_name) setFirstName(profile.first_name);
+      } catch {
+        // ignore
+      }
+    };
+
+    if (showWelcome) loadProfile();
+  }, [showWelcome]);
+
+  useEffect(() => {
+    setDisableGuide(tutorialOptOut);
+  }, [tutorialOptOut]);
+
+  const handleStart = async () => {
+    setShowWelcome(false);
+
+    if (disableGuide) {
+      setTutorialOptOut(true);
+      return;
+    }
+
+    setPhase("tour_today");
+  };
+
+  const handleSkip = () => {
+    if (disableGuide) {
+      setTutorialOptOut(true);
+      return;
+    }
+    skipTutorial();
+  };
+
+  return (
+    <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none">
+        <div className="gradient-primary p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="w-8 h-8 text-primary-foreground" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-primary-foreground mb-2">
+            Bienvenue {firstName ? firstName : ""} ! 👋
+          </h2>
+
+          <p className="text-primary-foreground/90 text-lg mb-6">Je suis Tipote, ton partenaire business.</p>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Rocket className="w-5 h-5 text-primary-foreground" />
+              <h3 className="text-lg font-semibold text-primary-foreground">Petit tour guidé ?</h3>
+            </div>
+            <p className="text-primary-foreground/80 leading-relaxed">
+              En 30 secondes, je te montre où cliquer pour avancer vite (Aujourd&apos;hui → Créer → Stratégie).
+            </p>
+
+            {/* ✅ Opt-out permanent */}
+            <div className="mt-4 flex items-start gap-3 text-left">
+              <Checkbox
+                id="disable-guide"
+                checked={disableGuide}
+                onCheckedChange={(v) => setDisableGuide(Boolean(v))}
+              />
+              <Label htmlFor="disable-guide" className="text-primary-foreground/90 leading-snug cursor-pointer">
+                J&apos;ai mon Tipote en main, ne me montre plus ce guide
+              </Label>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={handleStart}
+              variant="secondary"
+              size="lg"
+              className="w-full text-lg"
+            >
+              C&apos;est parti !
+            </Button>
+
+            <Button
+              onClick={handleSkip}
+              variant="ghost"
+              className="w-full text-primary-foreground/90 hover:text-primary-foreground hover:bg-white/10"
+            >
+              Pas maintenant
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
