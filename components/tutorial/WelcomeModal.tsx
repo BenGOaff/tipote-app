@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { useTutorial } from "@/hooks/useTutorial";
 
 export function WelcomeModal() {
   const {
+    phase,
     showWelcome,
     setShowWelcome,
     setPhase,
@@ -42,15 +44,17 @@ export function WelcomeModal() {
     if (showWelcome) loadProfile();
   }, [showWelcome]);
 
-  const handleStart = () => {
-    setShowWelcome(false);
-
+  const startTour = () => {
     if (disableGuide) {
       setTutorialOptOut(true);
       return;
     }
-
     setPhase("tour_today");
+  };
+
+  const handleStart = () => {
+    setShowWelcome(false);
+    startTour();
   };
 
   const handleSkip = () => {
@@ -65,8 +69,25 @@ export function WelcomeModal() {
   };
 
   return (
-    <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+    <Dialog
+      open={showWelcome}
+      onOpenChange={(open) => {
+        setShowWelcome(open);
+
+        // ✅ Si l'user ferme la modale via ESC / clic outside,
+        // et qu'on est encore en welcome + pas opt-out => on démarre le tour.
+        if (!open && phase === "welcome" && !tutorialOptOut) {
+          startTour();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none">
+        {/* ✅ A11y Radix: Title/Description obligatoires */}
+        <VisuallyHidden>
+          <DialogTitle>Bienvenue sur Tipote</DialogTitle>
+          <DialogDescription>Tour guidé de prise en main de l’application</DialogDescription>
+        </VisuallyHidden>
+
         <div className="gradient-primary p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
             <Sparkles className="w-8 h-8 text-primary-foreground" />

@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -29,8 +30,22 @@ export function TourCompleteModal() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o && phase === "tour_complete") {
+          handleClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none">
+        {/* ✅ A11y Radix: Title/Description obligatoires */}
+        <VisuallyHidden>
+          <DialogTitle>Tour guidé terminé</DialogTitle>
+          <DialogDescription>Confirmation de fin du guide</DialogDescription>
+        </VisuallyHidden>
+
         <div className="gradient-primary p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
             <PartyPopper className="w-8 h-8 text-primary-foreground" />
