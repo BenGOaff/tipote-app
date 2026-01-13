@@ -23,52 +23,6 @@ import { VideoForm } from "@/components/create/forms/VideoForm";
 import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
 
-type AnyParams = Record<string, any>;
-
-function buildFallbackPrompt(params: AnyParams): string {
-  const type = String(params?.type ?? "").trim();
-  const theme = String(params?.theme ?? "").trim();
-  const title = String(params?.title ?? "").trim();
-  const topic = String(params?.topic ?? "").trim();
-  const platform = String(params?.platform ?? "").trim();
-  const instructions = String(params?.instructions ?? "").trim();
-  const brief = String(params?.brief ?? "").trim();
-
-  const lines = [
-    type ? `Génère un contenu de type "${type}".` : "Génère un contenu.",
-    title ? `Titre: ${title}` : "",
-    topic ? `Sujet: ${topic}` : "",
-    platform ? `Plateforme: ${platform}` : "",
-    theme ? `Thème: ${theme}` : "",
-    instructions ? `Instructions: ${instructions}` : "",
-    brief ? `Brief: ${brief}` : "",
-  ].filter(Boolean);
-
-  return lines.join("\n");
-}
-
-function normalizeGenerateParams(raw: unknown): AnyParams {
-  const params = (raw && typeof raw === "object" ? (raw as AnyParams) : {}) as AnyParams;
-
-  const hasAnyText =
-    (typeof params.prompt === "string" && params.prompt.trim().length > 0) ||
-    (typeof params.brief === "string" && params.brief.trim().length > 0) ||
-    (typeof params.consigne === "string" && params.consigne.trim().length > 0) ||
-    (typeof params.angle === "string" && params.angle.trim().length > 0) ||
-    (typeof params.text === "string" && params.text.trim().length > 0) ||
-    (typeof params.instructions === "string" && params.instructions.trim().length > 0);
-
-  // On standardise "prompt" car l'API /api/content/generate attend souvent un champ texte
-  if (hasAnyText) {
-    if (!params.prompt && typeof params.instructions === "string" && params.instructions.trim()) {
-      return { ...params, prompt: params.instructions.trim() };
-    }
-    return params;
-  }
-
-  return { ...params, prompt: buildFallbackPrompt(params) };
-}
-
 const contentTypes = [
   {
     id: "post",
@@ -161,6 +115,64 @@ const quickTemplates = [
 
 type ContentType = (typeof contentTypes)[number]["id"] | null;
 
+type AnyParams = Record<string, any>;
+
+function buildFallbackPrompt(params: AnyParams): string {
+  const type = String(params?.type ?? "").trim();
+  const formality = params?.formality ? `Ton: ${String(params.formality)}` : "";
+  const platform = params?.platform ? `Plateforme: ${String(params.platform)}` : "";
+  const theme = params?.theme ? `Thème: ${String(params.theme)}` : "";
+  const emailType = params?.email_type ? `Type d'email: ${String(params.email_type)}` : "";
+  const articleType = params?.article_type ? `Type d'article: ${String(params.article_type)}` : "";
+  const videoType = params?.video_type ? `Type de vidéo: ${String(params.video_type)}` : "";
+  const topic = params?.topic ? `Sujet: ${String(params.topic)}` : "";
+  const title = params?.title ? `Titre: ${String(params.title)}` : "";
+  const instructions = params?.instructions ? String(params.instructions) : "";
+  const brief = params?.brief ? String(params.brief) : "";
+
+  const lines = [
+    type ? `Génère un contenu de type "${type}".` : "Génère un contenu.",
+    title,
+    topic,
+    platform,
+    theme,
+    emailType,
+    articleType,
+    videoType,
+    formality,
+    instructions ? `Instructions: ${instructions}` : "",
+    brief ? `Brief: ${brief}` : "",
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function normalizeGenerateParams(raw: unknown): AnyParams {
+  const params = (raw && typeof raw === "object" ? (raw as AnyParams) : {}) as AnyParams;
+
+  const hasPrompt =
+    typeof params.prompt === "string" && params.prompt.trim().length > 0
+      ? true
+      : typeof params.brief === "string" && params.brief.trim().length > 0
+        ? true
+        : typeof params.consigne === "string" && params.consigne.trim().length > 0
+          ? true
+          : typeof params.angle === "string" && params.angle.trim().length > 0
+            ? true
+            : typeof params.text === "string" && params.text.trim().length > 0
+              ? true
+              : typeof params.instructions === "string" && params.instructions.trim().length > 0;
+
+  if (hasPrompt) {
+    if (!params.prompt && typeof params.instructions === "string" && params.instructions.trim()) {
+      return { ...params, prompt: params.instructions.trim() };
+    }
+    return params;
+  }
+
+  return { ...params, prompt: buildFallbackPrompt(params) };
+}
+
 export default function CreateLovableClient() {
   const router = useRouter();
   const { toast } = useToast();
@@ -215,7 +227,8 @@ export default function CreateLovableClient() {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/contents", {
+      // ✅ Endpoint réel : /api/content (pas /api/contents)
+      const res = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
