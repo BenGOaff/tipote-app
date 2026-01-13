@@ -8,33 +8,61 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Users, Mail, MousePointer, Eye, ArrowUpRight } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Mail,
+  MousePointer,
+  Eye,
+  ArrowUpRight,
+} from "lucide-react";
 
 function clamp(n: number, min: number, max: number) {
   if (!Number.isFinite(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
 
-function trendBadgeVariant(delta: number) {
+function pct(n: number, d: number) {
+  if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return 0;
+  return Math.round((n / d) * 100);
+}
+
+function trendVariant(delta: number): "default" | "destructive" {
   return delta >= 0 ? "default" : "destructive";
 }
 
-function labelStatus(s: string) {
-  const x = (s ?? "").toLowerCase();
-  if (x === "published" || x === "publie" || x === "publié") return "Publié";
-  if (x === "scheduled" || x === "planifie" || x === "planifié") return "Planifié";
-  if (x === "draft" || x === "brouillon") return "Brouillon";
+function labelStatus(s?: string | null) {
+  const v = (s || "").toLowerCase().trim();
+  if (!v) return "—";
+  if (v.includes("publish")) return "Publié";
+  if (v.includes("sched")) return "Planifié";
+  if (v.includes("draft")) return "Brouillon";
   return s || "—";
 }
 
-function labelType(t: string) {
-  const x = (t ?? "").toLowerCase();
-  if (x === "post") return "Post";
-  if (x === "email") return "Email";
-  if (x === "blog") return "Blog";
-  if (x === "video_script") return "Script vidéo";
-  if (x === "funnel") return "Funnel";
+function labelType(t?: string | null) {
+  const v = (t || "").toLowerCase().trim();
+  if (!v) return "—";
+  if (v === "post") return "Post";
+  if (v === "email") return "Email";
+  if (v === "article") return "Article";
+  if (v === "video") return "Vidéo";
+  if (v === "offer") return "Offre";
+  if (v === "funnel") return "Funnel";
   return t || "—";
+}
+
+function formatDateTime(iso?: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function AnalyticsLovableClient(props: {
@@ -57,20 +85,26 @@ export default function AnalyticsLovableClient(props: {
   topContents: Array<{
     id: string;
     title: string;
+    type: string;
     channel: string;
     status: string;
-    scheduled_date: string | null;
-    created_at: string | null;
+    scheduledAt?: string | null;
+    createdAt?: string | null;
   }>;
-  trafficSources: Array<{ source: string; percentage: number; visitors: string }>;
-  nextScheduled: null | {
+  trafficSources: Array<{
+    source: string;
+    percentage: number;
+    visitors: string;
+    color?: string;
+  }>;
+  nextScheduled: {
     id: string;
     title: string;
     type: string;
     channel: string;
     status: string;
     scheduledAt: string;
-  };
+  } | null;
 }) {
   const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } = props;
 
@@ -109,6 +143,16 @@ export default function AnalyticsLovableClient(props: {
     },
   ];
 
+  const periodButtons: Array<{ days: number; label: string }> = [
+    { days: 7, label: "7 jours" },
+    { days: 30, label: "30 jours" },
+    { days: 90, label: "90 jours" },
+  ];
+
+  const topChannel = trafficSources?.[0]?.source || "—";
+  const publishRate = pct(kpis.publishedNow, Math.max(1, kpis.totalNow));
+  const scheduledRate = pct(kpis.scheduledNow, Math.max(1, kpis.totalNow));
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -120,11 +164,8 @@ export default function AnalyticsLovableClient(props: {
             <div className="ml-4 flex-1">
               <h1 className="text-xl font-display font-bold">Analytics</h1>
             </div>
-
-            <Button asChild variant="outline">
-              <a href={`/api/analytics/export?period=${periodDays}`} target="_blank" rel="noreferrer">
-                Exporter le rapport
-              </a>
+            <Button variant="outline" asChild>
+              <Link href="/analytics?export=1">Exporter le rapport</Link>
             </Button>
           </header>
 
@@ -136,15 +177,16 @@ export default function AnalyticsLovableClient(props: {
                 <p className="text-muted-foreground">Suivez et optimisez vos résultats</p>
               </div>
               <div className="flex gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/analytics?period=7">7 jours</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/analytics?period=30">30 jours</Link>
-                </Button>
-                <Button asChild variant={periodDays === 90 ? "default" : "outline"} size="sm">
-                  <Link href="/analytics?period=90">90 jours</Link>
-                </Button>
+                {periodButtons.map((b) => (
+                  <Button
+                    key={b.days}
+                    asChild
+                    variant={periodDays === b.days ? "default" : "outline"}
+                    size="sm"
+                  >
+                    <Link href={`/analytics?period=${b.days}`}>{b.label}</Link>
+                  </Button>
+                ))}
               </div>
             </div>
 
@@ -153,16 +195,23 @@ export default function AnalyticsLovableClient(props: {
               {metrics.map((metric, i) => (
                 <Card key={i} className="p-6 hover:shadow-md transition-all duration-200">
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center ${metric.color}`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center ${metric.color}`}
+                    >
                       <metric.icon className="w-5 h-5" />
                     </div>
-
-                    <Badge variant={trendBadgeVariant(metric.delta)} className="flex items-center gap-1">
-                      {metric.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <Badge
+                      variant={trendVariant(metric.delta)}
+                      className="flex items-center gap-1"
+                    >
+                      {metric.delta >= 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
                       {metric.change}
                     </Badge>
                   </div>
-
                   <p className="text-sm text-muted-foreground mb-1">{metric.label}</p>
                   <p className="text-3xl font-bold">{metric.value}</p>
                 </Card>
@@ -182,20 +231,21 @@ export default function AnalyticsLovableClient(props: {
                 <Card className="p-6">
                   <h3 className="text-lg font-bold mb-6">Engagement au fil du temps</h3>
                   <div className="h-64 flex items-end justify-between gap-2">
-                    {bars.map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 bg-gradient-to-t from-primary to-primary/50 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
-                        style={{ height: `${h}%` }}
-                        title={`${h}%`}
-                      />
-                    ))}
+                    {(bars.length ? bars : [65, 72, 68, 80, 75, 88, 82, 90, 85, 92, 88, 95, 90, 98]).map(
+                      (height, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 bg-gradient-to-t from-primary to-primary/50 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
+                          style={{ height: `${clamp(height, 5, 100)}%` }}
+                        />
+                      )
+                    )}
                   </div>
                   <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-                    <span>-14j</span>
-                    <span>-10j</span>
-                    <span>-7j</span>
-                    <span>Aujourd’hui</span>
+                    <span>Jan</span>
+                    <span>Fév</span>
+                    <span>Mar</span>
+                    <span>Avr</span>
                   </div>
                 </Card>
 
@@ -209,37 +259,45 @@ export default function AnalyticsLovableClient(props: {
                             <div className="flex-1">
                               <p className="font-medium mb-1">{c.title}</p>
                               <p className="text-sm text-muted-foreground">
-                                {c.channel} • {labelStatus(c.status)}
+                                {c.channel} • {labelType(c.type)} • {labelStatus(c.status)}
                               </p>
                             </div>
                             <ArrowUpRight className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
                           </div>
                         </Link>
                       ))}
+                      {!topContents.length && (
+                        <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                          Pas encore de contenus sur la période.
+                        </div>
+                      )}
                     </div>
                   </Card>
 
                   <Card className="p-6">
                     <h3 className="text-lg font-bold mb-6">Sources de trafic</h3>
                     <div className="space-y-4">
-                      {(trafficSources.length ? trafficSources : [{ source: "—", percentage: 100, visitors: "0" }]).map(
-                        (source, i) => (
-                          <div key={i}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium">{source.source}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {source.percentage}% • {source.visitors}
-                              </span>
-                            </div>
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-primary rounded-full transition-all duration-500"
-                                style={{ width: `${source.percentage}%` }}
-                              />
-                            </div>
+                      {(trafficSources.length
+                        ? trafficSources
+                        : [
+                            { source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" },
+                          ]
+                      ).map((source, i) => (
+                        <div key={`${source.source}-${i}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">{source.source}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {clamp(source.percentage, 0, 100)}% • {source.visitors}
+                            </span>
                           </div>
-                        )
-                      )}
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${source.color || "bg-primary"} rounded-full transition-all duration-500`}
+                              style={{ width: `${clamp(source.percentage, 0, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </Card>
                 </div>
@@ -248,21 +306,34 @@ export default function AnalyticsLovableClient(props: {
               <TabsContent value="traffic">
                 <Card className="p-12 text-center">
                   <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Données de trafic à venir</p>
+                  <p className="text-muted-foreground">
+                    Sur {periodDays} jours : {kpis.totalNow} contenus • canal principal : {topChannel}
+                  </p>
                 </Card>
               </TabsContent>
 
               <TabsContent value="conversions">
                 <Card className="p-12 text-center">
                   <MousePointer className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Données de conversion à venir</p>
+                  <p className="text-muted-foreground">
+                    Taux de publication : {publishRate}% • taux de planification : {scheduledRate}%
+                  </p>
                 </Card>
               </TabsContent>
 
               <TabsContent value="social">
                 <Card className="p-12 text-center">
                   <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Analytics réseaux sociaux à venir</p>
+                  <p className="text-muted-foreground">
+                    Répartition par canaux :{" "}
+                    {(trafficSources.length ? trafficSources.slice(0, 3) : []).map((s, idx) => (
+                      <span key={`${s.source}-${idx}`}>
+                        {idx > 0 ? " • " : ""}
+                        {s.source} {clamp(s.percentage, 0, 100)}%
+                      </span>
+                    ))}
+                    {!trafficSources.length && "—"}
+                  </p>
                 </Card>
               </TabsContent>
             </Tabs>
@@ -276,16 +347,14 @@ export default function AnalyticsLovableClient(props: {
                     label: "Objectif exécution (tâches)",
                     current: `${kpis.tasksDone}`,
                     target: `${kpis.tasksTotal}`,
-                    progress: kpis.tasksPct,
+                    progress: clamp(kpis.tasksPct, 0, 100),
                   },
                   {
                     label: "Objectif contenus publiés (période)",
                     current: `${kpis.publishedNow}`,
-                    target: `${Math.max(kpis.publishedNow, kpis.publishedPrev, 1)}`,
+                    target: `${Math.max(kpis.publishedPrev, kpis.publishedNow, 1)}`,
                     progress: clamp(
-                      Math.round(
-                        (kpis.publishedNow / Math.max(kpis.publishedNow, kpis.publishedPrev, 1)) * 100
-                      ),
+                      pct(kpis.publishedNow, Math.max(1, Math.max(kpis.publishedPrev, kpis.publishedNow, 1))),
                       0,
                       100
                     ),
@@ -293,11 +362,9 @@ export default function AnalyticsLovableClient(props: {
                   {
                     label: "Objectif contenus planifiés (période)",
                     current: `${kpis.scheduledNow}`,
-                    target: `${Math.max(kpis.scheduledNow, kpis.scheduledPrev, 1)}`,
+                    target: `${Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1)}`,
                     progress: clamp(
-                      Math.round(
-                        (kpis.scheduledNow / Math.max(kpis.scheduledNow, kpis.scheduledPrev, 1)) * 100
-                      ),
+                      pct(kpis.scheduledNow, Math.max(1, Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1))),
                       0,
                       100
                     ),
@@ -314,11 +381,11 @@ export default function AnalyticsLovableClient(props: {
                       <div className="h-3 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full gradient-primary rounded-full transition-all duration-500"
-                          style={{ width: `${goal.progress}%` }}
+                          style={{ width: `${clamp(goal.progress, 0, 100)}%` }}
                         />
                       </div>
                       <span className="absolute -right-0 -top-7 text-xs font-medium text-primary">
-                        {goal.progress}%
+                        {clamp(goal.progress, 0, 100)}%
                       </span>
                     </div>
                   </div>
@@ -326,44 +393,27 @@ export default function AnalyticsLovableClient(props: {
               </div>
             </Card>
 
-            {nextScheduled && (
-              <Card className="p-6">
-                <h3 className="text-lg font-bold mb-4">Prochaine échéance</h3>
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <Badge variant="secondary">{labelType(nextScheduled.type)}</Badge>
-                  <Badge variant="outline">{nextScheduled.channel || "—"}</Badge>
-                  <Badge variant="outline">{labelStatus(nextScheduled.status)}</Badge>
-                </div>
-                <div className="text-xl font-bold mb-2">{nextScheduled.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(nextScheduled.scheduledAt).toLocaleString("fr-FR", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "long",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button asChild className="w-full">
-                    <Link href={`/contents/${nextScheduled.id}`}>Ouvrir</Link>
-                  </Button>
-                  <Button asChild variant="secondary" className="w-full">
-                    <Link href="/strategy">Voir stratégie</Link>
-                  </Button>
-                </div>
-              </Card>
-            )}
-
+            {/* Update Reminder */}
             <Card className="p-6 gradient-hero border-border/50">
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-primary-foreground mb-2">Mettre à jour vos données</h3>
+                <div className="w-full">
+                  <h3 className="text-xl font-bold text-primary-foreground mb-2">
+                    Mettre à jour vos données
+                  </h3>
                   <p className="text-primary-foreground/90 mb-4">
-                    Pensez à synchroniser vos tâches et à planifier vos contenus : l’IA pourra analyser vos résultats et adapter votre stratégie.
+                    Prochaine publication planifiée :{" "}
+                    {nextScheduled ? (
+                      <>
+                        <span className="font-semibold">{nextScheduled.title}</span> •{" "}
+                        {labelType(nextScheduled.type)} • {nextScheduled.channel} •{" "}
+                        {formatDateTime(nextScheduled.scheduledAt)}
+                      </>
+                    ) : (
+                      "aucune pour l’instant."
+                    )}
                   </p>
                   <Button asChild variant="secondary">
-                    <Link href="/tasks">Mettre à jour maintenant</Link>
+                    <Link href="/contents">Mettre à jour maintenant</Link>
                   </Button>
                 </div>
               </div>
