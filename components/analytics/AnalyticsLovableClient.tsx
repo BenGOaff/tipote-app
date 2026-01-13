@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,18 @@ import {
   Eye,
   ArrowUpRight,
 } from "lucide-react";
+import { useTutorial } from "@/hooks/useTutorial";
+import { ContextualTooltip } from "@/components/tutorial/ContextualTooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 function clamp(n: number, min: number, max: number) {
   if (!Number.isFinite(n)) return min;
@@ -102,7 +115,9 @@ type NextScheduledInput =
     }
   | null;
 
-function getScheduledAt(c: TopContentInput | (NextScheduledInput extends infer T ? T : never)) {
+function getScheduledAt(
+  c: TopContentInput | (NextScheduledInput extends infer T ? T : never),
+) {
   const anyC: any = c as any;
   return (anyC?.scheduledAt ?? anyC?.scheduled_date ?? null) as string | null;
 }
@@ -144,6 +159,70 @@ export default function AnalyticsLovableClient(props: {
   nextScheduled: NextScheduledInput;
 }) {
   const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } = props;
+
+  const { hasSeenContext, markContextSeen } = useTutorial();
+  const { toast } = useToast();
+
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isUpdatingMetrics, setIsUpdatingMetrics] = useState(false);
+  const [metricsForm, setMetricsForm] = useState({
+    emailOpenRate: "",
+    conversionRate: "",
+    newSubscribers: "",
+    pageViews: "",
+  });
+
+  const handleMetricsUpdate = async () => {
+    setIsUpdatingMetrics(true);
+    try {
+      const payload = {
+        emailOpenRate: metricsForm.emailOpenRate,
+        conversionRate: metricsForm.conversionRate,
+        newSubscribers: metricsForm.newSubscribers,
+        pageViews: metricsForm.pageViews,
+      };
+
+      const res = await fetch("/api/analytics/metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // fallback localStorage (ne bloque pas l’UX si la table n’existe pas encore)
+        try {
+          localStorage.setItem(
+            "tipote_analytics_metrics_latest",
+            JSON.stringify({ ...payload, updatedAt: new Date().toISOString() }),
+          );
+        } catch {
+          // ignore
+        }
+      }
+
+      toast({
+        title: "Métriques mises à jour !",
+        description: "Vos données ont été enregistrées. L'IA va adapter vos recommandations.",
+      });
+
+      markContextSeen("first_analytics_visit");
+      setIsUpdateModalOpen(false);
+      setMetricsForm({
+        emailOpenRate: "",
+        conversionRate: "",
+        newSubscribers: "",
+        pageViews: "",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Erreur",
+        description: e?.message || "Impossible d'enregistrer vos métriques.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingMetrics(false);
+    }
+  };
 
   const metrics = [
     {
@@ -272,7 +351,7 @@ export default function AnalyticsLovableClient(props: {
                           className="flex-1 bg-gradient-to-t from-primary to-primary/50 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
                           style={{ height: `${clamp(height, 5, 100)}%` }}
                         />
-                      )
+                      ),
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
@@ -297,7 +376,6 @@ export default function AnalyticsLovableClient(props: {
                                 <p className="text-sm text-muted-foreground">
                                   {c.channel} • {labelType(type)} • {labelStatus(c.status)}
                                 </p>
-                                {/* on garde la date dispo si la page la fournit */}
                                 {getCreatedAt(c) ? (
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Créé : {formatDateTime(getCreatedAt(c))}
@@ -322,23 +400,24 @@ export default function AnalyticsLovableClient(props: {
                     <div className="space-y-4">
                       {(trafficSources.length
                         ? trafficSources
-                        : [{ source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" }]
-                      ).map((source, i) => (
-                        <div key={`${source.source}-${i}`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{source.source}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {clamp(source.percentage, 0, 100)}% • {source.visitors}
-                            </span>
+                        : [{ source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" }]).map(
+                        (source, i) => (
+                          <div key={`${source.source}-${i}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">{source.source}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {clamp(source.percentage, 0, 100)}% • {source.visitors}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${source.color || "bg-primary"} rounded-full transition-all duration-500`}
+                                style={{ width: `${clamp(source.percentage, 0, 100)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${source.color || "bg-primary"} rounded-full transition-all duration-500`}
-                              style={{ width: `${clamp(source.percentage, 0, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   </Card>
                 </div>
@@ -366,7 +445,7 @@ export default function AnalyticsLovableClient(props: {
                 <Card className="p-12 text-center">
                   <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Répartition par canaux :{" "}
+                    Répartition par canaux:{" "}
                     {(trafficSources.length ? trafficSources.slice(0, 3) : []).map((s, idx) => (
                       <span key={`${s.source}-${idx}`}>
                         {idx > 0 ? " • " : ""}
@@ -397,7 +476,7 @@ export default function AnalyticsLovableClient(props: {
                     progress: clamp(
                       pct(kpis.publishedNow, Math.max(1, Math.max(kpis.publishedPrev, kpis.publishedNow, 1))),
                       0,
-                      100
+                      100,
                     ),
                   },
                   {
@@ -407,7 +486,7 @@ export default function AnalyticsLovableClient(props: {
                     progress: clamp(
                       pct(kpis.scheduledNow, Math.max(1, Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1))),
                       0,
-                      100
+                      100,
                     ),
                   },
                 ].map((goal, i) => (
@@ -435,29 +514,121 @@ export default function AnalyticsLovableClient(props: {
             </Card>
 
             {/* Update Reminder */}
-            <Card className="p-6 gradient-hero border-border/50">
-              <div className="flex items-start justify-between">
-                <div className="w-full">
-                  <h3 className="text-xl font-bold text-primary-foreground mb-2">Mettre à jour vos données</h3>
-                  <p className="text-primary-foreground/90 mb-4">
-                    Prochaine publication planifiée :{" "}
-                    {nextScheduled ? (
-                      <>
-                        <span className="font-semibold">{nextScheduled.title}</span> •{" "}
-                        {labelType(getType(nextScheduled as any))} • {nextScheduled.channel} •{" "}
-                        {formatDateTime(getScheduledAt(nextScheduled as any))}
-                      </>
-                    ) : (
-                      "aucune pour l’instant."
-                    )}
-                  </p>
-                  <Button asChild variant="secondary">
-                    <Link href="/contents">Mettre à jour maintenant</Link>
+            <ContextualTooltip
+              contextKey="first_analytics_visit"
+              message="Mets à jour tes métriques chaque semaine pour des recommandations plus précises."
+              position="top"
+            >
+              <Card className="p-6 gradient-hero border-border/50">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-primary-foreground mb-2">
+                      Mettre à jour vos données
+                    </h3>
+                    <p className="text-primary-foreground/90 mb-4">
+                      N&apos;oubliez pas de mettre à jour vos métriques chaque semaine pour que l&apos;IA puisse
+                      analyser vos résultats et adapter votre stratégie
+                      {nextScheduled ? (
+                        <>
+                          . Prochaine publication planifiée :{" "}
+                          <span className="font-semibold">{nextScheduled.title}</span> •{" "}
+                          {labelType(getType(nextScheduled as any))} • {nextScheduled.channel} •{" "}
+                          {formatDateTime(getScheduledAt(nextScheduled as any))}
+                        </>
+                      ) : null}
+                    </p>
+                    <Button variant="secondary" onClick={() => setIsUpdateModalOpen(true)}>
+                      Mettre à jour maintenant
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </ContextualTooltip>
+          </div>
+
+          {/* Modal de mise à jour des métriques */}
+          <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Mettre à jour vos métriques</DialogTitle>
+                <DialogDescription>
+                  Entrez vos dernières données pour que l&apos;IA puisse affiner vos recommandations.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="emailOpenRate">Taux d'ouverture emails (%)</Label>
+                  <Input
+                    id="emailOpenRate"
+                    type="number"
+                    placeholder="ex: 34.2"
+                    value={metricsForm.emailOpenRate}
+                    onChange={(e) =>
+                      setMetricsForm((prev) => ({ ...prev, emailOpenRate: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="conversionRate">Taux de conversion (%)</Label>
+                  <Input
+                    id="conversionRate"
+                    type="number"
+                    placeholder="ex: 8.7"
+                    value={metricsForm.conversionRate}
+                    onChange={(e) =>
+                      setMetricsForm((prev) => ({ ...prev, conversionRate: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newSubscribers">Nouveaux abonnés</Label>
+                  <Input
+                    id="newSubscribers"
+                    type="number"
+                    placeholder="ex: 1247"
+                    value={metricsForm.newSubscribers}
+                    onChange={(e) =>
+                      setMetricsForm((prev) => ({ ...prev, newSubscribers: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pageViews">Pages vues</Label>
+                  <Input
+                    id="pageViews"
+                    type="number"
+                    placeholder="ex: 12400"
+                    value={metricsForm.pageViews}
+                    onChange={(e) =>
+                      setMetricsForm((prev) => ({ ...prev, pageViews: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setIsUpdateModalOpen(false)}
+                    disabled={isUpdatingMetrics}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleMetricsUpdate}
+                    disabled={isUpdatingMetrics}
+                  >
+                    {isUpdatingMetrics ? "Enregistrement..." : "Enregistrer"}
                   </Button>
                 </div>
               </div>
-            </Card>
-          </div>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </SidebarProvider>
