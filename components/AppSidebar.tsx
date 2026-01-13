@@ -3,14 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Sun,
-  Target,
-  Sparkles,
-  FolderOpen,
-  Settings,
-  BarChart3,
-} from "lucide-react";
+import { Sun, Target, Sparkles, FolderOpen, Settings, BarChart3 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { useTutorial } from "@/hooks/useTutorial";
 import {
@@ -41,14 +34,12 @@ function NavLink(props: {
   const { to, end, className, activeClassName, onClick, children } = props;
   const pathname = usePathname();
 
-  const isActive = end ? pathname === to : pathname === to || (to !== "/" && pathname.startsWith(to));
+  const isActive = end
+    ? pathname === to
+    : pathname === to || (to !== "/" && pathname.startsWith(to));
 
   return (
-    <Link
-      href={to}
-      className={cx(className, isActive ? activeClassName : "")}
-      onClick={onClick}
-    >
+    <Link href={to} className={cx(className, isActive ? activeClassName : "")} onClick={onClick}>
       {children}
     </Link>
   );
@@ -89,7 +80,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-y-auto px-3 py-4">
+      {/* IMPORTANT: Tipote UI sidebar.tsx met overflow-auto par défaut => ça CLIP l'infobulle.
+          On force overflow-x-visible pour matcher Lovable (overflow-y-auto). */}
+      <SidebarContent className="overflow-y-auto overflow-x-visible px-3 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
