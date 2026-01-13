@@ -1,23 +1,32 @@
 // components/tutorial/WelcomeModal.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Rocket } from "lucide-react";
-import { useTutorial } from "@/hooks/useTutorial";
-import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Sparkles, Rocket } from "lucide-react";
+import { useTutorial } from "@/hooks/useTutorial";
 
 export function WelcomeModal() {
-  const { showWelcome, setShowWelcome, setPhase, skipTutorial, tutorialOptOut, setTutorialOptOut } =
-    useTutorial();
+  const {
+    showWelcome,
+    setShowWelcome,
+    setPhase,
+    skipTutorial,
+    tutorialOptOut,
+    setTutorialOptOut,
+  } = useTutorial();
 
-  const [firstName, setFirstName] = useState<string>("");
   const [disableGuide, setDisableGuide] = useState<boolean>(tutorialOptOut);
+  const [firstName, setFirstName] = useState("");
 
   useEffect(() => {
-    // Load profile (first_name) via Tipote API (business_profiles)
+    setDisableGuide(tutorialOptOut);
+  }, [tutorialOptOut]);
+
+  useEffect(() => {
     const loadProfile = async () => {
       try {
         const res = await fetch("/api/profile", { method: "GET" });
@@ -33,11 +42,7 @@ export function WelcomeModal() {
     if (showWelcome) loadProfile();
   }, [showWelcome]);
 
-  useEffect(() => {
-    setDisableGuide(tutorialOptOut);
-  }, [tutorialOptOut]);
-
-  const handleStart = async () => {
+  const handleStart = () => {
     setShowWelcome(false);
 
     if (disableGuide) {
@@ -49,10 +54,13 @@ export function WelcomeModal() {
   };
 
   const handleSkip = () => {
+    setShowWelcome(false);
+
     if (disableGuide) {
       setTutorialOptOut(true);
       return;
     }
+
     skipTutorial();
   };
 
@@ -65,10 +73,12 @@ export function WelcomeModal() {
           </div>
 
           <h2 className="text-2xl font-bold text-primary-foreground mb-2">
-            Bienvenue {firstName ? firstName : ""} ! 👋
+            Bienvenue{firstName ? ` ${firstName}` : ""} ! 👋
           </h2>
 
-          <p className="text-primary-foreground/90 text-lg mb-6">Je suis Tipote, ton partenaire business.</p>
+          <p className="text-primary-foreground/90 text-lg mb-6">
+            Je suis Tipote, ton partenaire business.
+          </p>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -79,26 +89,23 @@ export function WelcomeModal() {
               En 30 secondes, je te montre où cliquer pour avancer vite (Aujourd&apos;hui → Créer → Stratégie).
             </p>
 
-            {/* ✅ Opt-out permanent */}
             <div className="mt-4 flex items-start gap-3 text-left">
               <Checkbox
                 id="disable-guide"
                 checked={disableGuide}
                 onCheckedChange={(v) => setDisableGuide(Boolean(v))}
               />
-              <Label htmlFor="disable-guide" className="text-primary-foreground/90 leading-snug cursor-pointer">
+              <Label
+                htmlFor="disable-guide"
+                className="text-primary-foreground/90 leading-snug cursor-pointer"
+              >
                 J&apos;ai mon Tipote en main, ne me montre plus ce guide
               </Label>
             </div>
           </div>
 
           <div className="space-y-3">
-            <Button
-              onClick={handleStart}
-              variant="secondary"
-              size="lg"
-              className="w-full text-lg"
-            >
+            <Button onClick={handleStart} variant="secondary" size="lg" className="w-full text-lg">
               C&apos;est parti !
             </Button>
 
