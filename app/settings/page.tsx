@@ -10,26 +10,29 @@ import { AppSidebar } from "@/components/AppSidebar";
 import SettingsTabsShell from "@/components/settings/SettingsTabsShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+type TabKey = "profile" | "settings" | "ai" | "pricing";
+
 type Props = {
   searchParams?: { tab?: string };
 };
 
-type TabKey = "profile" | "settings" | "ai" | "billing";
-
-function normalizeTab(v: unknown): TabKey {
-  if (typeof v !== "string") return "profile";
-  const s = v.trim().toLowerCase();
-  if (s === "profile" || s === "settings" || s === "ai" || s === "billing") return s;
+function normalizeTab(v: string | undefined): TabKey {
+  const s = (v ?? "").trim().toLowerCase();
+  if (s === "profile" || s === "settings" || s === "ai") return s;
+  // compat ancien: tab=billing
+  if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
 }
 
 export default async function SettingsPage({ searchParams }: Props) {
   const supabase = await getSupabaseServerClient();
-  const { data: auth } = await supabase.auth.getUser();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
 
-  if (!auth?.user) redirect("/");
+  if (!authUser) redirect("/login");
 
-  const userEmail = auth.user.email ?? "";
+  const userEmail = authUser.email ?? "";
   const activeTab = normalizeTab(searchParams?.tab);
 
   return (

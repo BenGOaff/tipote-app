@@ -43,7 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 
-type TabKey = "profile" | "settings" | "ai" | "billing";
+type TabKey = "profile" | "settings" | "ai" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -52,7 +52,9 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "settings" || s === "ai" || s === "billing") return s;
+  if (s === "profile" || s === "settings" || s === "ai") return s;
+  // compat ancien: tab=billing
+  if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
 }
 
@@ -106,8 +108,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const onTabChange = (next: string) => {
     const t = normalizeTab(next);
     setTab(t);
+
+    // URL compat: historiquement Tipote utilisait tab=billing
+    const urlTab = t === "pricing" ? "billing" : t;
+
     const params = new URLSearchParams(queryBase);
-    params.set("tab", t);
+    params.set("tab", urlTab);
     const qs = params.toString();
     router.push(qs ? `/settings?${qs}` : "/settings");
   };
@@ -332,7 +338,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <Brain className="w-4 h-4" />
           IA & API
         </TabsTrigger>
-        <TabsTrigger value="billing" className="gap-2">
+        <TabsTrigger value="pricing" className="gap-2">
           <CreditCard className="w-4 h-4" />
           Abonnement
         </TabsTrigger>
@@ -362,13 +368,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-2">
               <Label htmlFor="password">Mot de passe</Label>
               <div className="flex gap-2">
-                <Input
-                  id="password"
-                  type="password"
-                  value="••••••••"
-                  disabled
-                  className="flex-1"
-                />
+                <Input id="password" type="password" value="••••••••" disabled className="flex-1" />
 
                 <Dialog>
                   <DialogTrigger asChild>
@@ -380,7 +380,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       <DialogTitle>Modifier le mot de passe</DialogTitle>
                     </DialogHeader>
 
-                    {/* IMPORTANT : SetPasswordForm exige `mode` */}
                     <SetPasswordForm mode="reset" />
                   </DialogContent>
                 </Dialog>
@@ -557,7 +556,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </div>
         </Card>
 
-        {/* OpenAI */}
+       {/* OpenAI */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -797,7 +796,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <p className="text-xs text-muted-foreground mt-2">
             <a
-              href="https://makersuite.google.com"
+              href="https://aistudio.google.com/api-keys"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
@@ -830,6 +829,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <Input type="password" placeholder="pplx-..." className="flex-1" disabled />
             <Button disabled>Connecter</Button>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            <a
+              href="https://www.perplexity.ai/help-center/fr/articles/10352995-parametres-de-l-api"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Trouver votre clé Perplexity <ExternalLink className="w-3 h-3 inline" />
+            </a>
+          </p>
         </Card>
 
         {/* Systeme.io API (UI only) */}
@@ -849,7 +858,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </div>
           <p className="text-xs text-muted-foreground mt-2">
             <a
-              href="https://systeme.io/dashboard/api"
+              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"

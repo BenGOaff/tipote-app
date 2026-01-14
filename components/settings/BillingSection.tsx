@@ -1,8 +1,10 @@
 // components/settings/BillingSection.tsx
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ExternalLink, Lock } from "lucide-react";
 
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -29,87 +31,82 @@ type SubscriptionPayload = {
   error?: string;
 };
 
-function safeString(v: unknown): string {
-  if (typeof v === "string") return v;
-  if (typeof v === "number") return String(v);
-  if (typeof v === "boolean") return v ? "true" : "false";
-  return "";
+type PlanKey = "free" | "basic" | "essential" | "elite";
+
+function safeString(v: unknown) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
 }
 
-function statusLabel(status: string) {
-  const s = status.trim().toLowerCase();
-  if (!s) return "—";
-  if (s === "active") return "Actif";
-  if (s === "trialing") return "Essai";
-  if (s === "paid") return "Payé";
-  if (s === "canceled" || s === "cancelled") return "Annulé";
-  if (s === "refunded") return "Remboursé";
-  return status;
+function normalizePlan(planName: string | null | undefined): PlanKey {
+  const s = (planName ?? "").trim().toLowerCase();
+
+  if (!s) return "free";
+  if (s.includes("elite")) return "elite";
+  if (s.includes("essential")) return "essential";
+  if (s.includes("basic")) return "basic";
+  if (s.includes("free") || s.includes("gratuit")) return "free";
+
+  return "free";
 }
 
-function formatMaybeDate(v: unknown): string | null {
-  const s = safeString(v).trim();
-  if (!s) return null;
+function isAnnualSubscription(sub: any): boolean {
+  const raw =
+    safeString(sub?.interval) ||
+    safeString(sub?.billing_interval) ||
+    safeString(sub?.billingInterval) ||
+    safeString(sub?.offer_price_plan?.interval) ||
+    safeString(sub?.offerPricePlan?.interval) ||
+    safeString(sub?.offer_price_plan?.name) ||
+    safeString(sub?.offerPricePlan?.name) ||
+    safeString(sub?.product?.name) ||
+    safeString(sub?.productName) ||
+    safeString(sub?.product_name) ||
+    null;
 
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const dt = new Date(`${s}T00:00:00.000Z`);
-    if (!Number.isNaN(dt.getTime())) {
-      return dt.toLocaleDateString("fr-FR", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-      });
-    }
+  const s = (raw ?? "").toLowerCase();
+  if (!s) return false;
+
+  if (s.includes("year") || s.includes("annual") || s.includes("annuel") || s.includes("année"))
+    return true;
+  if (s.includes("month") || s.includes("mensuel") || s.includes("mois")) return false;
+
+  return false;
+}
+
+function planMeta(plan: PlanKey) {
+  switch (plan) {
+    case "basic":
+      return { label: "Basic", price: 19, desc: "1 module • Content Hub" };
+    case "essential":
+      return { label: "Essential", price: 49, desc: "3 modules • Coach IA • Content Hub" };
+    case "elite":
+      return { label: "Elite", price: 99, desc: "Modules illimités • Support prioritaire" };
+    default:
+      return { label: "Free", price: 0, desc: "Accès limité" };
   }
-
-  // ISO
-  const dt = new Date(s);
-  if (!Number.isNaN(dt.getTime())) {
-    return dt.toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-    });
-  }
-
-  // parfois timestamp (sec ou ms)
-  const asNum = Number(s);
-  if (Number.isFinite(asNum) && asNum > 0) {
-    const dt2 = new Date(asNum * (asNum > 10_000_000_000 ? 1 : 1000));
-    if (!Number.isNaN(dt2.getTime())) {
-      return dt2.toLocaleDateString("fr-FR", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-      });
-    }
-  }
-
-  return null;
 }
 
-function pickNextBillingDate(sub: any): string | null {
-  if (!sub) return null;
-  return (
-    formatMaybeDate(sub.currentPeriodEnd) ||
-    formatMaybeDate(sub.current_period_end) ||
-    formatMaybeDate(sub.nextBillingAt) ||
-    formatMaybeDate(sub.next_billing_at) ||
-    formatMaybeDate(sub.endsAt) ||
-    formatMaybeDate(sub.ends_at) ||
-    formatMaybeDate(sub.renewalDate) ||
-    formatMaybeDate(sub.renewal_date) ||
-    null
-  );
-}
+const ORDER_FORMS = {
+  basic: {
+    monthly: "https://www.tipote.com/tipote-basic-mensuel",
+    annual: "https://www.tipote.com/tipote-basic-annuel",
+  },
+  essential: {
+    monthly: "https://www.tipote.com/tipote-essential-mensuel",
+    annual: "https://www.tipote.com/tipote-essential-annuel",
+  },
+  elite: {
+    monthly: "https://www.tipote.com/tipote-elite-mensuel",
+    annual: "https://www.tipote.com/tipote-elite-annuel",
+  },
+} as const;
 
 export default function BillingSection({ email }: Props) {
   const { toast } = useToast();
-  const [pending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [data, setData] = useState<SubscriptionPayload | null>(null);
 
   const activeSub = data?.activeSubscription ?? null;
@@ -128,222 +125,241 @@ export default function BillingSection({ email }: Props) {
       safeString(sub?.product_id) ||
       safeString(data?.profile?.product_id);
 
-    return maybeProduct || "—";
+    return maybeProduct || "free";
   }, [data?.profile?.plan, data?.profile?.product_id, sub]);
 
-  const status = useMemo(() => {
-    const s = safeString(sub?.status);
-    return s || "—";
-  }, [sub]);
-
-  const nextBilling = useMemo(() => pickNextBillingDate(sub), [sub]);
-
-  async function refresh() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/billing/subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const json = (await res.json().catch(() => null)) as SubscriptionPayload | null;
-
-      if (!res.ok || !json || json.error) {
-        setData(json);
-        toast({
-          title: "Impossible de charger l'abonnement",
-          description: json?.error || "Une erreur est survenue.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setData(json);
-    } catch (e) {
-      toast({
-        title: "Impossible de charger l'abonnement",
-        description: e instanceof Error ? e.message : "Une erreur est survenue.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
+  const currentPlan = useMemo<PlanKey>(() => normalizePlan(planName), [planName]);
+  const isAnnual = useMemo(() => isAnnualSubscription(sub), [sub]);
+  const currentMeta = useMemo(() => planMeta(currentPlan), [currentPlan]);
 
   useEffect(() => {
-    void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email]);
+    let cancelled = false;
 
-  async function syncNow() {
-    setSyncing(true);
-    try {
-      const res = await fetch("/api/billing/sync", { method: "POST" });
-      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-
-      if (!res.ok || !json?.ok) {
-        toast({
-          title: "Vérification impossible",
-          description: json?.error || "Impossible de vérifier l’abonnement.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Abonnement synchronisé ✅",
-        description: "Votre plan Tipote a été mis à jour.",
-      });
-
-      await refresh();
-    } catch (e) {
-      toast({
-        title: "Vérification impossible",
-        description: e instanceof Error ? e.message : "Impossible de vérifier l’abonnement.",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  async function cancel(cancelMode: "Now" | "WhenBillingCycleEnds") {
-    const subscriptionId =
-      safeString(sub?.id) || safeString(sub?.subscription_id) || safeString(sub?.subscriptionId);
-
-    if (!subscriptionId) {
-      toast({
-        title: "Annulation impossible",
-        description: "Aucun ID d'abonnement détecté.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    startTransition(async () => {
+    async function load() {
+      setLoading(true);
       try {
-        const res = await fetch("/api/billing/cancel", {
+        const res = await fetch("/api/billing/subscription", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subscriptionId,
-            mode: cancelMode,
-          }),
+          body: JSON.stringify({ email }),
         });
 
-        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+        const json = (await res.json().catch(() => null)) as any;
+        if (cancelled) return;
 
-        if (!res.ok || !json?.ok) {
+        if (!res.ok || !json) throw new Error("Erreur de récupération de l'abonnement");
+        if (json?.error) throw new Error(String(json.error));
+
+        setData(json as SubscriptionPayload);
+      } catch (e) {
+        if (!cancelled) {
           toast({
-            title: "Annulation impossible",
-            description: json?.error || "Une erreur est survenue.",
+            title: "Impossible de charger l'abonnement",
+            description: e instanceof Error ? e.message : "Une erreur est survenue.",
             variant: "destructive",
           });
-          return;
         }
-
-        toast({
-          title: "Demande d'annulation envoyée",
-          description:
-            cancelMode === "Now"
-              ? "Votre abonnement est en cours d'annulation immédiate."
-              : "Votre abonnement sera annulé à la fin du cycle.",
-        });
-
-        await refresh();
-      } catch (e) {
-        toast({
-          title: "Annulation impossible",
-          description: e instanceof Error ? e.message : "Une erreur est survenue.",
-          variant: "destructive",
-        });
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    });
-  }
+    }
 
-  const canCancel =
-    !!sub && ["active", "trialing", "paid"].includes(safeString(sub?.status).toLowerCase());
+    if (email) load();
+    return () => {
+      cancelled = true;
+    };
+  }, [email, toast]);
+
+  const openOrderForm = (plan: "basic" | "essential" | "elite") => {
+    const url = isAnnual ? ORDER_FORMS[plan].annual : ORDER_FORMS[plan].monthly;
+    window.location.href = url;
+  };
+
+  const basicIsCurrent = currentPlan === "basic";
+  const essentialIsCurrent = currentPlan === "essential";
+  const eliteIsCurrent = currentPlan === "elite";
+
+  const basicCta = "Downgrader";
+  const essentialCta = currentPlan === "elite" ? "Downgrader" : "Upgrader";
+  const eliteCta = "Upgrader";
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-slate-900">Abonnement</h3>
-          <p className="text-xs text-slate-500">Statut et gestion de votre abonnement Tipote.</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading || pending}>
-            {loading ? "Chargement…" : "Rafraîchir"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => syncNow()} disabled={loading || pending || syncing}>
-            {syncing ? "Vérification…" : "J’ai déjà payé"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500">Plan</p>
-          <p className="mt-1 text-sm font-semibold text-slate-900">{loading ? "…" : planName}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{email}</p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500">Statut</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant="secondary">{loading ? "…" : statusLabel(status)}</Badge>
-            {data?.contactId ? (
-              <span className="text-[11px] text-slate-500">Contact #{safeString(data.contactId)}</span>
-            ) : null}
+    <>
+      <Card className="p-6 gradient-hero border-border/50">
+        <div className="flex items-start justify-between">
+          <div>
+            <Badge className="mb-2 bg-background/20 text-primary-foreground">Plan actuel</Badge>
+            <h2 className="text-2xl font-bold text-primary-foreground mb-1">
+              {loading ? "—" : currentMeta.label}
+            </h2>
+            <p className="text-primary-foreground/80">
+              {loading ? "Chargement…" : currentMeta.desc}
+            </p>
           </div>
-          <p className="mt-2 text-[11px] text-slate-500">
-            {loading ? "—" : activeSub ? "Abonnement actif détecté." : "Dernier abonnement affiché."}
+          <p className="text-3xl font-bold text-primary-foreground">
+            {loading ? "—" : `${currentMeta.price}€`}
+            <span className="text-lg font-normal">/mois</span>
           </p>
         </div>
+      </Card>
 
-        <div className="rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500">Prochain renouvellement</p>
-          <p className="mt-1 text-sm font-semibold text-slate-900">{loading ? "…" : nextBilling || "—"}</p>
-          <p className="mt-2 text-[11px] text-slate-500">
-            Si la date n’apparaît pas, c’est que Systeme.io ne la renvoie pas sur votre abonnement.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-dashed border-slate-200 p-4 space-y-2">
-        <p className="text-xs text-slate-600">
-          Gestion : si vous voulez changer de plan, passez par la page d’abonnement (Systeme.io) ou contactez le support.
-        </p>
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="rounded-xl">
-              ID subscription: {safeString(sub?.id) || safeString(sub?.subscription_id) || safeString(sub?.subscriptionId) || "—"}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Basic */}
+        <Card className={basicIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
+          {basicIsCurrent ? (
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+              Actuel
             </Badge>
+          ) : null}
+
+          <h3 className="font-bold text-lg mb-2">Basic</h3>
+          <p className="text-3xl font-bold mb-4">
+            19€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+          </p>
+
+          <ul className="space-y-2 text-sm mb-6">
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Plan stratégique IA
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              1 module activable
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Contenus illimités
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Content Hub + Calendrier
+            </li>
+            <li className="flex items-center gap-2 text-muted-foreground">
+              <Lock className="w-4 h-4" />
+              Pas de coach IA
+            </li>
+          </ul>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => openOrderForm("basic")}
+            disabled={loading || basicIsCurrent}
+          >
+            {basicIsCurrent ? "Plan actuel" : basicCta}
+          </Button>
+        </Card>
+
+        {/* Essential */}
+        <Card className={essentialIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
+          {essentialIsCurrent ? (
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+              Actuel
+            </Badge>
+          ) : null}
+
+          <h3 className="font-bold text-lg mb-2">Essential</h3>
+          <p className="text-3xl font-bold mb-4">
+            49€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+          </p>
+
+          <ul className="space-y-2 text-sm mb-6">
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Plan stratégique IA
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              3 modules activables
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Contenus illimités
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Content Hub + Calendrier
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Coach IA
+            </li>
+          </ul>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => openOrderForm("essential")}
+            disabled={loading || essentialIsCurrent}
+          >
+            {essentialIsCurrent ? "Plan actuel" : essentialCta}
+          </Button>
+        </Card>
+
+        {/* Elite */}
+        <Card className={eliteIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
+          {eliteIsCurrent ? (
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+              Actuel
+            </Badge>
+          ) : null}
+
+          <h3 className="font-bold text-lg mb-2">Elite</h3>
+          <p className="text-3xl font-bold mb-4">
+            99€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+          </p>
+
+          <ul className="space-y-2 text-sm mb-6">
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Tout Essential +
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Modules illimités
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Accès nouveautés en avant-première
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Automatisations n8n (V2)
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              Support prioritaire
+            </li>
+          </ul>
+
+          <Button
+            variant="hero"
+            className="w-full"
+            onClick={() => openOrderForm("elite")}
+            disabled={loading || eliteIsCurrent}
+          >
+            {eliteIsCurrent ? "Plan actuel" : eliteCta}
+          </Button>
+        </Card>
+      </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">Gérer votre abonnement</p>
+            <p className="text-sm text-muted-foreground">
+              Modifier, upgrader ou annuler via Systeme.io
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => cancel("WhenBillingCycleEnds")}
-              disabled={!canCancel || pending}
-            >
-              Annuler fin de cycle
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => cancel("Now")}
-              disabled={!canCancel || pending}
-            >
-              Annuler maintenant
-            </Button>
-          </div>
+          <Button variant="outline" asChild>
+            <a href="https://systeme.io" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Gérer sur Systeme.io
+            </a>
+          </Button>
         </div>
-      </div>
-    </section>
+      </Card>
+    </>
   );
 }
