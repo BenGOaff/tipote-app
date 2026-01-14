@@ -1,3 +1,4 @@
+// hooks/useTutorial.ts
 "use client";
 
 import React, {
@@ -22,8 +23,7 @@ export type TutorialPhase =
   | "tour_complete"
   | "completed";
 
-// ✅ Best-of-both-worlds : on conserve les anciens keys (Lovable)
-// + on ajoute les nouveaux keys (Tipote)
+// ✅ On garde les anciens + on ajoute les nouveaux (anti-régression)
 export type ContextualTooltip =
   | "first_create_click"
   | "first_content_generated"
@@ -34,7 +34,8 @@ export type ContextualTooltip =
   | "first_strategy_visit"
   | "first_contents_visit"
   | "first_calendar_visit"
-  | "first_settings_visit";
+  | "first_settings_visit"
+  | "first_analytics_visit";
 
 type SeenMap = Record<string, boolean>;
 
@@ -47,8 +48,8 @@ interface TutorialContextType {
   showWelcome: boolean;
   setShowWelcome: (show: boolean) => void;
 
-  hasSeenContext: (key: ContextualTooltip) => boolean;
-  markContextSeen: (key: ContextualTooltip) => void;
+  hasSeenContext: (key: string) => boolean;
+  markContextSeen: (key: string) => void;
 
   isLoading: boolean;
 
@@ -61,13 +62,13 @@ interface TutorialContextType {
   firstSeenAt: string | null;
   daysSinceFirstSeen: number;
 
-  // ✅ Permet de “récupérer” un tuto bloqué (reset des flags persistés)
+  // ✅ Récupération “tuto disparu”
   resetTutorial: () => void;
 }
 
 const TutorialContext = createContext<TutorialContextType | undefined>(undefined);
 
-// Conserve le stockage des tooltips contextuels (déjà utilisé)
+// contexts globaux (pas par user)
 const CONTEXT_STORAGE_KEY = "tipote_tutorial_contexts_v1";
 
 // “premiers jours”
@@ -96,11 +97,10 @@ function isoNow() {
   return new Date().toISOString();
 }
 
-function daysBetween(isoA: string, isoB: string) {
-  const a = new Date(isoA);
-  const b = new Date(isoB);
-  const ms = b.getTime() - a.getTime();
-  if (!Number.isFinite(ms)) return 0;
+function daysBetween(fromIso: string, toIso: string) {
+  const from = new Date(fromIso).getTime();
+  const to = new Date(toIso).getTime();
+  const ms = Math.max(0, to - from);
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
@@ -127,7 +127,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const [userId, setUserId] = useState<string | null>(null);
 
-  // IMPORTANT: fichier .ts -> PAS de JSX (sinon TS pense à un namespace)
+  // ✅ On démarre “completed”, mais ce n’est pas “définitif” sans done/optout
   const [phase, setPhaseState] = useState<TutorialPhase>("completed");
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -212,10 +212,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // dans la fenêtre :
-        // - pas de phase -> welcome
-        // - phase invalide -> welcome
-        // - phase "completed" (skip) -> welcome (pas définitif)
+        // ✅ dans la fenêtre :
+        // - pas de phase → welcome
+        // - phase invalide → welcome
+        // - phase "completed" (ex: “Pas maintenant”) → on ré-affiche welcome (pas définitif)
         if (!savedPhase || !PHASE_ORDER.includes(savedPhase) || savedPhase === "completed") {
           setPhaseState("welcome");
           setShowWelcome(true);
@@ -237,10 +237,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persistPhase = useCallback(
-    (next: TutorialPhase) => {
+    (nextPhase: TutorialPhase) => {
       if (!userId) return;
       try {
-        localStorage.setItem(userKey(userId, "phase"), JSON.stringify(next));
+        localStorage.setItem(userKey(userId, "phase"), JSON.stringify(nextPhase));
       } catch {
         // ignore
       }
@@ -298,7 +298,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
     const next = PHASE_ORDER[Math.min(idx + 1, PHASE_ORDER.length - 1)];
 
-    // on marque "done" à la fin du tour (pour ne plus le relancer automatiquement)
+    // ✅ on marque “done” quand on passe en fin de tour
     if (next === "tour_complete") {
       persistDone(true);
     }
@@ -307,8 +307,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (next !== "welcome") setShowWelcome(false);
   }, [phase, persistDone, setPhase]);
 
-  // Skip = fermer maintenant (mais tant que pas opt-out/done, ça peut revenir dans les 7 jours)
   const skipTutorial = useCallback(() => {
+    // ✅ “Pas maintenant” n’est plus définitif : on ferme, mais done=false / optout=false
     setPhase("completed");
     setShowWelcome(false);
   }, [setPhase]);
@@ -319,7 +319,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       persistOptOut(value);
 
       if (value) {
-        // opt-out = définitif
+        // opt-out = définitif => done
         persistDone(true);
         setPhase("completed");
         setShowWelcome(false);
@@ -329,6 +329,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   );
 
   const resetTutorial = useCallback(() => {
+    // ✅ récupération “tuto disparu”
     clearPersisted();
     setTutorialOptOutState(false);
     setShowWelcome(true);
@@ -336,7 +337,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, [clearPersisted, setPhase]);
 
   const markContextSeen = useCallback(
-    (key: ContextualTooltip) => {
+    (key: string) => {
       const next = { ...contextFlags, [key]: true };
       setContextFlags(next);
       writeSeenContexts(next);
@@ -345,7 +346,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   );
 
   const hasSeenContext = useCallback(
-    (key: ContextualTooltip) => {
+    (key: string) => {
       return Boolean(contextFlags[key]);
     },
     [contextFlags],
@@ -360,7 +361,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (phase === "tour_create") return element === "create";
       if (phase === "tour_strategy") return element === "strategy";
 
-      // "settings" spotlight existe côté UI mais pas dans l’ordre du tour pour l’instant
+      // settings spotlight existe côté UI, mais pas dans le tour principal
       return false;
     },
     [phase, tutorialOptOut],
@@ -368,7 +369,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const currentTooltip = useMemo(() => {
     if (tutorialOptOut) return null;
-    if (phase === "completed" || phase === "welcome") return null;
 
     switch (phase) {
       case "tour_today":
@@ -409,7 +409,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       nextPhase,
       skipTutorial,
       showWelcome,
-      setShowWelcome,
       hasSeenContext,
       markContextSeen,
       isLoading,
@@ -423,12 +422,12 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  // ✅ IMPORTANT : pas de JSX dans un .ts
+  // ✅ IMPORTANT : fichier .ts => pas de JSX
   return React.createElement(TutorialContext.Provider, { value }, children as any);
 }
 
 export function useTutorial() {
   const ctx = useContext(TutorialContext);
-  if (!ctx) throw new Error("useTutorial must be used within a TutorialProvider");
+  if (!ctx) throw new Error("useTutorial must be used within TutorialProvider");
   return ctx;
 }
