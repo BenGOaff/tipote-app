@@ -1,7 +1,7 @@
 // components/tutorial/HelpButton.tsx
 "use client";
 
-import { HelpCircle, Book } from "lucide-react";
+import { HelpCircle, Book, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,9 +12,7 @@ import {
 import { useTutorial } from "@/hooks/useTutorial";
 
 export function HelpButton() {
-  const { setPhase, setShowWelcome, tutorialOptOut } = useTutorial();
-
-  if (tutorialOptOut) return null;
+  const { tutorialOptOut, resetTutorial, setShowWelcome, setPhase } = useTutorial();
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -24,16 +22,24 @@ export function HelpButton() {
             <HelpCircle className="w-6 h-6" />
           </Button>
         </DropdownMenuTrigger>
+
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => {
+              // ✅ Si l’utilisateur a opt-out (ou bug localStorage), on force un reset propre
+              if (tutorialOptOut) {
+                resetTutorial();
+                return;
+              }
+
+              // ✅ Sinon on relance le tour
               setShowWelcome(true);
               setPhase("welcome");
             }}
           >
-            <Book className="w-4 h-4" />
-            Refaire le tour guidé
+            {tutorialOptOut ? <RotateCcw className="w-4 h-4" /> : <Book className="w-4 h-4" />}
+            {tutorialOptOut ? "Réactiver le tour guidé" : "Refaire le tour guidé"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
