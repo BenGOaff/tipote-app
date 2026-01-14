@@ -870,8 +870,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       </TabsContent>
 
       {/* ABONNEMENT */}
-      <TabsContent value="billing" className="space-y-6">
-        {/* ✅ FIX: BillingSection attend la prop `email` (Tipote existant) */}
+      <TabsContent value="pricing" className="space-y-6">
         <BillingSection email={userEmail} />
       </TabsContent>
     </Tabs>
