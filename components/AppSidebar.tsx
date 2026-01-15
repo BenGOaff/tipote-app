@@ -1,9 +1,15 @@
-// components/AppSidebar.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, Target, Sparkles, FolderOpen, Settings, BarChart3 } from "lucide-react";
+import {
+  Sun,
+  Target,
+  Sparkles,
+  FolderOpen,
+  Settings,
+  BarChart3,
+} from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { useTutorial } from "@/hooks/useTutorial";
 import {
@@ -39,7 +45,11 @@ function NavLink(props: {
     : pathname === to || (to !== "/" && pathname.startsWith(to));
 
   return (
-    <Link href={to} className={cx(className, isActive ? activeClassName : "")} onClick={onClick}>
+    <Link
+      href={to}
+      className={cx(className, isActive ? activeClassName : "")}
+      onClick={onClick}
+    >
       {children}
     </Link>
   );
@@ -67,7 +77,12 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
+    // IMPORTANT (fix layout global) :
+    // - En "collapsible=offcanvas", la sidebar desktop est en fixed + spacer.
+    // - Si le spacer/vars se fait casser par un autre endroit, tout le main passe dessous.
+    // -> On force "collapsible=none" pour une sidebar desktop en flow normal (width réservée),
+    //    ce qui empêche TOUT chevauchement avec le contenu.
+    <Sidebar collapsible="none">
       <SidebarHeader className="border-b border-sidebar-border p-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
