@@ -191,12 +191,14 @@ const Sidebar = React.forwardRef<
   ) => {
     const { state, openMobile, setOpenMobile, isMobile } = useSidebar();
 
+    // ✅ Match Lovable: in "none", sidebar is in normal flow with h-full,
+    // so footer can sit at the bottom (with SidebarContent flex-1 + SidebarFooter mt-auto).
     if (collapsible === "none") {
       return (
         <div
           ref={ref}
           className={cn(
-            "flex h-svh w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
             className,
           )}
           {...props}
@@ -318,7 +320,8 @@ const SidebarRail = React.forwardRef<
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        "absolute -right-4 top-4 z-40 hidden h-10 w-10 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent md:flex",
+        "absolute -right-4 top-4 z-40 hidden h-10 w-10 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent",
+        "md:flex",
         className,
       )}
       {...props}
@@ -381,6 +384,7 @@ const SidebarHeader = React.forwardRef<
 ));
 SidebarHeader.displayName = "SidebarHeader";
 
+// ✅ Sticky bottom: mt-auto ensures footer stays at the bottom of the flex column layout.
 const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
@@ -388,7 +392,7 @@ const SidebarFooter = React.forwardRef<
   <div
     ref={ref}
     data-sidebar="footer"
-    className={cn("flex flex-col gap-2 p-2", className)}
+    className={cn("mt-auto flex flex-col gap-2 p-2", className)}
     {...props}
   />
 ));
@@ -664,11 +668,7 @@ const SidebarMenuSkeleton = React.forwardRef<
       {...props}
     >
       <div className="flex items-center gap-2">
-        {showIcon ? (
-          <Skeleton className="h-4 w-4 rounded-md" />
-        ) : (
-          <Skeleton className="h-4 w-0" />
-        )}
+        {showIcon ? <Skeleton className="h-4 w-4 rounded-md" /> : <Skeleton className="h-4 w-0" />}
         <Skeleton className="h-4 flex-1" style={{ width }} />
       </div>
     </div>
