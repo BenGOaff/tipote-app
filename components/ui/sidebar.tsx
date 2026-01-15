@@ -43,7 +43,6 @@ function useSidebar() {
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.");
   }
-
   return context;
 }
 
@@ -83,8 +82,6 @@ const SidebarProvider = React.forwardRef<
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = React.useState(false);
 
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(() => {
       const cookie = getCookie(SIDEBAR_COOKIE_NAME);
       if (cookie === "true") return true;
@@ -109,8 +106,6 @@ const SidebarProvider = React.forwardRef<
       [open, setOpenProp],
     );
 
-    const state = open ? "expanded" : "collapsed";
-
     const toggleSidebar = React.useCallback(() => {
       return isMobile ? setOpenMobile((o) => !o) : setOpen((o) => !o);
     }, [isMobile, setOpen, setOpenMobile]);
@@ -129,6 +124,8 @@ const SidebarProvider = React.forwardRef<
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }, [toggleSidebar]);
+
+    const state = open ? "expanded" : "collapsed";
 
     const contextValue = React.useMemo<SidebarContextValue>(
       () => ({
@@ -191,14 +188,17 @@ const Sidebar = React.forwardRef<
   ) => {
     const { state, openMobile, setOpenMobile, isMobile } = useSidebar();
 
-    // ✅ Match Lovable: in "none", sidebar is in normal flow with h-full,
-    // so footer can sit at the bottom (with SidebarContent flex-1 + SidebarFooter mt-auto).
+    // ✅ Pixel-perfect Lovable + footer visible without scroll:
+    // - lock sidebar to viewport height
+    // - prevent whole sidebar from scrolling
+    // - SidebarContent becomes the scroll area
+    // - keep sidebar stuck while main page scrolls
     if (collapsible === "none") {
       return (
         <div
           ref={ref}
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            "sticky top-0 flex h-svh w-[--sidebar-width] flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
             className,
           )}
           {...props}
@@ -320,8 +320,7 @@ const SidebarRail = React.forwardRef<
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        "absolute -right-4 top-4 z-40 hidden h-10 w-10 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent",
-        "md:flex",
+        "absolute -right-4 top-4 z-40 hidden h-10 w-10 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent md:flex",
         className,
       )}
       {...props}
@@ -384,7 +383,6 @@ const SidebarHeader = React.forwardRef<
 ));
 SidebarHeader.displayName = "SidebarHeader";
 
-// ✅ Sticky bottom: mt-auto ensures footer stays at the bottom of the flex column layout.
 const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
@@ -392,7 +390,7 @@ const SidebarFooter = React.forwardRef<
   <div
     ref={ref}
     data-sidebar="footer"
-    className={cn("mt-auto flex flex-col gap-2 p-2", className)}
+    className={cn("flex flex-col gap-2 p-2", className)}
     {...props}
   />
 ));
@@ -418,7 +416,10 @@ const SidebarContent = React.forwardRef<
   <div
     ref={ref}
     data-sidebar="content"
-    className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-auto", className)}
+    className={cn(
+      "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+      className,
+    )}
     {...props}
   />
 ));
@@ -470,7 +471,6 @@ const SidebarGroupAction = React.forwardRef<
       data-sidebar="group-action"
       className={cn(
         "absolute right-3 top-3.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "group-data-[collapsible=icon]:hidden",
         className,
@@ -577,15 +577,10 @@ const SidebarMenuButton = React.forwardRef<
       />
     );
 
-    if (!tooltip) {
-      return button;
-    }
+    if (!tooltip) return button;
 
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      };
-    }
+    const tooltipProps =
+      typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
     return (
       <Tooltip>
@@ -594,7 +589,7 @@ const SidebarMenuButton = React.forwardRef<
           side="right"
           align="center"
           hidden={state !== "collapsed" || isMobile}
-          {...tooltip}
+          {...tooltipProps}
         />
       </Tooltip>
     );
@@ -614,7 +609,6 @@ const SidebarMenuAction = React.forwardRef<
       data-sidebar="menu-action"
       className={cn(
         "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1",
         "peer-data-[size=default]/menu-button:top-1.5",
@@ -652,13 +646,12 @@ SidebarMenuBadge.displayName = "SidebarMenuBadge";
 
 const SidebarMenuSkeleton = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
-    showIcon?: boolean;
-  }
+  React.ComponentProps<"div"> & { showIcon?: boolean }
 >(({ className, showIcon = false, ...props }, ref) => {
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
+  const width = React.useMemo(
+    () => `${Math.floor(Math.random() * 40) + 50}%`,
+    [],
+  );
 
   return (
     <div
@@ -668,7 +661,11 @@ const SidebarMenuSkeleton = React.forwardRef<
       {...props}
     >
       <div className="flex items-center gap-2">
-        {showIcon ? <Skeleton className="h-4 w-4 rounded-md" /> : <Skeleton className="h-4 w-0" />}
+        {showIcon ? (
+          <Skeleton className="h-4 w-4 rounded-md" />
+        ) : (
+          <Skeleton className="h-4 w-0" />
+        )}
         <Skeleton className="h-4 flex-1" style={{ width }} />
       </div>
     </div>
