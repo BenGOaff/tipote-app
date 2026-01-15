@@ -61,7 +61,7 @@ const contentTypes = [
   {
     id: "funnel",
     label: "Funnels",
-    description: "Pages de vente, séquences...",
+    description: "Pages de vente, de capture ...",
     icon: Route,
     color: "bg-indigo-500",
   },
@@ -232,7 +232,7 @@ export default function CreateLovableClient() {
     if (!payload?.title?.trim()) {
       toast({
         title: "Titre requis",
-        description: "Veuillez entrer un titre pour sauvegarder",
+        description: "Entre un titre pour sauvegarder",
         variant: "destructive",
       });
       return;
@@ -315,9 +315,9 @@ export default function CreateLovableClient() {
                     <Sparkles className="w-3 h-3 mr-1" />
                     Propulsé par IA
                   </Badge>
-                  <h2 className="text-2xl font-bold mb-2">Quel type de contenu souhaitez-vous créer ?</h2>
+                  <h2 className="text-2xl font-bold mb-2">Quel type de contenu veux-tu créer ?</h2>
                   <p className="text-primary-foreground/80">
-                    L&apos;IA utilisera vos paramètres Tipote pour générer du contenu aligné avec votre stratégie
+                    L&apos;IA utilisera tes paramètres Tipote pour générer du contenu aligné avec ta stratégie
                   </p>
                 </Card>
 
