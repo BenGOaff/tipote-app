@@ -1,4 +1,3 @@
-// components/analytics/AnalyticsLovableClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -127,7 +126,9 @@ function getCreatedAt(c: TopContentInput) {
   return (anyC?.createdAt ?? anyC?.created_at ?? null) as string | null;
 }
 
-function getType(c: TopContentInput | (NextScheduledInput extends infer T ? T : never)) {
+function getType(
+  c: TopContentInput | (NextScheduledInput extends infer T ? T : never),
+) {
   const anyC: any = c as any;
   return (anyC?.type ?? null) as string | null;
 }
@@ -158,9 +159,10 @@ export default function AnalyticsLovableClient(props: {
   }>;
   nextScheduled: NextScheduledInput;
 }) {
-  const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } = props;
+  const { periodDays, kpis, bars, topContents, trafficSources, nextScheduled } =
+    props;
 
-  const { hasSeenContext, markContextSeen } = useTutorial();
+  const { markContextSeen } = useTutorial();
   const { toast } = useToast();
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -202,7 +204,8 @@ export default function AnalyticsLovableClient(props: {
 
       toast({
         title: "Métriques mises à jour !",
-        description: "Vos données ont été enregistrées. L'IA va adapter vos recommandations.",
+        description:
+          "Vos données ont été enregistrées. L'IA va adapter vos recommandations.",
       });
 
       markContextSeen("first_analytics_visit");
@@ -289,8 +292,12 @@ export default function AnalyticsLovableClient(props: {
             {/* Period Selector */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-display font-bold">Vos performances</h2>
-                <p className="text-muted-foreground">Suivez et optimisez vos résultats</p>
+                <h2 className="text-2xl font-display font-bold">
+                  Vos performances
+                </h2>
+                <p className="text-muted-foreground">
+                  Suivez et optimisez vos résultats
+                </p>
               </div>
               <div className="flex gap-2">
                 {periodButtons.map((b) => (
@@ -309,14 +316,20 @@ export default function AnalyticsLovableClient(props: {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {metrics.map((metric, i) => (
-                <Card key={i} className="p-6 hover:shadow-md transition-all duration-200">
+                <Card
+                  key={i}
+                  className="p-6 hover:shadow-md transition-all duration-200"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div
                       className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center ${metric.color}`}
                     >
                       <metric.icon className="w-5 h-5" />
                     </div>
-                    <Badge variant={trendVariant(metric.delta)} className="flex items-center gap-1">
+                    <Badge
+                      variant={trendVariant(metric.delta)}
+                      className="flex items-center gap-1"
+                    >
                       {metric.delta >= 0 ? (
                         <TrendingUp className="w-3 h-3" />
                       ) : (
@@ -325,7 +338,9 @@ export default function AnalyticsLovableClient(props: {
                       {metric.change}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">{metric.label}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {metric.label}
+                  </p>
                   <p className="text-3xl font-bold">{metric.value}</p>
                 </Card>
               ))}
@@ -342,17 +357,23 @@ export default function AnalyticsLovableClient(props: {
 
               <TabsContent value="engagement" className="space-y-6 mt-6">
                 <Card className="p-6">
-                  <h3 className="text-lg font-bold mb-6">Engagement au fil du temps</h3>
+                  <h3 className="text-lg font-bold mb-6">
+                    Engagement au fil du temps
+                  </h3>
                   <div className="h-64 flex items-end justify-between gap-2">
-                    {(bars.length ? bars : [65, 72, 68, 80, 75, 88, 82, 90, 85, 92, 88, 95, 90, 98]).map(
-                      (height, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 bg-gradient-to-t from-primary to-primary/50 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
-                          style={{ height: `${clamp(height, 5, 100)}%` }}
-                        />
-                      ),
-                    )}
+                    {(bars.length
+                      ? bars
+                      : [
+                          65, 72, 68, 80, 75, 88, 82, 90, 85, 92, 88, 95, 90,
+                          98,
+                        ]
+                    ).map((height, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 bg-gradient-to-t from-primary to-primary/50 rounded-t-lg hover:opacity-80 transition-opacity cursor-pointer"
+                        style={{ height: `${clamp(height, 5, 100)}%` }}
+                      />
+                    ))}
                   </div>
                   <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
                     <span>Jan</span>
@@ -369,12 +390,17 @@ export default function AnalyticsLovableClient(props: {
                       {topContents.slice(0, 4).map((c) => {
                         const type = getType(c);
                         return (
-                          <Link key={c.id} href={`/contents/${c.id}`} className="block">
+                          <Link
+                            key={c.id}
+                            href={`/contents/${c.id}`}
+                            className="block"
+                          >
                             <div className="flex items-start justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                               <div className="flex-1">
                                 <p className="font-medium mb-1">{c.title}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {c.channel} • {labelType(type)} • {labelStatus(c.status)}
+                                  {c.channel} • {labelType(type)} •{" "}
+                                  {labelStatus(c.status)}
                                 </p>
                                 {getCreatedAt(c) ? (
                                   <p className="text-xs text-muted-foreground mt-1">
@@ -396,28 +422,41 @@ export default function AnalyticsLovableClient(props: {
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-lg font-bold mb-6">Sources de trafic</h3>
+                    <h3 className="text-lg font-bold mb-6">
+                      Sources de trafic
+                    </h3>
                     <div className="space-y-4">
                       {(trafficSources.length
                         ? trafficSources
-                        : [{ source: "—", percentage: 100, visitors: "0", color: "bg-muted-foreground/30" }]).map(
-                        (source, i) => (
-                          <div key={`${source.source}-${i}`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium">{source.source}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {clamp(source.percentage, 0, 100)}% • {source.visitors}
-                              </span>
-                            </div>
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${source.color || "bg-primary"} rounded-full transition-all duration-500`}
-                                style={{ width: `${clamp(source.percentage, 0, 100)}%` }}
-                              />
-                            </div>
+                        : [
+                            {
+                              source: "—",
+                              percentage: 100,
+                              visitors: "0",
+                              color: "bg-muted-foreground/30",
+                            },
+                          ]
+                      ).map((source, i) => (
+                        <div key={`${source.source}-${i}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">{source.source}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {clamp(source.percentage, 0, 100)}% •{" "}
+                              {source.visitors}
+                            </span>
                           </div>
-                        ),
-                      )}
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${
+                                source.color || "bg-primary"
+                              } rounded-full transition-all duration-500`}
+                              style={{
+                                width: `${clamp(source.percentage, 0, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </Card>
                 </div>
@@ -427,7 +466,8 @@ export default function AnalyticsLovableClient(props: {
                 <Card className="p-12 text-center">
                   <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Sur {periodDays} jours : {kpis.totalNow} contenus • canal principal : {topChannel}
+                    Sur {periodDays} jours : {kpis.totalNow} contenus • canal
+                    principal : {topChannel}
                   </p>
                 </Card>
               </TabsContent>
@@ -436,7 +476,8 @@ export default function AnalyticsLovableClient(props: {
                 <Card className="p-12 text-center">
                   <MousePointer className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Taux de publication : {publishRate}% • taux de planification : {scheduledRate}%
+                    Taux de publication : {publishRate}% • taux de planification
+                    : {scheduledRate}%
                   </p>
                 </Card>
               </TabsContent>
@@ -446,7 +487,10 @@ export default function AnalyticsLovableClient(props: {
                   <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
                     Répartition par canaux:{" "}
-                    {(trafficSources.length ? trafficSources.slice(0, 3) : []).map((s, idx) => (
+                    {(trafficSources.length
+                      ? trafficSources.slice(0, 3)
+                      : []
+                    ).map((s, idx) => (
                       <span key={`${s.source}-${idx}`}>
                         {idx > 0 ? " • " : ""}
                         {s.source} {clamp(s.percentage, 0, 100)}%
@@ -460,7 +504,9 @@ export default function AnalyticsLovableClient(props: {
 
             {/* Goals Progress */}
             <Card className="p-6">
-              <h3 className="text-lg font-bold mb-6">Progression des objectifs</h3>
+              <h3 className="text-lg font-bold mb-6">
+                Progression des objectifs
+              </h3>
               <div className="space-y-6">
                 {[
                   {
@@ -472,9 +518,19 @@ export default function AnalyticsLovableClient(props: {
                   {
                     label: "Objectif contenus publiés (période)",
                     current: `${kpis.publishedNow}`,
-                    target: `${Math.max(kpis.publishedPrev, kpis.publishedNow, 1)}`,
+                    target: `${Math.max(
+                      kpis.publishedPrev,
+                      kpis.publishedNow,
+                      1,
+                    )}`,
                     progress: clamp(
-                      pct(kpis.publishedNow, Math.max(1, Math.max(kpis.publishedPrev, kpis.publishedNow, 1))),
+                      pct(
+                        kpis.publishedNow,
+                        Math.max(
+                          1,
+                          Math.max(kpis.publishedPrev, kpis.publishedNow, 1),
+                        ),
+                      ),
                       0,
                       100,
                     ),
@@ -482,9 +538,19 @@ export default function AnalyticsLovableClient(props: {
                   {
                     label: "Objectif contenus planifiés (période)",
                     current: `${kpis.scheduledNow}`,
-                    target: `${Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1)}`,
+                    target: `${Math.max(
+                      kpis.scheduledPrev,
+                      kpis.scheduledNow,
+                      1,
+                    )}`,
                     progress: clamp(
-                      pct(kpis.scheduledNow, Math.max(1, Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1))),
+                      pct(
+                        kpis.scheduledNow,
+                        Math.max(
+                          1,
+                          Math.max(kpis.scheduledPrev, kpis.scheduledNow, 1),
+                        ),
+                      ),
                       0,
                       100,
                     ),
@@ -493,20 +559,20 @@ export default function AnalyticsLovableClient(props: {
                   <div key={i}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{goal.label}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {goal.current} / {goal.target}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <div className="h-3 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full gradient-primary rounded-full transition-all duration-500"
-                          style={{ width: `${clamp(goal.progress, 0, 100)}%` }}
-                        />
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          {goal.current} / {goal.target}
+                        </span>
+                        <span className="text-xs font-medium text-primary whitespace-nowrap">
+                          ({clamp(goal.progress, 0, 100)}%)
+                        </span>
                       </div>
-                      <span className="absolute -right-0 -top-7 text-xs font-medium text-primary">
-                        {clamp(goal.progress, 0, 100)}%
-                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full gradient-primary rounded-full transition-all duration-500"
+                        style={{ width: `${clamp(goal.progress, 0, 100)}%` }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -526,18 +592,25 @@ export default function AnalyticsLovableClient(props: {
                       Mettre à jour vos données
                     </h3>
                     <p className="text-primary-foreground/90 mb-4">
-                      N&apos;oubliez pas de mettre à jour vos métriques chaque semaine pour que l&apos;IA puisse
-                      analyser vos résultats et adapter votre stratégie
+                      N&apos;oubliez pas de mettre à jour vos métriques chaque
+                      semaine pour que l&apos;IA puisse analyser vos résultats
+                      et adapter votre stratégie
                       {nextScheduled ? (
                         <>
                           . Prochaine publication planifiée :{" "}
-                          <span className="font-semibold">{nextScheduled.title}</span> •{" "}
-                          {labelType(getType(nextScheduled as any))} • {nextScheduled.channel} •{" "}
+                          <span className="font-semibold">
+                            {nextScheduled.title}
+                          </span>{" "}
+                          • {labelType(getType(nextScheduled as any))} •{" "}
+                          {nextScheduled.channel} •{" "}
                           {formatDateTime(getScheduledAt(nextScheduled as any))}
                         </>
                       ) : null}
                     </p>
-                    <Button variant="secondary" onClick={() => setIsUpdateModalOpen(true)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsUpdateModalOpen(true)}
+                    >
                       Mettre à jour maintenant
                     </Button>
                   </div>
@@ -552,20 +625,26 @@ export default function AnalyticsLovableClient(props: {
               <DialogHeader>
                 <DialogTitle>Mettre à jour vos métriques</DialogTitle>
                 <DialogDescription>
-                  Entrez vos dernières données pour que l&apos;IA puisse affiner vos recommandations.
+                  Entrez vos dernières données pour que l&apos;IA puisse affiner
+                  vos recommandations.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="emailOpenRate">Taux d'ouverture emails (%)</Label>
+                  <Label htmlFor="emailOpenRate">
+                    Taux d&apos;ouverture emails (%)
+                  </Label>
                   <Input
                     id="emailOpenRate"
                     type="number"
                     placeholder="ex: 34.2"
                     value={metricsForm.emailOpenRate}
                     onChange={(e) =>
-                      setMetricsForm((prev) => ({ ...prev, emailOpenRate: e.target.value }))
+                      setMetricsForm((prev) => ({
+                        ...prev,
+                        emailOpenRate: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -578,7 +657,10 @@ export default function AnalyticsLovableClient(props: {
                     placeholder="ex: 8.7"
                     value={metricsForm.conversionRate}
                     onChange={(e) =>
-                      setMetricsForm((prev) => ({ ...prev, conversionRate: e.target.value }))
+                      setMetricsForm((prev) => ({
+                        ...prev,
+                        conversionRate: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -591,7 +673,10 @@ export default function AnalyticsLovableClient(props: {
                     placeholder="ex: 1247"
                     value={metricsForm.newSubscribers}
                     onChange={(e) =>
-                      setMetricsForm((prev) => ({ ...prev, newSubscribers: e.target.value }))
+                      setMetricsForm((prev) => ({
+                        ...prev,
+                        newSubscribers: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -604,7 +689,10 @@ export default function AnalyticsLovableClient(props: {
                     placeholder="ex: 12400"
                     value={metricsForm.pageViews}
                     onChange={(e) =>
-                      setMetricsForm((prev) => ({ ...prev, pageViews: e.target.value }))
+                      setMetricsForm((prev) => ({
+                        ...prev,
+                        pageViews: e.target.value,
+                      }))
                     }
                   />
                 </div>

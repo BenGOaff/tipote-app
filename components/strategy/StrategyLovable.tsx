@@ -13,13 +13,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Target,
-  TrendingUp,
   Users,
-  DollarSign,
   CheckCircle2,
-  Clock,
   ArrowRight,
-  Edit3,
+  Layers,
+  Clock,
+  Plus,
 } from "lucide-react";
 
 type AnyRecord = Record<string, unknown>;
@@ -74,14 +73,30 @@ function toStr(v: unknown): string {
 
 function isDoneStatus(v: unknown) {
   const s = toStr(v).toLowerCase();
-  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
+  return (
+    s === "done" ||
+    s === "completed" ||
+    s === "fait" ||
+    s === "terminé" ||
+    s === "termine"
+  );
 }
 
-function pickSelectedPyramid(offerPyramids: AnyRecord[], index: number, explicit?: AnyRecord) {
+function pickSelectedPyramid(
+  offerPyramids: AnyRecord[],
+  index: number,
+  explicit?: AnyRecord,
+) {
   if (explicit) return explicit;
   if (!Array.isArray(offerPyramids) || offerPyramids.length === 0) return null;
-  if (typeof index !== "number" || index < 0 || index >= offerPyramids.length) return offerPyramids[0];
+  if (typeof index !== "number" || index < 0 || index >= offerPyramids.length)
+    return offerPyramids[0];
   return offerPyramids[index];
+}
+
+function clamp(n: number, min: number, max: number) {
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
 }
 
 export default function StrategyLovable(props: StrategyLovableProps) {
@@ -103,7 +118,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const personaGoals = Array.isArray(props.persona?.desires) ? props.persona.desires : [];
   const personaChannels = Array.isArray(props.persona?.channels) ? props.persona.channels : [];
 
-  // ✅ Local state: permet de cocher/décocher sans casser le DOM Lovable
+  // ✅ Local state: permet de cocher/décocher sans casser l’UX
   const initialStatusById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const ph of props.phases || []) {
@@ -131,7 +146,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             body: JSON.stringify({ status: nextStatus }),
           });
 
-          const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+          const json = (await res.json().catch(() => null)) as
+            | { ok?: boolean; error?: string }
+            | null;
 
           if (!res.ok || !json?.ok) {
             // rollback
@@ -139,7 +156,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             return;
           }
 
-          // refresh pour recalcul server-side progress / compteurs si besoin
           router.refresh();
         } catch {
           setStatusById((prev) => ({ ...prev, [taskId]: nextChecked ? "todo" : "done" }));
@@ -149,265 +165,311 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     [router, startTransition],
   );
 
-  // Pas d'UI pending (Lovable)
+  // Lovable : pas d'UI pending
   void pending;
+
+  // Helpers affichage pyramide (sans inventer de schéma)
+  const leadTitle = toStr(lead?.title) || "—";
+  const midTitle = toStr(mid?.title) || "—";
+  const highTitle = toStr(high?.title) || "—";
+
+  const leadPrice =
+    toStr(lead?.price) || toStr(lead?.amount) || toStr(lead?.pricing) || "Gratuit";
+  const midPrice = toStr(mid?.price) || toStr(mid?.amount) || toStr(mid?.pricing) || "—";
+  const highPrice = toStr(high?.price) || toStr(high?.amount) || toStr(high?.pricing) || "—";
+
+  const leadDesc = toStr(lead?.description) || toStr(lead?.format) || toStr(lead?.composition) || "";
+  const midDesc = toStr(mid?.description) || toStr(mid?.format) || toStr(mid?.composition) || "";
+  const highDesc =
+    toStr(high?.description) || toStr(high?.format) || toStr(high?.composition) || "";
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1">
-          <div className="flex h-16 items-center gap-4 border-b bg-background px-6">
+
+        <main className="flex-1 overflow-auto bg-muted/30">
+          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
-            <h1 className="text-xl font-semibold">Ma Stratégie</h1>
-            <div className="ml-auto">
-              <Button variant="outline" size="sm" className="rounded-full">
-                <Edit3 className="mr-2 h-4 w-4" />
-                Personnaliser
-              </Button>
+            <div className="ml-4 flex-1">
+              <h1 className="text-xl font-display font-bold">Ma Stratégie</h1>
             </div>
-          </div>
+            <Button variant="outline">Personnaliser</Button>
+          </header>
 
-          <div className="p-6 space-y-6">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-900 p-8 text-white">
-              <div className="absolute right-8 top-8 opacity-20">
-                <Target className="h-16 w-16" />
+          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Strategic Overview */}
+            <Card className="p-8 gradient-hero border-border/50">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
+                    Votre Vision Stratégique
+                  </h2>
+                  <p className="text-primary-foreground/90 text-lg max-w-2xl">
+                    Plan personnalisé généré par l&apos;IA pour atteindre vos objectifs business
+                  </p>
+                </div>
+                <Target className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
               </div>
 
-              <h2 className="text-4xl font-bold mb-2">Votre Vision Stratégique</h2>
-              <p className="text-indigo-100 text-lg mb-8">
-                Plan personnalisé généré par l&apos;IA pour atteindre vos objectifs business
-              </p>
-
-              <div className="grid grid-cols-3 gap-6">
-                <div className="bg-white/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="text-sm opacity-90">Objectif Revenu</span>
-                  </div>
-                  <div className="text-2xl font-bold">{props.revenueGoal}</div>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">Objectif Revenue</p>
+                  <p className="text-2xl font-bold text-primary-foreground">{props.revenueGoal}</p>
                 </div>
-
-                <div className="bg-white/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm opacity-90">Horizon</span>
-                  </div>
-                  <div className="text-2xl font-bold">{props.horizon}</div>
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">Horizon</p>
+                  <p className="text-2xl font-bold text-primary-foreground">{props.horizon}</p>
                 </div>
-
-                <div className="bg-white/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="text-sm opacity-90">Progression</span>
-                  </div>
-                  <div className="text-2xl font-bold">{props.progressionPercent}%</div>
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">Progression</p>
+                  <p className="text-2xl font-bold text-primary-foreground">
+                    {clamp(props.progressionPercent, 0, 100)}%
+                  </p>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <Tabs defaultValue="action" className="w-full">
-              <TabsList className="grid w-fit grid-cols-3">
-                <TabsTrigger value="action">Plan d&apos;action</TabsTrigger>
+            {/* Tabs for different views */}
+            <Tabs defaultValue="plan" className="w-full">
+              <TabsList className="mb-6">
+                <TabsTrigger value="plan">Plan d&apos;action</TabsTrigger>
                 <TabsTrigger value="pyramid">Pyramide d&apos;offres</TabsTrigger>
                 <TabsTrigger value="persona">Persona cible</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="action" className="space-y-6">
-                <div className="grid grid-cols-3 gap-6">
-                  <Card className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-indigo-100 p-2 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5 text-indigo-600" />
+              {/* Plan d'action Tab */}
+              <TabsContent value="plan" className="space-y-6">
+                {/* Progress Overview */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Card className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-medium">Tâches complétées</span>
+                      <span className="font-semibold">Tâches complétées</span>
                     </div>
-                    <div className="text-3xl font-bold mb-2">
+                    <p className="text-3xl font-bold">
                       {props.totalDone}/{props.totalAll}
-                    </div>
-                    <Progress value={props.progressionPercent} className="h-2" />
+                    </p>
+                    <Progress value={clamp(props.progressionPercent, 0, 100)} className="mt-3" />
                   </Card>
 
-                  <Card className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-indigo-100 p-2 rounded-lg">
-                        <Clock className="h-5 w-5 text-indigo-600" />
+                  <Card className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Clock className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-medium">Jours restants</span>
+                      <span className="font-semibold">Jours restants</span>
                     </div>
-                    <div className="text-3xl font-bold mb-2">{props.daysRemaining}</div>
-                    <div className="text-sm text-muted-foreground">Sur 90 jours</div>
+                    <p className="text-3xl font-bold">{props.daysRemaining}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Sur 90 jours</p>
                   </Card>
 
-                  <Card className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
+                  <Card className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Target className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-medium">Phase actuelle</span>
+                      <span className="font-semibold">Phase actuelle</span>
                     </div>
-                    <div className="text-3xl font-bold mb-2">{props.currentPhase}</div>
-                    <div className="text-sm text-muted-foreground">{props.currentPhaseLabel}</div>
+                    <p className="text-3xl font-bold">{props.currentPhase}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{props.currentPhaseLabel}</p>
                   </Card>
                 </div>
 
-                {props.phases.map((phase, idx) => {
-                  const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
-                  const doneInPhase = tasks.filter((t) => isDoneStatus(statusById[String(t.id)] ?? t.status)).length;
-                  const phaseProgress = tasks.length ? Math.round((doneInPhase / tasks.length) * 100) : 0;
+                {/* Phases */}
+                <div className="space-y-6">
+                  {(props.phases || []).map((phase, idx) => {
+                    const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
+                    const doneInPhase = tasks.filter((t) =>
+                      isDoneStatus(statusById[String(t.id)] ?? t.status),
+                    ).length;
+                    const phaseProgress = tasks.length
+                      ? Math.round((doneInPhase / tasks.length) * 100)
+                      : 0;
 
-                  return (
-                    <Card key={idx} className="p-6">
-                      <div className="flex items-start justify-between mb-6">
-                        <div>
-                          <h3 className="text-xl font-semibold">{phase.title}</h3>
-                          <p className="text-muted-foreground">{phase.period}</p>
-                        </div>
-                        <Badge variant="secondary" className="rounded-full">
-                          {phaseProgress}%
-                        </Badge>
-                      </div>
+                    const badgeVariant =
+                      phaseProgress === 100
+                        ? "default"
+                        : phaseProgress > 0
+                          ? "secondary"
+                          : "outline";
 
-                      <Progress value={phaseProgress} className="h-2 mb-6" />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        {tasks.length ? (
-                          tasks.map((task) => (
-                            <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                              <Checkbox
-                                checked={isDoneStatus(statusById[String(task.id)] ?? task.status)}
-                                onCheckedChange={(v) => toggleTask(String(task.id), Boolean(v))}
-                              />
-                              <span
-                                className={
-                                  isDoneStatus(statusById[String(task.id)] ?? task.status)
-                                    ? "line-through text-muted-foreground"
-                                    : ""
-                                }
-                              >
-                                {task.title || "—"}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="col-span-2 text-sm text-muted-foreground">
-                            Aucune tâche dans cette phase pour l&apos;instant.
+                    return (
+                      <Card key={idx} className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-bold">{phase.title}</h3>
+                            <p className="text-sm text-muted-foreground">{phase.period}</p>
                           </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
+                          <Badge variant={badgeVariant as any}>{phaseProgress}%</Badge>
+                        </div>
 
-                <Card className="p-6 bg-indigo-50 border-indigo-100">
+                        <Progress value={clamp(phaseProgress, 0, 100)} className="mb-4" />
+
+                        <div className="grid md:grid-cols-2 gap-3">
+                          {tasks.length ? (
+                            tasks.map((task) => {
+                              const checked = isDoneStatus(statusById[String(task.id)] ?? task.status);
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(v) => toggleTask(String(task.id), Boolean(v))}
+                                  />
+                                  <span className={checked ? "line-through text-muted-foreground" : ""}>
+                                    {task.title || "—"}
+                                  </span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-sm text-muted-foreground">
+                              Aucune tâche dans cette phase pour l&apos;instant.
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Next Step */}
+                <Card className="p-5 bg-primary/5 border-primary/20">
                   <div className="flex items-start gap-4">
-                    <div className="bg-indigo-100 p-2 rounded-lg">
-                      <Target className="h-5 w-5 text-indigo-600" />
-                    </div>
+                    <Target className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-indigo-900 mb-2">Prochaine étape recommandée</h3>
-                      <p className="text-indigo-700 mb-4">
+                      <p className="font-semibold text-primary mb-1">Prochaine étape recommandée</p>
+                      <p className="text-sm text-muted-foreground mb-3">
                         Continue l&apos;exécution : synchronise ton plan puis avance phase par phase.
                       </p>
-                      <Button className="bg-indigo-600 hover:bg-indigo-700">
-                        Commencer
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                      <Button variant="default" size="sm">
+                        Commencer <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 </Card>
               </TabsContent>
 
+              {/* Pyramide d'offres Tab */}
               <TabsContent value="pyramid" className="space-y-6">
                 <Card className="p-6">
-                  <h3 className="text-xl font-semibold mb-2">Pyramide d&apos;offres sélectionnée</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Voici la structure recommandée pour maximiser la conversion à chaque niveau.
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    <Card className="p-4 bg-green-50 border-green-100">
-                      <h4 className="font-semibold text-green-900 mb-2">Lead Magnet</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="font-medium">{toStr(lead?.title) || "—"}</div>
-                        <div className="text-green-700">{toStr(lead?.format) || ""}</div>
-                        <div className="text-green-600">{toStr(lead?.composition) || ""}</div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-4 bg-blue-50 border-blue-100">
-                      <h4 className="font-semibold text-blue-900 mb-2">Low Ticket</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="font-medium">{toStr(mid?.title) || "—"}</div>
-                        <div className="text-blue-700">{toStr(mid?.format) || ""}</div>
-                        <div className="text-blue-600">{toStr(mid?.composition) || ""}</div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-4 bg-purple-50 border-purple-100">
-                      <h4 className="font-semibold text-purple-900 mb-2">High Ticket</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="font-medium">{toStr(high?.title) || "—"}</div>
-                        <div className="text-purple-700">{toStr(high?.format) || ""}</div>
-                        <div className="text-purple-600">{toStr(high?.composition) || ""}</div>
-                      </div>
-                    </Card>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                      <Layers className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <h3 className="text-xl font-bold">Pyramide d&apos;Offres</h3>
                   </div>
+
+                  <div className="space-y-4">
+                    <div className="p-5 rounded-lg border-2 border-success bg-success/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-success">High Ticket</p>
+                          <p className="text-3xl font-bold mt-1">{highPrice}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{highTitle}{highDesc ? ` — ${highDesc}` : ""}</p>
+                    </div>
+
+                    <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-primary">Middle Ticket</p>
+                          <p className="text-3xl font-bold mt-1">{midPrice}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{midTitle}{midDesc ? ` — ${midDesc}` : ""}</p>
+                    </div>
+
+                    <div className="p-5 rounded-lg border-2 border-secondary bg-secondary/5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-secondary">Lead Magnet</p>
+                          <p className="text-3xl font-bold mt-1">{leadPrice}</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-secondary" />
+                      </div>
+                      <p className="text-muted-foreground mt-2">{leadTitle}{leadDesc ? ` — ${leadDesc}` : ""}</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="w-full mt-6"
+                    onClick={() => router.push("/strategy/pyramids")}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter une offre
+                  </Button>
                 </Card>
               </TabsContent>
 
+              {/* Persona Tab */}
               <TabsContent value="persona" className="space-y-6">
                 <Card className="p-6">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-indigo-100 p-2 rounded-lg">
-                      <Users className="h-5 w-5 text-indigo-600" />
+                    <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center">
+                      <Users className="w-5 h-5 text-secondary-foreground" />
                     </div>
-                    <h3 className="text-xl font-semibold">Persona cible</h3>
+                    <h3 className="text-xl font-bold">Persona Cible</h3>
                   </div>
 
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold mb-2">Profil</h4>
-                      <p className="text-muted-foreground">{personaTitle}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
                       <div>
-                        <h4 className="font-semibold mb-3">Points de douleur</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                          {personaPains.length ? (
-                            personaPains.map((p, i) => <li key={i}>• {p}</li>)
-                          ) : (
-                            <li>—</li>
-                          )}
-                        </ul>
+                        <p className="text-sm text-muted-foreground mb-2">Profil Principal</p>
+                        <p className="font-semibold text-lg">{personaTitle}</p>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold mb-3">Désirs / objectifs</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                          {personaGoals.length ? personaGoals.map((g, i) => <li key={i}>• {g}</li>) : <li>—</li>}
+                        <p className="text-sm text-muted-foreground mb-3">Problèmes Principaux</p>
+                        <ul className="space-y-2">
+                          {(personaPains.length ? personaPains : ["—"]).map((p, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="w-2 h-2 rounded-full bg-destructive mt-2 flex-shrink-0" />
+                              <span>{p}</span>
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold mb-3">Canaux de communication</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {personaChannels.length ? (
-                          personaChannels.map((c, i) => (
-                            <Badge key={i} variant="secondary" className="rounded-full">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-3">Objectifs</p>
+                        <ul className="space-y-2">
+                          {(personaGoals.length ? personaGoals : ["—"]).map((g, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
+                              <span>{g}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Canaux préférés</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(personaChannels.length ? personaChannels : ["—"]).map((c, i) => (
+                            <Badge key={i} variant="outline">
                               {c}
                             </Badge>
-                          ))
-                        ) : (
-                          <Badge variant="secondary" className="rounded-full">
-                            —
-                          </Badge>
-                        )}
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  <Button variant="outline" className="w-full mt-6">
+                    Modifier le persona
+                  </Button>
                 </Card>
               </TabsContent>
             </Tabs>
