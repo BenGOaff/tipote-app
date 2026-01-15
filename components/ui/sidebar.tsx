@@ -24,7 +24,7 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
-type SidebarContextValue = {
+type SidebarContext = {
   state: "expanded" | "collapsed";
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -34,7 +34,7 @@ type SidebarContextValue = {
   toggleSidebar: () => void;
 };
 
-const SidebarContext = React.createContext<SidebarContextValue | null>(null);
+const SidebarContext = React.createContext<SidebarContext | null>(null);
 
 function useSidebar() {
   const context = React.useContext(SidebarContext);
@@ -102,15 +102,12 @@ const SidebarProvider = React.forwardRef<
     );
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile ? setOpenMobile((v) => !v) : setOpen((v) => !v);
-    }, [isMobile, setOpen]);
+      return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
+    }, [isMobile, setOpen, setOpenMobile]);
 
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
+        if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();
           toggleSidebar();
         }
@@ -122,7 +119,7 @@ const SidebarProvider = React.forwardRef<
 
     const state = open ? "expanded" : "collapsed";
 
-    const contextValue = React.useMemo<SidebarContextValue>(
+    const contextValue = React.useMemo<SidebarContext>(
       () => ({
         state,
         open,
@@ -132,7 +129,7 @@ const SidebarProvider = React.forwardRef<
         setOpenMobile,
         toggleSidebar,
       }),
-      [state, open, setOpen, isMobile, openMobile, toggleSidebar],
+      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
     );
 
     return (
@@ -221,16 +218,16 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className="group peer shrink-0 text-sidebar-foreground"
+        className="group peer text-sidebar-foreground"
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
       >
-        {/* Reserve space in normal flow so main content never slides under the fixed sidebar */}
+        {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "relative h-svh w-[--sidebar-width] shrink-0 bg-transparent transition-[width] duration-200 ease-linear",
+            "relative h-svh w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -244,6 +241,7 @@ const Sidebar = React.forwardRef<
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -461,6 +459,7 @@ const SidebarGroupAction = React.forwardRef<
       data-sidebar="group-action"
       className={cn(
         "absolute right-3 top-3.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "group-data-[collapsible=icon]:hidden",
         className,
@@ -542,15 +541,7 @@ const SidebarMenuButton = React.forwardRef<
     }
 >(
   (
-    {
-      asChild = false,
-      isActive = false,
-      variant,
-      size,
-      tooltip,
-      className,
-      ...props
-    },
+    { asChild = false, isActive = false, variant, size, tooltip, className, ...props },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
@@ -567,10 +558,15 @@ const SidebarMenuButton = React.forwardRef<
       />
     );
 
-    if (!tooltip) return button;
+    if (!tooltip) {
+      return button;
+    }
 
-    const tooltipProps =
-      typeof tooltip === "string" ? { children: tooltip } : tooltip;
+    if (typeof tooltip === "string") {
+      tooltip = {
+        children: tooltip,
+      };
+    }
 
     return (
       <Tooltip>
@@ -579,7 +575,7 @@ const SidebarMenuButton = React.forwardRef<
           side="right"
           align="center"
           hidden={state !== "collapsed" || isMobile}
-          {...tooltipProps}
+          {...tooltip}
         />
       </Tooltip>
     );
@@ -602,6 +598,7 @@ const SidebarMenuAction = React.forwardRef<
       data-sidebar="menu-action"
       className={cn(
         "absolute right-1 top-1.5 flex aspect-square w-7 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1 peer-data-[size=sm]/menu-button:w-6",
         "peer-data-[size=lg]/menu-button:top-2 peer-data-[size=lg]/menu-button:w-7",
@@ -637,12 +634,13 @@ SidebarMenuBadge.displayName = "SidebarMenuBadge";
 
 const SidebarMenuSkeleton = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & { showIcon?: boolean }
+  React.ComponentProps<"div"> & {
+    showIcon?: boolean;
+  }
 >(({ className, showIcon = false, ...props }, ref) => {
-  const width = React.useMemo(
-    () => `${Math.floor(Math.random() * 40) + 50}%`,
-    [],
-  );
+  const width = React.useMemo(() => {
+    return `${Math.floor(Math.random() * 40) + 50}%`;
+  }, []);
 
   return (
     <div
