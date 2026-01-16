@@ -14,17 +14,28 @@ export default async function StrategyPyramidsPage({
 
   if (!auth?.user) redirect("/");
 
+  // ✅ Guard onboarding : si onboarding non complété, on renvoie vers /onboarding
+  const { data: profile, error: profileError } = await supabase
+    .from("business_profiles")
+    .select("onboarding_completed")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+
+  if (profileError || !profile?.onboarding_completed) {
+    redirect("/onboarding");
+  }
+
   const { data: planRow, error: planError } = await supabase
     .from("business_plan")
     .select("plan_json")
     .eq("user_id", auth.user.id)
     .maybeSingle();
 
-  if (planError || !planRow?.plan_json) {
-    redirect("/onboarding");
-  }
+  // ✅ IMPORTANT: ne jamais renvoyer vers /onboarding si l'utilisateur est déjà onboardé.
+  // Si plan indisponible / vide, on laisse PyramidSelection s'afficher (la génération/selection se fait via API).
+  void planError;
 
-  const planJson = planRow.plan_json as any;
+  const planJson = (planRow?.plan_json ?? {}) as any;
 
   /**
    * Dev/test bypass:

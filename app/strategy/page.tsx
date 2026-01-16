@@ -105,6 +105,17 @@ export default async function StrategyPage() {
 
   if (!user) redirect("/");
 
+  // ✅ Guard onboarding : évite les boucles "onboarding ↔ stratégie"
+  const { data: onboardingRow, error: onboardingError } = await supabase
+    .from("business_profiles")
+    .select("onboarding_completed")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (onboardingError || !onboardingRow?.onboarding_completed) {
+    redirect("/onboarding");
+  }
+
   // Plan
   const planRes = await supabase
     .from("business_plan")
@@ -112,12 +123,14 @@ export default async function StrategyPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (planRes.error) redirect("/onboarding");
+  // ✅ Si plan non lisible/manquant => c'est un problème de flow stratégie (pas onboarding)
+  if (planRes.error) redirect("/strategy/pyramids");
 
   const planRow = (planRes.data ?? null) as AnyRecord | null;
   const planJson = (planRow?.plan_json ?? {}) as AnyRecord;
 
-  if (!Object.keys(planJson).length) redirect("/onboarding");
+  // ✅ Si plan_json vide => renvoyer au flow officiel de sélection pyramide
+  if (!Object.keys(planJson).length) redirect("/strategy/pyramids");
 
   // ✅ si pas de pyramide choisie -> page Lovable de choix
   const selectedIndex = planJson.selected_offer_pyramid_index;
@@ -210,12 +223,11 @@ export default async function StrategyPage() {
   const revenueFromPlan = normalizeRevenueGoalText((planJson as AnyRecord)?.revenue_goal);
   const revenueFromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
 
-  const revenueGoal =
-    revenueFromPlan
-      ? `${revenueFromPlan} € / mois`
-      : revenueFromProfile
-        ? `${revenueFromProfile} € / mois`
-        : "—";
+  const revenueGoal = revenueFromPlan
+    ? `${revenueFromPlan} € / mois`
+    : revenueFromProfile
+      ? `${revenueFromProfile} € / mois`
+      : "—";
 
   const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
@@ -230,10 +242,9 @@ export default async function StrategyPage() {
   const createdAt = asString(planRow?.created_at);
   const createdDate = createdAt ? parseDateOnly(createdAt) : null;
 
-  const daysElapsed =
-    createdDate
-      ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
-      : 0;
+  const daysElapsed = createdDate
+    ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   const daysRemaining = Math.max(0, 90 - daysElapsed);
 
