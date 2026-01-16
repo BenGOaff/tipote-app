@@ -12,6 +12,26 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+
+import { SortableTask } from "@/components/strategy/SortableTask";
+import { AddTaskDialog } from "@/components/strategy/AddTaskDialog";
+
 import {
   Target,
   CheckCircle2,
@@ -20,6 +40,9 @@ import {
   Clock,
   Plus,
   Users,
+  Pencil,
+  X,
+  Save,
 } from "lucide-react";
 
 type AnyRecord = Record<string, unknown>;
@@ -103,10 +126,25 @@ function pickFirstNonEmpty(...vals: unknown[]): string {
   return "—";
 }
 
+function addDaysISO(base: Date, days: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function phaseIndexToDueDate(phaseIndex: number): string {
+  const today = new Date();
+  if (phaseIndex === 0) return addDaysISO(today, 7);
+  if (phaseIndex === 1) return addDaysISO(today, 37);
+  return addDaysISO(today, 67);
+}
+
 export default function StrategyLovable(props: StrategyLovableProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, startTransition] = useTransition();
 
+  // --- Sélection pyramide (inchangé) ---
   const selectedPyramid = pickSelectedPyramid(
     (props.offerPyramids || []) as AnyRecord[],
     props.initialSelectedIndex ?? 0,
@@ -124,8 +162,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     selectedPyramid?.highTicket ??
     null) as AnyRecord | null;
 
+  // --- Persona (inchangé) ---
   const personaTitle = props.persona?.title || "—";
-  const personaPains = Array.isArray(props.persona?.pains) ? props.persona.pains : [];
+  const personaPains = Array.isArray(props.persona?.pains)
+    ? props.persona.pains
+    : [];
   const personaGoals = Array.isArray(props.persona?.desires)
     ? props.persona.desires
     : [];
@@ -133,7 +174,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     ? props.persona.channels
     : [];
 
-  // ✅ Local state: permet de cocher/décocher sans casser l’UX
+  // ✅ Local state statuses (existant) : permet de cocher/décocher sans casser l’UX
   const initialStatusById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const ph of props.phases || []) {
@@ -147,6 +188,174 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   const [statusById, setStatusById] =
     useState<Record<string, string>>(initialStatusById);
+
+  // ✅ NEW : état local pour personnalisation (drag/drop, add, delete) sans casser le mode normal
+  const [isEditing, setIsEditing] = useState(false);
+  const [phases, setPhases] = useState<Phase[]>(props.phases || []);
+  const [savedPhases, setSavedPhases] = useState<Phase[]>(props.phases || []);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+
+  // Sync phases local si props changent (ex: router.refresh après toggle)
+  // On ne force pas en mode édition pour éviter d’écraser l’ordre local en cours.
+  useMemo(() => {
+    if (!isEditing) {
+      setPhases(props.phases || []);
+      setSavedPhases(props.phases || []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.phases]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, phaseIndex: number) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        setPhases((prevPhases) => {
+          const newPhases = [...prevPhases];
+          const phase = newPhases[phaseIndex];
+          const oldIndex = phase.tasks.findIndex((t) => t.id === active.id);
+          const newIndex = phase.tasks.findIndex((t) => t.id === over.id);
+
+          if (oldIndex < 0 || newIndex < 0) return prevPhases;
+
+          newPhases[phaseIndex] = {
+            ...phase,
+            tasks: arrayMove(phase.tasks, oldIndex, newIndex),
+          };
+
+          return newPhases;
+        });
+      }
+    },
+    [],
+  );
+
+  const handleStartEditing = useCallback(() => {
+    setSavedPhases(phases);
+    setIsEditing(true);
+  }, [phases]);
+
+  const handleCancelEditing = useCallback(() => {
+    setPhases(savedPhases);
+    setIsEditing(false);
+  }, [savedPhases]);
+
+  const handleSaveChanges = useCallback(() => {
+    // Ici on conserve le comportement Lovable : sauvegarde UX (ordre local + add/delete) sans casser l’existant.
+    setSavedPhases(phases);
+    setIsEditing(false);
+    toast({
+      title: "Modifications enregistrées",
+      description: "Ta stratégie a été mise à jour avec succès",
+    });
+  }, [phases, toast]);
+
+  const deleteTask = useCallback(
+    async (taskId: string) => {
+      // UX instant
+      setPhases((prev) =>
+        prev.map((ph) => ({
+          ...ph,
+          tasks: (ph.tasks || []).filter((t) => String(t.id) !== String(taskId)),
+        })),
+      );
+
+      try {
+        const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+          method: "DELETE",
+        });
+        const json = (await res.json().catch(() => null)) as
+          | { ok?: boolean; error?: string }
+          | null;
+
+        if (!res.ok || !json?.ok) {
+          toast({
+            title: "Erreur",
+            description: json?.error || "Impossible de supprimer la tâche.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Tâche supprimée",
+          description: "La tâche a bien été supprimée.",
+        });
+      } catch {
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer la tâche.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
+
+  const addTask = useCallback(
+    async (taskName: string, phaseIndex: number) => {
+      try {
+        const due_date = phaseIndexToDueDate(phaseIndex);
+
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: taskName,
+            due_date,
+            priority: "high",
+            status: "todo",
+          }),
+        });
+
+        const json = (await res.json().catch(() => null)) as
+          | { ok?: boolean; task?: TaskRow; error?: string }
+          | null;
+
+        if (!res.ok || !json?.ok || !json?.task?.id) {
+          toast({
+            title: "Erreur",
+            description: json?.error || "Impossible d'ajouter la tâche.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setPhases((prev) => {
+          const next = [...prev];
+          const ph = next[phaseIndex] ?? null;
+          if (!ph) return prev;
+
+          next[phaseIndex] = {
+            ...ph,
+            tasks: [...(ph.tasks || []), json.task as TaskRow],
+          };
+          return next;
+        });
+
+        toast({
+          title: "Tâche ajoutée",
+          description: "La tâche a bien été créée.",
+        });
+      } catch {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'ajouter la tâche.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
 
   const toggleTask = useCallback(
     (taskId: string, nextChecked: boolean) => {
@@ -178,6 +387,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             return;
           }
 
+          // On garde le refresh en mode normal (pas de régression).
           router.refresh();
         } catch {
           setStatusById((prev) => ({
@@ -193,6 +403,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   // Pas d'UI pending (Lovable)
   void pending;
 
+  const phasesForRender = isEditing ? phases : props.phases;
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -204,7 +416,24 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             <div className="ml-4 flex-1">
               <h1 className="text-xl font-display font-bold">Ma Stratégie</h1>
             </div>
-            <Button variant="outline">Personnaliser</Button>
+
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={handleCancelEditing}>
+                  <X className="w-4 h-4 mr-2" />
+                  Annuler
+                </Button>
+                <Button onClick={handleSaveChanges}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Enregistrer
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" onClick={handleStartEditing}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Personnaliser
+              </Button>
+            )}
           </header>
 
           <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -262,6 +491,35 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
               {/* Plan d'action Tab */}
               <TabsContent value="plan" className="space-y-6">
+                {/* Edit Mode Banner */}
+                {isEditing && (
+                  <Card className="p-4 bg-primary/5 border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <Pencil className="w-5 h-5 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-medium text-primary">
+                          Mode personnalisation
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Glisse les tâches pour les réorganiser, supprime celles
+                          qui ne te conviennent pas, ou ajoute-en de nouvelles
+                        </p>
+                      </div>
+                      <Button onClick={() => setIsAddTaskOpen(true)} size="sm">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Ajouter une tâche
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
+                <AddTaskDialog
+                  isOpen={isAddTaskOpen}
+                  onClose={() => setIsAddTaskOpen(false)}
+                  onAdd={addTask}
+                  phases={(phasesForRender || []).map((p) => ({ title: p.title }))}
+                />
+
                 {/* Progress Overview */}
                 <div className="grid md:grid-cols-3 gap-4">
                   <Card className="p-5">
@@ -274,7 +532,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <p className="text-3xl font-bold">
                       {props.totalDone}/{props.totalAll}
                     </p>
-                    <Progress value={props.progressionPercent} className="mt-3" />
+                    <Progress
+                      value={props.progressionPercent}
+                      className="mt-3"
+                    />
                   </Card>
 
                   <Card className="p-5">
@@ -306,7 +567,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
                 {/* Phases */}
                 <div className="space-y-6">
-                  {(props.phases || []).map((phase, phaseIndex) => {
+                  {(phasesForRender || []).map((phase, phaseIndex) => {
                     const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
                     const doneInPhase = tasks.filter((t) =>
                       isDoneStatus(statusById[String(t.id)] ?? t.status),
@@ -340,33 +601,61 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
                         <div className="grid md:grid-cols-2 gap-3">
                           {tasks.length ? (
-                            tasks.map((item) => {
-                              const checked = isDoneStatus(
-                                statusById[String(item.id)] ?? item.status,
-                              );
-                              return (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                            isEditing ? (
+                              <DndContext
+                                sensors={sensors}
+                                onDragEnd={(e) => handleDragEnd(e, phaseIndex)}
+                              >
+                                <SortableContext
+                                  items={tasks.map((t) => String(t.id))}
+                                  strategy={verticalListSortingStrategy}
                                 >
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(v) =>
-                                      toggleTask(String(item.id), Boolean(v))
-                                    }
-                                  />
-                                  <span
-                                    className={
-                                      checked
-                                        ? "line-through text-muted-foreground"
-                                        : ""
-                                    }
+                                  {tasks.map((t) => (
+                                    <SortableTask
+                                      key={String(t.id)}
+                                      task={{
+                                        id: String(t.id),
+                                        task: t.title || "—",
+                                        done: isDoneStatus(
+                                          statusById[String(t.id)] ?? t.status,
+                                        ),
+                                      }}
+                                      isEditing
+                                      onToggle={() => {}}
+                                      onDelete={(id) => deleteTask(id)}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              </DndContext>
+                            ) : (
+                              tasks.map((item) => {
+                                const checked = isDoneStatus(
+                                  statusById[String(item.id)] ?? item.status,
+                                );
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                                   >
-                                    {item.title || "—"}
-                                  </span>
-                                </div>
-                              );
-                            })
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(v) =>
+                                        toggleTask(String(item.id), Boolean(v))
+                                      }
+                                    />
+                                    <span
+                                      className={
+                                        checked
+                                          ? "line-through text-muted-foreground"
+                                          : ""
+                                      }
+                                    >
+                                      {item.title || "—"}
+                                    </span>
+                                  </div>
+                                );
+                              })
+                            )
                           ) : (
                             <div className="text-sm text-muted-foreground md:col-span-2">
                               Aucune tâche dans cette phase pour l&apos;instant.
@@ -412,7 +701,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="p-5 rounded-lg border-2 border-success bg-success/5">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="font-semibold text-success">High Ticket</p>
+                          <p className="font-semibold text-success">
+                            High Ticket
+                          </p>
                           <p className="text-3xl font-bold mt-1">
                             {pickFirstNonEmpty(
                               high?.price,
@@ -435,7 +726,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="font-semibold text-primary">Middle Ticket</p>
+                          <p className="font-semibold text-primary">
+                            Middle Ticket
+                          </p>
                           <p className="text-3xl font-bold mt-1">
                             {pickFirstNonEmpty(
                               mid?.price,
@@ -458,7 +751,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="p-5 rounded-lg border-2 border-secondary bg-secondary/5">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="font-semibold text-secondary">Lead Magnet</p>
+                          <p className="font-semibold text-secondary">
+                            Lead Magnet
+                          </p>
                           <p className="text-3xl font-bold mt-1">
                             {pickFirstNonEmpty(
                               lead?.price,
@@ -545,13 +840,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                           Canaux préférés
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {(personaChannels.length ? personaChannels : ["—"]).map(
-                            (c, i) => (
-                              <Badge key={i} variant="outline">
-                                {c}
-                              </Badge>
-                            ),
-                          )}
+                          {(personaChannels.length
+                            ? personaChannels
+                            : ["—"]
+                          ).map((c, i) => (
+                            <Badge key={i} variant="outline">
+                              {c}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     </div>
