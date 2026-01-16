@@ -337,6 +337,106 @@ function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | nu
   return null;
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await getSupabaseServerClient();
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    const body = (await req.json().catch(() => ({}))) as AnyRecord;
+
+    const selectedIndexRaw = body?.selectedIndex;
+    const pyramidRaw = body?.pyramid;
+
+    const selectedIndex =
+      typeof selectedIndexRaw === "number"
+        ? selectedIndexRaw
+        : typeof selectedIndexRaw === "string"
+          ? Number(selectedIndexRaw)
+          : null;
+
+    if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) {
+      return NextResponse.json({ success: false, error: "Invalid selectedIndex" }, { status: 400 });
+    }
+
+    const pyramid = asRecord(pyramidRaw);
+    if (!pyramid) {
+      return NextResponse.json({ success: false, error: "Invalid pyramid" }, { status: 400 });
+    }
+
+    // Lire le plan existant (si présent), puis fusionner sans casser l’existant.
+    const { data: planRow, error: planErr } = await supabase
+      .from("business_plan")
+      .select("plan_json")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (planErr) {
+      console.error("Error reading business_plan for PATCH:", planErr);
+    }
+
+    const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
+
+    const nextPlan: AnyRecord = {
+      ...basePlan,
+      selected_offer_pyramid_index: selectedIndex,
+      selected_offer_pyramid: pyramid,
+      // compat legacy
+      selected_pyramid_index: selectedIndex,
+      selected_pyramid: pyramid,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: saved, error: saveErr } = await supabase
+      .from("business_plan")
+      .upsert(
+        {
+          user_id: userId,
+          plan_json: nextPlan,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      )
+      .select("id")
+      .maybeSingle();
+
+    if (saveErr) {
+      console.error("Error saving selection in business_plan:", saveErr);
+      return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
+    }
+
+    // Opportuniste : garder la table strategies sync (best-effort)
+    try {
+      const { data: businessProfile } = await supabase
+        .from("business_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (businessProfile) {
+        await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
+      }
+    } catch (e) {
+      console.error("persistStrategyRow (PATCH) unexpected error:", e);
+    }
+
+    return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
+  } catch (err) {
+    console.error("Unhandled error in PATCH /api/strategy/offer-pyramid:", err);
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
