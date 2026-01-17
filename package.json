@@ -2,6 +2,11 @@
   "name": "tipote-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": "20.19.6",
+    "npm": "10.8.2"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -59,7 +64,7 @@
     "lucide-react": "^0.469.0",
     "mammoth": "^1.11.0",
     "next": "^16.0.0",
-    "next-themes": "^0.3.0",
+    "next-themes": "^0.4.4",
     "openai": "^4.73.1",
     "react": "^19",
     "react-day-picker": "^9.2.0",
@@ -70,7 +75,7 @@
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "^0.9.1",
+    "vaul": "^1.1.1",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "zustand": "^4.5.5"
