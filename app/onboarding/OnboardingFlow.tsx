@@ -9,13 +9,15 @@ import { Sparkles } from "lucide-react";
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
 import { StepGoals } from "./StepGoals";
+import { StepDiagnosticChat, type DiagnosticPayload } from "./StepDiagnosticChat";
 
 export interface Offer {
   name: string;
   type: string;
   price: string;
-  salesCount: string;
-  link: string;
+  salesCount?: string;
+  sales?: string | number;
+  link?: string;
 }
 
 export interface SocialLink {
@@ -34,7 +36,7 @@ export interface OnboardingData {
   maturity: string;
   biggestBlocker: string;
 
-  // ÉCRAN 2 — Ta situation actuelle
+  // ÉCRAN 2 — Situation actuelle
   hasOffers: boolean | null;
   offers: Offer[];
   socialAudience: string;
@@ -43,13 +45,12 @@ export interface OnboardingData {
   weeklyHours: string;
   mainGoal90Days: string;
 
-  // ✅ NOUVEAU — Objectif de revenus mensuels (stocké en texte côté DB)
+  // ✅ NEW: objectif chiffré (texte en DB)
   revenueGoalMonthly: string;
 
-  // Objectifs "symboliques" (devenir riche, aider les autres, etc.)
   mainGoals: string[];
 
-  // ÉCRAN 3 — Ce qui te rend unique
+  // ÉCRAN 3 — Unicité & style
   uniqueValue: string;
   untappedStrength: string;
   biggestChallenge: string;
@@ -57,6 +58,13 @@ export interface OnboardingData {
   clientFeedback: string[];
   preferredContentType: string;
   tonePreference: string[];
+
+  // ✅ NEW: phase 2 (diagnostic chat)
+  diagnosticAnswers?: unknown[];
+  diagnosticProfile?: Record<string, unknown> | null;
+  diagnosticSummary?: string;
+  diagnosticCompleted?: boolean;
+  onboardingVersion?: string;
 }
 
 const initialData: OnboardingData = {
@@ -88,6 +96,12 @@ const initialData: OnboardingData = {
   clientFeedback: [""],
   preferredContentType: "",
   tonePreference: [],
+
+  diagnosticAnswers: [],
+  diagnosticProfile: null,
+  diagnosticSummary: "",
+  diagnosticCompleted: false,
+  onboardingVersion: "v2_form+chat",
 };
 
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
@@ -106,6 +120,42 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
+function normalizeDiagnosticPayload(payload: DiagnosticPayload): {
+  diagnosticAnswers?: unknown[];
+  diagnosticProfile?: Record<string, unknown> | null;
+  diagnosticSummary?: string;
+} {
+  const p: any = payload as any;
+
+  const answers =
+    p?.diagnosticAnswers ??
+    p?.diagnostic_answers ??
+    p?.answers ??
+    p?.messages ??
+    p?.transcript ??
+    undefined;
+
+  const profile =
+    p?.diagnosticProfile ??
+    p?.diagnostic_profile ??
+    p?.profile ??
+    p?.normalized ??
+    null;
+
+  const summary =
+    p?.diagnosticSummary ??
+    p?.diagnostic_summary ??
+    p?.summary ??
+    p?.coachSummary ??
+    "";
+
+  return {
+    diagnosticAnswers: Array.isArray(answers) ? answers : undefined,
+    diagnosticProfile: (profile && typeof profile === "object" ? profile : null) as Record<string, unknown> | null,
+    diagnosticSummary: typeof summary === "string" ? summary : "",
+  };
+}
+
 const OnboardingFlow = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -119,7 +169,6 @@ const OnboardingFlow = () => {
   };
 
   const saveCurrent = async () => {
-    // Compat DB: colonne ajoutée en snake_case (texte)
     await postJSON("/api/onboarding/answers", {
       ...data,
       revenue_goal_monthly: data.revenueGoalMonthly,
@@ -132,7 +181,7 @@ const OnboardingFlow = () => {
 
     try {
       await saveCurrent();
-      setStep((prev) => Math.min(prev + 1, 3));
+      setStep((prev) => Math.min(prev + 1, 4));
     } catch (error) {
       toast({
         title: "Erreur",
@@ -149,30 +198,46 @@ const OnboardingFlow = () => {
     setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleComplete = async () => {
+  const finalizeOnboarding = async (payload: DiagnosticPayload) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      // 1) save answers
-      await saveCurrent();
+      const diagnostic = normalizeDiagnosticPayload(payload);
 
-      // 2) mark onboarding completed
-      await postJSON("/api/onboarding/complete");
+      // 1) persister la phase 2
+      updateData({
+        diagnosticAnswers: diagnostic.diagnosticAnswers ?? [],
+        diagnosticProfile: diagnostic.diagnosticProfile ?? null,
+        diagnosticSummary: diagnostic.diagnosticSummary ?? "",
+        diagnosticCompleted: true,
+      });
+
+      await postJSON("/api/onboarding/answers", {
+        diagnostic_answers: diagnostic.diagnosticAnswers ?? [],
+        diagnostic_profile: diagnostic.diagnosticProfile ?? null,
+        diagnostic_summary: diagnostic.diagnosticSummary ?? "",
+        diagnostic_completed: true,
+        onboarding_version: data.onboardingVersion ?? "v2_form+chat",
+      });
+
+      // 2) marquer onboarding complet
+      await postJSON("/api/onboarding/complete", {
+        diagnostic_completed: true,
+      });
 
       // 3) suite logique : choix des 3 pyramides d'offres (Lovable)
       router.push("/strategy/pyramids");
       router.refresh();
 
-      // 4) generate persona + 3 pyramides + plan en background (ne bloque pas l'UX)
-      // Important: cette route doit écrire business_plan.plan_json.offer_pyramids
+      // 4) ✅ anti-régression : génération stratégie en background
       postJSON("/api/strategy").catch(() => {
-        // On ne casse pas le flow si l'IA échoue; la page /strategy/pyramids gère l'état.
+        // ne bloque jamais l'UX
       });
     } catch (error) {
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de finaliser l'onboarding.",
+        description: error instanceof Error ? error.message : "Impossible de finaliser ton onboarding.",
         variant: "destructive",
       });
     } finally {
@@ -180,7 +245,7 @@ const OnboardingFlow = () => {
     }
   };
 
-  const progress = (step / 3) * 100;
+  const progress = (step / 4) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -193,14 +258,13 @@ const OnboardingFlow = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Réponds à quelques questions pour que je puisse créer ton persona, tes offres et un plan d’action adapté à ton
-            business.
+            Réponds à quelques questions pour que je te crée une stratégie et un plan d'action ultra personnalisés.
           </p>
         </div>
 
         <div className="mb-8">
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Étape {step} sur 3</span>
+            <span>Étape {step} sur 4</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -216,8 +280,17 @@ const OnboardingFlow = () => {
               data={data}
               updateData={updateData}
               onBack={prevStep}
-              onComplete={handleComplete}
+              onComplete={nextStep} // on passe au chat
               isSubmitting={isSubmitting}
+            />
+          )}
+
+          {step === 4 && (
+            <StepDiagnosticChat
+              data={data}
+              onBack={prevStep}
+              isSubmitting={isSubmitting}
+              onComplete={finalizeOnboarding}
             />
           )}
         </div>

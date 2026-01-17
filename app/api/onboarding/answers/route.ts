@@ -7,6 +7,7 @@
 // ✅ Keep existing robustness (json/text fallback, JSON errors).
 // ✅ Adds: age_range + gender + offer_* analytics columns
 // ✅ Adds: revenue_goal_monthly (TEXT en DB) from onboarding
+// ✅ Adds (V2): diagnostic_answers / diagnostic_profile / diagnostic_summary / diagnostic_completed / onboarding_version
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,8 +16,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 const OfferSchema = z.object({
   name: z.string().optional().default(""),
   type: z.string().optional().default(""),
-  price: z.union([z.string(), z.number()]).optional().default(""),
-  salesCount: z.union([z.string(), z.number()]).optional().default(""),
+  price: z.string().optional().default(""),
+  salesCount: z.union([z.string(), z.number()]).optional(),
   sales: z.union([z.string(), z.number()]).optional(),
   link: z.string().optional().default(""),
 });
@@ -61,6 +62,18 @@ const OnboardingSchema = z
     clientFeedback: z.array(z.string()).optional().default([]),
     preferredContentType: z.string().optional().default(""),
     tonePreference: z.array(z.string()).optional().default([]),
+
+    // ✅ NEW (V2 chat)
+    diagnosticAnswers: z.array(z.any()).optional(),
+    diagnostic_answers: z.array(z.any()).optional(),
+    diagnosticProfile: z.record(z.any()).nullable().optional(),
+    diagnostic_profile: z.record(z.any()).nullable().optional(),
+    diagnosticSummary: z.string().optional(),
+    diagnostic_summary: z.string().optional(),
+    diagnosticCompleted: z.boolean().optional(),
+    diagnostic_completed: z.boolean().optional(),
+    onboardingVersion: z.string().optional(),
+    onboarding_version: z.string().optional(),
   })
   .strict()
   .passthrough();
@@ -80,14 +93,6 @@ function compactArray(values: unknown[], max = 10): string[] {
     if (out.length >= max) break;
   }
   return out;
-}
-
-function toNumberSafe(value: unknown): number | null {
-  const v = cleanString(value, 80);
-  if (!v) return null;
-  const normalized = v.replace(",", ".").replace(/[^0-9.]/g, "");
-  const n = Number.parseFloat(normalized);
-  return Number.isNaN(n) ? null : n;
 }
 
 function parseIntSafe(value: string): number | null {
@@ -121,6 +126,8 @@ function parseAudienceEmail(value: string): number {
   return n ?? 0;
 }
 
+type UpdateResult = { ok: true; stage: string; id: string | null } | { ok: false; stage: string; error: any };
+
 export async function POST(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
 
@@ -132,8 +139,6 @@ export async function POST(req: NextRequest) {
   if (userError || !user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-
-  const userId = user.id;
 
   let body: unknown = {};
   try {
@@ -156,6 +161,8 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+
+  const userId = user.id;
 
   const normalizedOffers = (d.offers ?? []).slice(0, 50).map((o) => ({
     name: cleanString(o.name, 200),
@@ -181,6 +188,21 @@ export async function POST(req: NextRequest) {
 
   const revenueGoalMonthlyRaw = cleanString(
     ((d as any).revenueGoalMonthly ?? (d as any).revenue_goal_monthly ?? "") as string,
+    50,
+  );
+
+  const diagnosticAnswers =
+    (d as any).diagnosticAnswers ?? (d as any).diagnostic_answers ?? undefined;
+  const diagnosticProfile =
+    (d as any).diagnosticProfile ?? (d as any).diagnostic_profile ?? undefined;
+  const diagnosticSummary = cleanString(
+    (d as any).diagnosticSummary ?? (d as any).diagnostic_summary ?? "",
+    4000,
+  );
+  const diagnosticCompleted =
+    (d as any).diagnosticCompleted ?? (d as any).diagnostic_completed ?? undefined;
+  const onboardingVersion = cleanString(
+    (d as any).onboardingVersion ?? (d as any).onboarding_version ?? "",
     50,
   );
 
@@ -223,6 +245,13 @@ export async function POST(req: NextRequest) {
     content_preference: cleanString(d.preferredContentType, 200),
     preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
 
+    // ✅ V2
+    ...(typeof diagnosticAnswers !== "undefined" ? { diagnostic_answers: diagnosticAnswers } : {}),
+    ...(typeof diagnosticProfile !== "undefined" ? { diagnostic_profile: diagnosticProfile } : {}),
+    ...(diagnosticSummary ? { diagnostic_summary: diagnosticSummary } : {}),
+    ...(typeof diagnosticCompleted !== "undefined" ? { diagnostic_completed: !!diagnosticCompleted } : {}),
+    ...(onboardingVersion ? { onboarding_version: onboardingVersion } : {}),
+
     updated_at: nowIso,
   };
 
@@ -233,36 +262,29 @@ export async function POST(req: NextRequest) {
     main_goals: compactArray(d.mainGoals ?? [], 2).join(", "),
   };
 
-  async function updateThenInsert(row: Record<string, unknown>) {
+  async function updateThenInsert(row: Record<string, unknown>): Promise<UpdateResult> {
     const rowForUpdate = { ...row };
     delete (rowForUpdate as any).user_id;
 
     const upd = await supabase.from("business_profiles").update(rowForUpdate).eq("user_id", userId).select("id");
-
-    if (upd.error) return { ok: false as const, stage: "update" as const, error: upd.error };
+    if (upd.error) return { ok: false, stage: "update", error: upd.error };
     if (Array.isArray(upd.data) && upd.data.length > 0) {
-      return { ok: true as const, stage: "update" as const, id: (upd.data[0] as any)?.id ?? null };
+      return { ok: true, stage: "update", id: (upd.data[0] as any)?.id ?? null };
     }
 
-    const ins = await supabase
-      .from("business_profiles")
-      .insert({ ...row, user_id: userId })
-      .select("id")
-      .maybeSingle();
-
-    if (ins.error) return { ok: false as const, stage: "insert" as const, error: ins.error };
-
-    return { ok: true as const, stage: "insert" as const, id: (ins.data as any)?.id ?? null };
+    const ins = await supabase.from("business_profiles").insert(row).select("id");
+    if (ins.error) return { ok: false, stage: "insert", error: ins.error };
+    return { ok: true, stage: "insert", id: (ins.data?.[0] as any)?.id ?? null };
   }
 
   const nativeRes = await updateThenInsert(rowNative);
   if (nativeRes.ok) {
-    return NextResponse.json({ ok: true, stage: nativeRes.stage, id: nativeRes.id }, { status: 200 });
+    return NextResponse.json({ ok: true, id: nativeRes.id, stage: nativeRes.stage }, { status: 200 });
   }
 
   const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
-    return NextResponse.json({ ok: true, stage: fallbackRes.stage, id: fallbackRes.id }, { status: 200 });
+    return NextResponse.json({ ok: true, id: fallbackRes.id, stage: fallbackRes.stage }, { status: 200 });
   }
 
   return NextResponse.json(
