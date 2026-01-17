@@ -5,12 +5,12 @@
   "packageManager": "npm@10.8.2",
   "engines": {
     "node": "20.19.6",
-    "npm": "10.8.2", 
-    "postbuild": "node scripts/postbuild-standalone-static.cjs"
+    "npm": "10.8.2"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
