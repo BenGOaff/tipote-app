@@ -8,6 +8,7 @@
 // ✅ Compat DB : tags peut être array OU texte CSV -> insert avec retry.
 // ✅ Output : texte brut (pas de markdown)
 // ✅ Knowledge : injecte tipote-knowledge via manifest (xlsx) + lecture des ressources
+// ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -97,6 +98,39 @@ function isTagsTypeMismatch(message: string | null | undefined) {
     m.includes("character varying") ||
     m.includes("text")
   );
+}
+
+function safeJsonParse<T>(v: unknown): T | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    return null;
+  }
+}
+
+function arrayFromTextOrJson(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
+  if (typeof v !== "string") return [];
+  const parsed = safeJsonParse<unknown>(v);
+  if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
+  // fallback CSV
+  return v
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function isRecord(v: unknown): v is Record<string, any> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function coercePersonaJson(v: unknown): Record<string, any> | null {
+  if (isRecord(v)) return v;
+  const parsed = safeJsonParse<unknown>(v);
+  return isRecord(parsed) ? (parsed as Record<string, any>) : null;
 }
 
 function toPlainText(input: string): string {
@@ -517,6 +551,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
+
     const body = (await req.json()) as Body;
 
     const type = safeString(body?.type).trim();
@@ -551,12 +587,12 @@ export async function POST(req: Request) {
     const ownerKey = process.env.OPENAI_API_KEY ?? "";
     const userKey = await getDecryptedUserApiKey({
       supabase,
-      userId: session.user.id,
+      userId,
       provider: "openai",
     });
 
     // ✅ Nouveau gating : plan payant => OK ; plan free => quota hebdo (même si userKey)
-    const gate = await isPaidOrThrowQuota({ supabase, userId: session.user.id });
+    const gate = await isPaidOrThrowQuota({ supabase, userId });
     if (!gate.paid) {
       // Si on a pu compter, on applique strictement le quota
       if (typeof gate.used === "number") {
@@ -588,14 +624,54 @@ export async function POST(req: Request) {
     const { data: profile } = await supabase
       .from("business_profiles")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     const { data: planRow } = await supabase
       .from("business_plan")
       .select("plan_json")
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .maybeSingle();
+
+    // ✅ Persona (optionnel) : public.personas
+    let personaContext: any = null;
+    try {
+      const { data: personaRow, error: personaErr } = await supabase
+        .from("personas")
+        .select(
+          "persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at",
+        )
+        .eq("user_id", userId)
+        .eq("role", "client_ideal")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (personaErr) {
+        if (!isMissingColumnError(personaErr.message)) {
+          console.error("Error loading personas:", personaErr);
+        }
+      } else if (personaRow) {
+        const pj = coercePersonaJson((personaRow as any).persona_json);
+
+        personaContext =
+          pj ??
+          {
+            title: (personaRow as any).name ?? null,
+            current_situation: (personaRow as any).current_situation ?? null,
+            desired_situation: (personaRow as any).desired_situation ?? null,
+            awareness_level: (personaRow as any).awareness_level ?? null,
+            budget_level: (personaRow as any).budget_level ?? null,
+            pains: arrayFromTextOrJson((personaRow as any).pains),
+            desires: arrayFromTextOrJson((personaRow as any).desires),
+            objections: arrayFromTextOrJson((personaRow as any).objections),
+            description: (personaRow as any).description ?? null,
+          };
+      }
+    } catch (e) {
+      // fail-open
+      console.error("Persona load (fail-open):", e);
+    }
 
     const planJson = (planRow as any)?.plan_json ?? null;
 
@@ -613,6 +689,8 @@ export async function POST(req: Request) {
       "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
       "Si tu structures: sauts de lignes + tirets simples '- ' uniquement.",
       "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
+      "Tu adaptes ton vocabulaire, tes angles, et tes CTA au persona (douleurs, désirs, objections, déclencheurs d'achat).",
+      "Tu tiens compte de l'onboarding (business profile) et du business plan si disponibles.",
     ].join("\n");
 
     const userContextLines: string[] = [];
@@ -622,8 +700,13 @@ export async function POST(req: Request) {
     if (tagsCsv) userContextLines.push(`Tags: ${tagsCsv}`);
 
     userContextLines.push("");
+    userContextLines.push("Persona client (si disponible) :");
+    userContextLines.push(personaContext ? JSON.stringify(personaContext) : "Aucun persona.");
+
+    userContextLines.push("");
     userContextLines.push("Business profile (si disponible) :");
     userContextLines.push(profile ? JSON.stringify(profile) : "Aucun profil.");
+
     userContextLines.push("");
     userContextLines.push("Business plan (si disponible) :");
     userContextLines.push(planJson ? JSON.stringify(planJson) : "Aucun plan.");
@@ -678,7 +761,7 @@ export async function POST(req: Request) {
 
     const tryEN = await insertContentEN({
       supabase,
-      userId: session.user.id,
+      userId,
       type,
       title,
       content,
@@ -710,7 +793,7 @@ export async function POST(req: Request) {
 
     const tryFR = await insertContentFR({
       supabase,
-      userId: session.user.id,
+      userId,
       type,
       title,
       content,
