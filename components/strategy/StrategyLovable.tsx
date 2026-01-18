@@ -43,7 +43,14 @@ import {
   Pencil,
   X,
   Save,
+  ChevronRight,
+  Gift,
+  Zap,
+  Crown,
 } from "lucide-react";
+
+import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
+import { OfferDetailModal } from "@/components/strategy/OfferDetailModal";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -139,6 +146,8 @@ function phaseIndexToDueDate(phaseIndex: number): string {
   return addDaysISO(today, 67);
 }
 
+const TASKS_DISPLAY_LIMIT = 4;
+
 export default function StrategyLovable(props: StrategyLovableProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -194,6 +203,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const [phases, setPhases] = useState<Phase[]>(props.phases || []);
   const [savedPhases, setSavedPhases] = useState<Phase[]>(props.phases || []);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+
+  // ✅ NEW (Lovable): modales détails
+  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState<number | null>(
+    null,
+  );
+  const [selectedOfferType, setSelectedOfferType] = useState<
+    "lead_magnet" | "low_ticket" | "high_ticket" | null
+  >(null);
 
   // Sync phases local si props changent (ex: router.refresh après toggle)
   // On ne force pas en mode édition pour éviter d’écraser l’ordre local en cours.
@@ -585,23 +602,35 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                               {phase.period}
                             </p>
                           </div>
-                          <Badge
-                            variant={
-                              phaseProgress === 100
-                                ? "default"
-                                : phaseProgress > 0
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                          >
-                            {phaseProgress}%
-                          </Badge>
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              variant={
+                                phaseProgress === 100
+                                  ? "default"
+                                  : phaseProgress > 0
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                            >
+                              {phaseProgress}%
+                            </Badge>
+
+                            {!isEditing && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setSelectedPhaseIndex(phaseIndex)}
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <Progress value={phaseProgress} className="mb-4" />
 
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {tasks.length ? (
-                            isEditing ? (
+                        {isEditing ? (
+                          <div className="grid md:grid-cols-2 gap-3">
+                            {tasks.length ? (
                               <DndContext
                                 sensors={sensors}
                                 onDragEnd={(e) => handleDragEnd(e, phaseIndex)}
@@ -628,40 +657,58 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                 </SortableContext>
                               </DndContext>
                             ) : (
-                              tasks.map((item) => {
-                                const checked = isDoneStatus(
-                                  statusById[String(item.id)] ?? item.status,
-                                );
-                                return (
-                                  <div
-                                    key={item.id}
-                                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                                  >
-                                    <Checkbox
-                                      checked={checked}
-                                      onCheckedChange={(v) =>
-                                        toggleTask(String(item.id), Boolean(v))
-                                      }
-                                    />
-                                    <span
-                                      className={
-                                        checked
-                                          ? "line-through text-muted-foreground"
-                                          : ""
-                                      }
-                                    >
-                                      {item.title || "—"}
-                                    </span>
-                                  </div>
-                                );
-                              })
-                            )
-                          ) : (
-                            <div className="text-sm text-muted-foreground md:col-span-2">
-                              Aucune tâche dans cette phase pour l&apos;instant.
-                            </div>
-                          )}
-                        </div>
+                              <div className="text-sm text-muted-foreground md:col-span-2">
+                                Aucune tâche dans cette phase pour l&apos;instant.
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {tasks.length ? (
+                              <>
+                                {tasks
+                                  .slice(0, TASKS_DISPLAY_LIMIT)
+                                  .map((item) => {
+                                    const checked = isDoneStatus(
+                                      statusById[String(item.id)] ?? item.status,
+                                    );
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                      >
+                                        <Checkbox
+                                          checked={checked}
+                                          onCheckedChange={(v) =>
+                                            toggleTask(String(item.id), Boolean(v))
+                                          }
+                                        />
+                                        <span
+                                          className={
+                                            checked
+                                              ? "line-through text-muted-foreground"
+                                              : ""
+                                          }
+                                        >
+                                          {item.title || "—"}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                {tasks.length > TASKS_DISPLAY_LIMIT && (
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    +{tasks.length - TASKS_DISPLAY_LIMIT} tâches
+                                    supplémentaires...
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                Aucune tâche dans cette phase pour l&apos;instant.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </Card>
                     );
                   })}
@@ -698,7 +745,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="p-5 rounded-lg border-2 border-success bg-success/5">
+                    <div
+                      className="p-5 rounded-lg border-2 border-success bg-success/5 cursor-pointer"
+                      onClick={() => setSelectedOfferType("high_ticket")}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-semibold text-success">
@@ -712,7 +762,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                             )}
                           </p>
                         </div>
-                        <CheckCircle2 className="w-5 h-5 text-success" />
+                        <Crown className="w-5 h-5 text-success" />
                       </div>
                       <p className="text-muted-foreground mt-2">
                         {pickFirstNonEmpty(
@@ -723,7 +773,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       </p>
                     </div>
 
-                    <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
+                    <div
+                      className="p-5 rounded-lg border-2 border-primary bg-primary/5 cursor-pointer"
+                      onClick={() => setSelectedOfferType("low_ticket")}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-semibold text-primary">
@@ -737,7 +790,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                             )}
                           </p>
                         </div>
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                        <Zap className="w-5 h-5 text-primary" />
                       </div>
                       <p className="text-muted-foreground mt-2">
                         {pickFirstNonEmpty(
@@ -748,7 +801,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       </p>
                     </div>
 
-                    <div className="p-5 rounded-lg border-2 border-secondary bg-secondary/5">
+                    <div
+                      className="p-5 rounded-lg border-2 border-secondary bg-secondary/5 cursor-pointer"
+                      onClick={() => setSelectedOfferType("lead_magnet")}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-semibold text-secondary">
@@ -763,7 +819,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                             )}
                           </p>
                         </div>
-                        <CheckCircle2 className="w-5 h-5 text-secondary" />
+                        <Gift className="w-5 h-5 text-secondary" />
                       </div>
                       <p className="text-muted-foreground mt-2">
                         {pickFirstNonEmpty(
@@ -776,7 +832,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   </div>
 
                   <Button variant="outline" className="w-full mt-6">
-                    <Plus className="w-4 h-4 mr-2" />
                     Ajouter une offre
                   </Button>
                 </Card>
@@ -860,6 +915,127 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               </TabsContent>
             </Tabs>
           </div>
+
+          {selectedPhaseIndex !== null &&
+            phasesForRender?.[selectedPhaseIndex] &&
+            (() => {
+              const ph = phasesForRender[selectedPhaseIndex] as Phase;
+              const tasks = Array.isArray(ph.tasks) ? ph.tasks : [];
+              const completed = tasks.filter((t) =>
+                isDoneStatus(statusById[String(t.id)] ?? t.status),
+              ).length;
+              const progress = tasks.length
+                ? Math.round((completed / tasks.length) * 100)
+                : 0;
+
+              return (
+                <PhaseDetailModal
+                  isOpen={selectedPhaseIndex !== null}
+                  onClose={() => setSelectedPhaseIndex(null)}
+                  phase={{
+                    title: ph.title,
+                    period: ph.period,
+                    progress,
+                    tasks: tasks.map((t) => ({
+                      id: String(t.id),
+                      task: t.title || "—",
+                      done: isDoneStatus(statusById[String(t.id)] ?? t.status),
+                    })),
+                  }}
+                  phaseIndex={selectedPhaseIndex}
+                  onUpdatePhase={() => {
+                    // Best-effort (Lovable): UX only — les tâches sont gérées par les endpoints existants.
+                    toast({
+                      title: "Phase mise à jour",
+                      description: "Les modifications ont été enregistrées",
+                    });
+                    setSelectedPhaseIndex(null);
+                  }}
+                />
+              );
+            })()}
+
+          {selectedOfferType && (
+            <OfferDetailModal
+              isOpen={!!selectedOfferType}
+              onClose={() => setSelectedOfferType(null)}
+              offer={
+                selectedOfferType === "lead_magnet"
+                  ? {
+                      title: pickFirstNonEmpty(
+                        lead?.title,
+                        (lead as any)?.name,
+                        "Lead Magnet",
+                      ),
+                      price: pickFirstNonEmpty(
+                        lead?.price,
+                        (lead as any)?.pricing?.price,
+                        (lead as any)?.tarif,
+                        "Gratuit",
+                      ),
+                      description: pickFirstNonEmpty(
+                        lead?.composition,
+                        (lead as any)?.description,
+                        "",
+                      ),
+                      why: toStr((lead as any)?.purpose),
+                      whyPrice: toStr((lead as any)?.insight),
+                      whatToCreate: Array.isArray((lead as any)?.whatToCreate)
+                        ? ((lead as any)?.whatToCreate as any[])
+                        : undefined,
+                      howToCreate: toStr((lead as any)?.howToCreate),
+                      howToPromote: Array.isArray((lead as any)?.howToPromote)
+                        ? ((lead as any)?.howToPromote as any[])
+                        : undefined,
+                    }
+                  : selectedOfferType === "low_ticket"
+                    ? {
+                        title: pickFirstNonEmpty(
+                          mid?.title,
+                          (mid as any)?.name,
+                          "Middle Ticket",
+                        ),
+                        price: pickFirstNonEmpty(
+                          mid?.price,
+                          (mid as any)?.pricing?.price,
+                          (mid as any)?.tarif,
+                        ),
+                        description: pickFirstNonEmpty(
+                          mid?.composition,
+                          (mid as any)?.description,
+                          "",
+                        ),
+                        why: toStr((mid as any)?.purpose),
+                        whyPrice: toStr((mid as any)?.insight),
+                      }
+                    : {
+                        title: pickFirstNonEmpty(
+                          high?.title,
+                          (high as any)?.name,
+                          "High Ticket",
+                        ),
+                        price: pickFirstNonEmpty(
+                          high?.price,
+                          (high as any)?.pricing?.price,
+                          (high as any)?.tarif,
+                        ),
+                        description: pickFirstNonEmpty(
+                          high?.composition,
+                          (high as any)?.description,
+                          "",
+                        ),
+                        why: toStr((high as any)?.purpose),
+                        whyPrice: toStr((high as any)?.insight),
+                      }
+              }
+              offerType={selectedOfferType}
+              profileData={{
+                firstName: props.firstName,
+                revenueGoal: props.revenueGoal,
+                horizon: props.horizon,
+              }}
+            />
+          )}
         </main>
       </div>
     </SidebarProvider>

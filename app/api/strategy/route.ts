@@ -97,7 +97,11 @@ async function persistStrategyRow(params: {
     };
 
     // On tente un upsert, mais sans faire échouer le flux si la table/colonnes diffèrent en prod.
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    const upsertRes = await supabase
+      .from("strategies")
+      .upsert(payload, { onConflict: "user_id" })
+      .select("id")
+      .maybeSingle();
 
     if (upsertRes?.error) {
       // fallback insert (si pas de contrainte unique sur user_id)
@@ -146,7 +150,11 @@ async function getOrCreateStrategyIdBestEffort(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    const upsertRes = await supabase
+      .from("strategies")
+      .upsert(payload, { onConflict: "user_id" })
+      .select("id")
+      .maybeSingle();
     if (!upsertRes?.error && upsertRes?.data?.id) return String(upsertRes.data.id);
 
     // fallback select
@@ -966,3 +974,4 @@ Consignes importantes :
     );
   }
 }
+  
