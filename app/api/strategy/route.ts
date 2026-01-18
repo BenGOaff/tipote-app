@@ -97,11 +97,7 @@ async function persistStrategyRow(params: {
     };
 
     // On tente un upsert, mais sans faire échouer le flux si la table/colonnes diffèrent en prod.
-    const upsertRes = await supabase
-      .from("strategies")
-      .upsert(payload, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
+    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
 
     if (upsertRes?.error) {
       // fallback insert (si pas de contrainte unique sur user_id)
@@ -112,6 +108,55 @@ async function persistStrategyRow(params: {
     }
   } catch (e) {
     console.error("persistStrategyRow unexpected error:", e);
+  }
+}
+
+/**
+ * ✅ NEW (anti-régression): récupérer un strategy_id best-effort
+ * - ne casse rien si la table strategies n'existe pas
+ */
+async function getOrCreateStrategyIdBestEffort(params: {
+  supabase: any;
+  userId: string;
+  businessProfile: AnyRecord;
+  planJson: AnyRecord;
+}): Promise<string | null> {
+  const { supabase, userId, businessProfile, planJson } = params;
+  try {
+    const businessProfileId = cleanString(businessProfile.id, 80) || null;
+    const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
+
+    const targetMonthlyRev =
+      toNumber(planJson.target_monthly_rev) ??
+      toNumber(planJson.target_monthly_revenue) ??
+      parseMoneyFromText(planJson.revenue_goal) ??
+      parseMoneyFromText(planJson.goal_revenue) ??
+      parseMoneyFromText(planJson.main_goal);
+
+    const title =
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) ||
+      "Ma stratégie";
+
+    const payload: AnyRecord = {
+      user_id: userId,
+      ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
+      title,
+      horizon_days: horizonDays,
+      ...(targetMonthlyRev !== null ? { target_monthly_rev: targetMonthlyRev } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
+    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    if (!upsertRes?.error && upsertRes?.data?.id) return String(upsertRes.data.id);
+
+    // fallback select
+    const sel = await supabase.from("strategies").select("id").eq("user_id", userId).maybeSingle();
+    if (!sel?.error && sel?.data?.id) return String(sel.data.id);
+
+    return null;
+  } catch (e) {
+    console.error("getOrCreateStrategyIdBestEffort error:", e);
+    return null;
   }
 }
 
@@ -177,6 +222,89 @@ function pyramidsLookUseful(pyramids: unknown[]): boolean {
     .map((p, idx) => normalizePyramid(asRecord(p), idx))
     .filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
   return ok.length >= 1;
+}
+
+/**
+ * ✅ NEW (anti-régression): persister les pyramides dans public.offer_pyramids en best-effort
+ * - On n'empêche jamais le flux si la table/colonnes n'existent pas.
+ * - On garde business_plan comme source actuelle (compat).
+ */
+async function persistOfferPyramidsBestEffort(params: {
+  supabase: any;
+  userId: string;
+  strategyId: string | null;
+  pyramids: AnyRecord[];
+  pyramidRunId: string;
+}): Promise<void> {
+  const { supabase, userId, strategyId, pyramids, pyramidRunId } = params;
+
+  try {
+    if (!Array.isArray(pyramids) || pyramids.length < 1) return;
+
+    const rows: AnyRecord[] = [];
+
+    pyramids.forEach((pyr, idx) => {
+      const pyramidName = cleanString(pyr?.name ?? `Pyramide ${idx + 1}`, 160);
+      const pyramidSummary = cleanString(pyr?.strategy_summary ?? "", 4000);
+
+      const levels: { level: string; offer: AnyRecord | null }[] = [
+        { level: "lead_magnet", offer: asRecord(pyr?.lead_magnet) },
+        { level: "low_ticket", offer: asRecord(pyr?.low_ticket) },
+        { level: "high_ticket", offer: asRecord(pyr?.high_ticket) },
+      ];
+
+      levels.forEach(({ level, offer }) => {
+        const o = asRecord(offer);
+        if (!o) return;
+
+        const name = cleanString(o.title ?? o.name ?? "", 180);
+        const description = cleanString(o.composition ?? o.description ?? "", 2000);
+        const promise = cleanString(o.purpose ?? o.promise ?? "", 2000);
+        const format = cleanString(o.format ?? "", 180);
+        const main_outcome = cleanString(o.insight ?? o.main_outcome ?? "", 2000);
+
+        const price = toNumber(o.price);
+        const row: AnyRecord = {
+          user_id: userId,
+          ...(strategyId ? { strategy_id: strategyId } : {}),
+          pyramid_run_id: pyramidRunId,
+          option_index: idx,
+          level, // enum offer_level côté DB (doit matcher)
+          name,
+          description,
+          promise,
+          format,
+          // delivery non présent dans normalizeOffer -> laissé NULL
+          ...(price !== null ? { price_min: price, price_max: price } : {}),
+          main_outcome,
+          is_flagship: level === "high_ticket",
+          details: {
+            pyramid: { id: cleanString(pyr?.id, 64), name: pyramidName, strategy_summary: pyramidSummary },
+            offer: o,
+          },
+          updated_at: new Date().toISOString(),
+        };
+
+        rows.push(row);
+      });
+    });
+
+    if (!rows.length) return;
+
+    // best-effort upsert: si pas de contrainte unique, on insert
+    const up = await supabase.from("offer_pyramids").upsert(rows, {
+      onConflict: "user_id,pyramid_run_id,option_index,level",
+    });
+
+    if (up?.error) {
+      const ins = await supabase.from("offer_pyramids").insert(rows);
+      if (ins?.error) {
+        console.error("persistOfferPyramidsBestEffort failed:", ins.error);
+      }
+    }
+  } catch (e) {
+    console.error("persistOfferPyramidsBestEffort unexpected error:", e);
+  }
 }
 
 function normalizeTaskTitle(v: AnyRecord): string {
@@ -322,7 +450,11 @@ function strategyTextLooksUseful(planJson: AnyRecord | null): boolean {
 
 function fullStrategyLooksUseful(planJson: AnyRecord | null): boolean {
   if (!planJson) return false;
-  return personaLooksUseful(asRecord(planJson.persona)) && tasksByTimeframeLooksUseful(planJson) && strategyTextLooksUseful(planJson);
+  return (
+    personaLooksUseful(asRecord(planJson.persona)) &&
+    tasksByTimeframeLooksUseful(planJson) &&
+    strategyTextLooksUseful(planJson)
+  );
 }
 
 function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | null {
@@ -384,18 +516,12 @@ export async function POST(req: Request) {
 
     // ✅ Si l'user a déjà choisi ET que la stratégie complète existe => on ne régénère rien
     if (hasSelected && !needFullStrategy) {
-      return NextResponse.json(
-        { success: true, planId: null, skipped: true, reason: "already_complete" },
-        { status: 200 },
-      );
+      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
     }
 
     // ✅ Si pas encore choisi, mais déjà généré les pyramides proprement => on ne régénère pas
     if (!hasSelected && hasUsefulPyramids) {
-      return NextResponse.json(
-        { success: true, planId: null, skipped: true, reason: "already_generated" },
-        { status: 200 },
-      );
+      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
     // 1) Lire business_profile (onboarding)
@@ -552,9 +678,15 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
       }
 
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
+
+      // ✅ NEW: run id pour relier génération -> sélection -> table offer_pyramids
+      const offerPyramidsRunId =
+        typeof globalThis.crypto?.randomUUID === "function" ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+
       const plan_json: AnyRecord = {
         ...basePlan,
         offer_pyramids: normalizedOfferPyramids,
+        offer_pyramids_run_id: offerPyramidsRunId, // ✅ NEW (anti-régression, simple)
         ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
           ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
           : {}),
@@ -564,11 +696,30 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
           typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
         selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
         // compat
-        selected_pyramid_index:
-          typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
+        selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
         selected_pyramid: basePlan.selected_pyramid ?? null,
         updated_at: new Date().toISOString(),
       };
+
+      // ✅ NEW: persister en best-effort dans offer_pyramids (sans casser si pas migré)
+      try {
+        const strategyId = await getOrCreateStrategyIdBestEffort({
+          supabase,
+          userId,
+          businessProfile: businessProfile as AnyRecord,
+          planJson: plan_json,
+        });
+
+        await persistOfferPyramidsBestEffort({
+          supabase,
+          userId,
+          strategyId,
+          pyramids: normalizedOfferPyramids,
+          pyramidRunId: offerPyramidsRunId,
+        });
+      } catch (e) {
+        console.error("offer_pyramids persistence (POST /api/strategy) error:", e);
+      }
 
       const { data: saved, error: saveErr } = await supabase
         .from("business_plan")
