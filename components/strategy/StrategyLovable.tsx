@@ -595,7 +595,21 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
                     return (
                       <Card key={phaseIndex} className="p-6">
-                        <div className="flex items-center justify-between mb-4">
+                        <div
+                          className={`flex items-center justify-between mb-4 ${!isEditing ? "cursor-pointer" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            if (!isEditing) setSelectedPhaseIndex(phaseIndex);
+                          }}
+                          onKeyDown={(e) => {
+                            if (isEditing) return;
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedPhaseIndex(phaseIndex);
+                            }
+                          }}
+                        >
                           <div>
                             <h3 className="text-lg font-bold">{phase.title}</h3>
                             <p className="text-sm text-muted-foreground">
