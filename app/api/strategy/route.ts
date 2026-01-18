@@ -50,12 +50,19 @@ function parseMoneyFromText(raw: unknown): number | null {
 
 function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   const direct =
-    cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
+    cleanString(businessProfile.target_monthly_revenue, 64) ||
+    cleanString(businessProfile.revenue_goal, 240) ||
+    cleanString(businessProfile.revenue_goal_monthly, 240) ||
+    cleanString(businessProfile.revenueGoalMonthly, 240);
+
   if (direct) return direct;
+
   const mg = cleanString(businessProfile.main_goal, 240) || cleanString(businessProfile.mainGoal90Days, 240);
   if (mg) return mg;
+
   const goals = asArray(businessProfile.main_goals);
   if (goals.length) return cleanString(goals[0], 240);
+
   return "";
 }
 
@@ -77,7 +84,8 @@ async function persistStrategyRow(params: {
       parseMoneyFromText(planJson.main_goal);
 
     const title =
-      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) ||
+      "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -89,7 +97,11 @@ async function persistStrategyRow(params: {
     };
 
     // On tente un upsert, mais sans faire échouer le flux si la table/colonnes diffèrent en prod.
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    const upsertRes = await supabase
+      .from("strategies")
+      .upsert(payload, { onConflict: "user_id" })
+      .select("id")
+      .maybeSingle();
 
     if (upsertRes?.error) {
       // fallback insert (si pas de contrainte unique sur user_id)
@@ -129,13 +141,25 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
-    asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
+    asRecord(p?.lead_magnet) ??
+    asRecord(p?.leadMagnet) ??
+    asRecord(p?.lead) ??
+    asRecord(p?.lead_offer) ??
+    null;
 
   const low =
-    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
+    asRecord(p?.low_ticket) ??
+    asRecord(p?.lowTicket) ??
+    asRecord(p?.mid) ??
+    asRecord(p?.middle_offer) ??
+    null;
 
   const high =
-    asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
+    asRecord(p?.high_ticket) ??
+    asRecord(p?.highTicket) ??
+    asRecord(p?.high) ??
+    asRecord(p?.high_offer) ??
+    null;
 
   return {
     id,
@@ -258,12 +282,21 @@ function personaLooksUseful(persona: AnyRecord | null): boolean {
 
 function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
   if (!persona) return null;
+
   const title = cleanString(persona.title ?? persona.profile ?? persona.name, 180);
   const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
   const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
   const channels = asArray(persona.channels).map((x) => cleanString(x, 64)).filter(Boolean);
   const tags = asArray(persona.tags).map((x) => cleanString(x, 64)).filter(Boolean);
-  const result = { title, pains, desires, channels, tags };
+
+  // ✅ NEW (persona “coach-level”)
+  const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
+  const triggers = asArray(persona.triggers).map((x) => cleanString(x, 160)).filter(Boolean);
+  const exact_phrases = asArray(persona.exact_phrases ?? persona.exactPhrases)
+    .map((x) => cleanString(x, 180))
+    .filter(Boolean);
+
+  const result = { title, pains, desires, channels, tags, objections, triggers, exact_phrases };
   return personaLooksUseful(result) ? result : null;
 }
 
@@ -289,11 +322,7 @@ function strategyTextLooksUseful(planJson: AnyRecord | null): boolean {
 
 function fullStrategyLooksUseful(planJson: AnyRecord | null): boolean {
   if (!planJson) return false;
-  return (
-    personaLooksUseful(asRecord(planJson.persona)) &&
-    tasksByTimeframeLooksUseful(planJson) &&
-    strategyTextLooksUseful(planJson)
-  );
+  return personaLooksUseful(asRecord(planJson.persona)) && tasksByTimeframeLooksUseful(planJson) && strategyTextLooksUseful(planJson);
 }
 
 function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | null {
@@ -355,12 +384,18 @@ export async function POST(req: Request) {
 
     // ✅ Si l'user a déjà choisi ET que la stratégie complète existe => on ne régénère rien
     if (hasSelected && !needFullStrategy) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_complete" },
+        { status: 200 },
+      );
     }
 
     // ✅ Si pas encore choisi, mais déjà généré les pyramides proprement => on ne régénère pas
     if (!hasSelected && hasUsefulPyramids) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_generated" },
+        { status: 200 },
+      );
     }
 
     // 1) Lire business_profile (onboarding)
@@ -401,13 +436,69 @@ export async function POST(req: Request) {
 
     // 3) Si pas de pyramides utiles -> générer les 3 propositions de pyramides
     if (!hasUsefulPyramids) {
-      const systemPrompt = `Tu es un expert en stratégie business et funnels.
-Tu dois proposer 3 pyramides d'offres adaptées à la niche de l'utilisateur.
+      const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
-IMPORTANT : Tu dois répondre en JSON strict uniquement, sans texte autour.`;
+OBJECTIF :
+Proposer 3 pyramides d'offres (lead magnet → low ticket → high ticket) parfaitement adaptées à l'utilisateur, au niveau “coach business”.
 
-      const userPrompt = `Contexte business (depuis onboarding) :
-${JSON.stringify(businessProfile, null, 2)}
+SOURCE DE VÉRITÉ (ordre de priorité) :
+1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
+2) diagnostic_summary + diagnostic_answers (si présents).
+3) Champs “cases” (maturity, biggest_blocker, etc.) = fallback seulement.
+
+EXIGENCES “COACH-LEVEL” :
+- Zéro blabla : tout doit être actionnable, spécifique, niché.
+- Chaque pyramide = une stratégie distincte (angle, mécanisme, promesse, canal, format).
+- Pas de généralités (“créer du contenu”) : préciser le quoi / comment / pourquoi.
+- Cohérence : respecter contraintes & non-négociables (temps, énergie, budget, formats refusés).
+- Inclure un quick win 7 jours (effet “wow”) dans la logique globale.
+
+IMPORTANT :
+Tu dois répondre en JSON strict uniquement, sans texte autour.`;
+
+      const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
+- diagnostic_profile :
+${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
+
+- diagnostic_summary :
+${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+
+- diagnostic_answers (extraits) :
+${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
+
+DONNÉES FORMULAIRES (fallback) :
+${JSON.stringify(
+  {
+    first_name: (businessProfile as any).first_name ?? (businessProfile as any).firstName ?? null,
+    country: (businessProfile as any).country ?? null,
+    niche: (businessProfile as any).niche ?? null,
+    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
+    maturity: (businessProfile as any).maturity ?? null,
+    biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
+    weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
+    revenue_goal_monthly:
+      (businessProfile as any).revenue_goal_monthly ??
+      (businessProfile as any).revenueGoalMonthly ??
+      (businessProfile as any).target_monthly_revenue ??
+      (businessProfile as any).revenue_goal ??
+      null,
+    has_offers: (businessProfile as any).has_offers ?? (businessProfile as any).hasOffers ?? null,
+    offers: (businessProfile as any).offers ?? null,
+    social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
+    email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
+    main_goal_90_days:
+      (businessProfile as any).main_goal_90_days ??
+      (businessProfile as any).main_goal ??
+      (businessProfile as any).mainGoal90Days ??
+      null,
+    main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
+    preferred_content_type:
+      (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
+    tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
+  },
+  null,
+  2,
+)}
 
 Ressources internes (si utiles) :
 ${JSON.stringify(resources ?? [], null, 2)}
@@ -423,16 +514,17 @@ Contraintes :
   - purpose (l'objectif / transformation)
   - insight (1 phrase percutante: pourquoi ça convertit à ce niveau)
 - La logique globale de chaque pyramide doit être expliquée en 1 phrase (strategy_summary).
+- Titres inspirés de : SUPERPROLIFIQUE™, EMAIL FACTORY™, etc. (outcome + mécanisme).
 
 STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
 {
   "offer_pyramids": [
     {
       "id": "A",
-      "name": "Pyramide A — Simplicité",
+      "name": "Pyramide A — ...",
       "strategy_summary": "1 phrase",
       "lead_magnet": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-      "low_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "low_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
       "high_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
     }
   ]
@@ -472,7 +564,8 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
           typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
         selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
         // compat
-        selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
+        selected_pyramid_index:
+          typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
         selected_pyramid: basePlan.selected_pyramid ?? null,
         updated_at: new Date().toISOString(),
       };
@@ -512,40 +605,100 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
       );
     }
 
-    const fullSystemPrompt = `Tu es un stratège business senior.
-Tu dois créer une stratégie complète et actionnable pour un entrepreneur à partir de son onboarding + de sa pyramide d'offres choisie.
+    const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind).
+Tu dois créer une stratégie complète et actionnable pour un entrepreneur à partir :
+- du business_profile (onboarding),
+- du diagnostic_profile (si présent),
+- de la pyramide d'offres choisie.
+
+SOURCE DE VÉRITÉ (ordre de priorité) :
+1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
+2) diagnostic_summary + diagnostic_answers (si présents).
+3) Champs “cases” (maturity, biggest_blocker…) = fallback seulement.
 
 OBJECTIF :
-Générer une stratégie actionnable + un plan 90 jours découpé en tâches, pour alimenter automatiquement l'app.
+Générer une stratégie “coach-level” + un plan 90 jours découpé en tâches, pour alimenter automatiquement l'app.
 
-RÈGLES :
-- Réponds en JSON strict uniquement, sans texte autour.
-- Donne des éléments concrets, pas de blabla.
-- Si une info manque, fais une hypothèse plausible basée sur la niche.
+RÈGLES “COACH-LEVEL” :
+- Spécifique > générique. Actions concrètes, livrables, critères de réussite.
+- Respecte contraintes & non-négociables (temps/énergie/budget/formats refusés).
+- Cohérence totale avec la pyramide choisie (mêmes angles, même canal principal).
+- 1 focus prioritaire (levier principal) + 2 leviers secondaires maximum.
+- Les tâches doivent être exécutables par une personne seule.
 
-FORMAT JSON STRICT À RESPECTER :
+FORMAT JSON STRICT À RESPECTER (réponds en JSON strict uniquement, sans texte autour) :
 {
   "mission": "string",
   "promise": "string",
   "positioning": "string",
   "summary": "string",
   "persona": {
-    "title": "profil en 1 phrase (ex: 'Dirigeantes de PME ...')",
-    "pains": ["...", "...", "..."],
+    "title": "profil en 1 phrase (sans âge/ville, sans prénom)",
+    "pains": ["...", "...", "...", "...", "..."],
     "desires": ["...", "...", "..."],
-    "channels": ["LinkedIn", "Email", "..."]
+    "channels": ["...", "...", "..."],
+    "objections": ["...", "...", "..."],
+    "triggers": ["...", "...", "..."],
+    "exact_phrases": ["...", "...", "...", "...", "..."]
   },
   "plan_90_days": {
+    "focus": "string",
+    "milestones": ["...", "...", "..."],
     "tasks_by_timeframe": {
       "d30": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
       "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
       "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
     }
   }
-}`;
+}
 
-    const fullUserPrompt = `Contexte business (onboarding) :
-${JSON.stringify(businessProfile, null, 2)}
+CONTRAINTES TASKS :
+- Minimum 6 tâches par timeframe (d30/d60/d90).
+- due_date valides et réparties dans le temps.`;
+
+    const fullUserPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
+- diagnostic_profile :
+${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
+
+- diagnostic_summary :
+${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+
+- diagnostic_answers :
+${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
+
+DONNÉES FORMULAIRES (fallback) :
+${JSON.stringify(
+  {
+    first_name: (businessProfile as any).first_name ?? (businessProfile as any).firstName ?? null,
+    country: (businessProfile as any).country ?? null,
+    niche: (businessProfile as any).niche ?? null,
+    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
+    maturity: (businessProfile as any).maturity ?? null,
+    biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
+    weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
+    revenue_goal_monthly:
+      (businessProfile as any).revenue_goal_monthly ??
+      (businessProfile as any).revenueGoalMonthly ??
+      (businessProfile as any).target_monthly_revenue ??
+      (businessProfile as any).revenue_goal ??
+      null,
+    has_offers: (businessProfile as any).has_offers ?? (businessProfile as any).hasOffers ?? null,
+    offers: (businessProfile as any).offers ?? null,
+    social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
+    email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
+    main_goal_90_days:
+      (businessProfile as any).main_goal_90_days ??
+      (businessProfile as any).main_goal ??
+      (businessProfile as any).mainGoal90Days ??
+      null,
+    main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
+    preferred_content_type:
+      (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
+    tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
+  },
+  null,
+  2,
+)}
 
 Pyramide choisie :
 ${JSON.stringify(selectedPyramid, null, 2)}
@@ -559,7 +712,7 @@ ${JSON.stringify(limitedChunks ?? [], null, 2)}
 Consignes importantes :
 - Le plan 90 jours DOIT contenir des tâches avec due_date au format YYYY-MM-DD.
 - Donne au moins 6 tâches par timeframe (d30, d60, d90).
-- Priorité cohérente avec l'objectif et la maturité.
+- Priorité cohérente avec l'objectif et les contraintes.
 `;
 
     const fullAiResponse = await ai.chat.completions.create({
@@ -569,7 +722,7 @@ Consignes importantes :
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-      temperature: 0.7,
+      temperature: 0.6,
     });
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -616,11 +769,12 @@ Consignes importantes :
       mission: cleanString(basePlan.mission, 240) || mission,
       promise: cleanString(basePlan.promise, 240) || promise,
       positioning: cleanString(basePlan.positioning, 320) || positioning,
-      summary:
-        cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
+      summary: cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
       persona: personaLooksUseful(asRecord(basePlan.persona)) ? basePlan.persona : safePersona,
       plan_90_days: {
         ...(asRecord(basePlan.plan_90_days) ?? {}),
+        focus: cleanString(plan90Raw.focus, 200),
+        milestones: asArray(plan90Raw.milestones).map((x) => cleanString(x, 180)).filter(Boolean).slice(0, 6),
         tasks_by_timeframe: tasksByTimeframeLooksUseful(basePlan)
           ? (asRecord((asRecord(basePlan.plan_90_days) ?? {}).tasks_by_timeframe) ??
               asRecord(basePlan.tasks_by_timeframe) ??

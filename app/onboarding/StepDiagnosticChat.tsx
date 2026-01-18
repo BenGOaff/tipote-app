@@ -89,6 +89,26 @@ function getAnswerByQuestionId(turns: DiagnosticTurn[], id: string) {
   return (t?.content ?? "").trim();
 }
 
+function isPyramidQuestionId(id: string) {
+  return id.startsWith("pyr_");
+}
+
+function isPyramidAnswerComplete(text: string, minChars: number) {
+  const t = (text ?? "").trim();
+  if (!t) return false;
+  if (t.length < Math.max(minChars, 1)) return false;
+
+  // garde-fou "réponse vide déguisée"
+  // ex: "je sais pas", "aucune idée", "?"
+  if (/^(je\s+sais\s+pas|aucune\s+idée|pas\s+sûr|bof|non|n\/a|\?)$/i.test(t)) return false;
+
+  // évite de valider sur 1 seul mot
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 3) return false;
+
+  return true;
+}
+
 function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): Record<string, unknown> {
   const userText = turns
     .filter((t) => t.role === "user")
@@ -141,8 +161,23 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
     deliverable_14_days: getAnswerByQuestionId(turns, "deliverable_14_days") || null,
   };
 
+  // ✅ NOUVEAU : réponses aux 9 questions "pyramide" (stockées dans diagnostic_profile)
+  const offerPyramid9 = {
+    q1_domain: getAnswerByQuestionId(turns, "pyr_q1_domain") || null,
+    q2_ideal_client: getAnswerByQuestionId(turns, "pyr_q2_ideal_client") || null,
+    q3_urgent_problem: getAnswerByQuestionId(turns, "pyr_q3_urgent_problem") || null,
+    q4_transformation: getAnswerByQuestionId(turns, "pyr_q4_transformation") || null,
+    q5_quick_result: getAnswerByQuestionId(turns, "pyr_q5_quick_result") || null,
+    q6_obstacles: getAnswerByQuestionId(turns, "pyr_q6_obstacles") || null,
+    q7_unique_methods: getAnswerByQuestionId(turns, "pyr_q7_unique_methods") || null,
+    q8_format: getAnswerByQuestionId(turns, "pyr_q8_format") || null,
+    q9_uniqueness: getAnswerByQuestionId(turns, "pyr_q9_uniqueness") || null,
+  };
+
+  const offerPyramidCompleted = Object.values(offerPyramid9).every((v) => typeof v === "string" && (v ?? "").trim().length > 0);
+
   return {
-    version: "v2_min_form+chat",
+    version: "v2_min_form+chat+pyramid9",
     root_blockers: Array.from(new Set(rootBlockers)).slice(0, 8),
 
     // from form (ancrages)
@@ -164,6 +199,12 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
     differentiation,
     tone_energy: toneEnergy,
     next_move: nextMove,
+
+    // ✅ NEW BLOCK for pyramid GPT
+    offer_pyramid: {
+      completed: offerPyramidCompleted,
+      answers: offerPyramid9,
+    },
 
     raw_signals: {
       biggest_blocker_form: data.biggestBlocker || null,
@@ -188,7 +229,17 @@ function buildSummary(turns: DiagnosticTurn[], data: OnboardingData) {
   if ((data as any).revenueGoalMonthly) meta.push(`Objectif CA mensuel : ${(data as any).revenueGoalMonthly}`);
   if (data.weeklyHours) meta.push(`Temps dispo : ${data.weeklyHours}/semaine`);
 
-  return compactLines([meta.length ? meta.join(" · ") : "", "", "Synthèse du diagnostic :", ...points].join("\n")).slice(
+  // ✅ ajout léger (sans casser ta synthèse)
+  const pyramidLine = compactLines(
+    [
+      getAnswerByQuestionId(turns, "pyr_q1_domain") ? `Pyramide Q1 : ${getAnswerByQuestionId(turns, "pyr_q1_domain")}` : "",
+      getAnswerByQuestionId(turns, "pyr_q3_urgent_problem")
+        ? `Pyramide Q3 : ${getAnswerByQuestionId(turns, "pyr_q3_urgent_problem")}`
+        : "",
+    ].join("\n"),
+  );
+
+  return compactLines([meta.length ? meta.join(" · ") : "", "", "Synthèse du diagnostic :", ...points, pyramidLine].join("\n")).slice(
     0,
     4000,
   );
@@ -245,7 +296,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         prompt: (n) =>
           `Dans 30 jours${maybeName(n)}, ce serait déjà une victoire si…\n\n(un résultat concret, mesurable, même petit)`,
         minChars: 60,
-        followUp: (n, last) =>
+        followUp: (n) =>
           `Ok${maybeName(n)}. Si tu devais le rendre mesurable : tu mesurerais quoi exactement ? (ex: 10 leads, 3 ventes, 1 page en ligne, 5 contenus, etc.)`,
         tags: ["goal", "horizon"],
       },
@@ -321,7 +372,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         prompt: (n) =>
           `Écris ta phrase “anti-concurrents”${maybeName(n)} en mode simple (pas de jargon).\n\nEx: “Je fais X pour Y sans Z.”`,
         minChars: 60,
-        followUp: (n, last) =>
+        followUp: (n) =>
           `Ok${maybeName(n)}. Maintenant rends-la encore plus concrète : remplace “X/Y/Z” par des mots que ton client utilise vraiment.`,
         tags: ["differentiation"],
       },
@@ -374,6 +425,77 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         followUp: (n) =>
           `Ok${maybeName(n)}. Si tu avais 2 heures demain, tu fais quoi en premier ?`,
         tags: ["next_move", "deliverable"],
+      },
+
+      // ✅ NOUVEAU : 9 questions pyramide EXACTES (sans reformulation)
+      {
+        id: "pyr_q1_domain",
+        title: "Pyramide — Question 1",
+        prompt: () =>
+          "Dans quel domaine travailles-tu ? Utilise la phrase obtenue après l'exercice positionnement (j'aide les ... à ... en ...)",
+        minChars: 20,
+        tags: ["offer_pyramid", "pyr_q1"],
+      },
+      {
+        id: "pyr_q2_ideal_client",
+        title: "Pyramide — Question 2",
+        prompt: () => "Qui est ton client idéal ? Utilise les réponses obtenues lors de l'exercice persona.",
+        minChars: 35,
+        tags: ["offer_pyramid", "pyr_q2"],
+      },
+      {
+        id: "pyr_q3_urgent_problem",
+        title: "Pyramide — Question 3",
+        prompt: () =>
+          "Quel problème urgent tu vas résoudre pour lui ? (Un vrai problème qui le stresse ou l’empêche d’avancer)",
+        minChars: 35,
+        tags: ["offer_pyramid", "pyr_q3"],
+      },
+      {
+        id: "pyr_q4_transformation",
+        title: "Pyramide — Question 4",
+        prompt: () =>
+          "Quelle transformation concrète il obtient grâce à ton offre ? (À quoi ressemble sa vie après avoir suivi ou acheté ton offre)",
+        minChars: 35,
+        tags: ["offer_pyramid", "pyr_q4"],
+      },
+      {
+        id: "pyr_q5_quick_result",
+        title: "Pyramide — Question 5",
+        prompt: () =>
+          'Quel résultat rapide, visible et motivant peux-tu lui promettre ? (Qui crée un effet "wow" dans les 7 premiers jours, par exemple)',
+        minChars: 35,
+        tags: ["offer_pyramid", "pyr_q5"],
+      },
+      {
+        id: "pyr_q6_obstacles",
+        title: "Pyramide — Question 6",
+        prompt: () => "Quels sont les 3 plus gros obstacles qui l’empêchent d’obtenir ce résultat aujourd’hui ?",
+        minChars: 45,
+        tags: ["offer_pyramid", "pyr_q6"],
+      },
+      {
+        id: "pyr_q7_unique_methods",
+        title: "Pyramide — Question 7",
+        prompt: () => "Quelles sont tes méthodes uniques, secrètes ou innovantes pour l’aider à dépasser ces obstacles ?",
+        minChars: 45,
+        tags: ["offer_pyramid", "pyr_q7"],
+      },
+      {
+        id: "pyr_q8_format",
+        title: "Pyramide — Question 8",
+        prompt: () =>
+          "Sous quel format vas-tu proposer cette offre ? (formation vidéo, accompagnement, templates prêts à l’emploi, coaching, abonnement, checklist, application, mastermind, membership, …)",
+        minChars: 25,
+        tags: ["offer_pyramid", "pyr_q8"],
+      },
+      {
+        id: "pyr_q9_uniqueness",
+        title: "Pyramide — Question 9",
+        prompt: () =>
+          "Pourquoi ton offre est unique et différente de tout ce qui existe ? (Ce qui fait qu’elle est une évidence pour le client)",
+        minChars: 45,
+        tags: ["offer_pyramid", "pyr_q9"],
       },
     ],
     [],
@@ -485,9 +607,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     const quality = scoreAnswer(content, q.minChars);
 
     // tag du tour user avec id de question -> extraction fiable
-    const tags = Array.from(
-      new Set([...(q.tags ?? []), `q:${q.id}`]),
-    );
+    const tags = Array.from(new Set([...(q.tags ?? []), `q:${q.id}`]));
 
     pushTurn({ role: "user", content, created_at: nowIso(), quality_score: quality, tags });
     return quality;
@@ -510,6 +630,16 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     setQIndex(next);
     setAwaitingAnswer(true);
     const nq = questions[next];
+
+    // ✅ Transition unique AVANT la 1ère question pyramide (OK, pas "entre chaque question")
+    if (nq.id === "pyr_q1_domain") {
+      pushAssistant(
+        "Je vais te poser 9 questions pour clarifier et construire ton offre.",
+        ["offer_pyramid", "intro9q"],
+        true,
+      );
+    }
+
     pushAssistant(nq.prompt(firstName), nq.tags, true);
   }
 
@@ -522,9 +652,24 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     const text = input.trim();
     if (!text || !currentQ) return;
 
+    const isPyr = isPyramidQuestionId(currentQ.id);
+
+    // ✅ pour les questions pyramide : on n'avance pas tant que "réponse complète"
+    if (isPyr && !isPyramidAnswerComplete(text, currentQ.minChars)) {
+      pushAssistant("Merci de compléter ta réponse.", ["incomplete", "offer_pyramid"], true);
+      setAwaitingAnswer(true);
+      return;
+    }
+
     setInput("");
     const quality = pushUser(text, currentQ);
     setAwaitingAnswer(false);
+
+    // ✅ IMPORTANT : aucune phrase/ack/encouragement entre les 9 questions pyramide
+    if (isPyr) {
+      nextQuestion();
+      return;
+    }
 
     const needsFollowUp = quality < 0.62 && !!currentQ.followUp && !askedFollowUpFor[currentQ.id];
 
@@ -544,7 +689,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
 
     pushAssistant(feedback, ["ack"], true);
 
-    // petite “phrase humaine” de temps en temps
+    // petite “phrase humaine” de temps en temps (diagnostic ONLY)
     if (Math.random() < 0.35) {
       pushAssistant(`Super${maybeName(firstName)}, ta réponse va beaucoup m’aider pour la suite 👏`, ["encourage"], true);
     }
@@ -560,7 +705,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
       diagnostic_profile: buildDiagnosticProfile(turns, data),
       diagnostic_summary: buildSummary(turns, data),
       diagnostic_completed: true,
-      onboarding_version: "v2_min_form+chat",
+      onboarding_version: "v2_min_form+chat+pyramid9",
     };
 
     onComplete(payload);
