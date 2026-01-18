@@ -8,7 +8,6 @@ import { Sparkles } from "lucide-react";
 
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
-import { StepGoals } from "./StepGoals";
 import { StepDiagnosticChat, type DiagnosticPayload } from "./StepDiagnosticChat";
 
 export interface Offer {
@@ -26,17 +25,19 @@ export interface SocialLink {
 }
 
 export interface OnboardingData {
-  // ÉCRAN 1 — Toi & ton business
+  // Socle minimal (écran 1)
   firstName: string;
-  ageRange: string;
-  gender: string;
   country: string;
   niche: string;
   missionStatement: string;
+
+  // Gardés pour compat (anciens champs — peuvent rester vides)
+  ageRange: string;
+  gender: string;
   maturity: string;
   biggestBlocker: string;
 
-  // ÉCRAN 2 — Situation actuelle
+  // Socle minimal (écran 2)
   hasOffers: boolean | null;
   offers: Offer[];
   socialAudience: string;
@@ -45,12 +46,10 @@ export interface OnboardingData {
   weeklyHours: string;
   mainGoal90Days: string;
 
-  // ✅ NEW: objectif chiffré (texte en DB)
   revenueGoalMonthly: string;
-
   mainGoals: string[];
 
-  // ÉCRAN 3 — Unicité & style
+  // Gardés pour compat (anciens champs — chat ensuite)
   uniqueValue: string;
   untappedStrength: string;
   biggestChallenge: string;
@@ -59,7 +58,7 @@ export interface OnboardingData {
   preferredContentType: string;
   tonePreference: string[];
 
-  // ✅ NEW: phase 2 (diagnostic chat)
+  // Phase 2 chat
   diagnosticAnswers?: unknown[];
   diagnosticProfile?: Record<string, unknown> | null;
   diagnosticSummary?: string;
@@ -69,11 +68,12 @@ export interface OnboardingData {
 
 const initialData: OnboardingData = {
   firstName: "",
-  ageRange: "",
-  gender: "",
   country: "",
   niche: "",
   missionStatement: "",
+
+  ageRange: "",
+  gender: "",
   maturity: "",
   biggestBlocker: "",
 
@@ -86,7 +86,6 @@ const initialData: OnboardingData = {
   mainGoal90Days: "",
 
   revenueGoalMonthly: "",
-
   mainGoals: [],
 
   uniqueValue: "",
@@ -101,7 +100,7 @@ const initialData: OnboardingData = {
   diagnosticProfile: null,
   diagnosticSummary: "",
   diagnosticCompleted: false,
-  onboardingVersion: "v2_form+chat",
+  onboardingVersion: "v2_min_form+chat",
 };
 
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
@@ -112,11 +111,7 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   });
 
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-
-  if (!res.ok) {
-    throw new Error((json as any)?.error || `HTTP ${res.status}`);
-  }
-
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   return json as T;
 }
 
@@ -126,32 +121,12 @@ function normalizeDiagnosticPayload(payload: DiagnosticPayload): {
   diagnosticSummary?: string;
 } {
   const p: any = payload as any;
-
-  const answers =
-    p?.diagnosticAnswers ??
-    p?.diagnostic_answers ??
-    p?.answers ??
-    p?.messages ??
-    p?.transcript ??
-    undefined;
-
-  const profile =
-    p?.diagnosticProfile ??
-    p?.diagnostic_profile ??
-    p?.profile ??
-    p?.normalized ??
-    null;
-
-  const summary =
-    p?.diagnosticSummary ??
-    p?.diagnostic_summary ??
-    p?.summary ??
-    p?.coachSummary ??
-    "";
-
+  const answers = p?.diagnosticAnswers ?? p?.diagnostic_answers ?? p?.answers ?? p?.messages ?? [];
+  const profile = p?.diagnosticProfile ?? p?.diagnostic_profile ?? p?.profile ?? null;
+  const summary = p?.diagnosticSummary ?? p?.diagnostic_summary ?? p?.summary ?? "";
   return {
-    diagnosticAnswers: Array.isArray(answers) ? answers : undefined,
-    diagnosticProfile: (profile && typeof profile === "object" ? profile : null) as Record<string, unknown> | null,
+    diagnosticAnswers: Array.isArray(answers) ? answers : [],
+    diagnosticProfile: profile && typeof profile === "object" ? profile : null,
     diagnosticSummary: typeof summary === "string" ? summary : "",
   };
 }
@@ -164,9 +139,7 @@ const OnboardingFlow = () => {
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateData = (updates: Partial<OnboardingData>) => {
-    setData((prev) => ({ ...prev, ...updates }));
-  };
+  const updateData = (updates: Partial<OnboardingData>) => setData((prev) => ({ ...prev, ...updates }));
 
   const saveCurrent = async () => {
     await postJSON("/api/onboarding/answers", {
@@ -178,10 +151,9 @@ const OnboardingFlow = () => {
   const nextStep = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-
     try {
       await saveCurrent();
-      setStep((prev) => Math.min(prev + 1, 4));
+      setStep((prev) => Math.min(prev + 1, 3));
     } catch (error) {
       toast({
         title: "Erreur",
@@ -205,7 +177,6 @@ const OnboardingFlow = () => {
     try {
       const diagnostic = normalizeDiagnosticPayload(payload);
 
-      // 1) persister la phase 2
       updateData({
         diagnosticAnswers: diagnostic.diagnosticAnswers ?? [],
         diagnosticProfile: diagnostic.diagnosticProfile ?? null,
@@ -218,22 +189,16 @@ const OnboardingFlow = () => {
         diagnostic_profile: diagnostic.diagnosticProfile ?? null,
         diagnostic_summary: diagnostic.diagnosticSummary ?? "",
         diagnostic_completed: true,
-        onboarding_version: data.onboardingVersion ?? "v2_form+chat",
+        onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
       });
 
-      // 2) marquer onboarding complet
-      await postJSON("/api/onboarding/complete", {
-        diagnostic_completed: true,
-      });
+      await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
 
-      // 3) suite logique : choix des 3 pyramides d'offres (Lovable)
       router.push("/strategy/pyramids");
       router.refresh();
 
-      // 4) ✅ anti-régression : génération stratégie en background
-      postJSON("/api/strategy").catch(() => {
-        // ne bloque jamais l'UX
-      });
+      // ✅ anti-régression
+      postJSON("/api/strategy").catch(() => {});
     } catch (error) {
       toast({
         title: "Erreur",
@@ -245,7 +210,7 @@ const OnboardingFlow = () => {
     }
   };
 
-  const progress = (step / 4) * 100;
+  const progress = (step / 3) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -258,13 +223,13 @@ const OnboardingFlow = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Réponds à quelques questions pour que je te crée une stratégie et un plan d'action ultra personnalisés.
+            Réponds à quelques questions. Ensuite, on passe en mode diagnostic pour une stratégie ultra personnalisée.
           </p>
         </div>
 
         <div className="mb-8">
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Étape {step} sur 4</span>
+            <span>Étape {step} sur 3</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -272,26 +237,9 @@ const OnboardingFlow = () => {
 
         <div className="space-y-6">
           {step === 1 && <StepProfile data={data} updateData={updateData} onNext={nextStep} />}
-
           {step === 2 && <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />}
-
           {step === 3 && (
-            <StepGoals
-              data={data}
-              updateData={updateData}
-              onBack={prevStep}
-              onComplete={nextStep} // on passe au chat
-              isSubmitting={isSubmitting}
-            />
-          )}
-
-          {step === 4 && (
-            <StepDiagnosticChat
-              data={data}
-              onBack={prevStep}
-              isSubmitting={isSubmitting}
-              onComplete={finalizeOnboarding}
-            />
+            <StepDiagnosticChat data={data} onBack={prevStep} isSubmitting={isSubmitting} onComplete={finalizeOnboarding} />
           )}
         </div>
       </main>

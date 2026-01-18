@@ -37,11 +37,9 @@ interface StepDiagnosticChatProps {
 type Question = {
   id: string;
   title: string;
-  prompt: string;
+  prompt: (firstName: string) => string;
   minChars: number;
-  // If user answer is vague, ask this follow-up prompt once.
-  followUp?: string;
-  // A lightweight extractor tag for later normalization.
+  followUp?: (firstName: string, lastAnswer: string) => string;
   tags?: string[];
 };
 
@@ -49,16 +47,32 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function randomDelayMs() {
+  return 800 + Math.floor(Math.random() * 1000);
+}
+
+function maybeName(firstName: string) {
+  if (!firstName) return "";
+  return Math.random() < 0.55 ? ` ${firstName}` : "";
+}
+
 function scoreAnswer(text: string, minChars: number) {
   const t = (text ?? "").trim();
   if (!t) return 0;
-  // Simple heuristic: length + presence of specifics
+
   const lenScore = Math.min(1, t.length / Math.max(minChars, 1));
   const hasExample = /ex(emple)?|par exemple|ex\s?:|genre|j'ai|j’ai|on a|on a essayé|j'ai essayé|j’ai essayé/i.test(t);
   const hasNumbers = /\d/.test(t);
   const hasCause = /parce que|car|du coup|donc|résultat|au lieu de|à cause de/i.test(t);
-  const richness = (hasExample ? 0.15 : 0) + (hasNumbers ? 0.1 : 0) + (hasCause ? 0.1 : 0);
-  return Math.max(0, Math.min(1, lenScore * 0.75 + richness));
+  const hasConcrete = /(€|\/mois|clients?|ventes?|rdv|leads?|followers?|emails?|%)/i.test(t);
+
+  const richness =
+    (hasExample ? 0.15 : 0) +
+    (hasNumbers ? 0.1 : 0) +
+    (hasCause ? 0.1 : 0) +
+    (hasConcrete ? 0.1 : 0);
+
+  return Math.max(0, Math.min(1, lenScore * 0.7 + richness));
 }
 
 function compactLines(s: string) {
@@ -67,6 +81,12 @@ function compactLines(s: string) {
     .map((x) => x.trim())
     .filter(Boolean)
     .join("\n");
+}
+
+function getAnswerByQuestionId(turns: DiagnosticTurn[], id: string) {
+  const tag = `q:${id}`;
+  const t = turns.find((x) => x.role === "user" && (x.tags ?? []).includes(tag));
+  return (t?.content ?? "").trim();
 }
 
 function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): Record<string, unknown> {
@@ -80,131 +100,280 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
   if (/impost|crédib|légitim/i.test(userText)) rootBlockers.push("credibility_fear");
   if (/temps|débord|surcharg|fatigu|énergie/i.test(userText)) rootBlockers.push("time_energy_constraints");
   if (/argent|budget|invest|endett|trésorer/i.test(userText)) rootBlockers.push("money_constraints");
-  if (/peur|anxi|stress|panique|bloqu/i.test(userText)) rootBlockers.push("fear_avoidance");
-  if (/offre|positionn|niche|cibl/i.test(userText)) rootBlockers.push("offer_clarity");
-  if (/trafic|audience|abonn|visibil|algorithm/i.test(userText)) rootBlockers.push("traffic_audience");
-  if (/vente|clos|conversion|prospect|client/i.test(userText)) rootBlockers.push("sales_conversion");
+  if (/peur|anxi|stress|panique|bloqu|évite|procrast/i.test(userText)) rootBlockers.push("fear_avoidance");
+  if (/offre|positionn|niche|cibl|promesse|avatar/i.test(userText)) rootBlockers.push("offer_clarity");
+  if (/trafic|audience|abonn|visibil|algorithm|contenu/i.test(userText)) rootBlockers.push("traffic_audience");
+  if (/vente|clos|conversion|prospect|client|objection/i.test(userText)) rootBlockers.push("sales_conversion");
 
   const constraints = {
     weekly_hours: data.weeklyHours || null,
-    current_maturity: data.maturity || null,
     revenue_goal_monthly: (data as any).revenueGoalMonthly || null,
+    non_negotiables: getAnswerByQuestionId(turns, "non_negotiables") || null,
+    personal_constraints: getAnswerByQuestionId(turns, "constraints") || null,
   };
 
-  const toneRules = {
-    preferred_content_type: data.preferredContentType || null,
-    tone_preference: data.tonePreference || [],
+  const horizon = {
+    d30: getAnswerByQuestionId(turns, "30d_win") || null,
+    d90: getAnswerByQuestionId(turns, "90d_target") || null,
+    m12: getAnswerByQuestionId(turns, "12m_vision") || null,
+    y3_5: getAnswerByQuestionId(turns, "3y_vision") || null,
+  };
+
+  const client = {
+    ideal_client_real_desire: getAnswerByQuestionId(turns, "ideal_client") || null,
+    triggers_now: getAnswerByQuestionId(turns, "client_triggers") || null,
+    objections: getAnswerByQuestionId(turns, "client_objections") || null,
+  };
+
+  const differentiation = {
+    proof_or_method: getAnswerByQuestionId(turns, "differentiation") || null,
+    anti_competitors_sentence: getAnswerByQuestionId(turns, "anti_competitors") || null,
+  };
+
+  const toneEnergy = {
+    tone_preference_raw: getAnswerByQuestionId(turns, "tone_style") || null,
+    formats_doable: getAnswerByQuestionId(turns, "formats_doable") || null,
+    formats_impossible: getAnswerByQuestionId(turns, "formats_impossible") || null,
+  };
+
+  const nextMove = {
+    focus_14_days: getAnswerByQuestionId(turns, "next_move") || null,
+    deliverable_14_days: getAnswerByQuestionId(turns, "deliverable_14_days") || null,
   };
 
   return {
-    version: "v2_form+chat",
-    root_blockers: Array.from(new Set(rootBlockers)).slice(0, 6),
+    version: "v2_min_form+chat",
+    root_blockers: Array.from(new Set(rootBlockers)).slice(0, 8),
+
+    // from form (ancrages)
+    profile: {
+      first_name: data.firstName || null,
+      country: data.country || null,
+      niche: data.niche || null,
+      mission_statement: data.missionStatement || null,
+      main_goal_90_days: data.mainGoal90Days || null,
+      has_offers: data.hasOffers ?? null,
+      offers: data.offers ?? [],
+      social_links: data.socialLinks ?? [],
+      client_feedback: (data.clientFeedback ?? []).filter(Boolean),
+    },
+
     constraints,
-    tone_rules: toneRules,
+    horizon,
+    client,
+    differentiation,
+    tone_energy: toneEnergy,
+    next_move: nextMove,
+
     raw_signals: {
-      biggest_blocker: data.biggestBlocker || null,
-      biggest_challenge: data.biggestChallenge || null,
-      unique_value: data.uniqueValue || null,
-      untapped_strength: data.untappedStrength || null,
+      biggest_blocker_form: data.biggestBlocker || null,
+      maturity_form: data.maturity || null,
+      biggest_challenge_form: data.biggestChallenge || null,
+      unique_value_form: data.uniqueValue || null,
+      untapped_strength_form: data.untappedStrength || null,
     },
   };
 }
 
 function buildSummary(turns: DiagnosticTurn[], data: OnboardingData) {
-  const answersByQuestion: string[] = [];
-  // crude: take last 8 user answers
+  const points: string[] = [];
   const userAnswers = turns.filter((t) => t.role === "user").map((t) => t.content.trim());
-  userAnswers.slice(-8).forEach((a, i) => {
-    answersByQuestion.push(`- Point ${i + 1} : ${a}`);
+  userAnswers.slice(-10).forEach((a, i) => {
+    points.push(`- Point ${i + 1} : ${a}`);
   });
 
   const meta: string[] = [];
   if (data.missionStatement) meta.push(`Mission : ${data.missionStatement}`);
-  if (data.mainGoal90Days) meta.push(`Objectif 90 jours : ${data.mainGoal90Days}`);
+  if (data.mainGoal90Days) meta.push(`Objectif 90 jours (form) : ${data.mainGoal90Days}`);
   if ((data as any).revenueGoalMonthly) meta.push(`Objectif CA mensuel : ${(data as any).revenueGoalMonthly}`);
   if (data.weeklyHours) meta.push(`Temps dispo : ${data.weeklyHours}/semaine`);
 
-  return compactLines(
-    [meta.length ? meta.join(" · ") : "", "", "Synthèse du diagnostic :", ...answersByQuestion].join("\n"),
-  ).slice(0, 4000);
+  return compactLines([meta.length ? meta.join(" · ") : "", "", "Synthèse du diagnostic :", ...points].join("\n")).slice(
+    0,
+    4000,
+  );
 }
 
 export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: StepDiagnosticChatProps) {
+  const firstName = (data.firstName || "").trim();
+
   const questions: Question[] = useMemo(
     () => [
       {
-        id: "q1",
+        id: "today_reality",
         title: "Situation réelle",
-        prompt:
-          "Avant de te proposer une stratégie, j’ai besoin de comprendre ta situation réelle.\n\nQu’est-ce que tu as déjà essayé jusqu’ici (même si ça n’a pas marché) ?",
+        prompt: (n) =>
+          `Ok${maybeName(n)}. Avant de te proposer une stratégie, j’ai besoin de ta réalité.\n\nDécris où tu en es aujourd’hui : ce que tu as déjà tenté, et ce qui te bloque VRAIMENT.`,
         minChars: 120,
-        followUp: "OK. Donne-moi 2–3 exemples concrets (actions faites, durée, résultat). Même si le résultat est nul.",
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Donne-moi 2–3 exemples concrets (actions faites, durée, résultat). Même si le résultat est nul.`,
         tags: ["context", "history"],
       },
       {
-        id: "q2",
-        title: "Le blocage racine",
-        prompt:
-          "Si tu devais choisir UNE seule chose qui te bloque le plus aujourd’hui, ce serait quoi ?\n\nEt surtout : qu’est-ce qui te fait dire ça ?",
-        minChars: 120,
-        followUp:
-          "Je veux être sûre de bien comprendre : raconte une situation précise où tu t’es retrouvée bloquée, et ce que tu t’es dit à ce moment-là.",
+        id: "root_blocker",
+        title: "Blocage racine",
+        prompt: (n) =>
+          `Hmmm${maybeName(n)}… si tu devais choisir UNE seule cause racine (pas le symptôme), ce serait quoi ?\n\nEt pourquoi ?`,
+        minChars: 110,
+        followUp: (n) =>
+          `Je veux être sûre de bien comprendre${maybeName(n)} : raconte une situation précise où tu t’es retrouvée bloquée, et ce que tu t’es dit à ce moment-là.`,
         tags: ["blocker", "root_cause"],
       },
       {
-        id: "q3",
-        title: "Contraintes",
-        prompt:
-          "Quelles sont tes contraintes non négociables en ce moment ?\n\nTemps, énergie, budget, situation perso, compétences… Dis-moi ce qui limite vraiment tes options.",
-        minChars: 120,
-        followUp: "Si tu devais classer tes contraintes (1 = la plus forte), ce serait quoi ? Et pourquoi ?",
+        id: "constraints",
+        title: "Contraintes & limites",
+        prompt: (n) =>
+          `Niveau contraintes${maybeName(n)} : quelles sont tes limites réelles (temps/énergie/budget/situation perso/compétences) ?\n\nDis-moi ce qui est NON négociable.`,
+        minChars: 110,
+        followUp: (n) =>
+          `Si tu devais classer tes contraintes (1 = la plus forte)${maybeName(n)}, ce serait quoi ? Et pourquoi ?`,
         tags: ["constraints"],
       },
       {
-        id: "q4",
-        title: "Client & achat",
-        prompt:
-          "Parle-moi de ton client idéal dans la vraie vie.\n\nQui est-il/elle ? Qu’est-ce qui le/la stresse ? Qu’est-ce qui le/la pousserait à acheter MAINTENANT plutôt que plus tard ?",
-        minChars: 140,
-        followUp: "OK. Donne-moi 2 objections qu’il/elle aurait avant d’acheter, et comment tu pourrais y répondre sans bullshit.",
-        tags: ["persona", "objections", "triggers"],
+        id: "non_negotiables",
+        title: "Ce que tu refuses",
+        prompt: (n) =>
+          `Qu’est-ce que tu refuses de faire, même si “ça marche”${maybeName(n)} ?\n\n(ex: DM, appels, vidéo, pub, poster tous les jours, etc.)`,
+        minChars: 60,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Donne-moi 2 choses que tu acceptes de faire, et 2 choses impossibles pour toi (même avec de la volonté).`,
+        tags: ["boundaries"],
       },
       {
-        id: "q5",
-        title: "Différenciation concrète",
-        prompt:
-          "Qu’est-ce qui te différencie concrètement ?\n\nPas une phrase marketing : une preuve, une méthode, un angle, une expérience, un résultat, quelque chose de vérifiable.",
-        minChars: 120,
-        followUp: "Super. Si je devais résumer ta différence en 1 phrase “anti-concurrents”, tu écrirais quoi ?",
-        tags: ["differentiation"],
+        id: "30d_win",
+        title: "Horizon 30 jours",
+        prompt: (n) =>
+          `Dans 30 jours${maybeName(n)}, ce serait déjà une victoire si…\n\n(un résultat concret, mesurable, même petit)`,
+        minChars: 60,
+        followUp: (n, last) =>
+          `Ok${maybeName(n)}. Si tu devais le rendre mesurable : tu mesurerais quoi exactement ? (ex: 10 leads, 3 ventes, 1 page en ligne, 5 contenus, etc.)`,
+        tags: ["goal", "horizon"],
       },
       {
-        id: "q6",
-        title: "Objectif 90 jours (mesurable)",
-        prompt:
-          "Dans 90 jours, tu veux quoi EXACTEMENT ?\n\nUn chiffre (CA, nombre de clients, taille audience), et un résultat concret (ce que tu as construit).",
-        minChars: 100,
-        followUp:
-          "Qu’est-ce qui t’empêche d’y arriver aujourd’hui, et qu’est-ce qui ferait que tu te dirais “OK, ça avance” dans 7 jours ?",
+        id: "90d_target",
+        title: "Horizon 90 jours (moteur)",
+        prompt: (n) =>
+          `Et dans 90 jours${maybeName(n)} : tu veux obtenir quoi EXACTEMENT ?\n\n(résultat + chiffre + preuve que c’est réel)`,
+        minChars: 80,
+        followUp: (n) =>
+          `Qu’est-ce qui ferait que tu te dirais “OK, ça avance” dans 7 jours${maybeName(n)} ? (un signal clair)`,
         tags: ["goal", "metrics"],
       },
       {
-        id: "q7",
-        title: "Style & énergie",
-        prompt:
-          "Comment tu veux communiquer, vraiment ?\n\nEt surtout : qu’est-ce que tu refuses de faire (même si “ça marche” chez les autres) ?",
-        minChars: 120,
-        followUp: "Donne-moi 2 formats que tu pourrais tenir 30 jours sans te détester, et 2 formats impossibles pour toi.",
-        tags: ["tone", "formats", "boundaries"],
+        id: "12m_vision",
+        title: "Vision 12 mois",
+        prompt: (n) => `Dans 12 mois${maybeName(n)}, tu veux que ton business ressemble à quoi ? (1 phrase claire)`,
+        minChars: 35,
+        followUp: (n) => `Ok${maybeName(n)}. Si tu devais choisir 1 indicateur qui prouve que tu y es, ce serait quoi ?`,
+        tags: ["vision"],
       },
       {
-        id: "q8",
-        title: "Le prochain mouvement",
-        prompt:
-          "Si on devait faire UN seul focus les 14 prochains jours pour débloquer ton business, ce serait quoi ?\n\nEt pourquoi celui-là plutôt qu’un autre ?",
-        minChars: 120,
-        followUp: "OK. Décris le livrable final au bout de 14 jours (ex: une offre, une page, 10 contenus, 5 RDV…).",
+        id: "3y_vision",
+        title: "Vision 3–5 ans",
+        prompt: (n) => `À 3–5 ans${maybeName(n)}, c’est quoi la vision ? (1 phrase)`,
+        minChars: 25,
+        followUp: (n) => `Ok${maybeName(n)}. Qu’est-ce que tu veux éviter à tout prix dans cette vision ?`,
+        tags: ["vision_long"],
+      },
+      {
+        id: "ideal_client",
+        title: "Client idéal (réel)",
+        prompt: (n) =>
+          `Parlons client idéal${maybeName(n)}.\n\nIl veut quoi VRAIMENT dans sa vie ? (pas “aligné” — concrètement, ça lui apporte quoi ?)`,
+        minChars: 110,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Décris une journée-type de ce client quand le problème n’est PAS résolu (ce qu’il vit, ce qu’il se répète, ce qu’il évite).`,
+        tags: ["persona", "desire"],
+      },
+      {
+        id: "client_triggers",
+        title: "Déclencheurs d’achat",
+        prompt: (n) =>
+          `Qu’est-ce qui le ferait acheter MAINTENANT${maybeName(n)} plutôt que “plus tard” ?\n\n(urgence, déclic, peur, opportunité, événement…)`,
+        minChars: 90,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Donne-moi 2 signaux/phrases qu’il pourrait dire au moment où il passe à l’action.`,
+        tags: ["persona", "triggers"],
+      },
+      {
+        id: "client_objections",
+        title: "Objections",
+        prompt: (n) =>
+          `Avant d’acheter, quelles sont ses 3 objections principales${maybeName(n)} ?\n\n(et ce qu’il se raconte pour justifier qu’il n’achète pas)`,
+        minChars: 100,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Parmi ces objections, laquelle revient TOUT LE TEMPS ? Et pourquoi ?`,
+        tags: ["persona", "objections"],
+      },
+      {
+        id: "differentiation",
+        title: "Différenciation concrète",
+        prompt: (n) =>
+          `Qu’est-ce qui te différencie VRAIMENT${maybeName(n)} ?\n\nPas une phrase marketing : une preuve, une méthode, un angle, une expérience, un résultat vérifiable.`,
+        minChars: 110,
+        followUp: (n) =>
+          `Super${maybeName(n)}. Si je devais résumer ta différence en 1 phrase “anti-concurrents”, tu écrirais quoi ?`,
+        tags: ["differentiation"],
+      },
+      {
+        id: "anti_competitors",
+        title: "Phrase anti-concurrents",
+        prompt: (n) =>
+          `Écris ta phrase “anti-concurrents”${maybeName(n)} en mode simple (pas de jargon).\n\nEx: “Je fais X pour Y sans Z.”`,
+        minChars: 60,
+        followUp: (n, last) =>
+          `Ok${maybeName(n)}. Maintenant rends-la encore plus concrète : remplace “X/Y/Z” par des mots que ton client utilise vraiment.`,
+        tags: ["differentiation"],
+      },
+      {
+        id: "tone_style",
+        title: "Style & ton",
+        prompt: (n) =>
+          `Dernier point${maybeName(n)} : tu veux un ton plutôt… direct / bienveillant / punchy / provoc / très pro ?\n\nEt tu préfères écrire ou parler ?`,
+        minChars: 70,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Donne-moi 2 mots qui décrivent ton style naturel, et 2 mots qui te donnent envie de fuir.`,
+        tags: ["tone", "style"],
+      },
+      {
+        id: "formats_doable",
+        title: "Formats tenables",
+        prompt: (n) =>
+          `Quels sont 2 formats que tu peux tenir 30 jours sans te détester${maybeName(n)} ?\n\n(ex: 3 posts/semaine, 1 email/jour, 1 live/semaine, 2 vidéos/semaine…)`,
+        minChars: 70,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Et le format le PLUS efficace selon toi (même s’il fait peur), ce serait lequel ?`,
+        tags: ["formats"],
+      },
+      {
+        id: "formats_impossible",
+        title: "Formats impossibles",
+        prompt: (n) =>
+          `Et à l’inverse${maybeName(n)} : quels sont 2 formats impossibles pour toi (même si “ça marche”) ?`,
+        minChars: 50,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. C’est noté. Je te construirai un plan qui n’implique pas ça.`,
+        tags: ["formats", "boundaries"],
+      },
+      {
+        id: "next_move",
+        title: "Prochain mouvement (14 jours)",
+        prompt: (n) =>
+          `Si on devait faire UN seul focus les 14 prochains jours${maybeName(n)} pour débloquer ton business, ce serait quoi ?\n\nEt pourquoi celui-là plutôt qu’un autre ?`,
+        minChars: 110,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Décris le livrable final au bout de 14 jours (ex: une offre, une page, 10 contenus, 5 RDV…).`,
         tags: ["next_move", "plan"],
+      },
+      {
+        id: "deliverable_14_days",
+        title: "Livrable 14 jours",
+        prompt: (n) =>
+          `Décris le livrable final au bout de 14 jours${maybeName(n)}.\n\nQu’est-ce qui existe concrètement à la fin ?`,
+        minChars: 80,
+        followUp: (n) =>
+          `Ok${maybeName(n)}. Si tu avais 2 heures demain, tu fais quoi en premier ?`,
+        tags: ["next_move", "deliverable"],
       },
     ],
     [],
@@ -217,7 +386,8 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     {
       role: "assistant",
       content:
-        "On va faire un mini diagnostic (8 questions). Je te pose 1 question à la fois.\n\nRéponds de façon la plus concrète possible : exemples, chiffres, contexte. Ça me permettra de te générer un plan + des tâches vraiment pertinents.",
+        `On va faire un mini diagnostic (≈ ${questions.length} questions). Je te pose 1 question à la fois.\n\n` +
+        `Réponds de façon la plus concrète possible : exemples, chiffres, contexte. Ça me permettra de te générer un plan + des tâches vraiment pertinents.`,
       created_at: nowIso(),
       tags: ["intro"],
     },
@@ -228,32 +398,21 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
   const [input, setInput] = useState("");
   const [askedFollowUpFor, setAskedFollowUpFor] = useState<Record<string, boolean>>({});
 
+  // typing simulation
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const pendingTextRef = useRef<string>("");
+  const pendingTagsRef = useRef<string[] | undefined>(undefined);
+
   const currentQ = questions[qIndex];
   const done = qIndex >= questions.length;
 
-  useEffect(() => {
-    if (!done && qIndex === 0) {
-      if (turns.length === 1) {
-        setTurns((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: currentQ.prompt,
-            created_at: nowIso(),
-            tags: currentQ.tags,
-          },
-        ]);
-        setAwaitingAnswer(true);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // Scroll
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [turns]);
+  }, [turns, isTyping]);
 
   useEffect(() => {
     if (awaitingAnswer) inputRef.current?.focus();
@@ -263,35 +422,103 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     setTurns((prev) => [...prev, t]);
   }
 
-  function pushAssistant(content: string, tags?: string[]) {
+  function pushAssistantNow(content: string, tags?: string[]) {
     pushTurn({ role: "assistant", content, created_at: nowIso(), tags });
   }
 
+  function pushAssistant(content: string, tags?: string[], withDelay = true) {
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    pendingTextRef.current = content;
+    pendingTagsRef.current = tags;
+
+    if (!withDelay) {
+      setIsTyping(false);
+      pushAssistantNow(content, tags);
+      pendingTextRef.current = "";
+      pendingTagsRef.current = undefined;
+      return;
+    }
+
+    setIsTyping(true);
+    typingTimeoutRef.current = window.setTimeout(() => {
+      pushAssistantNow(content, tags);
+      setIsTyping(false);
+      pendingTextRef.current = "";
+      pendingTagsRef.current = undefined;
+      typingTimeoutRef.current = null;
+    }, randomDelayMs());
+  }
+
+  function skipTyping() {
+    if (!isTyping) return;
+    const text = pendingTextRef.current;
+    if (!text) return;
+
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    setIsTyping(false);
+    pushAssistantNow(text, pendingTagsRef.current);
+    pendingTextRef.current = "";
+    pendingTagsRef.current = undefined;
+  }
+
+  useEffect(() => {
+    // intro déjà ajouté dans state init
+    // première question
+    pushAssistant(currentQ.prompt(firstName), currentQ.tags, true);
+    setAwaitingAnswer(true);
+
+    return () => {
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function pushUser(content: string, q: Question) {
     const quality = scoreAnswer(content, q.minChars);
-    pushTurn({ role: "user", content, created_at: nowIso(), quality_score: quality, tags: q.tags });
+
+    // tag du tour user avec id de question -> extraction fiable
+    const tags = Array.from(
+      new Set([...(q.tags ?? []), `q:${q.id}`]),
+    );
+
+    pushTurn({ role: "user", content, created_at: nowIso(), quality_score: quality, tags });
     return quality;
   }
 
   function nextQuestion() {
     const next = qIndex + 1;
+
     if (next >= questions.length) {
       setQIndex(next);
       setAwaitingAnswer(false);
       pushAssistant(
-        "Parfait. J’ai tout ce qu’il me faut.\n\nClique sur “Générer ma stratégie” pour que je construise ta pyramide d’offres, ton plan et tes tâches.",
+        `Parfait${maybeName(firstName)}. J’ai tout ce qu’il me faut.\n\nClique sur “Générer ma stratégie” pour que je construise ta pyramide d’offres, ton plan et tes tâches.`,
         ["done"],
+        true,
       );
       return;
     }
+
     setQIndex(next);
     setAwaitingAnswer(true);
     const nq = questions[next];
-    pushAssistant(nq.prompt, nq.tags);
+    pushAssistant(nq.prompt(firstName), nq.tags, true);
   }
 
   function handleSend() {
     if (isSubmitting) return;
+
+    // si Tipote est en train “d’écrire”, un envoi skip d’abord
+    if (isTyping) skipTyping();
+
     const text = input.trim();
     if (!text || !currentQ) return;
 
@@ -303,13 +530,24 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
 
     if (needsFollowUp) {
       setAskedFollowUpFor((prev) => ({ ...prev, [currentQ.id]: true }));
-      pushAssistant(currentQ.followUp!, ["followup"]);
+      pushAssistant(currentQ.followUp!(firstName, text), ["followup"], true);
       setAwaitingAnswer(true);
       return;
     }
 
-    const feedback = quality >= 0.85 ? "✅ Très clair." : quality >= 0.7 ? "✅ OK, je vois." : "✅ Merci.";
-    pushAssistant(feedback, ["ack"]);
+    const feedback =
+      quality >= 0.88
+        ? `✅ Très clair${maybeName(firstName)}.`
+        : quality >= 0.72
+          ? `✅ OK${maybeName(firstName)}, je vois.`
+          : `✅ Merci${maybeName(firstName)}.`;
+
+    pushAssistant(feedback, ["ack"], true);
+
+    // petite “phrase humaine” de temps en temps
+    if (Math.random() < 0.35) {
+      pushAssistant(`Super${maybeName(firstName)}, ta réponse va beaucoup m’aider pour la suite 👏`, ["encourage"], true);
+    }
 
     nextQuestion();
   }
@@ -322,7 +560,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
       diagnostic_profile: buildDiagnosticProfile(turns, data),
       diagnostic_summary: buildSummary(turns, data),
       diagnostic_completed: true,
-      onboarding_version: "v2_form+chat",
+      onboarding_version: "v2_min_form+chat",
     };
 
     onComplete(payload);
@@ -346,6 +584,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
               {done ? "Terminé" : `Question ${Math.min(qIndex + 1, questions.length)} / ${questions.length}`} ·{" "}
               <span className="font-medium">{progress}%</span>
             </p>
+
             {!done && currentQ?.title ? (
               <div className="mt-2">
                 <Badge variant="secondary" className="rounded-full">
@@ -365,6 +604,9 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
       <div
         ref={scrollerRef}
         className="h-[420px] md:h-[480px] overflow-y-auto rounded-2xl border bg-background/60 p-4 md:p-5 space-y-3"
+        onClick={skipTyping}
+        role="button"
+        tabIndex={0}
       >
         {turns.map((t, idx) => {
           const isUser = t.role === "user";
@@ -393,6 +635,22 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
             </div>
           );
         })}
+
+        {isTyping ? (
+          <div className="space-y-1 text-left">
+            <div className={cn("max-w-[92%] md:max-w-[80%] rounded-2xl px-4 py-3 text-sm bg-muted text-foreground")}>
+              <span className="inline-flex items-center gap-2">
+                <span className="text-muted-foreground">Tipote écrit…</span>
+                <span className="inline-flex gap-1">
+                  <span className="animate-bounce">•</span>
+                  <span className="animate-bounce [animation-delay:120ms]">•</span>
+                  <span className="animate-bounce [animation-delay:240ms]">•</span>
+                </span>
+              </span>
+              <div className="mt-2 text-xs text-muted-foreground">Clique pour afficher tout de suite</div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-5 space-y-3">
@@ -416,11 +674,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
               <p className="text-xs text-muted-foreground">
                 Astuce : exemples, chiffres, contexte, objections… c’est ça qui rend le plan “coach-level”.
               </p>
-              <Button
-                onClick={handleSend}
-                disabled={isSubmitting || !awaitingAnswer || !input.trim()}
-                className="rounded-xl"
-              >
+              <Button onClick={handleSend} disabled={isSubmitting || !awaitingAnswer || !input.trim()} className="rounded-xl">
                 Envoyer
               </Button>
             </div>
@@ -447,3 +701,5 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     </Card>
   );
 }
+
+export default StepDiagnosticChat;
