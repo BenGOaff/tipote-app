@@ -67,10 +67,7 @@ function scoreAnswer(text: string, minChars: number) {
   const hasConcrete = /(€|\/mois|clients?|ventes?|rdv|leads?|followers?|emails?|%)/i.test(t);
 
   const richness =
-    (hasExample ? 0.15 : 0) +
-    (hasNumbers ? 0.1 : 0) +
-    (hasCause ? 0.1 : 0) +
-    (hasConcrete ? 0.1 : 0);
+    (hasExample ? 0.15 : 0) + (hasNumbers ? 0.1 : 0) + (hasCause ? 0.1 : 0) + (hasConcrete ? 0.1 : 0);
 
   return Math.max(0, Math.min(1, lenScore * 0.7 + richness));
 }
@@ -91,6 +88,39 @@ function getAnswerByQuestionId(turns: DiagnosticTurn[], id: string) {
 
 function isPyramidQuestionId(id: string) {
   return id.startsWith("pyr_");
+}
+
+function extractMissionTarget(mission?: string | null) {
+  const m = (mission ?? "").trim();
+  if (!m) return null;
+
+  // extrait le "X" dans "j'aide X à Y"
+  const re = /j\s*['’]?\s*aide\s+(?:les?|des?)?\s*(.+?)\s+à\s+/i;
+  const match = m.match(re);
+  const target = (match?.[1] ?? "").trim();
+  if (!target) return null;
+
+  if (target.length > 140) return target.slice(0, 140).trim();
+  return target;
+}
+
+function derivePyrQ1DomainFromForm(data: OnboardingData) {
+  // priorité : mission (souvent déjà “j’aide X à Y…”)
+  if ((data.missionStatement ?? "").trim()) return (data.missionStatement ?? "").trim();
+  if ((data.niche ?? "").trim()) return (data.niche ?? "").trim();
+  return null;
+}
+
+function derivePyrQ2IdealClient(turns: DiagnosticTurn[], data: OnboardingData) {
+  // priorité : cible extraite de la mission
+  const fromMission = extractMissionTarget(data.missionStatement ?? null);
+  if (fromMission) return fromMission;
+
+  // fallback : réponse “client idéal (réel)”
+  const idealClient = getAnswerByQuestionId(turns, "ideal_client");
+  if (idealClient) return idealClient.slice(0, 220).trim();
+
+  return null;
 }
 
 function isPyramidAnswerComplete(text: string, minChars: number) {
@@ -161,10 +191,12 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
     deliverable_14_days: getAnswerByQuestionId(turns, "deliverable_14_days") || null,
   };
 
-  // ✅ NOUVEAU : réponses aux 9 questions "pyramide" (stockées dans diagnostic_profile)
+  // ✅ réponses aux 9 questions "pyramide"
+  // IMPORTANT : Q1/Q2 ne sont PLUS posées (redondantes).
+  // Elles sont dérivées automatiquement à partir du form + du diagnostic existant.
   const offerPyramid9 = {
-    q1_domain: getAnswerByQuestionId(turns, "pyr_q1_domain") || null,
-    q2_ideal_client: getAnswerByQuestionId(turns, "pyr_q2_ideal_client") || null,
+    q1_domain: getAnswerByQuestionId(turns, "pyr_q1_domain") || derivePyrQ1DomainFromForm(data) || null,
+    q2_ideal_client: getAnswerByQuestionId(turns, "pyr_q2_ideal_client") || derivePyrQ2IdealClient(turns, data) || null,
     q3_urgent_problem: getAnswerByQuestionId(turns, "pyr_q3_urgent_problem") || null,
     q4_transformation: getAnswerByQuestionId(turns, "pyr_q4_transformation") || null,
     q5_quick_result: getAnswerByQuestionId(turns, "pyr_q5_quick_result") || null,
@@ -174,7 +206,16 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
     q9_uniqueness: getAnswerByQuestionId(turns, "pyr_q9_uniqueness") || null,
   };
 
-  const offerPyramidCompleted = Object.values(offerPyramid9).every((v) => typeof v === "string" && (v ?? "").trim().length > 0);
+  // ✅ completed ne doit PAS être bloqué par Q1/Q2 (déjà connues via form/mission)
+  const offerPyramidCompleted = [
+    offerPyramid9.q3_urgent_problem,
+    offerPyramid9.q4_transformation,
+    offerPyramid9.q5_quick_result,
+    offerPyramid9.q6_obstacles,
+    offerPyramid9.q7_unique_methods,
+    offerPyramid9.q8_format,
+    offerPyramid9.q9_uniqueness,
+  ].every((v) => typeof v === "string" && (v ?? "").trim().length > 0);
 
   return {
     version: "v2_min_form+chat+pyramid9",
@@ -200,7 +241,7 @@ function buildDiagnosticProfile(turns: DiagnosticTurn[], data: OnboardingData): 
     tone_energy: toneEnergy,
     next_move: nextMove,
 
-    // ✅ NEW BLOCK for pyramid GPT
+    // ✅ BLOCK for pyramid GPT
     offer_pyramid: {
       completed: offerPyramidCompleted,
       answers: offerPyramid9,
@@ -229,10 +270,12 @@ function buildSummary(turns: DiagnosticTurn[], data: OnboardingData) {
   if ((data as any).revenueGoalMonthly) meta.push(`Objectif CA mensuel : ${(data as any).revenueGoalMonthly}`);
   if (data.weeklyHours) meta.push(`Temps dispo : ${data.weeklyHours}/semaine`);
 
+  const derivedQ1 = getAnswerByQuestionId(turns, "pyr_q1_domain") || derivePyrQ1DomainFromForm(data);
+
   // ✅ ajout léger (sans casser ta synthèse)
   const pyramidLine = compactLines(
     [
-      getAnswerByQuestionId(turns, "pyr_q1_domain") ? `Pyramide Q1 : ${getAnswerByQuestionId(turns, "pyr_q1_domain")}` : "",
+      derivedQ1 ? `Pyramide Q1 : ${derivedQ1}` : "",
       getAnswerByQuestionId(turns, "pyr_q3_urgent_problem")
         ? `Pyramide Q3 : ${getAnswerByQuestionId(turns, "pyr_q3_urgent_problem")}`
         : "",
@@ -264,7 +307,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "root_blocker",
         title: "Blocage racine",
         prompt: (n) =>
-          `Hmmm${maybeName(n)}… si tu devais choisir UNE seule cause racine (pas le symptôme), ce serait quoi ?\n\nEt pourquoi ?`,
+          `Hmmm${maybeName(n)}… tu n'as pas les résultats que tu veux : si tu devais choisir UNE seule cause racine (pas le symptôme), ce serait quoi ?\n\nEt pourquoi ?`,
         minChars: 110,
         followUp: (n) =>
           `Je veux être sûre de bien comprendre${maybeName(n)} : raconte une situation précise où tu t’es retrouvée bloquée, et ce que tu t’es dit à ce moment-là.`,
@@ -304,7 +347,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "90d_target",
         title: "Horizon 90 jours (moteur)",
         prompt: (n) =>
-          `Et dans 90 jours${maybeName(n)} : tu veux obtenir quoi EXACTEMENT ?\n\n(résultat + chiffre + preuve que c’est réel)`,
+          `Et dans 90 jours${maybeName(n)} : tu veux obtenir quoi EXACTEMENT ?\n\n(objectif mesurable, avec des chiffres)`,
         minChars: 80,
         followUp: (n) =>
           `Qu’est-ce qui ferait que tu te dirais “OK, ça avance” dans 7 jours${maybeName(n)} ? (un signal clair)`,
@@ -321,7 +364,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
       {
         id: "3y_vision",
         title: "Vision 3–5 ans",
-        prompt: (n) => `À 3–5 ans${maybeName(n)}, c’est quoi la vision ? (1 phrase)`,
+        prompt: (n) => `À 3–5 ans${maybeName(n)}, comment tu te vois toi, et comment tu vois ton business ? (1 phrase)`,
         minChars: 25,
         followUp: (n) => `Ok${maybeName(n)}. Qu’est-ce que tu veux éviter à tout prix dans cette vision ?`,
         tags: ["vision_long"],
@@ -330,7 +373,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "ideal_client",
         title: "Client idéal (réel)",
         prompt: (n) =>
-          `Parlons client idéal${maybeName(n)}.\n\nIl veut quoi VRAIMENT dans sa vie ? (pas “aligné” — concrètement, ça lui apporte quoi ?)`,
+          `Parlons client idéal${maybeName(n)}.\n\nIl veut quoi VRAIMENT dans sa vie ? (en rapport avec ce que tu fais)`,
         minChars: 110,
         followUp: (n) =>
           `Ok${maybeName(n)}. Décris une journée-type de ce client quand le problème n’est PAS résolu (ce qu’il vit, ce qu’il se répète, ce qu’il évite).`,
@@ -363,14 +406,14 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
           `Qu’est-ce qui te différencie VRAIMENT${maybeName(n)} ?\n\nPas une phrase marketing : une preuve, une méthode, un angle, une expérience, un résultat vérifiable.`,
         minChars: 110,
         followUp: (n) =>
-          `Super${maybeName(n)}. Si je devais résumer ta différence en 1 phrase “anti-concurrents”, tu écrirais quoi ?`,
+          `Super${maybeName(n)}. Si je devais résumer ta différence en 1 phrase, tu écrirais quoi ?`,
         tags: ["differentiation"],
       },
       {
         id: "anti_competitors",
         title: "Phrase anti-concurrents",
         prompt: (n) =>
-          `Écris ta phrase “anti-concurrents”${maybeName(n)} en mode simple (pas de jargon).\n\nEx: “Je fais X pour Y sans Z.”`,
+          `Écris ta phrase qui fait la différence avec tes concurrents ${maybeName(n)} en mode simple (pas de jargon).\n\nEx: “Je fais X pour Y sans Z.”`,
         minChars: 60,
         followUp: (n) =>
           `Ok${maybeName(n)}. Maintenant rends-la encore plus concrète : remplace “X/Y/Z” par des mots que ton client utilise vraiment.`,
@@ -390,7 +433,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "formats_doable",
         title: "Formats tenables",
         prompt: (n) =>
-          `Quels sont 2 formats que tu peux tenir 30 jours sans te détester${maybeName(n)} ?\n\n(ex: 3 posts/semaine, 1 email/jour, 1 live/semaine, 2 vidéos/semaine…)`,
+          `Quels sont 2 formats que tu peux tenir 30 jours sans détester ta vie${maybeName(n)} ?\n\n(ex: 3 posts/semaine, 1 email/jour, 1 live/semaine, 2 vidéos/semaine…)`,
         minChars: 70,
         followUp: (n) =>
           `Ok${maybeName(n)}. Et le format le PLUS efficace selon toi (même s’il fait peur), ce serait lequel ?`,
@@ -413,7 +456,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
           `Si on devait faire UN seul focus les 14 prochains jours${maybeName(n)} pour débloquer ton business, ce serait quoi ?\n\nEt pourquoi celui-là plutôt qu’un autre ?`,
         minChars: 110,
         followUp: (n) =>
-          `Ok${maybeName(n)}. Décris le livrable final au bout de 14 jours (ex: une offre, une page, 10 contenus, 5 RDV…).`,
+          `Ok${maybeName(n)}. Décris ce que tu veux avoir réalisé au bout de 14 jours (ex: une offre, une page, 10 contenus, 5 RDV…).`,
         tags: ["next_move", "plan"],
       },
       {
@@ -428,21 +471,6 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
       },
 
       // ✅ NOUVEAU : 9 questions pyramide EXACTES (sans reformulation)
-      {
-        id: "pyr_q1_domain",
-        title: "Pyramide — Question 1",
-        prompt: () =>
-          "Dans quel domaine travailles-tu ? Utilise la phrase obtenue après l'exercice positionnement (j'aide les ... à ... en ...)",
-        minChars: 20,
-        tags: ["offer_pyramid", "pyr_q1"],
-      },
-      {
-        id: "pyr_q2_ideal_client",
-        title: "Pyramide — Question 2",
-        prompt: () => "Qui est ton client idéal ? Utilise les réponses obtenues lors de l'exercice persona.",
-        minChars: 35,
-        tags: ["offer_pyramid", "pyr_q2"],
-      },
       {
         id: "pyr_q3_urgent_problem",
         title: "Pyramide — Question 3",
@@ -485,7 +513,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "pyr_q8_format",
         title: "Pyramide — Question 8",
         prompt: () =>
-          "Sous quel format vas-tu proposer cette offre ? (formation vidéo, accompagnement, templates prêts à l’emploi, coaching, abonnement, checklist, application, mastermind, membership, …)",
+          "Sous quel format proposes-tu ou penses-tu proposer cette offre ? (formation vidéo, accompagnement, templates prêts à l’emploi, coaching, abonnement, checklist, application, mastermind, membership, …)",
         minChars: 25,
         tags: ["offer_pyramid", "pyr_q8"],
       },
@@ -508,8 +536,8 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     {
       role: "assistant",
       content:
-        `On va faire un mini diagnostic (≈ ${questions.length} questions). Je te pose 1 question à la fois.\n\n` +
-        `Réponds de façon la plus concrète possible : exemples, chiffres, contexte. Ça me permettra de te générer un plan + des tâches vraiment pertinents.`,
+        `On va faire un mini diagnostic (≈ ${questions.length} questions). Je te pose 1 question à la fois, prends le temps de répondre, c'est important pour la suite.\n\n` +
+        `Réponds de façon la plus concrète possible : exemples, chiffres, contexte. Tu n'auras besoin de le faire qu'une fois, alors fais-le bien 🤩.`,
       created_at: nowIso(),
       tags: ["intro"],
     },
@@ -631,13 +659,9 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
     setAwaitingAnswer(true);
     const nq = questions[next];
 
-    // ✅ Transition unique AVANT la 1ère question pyramide (OK, pas "entre chaque question")
-    if (nq.id === "pyr_q1_domain") {
-      pushAssistant(
-        "Je vais te poser 9 questions pour clarifier et construire ton offre.",
-        ["offer_pyramid", "intro9q"],
-        true,
-      );
+    // ✅ Transition unique AVANT la 1ère question pyramide réellement posée
+    if (nq.id === "pyr_q3_urgent_problem") {
+      pushAssistant("Je vais te poser 9 questions pour clarifier et construire ton offre.", ["offer_pyramid", "intro9q"], true);
     }
 
     pushAssistant(nq.prompt(firstName), nq.tags, true);
@@ -656,7 +680,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
 
     // ✅ pour les questions pyramide : on n'avance pas tant que "réponse complète"
     if (isPyr && !isPyramidAnswerComplete(text, currentQ.minChars)) {
-      pushAssistant("Merci de compléter ta réponse.", ["incomplete", "offer_pyramid"], true);
+      pushAssistant("Merci de compléter ta réponse, c'est trop vague pour être utile 😉", ["incomplete", "offer_pyramid"], true);
       setAwaitingAnswer(true);
       return;
     }
@@ -817,7 +841,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
             />
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Astuce : exemples, chiffres, contexte, objections… c’est ça qui rend le plan “coach-level”.
+                Astuce : exemples, chiffres, contexte, objections… c’est ça qui rend ton Tipote ultra compétent pour TOI et TON business.
               </p>
               <Button onClick={handleSend} disabled={isSubmitting || !awaitingAnswer || !input.trim()} className="rounded-xl">
                 Envoyer
