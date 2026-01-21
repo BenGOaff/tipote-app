@@ -2,10 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Gift, Zap, Crown, Check, ArrowRight } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Gift,
+  Zap,
+  Crown,
+  Check,
+  ArrowRight,
+} from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -97,6 +111,39 @@ function looksLikeNewSchema(p: any): boolean {
   return !!p && (p.lead_magnet || p.low_ticket || p.high_ticket);
 }
 
+// -------------------------
+// ✅ Fallback anti-timeout / 504
+// -------------------------
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function strategyExistsForUser(supabase: any, userId: string) {
+  try {
+    // Table/colonne : chez toi c’est "strategies" + "user_id" (vu dans ton Supabase)
+    const { data, error } = await supabase
+      .from("strategies")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (error) return false;
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureStrategyAfterTimeout(supabase: any, userId: string) {
+  // 3 tentatives ~6-7 sec : suffisant pour le cas “504 mais la route a fini en DB”
+  for (let i = 0; i < 3; i++) {
+    await sleep(2200);
+    const ok = await strategyExistsForUser(supabase, userId);
+    if (ok) return true;
+  }
+  return false;
+}
+
 export default function PyramidSelection() {
   const router = useRouter();
   const { toast } = useToast();
@@ -127,7 +174,9 @@ export default function PyramidSelection() {
     if (planError) throw planError;
 
     const planJson = (planRow?.plan_json ?? null) as any;
-    const offerPyramids = Array.isArray(planJson?.offer_pyramids) ? planJson.offer_pyramids : [];
+    const offerPyramids = Array.isArray(planJson?.offer_pyramids)
+      ? planJson.offer_pyramids
+      : [];
 
     if (!offerPyramids.length) {
       return { ok: false as const, reason: "no_pyramids" as const };
@@ -195,6 +244,16 @@ export default function PyramidSelection() {
     try {
       setSubmitting(true);
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
       const selectedIndex = pyramids.findIndex((p) => p.id === selected.id);
       if (selectedIndex < 0) throw new Error("Index de pyramide introuvable.");
 
@@ -209,11 +268,25 @@ export default function PyramidSelection() {
         throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
       }
 
-      // ✅ Générer la stratégie complète (mission/persona/plan 90j) si nécessaire (idempotent)
-      const fullRes = await fetch("/api/strategy", { method: "POST" }).catch(() => null);
-      const fullJson = fullRes ? await fullRes.json().catch(() => ({} as any)) : null;
-      if (!fullRes || !fullRes.ok) {
-        throw new Error(fullJson?.error || "Impossible de générer la stratégie complète.");
+      // ✅ Générer la stratégie complète (idempotent)
+      let fullRes: Response | null = null;
+      let fullJson: any = null;
+
+      try {
+        fullRes = await fetch("/api/strategy", { method: "POST" });
+        fullJson = await fullRes.json().catch(() => null);
+      } catch {
+        fullRes = null;
+        fullJson = null;
+      }
+
+      const fullOk = Boolean(fullRes?.ok && fullJson?.ok !== false);
+      if (!fullOk) {
+        // ✅ fallback spécial timeouts (ex: 504) : la stratégie peut exister malgré tout
+        const recovered = await ensureStrategyAfterTimeout(supabase, user.id);
+        if (!recovered) {
+          throw new Error(fullJson?.error || "Impossible de générer la stratégie complète.");
+        }
       }
 
       // ✅ Puis seulement synchroniser les tâches depuis le plan (idempotent)
@@ -234,7 +307,8 @@ export default function PyramidSelection() {
       console.error("Error selecting pyramid:", error);
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de sauvegarder votre choix.",
+        description:
+          error instanceof Error ? error.message : "Impossible de sauvegarder votre choix.",
         variant: "destructive",
       });
     } finally {
@@ -271,9 +345,12 @@ export default function PyramidSelection() {
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="text-primary font-medium">Étape 1</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">Choisis ta pyramide d’offres</h1>
+          <h1 className="text-4xl font-bold tracking-tight">
+            Choisis ta pyramide d’offres
+          </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
+            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond
+            le mieux à ton style et à tes objectifs.
           </p>
         </div>
 
@@ -282,7 +359,9 @@ export default function PyramidSelection() {
             <Card
               key={pyramid.id}
               className={`relative overflow-hidden transition-all cursor-pointer ${
-                selectedPyramid === pyramid.id ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"
+                selectedPyramid === pyramid.id
+                  ? "ring-2 ring-primary shadow-lg"
+                  : "hover:shadow-md"
               }`}
               onClick={() => setSelectedPyramid(pyramid.id)}
             >
@@ -331,21 +410,29 @@ export default function PyramidSelection() {
                     </Badge>
                   </div>
                 </div>
-                <CardDescription className="text-sm">{pyramid.strategy_summary}</CardDescription>
+                <CardDescription className="text-sm">
+                  {pyramid.strategy_summary}
+                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Lead Magnet</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      Lead Magnet
+                    </p>
                     <p className="font-medium text-sm">{pyramid.lead_magnet.title}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Low Ticket</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      Low Ticket
+                    </p>
                     <p className="font-medium text-sm">{pyramid.low_ticket.title}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">High Ticket</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      High Ticket
+                    </p>
                     <p className="font-medium text-sm">{pyramid.high_ticket.title}</p>
                   </div>
                 </div>
@@ -359,7 +446,9 @@ export default function PyramidSelection() {
                       setSelectedPyramid(pyramid.id);
                     }}
                   >
-                    {selectedPyramid === pyramid.id ? "Sélectionné" : "Choisir cette stratégie"}
+                    {selectedPyramid === pyramid.id
+                      ? "Sélectionné"
+                      : "Choisir cette stratégie"}
                   </Button>
                 </div>
               </CardContent>
@@ -368,7 +457,12 @@ export default function PyramidSelection() {
         </div>
 
         <div className="text-center space-y-4">
-          <Button size="lg" className="px-8" disabled={!selectedPyramid || submitting} onClick={handleSelectPyramid}>
+          <Button
+            size="lg"
+            className="px-8"
+            disabled={!selectedPyramid || submitting}
+            onClick={handleSelectPyramid}
+          >
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -383,7 +477,8 @@ export default function PyramidSelection() {
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Tu pourras modifier ta pyramide d’offres plus tard dans l’onglet “Ma Stratégie”.
+            Tu pourras modifier ta pyramide d’offres plus tard dans l’onglet “Ma
+            Stratégie”.
           </p>
         </div>
       </main>

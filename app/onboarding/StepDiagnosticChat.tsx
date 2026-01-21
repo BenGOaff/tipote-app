@@ -475,7 +475,7 @@ export function StepDiagnosticChat({ data, onBack, onComplete, isSubmitting }: S
         id: "pyr_q3_urgent_problem",
         title: "Pyramide — Question 3",
         prompt: () =>
-          "Quel problème urgent tu vas résoudre pour lui ? (Un vrai problème qui le stresse ou l’empêche d’avancer)",
+          "Quel problème urgent tu vas résoudre pour ton client ? (Un vrai problème qui le stresse ou l’empêche d’avancer)",
         minChars: 35,
         tags: ["offer_pyramid", "pyr_q3"],
       },

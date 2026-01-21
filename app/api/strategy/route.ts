@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 120; // mets 180 ou 300 si besoin
+
 
 type AnyRecord = Record<string, any>;
 

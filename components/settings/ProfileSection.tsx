@@ -387,7 +387,7 @@ export default function ProfileSection() {
             <p className="text-xs leading-relaxed text-slate-600">
               Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le
               lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches et
-              toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C&apos;est
+              toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartiras de zéro. C&apos;est
               définitif, tu ne pourras pas revenir en arrière.
             </p>
           </div>
