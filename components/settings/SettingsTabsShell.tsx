@@ -1,3 +1,4 @@
+// components/settings/SettingsTabsShell.tsx
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -15,6 +16,8 @@ import {
   Instagram,
   Youtube,
   Link as LinkIcon,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,21 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
@@ -166,11 +157,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const profileDirty = useMemo(() => {
     const i = initialProfile;
-    return (
-      (i?.first_name ?? "") !== firstName ||
-      (i?.niche ?? "") !== niche ||
-      (i?.mission ?? "") !== mission
-    );
+    return (i?.first_name ?? "") !== firstName || (i?.niche ?? "") !== niche || (i?.mission ?? "") !== mission;
   }, [initialProfile, firstName, niche, mission]);
 
   const saveProfile = () => {
@@ -203,6 +190,61 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       }
     });
   };
+
+  // -------------------------
+  // ✅ Reset Tipote (connecté à /api/account/reset)
+  // -------------------------
+  const [resetting, setResetting] = useState(false);
+
+  async function onResetAccount() {
+    try {
+      const ok1 = window.confirm(
+        "⚠️ Réinitialiser ton Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations seront effacés. C’est définitif."
+      );
+      if (!ok1) return;
+
+      const confirmWord = window.prompt('Tape "RESET" pour confirmer :');
+      if ((confirmWord ?? "").trim().toUpperCase() !== "RESET") {
+        toast({
+          title: "Réinitialisation annulée",
+          description: 'Tu dois taper "RESET" pour confirmer.',
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setResetting(true);
+
+      const res = await fetch("/api/account/reset", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Reset impossible",
+          description: json?.error || "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Tipote réinitialisé ✅",
+        description: "On te renvoie vers l’onboarding.",
+      });
+
+      // ✅ Dans ton code serveur (app/app/page.tsx), l’absence de onboarding_completed => redirect("/onboarding")
+      // Donc aller directement sur /onboarding est OK.
+      window.location.href = "/onboarding";
+    } catch (e) {
+      toast({
+        title: "Reset impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setResetting(false);
+    }
+  }
 
   // -------------------------
   // API Keys (connecté à /api/user/api-keys)
@@ -357,12 +399,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="name">Prénom</Label>
-              <Input
-                id="name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={profileLoading}
-              />
+              <Input id="name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={profileLoading} />
             </div>
 
             <div className="space-y-2">
@@ -404,6 +441,31 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <Button className="mt-6" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
             <Save className="w-4 h-4 mr-2" />
             {pendingProfile ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </Card>
+
+        {/* ✅ ZONE DANGER */}
+        <Card className="p-6 border border-red-200 bg-red-50/40">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-700">Zone danger</h3>
+              <p className="text-sm font-medium text-red-700/90">Réinitialiser mon Tipote</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-red-700/80">
+            Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le lancer
+            dans une autre direction ? Clique sur ce bouton. <b>Attention</b> : tous les contenus, toutes les tâches et toutes
+            les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C&apos;est définitif, tu ne
+            pourras pas revenir en arrière.
+          </p>
+
+          <Button variant="destructive" className="mt-4 gap-2" onClick={onResetAccount} disabled={resetting}>
+            <RotateCcw className="h-4 w-4" />
+            {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
           </Button>
         </Card>
       </TabsContent>
@@ -464,33 +526,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Résumé de votre niche</Label>
-              <Textarea
-                value={niche}
-                onChange={(e) => setNiche(e.target.value)}
-                rows={2}
-                className="resize-none"
-                disabled={profileLoading}
-              />
+              <Textarea value={niche} onChange={(e) => setNiche(e.target.value)} rows={2} className="resize-none" disabled={profileLoading} />
             </div>
 
             <div className="space-y-2">
               <Label>Résumé de votre persona</Label>
-              <Textarea
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                rows={3}
-                className="resize-none"
-                disabled={profileLoading}
-              />
+              <Textarea value={mission} onChange={(e) => setMission(e.target.value)} rows={3} className="resize-none" disabled={profileLoading} />
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={saveProfile}
-            disabled={!profileDirty || pendingProfile}
-          >
+          <Button variant="outline" className="mt-4" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
             <Save className="w-4 h-4 mr-2" />
             {pendingProfile ? "Mise à jour…" : "Mettre à jour"}
           </Button>
@@ -521,9 +566,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liste des offres</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Ajoutez vos offres pour les utiliser dans les modules de génération.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Ajoutez vos offres pour les utiliser dans les modules de génération.</p>
 
           <div className="space-y-3">
             <div className="flex gap-3">
@@ -556,259 +599,145 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </div>
         </Card>
 
-       {/* OpenAI */}
+        {/* OpenAI */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.openai.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.openai.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
+              <div className={`w-10 h-10 rounded-lg ${keys.openai.hasKey ? "bg-success/10" : "bg-muted"} flex items-center justify-center`}>
+                {keys.openai.hasKey ? <CheckCircle2 className="w-5 h-5 text-success" /> : <AlertCircle className="w-5 h-5 text-muted-foreground" />}
               </div>
               <div>
                 <p className="font-medium">OpenAI GPT-4</p>
                 <p className="text-sm text-muted-foreground">
-                  {keys.openai.loading
-                    ? "Chargement…"
-                    : keys.openai.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
+                  {keys.openai.loading ? "Chargement…" : keys.openai.hasKey ? "Clé configurée" : "Non configuré"}
                 </p>
               </div>
             </div>
 
-            {keys.openai.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
+            {keys.openai.hasKey ? <Badge className="bg-success text-success-foreground">Connecté</Badge> : <Badge variant="outline">Non connecté</Badge>}
           </div>
 
           <div className="flex gap-2">
             <Input
               type="password"
               value={keys.openai.hasKey ? keys.openai.masked ?? "" : keys.openai.value}
-              onChange={(e) =>
-                setKeys((s) => ({
-                  ...s,
-                  openai: { ...s.openai, value: e.target.value },
-                }))
-              }
+              onChange={(e) => setKeys((s) => ({ ...s, openai: { ...s.openai, value: e.target.value } }))}
               placeholder="sk-..."
               className="flex-1"
               disabled={keys.openai.loading || keys.openai.hasKey}
             />
             {keys.openai.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("openai")}
-                disabled={keys.openai.saving || keys.openai.loading}
-              >
+              <Button variant="outline" onClick={() => deleteKey("openai")} disabled={keys.openai.saving || keys.openai.loading}>
                 Supprimer
               </Button>
             ) : (
-              <Button
-                onClick={() => saveKey("openai")}
-                disabled={
-                  keys.openai.saving || keys.openai.loading || !keys.openai.value.trim()
-                }
-              >
+              <Button onClick={() => saveKey("openai")} disabled={keys.openai.saving || keys.openai.loading || !keys.openai.value.trim()}>
                 {keys.openai.saving ? "Connexion…" : "Connecter"}
               </Button>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://platform.openai.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur platform.openai.com{" "}
-              <ExternalLink className="w-3 h-3 inline" />
+            <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Obtenir une clé sur platform.openai.com <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
 
-          {keys.openai.error ? (
-            <p className="text-xs text-destructive mt-2">{keys.openai.error}</p>
-          ) : null}
+          {keys.openai.error ? <p className="text-xs text-destructive mt-2">{keys.openai.error}</p> : null}
         </Card>
 
         {/* Claude */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.claude.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.claude.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
+              <div className={`w-10 h-10 rounded-lg ${keys.claude.hasKey ? "bg-success/10" : "bg-muted"} flex items-center justify-center`}>
+                {keys.claude.hasKey ? <CheckCircle2 className="w-5 h-5 text-success" /> : <AlertCircle className="w-5 h-5 text-muted-foreground" />}
               </div>
               <div>
                 <p className="font-medium">Claude (Anthropic)</p>
                 <p className="text-sm text-muted-foreground">
-                  {keys.claude.loading
-                    ? "Chargement…"
-                    : keys.claude.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
+                  {keys.claude.loading ? "Chargement…" : keys.claude.hasKey ? "Clé configurée" : "Non configuré"}
                 </p>
               </div>
             </div>
 
-            {keys.claude.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
+            {keys.claude.hasKey ? <Badge className="bg-success text-success-foreground">Connecté</Badge> : <Badge variant="outline">Non connecté</Badge>}
           </div>
 
           <div className="flex gap-2">
             <Input
               type="password"
               value={keys.claude.hasKey ? keys.claude.masked ?? "" : keys.claude.value}
-              onChange={(e) =>
-                setKeys((s) => ({
-                  ...s,
-                  claude: { ...s.claude, value: e.target.value },
-                }))
-              }
+              onChange={(e) => setKeys((s) => ({ ...s, claude: { ...s.claude, value: e.target.value } }))}
               placeholder="sk-ant-..."
               className="flex-1"
               disabled={keys.claude.loading || keys.claude.hasKey}
             />
             {keys.claude.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("claude")}
-                disabled={keys.claude.saving || keys.claude.loading}
-              >
+              <Button variant="outline" onClick={() => deleteKey("claude")} disabled={keys.claude.saving || keys.claude.loading}>
                 Supprimer
               </Button>
             ) : (
-              <Button
-                onClick={() => saveKey("claude")}
-                disabled={
-                  keys.claude.saving || keys.claude.loading || !keys.claude.value.trim()
-                }
-              >
+              <Button onClick={() => saveKey("claude")} disabled={keys.claude.saving || keys.claude.loading || !keys.claude.value.trim()}>
                 {keys.claude.saving ? "Connexion…" : "Connecter"}
               </Button>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://console.anthropic.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur console.anthropic.com{" "}
-              <ExternalLink className="w-3 h-3 inline" />
+            <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Obtenir une clé sur console.anthropic.com <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
 
-          {keys.claude.error ? (
-            <p className="text-xs text-destructive mt-2">{keys.claude.error}</p>
-          ) : null}
+          {keys.claude.error ? <p className="text-xs text-destructive mt-2">{keys.claude.error}</p> : null}
         </Card>
 
         {/* Gemini */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.gemini.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.gemini.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
+              <div className={`w-10 h-10 rounded-lg ${keys.gemini.hasKey ? "bg-success/10" : "bg-muted"} flex items-center justify-center`}>
+                {keys.gemini.hasKey ? <CheckCircle2 className="w-5 h-5 text-success" /> : <AlertCircle className="w-5 h-5 text-muted-foreground" />}
               </div>
               <div>
                 <p className="font-medium">Google Gemini</p>
                 <p className="text-sm text-muted-foreground">
-                  {keys.gemini.loading
-                    ? "Chargement…"
-                    : keys.gemini.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
+                  {keys.gemini.loading ? "Chargement…" : keys.gemini.hasKey ? "Clé configurée" : "Non configuré"}
                 </p>
               </div>
             </div>
 
-            {keys.gemini.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
+            {keys.gemini.hasKey ? <Badge className="bg-success text-success-foreground">Connecté</Badge> : <Badge variant="outline">Non connecté</Badge>}
           </div>
 
           <div className="flex gap-2">
             <Input
               type="password"
               value={keys.gemini.hasKey ? keys.gemini.masked ?? "" : keys.gemini.value}
-              onChange={(e) =>
-                setKeys((s) => ({
-                  ...s,
-                  gemini: { ...s.gemini, value: e.target.value },
-                }))
-              }
+              onChange={(e) => setKeys((s) => ({ ...s, gemini: { ...s.gemini, value: e.target.value } }))}
               placeholder="AIza..."
               className="flex-1"
               disabled={keys.gemini.loading || keys.gemini.hasKey}
             />
             {keys.gemini.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("gemini")}
-                disabled={keys.gemini.saving || keys.gemini.loading}
-              >
+              <Button variant="outline" onClick={() => deleteKey("gemini")} disabled={keys.gemini.saving || keys.gemini.loading}>
                 Supprimer
               </Button>
             ) : (
-              <Button
-                onClick={() => saveKey("gemini")}
-                disabled={
-                  keys.gemini.saving || keys.gemini.loading || !keys.gemini.value.trim()
-                }
-              >
+              <Button onClick={() => saveKey("gemini")} disabled={keys.gemini.saving || keys.gemini.loading || !keys.gemini.value.trim()}>
                 {keys.gemini.saving ? "Connexion…" : "Connecter"}
               </Button>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://aistudio.google.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur makersuite.google.com{" "}
-              <ExternalLink className="w-3 h-3 inline" />
+            <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Obtenir une clé sur makersuite.google.com <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
 
-          {keys.gemini.error ? (
-            <p className="text-xs text-destructive mt-2">{keys.gemini.error}</p>
-          ) : null}
+          {keys.gemini.error ? <p className="text-xs text-destructive mt-2">{keys.gemini.error}</p> : null}
         </Card>
 
         {/* Perplexity (UI only) */}
@@ -844,16 +773,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         {/* Systeme.io API (UI only) */}
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-4">API Systeme.io</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Connectez votre compte Systeme.io pour synchroniser vos contacts et ventes.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Connectez votre compte Systeme.io pour synchroniser vos contacts et ventes.</p>
           <div className="flex gap-2">
-            <Input
-              type="password"
-              placeholder="Votre clé API Systeme.io"
-              className="flex-1"
-              disabled
-            />
+            <Input type="password" placeholder="Votre clé API Systeme.io" className="flex-1" disabled />
             <Button disabled>Connecter</Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
