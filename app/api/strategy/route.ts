@@ -66,6 +66,233 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   return "";
 }
 
+// ✅ NEW: light retrieval / relevance scoring for resource_chunks (coach-level prompts without blowing tokens)
+const STOPWORDS = new Set([
+  "le",
+  "la",
+  "les",
+  "un",
+  "une",
+  "des",
+  "du",
+  "de",
+  "d",
+  "et",
+  "ou",
+  "mais",
+  "donc",
+  "or",
+  "ni",
+  "car",
+  "à",
+  "a",
+  "au",
+  "aux",
+  "en",
+  "dans",
+  "sur",
+  "sous",
+  "pour",
+  "par",
+  "avec",
+  "sans",
+  "chez",
+  "vers",
+  "ce",
+  "cet",
+  "cette",
+  "ces",
+  "ça",
+  "cela",
+  "c",
+  "qui",
+  "que",
+  "quoi",
+  "dont",
+  "où",
+  "je",
+  "tu",
+  "il",
+  "elle",
+  "on",
+  "nous",
+  "vous",
+  "ils",
+  "elles",
+  "me",
+  "te",
+  "se",
+  "mon",
+  "ma",
+  "mes",
+  "ton",
+  "ta",
+  "tes",
+  "son",
+  "sa",
+  "ses",
+  "notre",
+  "nos",
+  "votre",
+  "vos",
+  "leur",
+  "leurs",
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "so",
+  "because",
+  "to",
+  "of",
+  "in",
+  "on",
+  "for",
+  "with",
+  "without",
+  "at",
+  "by",
+  "from",
+  "as",
+  "is",
+  "are",
+  "was",
+  "were",
+]);
+
+function normalizeTextForSearch(v: unknown): string {
+  const s = typeof v === "string" ? v : v === null || v === undefined ? "" : String(v);
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9\s\-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractKeywords(text: string, max = 28): string[] {
+  const t = normalizeTextForSearch(text);
+  if (!t) return [];
+  const words = t
+    .split(" ")
+    .map((w) => w.trim())
+    .filter(Boolean);
+
+  const counts = new Map<string, number>();
+  for (const w0 of words) {
+    const w = w0.replace(/^[-_/]+|[-_/]+$/g, "");
+    if (!w) continue;
+    if (w.length < 4) continue;
+    if (STOPWORDS.has(w)) continue;
+    if (/^\d+$/.test(w)) continue;
+    counts.set(w, (counts.get(w) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([w]) => w);
+}
+
+function buildProfileSearchText(businessProfile: AnyRecord, selectedPyramid?: AnyRecord | null): string {
+  const dp = businessProfile.diagnostic_profile ?? businessProfile.diagnosticProfile ?? null;
+  const ds = businessProfile.diagnostic_summary ?? businessProfile.diagnosticSummary ?? "";
+  const base = {
+    niche: businessProfile.niche ?? businessProfile.activity ?? businessProfile.business_type ?? "",
+    mission: businessProfile.mission_statement ?? businessProfile.missionStatement ?? "",
+    main_goal: businessProfile.main_goal_90_days ?? businessProfile.main_goal ?? businessProfile.mainGoal90Days ?? "",
+    biggest_blocker: businessProfile.biggest_blocker ?? businessProfile.biggestBlocker ?? "",
+    maturity: businessProfile.maturity ?? "",
+    diagnostic_profile: dp,
+    diagnostic_summary: ds,
+    selected_pyramid: selectedPyramid ?? null,
+  };
+  return JSON.stringify(base);
+}
+
+function pickTopResourceChunks(params: {
+  chunks: AnyRecord[];
+  businessProfile: AnyRecord;
+  selectedPyramid?: AnyRecord | null;
+  maxChunks?: number;
+}): AnyRecord[] {
+  const { chunks, businessProfile, selectedPyramid, maxChunks = 18 } = params;
+  if (!Array.isArray(chunks) || chunks.length < 1) return [];
+
+  const searchText = buildProfileSearchText(businessProfile, selectedPyramid);
+  const keywords = extractKeywords(searchText, 30);
+  const kwSet = new Set(keywords);
+
+  const scored = chunks
+    .map((c, idx) => {
+      const rec = asRecord(c) ?? {};
+      const raw = rec.content ?? rec.text ?? rec.chunk ?? rec.body ?? rec.excerpt ?? rec.markdown ?? "";
+      const text = normalizeTextForSearch(cleanString(raw, 8000));
+      let score = 0;
+
+      // score keywords presence
+      for (const kw of kwSet) {
+        if (!kw) continue;
+        if (text.includes(kw)) score += 2;
+      }
+
+      // bonus if chunk has explicit tags that match
+      const tags = asArray(rec.tags ?? rec.keywords ?? []).map((x) => normalizeTextForSearch(cleanString(x, 40)));
+      for (const t of tags) if (kwSet.has(t)) score += 2;
+
+      // slight recency bonus if timestamps exist (best-effort)
+      const updated = typeof rec.updated_at === "string" ? Date.parse(rec.updated_at) : NaN;
+      if (Number.isFinite(updated)) {
+        const ageDays = (Date.now() - updated) / (1000 * 60 * 60 * 24);
+        if (ageDays >= 0 && ageDays < 365) score += 1;
+      }
+
+      return { idx, score, rec, raw };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const top = scored
+    .filter((x) => x.score > 0)
+    .slice(0, maxChunks)
+    .map((x) => {
+      const r = x.rec;
+      const raw = r.content ?? r.text ?? r.chunk ?? r.body ?? r.excerpt ?? r.markdown ?? x.raw ?? "";
+      return {
+        id: cleanString(r.id, 80) || String(x.idx),
+        resource_id: cleanString(r.resource_id ?? r.resourceId, 80),
+        title: cleanString(r.title ?? r.heading ?? r.name ?? "", 140),
+        tags: asArray(r.tags ?? r.keywords ?? [])
+          .map((t) => cleanString(t, 48))
+          .filter(Boolean)
+          .slice(0, 8),
+        content: cleanString(raw, 1800), // keep prompt small
+      };
+    });
+
+  return top;
+}
+
+function summarizeResourcesForPrompt(resources: unknown[], max = 12): AnyRecord[] {
+  const list = Array.isArray(resources) ? resources : [];
+  return list.slice(0, max).map((r) => {
+    const rec = asRecord(r) ?? {};
+    return {
+      id: cleanString(rec.id, 80),
+      title: cleanString(rec.title ?? rec.name, 180),
+      type: cleanString(rec.type ?? rec.category, 48),
+      tags: asArray(rec.tags ?? rec.keywords ?? [])
+        .map((x) => cleanString(x, 48))
+        .filter(Boolean)
+        .slice(0, 10),
+      summary: cleanString(rec.summary ?? rec.description ?? rec.excerpt, 320),
+      url: cleanString(rec.url ?? rec.link, 220),
+    };
+  });
+}
+
 async function persistStrategyRow(params: {
   supabase: any;
   userId: string;
@@ -420,14 +647,26 @@ function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
   if (!persona) return null;
 
   const title = cleanString(persona.title ?? persona.profile ?? persona.name, 180);
-  const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
-  const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
-  const channels = asArray(persona.channels).map((x) => cleanString(x, 64)).filter(Boolean);
-  const tags = asArray(persona.tags).map((x) => cleanString(x, 64)).filter(Boolean);
+  const pains = asArray(persona.pains)
+    .map((x) => cleanString(x, 160))
+    .filter(Boolean);
+  const desires = asArray(persona.desires)
+    .map((x) => cleanString(x, 160))
+    .filter(Boolean);
+  const channels = asArray(persona.channels)
+    .map((x) => cleanString(x, 64))
+    .filter(Boolean);
+  const tags = asArray(persona.tags)
+    .map((x) => cleanString(x, 64))
+    .filter(Boolean);
 
   // ✅ NEW (persona “coach-level”)
-  const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
-  const triggers = asArray(persona.triggers).map((x) => cleanString(x, 160)).filter(Boolean);
+  const objections = asArray(persona.objections)
+    .map((x) => cleanString(x, 160))
+    .filter(Boolean);
+  const triggers = asArray(persona.triggers)
+    .map((x) => cleanString(x, 160))
+    .filter(Boolean);
   const exact_phrases = asArray(persona.exact_phrases ?? persona.exactPhrases)
     .map((x) => cleanString(x, 180))
     .filter(Boolean);
@@ -458,11 +697,7 @@ function strategyTextLooksUseful(planJson: AnyRecord | null): boolean {
 
 function fullStrategyLooksUseful(planJson: AnyRecord | null): boolean {
   if (!planJson) return false;
-  return (
-    personaLooksUseful(asRecord(planJson.persona)) &&
-    tasksByTimeframeLooksUseful(planJson) &&
-    strategyTextLooksUseful(planJson)
-  );
+  return personaLooksUseful(asRecord(planJson.persona)) && tasksByTimeframeLooksUseful(planJson) && strategyTextLooksUseful(planJson);
 }
 
 function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | null {
@@ -557,8 +792,16 @@ export async function POST(req: Request) {
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    const MAX_CHUNKS = 24;
-    const limitedChunks = Array.isArray(resourceChunks) ? resourceChunks.slice(0, MAX_CHUNKS) : [];
+    const MAX_CHUNKS = 18;
+    // ✅ NEW: on choisit les chunks les plus pertinents pour CE user (au lieu de prendre les 24 premiers)
+    const allChunks = Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [];
+    const limitedChunks = pickTopResourceChunks({
+      chunks: allChunks,
+      businessProfile: businessProfile as AnyRecord,
+      selectedPyramid: null,
+      maxChunks: MAX_CHUNKS,
+    });
+    const resourcesForPrompt = summarizeResourcesForPrompt(resources ?? [], 12);
 
     const ai = openai;
     if (!ai) {
@@ -764,26 +1007,35 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
       );
     }
 
-    const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind).
-Tu dois créer une stratégie complète et actionnable pour un entrepreneur à partir :
-- du business_profile (onboarding),
-- du diagnostic_profile (si présent),
-- de la pyramide d'offres choisie.
+    const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) ET un stratège opérateur (tu transformes un diagnostic en plan exécuté).
+Ton niveau attendu : stratégie ultra personnalisée, digne d’un coach à 10 000$/mois.
+
+MISSION :
+À partir du business_profile (onboarding), du diagnostic_profile (si présent) et de la pyramide d’offres choisie, tu produis :
+1) une stratégie claire (mission, promesse, positionnement, résumé),
+2) un persona “terrain” (pains, désirs, objections, déclencheurs, phrases exactes),
+3) un plan 90 jours exécutable (focus unique + milestones + tâches datées).
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
-1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
+1) business_profile.diagnostic_profile (si présent) = vérité terrain, ULTRA prioritaire.
 2) diagnostic_summary + diagnostic_answers (si présents).
 3) Champs “cases” (maturity, biggest_blocker…) = fallback seulement.
 
-OBJECTIF :
-Générer une stratégie “coach-level” + un plan 90 jours découpé en tâches, pour alimenter automatiquement l'app.
+RÈGLES COACH-LEVEL (non négociables) :
+- ZÉRO généralités : pas de “créer du contenu” sans préciser le format, la fréquence, le canal, l’angle, l’objectif, et le livrable.
+- Respect strict des contraintes & non-négociables (temps/énergie/budget/formats refusés).
+- Cohérence totale avec la pyramide choisie : mêmes angles, mêmes mécanismes, même canal principal.
+- 1 levier principal (focus) + max 2 leviers secondaires.
+- Chaque tâche doit être faisable par une personne seule, et inclure un livrable clair (ex: “écrire la page X”, “publier 6 posts selon le plan Y”).
+- Si une info manque : FAIS UNE HYPOTHÈSE MINIMALE et indique-la implicitement dans le plan (sans ajouter un champ “assumptions”).
 
-RÈGLES “COACH-LEVEL” :
-- Spécifique > générique. Actions concrètes, livrables, critères de réussite.
-- Respecte contraintes & non-négociables (temps/énergie/budget/formats refusés).
-- Cohérence totale avec la pyramide choisie (mêmes angles, même canal principal).
-- 1 focus prioritaire (levier principal) + 2 leviers secondaires maximum.
-- Les tâches doivent être exécutables par une personne seule.
+UTILISATION DES RESSOURCES INTERNES :
+Tu as accès à des ressources et des extraits (chunks). Utilise-les comme “cadres / checklists / patterns”, mais adapte toujours à la niche et aux contraintes. Ne cite pas les ressources, et ne colle pas de longs extraits.
+
+GARDE-FOUS QUALITÉ (à appliquer AVANT de répondre) :
+- Spécificité : au moins 70% des tâches doivent mentionner un livrable concret + un canal/format.
+- Priorités : d30 = fondations + acquisition lead magnet, d60 = conversion + low-ticket, d90 = high-ticket + systèmes.
+- Anti-contradiction : aucune tâche ne doit contredire “formats impossibles” et “non_negotiables”.
 
 FORMAT JSON STRICT À RESPECTER (réponds en JSON strict uniquement, sans texte autour) :
 {
@@ -813,19 +1065,32 @@ FORMAT JSON STRICT À RESPECTER (réponds en JSON strict uniquement, sans texte 
 
 CONTRAINTES TASKS :
 - Minimum 6 tâches par timeframe (d30/d60/d90).
-- due_date valides et réparties dans le temps.`;
+- due_date valides et réparties dans le temps.
+- Les titres doivent être actionnables (verbe + livrable).`;
 
-    const fullUserPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
-- diagnostic_profile :
+    // ✅ NEW: chunks les plus pertinents *après* sélection de pyramide (meilleur contexte)
+    const selectedChunks = pickTopResourceChunks({
+      chunks: Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [],
+      businessProfile: businessProfile as AnyRecord,
+      selectedPyramid,
+      maxChunks: 18,
+    });
+
+    const fullUserPrompt = `CONTEXTE UTILISATEUR — À UTILISER EN PRIORITÉ
+Revenue goal (label) : ${cleanString(revenueGoalLabel, 240) || "N/A"}
+Target monthly revenue (guess) : ${targetMonthlyRevGuess !== null ? String(targetMonthlyRevGuess) : "N/A"}
+
+SOURCE PRIORITAIRE — Diagnostic (si présent)
+diagnostic_profile :
 ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
 
-- diagnostic_summary :
+diagnostic_summary :
 ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
 
-- diagnostic_answers :
+diagnostic_answers (brut) :
 ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
 
-DONNÉES FORMULAIRES (fallback) :
+DONNÉES FORMULAIRES (fallback)
 ${JSON.stringify(
   {
     first_name: (businessProfile as any).first_name ?? (businessProfile as any).firstName ?? null,
@@ -859,20 +1124,20 @@ ${JSON.stringify(
   2,
 )}
 
-Pyramide choisie :
+PYRAMIDE CHOISIE (source de cohérence)
 ${JSON.stringify(selectedPyramid, null, 2)}
 
-Ressources internes (si utiles) :
-${JSON.stringify(resources ?? [], null, 2)}
+RESSOURCES INTERNES (résumé)
+${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 
-Chunks (extraits) :
-${JSON.stringify(limitedChunks ?? [], null, 2)}
+CHUNKS PERTINENTS (extraits)
+${JSON.stringify(selectedChunks ?? [], null, 2)}
 
-Consignes importantes :
+CONSINGNES IMPORTANTES
 - Le plan 90 jours DOIT contenir des tâches avec due_date au format YYYY-MM-DD.
 - Donne au moins 6 tâches par timeframe (d30, d60, d90).
-- Priorité cohérente avec l'objectif et les contraintes.
-`;
+- Utilise les contraintes “non_negotiables / formats_impossible” du diagnostic_profile si présentes.
+- Le focus doit être un levier unique et concret (ex: “tunnel lead magnet → low-ticket via X canal”, pas “marketing”).`;
 
     const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",
@@ -933,7 +1198,10 @@ Consignes importantes :
       plan_90_days: {
         ...(asRecord(basePlan.plan_90_days) ?? {}),
         focus: cleanString(plan90Raw.focus, 200),
-        milestones: asArray(plan90Raw.milestones).map((x) => cleanString(x, 180)).filter(Boolean).slice(0, 6),
+        milestones: asArray(plan90Raw.milestones)
+          .map((x) => cleanString(x, 180))
+          .filter(Boolean)
+          .slice(0, 6),
         tasks_by_timeframe: tasksByTimeframeLooksUseful(basePlan)
           ? (asRecord((asRecord(basePlan.plan_90_days) ?? {}).tasks_by_timeframe) ??
               asRecord(basePlan.tasks_by_timeframe) ??
@@ -974,4 +1242,3 @@ Consignes importantes :
     );
   }
 }
-  

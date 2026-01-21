@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ function arrayToCsv(a: string[]) {
 
 export default function ProfileSection() {
   const { toast } = useToast();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -70,6 +72,9 @@ export default function ProfileSection() {
   const [mainGoalsCsv, setMainGoalsCsv] = useState("");
   const [contentTypesCsv, setContentTypesCsv] = useState("");
   const [tonePreference, setTonePreference] = useState("");
+
+  // ✅ NEW (reset)
+  const [resetting, setResetting] = useState(false);
 
   const dirty = useMemo(() => {
     const p = profile ?? {};
@@ -198,6 +203,48 @@ export default function ProfileSection() {
     });
   };
 
+  // ✅ NEW: reset handler (appelle une route API à créer: /api/account/reset)
+  const onReset = async () => {
+    const ok1 = window.confirm(
+      "⚠️ Réinitialiser mon Tipote ?\n\nTous les contenus, tâches et personnalisations seront supprimés. C'est définitif.",
+    );
+    if (!ok1) return;
+
+    const ok2 = window.confirm("Dernière confirmation : tu es sûr(e) à 100% ?");
+    if (!ok2) return;
+
+    setResetting(true);
+    try {
+      const res = await fetch("/api/account/reset", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Réinitialisation impossible",
+          description: json?.error || "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Tipote réinitialisé ✅",
+        description: "Retour à l'onboarding…",
+      });
+
+      router.push("/onboarding");
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Réinitialisation impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -207,7 +254,13 @@ export default function ProfileSection() {
         </div>
 
         <div className="flex items-center gap-2">
-          {loading ? <Badge variant="secondary">Chargement…</Badge> : dirty ? <Badge>Modifié</Badge> : <Badge variant="secondary">À jour</Badge>}
+          {loading ? (
+            <Badge variant="secondary">Chargement…</Badge>
+          ) : dirty ? (
+            <Badge>Modifié</Badge>
+          ) : (
+            <Badge variant="secondary">À jour</Badge>
+          )}
           <Button size="sm" onClick={onSave} disabled={loading || pending || !dirty}>
             {pending ? "Sauvegarde…" : "Sauvegarder"}
           </Button>
@@ -233,7 +286,12 @@ export default function ProfileSection() {
           <Label className="text-xs" htmlFor="niche">
             Niche
           </Label>
-          <Input id="niche" value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Coach, E-commerce, SaaS…" />
+          <Input
+            id="niche"
+            value={niche}
+            onChange={(e) => setNiche(e.target.value)}
+            placeholder="Coach, E-commerce, SaaS…"
+          />
         </div>
 
         <div className="grid gap-2">
@@ -312,6 +370,38 @@ export default function ProfileSection() {
             placeholder="Ex: posts, emails, blog, scripts vidéo"
           />
           <p className="text-[11px] text-slate-500">Sépare par des virgules. Max 12.</p>
+        </div>
+      </div>
+
+      {/* ✅ AJOUT : ZONE DANGER */}
+      <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-red-600">⚠️</span>
+              <h3 className="text-sm font-semibold text-red-700">Zone danger</h3>
+            </div>
+
+            <p className="text-sm font-medium text-slate-900">Réinitialiser mon Tipote</p>
+
+            <p className="text-xs leading-relaxed text-slate-600">
+              Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le
+              lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches et
+              toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C&apos;est
+              définitif, tu ne pourras pas revenir en arrière.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <Button
+              variant="destructive"
+              onClick={onReset}
+              disabled={loading || pending || resetting}
+              className="rounded-xl"
+            >
+              {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
+            </Button>
+          </div>
         </div>
       </div>
     </section>

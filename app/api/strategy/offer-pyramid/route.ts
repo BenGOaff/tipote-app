@@ -67,8 +67,7 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   const monthly = cleanString(businessProfile.revenue_goal_monthly, 64);
   if (monthly) return monthly;
 
-  const direct =
-    cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
+  const direct = cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
   if (direct) return direct;
 
   const mg = cleanString(businessProfile.main_goal, 240) || cleanString(businessProfile.mainGoal90Days, 240);
@@ -78,6 +77,179 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   if (goals.length) return cleanString(goals[0], 240);
 
   return "";
+}
+
+/**
+ * -----------------------
+ * Retrieval (best-effort)
+ * -----------------------
+ * Objectif: piocher les meilleurs extraits de resources/resource_chunks sans casser si les champs diffèrent.
+ */
+function extractAnyText(obj: AnyRecord | null, maxLen = 2200): string {
+  if (!obj) return "";
+  // champs fréquents (resources + chunks)
+  const candidates = [
+    obj.content,
+    obj.text,
+    obj.chunk,
+    obj.body,
+    obj.markdown,
+    obj.html,
+    obj.summary,
+    obj.description,
+    obj.excerpt,
+    obj.title,
+    obj.name,
+  ]
+    .map((x) => cleanString(x, maxLen))
+    .filter(Boolean);
+
+  // fallback: stringify petit
+  if (!candidates.length) {
+    try {
+      const s = JSON.stringify(obj);
+      return cleanString(s, maxLen);
+    } catch {
+      return "";
+    }
+  }
+
+  // concat sans exploser le prompt
+  const joined = candidates.join("\n");
+  return cleanString(joined, maxLen);
+}
+
+function tokenize(s: string): string[] {
+  const base = (s || "")
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+  if (!base) return [];
+  const parts = base.split(/\s+/g).filter(Boolean);
+  // tokens utiles seulement
+  return parts.filter((t) => t.length >= 3 && t.length <= 32);
+}
+
+function scoreTextByQuery(text: string, queryTokens: string[]): number {
+  if (!text || !queryTokens.length) return 0;
+  const t = text.toLowerCase();
+  let score = 0;
+  for (const q of queryTokens) {
+    // score simple: occurrences * poids léger
+    // (on évite regex dynamiques lourdes)
+    let idx = 0;
+    let hits = 0;
+    while (true) {
+      idx = t.indexOf(q, idx);
+      if (idx === -1) break;
+      hits++;
+      idx += q.length;
+      if (hits >= 6) break;
+    }
+    if (hits) score += hits * (q.length >= 6 ? 3 : 2);
+  }
+  // bonus si le texte contient des patterns “framework”
+  if (t.includes("checklist") || t.includes("framework") || t.includes("template") || t.includes("exemple")) score += 4;
+  return score;
+}
+
+function buildRetrievalQuery(params: { businessProfile: AnyRecord; selectedPyramid?: AnyRecord | null }): string {
+  const bp = params.businessProfile ?? {};
+  const pyr = params.selectedPyramid ?? {};
+
+  const niche = cleanString(bp.niche ?? bp.market ?? bp.activity ?? bp.business_type, 120);
+  const goal = cleanString(bp.main_goal_90_days ?? bp.main_goal ?? bp.goal ?? bp.revenue_goal, 180);
+  const blocker = cleanString(bp.biggest_blocker ?? bp.biggestBlocker, 160);
+  const maturity = cleanString(bp.maturity, 80);
+
+  const pyramidBits = [
+    cleanString(pyr?.name, 160),
+    cleanString(pyr?.strategy_summary, 280),
+    cleanString(pyr?.lead_magnet?.title, 160),
+    cleanString(pyr?.low_ticket?.title, 160),
+    cleanString(pyr?.high_ticket?.title, 160),
+  ].filter(Boolean);
+
+  return [
+    niche && `niche ${niche}`,
+    goal && `objectif ${goal}`,
+    blocker && `blocage ${blocker}`,
+    maturity && `maturité ${maturity}`,
+    ...pyramidBits,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+}
+
+function selectRelevantContext(params: {
+  resources: AnyRecord[];
+  resourceChunks: AnyRecord[];
+  businessProfile: AnyRecord;
+  selectedPyramid?: AnyRecord | null;
+  maxResources?: number;
+  maxChunks?: number;
+}): { pickedResources: AnyRecord[]; pickedChunks: AnyRecord[]; contextBlock: string } {
+  const {
+    resources,
+    resourceChunks,
+    businessProfile,
+    selectedPyramid = null,
+    maxResources = 6,
+    maxChunks = 12,
+  } = params;
+
+  const query = buildRetrievalQuery({ businessProfile, selectedPyramid });
+  const qTokens = tokenize(query);
+
+  const scoredResources = (Array.isArray(resources) ? resources : [])
+    .map((r, idx) => {
+      const rec = asRecord(r) ?? {};
+      const txt = extractAnyText(rec, 2200);
+      const score = scoreTextByQuery(txt, qTokens);
+      return { rec, score, idx };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResources)
+    .filter((x) => x.score > 0);
+
+  const scoredChunks = (Array.isArray(resourceChunks) ? resourceChunks : [])
+    .map((c, idx) => {
+      const rec = asRecord(c) ?? {};
+      const txt = extractAnyText(rec, 2200);
+      const score = scoreTextByQuery(txt, qTokens);
+      return { rec, score, idx };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxChunks)
+    .filter((x) => x.score > 0);
+
+  const pickedResources = scoredResources.map((x) => x.rec);
+  const pickedChunks = scoredChunks.map((x) => x.rec);
+
+  // Bloc compact (anti “prompt giant”)
+  const contextLines: string[] = [];
+  if (pickedResources.length) {
+    contextLines.push("RESSOURCES PERTINENTES (extraits):");
+    pickedResources.forEach((r, i) => {
+      const id = cleanString(r.id ?? r.slug ?? r.resource_id ?? "", 64);
+      const title = cleanString(r.title ?? r.name ?? "Ressource", 140);
+      const excerpt = extractAnyText(r, 900);
+      contextLines.push(`- [R${i + 1}] ${id ? `(${id}) ` : ""}${title}\n${excerpt}`);
+    });
+  }
+  if (pickedChunks.length) {
+    contextLines.push("CHUNKS PERTINENTS (extraits):");
+    pickedChunks.forEach((c, i) => {
+      const id = cleanString(c.id ?? c.chunk_id ?? c.resource_id ?? "", 64);
+      const title = cleanString(c.title ?? c.heading ?? c.section ?? "", 140);
+      const excerpt = extractAnyText(c, 900);
+      contextLines.push(`- [C${i + 1}] ${id ? `(${id}) ` : ""}${title}\n${excerpt}`);
+    });
+  }
+
+  const contextBlock = contextLines.join("\n\n");
+  return { pickedResources, pickedChunks, contextBlock };
 }
 
 /**
@@ -106,8 +278,7 @@ async function persistStrategyRow(params: {
       parseMoneyFromText(businessProfile.target_monthly_revenue) ??
       parseMoneyFromText(businessProfile.revenue_goal);
 
-    const title =
-      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+    const title = cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -118,11 +289,7 @@ async function persistStrategyRow(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabase
-      .from("strategies")
-      .upsert(payload, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
+    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
 
     if (upsertRes?.error) {
       const insRes = await supabase.from("strategies").insert(payload).select("id").maybeSingle();
@@ -175,12 +342,9 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const name = cleanString(p?.name ?? p?.nom ?? `Pyramide ${idx + 1}`, 160);
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
-  const lead =
-    asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
-  const low =
-    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
-  const high =
-    asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
+  const lead = asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
+  const low = asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
+  const high = asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
   return {
     id,
@@ -308,8 +472,12 @@ function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
   const daily_exasperations = asArray(persona.daily_exasperations ?? persona.dailyExasperations)
     .map((x) => cleanString(x, 240))
     .filter(Boolean);
-  const emotions_wanted = asArray(persona.emotions_wanted ?? persona.emotionsWanted).map((x) => cleanString(x, 240)).filter(Boolean);
-  const tried_solutions = asArray(persona.tried_solutions ?? persona.triedSolutions).map((x) => cleanString(x, 240)).filter(Boolean);
+  const emotions_wanted = asArray(persona.emotions_wanted ?? persona.emotionsWanted)
+    .map((x) => cleanString(x, 240))
+    .filter(Boolean);
+  const tried_solutions = asArray(persona.tried_solutions ?? persona.triedSolutions)
+    .map((x) => cleanString(x, 240))
+    .filter(Boolean);
   const limiting_beliefs = asArray(persona.limiting_beliefs ?? persona.limitingBeliefs)
     .map((x) => cleanString(x, 240))
     .filter(Boolean);
@@ -542,11 +710,7 @@ export async function PATCH(req: Request) {
     const pyramidRaw = body?.pyramid;
 
     const selectedIndex =
-      typeof selectedIndexRaw === "number"
-        ? selectedIndexRaw
-        : typeof selectedIndexRaw === "string"
-          ? Number(selectedIndexRaw)
-          : null;
+      typeof selectedIndexRaw === "number" ? selectedIndexRaw : typeof selectedIndexRaw === "string" ? Number(selectedIndexRaw) : null;
 
     if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) {
       return NextResponse.json({ success: false, error: "Invalid selectedIndex" }, { status: 400 });
@@ -555,11 +719,7 @@ export async function PATCH(req: Request) {
     const pyramid = asRecord(pyramidRaw);
     if (!pyramid) return NextResponse.json({ success: false, error: "Invalid pyramid" }, { status: 400 });
 
-    const { data: planRow, error: planErr } = await supabase
-      .from("business_plan")
-      .select("plan_json")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: planRow, error: planErr } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
 
     if (planErr) console.error("Error reading business_plan for PATCH:", planErr);
 
@@ -615,10 +775,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
   } catch (err) {
     console.error("Unhandled error in PATCH /api/strategy/offer-pyramid:", err);
-    return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : "Internal server error" }, { status: 500 });
   }
 }
 
@@ -661,11 +818,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
-    const { data: businessProfile, error: profileError } = await supabase
-      .from("business_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+    const { data: businessProfile, error: profileError } = await supabase.from("business_profiles").select("*").eq("user_id", userId).single();
 
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
@@ -678,21 +831,16 @@ export async function POST(req: Request) {
     const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
     const targetMonthlyRevGuess = parseMoneyFromText(revenueGoalLabel);
 
+    // Load resources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
     if (resourcesError) console.error("Error loading resources:", resourcesError);
 
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    const MAX_CHUNKS = 24;
-    const limitedChunks = Array.isArray(resourceChunks) ? resourceChunks.slice(0, MAX_CHUNKS) : [];
-
     const ai = openai;
     if (!ai) {
-      return NextResponse.json(
-        { success: false, error: "OPENAI_API_KEY / OPENAI client not configured (strategy disabled)" },
-        { status: 500 },
-      );
+      return NextResponse.json({ success: false, error: "OPENAI_API_KEY / OPENAI client not configured (strategy disabled)" }, { status: 500 });
     }
 
     /**
@@ -700,6 +848,16 @@ export async function POST(req: Request) {
      */
     if (!hasUsefulPyramids) {
       const PYRAMIDS_COUNT = 5;
+
+      // retrieval sans selected pyramid (pas encore)
+      const { contextBlock } = selectRelevantContext({
+        resources: (resources ?? []) as AnyRecord[],
+        resourceChunks: (resourceChunks ?? []) as AnyRecord[],
+        businessProfile: businessProfile as AnyRecord,
+        selectedPyramid: null,
+        maxResources: 5,
+        maxChunks: 10,
+      });
 
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
@@ -711,11 +869,11 @@ SOURCE DE VÉRITÉ (ordre de priorité) :
 2) diagnostic_summary + diagnostic_answers (si présents).
 3) Champs onboarding “cases” = fallback.
 
-EXIGENCES :
-- Zéro blabla : actionnable, spécifique, niché.
-- Chaque pyramide = une stratégie distincte (angle, mécanisme, promesse, canal, format).
-- Respecte contraintes & non-négociables (temps, énergie, budget, formats refusés).
-- Chaque pyramide doit inclure un quick win 7 jours dans sa logique (via lead/low/angle).
+EXIGENCES “ANTI-GÉNÉRALITÉS” :
+- Interdit: “faire du contenu”, “améliorer la com”, “poster sur Instagram” sans préciser QUOI / ANGLE / FORMAT / FRÉQUENCE / CTA.
+- Chaque offre doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit”.
+- Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
+- Intègre un quick win 7 jours cohérent avec la pyramide.
 
 IMPORTANT :
 Réponds en JSON strict uniquement, sans texte autour.`;
@@ -736,8 +894,7 @@ ${JSON.stringify(
     first_name: (businessProfile as any).first_name ?? (businessProfile as any).firstName ?? null,
     country: (businessProfile as any).country ?? null,
     niche: (businessProfile as any).niche ?? null,
-    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ??
-null,
+    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
     maturity: (businessProfile as any).maturity ?? null,
     biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
     weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
@@ -751,37 +908,29 @@ null,
     offers: (businessProfile as any).offers ?? null,
     social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
     email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
-    main_goal_90_days:
-      (businessProfile as any).main_goal_90_days ??
-      (businessProfile as any).main_goal ??
-      (businessProfile as any).mainGoal90Days ??
-      null,
+    main_goal_90_days: (businessProfile as any).main_goal_90_days ?? (businessProfile as any).main_goal ?? (businessProfile as any).mainGoal90Days ?? null,
     main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
-    preferred_content_type:
-      (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
+    preferred_content_type: (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
     tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
   },
   null,
   2,
 )}
 
-Ressources internes (si utiles) :
-${JSON.stringify(resources ?? [], null, 2)}
+RESSOURCES INTERNES (top extraits pertinents) :
+${contextBlock || "(aucun extrait pertinent trouvé)"}
 
-Chunks (extraits) :
-${JSON.stringify(limitedChunks ?? [], null, 2)}
-
-Contraintes :
+Contraintes de sortie :
 - Génère ${PYRAMIDS_COUNT} pyramides complètes.
 - Chaque pyramide contient : lead_magnet, low_ticket, high_ticket.
 - Pour chaque offre, renseigne :
-  - title
-  - format
+  - title (spécifique + outcome + mécanisme)
+  - format (PDF, mini-cours, workshop, template, audit, coaching, etc.)
   - price (nombre)
   - composition (livrables concrets)
-  - purpose (objectif/transformation)
-  - insight (1 phrase: pourquoi ça convertit)
-- La logique globale de chaque pyramide = strategy_summary (1 phrase)
+  - purpose (objectif/transformation mesurable)
+  - insight (1 phrase: pourquoi ça convertit à ce niveau)
+- La logique globale de chaque pyramide = strategy_summary (1 phrase).
 
 STRUCTURE EXACTE À RENVOYER :
 {
@@ -804,7 +953,7 @@ STRUCTURE EXACTE À RENVOYER :
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
+        temperature: 0.65,
       });
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -823,15 +972,12 @@ STRUCTURE EXACTE À RENVOYER :
         ...basePlan,
         offer_pyramids: normalizedOfferPyramids,
 
-        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
-          ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
-          : {}),
+        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel } : {}),
 
         horizon_days: toNumber(basePlan.horizon_days) ?? 90,
         ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
 
-        selected_offer_pyramid_index:
-          typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
+        selected_offer_pyramid_index: typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
         selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
 
         // legacy compat
@@ -880,23 +1026,32 @@ STRUCTURE EXACTE À RENVOYER :
     const selectedPyramid = pickSelectedPyramidFromPlan(existingPlanJson);
     if (!selectedPyramid) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "selected_offer_pyramid is missing. Choose a pyramid first before generating the full strategy.",
-        },
+        { success: false, error: "selected_offer_pyramid is missing. Choose a pyramid first before generating the full strategy." },
         { status: 400 },
       );
     }
 
+    // retrieval contextualisé avec la pyramide choisie
+    const { contextBlock } = selectRelevantContext({
+      resources: (resources ?? []) as AnyRecord[],
+      resourceChunks: (resourceChunks ?? []) as AnyRecord[],
+      businessProfile: businessProfile as AnyRecord,
+      selectedPyramid: selectedPyramid as AnyRecord,
+      maxResources: 6,
+      maxChunks: 12,
+    });
+
     const fullSystemPrompt = `Tu es Tipote™, un stratège business senior + expert persona francophone (niveau mondial).
 Tu dois créer une stratégie complète et actionnable à partir de l'onboarding + de la pyramide choisie.
 
-RÈGLES :
-- Réponds en JSON strict uniquement.
-- Concret, actionnable, niché.
-- Pas d'âge, pas de ville, pas de nom de persona.
-- Le persona doit être extrêmement détaillé (pains, désirs, objections, déclencheurs, dialogue interne, etc.).
+RÈGLES “COACH-LEVEL” :
+- Réponds en JSON strict uniquement (zéro texte autour).
+- Concret, actionnable, niché. Aucun conseil générique.
+- Chaque recommandation doit préciser: QUOI / COMMENT / LIVRABLE / MÉTRIQUE.
+- Cohérence totale avec la pyramide (angle, canal principal, offre, promesse).
+- Interdit: “crée du contenu” sans (thèmes, formats, fréquence, CTA, distribution).
+- Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé (pains, désirs, objections, déclencheurs, dialogue interne…).
+- Plan 90 jours: tâches “solo-exécutables”, avec due_date valides, et priorité.
 
 FORMAT JSON STRICT :
 {
@@ -959,22 +1114,54 @@ FORMAT JSON STRICT :
   }
 }`.trim();
 
-    const fullUserPrompt = `Contexte onboarding :
-${JSON.stringify(businessProfile, null, 2)}
+    const fullUserPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
+- diagnostic_profile :
+${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
 
-Pyramide choisie :
+- diagnostic_summary :
+${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+
+- diagnostic_answers :
+${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
+
+DONNÉES FORMULAIRES (fallback) :
+${JSON.stringify(
+  {
+    country: (businessProfile as any).country ?? null,
+    niche: (businessProfile as any).niche ?? null,
+    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
+    maturity: (businessProfile as any).maturity ?? null,
+    biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
+    weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
+    revenue_goal_monthly:
+      (businessProfile as any).revenue_goal_monthly ??
+      (businessProfile as any).revenueGoalMonthly ??
+      (businessProfile as any).target_monthly_revenue ??
+      (businessProfile as any).revenue_goal ??
+      null,
+    has_offers: (businessProfile as any).has_offers ?? (businessProfile as any).hasOffers ?? null,
+    offers: (businessProfile as any).offers ?? null,
+    social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
+    email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
+    main_goal_90_days: (businessProfile as any).main_goal_90_days ?? (businessProfile as any).main_goal ?? (businessProfile as any).mainGoal90Days ?? null,
+    main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
+    preferred_content_type: (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
+    tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
+  },
+  null,
+  2,
+)}
+
+PYRAMIDE CHOISIE :
 ${JSON.stringify(selectedPyramid, null, 2)}
 
-Ressources internes :
-${JSON.stringify(resources ?? [], null, 2)}
-
-Chunks :
-${JSON.stringify(limitedChunks ?? [], null, 2)}
+RESSOURCES INTERNES (top extraits pertinents) :
+${contextBlock || "(aucun extrait pertinent trouvé)"}
 
 Contraintes :
 - d30/d60/d90 : au moins 10 tâches chacun
-- due_date en YYYY-MM-DD
-`.trim();
+- due_date en YYYY-MM-DD (dates réelles et réparties)
+- chaque tâche doit être spécifique (livrable concret)`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",
@@ -983,7 +1170,7 @@ Contraintes :
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-      temperature: 0.7,
+      temperature: 0.6,
     });
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -1112,9 +1299,6 @@ Contraintes :
     );
   } catch (err) {
     console.error("Unhandled error in POST /api/strategy/offer-pyramid:", err);
-    return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : "Internal server error" }, { status: 500 });
   }
 }
