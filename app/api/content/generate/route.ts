@@ -17,6 +17,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 import { buildPromptByType } from "@/lib/prompts/content";
+import { buildEmailPrompt } from "@/lib/prompts/content/email";
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -31,6 +32,12 @@ type Body = {
   batchCount?: number;
   promoKind?: "paid" | "free";
   offerLink?: string;
+
+  // Emails
+  emailType?: "nurturing" | "sales_sequence" | "onboarding";
+  formality?: "tu" | "vous";
+  offerId?: string;
+  offer?: string;
 
   type?: string;
   provider?: Provider;
@@ -422,6 +429,7 @@ async function readKnowledgeFileSnippet(relPath: string, maxChars: number): Prom
     }
   }
 
+  // Nettoyage léger
   const s = buf
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
@@ -455,7 +463,7 @@ function scoreEntry(entry: KnowledgeEntry, tokens: string[], tags: string[], typ
     if (eTags.some((x) => x.includes(tok))) score += 3;
   }
 
-  if (typeof entry.priority === "number") score += Math.max(0, Math.min(10, entry.priority));
+  if (typeof entry.priority === 'number') score += Math.max(0, Math.min(10, entry.priority));
 
   return score;
 }
@@ -517,6 +525,7 @@ async function isPaidOrThrowQuota(params: {
       if (paid) return { ok: true, paid: true };
     }
   } catch {
+    // fail-open
     return { ok: true, paid: false, used: null, limit: 7, windowDays: 7 };
   }
 
@@ -526,6 +535,7 @@ async function isPaidOrThrowQuota(params: {
   try {
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // count exact, head: true to avoid fetching rows
     const { count, error } = await supabase
       .from("content_item")
       .select("id", { count: "exact", head: true })
@@ -533,6 +543,7 @@ async function isPaidOrThrowQuota(params: {
       .gte("created_at", since);
 
     if (error) {
+      // Si colonne manquante etc => fail-open (ne pas casser)
       if (isMissingColumnError(error.message)) {
         return { ok: true, paid: false, used: null, limit, windowDays };
       }
@@ -582,35 +593,32 @@ export async function POST(req: Request) {
     const promoKind = ((body as any)?.promoKind ?? "paid") as "paid" | "free";
     const offerLink = safeString((body as any)?.offerLink).trim();
 
+    // Champs structurés (emails)
+    const emailTypeRaw = safeString((body as any)?.emailType).trim();
+    const formalityRaw = safeString((body as any)?.formality).trim();
+    const offerId = safeString((body as any)?.offerId).trim();
+    const offerName = safeString((body as any)?.offer).trim();
+
     if (!type) {
       return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
     }
+    if (!prompt && !subject) {
+      return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+    }
 
-    // ✅ Nouveau: pour type "post", le prompt peut être construit côté backend
-    // (on exige au minimum un sujet)
-    if (type === "post") {
-      const finalSubject = subject || prompt;
-      if (!finalSubject) {
-        return NextResponse.json(
-          { ok: false, code: "missing_subject", error: "Sujet requis pour générer un post." },
-          { status: 400 },
-        );
-      }
-
-      if ((theme || "").toLowerCase() === "sell" && !offerLink) {
-        return NextResponse.json(
-          {
-            ok: false,
-            code: "missing_offer_link",
-            error: "Pour un post de vente (ou une offre gratuite), ajoute le lien de la page à étudier avant génération.",
-          },
-          { status: 400 },
-        );
-      }
-    } else {
-      // Autres types: prompt requis (comportement inchangé)
-      if (!prompt) {
-        return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+    // ✅ Emails: une séquence de vente doit être basée sur une offre précise (pyramide)
+    if (type === "email") {
+      const et =
+        emailTypeRaw === "sales_sequence" || emailTypeRaw === "onboarding" || emailTypeRaw === "nurturing"
+          ? emailTypeRaw
+          : "nurturing";
+      if (et === "sales_sequence") {
+        if (!offerId && !offerName) {
+          return NextResponse.json(
+            { ok: false, error: "Choisis une offre (pyramide) pour générer une séquence de vente." },
+            { status: 400 },
+          );
+        }
       }
     }
 
@@ -633,6 +641,7 @@ export async function POST(req: Request) {
     // ✅ Nouveau gating : plan payant => OK ; plan free => quota hebdo (même si userKey)
     const gate = await isPaidOrThrowQuota({ supabase, userId });
     if (!gate.paid) {
+      // Si on a pu compter, on applique strictement le quota
       if (typeof gate.used === "number") {
         if (gate.used >= gate.limit) {
           return NextResponse.json(
@@ -646,16 +655,24 @@ export async function POST(req: Request) {
           );
         }
       }
+      // Si on ne peut pas compter (fail-open), on laisse passer
     }
 
     const apiKey = (userKey ?? ownerKey).trim();
 
     if (!apiKey) {
-      return NextResponse.json({ ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." },
+        { status: 400 },
+      );
     }
 
     // Contexte (optionnel) : business profile + plan
-    const { data: profile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
+    const { data: profile } = await supabase
+      .from("business_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
 
     const { data: planRow } = await supabase
       .from("business_plan")
@@ -699,6 +716,7 @@ export async function POST(req: Request) {
           };
       }
     } catch (e) {
+      // fail-open
       console.error("Persona load (fail-open):", e);
     }
 
@@ -709,7 +727,32 @@ export async function POST(req: Request) {
     const tagsCsv = joinTagsCsv(tags);
 
     // ✅ Prompt final (selon type)
-    const matchPrompt = type === "post" ? (subject || prompt) : prompt;
+    const matchPrompt = type === "post" ? (subject || prompt) : type === "email" ? (subject || prompt) : prompt;
+
+    // ✅ Offre (emails sales_sequence) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
+    let offerContext: any = null;
+    const emailType =
+      emailTypeRaw === "sales_sequence" || emailTypeRaw === "onboarding" || emailTypeRaw === "nurturing"
+        ? (emailTypeRaw as any)
+        : "nurturing";
+
+    const formality = formalityRaw === "tu" ? "tu" : "vous";
+
+    if (type === "email" && emailType === "sales_sequence" && offerId) {
+      try {
+        const { data: offerRow, error: offerErr } = await supabase
+          .from("offer_pyramids")
+          .select("id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,is_flagship,updated_at")
+          .eq("id", offerId)
+          .maybeSingle();
+
+        if (!offerErr && offerRow) {
+          offerContext = offerRow as any;
+        }
+      } catch {
+        // fail-open
+      }
+    }
 
     const effectivePrompt =
       type === "post"
@@ -723,7 +766,33 @@ export async function POST(req: Request) {
             promoKind,
             offerLink,
           } as any)
-        : prompt;
+        : type === "email"
+          ? buildEmailPrompt({
+              emailType,
+              formality,
+              subject: subject || prompt,
+              offerLink: offerLink || null,
+              offer:
+                emailType === "sales_sequence"
+                  ? offerContext
+                    ? {
+                        id: (offerContext as any)?.id ?? undefined,
+                        name: (offerContext as any)?.name ?? undefined,
+                        level: (offerContext as any)?.level ?? null,
+                        promise: (offerContext as any)?.promise ?? null,
+                        description: (offerContext as any)?.description ?? null,
+                        price_min: (offerContext as any)?.price_min ?? null,
+                        price_max: (offerContext as any)?.price_max ?? null,
+                        main_outcome: (offerContext as any)?.main_outcome ?? null,
+                        format: (offerContext as any)?.format ?? null,
+                        delivery: (offerContext as any)?.delivery ?? null,
+                      }
+                    : offerName
+                      ? { name: offerName }
+                      : null
+                  : null,
+            })
+          : prompt;
 
     // ✅ Plain text output
     const systemPrompt = [
@@ -759,7 +828,7 @@ export async function POST(req: Request) {
 
     // ✅ Tipote Knowledge injection
     try {
-      const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt, tags });
+      const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt || effectivePrompt, tags });
       if (knowledgeSnippets.length) {
         userContextLines.push("");
         userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
@@ -851,7 +920,10 @@ export async function POST(req: Request) {
     });
 
     if (tryFR.error) {
-      return NextResponse.json({ ok: false, error: (tryFR.error as any)?.message ?? "Insert error" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: (tryFR.error as any)?.message ?? "Insert error" },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(
@@ -866,6 +938,9 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (e) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
   }
 }

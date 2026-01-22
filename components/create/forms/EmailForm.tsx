@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 interface EmailFormProps {
   onGenerate: (params: any) => Promise<string>;
@@ -23,23 +25,109 @@ const emailTypes = [
   { id: "onboarding", label: "Onboarding" },
 ];
 
+type OfferOption = {
+  id: string;
+  label: string;
+  level: "lead_magnet" | "low_ticket" | "high_ticket" | string;
+  is_flagship?: boolean | null;
+};
+
+function levelLabel(level: string) {
+  if (level === "lead_magnet") return "Gratuit";
+  if (level === "low_ticket") return "Low ticket";
+  if (level === "high_ticket") return "High ticket";
+  return level || "Offre";
+}
+
 export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: EmailFormProps) {
   const [emailType, setEmailType] = useState("nurturing");
-  const [offer, setOffer] = useState("");
   const [formality, setFormality] = useState<"tu" | "vous">("vous");
   const [subject, setSubject] = useState("");
   const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
+  // ✅ Nouveau: sélection d'offre depuis la pyramide (offer_pyramids)
+  const [offers, setOffers] = useState<OfferOption[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offerId, setOfferId] = useState<string>("");
+  // ✅ Fallback (si pas d'offres récupérées / schema différent)
+  const [offerNameFallback, setOfferNameFallback] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOffers() {
+      setOffersLoading(true);
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("offer_pyramids")
+          .select("id,name,level,is_flagship,updated_at")
+          .order("is_flagship", { ascending: false })
+          .order("updated_at", { ascending: false })
+          .limit(50);
+
+        if (error) {
+          if (mounted) setOffers([]);
+          return;
+        }
+
+        const rows = Array.isArray(data) ? data : [];
+        const mapped: OfferOption[] = rows
+          .map((r: any) => {
+            const id = typeof r?.id === "string" ? r.id : "";
+            const name = typeof r?.name === "string" ? r.name : "";
+            const level = typeof r?.level === "string" ? r.level : "";
+            const isFlagship = typeof r?.is_flagship === "boolean" ? r.is_flagship : null;
+            if (!id || !name) return null;
+            return {
+              id,
+              label: name,
+              level,
+              is_flagship: isFlagship,
+            } as OfferOption;
+          })
+          .filter(Boolean) as OfferOption[];
+
+        if (mounted) setOffers(mapped);
+      } catch {
+        if (mounted) setOffers([]);
+      } finally {
+        if (mounted) setOffersLoading(false);
+      }
+    }
+
+    loadOffers();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const offersByLevel = useMemo(() => {
+    const out: Record<string, OfferOption[]> = {};
+    offers.forEach((o) => {
+      const k = o.level || "other";
+      out[k] = out[k] || [];
+      out[k].push(o);
+    });
+    return out;
+  }, [offers]);
+
+  const needsOffer = emailType === "sales_sequence";
+  const canGenerate = !!subject.trim() && (!needsOffer || !!offerId || !!offerNameFallback.trim());
+
   const handleGenerate = async () => {
     const content = await onGenerate({
       type: "email",
       emailType,
-      offer: emailType === "sales_sequence" ? offer : undefined,
+      offerId: needsOffer ? offerId || undefined : undefined,
+      offer: needsOffer && !offerId ? offerNameFallback || undefined : undefined,
       formality,
       subject,
     });
+
     if (content) {
       setGeneratedContent(content);
       if (!title) setTitle(subject || `Email ${emailType}`);
@@ -76,7 +164,9 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               </SelectTrigger>
               <SelectContent>
                 {emailTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -85,11 +175,46 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           {emailType === "sales_sequence" && (
             <div className="space-y-2">
               <Label>Offre à vendre</Label>
-              <Input
-                placeholder="Nom de votre offre"
-                value={offer}
-                onChange={(e) => setOffer(e.target.value)}
-              />
+
+              {offersLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Chargement de vos offres...
+                </div>
+              ) : offers.length ? (
+                <Select value={offerId} onValueChange={setOfferId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisis une offre de ta pyramide" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(offersByLevel).map(([lvl, list]) => (
+                      <div key={lvl}>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          {levelLabel(lvl)}
+                        </div>
+                        {list.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.is_flagship ? "⭐ " : ""}
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  placeholder="Nom de votre offre (fallback)"
+                  value={offerNameFallback}
+                  onChange={(e) => setOfferNameFallback(e.target.value)}
+                />
+              )}
+
+              {!offersLoading && emailType === "sales_sequence" && !offerId && !offerNameFallback.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Sélectionne une offre (pyramide) pour générer une séquence de vente pertinente.
+                </p>
+              )}
             </div>
           )}
 
@@ -116,11 +241,17 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             />
           </div>
 
-          <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
+          <Button className="w-full" onClick={handleGenerate} disabled={!canGenerate || isGenerating}>
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Génération...
+              </>
             ) : (
-              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Générer
+              </>
             )}
           </Button>
         </div>
@@ -128,11 +259,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
-            <Input
-              placeholder="Titre interne"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input placeholder="Titre interne" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -150,11 +277,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -164,17 +287,25 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 </Button>
 
                 {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSave("scheduled")}
+                    disabled={!title || isSaving}
+                  >
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Planifier
                   </Button>
                 )}
 
                 <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />Publier
+                  <Send className="w-4 h-4 mr-1" />
+                  Publier
                 </Button>
 
-                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating || !canGenerate}>
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Regénérer
                 </Button>
               </div>
             </div>
