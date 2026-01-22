@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
 
 interface ArticleFormProps {
@@ -15,9 +22,17 @@ interface ArticleFormProps {
   isSaving: boolean;
 }
 
+const objectiveOptions = [
+  { id: "trafic_seo", label: "Trafic SEO" },
+  { id: "autorite", label: "Autorité" },
+  { id: "emails", label: "Emails" },
+  { id: "ventes", label: "Ventes" },
+];
+
 export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: ArticleFormProps) {
   const [subject, setSubject] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
+  const [objective, setObjective] = useState<string>("");
   const [links, setLinks] = useState("");
   const [cta, setCta] = useState("");
   const [generatedContent, setGeneratedContent] = useState("");
@@ -29,9 +44,11 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
       type: "article",
       subject,
       seoKeyword,
+      objective,
       links: links || undefined,
       cta,
     });
+
     if (content) {
       setGeneratedContent(content);
       if (!title) setTitle(subject || seoKeyword);
@@ -48,6 +65,9 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
       scheduled_at: scheduledAt || undefined,
     });
   };
+
+  const canGenerate = (!!subject || !!seoKeyword) && !!objective;
+  const generateDisabled = !canGenerate || isGenerating;
 
   return (
     <div className="space-y-6">
@@ -79,6 +99,27 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
           </div>
 
           <div className="space-y-2">
+            <Label>Objectif *</Label>
+            <Select value={objective} onValueChange={setObjective}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir un objectif" />
+              </SelectTrigger>
+              <SelectContent>
+                {objectiveOptions.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!objective && (
+              <p className="text-xs text-muted-foreground">
+                Obligatoire. 1 seul choix.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label>Liens à placer (optionnel)</Label>
             <Textarea
               placeholder="Collez les URLs importantes"
@@ -97,15 +138,17 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
             />
           </div>
 
-          <Button
-            className="w-full"
-            onClick={handleGenerate}
-            disabled={!subject && !seoKeyword || isGenerating}
-          >
+          <Button className="w-full" onClick={handleGenerate} disabled={generateDisabled}>
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Génération...
+              </>
             ) : (
-              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Générer
+              </>
             )}
           </Button>
         </div>
@@ -143,19 +186,39 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
-                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleSave("draft")}
+                  disabled={!title || isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-1" />
+                  )}
                   Brouillon
                 </Button>
 
                 {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSave("scheduled")}
+                    disabled={!title || isSaving}
+                  >
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Planifier
                   </Button>
                 )}
 
-                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />Publier
+                <Button
+                  size="sm"
+                  onClick={() => handleSave("published")}
+                  disabled={!title || isSaving}
+                >
+                  <Send className="w-4 h-4 mr-1" />
+                  Publier
                 </Button>
 
                 <Button
@@ -164,7 +227,8 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
                   onClick={handleGenerate}
                   disabled={isGenerating}
                 >
-                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Regénérer
                 </Button>
               </div>
             </div>
