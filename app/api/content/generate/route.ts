@@ -33,11 +33,25 @@ type Body = {
   promoKind?: "paid" | "free";
   offerLink?: string;
 
-  // Emails
-  emailType?: "nurturing" | "sales_sequence" | "onboarding";
+  // Emails (nouveau modèle)
+  emailType?: "newsletter" | "sales" | "onboarding";
+  salesMode?: "single" | "sequence_7";
+  newsletterTheme?: string;
+  newsletterCta?: string;
+  salesCta?: string;
+  leadMagnetLink?: string;
+  onboardingCta?: string;
+
   formality?: "tu" | "vous";
   offerId?: string;
-  offer?: string;
+  offer?: string; // compat ancien fallback
+  offerManual?: {
+    name?: string;
+    promise?: string;
+    main_outcome?: string;
+    description?: string;
+    price?: string;
+  };
 
   type?: string;
   provider?: Provider;
@@ -463,7 +477,7 @@ function scoreEntry(entry: KnowledgeEntry, tokens: string[], tags: string[], typ
     if (eTags.some((x) => x.includes(tok))) score += 3;
   }
 
-  if (typeof entry.priority === 'number') score += Math.max(0, Math.min(10, entry.priority));
+  if (typeof entry.priority === "number") score += Math.max(0, Math.min(10, entry.priority));
 
   return score;
 }
@@ -594,32 +608,25 @@ export async function POST(req: Request) {
     const offerLink = safeString((body as any)?.offerLink).trim();
 
     // Champs structurés (emails)
-    const emailTypeRaw = safeString((body as any)?.emailType).trim();
+    const emailTypeRaw = safeString((body as any)?.emailType).trim(); // "newsletter" | "sales" | "onboarding"
+    const salesModeRaw = safeString((body as any)?.salesMode).trim(); // "single" | "sequence_7"
+    const newsletterTheme = safeString((body as any)?.newsletterTheme).trim();
+    const newsletterCta = safeString((body as any)?.newsletterCta).trim();
+    const salesCta = safeString((body as any)?.salesCta).trim();
+    const leadMagnetLink = safeString((body as any)?.leadMagnetLink).trim();
+    const onboardingCta = safeString((body as any)?.onboardingCta).trim();
+
     const formalityRaw = safeString((body as any)?.formality).trim();
     const offerId = safeString((body as any)?.offerId).trim();
     const offerName = safeString((body as any)?.offer).trim();
 
+    const offerManual = isRecord((body as any)?.offerManual) ? ((body as any).offerManual as any) : null;
+
     if (!type) {
       return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
     }
-    if (!prompt && !subject) {
+    if (!prompt && !subject && !newsletterTheme) {
       return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
-    }
-
-    // ✅ Emails: une séquence de vente doit être basée sur une offre précise (pyramide)
-    if (type === "email") {
-      const et =
-        emailTypeRaw === "sales_sequence" || emailTypeRaw === "onboarding" || emailTypeRaw === "nurturing"
-          ? emailTypeRaw
-          : "nurturing";
-      if (et === "sales_sequence") {
-        if (!offerId && !offerName) {
-          return NextResponse.json(
-            { ok: false, error: "Choisis une offre (pyramide) pour générer une séquence de vente." },
-            { status: 400 },
-          );
-        }
-      }
     }
 
     // UI peut proposer Claude/Gemini, mais backend pas activé -> réponse propre
@@ -727,18 +734,45 @@ export async function POST(req: Request) {
     const tagsCsv = joinTagsCsv(tags);
 
     // ✅ Prompt final (selon type)
-    const matchPrompt = type === "post" ? (subject || prompt) : type === "email" ? (subject || prompt) : prompt;
+    const matchPrompt = type === "post" ? subject || prompt : type === "email" ? subject || prompt : prompt;
 
-    // ✅ Offre (emails sales_sequence) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
+    // ✅ Offre (emails sales) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
     let offerContext: any = null;
-    const emailType =
-      emailTypeRaw === "sales_sequence" || emailTypeRaw === "onboarding" || emailTypeRaw === "nurturing"
-        ? (emailTypeRaw as any)
-        : "nurturing";
+
+    const uiEmailType =
+      emailTypeRaw === "newsletter" || emailTypeRaw === "sales" || emailTypeRaw === "onboarding"
+        ? (emailTypeRaw as "newsletter" | "sales" | "onboarding")
+        : "newsletter";
+
+    const salesMode = salesModeRaw === "sequence_7" ? "sequence_7" : "single";
+
+    const emailPromptType =
+      uiEmailType === "sales"
+        ? salesMode === "sequence_7"
+          ? ("sales_sequence_7" as const)
+          : ("sales_single" as const)
+        : uiEmailType === "onboarding"
+          ? ("onboarding_klt_3" as const)
+          : ("newsletter" as const);
 
     const formality = formalityRaw === "tu" ? "tu" : "vous";
 
-    if (type === "email" && emailType === "sales_sequence" && offerId) {
+    // ✅ Gating emails sales : il faut une offre (pyramide OU manual OU offerName legacy)
+    if (type === "email" && (emailPromptType === "sales_single" || emailPromptType === "sales_sequence_7")) {
+      const hasManual =
+        isRecord(offerManual) &&
+        (safeString((offerManual as any)?.name).trim() ||
+          safeString((offerManual as any)?.promise).trim() ||
+          safeString((offerManual as any)?.main_outcome).trim());
+      if (!offerId && !offerName && !hasManual) {
+        return NextResponse.json(
+          { ok: false, error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente." },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (type === "email" && (emailPromptType === "sales_single" || emailPromptType === "sales_sequence_7") && offerId) {
       try {
         const { data: offerRow, error: offerErr } = await supabase
           .from("offer_pyramids")
@@ -768,12 +802,25 @@ export async function POST(req: Request) {
           } as any)
         : type === "email"
           ? buildEmailPrompt({
-              emailType,
+              type: emailPromptType,
               formality,
-              subject: subject || prompt,
+
+              // Newsletter
+              theme: uiEmailType === "newsletter" ? (newsletterTheme || subject || prompt) : undefined,
+              cta: uiEmailType === "newsletter" ? newsletterCta || undefined : uiEmailType === "sales" ? salesCta || undefined : undefined,
+
+              // Sales / Onboarding: subject intention
+              subject:
+                uiEmailType === "sales"
+                  ? (subject || prompt)
+                  : uiEmailType === "onboarding"
+                    ? (subject || prompt)
+                    : undefined,
+
               offerLink: offerLink || null,
+
               offer:
-                emailType === "sales_sequence"
+                uiEmailType === "sales"
                   ? offerContext
                     ? {
                         id: (offerContext as any)?.id ?? undefined,
@@ -791,6 +838,21 @@ export async function POST(req: Request) {
                       ? { name: offerName }
                       : null
                   : null,
+
+              offerManual:
+                uiEmailType === "sales" && isRecord(offerManual)
+                  ? {
+                      name: safeString((offerManual as any)?.name) || null,
+                      promise: safeString((offerManual as any)?.promise) || null,
+                      main_outcome: safeString((offerManual as any)?.main_outcome) || null,
+                      description: safeString((offerManual as any)?.description) || null,
+                      price: safeString((offerManual as any)?.price) || null,
+                    }
+                  : null,
+
+              // Onboarding
+              leadMagnetLink: uiEmailType === "onboarding" ? (leadMagnetLink || null) : null,
+              onboardingCta: uiEmailType === "onboarding" ? (onboardingCta || null) : null,
             })
           : prompt;
 

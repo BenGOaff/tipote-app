@@ -20,9 +20,9 @@ interface EmailFormProps {
 }
 
 const emailTypes = [
-  { id: "nurturing", label: "Nurturing" },
-  { id: "sales_sequence", label: "Séquence de vente" },
-  { id: "onboarding", label: "Onboarding" },
+  { id: "newsletter", label: "Newsletter" },
+  { id: "sales", label: "Email(s) de vente" },
+  { id: "onboarding", label: "Onboarding (Know/Like/Trust)" },
 ];
 
 type OfferOption = {
@@ -39,20 +39,58 @@ function levelLabel(level: string) {
   return level || "Offre";
 }
 
+function splitEmails(raw: string): string[] {
+  const s = (raw ?? "").trim();
+  if (!s) return [];
+  const parts = s
+    .split(/\n\s*-----\s*\n/g)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [s];
+}
+
+function joinEmails(parts: string[]): string {
+  const cleaned = (parts ?? []).map((p) => (p ?? "").trim()).filter(Boolean);
+  return cleaned.join("\n\n-----\n\n").trim();
+}
+
 export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: EmailFormProps) {
-  const [emailType, setEmailType] = useState("nurturing");
+  const [emailType, setEmailType] = useState("newsletter");
+
+  // Newsletter
+  const [newsletterTheme, setNewsletterTheme] = useState("");
+  const [newsletterCta, setNewsletterCta] = useState("");
+
+  // Sales
+  const [salesMode, setSalesMode] = useState<"single" | "sequence_7">("single");
+  const [salesAngle, setSalesAngle] = useState("");
+  const [salesCta, setSalesCta] = useState("");
+
+  // Onboarding
+  const [onboardingSubject, setOnboardingSubject] = useState("");
+  const [leadMagnetLink, setLeadMagnetLink] = useState("");
+  const [onboardingCta, setOnboardingCta] = useState("");
+
+  // Common
   const [formality, setFormality] = useState<"tu" | "vous">("vous");
-  const [subject, setSubject] = useState("");
-  const [generatedContent, setGeneratedContent] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
-  // ✅ Nouveau: sélection d'offre depuis la pyramide (offer_pyramids)
+  const generatedContent = useMemo(() => joinEmails(emails), [emails]);
+
+  // ✅ Sélection d'offre depuis la pyramide (offer_pyramids) — pour sales
   const [offers, setOffers] = useState<OfferOption[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);
+  const [offerSource, setOfferSource] = useState<"pyramid" | "manual">("pyramid");
   const [offerId, setOfferId] = useState<string>("");
-  // ✅ Fallback (si pas d'offres récupérées / schema différent)
-  const [offerNameFallback, setOfferNameFallback] = useState("");
+
+  // Manual offer specs (fallback)
+  const [offerName, setOfferName] = useState("");
+  const [offerPromise, setOfferPromise] = useState("");
+  const [offerOutcome, setOfferOutcome] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerDescription, setOfferDescription] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -115,22 +153,67 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     return out;
   }, [offers]);
 
-  const needsOffer = emailType === "sales_sequence";
-  const canGenerate = !!subject.trim() && (!needsOffer || !!offerId || !!offerNameFallback.trim());
+  const needsOffer =
+    emailType === "sales" &&
+    (offerSource === "pyramid" ? !offerId : !offerName.trim() && !offerPromise.trim() && !offerOutcome.trim());
+
+  const canGenerate = useMemo(() => {
+    if (emailType === "newsletter") {
+      return !!newsletterTheme.trim() && !!newsletterCta.trim();
+    }
+    if (emailType === "sales") {
+      return !!salesAngle.trim() && !needsOffer;
+    }
+    // onboarding
+    return !!onboardingSubject.trim() && (!!leadMagnetLink.trim() || !!onboardingCta.trim());
+  }, [emailType, newsletterTheme, newsletterCta, salesAngle, needsOffer, onboardingSubject, leadMagnetLink, onboardingCta]);
 
   const handleGenerate = async () => {
-    const content = await onGenerate({
+    const payload: any = {
       type: "email",
       emailType,
-      offerId: needsOffer ? offerId || undefined : undefined,
-      offer: needsOffer && !offerId ? offerNameFallback || undefined : undefined,
       formality,
-      subject,
-    });
+    };
+
+    if (emailType === "newsletter") {
+      payload.newsletterTheme = newsletterTheme;
+      payload.newsletterCta = newsletterCta;
+    }
+
+    if (emailType === "sales") {
+      payload.salesMode = salesMode;
+      payload.subject = salesAngle;
+      payload.salesCta = salesCta;
+
+      if (offerSource === "pyramid") {
+        payload.offerId = offerId || undefined;
+      } else {
+        payload.offerManual = {
+          name: offerName || undefined,
+          promise: offerPromise || undefined,
+          main_outcome: offerOutcome || undefined,
+          price: offerPrice || undefined,
+          description: offerDescription || undefined,
+        };
+      }
+    }
+
+    if (emailType === "onboarding") {
+      payload.subject = onboardingSubject;
+      payload.leadMagnetLink = leadMagnetLink || undefined;
+      payload.onboardingCta = onboardingCta || undefined;
+    }
+
+    const content = await onGenerate(payload);
 
     if (content) {
-      setGeneratedContent(content);
-      if (!title) setTitle(subject || `Email ${emailType}`);
+      const blocks = splitEmails(content);
+      setEmails(blocks);
+      if (!title) {
+        if (emailType === "newsletter") setTitle(newsletterTheme || "Newsletter");
+        else if (emailType === "sales") setTitle(salesAngle || "Email de vente");
+        else setTitle(onboardingSubject || "Onboarding");
+      }
     }
   };
 
@@ -144,6 +227,8 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
       scheduled_at: scheduledAt || undefined,
     });
   };
+
+  const regenerateDisabled = isGenerating || !canGenerate;
 
   return (
     <div className="space-y-6">
@@ -172,50 +257,166 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             </Select>
           </div>
 
-          {emailType === "sales_sequence" && (
-            <div className="space-y-2">
-              <Label>Offre à vendre</Label>
-
-              {offersLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Chargement de vos offres...
-                </div>
-              ) : offers.length ? (
-                <Select value={offerId} onValueChange={setOfferId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisis une offre de ta pyramide" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(offersByLevel).map(([lvl, list]) => (
-                      <div key={lvl}>
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                          {levelLabel(lvl)}
-                        </div>
-                        {list.map((o) => (
-                          <SelectItem key={o.id} value={o.id}>
-                            {o.is_flagship ? "⭐ " : ""}
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
+          {emailType === "newsletter" && (
+            <>
+              <div className="space-y-2">
+                <Label>Thème *</Label>
                 <Input
-                  placeholder="Nom de votre offre (fallback)"
-                  value={offerNameFallback}
-                  onChange={(e) => setOfferNameFallback(e.target.value)}
+                  placeholder="Ex: Débuter en business en ligne sans budget"
+                  value={newsletterTheme}
+                  onChange={(e) => setNewsletterTheme(e.target.value)}
                 />
-              )}
+              </div>
 
-              {!offersLoading && emailType === "sales_sequence" && !offerId && !offerNameFallback.trim() && (
-                <p className="text-xs text-muted-foreground">
-                  Sélectionne une offre (pyramide) pour générer une séquence de vente pertinente.
-                </p>
-              )}
-            </div>
+              <div className="space-y-2">
+                <Label>CTA *</Label>
+                <Input
+                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  value={newsletterCta}
+                  onChange={(e) => setNewsletterCta(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {emailType === "sales" && (
+            <>
+              <div className="space-y-2">
+                <Label>Format</Label>
+                <RadioGroup value={salesMode} onValueChange={(v) => setSalesMode(v as any)} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="single" id="single" />
+                    <Label htmlFor="single">1 email de vente</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sequence_7" id="sequence_7" />
+                    <Label htmlFor="sequence_7">Séquence complète (7 emails)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Angle / intention *</Label>
+                <Input
+                  placeholder="Ex: Relancer les prospects froids"
+                  value={salesAngle}
+                  onChange={(e) => setSalesAngle(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>CTA (optionnel)</Label>
+                <Input
+                  placeholder="Ex: Clique ici pour voir l'offre"
+                  value={salesCta}
+                  onChange={(e) => setSalesCta(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Offre à vendre</Label>
+
+                <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as any)} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pyramid" id="pyramid" />
+                    <Label htmlFor="pyramid">Pyramide</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manual" id="manual" />
+                    <Label htmlFor="manual">Manuel</Label>
+                  </div>
+                </RadioGroup>
+
+                {offerSource === "pyramid" ? (
+                  offersLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Chargement de vos offres...
+                    </div>
+                  ) : offers.length ? (
+                    <Select value={offerId} onValueChange={setOfferId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisis une offre de ta pyramide" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(offersByLevel).map(([lvl, list]) => (
+                          <div key={lvl}>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{levelLabel(lvl)}</div>
+                            {list.map((o) => (
+                              <SelectItem key={o.id} value={o.id}>
+                                {o.is_flagship ? "⭐ " : ""}
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Aucune offre trouvée dans la pyramide. Passe en mode Manuel.</p>
+                  )
+                ) : (
+                  <div className="space-y-2">
+                    <Input placeholder="Nom de l'offre *" value={offerName} onChange={(e) => setOfferName(e.target.value)} />
+                    <Input
+                      placeholder="Promesse (optionnel)"
+                      value={offerPromise}
+                      onChange={(e) => setOfferPromise(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Résultat principal (optionnel)"
+                      value={offerOutcome}
+                      onChange={(e) => setOfferOutcome(e.target.value)}
+                    />
+                    <Input placeholder="Prix (optionnel)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
+                    <Textarea
+                      value={offerDescription}
+                      onChange={(e) => setOfferDescription(e.target.value)}
+                      rows={4}
+                      placeholder="Description (optionnel)"
+                      className="resize-none"
+                    />
+                  </div>
+                )}
+
+                {emailType === "sales" && needsOffer && (
+                  <p className="text-xs text-muted-foreground">
+                    Sélectionne une offre (pyramide) ou renseigne au moins le nom de l'offre.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {emailType === "onboarding" && (
+            <>
+              <div className="space-y-2">
+                <Label>Sujet / intention *</Label>
+                <Input
+                  placeholder="Ex: Accueillir un nouveau lead et construire la confiance"
+                  value={onboardingSubject}
+                  onChange={(e) => setOnboardingSubject(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Lien du lead magnet (ou CTA) *</Label>
+                <Input
+                  placeholder="Ex: https://... (lien du téléchargement)"
+                  value={leadMagnetLink}
+                  onChange={(e) => setLeadMagnetLink(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>CTA alternatif (optionnel)</Label>
+                <Input
+                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  value={onboardingCta}
+                  onChange={(e) => setOnboardingCta(e.target.value)}
+                />
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
@@ -230,15 +431,6 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 <Label htmlFor="tu">Tu</Label>
               </div>
             </RadioGroup>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sujet / intention *</Label>
-            <Input
-              placeholder="Ex: Relancer les prospects froids"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
           </div>
 
           <Button className="w-full" onClick={handleGenerate} disabled={!canGenerate || isGenerating}>
@@ -264,13 +456,35 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <div className="space-y-2">
             <Label>Email généré</Label>
-            <Textarea
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              rows={12}
-              placeholder="L'email apparaîtra ici..."
-              className="resize-none"
-            />
+
+            {emails.length <= 1 ? (
+              <Textarea
+                value={emails[0] ?? ""}
+                onChange={(e) => setEmails([e.target.value])}
+                rows={12}
+                placeholder="L'email apparaîtra ici..."
+                className="resize-none"
+              />
+            ) : (
+              <div className="space-y-3">
+                {emails.map((value, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <Label>Email {idx + 1}</Label>
+                    <Textarea
+                      value={value}
+                      onChange={(e) => {
+                        const next = [...emails];
+                        next[idx] = e.target.value;
+                        setEmails(next);
+                      }}
+                      rows={10}
+                      placeholder={`Email ${idx + 1}...`}
+                      className="resize-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {generatedContent && (
@@ -287,12 +501,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 </Button>
 
                 {scheduledAt && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave("scheduled")}
-                    disabled={!title || isSaving}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
                     <Calendar className="w-4 h-4 mr-1" />
                     Planifier
                   </Button>
@@ -303,7 +512,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   Publier
                 </Button>
 
-                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating || !canGenerate}>
+                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={regenerateDisabled}>
                   <RefreshCw className="w-4 h-4 mr-1" />
                   Regénérer
                 </Button>
