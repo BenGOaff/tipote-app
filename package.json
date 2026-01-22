@@ -18,6 +18,8 @@
     "ingest:resources": "node scripts/ingest-resources.cjs"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.33.5",
+    "@amplitude/plugin-session-replay-browser": "^1.25.9",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
