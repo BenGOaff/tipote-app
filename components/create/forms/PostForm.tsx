@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,9 +47,22 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [subject, setSubject] = useState("");
   const [tone, setTone] = useState("professional");
   const [batchCount, setBatchCount] = useState<"1" | "5">("1");
+
+  // Vente / lead magnet
+  const [promoKind, setPromoKind] = useState<"paid" | "free">("paid");
+  const [offerLink, setOfferLink] = useState("");
+
   const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+
+  const needsOfferLink = useMemo(() => theme === "sell", [theme]);
+  const canGenerate = useMemo(() => {
+    if (!subject.trim()) return false;
+    if (isGenerating) return false;
+    if (needsOfferLink && !offerLink.trim()) return false;
+    return true;
+  }, [subject, isGenerating, needsOfferLink, offerLink]);
 
   const handleGenerate = async () => {
     const content = await onGenerate({
@@ -58,8 +71,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       theme,
       subject,
       tone,
-      batchCount: parseInt(batchCount),
+      batchCount: parseInt(batchCount, 10),
+
+      promoKind: needsOfferLink ? promoKind : undefined,
+      offerLink: needsOfferLink ? offerLink : undefined,
     });
+
     if (content) {
       setGeneratedContent(content);
       if (!title) setTitle(subject || `Post ${platform}`);
@@ -96,7 +113,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               </SelectTrigger>
               <SelectContent>
                 {platforms.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -104,20 +123,60 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
           <div className="space-y-2">
             <Label>Objectif du post</Label>
-            <Select value={theme} onValueChange={setTheme}>
+            <Select
+              value={theme}
+              onValueChange={(v) => {
+                setTheme(v);
+                if (v !== "sell") {
+                  setOfferLink("");
+                  setPromoKind("paid");
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {themes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {needsOfferLink && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="space-y-2">
+                <Label>Type de promo</Label>
+                <Select value={promoKind} onValueChange={(v) => setPromoKind(v as "paid" | "free")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">Offre payante</SelectItem>
+                    <SelectItem value="free">Offre gratuite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Lien de la page à étudier *</Label>
+                <Input
+                  placeholder={promoKind === "free" ? "Lien de l'offre gratuite" : "Lien de la page de vente"}
+                  value={offerLink}
+                  onChange={(e) => setOfferLink(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tipote étudie ce lien avant de rédiger le post (bénéfices, promesse, objections).
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Sujet *</Label>
+            <Label>Sujet / angle *</Label>
             <Input
               placeholder="Ex: Les 5 erreurs à éviter..."
               value={subject}
@@ -133,7 +192,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               </SelectTrigger>
               <SelectContent>
                 {tones.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -153,11 +214,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             </RadioGroup>
           </div>
 
-          <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
+          <Button className="w-full" onClick={handleGenerate} disabled={!canGenerate}>
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Génération...
+              </>
             ) : (
-              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Générer
+              </>
             )}
           </Button>
         </div>
@@ -166,11 +233,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
-            <Input
-              placeholder="Titre de votre contenu"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input placeholder="Titre de votre contenu" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -188,11 +251,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -202,16 +261,24 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 </Button>
 
                 {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSave("scheduled")}
+                    disabled={!title || isSaving}
+                  >
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Planifier
                   </Button>
                 )}
                 <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />Publier
+                  <Send className="w-4 h-4 mr-1" />
+                  Publier
                 </Button>
 
                 <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Regénérer
                 </Button>
               </div>
             </div>

@@ -144,10 +144,7 @@ function buildFallbackPrompt(params: AnyParams): string {
     .filter(Boolean)
     .join("\n");
 
-  const extra = [
-    brief ? `Brief:\n${brief}` : "",
-    instructions ? `Contraintes:\n${instructions}` : "",
-  ]
+  const extra = [brief ? `Brief:\n${brief}` : "", instructions ? `Contraintes:\n${instructions}` : ""]
     .filter(Boolean)
     .join("\n\n");
 
@@ -155,6 +152,26 @@ function buildFallbackPrompt(params: AnyParams): string {
 }
 
 function ensurePrompt(params: AnyParams): AnyParams {
+  // ✅ PATCH SAFE (sans changer le flow Lovable) :
+  // Pour les posts, le backend peut construire un prompt de haute qualité à partir des champs structurés.
+  // On s'assure donc d'avoir un "subject" même si l'UI envoie plutôt prompt/brief/text.
+  if (params?.type === "post") {
+    const subject = typeof params.subject === "string" ? params.subject.trim() : "";
+    const promptLike =
+      (typeof params.prompt === "string" && params.prompt.trim()) ||
+      (typeof params.brief === "string" && params.brief.trim()) ||
+      (typeof params.text === "string" && params.text.trim()) ||
+      (typeof params.instructions === "string" && params.instructions.trim()) ||
+      "";
+
+    if (!subject && promptLike) {
+      return { ...params, subject: promptLike };
+    }
+
+    // Si subject existe, on ne touche pas.
+    return params;
+  }
+
   const hasPrompt =
     (typeof params.prompt === "string" && params.prompt.trim().length > 0) ||
     (typeof params.brief === "string" && params.brief.trim().length > 0) ||
@@ -169,6 +186,16 @@ function ensurePrompt(params: AnyParams): AnyParams {
   }
 
   return { ...params, prompt: buildFallbackPrompt(params) };
+}
+
+function extractGeneratedText(data: any): string {
+  if (!data) return "";
+  if (typeof data.content === "string") return data.content;
+  if (typeof data.text === "string") return data.text;
+  if (typeof data.result === "string") return data.result;
+  if (typeof data.output === "string") return data.output;
+  if (typeof data.message === "string") return data.message;
+  return "";
 }
 
 export default function CreateLovableClient() {
@@ -191,21 +218,24 @@ export default function CreateLovableClient() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      // ✅ Patch tolérant : on essaye JSON, sinon texte brut
+      const rawText = await res.text();
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
 
-      const text =
-        typeof data?.content === "string"
-          ? data.content
-          : typeof data?.text === "string"
-            ? data.text
-            : typeof data?.result === "string"
-              ? data.result
-              : typeof data?.output === "string"
-                ? data.output
-                : typeof data?.message === "string"
-                  ? data.message
-                  : "";
+      if (!res.ok) {
+        const apiMsg =
+          (data && (data.error || data.message)) ||
+          rawText ||
+          "Impossible de générer";
+        throw new Error(apiMsg);
+      }
+
+      const text = extractGeneratedText(data);
 
       if (!text) {
         toast({
@@ -215,7 +245,7 @@ export default function CreateLovableClient() {
         });
       }
 
-      return text;
+      return text || "";
     } catch (e: any) {
       toast({
         title: "Erreur",
@@ -246,7 +276,10 @@ export default function CreateLovableClient() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Impossible de sauvegarder");
+      }
 
       setSelectedType(null);
       router.push("/contents");
@@ -262,6 +295,9 @@ export default function CreateLovableClient() {
   };
 
   const handleQuickTemplate = (_t: (typeof quickTemplates)[number]) => {
+    // (inchangé) : ouvre le form post.
+    // Les templates rapides pourront être branchés plus tard via un state
+    // sans toucher au JSX Lovable.
     setSelectedType("post");
   };
 
