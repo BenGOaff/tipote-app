@@ -9,6 +9,8 @@
 // ✅ Output : texte brut (pas de markdown)
 // ✅ Knowledge : injecte tipote-knowledge via manifest (xlsx) + lecture des ressources
 // ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
+// ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
+// ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -18,6 +20,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 import { buildPromptByType } from "@/lib/prompts/content";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
+import { buildArticlePrompt } from "@/lib/prompts/content/article";
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -52,6 +55,16 @@ type Body = {
     description?: string;
     price?: string;
   };
+
+  // Articles (blog) — 2 étapes
+  articleStep?: "plan" | "write";
+  objective?: "traffic_seo" | "authority" | "emails" | "sales";
+  seoKeyword?: string;
+  secondaryKeywords?: string; // CSV ou lignes
+  links?: string; // URLs séparées par lignes
+  ctaText?: string;
+  ctaLink?: string;
+  approvedPlan?: string; // plan validé (étape write)
 
   type?: string;
   provider?: Provider;
@@ -188,6 +201,35 @@ function toPlainText(input: string): string {
   s = s.replace(/`([^`]+)`/g, "$1");
 
   // Normalize bullets (avoid markdown-like)
+  s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
+
+  // Collapse extra blank lines
+  s = s.replace(/\n{3,}/g, "\n\n").trim();
+
+  return s;
+}
+
+// Version "article": on garde **bold** (mots-clés), mais on nettoie le reste
+function toPlainTextKeepBold(input: string): string {
+  let s = (input ?? "").replace(/\r\n/g, "\n");
+
+  // Remove fenced code blocks (keep inner content)
+  s = s.replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, (_m, code) => String(code ?? "").trim());
+
+  // Convert markdown links to text: [label](url) -> label
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+
+  // Remove headings, blockquotes
+  s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+  s = s.replace(/^\s{0,3}>\s?/gm, "");
+
+  // Remove list markers (-, *, +) but keep text; keep numbered lists as-is (article peut en contenir)
+  s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
+
+  // Remove inline code markers, keep content
+  s = s.replace(/`([^`]+)`/g, "$1");
+
+  // Normalize bullets
   s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
 
   // Collapse extra blank lines
@@ -570,6 +612,27 @@ async function isPaidOrThrowQuota(params: {
   }
 }
 
+function parseSecondaryKeywords(raw: string): string[] {
+  const s = (raw ?? "").trim();
+  if (!s) return [];
+  // accepte CSV ou lignes
+  return s
+    .split(/[\n,]/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 24);
+}
+
+function parseLinks(raw: string): string[] {
+  const s = (raw ?? "").trim();
+  if (!s) return [];
+  return s
+    .split(/\n+/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -622,11 +685,45 @@ export async function POST(req: Request) {
 
     const offerManual = isRecord((body as any)?.offerManual) ? ((body as any).offerManual as any) : null;
 
+    // Champs structurés (articles)
+    const articleStepRaw = safeString((body as any)?.articleStep).trim();
+    const objectiveRaw = safeString((body as any)?.objective).trim();
+    const seoKeyword = safeString((body as any)?.seoKeyword).trim();
+    const secondaryKeywordsRaw = safeString((body as any)?.secondaryKeywords).trim();
+    const linksRaw = safeString((body as any)?.links).trim();
+    const ctaText = safeString((body as any)?.ctaText).trim();
+    const ctaLink = safeString((body as any)?.ctaLink).trim();
+    const approvedPlan = safeString((body as any)?.approvedPlan).trim();
+
     if (!type) {
       return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
     }
-    if (!prompt && !subject && !newsletterTheme) {
-      return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+
+    // Validation minimale: emails déjà gérés; articles ont leurs règles
+    if (type === "email") {
+      if (!prompt && !subject && !newsletterTheme) {
+        return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+      }
+    } else if (type === "article") {
+      if (!subject && !seoKeyword) {
+        return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
+      }
+      const okObjective =
+        objectiveRaw === "traffic_seo" || objectiveRaw === "authority" || objectiveRaw === "emails" || objectiveRaw === "sales";
+      if (!okObjective) {
+        return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
+      }
+      const stepOk = articleStepRaw === "plan" || articleStepRaw === "write";
+      if (!stepOk) {
+        return NextResponse.json({ ok: false, error: "Missing articleStep" }, { status: 400 });
+      }
+      if (articleStepRaw === "write" && !approvedPlan) {
+        return NextResponse.json({ ok: false, error: "Missing approvedPlan" }, { status: 400 });
+      }
+    } else {
+      if (!prompt && !subject) {
+        return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+      }
     }
 
     // UI peut proposer Claude/Gemini, mais backend pas activé -> réponse propre
@@ -734,7 +831,7 @@ export async function POST(req: Request) {
     const tagsCsv = joinTagsCsv(tags);
 
     // ✅ Prompt final (selon type)
-    const matchPrompt = type === "post" ? subject || prompt : type === "email" ? subject || prompt : prompt;
+    const matchPrompt = type === "post" ? subject || prompt : type === "email" ? subject || prompt : type === "article" ? subject || seoKeyword : prompt;
 
     // ✅ Offre (emails sales) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
     let offerContext: any = null;
@@ -787,6 +884,13 @@ export async function POST(req: Request) {
         // fail-open
       }
     }
+
+    // Articles parsing
+    const articleStep = articleStepRaw === "write" ? ("write" as const) : ("plan" as const);
+    const objective =
+      objectiveRaw === "traffic_seo" || objectiveRaw === "authority" || objectiveRaw === "emails" || objectiveRaw === "sales"
+        ? (objectiveRaw as any)
+        : null;
 
     const effectivePrompt =
       type === "post"
@@ -854,17 +958,31 @@ export async function POST(req: Request) {
               leadMagnetLink: uiEmailType === "onboarding" ? (leadMagnetLink || null) : null,
               onboardingCta: uiEmailType === "onboarding" ? (onboardingCta || null) : null,
             })
-          : prompt;
+          : type === "article"
+            ? buildArticlePrompt({
+                step: articleStep,
+                subject: subject || seoKeyword,
+                objective: objective as any,
+                primaryKeyword: seoKeyword || undefined,
+                secondaryKeywords: parseSecondaryKeywords(secondaryKeywordsRaw),
+                links: parseLinks(linksRaw),
+                ctaText: ctaText || null,
+                ctaLink: ctaLink || null,
+                approvedPlan: articleStep === "write" ? (approvedPlan || null) : null,
+              })
+            : prompt;
 
     // ✅ Plain text output
+    // Articles: on autorise **uniquement** pour mots-clés; le reste reste "plain".
     const systemPrompt = [
       "Tu es Tipote, un assistant business & contenu.",
       "Tu écris en français, avec un style clair, pro, actionnable.",
       "Tu ne mentionnes pas que tu es une IA.",
       "Tu rends un contenu final prêt à publier.",
       "IMPORTANT: format texte brut (plain text).",
-      "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
-      "Si tu structures: sauts de lignes + tirets simples '- ' uniquement.",
+      type === "article"
+        ? "Exception autorisée: tu peux utiliser **gras** UNIQUEMENT pour mettre en évidence les mots-clés SEO."
+        : "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
       "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
       "Tu adaptes ton vocabulaire, tes angles, et tes CTA au persona (douleurs, désirs, objections, déclencheurs d'achat).",
       "Tu tiens compte de l'onboarding (business profile) et du business plan si disponibles.",
@@ -920,7 +1038,7 @@ export async function POST(req: Request) {
     });
 
     const raw = completion.choices?.[0]?.message?.content?.trim() ?? "";
-    const content = toPlainText(raw);
+    const content = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
 
     if (!content) {
       return NextResponse.json({ ok: false, error: "Empty content from model" }, { status: 502 });
