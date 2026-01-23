@@ -1,26 +1,28 @@
 "use client";
 
 import { useEffect } from "react";
-import * as amplitude from "@amplitude/analytics-browser";
-import { sessionReplayPlugin } from "@amplitude/plugin-session-replay-browser";
-
-const AMPLITUDE_API_KEY = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
+import * as amplitude from "@amplitude/unified";
 
 export function AmplitudeTracker() {
   useEffect(() => {
-    // Ne rien faire si pas de clé (évite de casser en preview/dev)
-    if (!AMPLITUDE_API_KEY) return;
+    const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
+
+    if (!apiKey) {
+      console.warn("[Amplitude] Missing NEXT_PUBLIC_AMPLITUDE_API_KEY");
+      return;
+    }
 
     try {
-      // Plugin Session Replay (optionnel mais tu l’as coché dans Amplitude)
-      amplitude.add(sessionReplayPlugin());
-
-      // Init Amplitude
-      amplitude.init(AMPLITUDE_API_KEY, undefined, {
-        autocapture: true,
+      amplitude.initAll(apiKey, {
+        analytics: { autocapture: true },
+        sessionReplay: { sampleRate: 1 }, // mets 0.1 si tu veux limiter après
       });
-    } catch {
-      // Silence volontaire: tracker ne doit jamais casser l’app
+
+      // Event TEST : si celui-là n'apparaît pas, le problème n'est pas "autocapture"
+      amplitude.track("tipote_debug_ping");
+      console.log("[Amplitude] initAll ok + tipote_debug_ping sent");
+    } catch (err) {
+      console.error("[Amplitude] init failed", err);
     }
   }, []);
 
