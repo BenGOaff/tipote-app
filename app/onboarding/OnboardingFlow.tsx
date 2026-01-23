@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles } from "lucide-react";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
@@ -121,7 +122,8 @@ function normalizeDiagnosticPayload(payload: DiagnosticPayload): {
   diagnosticSummary?: string;
 } {
   const p: any = payload as any;
-  const answers = p?.diagnosticAnswers ?? p?.diagnostic_answers ?? p?.answers ?? p?.messages ?? [];
+  const answers =
+    p?.diagnosticAnswers ?? p?.diagnostic_answers ?? p?.answers ?? p?.messages ?? [];
   const profile = p?.diagnosticProfile ?? p?.diagnostic_profile ?? p?.profile ?? null;
   const summary = p?.diagnosticSummary ?? p?.diagnostic_summary ?? p?.summary ?? "";
   return {
@@ -139,7 +141,8 @@ const OnboardingFlow = () => {
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateData = (updates: Partial<OnboardingData>) => setData((prev) => ({ ...prev, ...updates }));
+  const updateData = (updates: Partial<OnboardingData>) =>
+    setData((prev) => ({ ...prev, ...updates }));
 
   const saveCurrent = async () => {
     await postJSON("/api/onboarding/answers", {
@@ -153,11 +156,23 @@ const OnboardingFlow = () => {
     setIsSubmitting(true);
     try {
       await saveCurrent();
-      setStep((prev) => Math.min(prev + 1, 3));
+
+      const next = Math.min(step + 1, 3);
+
+      ampTrack("tipote_onboarding_step_completed", {
+        step,
+        next_step: next,
+        onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
+      });
+
+      setStep(next);
     } catch (error) {
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible d'enregistrer tes réponses.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Impossible d'enregistrer tes réponses.",
         variant: "destructive",
       });
     } finally {
@@ -167,7 +182,16 @@ const OnboardingFlow = () => {
 
   const prevStep = () => {
     if (isSubmitting) return;
-    setStep((prev) => Math.max(prev - 1, 1));
+
+    const prev = Math.max(step - 1, 1);
+
+    ampTrack("tipote_onboarding_back_clicked", {
+      step,
+      prev_step: prev,
+      onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
+    });
+
+    setStep(prev);
   };
 
   const finalizeOnboarding = async (payload: DiagnosticPayload) => {
@@ -194,15 +218,32 @@ const OnboardingFlow = () => {
 
       await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
 
+      ampTrack("tipote_onboarding_completed", {
+        onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
+        diagnostic_completed: true,
+        diagnostic_answers_count: (diagnostic.diagnosticAnswers ?? []).length,
+        has_diagnostic_profile: Boolean(diagnostic.diagnosticProfile),
+        diagnostic_summary_len: (diagnostic.diagnosticSummary ?? "").length,
+      });
+
       router.push("/strategy/pyramids");
       router.refresh();
 
       // ✅ anti-régression
       postJSON("/api/strategy").catch(() => {});
     } catch (error) {
+      ampTrack("tipote_onboarding_error", {
+        onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
+        message: error instanceof Error ? error.message : String(error),
+        step,
+      });
+
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de finaliser ton onboarding.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Impossible de finaliser ton onboarding.",
         variant: "destructive",
       });
     } finally {
@@ -237,9 +278,16 @@ const OnboardingFlow = () => {
 
         <div className="space-y-6">
           {step === 1 && <StepProfile data={data} updateData={updateData} onNext={nextStep} />}
-          {step === 2 && <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />}
+          {step === 2 && (
+            <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />
+          )}
           {step === 3 && (
-            <StepDiagnosticChat data={data} onBack={prevStep} isSubmitting={isSubmitting} onComplete={finalizeOnboarding} />
+            <StepDiagnosticChat
+              data={data}
+              onBack={prevStep}
+              isSubmitting={isSubmitting}
+              onComplete={finalizeOnboarding}
+            />
           )}
         </div>
       </main>

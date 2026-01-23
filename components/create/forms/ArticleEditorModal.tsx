@@ -1,3 +1,4 @@
+// components/create/forms/ArticleEditorModal.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -63,7 +64,6 @@ function markdownLightToHtml(input: string) {
   if (!raw) return "<p></p>";
 
   const lines = raw.split("\n");
-
   const htmlLines: string[] = [];
 
   for (const line of lines) {
@@ -84,7 +84,7 @@ function markdownLightToHtml(input: string) {
       continue;
     }
 
-    // "Partie X — ..." => h2
+    // "Partie X — ." => h2
     if (/^partie\s+\d+\s+—/i.test(l)) {
       htmlLines.push(`<h2>${escapeHtml(l)}</h2>`);
       continue;
@@ -100,9 +100,7 @@ function markdownLightToHtml(input: string) {
   }
 
   // join en conservant des sauts entre blocs
-  let html = htmlLines
-    .map((x) => x || "<p><br/></p>")
-    .join("\n");
+  let html = htmlLines.map((x) => x || "<p><br/></p>").join("\n");
 
   // **bold**
   // Remarque: simple et volontaire (pas un parser markdown complet)
@@ -116,10 +114,7 @@ function getPlainTextFromHtml(html: string) {
   div.innerHTML = html;
 
   // garder une lecture "article": blocs séparés par double saut
-  const text = div.innerText
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const text = div.innerText.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 
   return text;
 }
@@ -146,6 +141,10 @@ export function ArticleEditorModal({
 }: ArticleEditorModalProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ IMPORTANT: comme DialogContent est en Portal, le ref peut être null au moment du 1er effect.
+  // On garde un state qui se met à jour dès que le div contentEditable est monté.
+  const [editorEl, setEditorEl] = useState<HTMLDivElement | null>(null);
+
   const initialHtml = useMemo(() => markdownLightToHtml(initialValue), [initialValue]);
 
   const [docTitle, setDocTitle] = useState("");
@@ -160,35 +159,59 @@ export function ArticleEditorModal({
     setCopied(false);
     setHtml(initialHtml);
 
-    // un petit auto-titre (optionnel) basé sur 1ère ligne si on veut
+    // auto-titre (optionnel) basé sur 1ère ligne
     const firstLine = (initialValue ?? "").split("\n").find((x) => x.trim()) ?? "";
     setDocTitle(firstLine.replace(/^#+\s+/, "").trim().slice(0, 120));
   }, [open, initialHtml, initialValue]);
 
-  // hydrate editor content quand open + html change
+  // ✅ Hydrate editor content quand open + html change ET quand editorEl existe
   useEffect(() => {
     if (!open) return;
-    const el = editorRef.current;
+    const el = editorEl || editorRef.current;
     if (!el) return;
-    el.innerHTML = html || "<p></p>";
-  }, [open, html]);
+
+    // Si déjà identique, ne touche pas (évite de casser la sélection)
+    const target = html || "<p></p>";
+    if (el.innerHTML !== target) {
+      el.innerHTML = target;
+    }
+  }, [open, html, editorEl]);
 
   const syncFromEditor = () => {
-    const el = editorRef.current;
+    const el = editorEl || editorRef.current;
     if (!el) return;
     setHtml(el.innerHTML);
   };
 
+  const ensureFocus = () => {
+    (editorEl || editorRef.current)?.focus();
+  };
+
+  const insertLink = () => {
+    const url = window.prompt("Lien (URL) :");
+    if (!url) return;
+    exec("createLink", url);
+    syncFromEditor();
+  };
+
+  const setBlock = (tag: "p" | "h1" | "h2") => {
+    exec("formatBlock", `<${tag}>`);
+    syncFromEditor();
+  };
+
+  const clearFormatting = () => {
+    exec("removeFormat");
+    syncFromEditor();
+  };
+
   const handleCopy = async () => {
-    const el = editorRef.current;
+    const el = editorEl || editorRef.current;
     if (!el) return;
 
     const currentHtml = el.innerHTML;
     const currentText = getPlainTextFromHtml(currentHtml);
 
-    // Copie riche (HTML) + fallback texte
     try {
-      // ClipboardItem support (Chrome/Edge…)
       // @ts-ignore
       if (navigator.clipboard && (window as any).ClipboardItem) {
         // @ts-ignore
@@ -199,10 +222,8 @@ export function ArticleEditorModal({
         // @ts-ignore
         await navigator.clipboard.write([item]);
       } else if (navigator.clipboard?.writeText) {
-        // fallback: au moins texte
         await navigator.clipboard.writeText(currentText);
       } else {
-        // fallback old-school
         const range = document.createRange();
         range.selectNodeContents(el);
         const sel = window.getSelection();
@@ -215,7 +236,6 @@ export function ArticleEditorModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {
-      // dernier fallback
       try {
         await navigator.clipboard.writeText(currentText);
         setCopied(true);
@@ -227,7 +247,7 @@ export function ArticleEditorModal({
   };
 
   const apply = () => {
-    const el = editorRef.current;
+    const el = editorEl || editorRef.current;
     if (!el) return;
 
     const currentHtml = el.innerHTML;
@@ -235,28 +255,6 @@ export function ArticleEditorModal({
 
     onApply?.({ html: currentHtml, text: currentText });
     onOpenChange(false);
-  };
-
-  const insertLink = () => {
-    const url = window.prompt("Lien (URL) :");
-    if (!url) return;
-    exec("createLink", url);
-    syncFromEditor();
-  };
-
-  const setBlock = (tag: "p" | "h1" | "h2") => {
-    // formatBlock prend "<H1>" etc
-    exec("formatBlock", `<${tag}>`);
-    syncFromEditor();
-  };
-
-  const clearFormatting = () => {
-    exec("removeFormat");
-    syncFromEditor();
-  };
-
-  const ensureFocus = () => {
-    editorRef.current?.focus();
   };
 
   return (
@@ -439,13 +437,15 @@ export function ArticleEditorModal({
             <div className="rounded-xl border bg-background">
               <div className="p-4">
                 <div
-                  ref={editorRef}
+                  ref={(node) => {
+                    editorRef.current = node;
+                    setEditorEl(node);
+                  }}
                   contentEditable
                   suppressContentEditableWarning
                   onInput={syncFromEditor}
                   className="min-h-[420px] outline-none prose prose-sm max-w-none"
                   style={{
-                    // garder un rendu clean même sans plugin typographie
                     lineHeight: "1.6",
                     fontSize: "14px",
                   }}

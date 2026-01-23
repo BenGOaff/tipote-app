@@ -10,6 +10,7 @@ import React, {
   useState,
 } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 export type TutorialPhase =
   | "welcome"
@@ -84,6 +85,8 @@ const PHASE_ORDER: TutorialPhase[] = [
   "completed",
 ];
 
+const TUTORIAL_VERSION = "v1";
+
 function safeParseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
   try {
@@ -104,13 +107,19 @@ function daysBetween(fromIso: string, toIso: string) {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
-function userKey(userId: string, key: "phase" | "optout" | "first_seen_at" | "done") {
+function userKey(
+  userId: string,
+  key: "phase" | "optout" | "first_seen_at" | "done",
+) {
   return `tipote_tutorial_${key}_v1_${userId}`;
 }
 
 function readSeenContexts(): SeenMap {
   if (typeof window === "undefined") return {};
-  return safeParseJson<SeenMap>(window.localStorage.getItem(CONTEXT_STORAGE_KEY), {});
+  return safeParseJson<SeenMap>(
+    window.localStorage.getItem(CONTEXT_STORAGE_KEY),
+    {},
+  );
 }
 
 function writeSeenContexts(map: SeenMap) {
@@ -183,7 +192,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           null,
         );
 
-        const storedFirstSeen = localStorage.getItem(userKey(user.id, "first_seen_at"));
+        const storedFirstSeen = localStorage.getItem(
+          userKey(user.id, "first_seen_at"),
+        );
         const firstSeen = storedFirstSeen || isoNow();
         if (!storedFirstSeen) {
           localStorage.setItem(userKey(user.id, "first_seen_at"), firstSeen);
@@ -216,7 +227,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
         // - pas de phase → welcome
         // - phase invalide → welcome
         // - phase "completed" (ex: “Pas maintenant”) → on ré-affiche welcome (pas définitif)
-        if (!savedPhase || !PHASE_ORDER.includes(savedPhase) || savedPhase === "completed") {
+        if (
+          !savedPhase ||
+          !PHASE_ORDER.includes(savedPhase) ||
+          savedPhase === "completed"
+        ) {
           setPhaseState("welcome");
           setShowWelcome(true);
         } else {
@@ -301,6 +316,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     // ✅ on marque “done” quand on passe en fin de tour
     if (next === "tour_complete") {
       persistDone(true);
+
+      // ✅ Amplitude: tutorial completed (fin de tour)
+      ampTrack("tipote_tutorial_completed", {
+        version: TUTORIAL_VERSION,
+      });
     }
 
     setPhase(next);
@@ -309,6 +329,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const skipTutorial = useCallback(() => {
     // ✅ “Pas maintenant” n’est plus définitif : on ferme, mais done=false / optout=false
+    ampTrack("tipote_tutorial_skipped", { version: TUTORIAL_VERSION });
+
     setPhase("completed");
     setShowWelcome(false);
   }, [setPhase]);
@@ -321,6 +343,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (value) {
         // opt-out = définitif => done
         persistDone(true);
+
+        // ✅ Amplitude: tutorial opt-out
+        ampTrack("tipote_tutorial_optout", { version: TUTORIAL_VERSION });
+
         setPhase("completed");
         setShowWelcome(false);
       }
@@ -423,7 +449,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ✅ IMPORTANT : fichier .ts => pas de JSX
-  return React.createElement(TutorialContext.Provider, { value }, children as any);
+  return React.createElement(
+    TutorialContext.Provider,
+    { value },
+    children as any,
+  );
 }
 
 export function useTutorial() {

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTutorial } from "@/hooks/useTutorial";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
 
@@ -25,7 +26,7 @@ export function TutorialSpotlight(props: {
     showNextButton,
   } = props;
 
-  const { shouldHighlight, currentTooltip, nextPhase } = useTutorial();
+  const { shouldHighlight, currentTooltip, nextPhase, phase } = useTutorial();
 
   const isActive = shouldHighlight(elementId);
   const shouldShow = isActive && Boolean(currentTooltip);
@@ -36,9 +37,26 @@ export function TutorialSpotlight(props: {
     null,
   );
 
+  // Anti-spam : on n'envoie l'event "viewed" qu'une seule fois par (phase + elementId)
+  const lastViewedKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // ✅ Track : affichage d'une étape du tutoriel (spotlight visible)
+  useEffect(() => {
+    if (!shouldShow) return;
+
+    const key = `${phase}__${elementId}`;
+    if (lastViewedKeyRef.current === key) return;
+    lastViewedKeyRef.current = key;
+
+    ampTrack("tipote_tutorial_step_viewed", {
+      tutorial_phase: phase,
+      spotlight_element: elementId,
+    });
+  }, [shouldShow, phase, elementId]);
 
   const computePosition = useMemo(() => {
     return () => {
@@ -103,6 +121,15 @@ export function TutorialSpotlight(props: {
     };
   }, [shouldShow, computePosition]);
 
+  const handleNext = () => {
+    ampTrack("tipote_tutorial_next_clicked", {
+      tutorial_phase: phase,
+      spotlight_element: elementId,
+    });
+
+    nextPhase();
+  };
+
   return (
     <div ref={anchorRef} className={cn("relative", className)}>
       {/* Spotlight border (reste dans la sidebar) */}
@@ -131,7 +158,7 @@ export function TutorialSpotlight(props: {
                 <p className="text-sm text-foreground leading-relaxed">{currentTooltip}</p>
 
                 {showNextButton ? (
-                  <Button variant="secondary" className="mt-2 w-full" onClick={nextPhase}>
+                  <Button variant="secondary" className="mt-2 w-full" onClick={handleNext}>
                     Suivant
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>

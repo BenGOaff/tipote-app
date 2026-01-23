@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ampTrack } from '@/lib/telemetry/amplitude-client'
 
 type Props = {
   type: string
@@ -184,6 +185,18 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     setLoading(true)
     setResult(null)
 
+    // ✅ event: tentative de génération (utile pour mesurer l’usage même si ça échoue)
+    ampTrack('tipote_content_generate_clicked', {
+      type: safeType,
+      provider,
+      channel: (channel ?? '').trim() || null,
+      tags_count: (tags ?? '')
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean).length,
+      prompt_len: safePrompt.length,
+    })
+
     try {
       const res = await fetch('/api/content/generate', {
         method: 'POST',
@@ -205,23 +218,54 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
       if (!data) {
         setResult({ ok: false, error: 'Réponse invalide.' })
+        ampTrack('tipote_content_generate_failed', {
+          type: safeType,
+          provider,
+          code: 'invalid_response',
+        })
         return
       }
 
       if (!res.ok || !data.ok) {
+        const code = data?.code ?? (res.status === 402 ? 'subscription_required' : undefined)
+
         setResult({
           ok: false,
           error: data?.error ?? 'Erreur lors de la génération.',
-          code: data?.code ?? (res.status === 402 ? 'subscription_required' : undefined),
+          code,
+        })
+
+        ampTrack('tipote_content_generate_failed', {
+          type: safeType,
+          provider,
+          code: code ?? `http_${res.status}`,
+          usedUserKey: Boolean(data?.usedUserKey),
         })
         return
       }
 
       setResult(data)
+
+      // ✅ event: contenu généré (ton KPI “premiers contenus générés”)
+      ampTrack('tipote_content_generated', {
+        type: safeType,
+        provider,
+        content_id: data.id ?? null,
+        title_present: Boolean(data.title),
+        warning_present: Boolean(data.warning),
+        save_error_present: Boolean(data.saveError),
+        usedUserKey: Boolean(data.usedUserKey),
+      })
     } catch (e) {
       setResult({
         ok: false,
         error: e instanceof Error ? e.message : 'Erreur lors de la génération.',
+      })
+
+      ampTrack('tipote_content_generate_failed', {
+        type: normalizeType(type),
+        provider,
+        code: 'exception',
       })
     } finally {
       setLoading(false)
@@ -271,7 +315,9 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                   disabled={disabled}
                   className={[
                     'rounded-xl border px-3 py-2 text-left text-xs font-semibold',
-                    active ? 'border-[#b042b4] bg-[#b042b4]/5 text-[#7a2d7e]' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50',
+                    active
+                      ? 'border-[#b042b4] bg-[#b042b4]/5 text-[#7a2d7e]'
+                      : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50',
                     disabled ? 'opacity-60 cursor-not-allowed' : '',
                   ].join(' ')}
                 >
@@ -290,10 +336,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-slate-900">Clé API personnelle</p>
-            <Link
-              href="/settings?tab=api-keys"
-              className="text-xs font-semibold text-[#b042b4] hover:underline"
-            >
+            <Link href="/settings?tab=api-keys" className="text-xs font-semibold text-[#b042b4] hover:underline">
               Gérer mes clés
             </Link>
           </div>
@@ -306,7 +349,8 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             </p>
           ) : (
             <p className="mt-1 text-xs text-slate-600">
-              Aucune clé détectée pour ce provider. La génération utilisera la clé Tipote (si activée) ou échouera si le plan l’exige.
+              Aucune clé détectée pour ce provider. La génération utilisera la clé Tipote (si activée) ou échouera si le plan
+              l’exige.
             </p>
           )}
         </div>
@@ -431,9 +475,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                     </button>
                   </div>
 
-                  {billingSyncMsg ? (
-                    <p className="mt-2 text-xs font-medium text-rose-800">{billingSyncMsg}</p>
-                  ) : null}
+                  {billingSyncMsg ? <p className="mt-2 text-xs font-medium text-rose-800">{billingSyncMsg}</p> : null}
                 </div>
               ) : null}
             </div>

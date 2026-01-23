@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useToast } from "@/components/ui/use-toast";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 interface PyramidOffer {
   title: string;
@@ -85,7 +86,8 @@ function normalizeLegacySchema(p: any, idx: number): Pyramid {
   const offers = Array.isArray(p?.offers) ? p.offers : [];
   const lead = offers[0] ?? {};
   const low = offers[1] ?? offers[0] ?? {};
-  const high = offers.length ? offers[offers.length - 1] : offers[1] ?? offers[0] ?? {};
+  const high =
+    offers.length ? offers[offers.length - 1] : offers[1] ?? offers[0] ?? {};
 
   const scenario = asString(p?.scenario ?? `Scénario ${idx + 1}`);
   const rationale = asString(p?.rationale ?? "");
@@ -182,10 +184,12 @@ export default function PyramidSelection() {
       return { ok: false as const, reason: "no_pyramids" as const };
     }
 
-    const normalized: Pyramid[] = offerPyramids.slice(0, 3).map((p: any, idx: number) => {
-      if (looksLikeNewSchema(p)) return normalizeNewSchema(p, idx);
-      return normalizeLegacySchema(p, idx);
-    });
+    const normalized: Pyramid[] = offerPyramids
+      .slice(0, 3)
+      .map((p: any, idx: number) => {
+        if (looksLikeNewSchema(p)) return normalizeNewSchema(p, idx);
+        return normalizeLegacySchema(p, idx);
+      });
 
     setPyramids(normalized);
     return { ok: true as const };
@@ -211,7 +215,8 @@ export default function PyramidSelection() {
         if (!secondTry.ok) {
           toast({
             title: "Génération en cours.",
-            description: "Nous préparons tes 3 stratégies. Réessaie dans quelques secondes.",
+            description:
+              "Nous préparons tes 3 stratégies. Réessaie dans quelques secondes.",
           });
         }
       } catch (error) {
@@ -268,6 +273,12 @@ export default function PyramidSelection() {
         throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
       }
 
+      ampTrack("tipote_pyramid_selected", {
+        selected_index: selectedIndex,
+        pyramid_id: selected.id,
+        pyramid_name: selected.name,
+      });
+
       // ✅ Générer la stratégie complète (idempotent)
       let fullRes: Response | null = null;
       let fullJson: any = null;
@@ -296,9 +307,19 @@ export default function PyramidSelection() {
         throw new Error(syncJson?.error || "Impossible de générer les tâches.");
       }
 
+      ampTrack("tipote_tasks_synced", {
+        pyramid_id: selected.id,
+        pyramid_name: selected.name,
+        selected_index: selectedIndex,
+        inserted: syncJson?.inserted ?? null,
+        updated: syncJson?.updated ?? null,
+        total: syncJson?.total ?? null,
+      });
+
       toast({
         title: "Stratégie sélectionnée ✅",
-        description: "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote™ !",
+        description:
+          "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote™ !",
       });
 
       router.push("/app");
@@ -345,12 +366,9 @@ export default function PyramidSelection() {
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="text-primary font-medium">Étape 1</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">
-            Choisis ta pyramide d’offres
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight">Choisis ta pyramide d’offres</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond
-            le mieux à ton style et à tes objectifs.
+            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
           </p>
         </div>
 
@@ -410,9 +428,7 @@ export default function PyramidSelection() {
                     </Badge>
                   </div>
                 </div>
-                <CardDescription className="text-sm">
-                  {pyramid.strategy_summary}
-                </CardDescription>
+                <CardDescription className="text-sm">{pyramid.strategy_summary}</CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -446,9 +462,7 @@ export default function PyramidSelection() {
                       setSelectedPyramid(pyramid.id);
                     }}
                   >
-                    {selectedPyramid === pyramid.id
-                      ? "Sélectionné"
-                      : "Choisir cette stratégie"}
+                    {selectedPyramid === pyramid.id ? "Sélectionné" : "Choisir cette stratégie"}
                   </Button>
                 </div>
               </CardContent>
@@ -477,8 +491,7 @@ export default function PyramidSelection() {
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Tu pourras modifier ta pyramide d’offres plus tard dans l’onglet “Ma
-            Stratégie”.
+            Tu pourras modifier ta pyramide d’offres plus tard dans l’onglet “Ma Stratégie”.
           </p>
         </div>
       </main>

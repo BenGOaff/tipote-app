@@ -1,3 +1,4 @@
+// components/create/forms/ArticleForm.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -5,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, PencilLine } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
 
 interface ArticleFormProps {
@@ -39,8 +39,8 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
   // flow 2 étapes
   const [articleStep, setArticleStep] = useState<ArticleStep>("plan");
 
-  // Modal "Modifier & copier"
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  // ✅ modal "Modifier & copier"
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const objectives = useMemo(
     () => [
@@ -97,10 +97,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
   };
 
   const handleRegenerate = async () => {
-    // si on est sur le plan (ou on veut repartir), on régénère le plan
     if (articleStep === "plan") return handleGeneratePlan();
-
-    // si on est après plan, on régénère l’article à partir du plan affiché
     return handleWriteArticle();
   };
 
@@ -117,8 +114,6 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
 
   const isArticleReady =
     articleStep === "write" && Boolean(generatedContent?.trim()) && !generatedContent.startsWith("PLAN");
-
-  const hasAnyGenerated = Boolean(generatedContent?.trim());
 
   return (
     <div className="space-y-6">
@@ -231,18 +226,17 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-2">
               <Label>{articleStep === "plan" ? "Plan généré" : "Contenu généré"}</Label>
 
-              {/* ✅ Bouton Modifier & copier */}
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 size="sm"
-                onClick={() => setIsEditorOpen(true)}
-                disabled={!hasAnyGenerated}
+                onClick={() => setEditorOpen(true)}
+                disabled={!generatedContent?.trim()}
               >
-                <PencilLine className="w-4 h-4 mr-2" />
+                <Pencil className="w-4 h-4 mr-2" />
                 Modifier & copier
               </Button>
             </div>
@@ -256,7 +250,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
             />
           </div>
 
-          {/* Save uniquement quand on a l’article (pas juste le plan) */}
+          {/* ✅ Save uniquement quand on a l’article (pas juste le plan) */}
           {isArticleReady && (
             <div className="space-y-3">
               <div className="space-y-2">
@@ -295,7 +289,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
             </div>
           )}
 
-          {/* En phase plan->write (on a un plan mais pas encore l’article) */}
+          {/* En phase plan validé (write) mais avant article final: actions */}
           {articleStep === "write" && !isArticleReady && generatedContent && (
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={isGenerating}>
@@ -318,16 +312,15 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
         </div>
       </div>
 
-      {/* ✅ Modal éditeur riche */}
+      {/* ✅ MODALE ÉDITEUR */}
       <ArticleEditorModal
-        open={isEditorOpen}
-        onOpenChange={setIsEditorOpen}
-        initialValue={generatedContent}
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        initialValue={generatedContent || ""} // ✅ injecte le plan/article courant
         title="Modifier & copier"
         applyLabel="Appliquer"
         onApply={({ text }) => {
-          // On garde le texte "propre" dans le textarea / DB.
-          // Le bouton "Copier" de la modal gère le HTML riche pour Systeme.io.
+          // DB = texte (le bouton "Copier" dans la modale gère HTML/texte)
           setGeneratedContent(text);
         }}
       />
