@@ -110,7 +110,8 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
     });
   };
 
-  const isArticleReady = articleStep === "write" && Boolean(generatedContent?.trim()) && !generatedContent.startsWith("PLAN");
+  const isArticleReady =
+    articleStep === "write" && Boolean(generatedContent?.trim()) && !generatedContent.startsWith("PLAN");
 
   return (
     <div className="space-y-6">
@@ -178,11 +179,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
 
           <div className="space-y-2">
             <Label>Lien CTA (optionnel)</Label>
-            <Input
-              placeholder="Ex: https://..."
-              value={ctaLink}
-              onChange={(e) => setCtaLink(e.target.value)}
-            />
+            <Input placeholder="Ex: https://..." value={ctaLink} onChange={(e) => setCtaLink(e.target.value)} />
           </div>
 
           {/* ✅ Étape 1: générer le plan */}
