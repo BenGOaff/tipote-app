@@ -11,7 +11,6 @@
 // ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
 // ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
 // ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
-// ✅ Fix "Missing objective" : accepte aussi libellés FR / variantes UI et map vers valeurs internes.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -66,6 +65,9 @@ type Body = {
   ctaText?: string;
   ctaLink?: string;
   approvedPlan?: string; // plan validé (étape write)
+
+  // compat UI (certaines versions envoient "cta")
+  cta?: string;
 
   type?: string;
   provider?: Provider;
@@ -634,39 +636,22 @@ function parseLinks(raw: string): string[] {
     .slice(0, 20);
 }
 
+// ✅ Objectif: accepte variantes UI (FR/label) + slug
 function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "emails" | "sales" | null {
   const s0 = (raw ?? "").trim();
   if (!s0) return null;
 
-  const s = s0.toLowerCase().trim();
+  const s = s0
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[’']/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // remove accents
 
-  // Déjà OK
-  if (s === "traffic_seo" || s === "authority" || s === "emails" || s === "sales") return s;
-
-  // Variantes UI / FR / labels
-  // Autorité
-  if (s === "autorite" || s === "autorité" || s.includes("autor")) return "authority";
-
-  // Trafic SEO
-  if (
-    s === "trafic" ||
-    s === "traffic" ||
-    s === "seo" ||
-    s === "trafic_seo" ||
-    s === "traffic seo" ||
-    s === "trafic seo" ||
-    s.includes("trafic") ||
-    s.includes("traffic") ||
-    s.includes("seo")
-  ) {
-    return "traffic_seo";
-  }
-
-  // Emails
-  if (s === "email" || s === "emails" || s.includes("mail") || s.includes("email")) return "emails";
-
-  // Ventes
-  if (s === "vente" || s === "ventes" || s.includes("vente") || s.includes("sales")) return "sales";
+  if (s === "traffic_seo" || s === "trafic_seo" || s === "seo" || s === "trafic") return "traffic_seo";
+  if (s === "authority" || s === "autorite" || s === "autorite_" || s === "autorite__") return "authority";
+  if (s === "emails" || s === "email" || s === "liste_email" || s === "newsletter") return "emails";
+  if (s === "sales" || s === "vente" || s === "ventes" || s === "conversion") return "sales";
 
   return null;
 }
@@ -729,12 +714,8 @@ export async function POST(req: Request) {
     const seoKeyword = safeString((body as any)?.seoKeyword).trim();
     const secondaryKeywordsRaw = safeString((body as any)?.secondaryKeywords).trim();
     const linksRaw = safeString((body as any)?.links).trim();
-
-    // Compat UI : certains écrans envoient "cta" au lieu de ctaText
-    const ctaText =
-      safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim() || safeString((body as any)?.cta_label).trim();
-    const ctaLink = safeString((body as any)?.ctaLink).trim() || safeString((body as any)?.cta_url).trim();
-
+    const ctaText = safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim(); // ✅ compat UI
+    const ctaLink = safeString((body as any)?.ctaLink).trim();
     const approvedPlan = safeString((body as any)?.approvedPlan).trim();
 
     if (!type) {
@@ -751,8 +732,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
       }
 
-      const normalizedObjective = normalizeArticleObjective(objectiveRaw);
-      if (!normalizedObjective) {
+      const objective = normalizeArticleObjective(objectiveRaw);
+      if (!objective) {
         return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
       }
 
@@ -913,7 +894,10 @@ export async function POST(req: Request) {
           safeString((offerManual as any)?.main_outcome).trim());
       if (!offerId && !offerName && !hasManual) {
         return NextResponse.json(
-          { ok: false, error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente." },
+          {
+            ok: false,
+            error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente.",
+          },
           { status: 400 },
         );
       }
@@ -1035,6 +1019,7 @@ export async function POST(req: Request) {
       type === "article"
         ? "Exception autorisée: tu peux utiliser **gras** UNIQUEMENT pour mettre en évidence les mots-clés SEO."
         : "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
+      "Si tu structures: sauts de lignes + tirets simples '- ' uniquement.",
       "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
       "Tu adaptes ton vocabulaire, tes angles, et tes CTA au persona (douleurs, désirs, objections, déclencheurs d'achat).",
       "Tu tiens compte de l'onboarding (business profile) et du business plan si disponibles.",
@@ -1081,7 +1066,8 @@ export async function POST(req: Request) {
     userContextLines.push(effectivePrompt);
 
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      // ✅ upgrade qualité
+      model: "gpt-5.2",
       temperature: 0.7,
       messages: [
         { role: "system", content: systemPrompt },
