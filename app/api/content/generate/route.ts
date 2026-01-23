@@ -11,6 +11,7 @@
 // ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
 // ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
 // ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
+// ✅ Fix "Missing objective" : accepte aussi libellés FR / variantes UI et map vers valeurs internes.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -633,6 +634,43 @@ function parseLinks(raw: string): string[] {
     .slice(0, 20);
 }
 
+function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "emails" | "sales" | null {
+  const s0 = (raw ?? "").trim();
+  if (!s0) return null;
+
+  const s = s0.toLowerCase().trim();
+
+  // Déjà OK
+  if (s === "traffic_seo" || s === "authority" || s === "emails" || s === "sales") return s;
+
+  // Variantes UI / FR / labels
+  // Autorité
+  if (s === "autorite" || s === "autorité" || s.includes("autor")) return "authority";
+
+  // Trafic SEO
+  if (
+    s === "trafic" ||
+    s === "traffic" ||
+    s === "seo" ||
+    s === "trafic_seo" ||
+    s === "traffic seo" ||
+    s === "trafic seo" ||
+    s.includes("trafic") ||
+    s.includes("traffic") ||
+    s.includes("seo")
+  ) {
+    return "traffic_seo";
+  }
+
+  // Emails
+  if (s === "email" || s === "emails" || s.includes("mail") || s.includes("email")) return "emails";
+
+  // Ventes
+  if (s === "vente" || s === "ventes" || s.includes("vente") || s.includes("sales")) return "sales";
+
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -691,8 +729,12 @@ export async function POST(req: Request) {
     const seoKeyword = safeString((body as any)?.seoKeyword).trim();
     const secondaryKeywordsRaw = safeString((body as any)?.secondaryKeywords).trim();
     const linksRaw = safeString((body as any)?.links).trim();
-    const ctaText = safeString((body as any)?.ctaText).trim();
-    const ctaLink = safeString((body as any)?.ctaLink).trim();
+
+    // Compat UI : certains écrans envoient "cta" au lieu de ctaText
+    const ctaText =
+      safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim() || safeString((body as any)?.cta_label).trim();
+    const ctaLink = safeString((body as any)?.ctaLink).trim() || safeString((body as any)?.cta_url).trim();
+
     const approvedPlan = safeString((body as any)?.approvedPlan).trim();
 
     if (!type) {
@@ -708,11 +750,12 @@ export async function POST(req: Request) {
       if (!subject && !seoKeyword) {
         return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
       }
-      const okObjective =
-        objectiveRaw === "traffic_seo" || objectiveRaw === "authority" || objectiveRaw === "emails" || objectiveRaw === "sales";
-      if (!okObjective) {
+
+      const normalizedObjective = normalizeArticleObjective(objectiveRaw);
+      if (!normalizedObjective) {
         return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
       }
+
       const stepOk = articleStepRaw === "plan" || articleStepRaw === "write";
       if (!stepOk) {
         return NextResponse.json({ ok: false, error: "Missing articleStep" }, { status: 400 });
@@ -831,7 +874,14 @@ export async function POST(req: Request) {
     const tagsCsv = joinTagsCsv(tags);
 
     // ✅ Prompt final (selon type)
-    const matchPrompt = type === "post" ? subject || prompt : type === "email" ? subject || prompt : type === "article" ? subject || seoKeyword : prompt;
+    const matchPrompt =
+      type === "post"
+        ? subject || prompt
+        : type === "email"
+          ? subject || prompt
+          : type === "article"
+            ? subject || seoKeyword
+            : prompt;
 
     // ✅ Offre (emails sales) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
     let offerContext: any = null;
@@ -887,10 +937,7 @@ export async function POST(req: Request) {
 
     // Articles parsing
     const articleStep = articleStepRaw === "write" ? ("write" as const) : ("plan" as const);
-    const objective =
-      objectiveRaw === "traffic_seo" || objectiveRaw === "authority" || objectiveRaw === "emails" || objectiveRaw === "sales"
-        ? (objectiveRaw as any)
-        : null;
+    const objective = type === "article" ? normalizeArticleObjective(objectiveRaw) : null;
 
     const effectivePrompt =
       type === "post"
@@ -911,14 +958,19 @@ export async function POST(req: Request) {
 
               // Newsletter
               theme: uiEmailType === "newsletter" ? (newsletterTheme || subject || prompt) : undefined,
-              cta: uiEmailType === "newsletter" ? newsletterCta || undefined : uiEmailType === "sales" ? salesCta || undefined : undefined,
+              cta:
+                uiEmailType === "newsletter"
+                  ? newsletterCta || undefined
+                  : uiEmailType === "sales"
+                    ? salesCta || undefined
+                    : undefined,
 
               // Sales / Onboarding: subject intention
               subject:
                 uiEmailType === "sales"
-                  ? (subject || prompt)
+                  ? subject || prompt
                   : uiEmailType === "onboarding"
-                    ? (subject || prompt)
+                    ? subject || prompt
                     : undefined,
 
               offerLink: offerLink || null,
@@ -955,8 +1007,8 @@ export async function POST(req: Request) {
                   : null,
 
               // Onboarding
-              leadMagnetLink: uiEmailType === "onboarding" ? (leadMagnetLink || null) : null,
-              onboardingCta: uiEmailType === "onboarding" ? (onboardingCta || null) : null,
+              leadMagnetLink: uiEmailType === "onboarding" ? leadMagnetLink || null : null,
+              onboardingCta: uiEmailType === "onboarding" ? onboardingCta || null : null,
             })
           : type === "article"
             ? buildArticlePrompt({
@@ -968,7 +1020,7 @@ export async function POST(req: Request) {
                 links: parseLinks(linksRaw),
                 ctaText: ctaText || null,
                 ctaLink: ctaLink || null,
-                approvedPlan: articleStep === "write" ? (approvedPlan || null) : null,
+                approvedPlan: articleStep === "write" ? approvedPlan || null : null,
               })
             : prompt;
 

@@ -1,18 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ArticleFormProps {
   onGenerate: (params: any) => Promise<string>;
@@ -22,37 +16,87 @@ interface ArticleFormProps {
   isSaving: boolean;
 }
 
-const objectiveOptions = [
-  { id: "trafic_seo", label: "Trafic SEO" },
-  { id: "autorite", label: "Autorité" },
-  { id: "emails", label: "Emails" },
-  { id: "ventes", label: "Ventes" },
-];
+type Objective = "traffic_seo" | "authority" | "emails" | "sales";
+type ArticleStep = "plan" | "write";
 
 export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: ArticleFormProps) {
   const [subject, setSubject] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
-  const [objective, setObjective] = useState<string>("");
+
+  // ✅ requis : 1 choix unique
+  const [objective, setObjective] = useState<Objective | "">("");
+
   const [links, setLinks] = useState("");
-  const [cta, setCta] = useState("");
-  const [generatedContent, setGeneratedContent] = useState("");
+  const [ctaText, setCtaText] = useState("");
+  const [ctaLink, setCtaLink] = useState("");
+
+  const [generatedContent, setGeneratedContent] = useState(""); // contient le plan OU l’article selon step
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
-  const handleGenerate = async () => {
+  // flow 2 étapes
+  const [articleStep, setArticleStep] = useState<ArticleStep>("plan");
+
+  const objectives = useMemo(
+    () => [
+      { id: "traffic_seo" as const, label: "Trafic SEO" },
+      { id: "authority" as const, label: "Autorité" },
+      { id: "emails" as const, label: "Emails" },
+      { id: "sales" as const, label: "Ventes" },
+    ],
+    [],
+  );
+
+  const canGeneratePlan = Boolean((subject || seoKeyword) && objective && !isGenerating);
+  const hasPlan = articleStep === "write" && Boolean(generatedContent?.trim()); // quand on a validé le plan, generatedContent = plan
+  const canWriteArticle = Boolean(hasPlan && !isGenerating);
+
+  const handleGeneratePlan = async () => {
     const content = await onGenerate({
       type: "article",
+      articleStep: "plan",
+      objective,
       subject,
       seoKeyword,
-      objective,
       links: links || undefined,
-      cta,
+      ctaText: ctaText || undefined,
+      ctaLink: ctaLink || undefined,
     });
 
     if (content) {
       setGeneratedContent(content);
+      setArticleStep("write"); // ✅ l’étape suivante attend un plan validé
       if (!title) setTitle(subject || seoKeyword);
     }
+  };
+
+  const handleWriteArticle = async () => {
+    const plan = generatedContent;
+
+    const content = await onGenerate({
+      type: "article",
+      articleStep: "write",
+      objective,
+      subject,
+      seoKeyword,
+      links: links || undefined,
+      ctaText: ctaText || undefined,
+      ctaLink: ctaLink || undefined,
+      approvedPlan: plan, // ✅ obligatoire pour l’étape write
+    });
+
+    if (content) {
+      setGeneratedContent(content); // maintenant = article complet
+      if (!title) setTitle(subject || seoKeyword);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    // si on est sur le plan (ou on veut repartir), on régénère le plan
+    if (articleStep === "plan") return handleGeneratePlan();
+
+    // si on est après plan, on régénère l’article à partir du plan affiché
+    return handleWriteArticle();
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {
@@ -66,8 +110,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
     });
   };
 
-  const canGenerate = (!!subject || !!seoKeyword) && !!objective;
-  const generateDisabled = !canGenerate || isGenerating;
+  const isArticleReady = articleStep === "write" && Boolean(generatedContent?.trim()) && !generatedContent.startsWith("PLAN");
 
   return (
     <div className="space-y-6">
@@ -100,29 +143,24 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
 
           <div className="space-y-2">
             <Label>Objectif *</Label>
-            <Select value={objective} onValueChange={setObjective}>
+            <Select value={objective} onValueChange={(v) => setObjective(v as Objective)}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir un objectif" />
               </SelectTrigger>
               <SelectContent>
-                {objectiveOptions.map((o) => (
+                {objectives.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {!objective && (
-              <p className="text-xs text-muted-foreground">
-                Obligatoire. 1 seul choix.
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
             <Label>Liens à placer (optionnel)</Label>
             <Textarea
-              placeholder="Collez les URLs importantes"
+              placeholder="Collez les URLs importantes (1 par ligne)"
               value={links}
               onChange={(e) => setLinks(e.target.value)}
               rows={3}
@@ -130,41 +168,66 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
           </div>
 
           <div className="space-y-2">
-            <Label>CTA / objectif de conversion</Label>
+            <Label>CTA (optionnel)</Label>
             <Input
               placeholder="Ex: Télécharger le guide gratuit"
-              value={cta}
-              onChange={(e) => setCta(e.target.value)}
+              value={ctaText}
+              onChange={(e) => setCtaText(e.target.value)}
             />
           </div>
 
-          <Button className="w-full" onClick={handleGenerate} disabled={generateDisabled}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération...
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-4 h-4 mr-2" />
-                Générer
-              </>
-            )}
-          </Button>
+          <div className="space-y-2">
+            <Label>Lien CTA (optionnel)</Label>
+            <Input
+              placeholder="Ex: https://..."
+              value={ctaLink}
+              onChange={(e) => setCtaLink(e.target.value)}
+            />
+          </div>
+
+          {/* ✅ Étape 1: générer le plan */}
+          {articleStep === "plan" && (
+            <Button className="w-full" onClick={handleGeneratePlan} disabled={!canGeneratePlan}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Générer le plan
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* ✅ Étape 2: validation = clic “Rédiger” */}
+          {articleStep === "write" && (
+            <Button className="w-full" onClick={handleWriteArticle} disabled={!canWriteArticle}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Rédaction...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Valider le plan et rédiger l’article
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
-            <Input
-              placeholder="Titre de votre article"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input placeholder="Titre de votre article" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label>Contenu généré</Label>
+            <Label>{articleStep === "plan" ? "Plan généré" : "Contenu généré"}</Label>
             <Textarea
               value={generatedContent}
               onChange={(e) => setGeneratedContent(e.target.value)}
@@ -174,29 +237,17 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
             />
           </div>
 
-          {generatedContent && (
+          {/* Save uniquement quand on a l’article (pas juste le plan) */}
+          {isArticleReady && (
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleSave("draft")}
-                  disabled={!title || isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-1" />
-                  )}
+                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                   Brouillon
                 </Button>
 
@@ -212,25 +263,37 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
                   </Button>
                 )}
 
-                <Button
-                  size="sm"
-                  onClick={() => handleSave("published")}
-                  disabled={!title || isSaving}
-                >
+                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
                   <Send className="w-4 h-4 mr-1" />
                   Publier
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                >
+                <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={isGenerating}>
                   <RefreshCw className="w-4 h-4 mr-1" />
                   Regénérer
                 </Button>
               </div>
+            </div>
+          )}
+
+          {/* En phase plan: bouton regen simple */}
+          {articleStep === "write" && !isArticleReady && generatedContent && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={isGenerating}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Regénérer l’article (à partir du plan)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setGeneratedContent("");
+                  setArticleStep("plan");
+                }}
+                disabled={isGenerating}
+              >
+                Refaire un plan
+              </Button>
             </div>
           )}
         </div>
