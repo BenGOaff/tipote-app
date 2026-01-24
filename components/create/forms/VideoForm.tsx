@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check } from "lucide-react";
 
 interface VideoFormProps {
   onGenerate: (params: any) => Promise<string>;
@@ -39,6 +39,13 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(t);
+  }, [copied]);
 
   const handleGenerate = async () => {
     const content = await onGenerate({
@@ -64,6 +71,33 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     });
   };
 
+  const handleCopy = async () => {
+    const text = (generatedContent ?? "").trim();
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // Fallback
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        textarea.style.top = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        setCopied(true);
+      } catch {
+        // fail silent
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -83,7 +117,9 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               </SelectTrigger>
               <SelectContent>
                 {videoPlatforms.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -97,7 +133,9 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               </SelectTrigger>
               <SelectContent>
                 {durations.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.label}</SelectItem>
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -114,9 +152,15 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Génération...
+              </>
             ) : (
-              <><Wand2 className="w-4 h-4 mr-2" />Générer</>
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Générer
+              </>
             )}
           </Button>
         </div>
@@ -124,11 +168,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
-            <Input
-              placeholder="Titre interne"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input placeholder="Titre interne" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -146,11 +186,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -160,17 +196,30 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 </Button>
 
                 {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />Planifier
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSave("scheduled")}
+                    disabled={!title || isSaving}
+                  >
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Planifier
                   </Button>
                 )}
 
                 <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />Publier
+                  <Send className="w-4 h-4 mr-1" />
+                  Publier
                 </Button>
 
                 <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />Regénérer
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Regénérer
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
+                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                  {copied ? "Copié" : "Copier"}
                 </Button>
               </div>
             </div>
