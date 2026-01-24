@@ -6,8 +6,9 @@
 // Sortie : TEXTE BRUT (plain text), prêt à être utilisé
 
 export type OfferType = "lead_magnet" | "paid_training";
+export type OfferMode = "from_pyramid" | "from_scratch";
 
-export type SourceOffer = {
+export type OfferPyramidContext = {
   id?: string;
   name?: string | null;
   level?: string | null;
@@ -23,12 +24,19 @@ export type SourceOffer = {
 export type OfferPromptParams = {
   offerType: OfferType;
 
-  theme: string; // sujet principal (ou angle si on part d’une pyramide)
-  target?: string;
+  // ✅ Mode explicite
+  offerMode?: OfferMode;
 
-  // ✅ Nouveau: si présent, l’offre/lead magnet doit se baser dessus (pyramide)
-  sourceOffer?: SourceOffer | null;
+  // ✅ Zéro: sujet (uniquement si from_scratch)
+  theme?: string;
 
+  // ✅ Lead magnet (zéro): format demandé côté UI
+  leadMagnetFormat?: string;
+
+  // ✅ Contexte pyramide (si offerMode === from_pyramid)
+  sourceOffer?: OfferPyramidContext | null;
+
+  // Contexte enrichi (injecté automatiquement par route.ts)
   language?: string; // défaut fr
 };
 
@@ -36,150 +44,272 @@ function safe(s?: string) {
   return (s ?? "").trim();
 }
 
-function compact(v: unknown) {
-  const s = String(v ?? "").trim();
-  return s ? s : "";
+function compactJson(obj: any) {
+  try {
+    return JSON.stringify(obj ?? null);
+  } catch {
+    return String(obj ?? "");
+  }
 }
 
-function formatSourceOffer(o: SourceOffer | null | undefined) {
-  if (!o) return "";
-  const lines: string[] = [];
-  const id = compact(o.id);
-  if (id) lines.push(`id: ${id}`);
-  const name = compact(o.name);
-  if (name) lines.push(`name: ${name}`);
-  const level = compact(o.level);
-  if (level) lines.push(`level: ${level}`);
-  const promise = compact(o.promise);
-  if (promise) lines.push(`promise: ${promise}`);
-  const outcome = compact(o.main_outcome);
-  if (outcome) lines.push(`main_outcome: ${outcome}`);
-  const format = compact(o.format);
-  if (format) lines.push(`format: ${format}`);
-  const delivery = compact(o.delivery);
-  if (delivery) lines.push(`delivery: ${delivery}`);
-  const desc = compact(o.description);
-  if (desc) lines.push(`description: ${desc}`);
-  if (typeof o.price_min === "number" || typeof o.price_max === "number") {
-    lines.push(`price_range: ${typeof o.price_min === "number" ? o.price_min : "?"} - ${typeof o.price_max === "number" ? o.price_max : "?"}`);
-  }
-  return lines.join("\n");
+function pickString(v: any): string {
+  if (typeof v === "string") return v.trim();
+  if (v == null) return "";
+  return String(v).trim();
+}
+
+function inferOfferNameFromSource(sourceOffer: OfferPyramidContext | null): string {
+  const name = pickString(sourceOffer?.name);
+  if (name) return name;
+  // fallback doux: essaye description/promise
+  const p = pickString(sourceOffer?.promise);
+  if (p) return p.slice(0, 80);
+  const d = pickString(sourceOffer?.description);
+  if (d) return d.slice(0, 80);
+  return "Offre de la pyramide";
 }
 
 export function buildOfferPrompt(params: OfferPromptParams): string {
   const lang = safe(params.language) || "fr";
+  const offerType = params.offerType;
+  const mode: OfferMode = params.offerMode === "from_pyramid" ? "from_pyramid" : "from_scratch";
+
   const theme = safe(params.theme);
-  const target = safe(params.target);
-  const hasSource = Boolean(params.sourceOffer && (params.sourceOffer.name || params.sourceOffer.promise || params.sourceOffer.description));
-  const sourceBlock = hasSource ? formatSourceOffer(params.sourceOffer) : "";
+  const leadMagnetFormat = safe(params.leadMagnetFormat);
+  const sourceOffer = params.sourceOffer ?? null;
 
-  const baseContext = [
-    "Tu es Tipote, expert en marketing digital, création d'offres et pédagogie business.",
-    "Tu aides des entrepreneurs à créer des offres désirables, utiles et vendables.",
-    "Tu écris en français clair, structuré, orienté valeur et résultats.",
+  // ✅ Posture V2 (dynamique par catégorie)
+  // Ici: Création d'offres / structuration business => FORMATEUR & STRATÈGE EXPERT
+  const roleAndPosture = [
+    "RÔLE & POSTURE (V2 — OFFRES / STRUCTURATION BUSINESS) :",
+    "Tu es un formateur business senior et un stratège spécialisé dans la création d’offres claires, désirables et actionnables.",
+    "Tu structures des offres alignées avec la réalité du marché, la maturité de l’audience et les objectifs business.",
+    "Tu vises une valeur perçue exceptionnelle (niveau premium), sans blabla ni remplissage.",
     "Tu ne mentionnes jamais que tu es une IA.",
-    "Tu rends un livrable FINAL, directement exploitable.",
-    "Format de sortie : TEXTE BRUT (plain text).",
-    "Interdit : markdown, emojis excessifs, disclaimers, blabla inutile.",
-    "",
-    "RÈGLE CRITIQUE : si une 'SOURCE PYRAMIDE' est fournie, tu dois t'y ALIGNER :",
-    "- même public cible (ou compatible)",
-    "- même promesse / résultat (ou version améliorée cohérente)",
-    "- respecter format, delivery, et fourchette de prix si disponibles",
-    "- le nouveau livrable doit 'fit' parfaitement dans la pyramide (lead magnet -> prépare l'offre payante, etc.)",
   ].join("\n");
 
-  const audienceContext = [
-    "CONTEXTE UTILISATEUR (à exploiter intelligemment) :",
-    "- Tu tiens compte du persona client idéal (douleurs, désirs, objections).",
-    "- Tu exploites le business profile et le business plan si disponibles.",
-    "- Tu utilises les ressources Tipote Knowledge comme source d'expertise.",
-    target ? `- Cible explicitement mentionnée : ${target}` : "- Cible : déduite du persona.",
+  const outputRules = [
+    "CONTRAINTES DE SORTIE :",
+    "- Sortie = TEXTE BRUT (plain text).",
+    "- Interdit: markdown, titres avec #, emojis excessifs, disclaimers, meta-explications.",
+    "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
+    "- Ton: clair, pro, actionnable, précis.",
   ].join("\n");
 
-  const sourceContext = hasSource
-    ? [
-        "SOURCE PYRAMIDE (BASE À UTILISER) :",
-        sourceBlock,
-        "",
-        "CONSIGNES D'ADAPTATION :",
-        "- Tu peux améliorer, préciser et renforcer la structure, MAIS sans contredire la source.",
-        "- Si le thème fourni est un angle, utilise-le pour mieux positionner la source (sans changer la promesse).",
-        "- Si une info source manque, complète intelligemment à partir du persona / business plan.",
-      ].join("\n")
-    : [
-        "SOURCE PYRAMIDE : AUCUNE",
-        "=> Tu crées l'offre à partir de zéro en t'appuyant sur le persona + business plan + knowledge.",
-      ].join("\n");
+  const globalContext = [
+    "CONTEXTE À EXPLOITER (INJECTÉ PAR L'API, NE PAS RÉPÉTER MOT POUR MOT) :",
+    "- Persona client idéal: douleurs, désirs, objections, vocabulaire.",
+    "- Business profile + business plan (si disponibles).",
+    "- Ressources Tipote Knowledge (si présentes).",
+    "- Si une offre source (pyramide) est fournie: tu DOIS t’y aligner et ne pas inventer son existence.",
+  ].join("\n");
 
-  if (params.offerType === "lead_magnet") {
-    return [
-      baseContext,
-      "",
-      audienceContext,
-      "",
-      sourceContext,
-      "",
-      "MISSION :",
-      "Créer un LEAD MAGNET irrésistible dont l'objectif principal est de capter des emails.",
-      "Il doit résoudre un problème précis, douloureux et immédiat pour la cible.",
-      "S'il y a une SOURCE PYRAMIDE, le lead magnet doit être cohérent avec le lead magnet attendu dans cette pyramide (nom, but, contenu, résultat).",
-      "",
-      "ANGLE / THÈME (si fourni) :",
-      theme,
-      "",
+  const strategyRules = [
+    "EXIGENCE DE QUALITÉ (IMPORTANT) :",
+    "- Tu dois proposer un rendu tellement solide qu'il pourrait être vendu 10 000€.",
+    "- Tu anticipes les cas de figure: cible froide vs tiède, objections, maturité, contraintes d'exécution.",
+    "- Tu donnes des exemples concrets, des frameworks, des scripts, des checklists, des livrables, des templates.",
+    "- Tu fais des choix: tu ne listes pas 50 options. Tu proposes, tu justifies, tu verrouilles une direction.",
+  ].join("\n");
+
+  const sourceBlock =
+    mode === "from_pyramid"
+      ? [
+          "OFFRE SOURCE (PYRAMIDE) :",
+          "Tu disposes d'une offre existante issue de la pyramide. Tu dois la développer et la rendre exploitable.",
+          "Données source (JSON):",
+          compactJson(sourceOffer),
+          "",
+          "RÈGLES OFFRE SOURCE :",
+          "- Ne demande pas le thème: il est déduit de l'offre source.",
+          "- Ne renomme pas arbitrairement l'offre source si son nom est fourni.",
+          "- Si un champ manque, tu complètes intelligemment en restant cohérent avec persona + business plan + knowledge.",
+          "- Ta sortie doit être alignée avec la logique de la pyramide (lead magnet -> offre payante, etc.).",
+        ].join("\n")
+      : "";
+
+  /* =========================
+     LEAD MAGNET
+     ========================= */
+  if (offerType === "lead_magnet") {
+    const lmModeInstructions =
+      mode === "from_pyramid"
+        ? [
+            "MODE : CRÉER LE LEAD MAGNET DE LA PYRAMIDE",
+            "Tu produis le lead magnet final en te basant sur l'offre source (nom / promesse / but / contenu implicite).",
+            "Tu optimises la conversion (capture email) ET la cohérence avec l'offre payante à venir.",
+          ].join("\n")
+        : [
+            "MODE : CRÉER UN LEAD MAGNET À PARTIR DE ZÉRO",
+            "Tu te bases sur la niche + persona + business plan (fournis par l'API).",
+            "Tu dois utiliser le sujet fourni et le format demandé.",
+            "Tu délivres un 'quick win' immédiat et tu prepares naturellement la vente d'une offre payante.",
+          ].join("\n");
+
+    const lmInputs =
+      mode === "from_pyramid"
+        ? [
+            "INFOS CLÉS À UTILISER :",
+            `- Nom (si fourni) : ${inferOfferNameFromSource(sourceOffer)}`,
+            `- Promesse / outcome (si fourni) : ${pickString(sourceOffer?.promise) || pickString(sourceOffer?.main_outcome) || "à déduire"}`,
+            `- Description (si fournie) : ${pickString(sourceOffer?.description) || "à déduire"}`,
+            `- Format / delivery (si fournis) : ${pickString(sourceOffer?.format) || "à choisir"} / ${pickString(sourceOffer?.delivery) || "à préciser"}`,
+          ].join("\n")
+        : [
+            "SUJET DU LEAD MAGNET (OBLIGATOIRE) :",
+            theme || "(sujet manquant)",
+            "",
+            "FORMAT DU LEAD MAGNET (OBLIGATOIRE) :",
+            leadMagnetFormat || "(format manquant)",
+          ].join("\n");
+
+    const lmFormatRules = [
+      "RÈGLES DE FORMAT LEAD MAGNET :",
+      "- Si le format est PDF/guide: tu donnes un plan + le contenu section par section + une checklist finale + une page 'résumé' + un CTA.",
+      "- Si le format est checklist: tu donnes la checklist + micro-explications + erreurs fréquentes + exemple rempli + CTA.",
+      "- Si le format est template: tu donnes le template prêt à copier-coller + 2 exemples remplis + règles d'utilisation + CTA.",
+      "- Si le format est quiz: tu donnes questions + choix + logique de scoring + interprétation + recommandations + CTA.",
+      "- Si le format est vidéo: tu donnes script + structure + hook + déroulé + call-to-action + mini-plan de montage.",
+      "- Si le format est mini-formation: tu donnes modules + leçons + exercices + livrables + 'quick win' dès le module 1 + CTA.",
+      "- Dans tous les cas: le prospect doit obtenir un résultat tangible en 10 à 30 minutes.",
+    ].join("\n");
+
+    const lmDeliverable = [
       "STRUCTURE ATTENDUE (OBLIGATOIRE) :",
-      "1) TITRE PRINCIPAL (ultra spécifique, bénéfice clair)",
-      "2) PROMESSE PRINCIPALE (quick win mesurable)",
-      "3) PROBLÈME CIBLÉ (douleur + conséquence + erreur fréquente)",
-      "4) FORMAT RECOMMANDÉ (1 seul format + justification)",
-      "5) CONTENU DÉTAILLÉ (sections + frameworks + exemples + templates/checklists si pertinent)",
-      "6) CTA D'OPT-IN (simple, non agressif, orienté bénéfice)",
-      "7) LIEN NATUREL VERS OFFRE PAYANTE (phrase/pont logique + prochaine étape)",
-      "8) CONSEILS D'UTILISATION MARKETING (page capture, DM, bio, pub, séquence email courte)",
+      "1) TITRE PRINCIPAL (orienté bénéfice, très spécifique)",
+      "2) PROMESSE PRINCIPALE (transformation claire, mesurable ou ressentie)",
+      "3) PROBLÈME CIBLÉ (douleur précise + pourquoi ça bloque aujourd'hui)",
+      "4) POUR QUI / POUR QUI PAS (qualification rapide)",
+      "5) FORMAT RETENU + POURQUOI (justification courte, pas de blabla)",
+      "6) CONTENU COMPLET (selon le format, prêt à livrer)",
+      "7) QUICK WIN GUIDÉ (étapes exactes pour obtenir un résultat immédiat)",
+      "8) CTA DE CAPTURE (texte + variante courte + variante DM)",
+      "9) PONT VERS L'OFFRE PAYANTE (transition logique, non agressive)",
+      "10) PLAN D'UTILISATION MARKETING (page de capture, bio, DM, pub, séquence email courte)",
+    ].join("\n");
+
+    return [
+      roleAndPosture,
+      "",
+      outputRules,
+      "",
+      globalContext,
+      "",
+      strategyRules,
+      "",
+      mode === "from_pyramid" ? sourceBlock : "",
+      mode === "from_pyramid" ? "" : "",
+      lmModeInstructions,
+      "",
+      lmInputs,
+      "",
+      lmFormatRules,
+      "",
+      lmDeliverable,
       "",
       "IMPORTANT :",
-      "- Rapide à consommer, pas un roman.",
-      "- Donne un résultat immédiat.",
-      "- Prépare la vente derrière (sans vendre agressivement).",
+      "- Tu ne poses AUCUNE question. Tu produis directement le livrable final.",
+      "- Tu fais des choix fermes (angle, format, structure) et tu assumes.",
       "",
-      "Génère maintenant le livrable complet.",
-    ].join("\n");
+      "Génère maintenant le lead magnet complet.",
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
-  return [
-    baseContext,
-    "",
-    audienceContext,
-    "",
-    sourceContext,
-    "",
-    "MISSION :",
-    "Créer une OFFRE PAYANTE / FORMATION à forte valeur perçue.",
-    "Elle doit résoudre un problème D.U.R (Douloureux, Urgent, Reconnu).",
-    "S'il y a une SOURCE PYRAMIDE (middle ticket, high ticket, etc.), tu dois t'y aligner : format, contenu, public, prix, promesse.",
-    "",
-    "ANGLE / THÈME (si fourni) :",
-    theme,
-    "",
+  /* =========================
+     OFFRE PAYANTE / FORMATION
+     ========================= */
+  const ptModeInstructions =
+    mode === "from_pyramid"
+      ? [
+          "MODE : DÉVELOPPER L'OFFRE PAYANTE DE LA PYRAMIDE",
+          "Tu développes l'offre existante à partir des infos de la pyramide (sans réinventer l'offre).",
+          "Tu renforces: promesse, différenciation, contenu, pédagogie, exécution, valeur perçue, pricing, preuves, objections.",
+        ].join("\n")
+      : [
+          "MODE : CRÉER UNE OFFRE PAYANTE À PARTIR DE ZÉRO",
+          "Tu te bases sur la niche + persona + business plan (fournis par l'API).",
+          "Tu dois utiliser le sujet fourni (theme).",
+          "Tu choisis un format cohérent (self-paced, cohort, hybride, coaching…) et tu justifies.",
+        ].join("\n");
+
+  const ptInputs =
+    mode === "from_pyramid"
+      ? [
+          "INFOS OFFRE SOURCE À UTILISER :",
+          `- Nom (si fourni) : ${inferOfferNameFromSource(sourceOffer)}`,
+          `- Promesse : ${pickString(sourceOffer?.promise) || "à déduire"}`,
+          `- Main outcome : ${pickString(sourceOffer?.main_outcome) || "à déduire"}`,
+          `- Description : ${pickString(sourceOffer?.description) || "à déduire"}`,
+          `- Format : ${pickString(sourceOffer?.format) || "à choisir/affiner"}`,
+          `- Delivery : ${pickString(sourceOffer?.delivery) || "à préciser"}`,
+          `- Prix min/max : ${sourceOffer?.price_min ?? "?"} / ${sourceOffer?.price_max ?? "?"}`,
+          "",
+          "RÈGLE : si le prix est absent, propose une fourchette cohérente avec le marché ET avec la pyramide.",
+        ].join("\n")
+      : [
+          "SUJET DE L'OFFRE (OBLIGATOIRE) :",
+          theme || "(sujet manquant)",
+        ].join("\n");
+
+  const durRules = [
+    "CRITÈRE D.U.R (OBLIGATOIRE) :",
+    "- Douloureux: le problème doit coûter cher (temps/argent/opportunité/estime).",
+    "- Urgent: le prospect veut résoudre maintenant, pas 'un jour'.",
+    "- Reconnu: le problème est déjà exprimé en ligne (symptômes, phrases, frustrations).",
+    "- Tu traduis ça en: messages marketing, objections, et structure pédagogique.",
+  ].join("\n");
+
+  const ptDeliverable = [
     "STRUCTURE ATTENDUE (OBLIGATOIRE) :",
-    "1) NOM DE L'OFFRE (orienté transformation, cohérent avec la pyramide)",
-    "2) PROMESSE CENTRALE (résultat final concret)",
-    "3) PROBLÈME D.U.R RÉSOLU (douleur/urgence/preuve que c'est reconnu)",
-    "4) À QUI / PAS POUR QUI (ciblage net)",
-    "5) STRUCTURE DU PROGRAMME (8 à 15 modules, chaque module: objectif + résultat concret + livrable/exercice)",
-    "6) MÉTHODE (frameworks, étapes, pourquoi ça marche)",
-    "7) BÉNÉFICES (tangibles + intangibles)",
-    "8) POSITIONNEMENT (différenciation, pourquoi toi, pourquoi maintenant)",
-    "9) LIVRAISON & FORMAT (asynchrone, live, hybride, durée, support, communauté...)",
-    "10) PRIX RECOMMANDÉ (cohérent avec la pyramide si source fournie + justification rapide)",
-    "11) BONUS (optionnels mais pertinents, pas du remplissage)",
-    "12) OBJECTIONS & RÉPONSES (3 à 7 objections typiques + réponses courtes)",
+    "1) NOM DE L'OFFRE (clair, orienté transformation)",
+    "2) PROMESSE CENTRALE (résultat final concret + conditions de réussite)",
+    "3) QUI C'EST POUR / QUI C'EST PAS (qualification nette)",
+    "4) PROBLÈME D.U.R + MESSAGES DU MARCHÉ (phrases exactes que le prospect se dit)",
+    "5) MÉCANISME UNIQUE / ANGLE (pourquoi ça marche + en quoi c'est différent)",
+    "6) DÉRIVÉE PÉDAGOGIQUE (la méthode en 3-7 étapes)",
+    "7) STRUCTURE DU PROGRAMME (8 à 15 modules)",
+    "- Pour chaque module: objectif, livrable, exercice, résultat attendu",
+    "8) LIVRABLES PREMIUM",
+    "- templates, scripts, checklists, dashboards, prompts, etc.",
+    "9) PARCOURS D'EXÉCUTION",
+    "- planning recommandé (2, 4 ou 8 semaines selon format) + charge de travail",
+    "10) OBJECTIONS & RÉPONSES",
+    "- au moins 8 objections réalistes + réponses",
+    "11) PRICING & PACKAGING",
+    "- 3 options (ex: Essential / Pro / Elite) + quoi inclure + fourchette de prix",
+    "12) PLAN DE PREUVES",
+    "- quoi mesurer / quoi montrer / mini-cas d'étude type",
+    "13) PLAN DE VENTE (résumé)",
+    "- 1 hook, 1 pitch court, 1 pitch long, 1 CTA",
+  ].join("\n");
+
+  return [
+    roleAndPosture,
+    "",
+    outputRules,
+    "",
+    globalContext,
+    "",
+    strategyRules,
+    "",
+    mode === "from_pyramid" ? sourceBlock : "",
+    mode === "from_pyramid" ? "" : "",
+    ptModeInstructions,
+    "",
+    ptInputs,
+    "",
+    durRules,
+    "",
+    ptDeliverable,
     "",
     "IMPORTANT :",
-    "- Zéro remplissage : concret, actionnable, structuré.",
-    "- Donne l'impression d'un produit premium et très guidé.",
+    "- Tu ne poses AUCUNE question. Tu produis directement le livrable final.",
+    "- Tu évites le remplissage. Chaque ligne doit augmenter la valeur perçue.",
     "",
     "Génère maintenant l'offre complète.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

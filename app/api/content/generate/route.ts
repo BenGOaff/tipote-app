@@ -12,7 +12,7 @@
 // ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
 // ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
 // ✅ Vidéos: support prompt builder via lib/prompts/content/video (timing strict 160 mots/min)
-// ✅ Offres: support lead magnet + offre payante via lib/prompts/content/offer
+// ✅ Offres: support lead magnet + offre payante via lib/prompts/content/offer (mode from_pyramid / from_scratch)
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -23,6 +23,8 @@ import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
 import { buildPromptByType } from "@/lib/prompts/content";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
+import { buildOfferPrompt } from "@/lib/prompts/content/offer";
+import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/content/offer";
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -45,7 +47,10 @@ type Body = {
   // ✅ Offres / Lead magnets
   offerType?: "lead_magnet" | "paid_training";
   offerTheme?: string; // si UI envoie un champ séparé
-  target?: string; // cible optionnelle
+  target?: string; // cible optionnelle (on l'utilise dans le prompt, pas besoin de l'afficher)
+  offerMode?: "from_pyramid" | "from_scratch"; // ✅ nouveau
+  leadMagnetFormat?: string; // ✅ nouveau (si from_scratch + lead_magnet)
+  sourceOfferId?: string; // ✅ optionnel: si UI veut forcer une offre source (sinon auto)
 
   // Emails (nouveau modèle)
   emailType?: "newsletter" | "sales" | "onboarding";
@@ -237,7 +242,7 @@ function toPlainTextKeepBold(input: string): string {
   s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
   s = s.replace(/^\s{0,3}>\s?/gm, "");
 
-  // Remove list markers (-, *, +) but keep text; keep numbered lists as-is (article peut en contenir)
+  // Remove list markers (-, *, +) but keep text; keep numbered lists as-is
   s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
 
   // Remove inline code markers, keep content
@@ -360,14 +365,14 @@ async function insertContentFR(params: {
 
 /** ---------------------------
  * Tipote Knowledge (manifest + ressources)
- * - On reste fail-open (si xlsx/module/paths manquent => on n'explose pas)
- * - On limite à quelques snippets pertinents pour ne pas polluer le prompt
+ * - Fail-open
+ * - On limite à quelques snippets pertinents
  * -------------------------- */
 
 type KnowledgeEntry = {
   title: string;
   tags: string[];
-  relPath: string; // path relatif (depuis root)
+  relPath: string;
   type?: string;
   priority?: number;
 };
@@ -432,7 +437,6 @@ async function loadKnowledgeManifestEntries(): Promise<KnowledgeEntry[]> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     XLSX = require("xlsx");
   } catch {
-    // Pas de parse xlsx -> fail-open
     knowledgeCache = { manifestMtimeMs: stat.mtimeMs, entries: [] };
     return [];
   }
@@ -482,7 +486,6 @@ async function loadKnowledgeManifestEntries(): Promise<KnowledgeEntry[]> {
 
 async function readKnowledgeFileSnippet(relPath: string, maxChars: number): Promise<string | null> {
   const root = process.cwd();
-
   const cleanRel = relPath.replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
   const abs = path.join(root, cleanRel);
 
@@ -490,7 +493,6 @@ async function readKnowledgeFileSnippet(relPath: string, maxChars: number): Prom
   try {
     buf = await fs.readFile(abs, "utf8");
   } catch {
-    // fallback : certaines entrées peuvent être relatives à tipote-knowledge directement
     try {
       const alt = path.join(root, "tipote-knowledge", cleanRel);
       buf = await fs.readFile(alt, "utf8");
@@ -499,7 +501,6 @@ async function readKnowledgeFileSnippet(relPath: string, maxChars: number): Prom
     }
   }
 
-  // Nettoyage léger
   const s = buf
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
@@ -595,7 +596,6 @@ async function isPaidOrThrowQuota(params: {
       if (paid) return { ok: true, paid: true };
     }
   } catch {
-    // fail-open
     return { ok: true, paid: false, used: null, limit: 7, windowDays: 7 };
   }
 
@@ -605,7 +605,6 @@ async function isPaidOrThrowQuota(params: {
   try {
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
 
-    // count exact, head: true to avoid fetching rows
     const { count, error } = await supabase
       .from("content_item")
       .select("id", { count: "exact", head: true })
@@ -613,7 +612,6 @@ async function isPaidOrThrowQuota(params: {
       .gte("created_at", since);
 
     if (error) {
-      // Si colonne manquante etc => fail-open (ne pas casser)
       if (isMissingColumnError(error.message)) {
         return { ok: true, paid: false, used: null, limit, windowDays };
       }
@@ -629,7 +627,6 @@ async function isPaidOrThrowQuota(params: {
 function parseSecondaryKeywords(raw: string): string[] {
   const s = (raw ?? "").trim();
   if (!s) return [];
-  // accepte CSV ou lignes
   return s
     .split(/[\n,]/g)
     .map((x) => x.trim())
@@ -657,12 +654,131 @@ function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "
     .replace(/\s+/g, "_")
     .replace(/[’']/g, "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // remove accents
+    .replace(/[\u0300-\u036f]/g, "");
 
   if (s === "traffic_seo" || s === "trafic_seo" || s === "seo" || s === "trafic") return "traffic_seo";
   if (s === "authority" || s === "autorite" || s === "autorite_" || s === "autorite__") return "authority";
   if (s === "emails" || s === "email" || s === "liste_email" || s === "newsletter") return "emails";
   if (s === "sales" || s === "vente" || s === "ventes" || s === "conversion") return "sales";
+
+  return null;
+}
+
+/** ---------------------------
+ * Offer pyramids helpers (fail-open)
+ * -------------------------- */
+
+const OFFER_PYRAMID_SELECT =
+  "id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,is_flagship,updated_at";
+
+function normalizeOfferMode(raw: unknown): OfferMode {
+  const s = safeString(raw).trim().toLowerCase();
+  return s === "from_pyramid" ? "from_pyramid" : "from_scratch";
+}
+
+function normalizeOfferType(raw: unknown): OfferType | null {
+  const s = safeString(raw).trim().toLowerCase();
+  if (s === "paid_training") return "paid_training";
+  if (s === "lead_magnet") return "lead_magnet";
+  return null;
+}
+
+// Fetch by id (try with user_id then fallback if column missing)
+async function fetchOfferPyramidById(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+  id: string;
+}): Promise<OfferPyramidContext | null> {
+  const { supabase, userId, id } = args;
+  if (!id) return null;
+
+  const q1 = await supabase
+    .from("offer_pyramids")
+    .select(OFFER_PYRAMID_SELECT)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!q1.error) return (q1.data as any) ?? null;
+
+  if (isMissingColumnError(q1.error.message)) {
+    const q2 = await supabase.from("offer_pyramids").select(OFFER_PYRAMID_SELECT).eq("id", id).maybeSingle();
+    if (!q2.error) return (q2.data as any) ?? null;
+  }
+
+  return null;
+}
+
+// Auto-pick user's lead magnet from pyramid (best-effort)
+async function fetchUserLeadMagnet(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+}): Promise<OfferPyramidContext | null> {
+  const { supabase, userId } = args;
+
+  // Require user_id column for safety; if missing => stop (UI should send sourceOfferId)
+  const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
+  if (probe.error && isMissingColumnError(probe.error.message)) {
+    return null;
+  }
+
+  const q = await supabase
+    .from("offer_pyramids")
+    .select(OFFER_PYRAMID_SELECT)
+    .eq("user_id", userId)
+    .or("level.ilike.%lead%,level.ilike.%free%,level.ilike.%gratuit%")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!q.error && q.data) return q.data as any;
+
+  return null;
+}
+
+// Auto-pick user's paid offer (middle ticket preferred) (best-effort)
+async function fetchUserPaidOffer(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+}): Promise<OfferPyramidContext | null> {
+  const { supabase, userId } = args;
+
+  const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
+  if (probe.error && isMissingColumnError(probe.error.message)) {
+    return null;
+  }
+
+  const middle = await supabase
+    .from("offer_pyramids")
+    .select(OFFER_PYRAMID_SELECT)
+    .eq("user_id", userId)
+    .or("level.ilike.%middle%,level.ilike.%mid%")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!middle.error && middle.data) return middle.data as any;
+
+  const high = await supabase
+    .from("offer_pyramids")
+    .select(OFFER_PYRAMID_SELECT)
+    .eq("user_id", userId)
+    .or("level.ilike.%high%,level.ilike.%premium%")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!high.error && high.data) return high.data as any;
+
+  const anyPaid = await supabase
+    .from("offer_pyramids")
+    .select(OFFER_PYRAMID_SELECT)
+    .eq("user_id", userId)
+    .not("level", "ilike", "%free%")
+    .not("level", "ilike", "%gratuit%")
+    .not("level", "ilike", "%lead%")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!anyPaid.error && anyPaid.data) return anyPaid.data as any;
 
   return null;
 }
@@ -679,7 +795,6 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
-
     const body = (await req.json()) as Body;
 
     const type = safeString(body?.type).trim();
@@ -716,10 +831,13 @@ export async function POST(req: Request) {
     const offerTypeRaw = safeString((body as any)?.offerType).trim();
     const offerThemeRaw = safeString((body as any)?.offerTheme).trim();
     const offerTarget = safeString((body as any)?.target).trim();
+    const offerMode = normalizeOfferMode((body as any)?.offerMode);
+    const leadMagnetFormat = safeString((body as any)?.leadMagnetFormat).trim();
+    const sourceOfferId = safeString((body as any)?.sourceOfferId).trim();
 
     // Champs structurés (emails)
-    const emailTypeRaw = safeString((body as any)?.emailType).trim(); // "newsletter" | "sales" | "onboarding"
-    const salesModeRaw = safeString((body as any)?.salesMode).trim(); // "single" | "sequence_7"
+    const emailTypeRaw = safeString((body as any)?.emailType).trim();
+    const salesModeRaw = safeString((body as any)?.salesMode).trim();
     const newsletterTheme = safeString((body as any)?.newsletterTheme).trim();
     const newsletterCta = safeString((body as any)?.newsletterCta).trim();
     const salesCta = safeString((body as any)?.salesCta).trim();
@@ -738,7 +856,7 @@ export async function POST(req: Request) {
     const seoKeyword = safeString((body as any)?.seoKeyword).trim();
     const secondaryKeywordsRaw = safeString((body as any)?.secondaryKeywords).trim();
     const linksRaw = safeString((body as any)?.links).trim();
-    const ctaText = safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim(); // ✅ compat UI
+    const ctaText = safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim();
     const ctaLink = safeString((body as any)?.ctaLink).trim();
     const approvedPlan = safeString((body as any)?.approvedPlan).trim();
 
@@ -746,7 +864,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
     }
 
-    // Validation minimale: emails déjà gérés; articles ont leurs règles
+    // Validation minimale
     if (type === "email") {
       if (!prompt && !subject && !newsletterTheme) {
         return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
@@ -756,8 +874,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
       }
 
-      const objective = normalizeArticleObjective(objectiveRaw);
-      if (!objective) {
+      const objectiveCheck = normalizeArticleObjective(objectiveRaw);
+      if (!objectiveCheck) {
         return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
       }
 
@@ -769,7 +887,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing approvedPlan" }, { status: 400 });
       }
     } else if (type === "video") {
-      // ✅ Vidéo: on exige subject + duration (le prompt builder s'appuie sur ça)
       if (!subject && !prompt) {
         return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
       }
@@ -777,15 +894,26 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing duration" }, { status: 400 });
       }
     } else if (type === "offer") {
-      // ✅ Offer: on exige offerType + thème
-      const offerTypeOk = offerTypeRaw === "lead_magnet" || offerTypeRaw === "paid_training";
-      const offerTheme = offerThemeRaw || theme || subject || prompt;
+      const offerType = normalizeOfferType(offerTypeRaw);
+      const offerTheme = (offerThemeRaw || theme || subject || prompt || "").trim();
 
-      if (!offerTypeOk) {
+      if (!offerType) {
         return NextResponse.json({ ok: false, error: "Missing offerType" }, { status: 400 });
       }
-      if (!offerTheme || !offerTheme.trim()) {
-        return NextResponse.json({ ok: false, error: "Missing offer theme" }, { status: 400 });
+
+      // ✅ Règles V2 (offers)
+      // - from_pyramid : pas besoin de thème (on le déduit de l'offre source)
+      // - from_scratch : on a besoin d'un sujet (theme) + si lead_magnet => format obligatoire
+      if (offerMode === "from_scratch") {
+        if (!offerTheme) {
+          return NextResponse.json({ ok: false, error: "Missing offer theme" }, { status: 400 });
+        }
+        if (offerType === "lead_magnet" && !leadMagnetFormat) {
+          return NextResponse.json(
+            { ok: false, error: "Missing leadMagnetFormat (required for lead_magnet from_scratch)" },
+            { status: 400 },
+          );
+        }
       }
     } else {
       if (!prompt && !subject) {
@@ -793,7 +921,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // UI peut proposer Claude/Gemini, mais backend pas activé -> réponse propre
+    // Provider gating
     if (provider !== "openai") {
       return NextResponse.json(
         { ok: false, error: `Provider "${provider}" pas encore activé côté backend.` },
@@ -801,7 +929,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Clé user (si dispo) — toujours prioritaire
+    // ✅ Clé user (si dispo) — prioritaire
     const ownerKey = process.env.OPENAI_API_KEY ?? "";
     const userKey = await getDecryptedUserApiKey({
       supabase,
@@ -809,24 +937,20 @@ export async function POST(req: Request) {
       provider: "openai",
     });
 
-    // ✅ Nouveau gating : plan payant => OK ; plan free => quota hebdo (même si userKey)
+    // ✅ Gating plan/quota
     const gate = await isPaidOrThrowQuota({ supabase, userId });
     if (!gate.paid) {
-      // Si on a pu compter, on applique strictement le quota
-      if (typeof gate.used === "number") {
-        if (gate.used >= gate.limit) {
-          return NextResponse.json(
-            {
-              ok: false,
-              code: "free_quota_reached",
-              error: `Limite atteinte : ${gate.limit} contenus / ${gate.windowDays} jours. Choisissez un abonnement pour continuer.`,
-              meta: { limit: gate.limit, windowDays: gate.windowDays, used: gate.used },
-            },
-            { status: 402 },
-          );
-        }
+      if (typeof gate.used === "number" && gate.used >= gate.limit) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "free_quota_reached",
+            error: `Limite atteinte : ${gate.limit} contenus / ${gate.windowDays} jours. Choisissez un abonnement pour continuer.`,
+            meta: { limit: gate.limit, windowDays: gate.windowDays, used: gate.used },
+          },
+          { status: 402 },
+        );
       }
-      // Si on ne peut pas compter (fail-open), on laisse passer
     }
 
     const apiKey = (userKey ?? ownerKey).trim();
@@ -875,31 +999,15 @@ export async function POST(req: Request) {
           };
       }
     } catch (e) {
-      // fail-open
       console.error("Persona load (fail-open):", e);
     }
 
     const planJson = (planRow as any)?.plan_json ?? null;
 
     const client = new OpenAI({ apiKey });
-
     const tagsCsv = joinTagsCsv(tags);
 
-    // ✅ Prompt final (selon type)
-    const matchPrompt =
-      type === "post"
-        ? subject || prompt
-        : type === "email"
-          ? subject || prompt
-          : type === "article"
-            ? subject || seoKeyword
-            : type === "video"
-              ? subject || prompt
-              : type === "offer"
-                ? offerThemeRaw || theme || subject || prompt
-                : prompt;
-
-    // ✅ Offre (emails sales) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
+    // ✅ Offre (emails sales) : best-effort
     let offerContext: any = null;
 
     const uiEmailType =
@@ -920,13 +1028,14 @@ export async function POST(req: Request) {
 
     const formality = formalityRaw === "tu" ? "tu" : "vous";
 
-    // ✅ Gating emails sales : il faut une offre (pyramide OU manual OU offerName legacy)
+    // ✅ Gating emails sales : il faut une offre
     if (type === "email" && (emailPromptType === "sales_single" || emailPromptType === "sales_sequence_7")) {
       const hasManual =
         isRecord(offerManual) &&
         (safeString((offerManual as any)?.name).trim() ||
           safeString((offerManual as any)?.promise).trim() ||
           safeString((offerManual as any)?.main_outcome).trim());
+
       if (!offerId && !offerName && !hasManual) {
         return NextResponse.json(
           {
@@ -942,15 +1051,41 @@ export async function POST(req: Request) {
       try {
         const { data: offerRow, error: offerErr } = await supabase
           .from("offer_pyramids")
-          .select("id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,is_flagship,updated_at")
+          .select(OFFER_PYRAMID_SELECT)
           .eq("id", offerId)
           .maybeSingle();
 
-        if (!offerErr && offerRow) {
-          offerContext = offerRow as any;
-        }
+        if (!offerErr && offerRow) offerContext = offerRow as any;
       } catch {
         // fail-open
+      }
+    }
+
+    /** ---------------------------
+     * ✅ Offer generator: sourceOffer (from_pyramid)
+     * -------------------------- */
+    let sourceOffer: OfferPyramidContext | null = null;
+    if (type === "offer" && offerMode === "from_pyramid") {
+      const ot = normalizeOfferType(offerTypeRaw);
+
+      if (sourceOfferId) {
+        sourceOffer = await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId });
+      } else if (ot === "lead_magnet") {
+        sourceOffer = await fetchUserLeadMagnet({ supabase, userId });
+      } else if (ot === "paid_training") {
+        sourceOffer = await fetchUserPaidOffer({ supabase, userId });
+      }
+
+      if (!sourceOffer) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "missing_source_offer",
+            error:
+              "Impossible de retrouver automatiquement l'offre source de la pyramide. Réessaie ou choisis explicitement l'offre source.",
+          },
+          { status: 400 },
+        );
       }
     }
 
@@ -976,19 +1111,19 @@ export async function POST(req: Request) {
               platform: (platform || "youtube_long") as any,
               subject: subject || prompt,
               duration: (duration || "5min") as any,
-              // Ces champs sont optionnels et restent fail-open
               tone: tone || undefined,
               targetWordCount: Number.isFinite(targetWordCount) ? targetWordCount : undefined,
               language: "fr",
             } as any)
           : type === "offer"
-            ? buildPromptByType({
-                type: "offer",
-                offerType: (offerTypeRaw === "paid_training" ? "paid_training" : "lead_magnet") as any,
-                theme: offerThemeRaw || theme || subject || prompt,
-                target: offerTarget || undefined,
+            ? buildOfferPrompt({
+                offerType: normalizeOfferType(offerTypeRaw) === "paid_training" ? "paid_training" : "lead_magnet",
+                offerMode: (offerMode as OfferMode) || "from_scratch",
+                theme: (offerThemeRaw || theme || subject || prompt || "").trim() || undefined,
+                leadMagnetFormat: leadMagnetFormat || undefined,
+                sourceOffer: sourceOffer || null,
                 language: "fr",
-              } as any)
+              })
             : type === "email"
               ? buildEmailPrompt({
                   type: emailPromptType,
@@ -1062,8 +1197,23 @@ export async function POST(req: Request) {
                   })
                 : prompt;
 
+    // ✅ Prompt final (pour knowledge)
+    const matchPrompt =
+      type === "post"
+        ? subject || prompt
+        : type === "email"
+          ? subject || prompt
+          : type === "article"
+            ? subject || seoKeyword
+            : type === "video"
+              ? subject || prompt
+              : type === "offer"
+                ? offerMode === "from_pyramid"
+                  ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_pyramide")
+                  : (offerThemeRaw || theme || subject || prompt)
+                : prompt;
+
     // ✅ Plain text output
-    // Articles: on autorise **uniquement** pour mots-clés; le reste reste "plain".
     const systemPrompt = [
       "Tu es Tipote, un assistant business & contenu.",
       "Tu écris en français, avec un style clair, pro, actionnable.",
@@ -1085,18 +1235,22 @@ export async function POST(req: Request) {
     if (scheduledDate) userContextLines.push(`Date planifiée : ${scheduledDate}`);
     if (tagsCsv) userContextLines.push(`Tags: ${tagsCsv}`);
 
-    // ✅ Ajout léger de contexte vidéo (sans casser le reste)
     if (type === "video") {
       if (platform) userContextLines.push(`Plateforme vidéo: ${platform}`);
       if (duration) userContextLines.push(`Durée vidéo: ${duration}`);
       if (Number.isFinite(targetWordCount)) userContextLines.push(`TargetWordCount (override): ${targetWordCount}`);
     }
 
-    // ✅ Ajout léger de contexte offer (sans casser le reste)
     if (type === "offer") {
       if (offerTypeRaw) userContextLines.push(`OfferType: ${offerTypeRaw}`);
-      if (offerThemeRaw || theme || subject) userContextLines.push(`OfferTheme: ${offerThemeRaw || theme || subject}`);
-      if (offerTarget) userContextLines.push(`Cible (override): ${offerTarget}`);
+      userContextLines.push(`OfferMode: ${offerMode}`);
+      if (offerMode === "from_scratch") {
+        if (offerThemeRaw || theme || subject) userContextLines.push(`OfferTheme: ${offerThemeRaw || theme || subject}`);
+        if (leadMagnetFormat) userContextLines.push(`LeadMagnetFormat: ${leadMagnetFormat}`);
+      } else {
+        userContextLines.push("SourceOffer: (see below in JSON)");
+        userContextLines.push(JSON.stringify(sourceOffer));
+      }
     }
 
     userContextLines.push("");
@@ -1134,7 +1288,6 @@ export async function POST(req: Request) {
     userContextLines.push(effectivePrompt);
 
     const completion = await client.chat.completions.create({
-      // ✅ upgrade qualité
       model: "gpt-5.2",
       temperature: 0.7,
       messages: [
