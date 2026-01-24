@@ -12,6 +12,7 @@
 // ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
 // ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
 // ✅ Vidéos: support prompt builder via lib/prompts/content/video (timing strict 160 mots/min)
+// ✅ Offres: support lead magnet + offre payante via lib/prompts/content/offer
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -40,6 +41,11 @@ type Body = {
   // ✅ Vidéos
   duration?: string; // "30s" | "60s" | "3min" | "5min" | "10min" | "15min+"
   targetWordCount?: number; // override (si calcul côté UI)
+
+  // ✅ Offres / Lead magnets
+  offerType?: "lead_magnet" | "paid_training";
+  offerTheme?: string; // si UI envoie un champ séparé
+  target?: string; // cible optionnelle
 
   // Emails (nouveau modèle)
   emailType?: "newsletter" | "sales" | "onboarding";
@@ -706,6 +712,11 @@ export async function POST(req: Request) {
         ? targetWordCountRaw
         : Number(String(targetWordCountRaw ?? "").trim() || "NaN");
 
+    // ✅ Offres / Lead magnets
+    const offerTypeRaw = safeString((body as any)?.offerType).trim();
+    const offerThemeRaw = safeString((body as any)?.offerTheme).trim();
+    const offerTarget = safeString((body as any)?.target).trim();
+
     // Champs structurés (emails)
     const emailTypeRaw = safeString((body as any)?.emailType).trim(); // "newsletter" | "sales" | "onboarding"
     const salesModeRaw = safeString((body as any)?.salesMode).trim(); // "single" | "sequence_7"
@@ -765,6 +776,17 @@ export async function POST(req: Request) {
       if (!duration) {
         return NextResponse.json({ ok: false, error: "Missing duration" }, { status: 400 });
       }
+    } else if (type === "offer") {
+      // ✅ Offer: on exige offerType + thème
+      const offerTypeOk = offerTypeRaw === "lead_magnet" || offerTypeRaw === "paid_training";
+      const offerTheme = offerThemeRaw || theme || subject || prompt;
+
+      if (!offerTypeOk) {
+        return NextResponse.json({ ok: false, error: "Missing offerType" }, { status: 400 });
+      }
+      if (!offerTheme || !offerTheme.trim()) {
+        return NextResponse.json({ ok: false, error: "Missing offer theme" }, { status: 400 });
+      }
     } else {
       if (!prompt && !subject) {
         return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
@@ -810,24 +832,13 @@ export async function POST(req: Request) {
     const apiKey = (userKey ?? ownerKey).trim();
 
     if (!apiKey) {
-      return NextResponse.json(
-        { ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." }, { status: 400 });
     }
 
     // Contexte (optionnel) : business profile + plan
-    const { data: profile } = await supabase
-      .from("business_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: profile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
 
-    const { data: planRow } = await supabase
-      .from("business_plan")
-      .select("plan_json")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
 
     // ✅ Persona (optionnel) : public.personas
     let personaContext: any = null;
@@ -884,7 +895,9 @@ export async function POST(req: Request) {
             ? subject || seoKeyword
             : type === "video"
               ? subject || prompt
-              : prompt;
+              : type === "offer"
+                ? offerThemeRaw || theme || subject || prompt
+                : prompt;
 
     // ✅ Offre (emails sales) : on tente de récupérer les infos depuis offer_pyramids (best-effort)
     let offerContext: any = null;
@@ -968,78 +981,86 @@ export async function POST(req: Request) {
               targetWordCount: Number.isFinite(targetWordCount) ? targetWordCount : undefined,
               language: "fr",
             } as any)
-          : type === "email"
-            ? buildEmailPrompt({
-                type: emailPromptType,
-                formality,
+          : type === "offer"
+            ? buildPromptByType({
+                type: "offer",
+                offerType: (offerTypeRaw === "paid_training" ? "paid_training" : "lead_magnet") as any,
+                theme: offerThemeRaw || theme || subject || prompt,
+                target: offerTarget || undefined,
+                language: "fr",
+              } as any)
+            : type === "email"
+              ? buildEmailPrompt({
+                  type: emailPromptType,
+                  formality,
 
-                // Newsletter
-                theme: uiEmailType === "newsletter" ? (newsletterTheme || subject || prompt) : undefined,
-                cta:
-                  uiEmailType === "newsletter"
-                    ? newsletterCta || undefined
-                    : uiEmailType === "sales"
-                      ? salesCta || undefined
-                      : undefined,
+                  // Newsletter
+                  theme: uiEmailType === "newsletter" ? (newsletterTheme || subject || prompt) : undefined,
+                  cta:
+                    uiEmailType === "newsletter"
+                      ? newsletterCta || undefined
+                      : uiEmailType === "sales"
+                        ? salesCta || undefined
+                        : undefined,
 
-                // Sales / Onboarding: subject intention
-                subject:
-                  uiEmailType === "sales"
-                    ? subject || prompt
-                    : uiEmailType === "onboarding"
+                  // Sales / Onboarding: subject intention
+                  subject:
+                    uiEmailType === "sales"
                       ? subject || prompt
-                      : undefined,
+                      : uiEmailType === "onboarding"
+                        ? subject || prompt
+                        : undefined,
 
-                offerLink: offerLink || null,
+                  offerLink: offerLink || null,
 
-                offer:
-                  uiEmailType === "sales"
-                    ? offerContext
+                  offer:
+                    uiEmailType === "sales"
+                      ? offerContext
+                        ? {
+                            id: (offerContext as any)?.id ?? undefined,
+                            name: (offerContext as any)?.name ?? undefined,
+                            level: (offerContext as any)?.level ?? null,
+                            promise: (offerContext as any)?.promise ?? null,
+                            description: (offerContext as any)?.description ?? null,
+                            price_min: (offerContext as any)?.price_min ?? null,
+                            price_max: (offerContext as any)?.price_max ?? null,
+                            main_outcome: (offerContext as any)?.main_outcome ?? null,
+                            format: (offerContext as any)?.format ?? null,
+                            delivery: (offerContext as any)?.delivery ?? null,
+                          }
+                        : offerName
+                          ? { name: offerName }
+                          : null
+                      : null,
+
+                  offerManual:
+                    uiEmailType === "sales" && isRecord(offerManual)
                       ? {
-                          id: (offerContext as any)?.id ?? undefined,
-                          name: (offerContext as any)?.name ?? undefined,
-                          level: (offerContext as any)?.level ?? null,
-                          promise: (offerContext as any)?.promise ?? null,
-                          description: (offerContext as any)?.description ?? null,
-                          price_min: (offerContext as any)?.price_min ?? null,
-                          price_max: (offerContext as any)?.price_max ?? null,
-                          main_outcome: (offerContext as any)?.main_outcome ?? null,
-                          format: (offerContext as any)?.format ?? null,
-                          delivery: (offerContext as any)?.delivery ?? null,
+                          name: safeString((offerManual as any)?.name) || null,
+                          promise: safeString((offerManual as any)?.promise) || null,
+                          main_outcome: safeString((offerManual as any)?.main_outcome) || null,
+                          description: safeString((offerManual as any)?.description) || null,
+                          price: safeString((offerManual as any)?.price) || null,
                         }
-                      : offerName
-                        ? { name: offerName }
-                        : null
-                    : null,
+                      : null,
 
-                offerManual:
-                  uiEmailType === "sales" && isRecord(offerManual)
-                    ? {
-                        name: safeString((offerManual as any)?.name) || null,
-                        promise: safeString((offerManual as any)?.promise) || null,
-                        main_outcome: safeString((offerManual as any)?.main_outcome) || null,
-                        description: safeString((offerManual as any)?.description) || null,
-                        price: safeString((offerManual as any)?.price) || null,
-                      }
-                    : null,
-
-                // Onboarding
-                leadMagnetLink: uiEmailType === "onboarding" ? leadMagnetLink || null : null,
-                onboardingCta: uiEmailType === "onboarding" ? onboardingCta || null : null,
-              })
-            : type === "article"
-              ? buildArticlePrompt({
-                  step: articleStep,
-                  subject: subject || seoKeyword,
-                  objective: objective as any,
-                  primaryKeyword: seoKeyword || undefined,
-                  secondaryKeywords: parseSecondaryKeywords(secondaryKeywordsRaw),
-                  links: parseLinks(linksRaw),
-                  ctaText: ctaText || null,
-                  ctaLink: ctaLink || null,
-                  approvedPlan: articleStep === "write" ? approvedPlan || null : null,
+                  // Onboarding
+                  leadMagnetLink: uiEmailType === "onboarding" ? leadMagnetLink || null : null,
+                  onboardingCta: uiEmailType === "onboarding" ? onboardingCta || null : null,
                 })
-              : prompt;
+              : type === "article"
+                ? buildArticlePrompt({
+                    step: articleStep,
+                    subject: subject || seoKeyword,
+                    objective: objective as any,
+                    primaryKeyword: seoKeyword || undefined,
+                    secondaryKeywords: parseSecondaryKeywords(secondaryKeywordsRaw),
+                    links: parseLinks(linksRaw),
+                    ctaText: ctaText || null,
+                    ctaLink: ctaLink || null,
+                    approvedPlan: articleStep === "write" ? approvedPlan || null : null,
+                  })
+                : prompt;
 
     // ✅ Plain text output
     // Articles: on autorise **uniquement** pour mots-clés; le reste reste "plain".
@@ -1069,6 +1090,13 @@ export async function POST(req: Request) {
       if (platform) userContextLines.push(`Plateforme vidéo: ${platform}`);
       if (duration) userContextLines.push(`Durée vidéo: ${duration}`);
       if (Number.isFinite(targetWordCount)) userContextLines.push(`TargetWordCount (override): ${targetWordCount}`);
+    }
+
+    // ✅ Ajout léger de contexte offer (sans casser le reste)
+    if (type === "offer") {
+      if (offerTypeRaw) userContextLines.push(`OfferType: ${offerTypeRaw}`);
+      if (offerThemeRaw || theme || subject) userContextLines.push(`OfferTheme: ${offerThemeRaw || theme || subject}`);
+      if (offerTarget) userContextLines.push(`Cible (override): ${offerTarget}`);
     }
 
     userContextLines.push("");
@@ -1178,10 +1206,7 @@ export async function POST(req: Request) {
     });
 
     if (tryFR.error) {
-      return NextResponse.json(
-        { ok: false, error: (tryFR.error as any)?.message ?? "Insert error" },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: false, error: (tryFR.error as any)?.message ?? "Insert error" }, { status: 400 });
     }
 
     return NextResponse.json(
