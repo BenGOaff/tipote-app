@@ -1,28 +1,26 @@
 // app/api/content/generate/route.ts
 // Génération IA + sauvegarde dans content_item (mode async via placeholder row)
-// ✅ Fix compile TS : getDecryptedUserApiKey(params) attend 1 seul argument (objet), et retourne string|null
-// ✅ A5 — Gating :
-//    - Plans payants (basic/essential/elite) => OK
-//    - Plan free => quota 7 contenus / 7 jours glissants (même si clé user configurée)
-// ✅ Cohérence calendrier : scheduledDate stockée en YYYY-MM-DD et status "scheduled" si date.
+// ✅ Credits: vérification avant appel IA, consommation après succès (RPC)
+// ✅ Async: placeholder row => jobId = content_item.id, puis update quand c’est fini.
 // ✅ Compat DB : tags peut être array OU texte CSV -> insert/update avec retry.
-// ✅ Output : texte brut (pas de markdown)
+// ✅ Output : texte brut (pas de markdown) (articles: **gras** autorisé uniquement pour mots-clés)
 // ✅ Knowledge : injecte tipote-knowledge via manifest (xlsx) + lecture des ressources
 // ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
-// ✅ Emails: support nouveau modèle (newsletter/sales/onboarding) via buildEmailPrompt.
-// ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
-// ✅ Vidéos: support prompt builder via lib/prompts/content/video (timing strict 160 mots/min)
-// ✅ Offres: support lead magnet + offre payante via lib/prompts/content/offer (mode from_pyramid / from_scratch)
-// ✅ Providers: openai | claude | gemini (clé USER obligatoire, jamais clé owner)
-// ✅ Async: on crée un content_item placeholder => jobId = content_item.id, puis update quand c’est fini.
+// ✅ Emails: support nouveau modèle via buildEmailPrompt.
+// ✅ Articles: support 2 étapes via buildArticlePrompt.
+// ✅ Vidéos: support prompt builder via buildVideoScriptPrompt.
+// ✅ Offres: support lead magnet + offre payante via buildOfferPrompt (mode from_pyramid / from_scratch)
+// ✅ Claude uniquement (owner key): jamais de clé user côté API.
 
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getDecryptedUserApiKey } from "@/lib/userApiKeys";
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+
 import { buildPromptByType } from "@/lib/prompts/content";
+import { buildSocialPostPrompt } from "@/lib/prompts/content/socialPost";
+import { buildVideoScriptPrompt } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
@@ -31,41 +29,42 @@ import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/co
 import fs from "node:fs/promises";
 import path from "node:path";
 
-type Provider = "openai" | "claude" | "gemini";
+/** ---------------------------
+ * Types
+ * -------------------------- */
 
 type Body = {
+  type?: string;
+  channel?: string;
+  scheduledDate?: string | null;
+  tags?: string[] | string;
+
+  // commun
+  prompt?: string;
+  brief?: string;
+  consigne?: string;
+  angle?: string;
+  text?: string;
+
+  // post
   platform?: string;
-  theme?: string;
   subject?: string;
+  theme?: string;
   tone?: string;
   batchCount?: number;
   promoKind?: "paid" | "free";
   offerLink?: string;
 
-  // ✅ Vidéos
-  duration?: string;
+  // video
+  duration?: string; // "30s" | "60s" | "90s" | "120s" | "180s" | "300s" (selon lib)
   targetWordCount?: number;
 
-  // ✅ Offres / Lead magnets
-  offerType?: "lead_magnet" | "paid_training";
-  offerTheme?: string;
-  target?: string;
+  // offer
   offerMode?: "from_pyramid" | "from_scratch";
+  offerType?: "lead_magnet" | "paid_training";
   leadMagnetFormat?: string;
   sourceOfferId?: string;
-
-  // Emails (nouveau modèle)
-  emailType?: "newsletter" | "sales" | "onboarding";
-  salesMode?: "single" | "sequence_7";
-  newsletterTheme?: string;
-  newsletterCta?: string;
-  salesCta?: string;
-  leadMagnetLink?: string;
-  onboardingCta?: string;
-
-  formality?: "tu" | "vous";
-  offerId?: string;
-  offer?: string;
+  target?: string;
   offerManual?: {
     name?: string;
     promise?: string;
@@ -74,42 +73,40 @@ type Body = {
     price?: string;
   };
 
-  // Articles (blog) — 2 étapes
+  // email
+  emailType?: "newsletter" | "sales" | "onboarding";
+  salesMode?: "single" | "sequence_7";
+  newsletterTheme?: string;
+  newsletterCta?: string;
+  salesCta?: string;
+  leadMagnetLink?: string;
+  onboardingCta?: string;
+  formality?: "tu" | "vous";
+  offer?: string; // nom libre si pas de pyramide
+  offerId?: string; // pyramide (optionnel)
+
+  // article (2 étapes)
   articleStep?: "plan" | "write";
   objective?: "traffic_seo" | "authority" | "emails" | "sales";
-  seoKeyword?: string;
+  seoKeyword?: string; // => primaryKeyword
   secondaryKeywords?: string;
   links?: string;
   ctaText?: string;
   ctaLink?: string;
   approvedPlan?: string;
 
-  cta?: string;
-
-  type?: string;
-  provider?: Provider;
-  channel?: string;
-  scheduledDate?: string | null;
-  tags?: string[];
-  prompt?: string;
-
   // compat legacy
-  brief?: string;
-  consigne?: string;
-  angle?: string;
-  text?: string;
+  cta?: string;
 };
 
-function safeString(x: unknown): string {
-  if (typeof x === "string") return x;
-  return "";
-}
+type Provider = "claude";
 
-function normalizeProvider(x: unknown): Provider {
-  const s = safeString(x).trim().toLowerCase();
-  if (s === "claude") return "claude";
-  if (s === "gemini") return "gemini";
-  return "openai";
+/** ---------------------------
+ * Utils
+ * -------------------------- */
+
+function safeString(x: unknown): string {
+  return typeof x === "string" ? x : "";
 }
 
 function isoDateOrNull(x: unknown): string | null {
@@ -127,36 +124,6 @@ function joinTagsCsv(tags: string[]): string {
     .filter(Boolean)
     .slice(0, 50)
     .join(",");
-}
-
-function maskKey(key: string | null): string {
-  const s = (key ?? "").trim();
-  if (!s) return "••••••••";
-  if (s.length <= 8) return "••••••••";
-  return `${s.slice(0, 4)}••••••••${s.slice(-4)}`;
-}
-
-function isMissingColumnError(message: string | null | undefined) {
-  const m = (message ?? "").toLowerCase();
-  return (
-    m.includes("does not exist") ||
-    m.includes("could not find the '") ||
-    m.includes("schema cache") ||
-    m.includes("pgrst") ||
-    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
-  );
-}
-
-function isTagsTypeMismatch(message: string | null | undefined) {
-  const m = (message ?? "").toLowerCase();
-  return (
-    m.includes("malformed array") ||
-    m.includes("invalid input") ||
-    m.includes("array") ||
-    m.includes("json") ||
-    m.includes("character varying") ||
-    m.includes("text")
-  );
 }
 
 function safeJsonParse<T>(v: unknown): T | null {
@@ -185,10 +152,27 @@ function isRecord(v: unknown): v is Record<string, any> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-function coercePersonaJson(v: unknown): Record<string, any> | null {
-  if (isRecord(v)) return v;
-  const parsed = safeJsonParse<unknown>(v);
-  return isRecord(parsed) ? (parsed as Record<string, any>) : null;
+function isMissingColumnError(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("does not exist") ||
+    m.includes("could not find the '") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
+  );
+}
+
+function isTagsTypeMismatch(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("malformed array") ||
+    m.includes("invalid input") ||
+    m.includes("array") ||
+    m.includes("json") ||
+    m.includes("character varying") ||
+    m.includes("text")
+  );
 }
 
 function toPlainText(input: string): string {
@@ -223,7 +207,69 @@ function toPlainTextKeepBold(input: string): string {
   return s;
 }
 
-// Insert EN (schéma older)
+function normalizeBatchCount(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : Number(String(raw ?? "").trim() || "NaN");
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.min(10, Math.floor(n)));
+}
+
+function normalizePromoKind(raw: unknown): "paid" | "free" {
+  const s = safeString(raw).trim().toLowerCase();
+  return s === "free" ? "free" : "paid";
+}
+
+function normalizeFormality(raw: unknown): "tu" | "vous" {
+  const s = safeString(raw).trim().toLowerCase();
+  return s === "vous" ? "vous" : "tu";
+}
+
+function normalizeArticleStep(raw: unknown): "plan" | "write" {
+  const s = safeString(raw).trim().toLowerCase();
+  return s === "write" ? "write" : "plan";
+}
+
+function normalizeArticleObjective(raw: unknown): "traffic_seo" | "authority" | "emails" | "sales" | null {
+  const s0 = safeString(raw).trim();
+  if (!s0) return null;
+
+  const s = s0
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[’']/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (s === "traffic_seo" || s === "trafic_seo" || s === "seo" || s === "trafic") return "traffic_seo";
+  if (s === "authority" || s === "autorite") return "authority";
+  if (s === "emails" || s === "email" || s === "newsletter") return "emails";
+  if (s === "sales" || s === "vente" || s === "ventes" || s === "conversion") return "sales";
+  return null;
+}
+
+function parseSecondaryKeywords(raw: string): string[] {
+  const s = (raw ?? "").trim();
+  if (!s) return [];
+  return s
+    .split(/[\n,]/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 24);
+}
+
+function parseLinks(raw: string): string[] {
+  const s = (raw ?? "").trim();
+  if (!s) return [];
+  return s
+    .split(/\n+/g)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+/** ---------------------------
+ * DB helpers (compat EN/FR)
+ * -------------------------- */
+
 async function insertContentEN(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -275,7 +321,6 @@ async function insertContentEN(params: {
   return { data: first.data, error: first.error };
 }
 
-// Insert FR (schéma prod)
 async function insertContentFR(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -414,6 +459,7 @@ async function updateContentFR(params: {
 /** ---------------------------
  * Tipote Knowledge (manifest + ressources) — fail-open
  * -------------------------- */
+
 type KnowledgeEntry = {
   title: string;
   tags: string[];
@@ -607,96 +653,6 @@ async function getKnowledgeSnippets(args: {
   return out;
 }
 
-async function isPaidOrThrowQuota(params: {
-  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
-  userId: string;
-}): Promise<
-  | { ok: true; paid: true }
-  | { ok: true; paid: false; used: number; limit: number; windowDays: number }
-  | { ok: true; paid: false; used: null; limit: number; windowDays: number }
-> {
-  const { supabase, userId } = params;
-
-  // 1) Plan
-  try {
-    const { data: billingProfile, error: billingError } = await supabase
-      .from("profiles")
-      .select("plan")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (!billingError) {
-      const plan = (billingProfile as any)?.plan as string | null | undefined;
-      const p = (plan ?? "").toLowerCase().trim();
-      const paid = p === "basic" || p === "essential" || p === "elite";
-      if (paid) return { ok: true, paid: true };
-    }
-  } catch {
-    return { ok: true, paid: false, used: null, limit: 7, windowDays: 7 };
-  }
-
-  // 2) Quota free (7 / 7 jours glissants)
-  const limit = 7;
-  const windowDays = 7;
-  try {
-    const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await supabase
-      .from("content_item")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", since);
-
-    if (error) {
-      if (isMissingColumnError(error.message)) {
-        return { ok: true, paid: false, used: null, limit, windowDays };
-      }
-      return { ok: true, paid: false, used: null, limit, windowDays };
-    }
-
-    return { ok: true, paid: false, used: typeof count === "number" ? count : 0, limit, windowDays };
-  } catch {
-    return { ok: true, paid: false, used: null, limit, windowDays };
-  }
-}
-
-function parseSecondaryKeywords(raw: string): string[] {
-  const s = (raw ?? "").trim();
-  if (!s) return [];
-  return s
-    .split(/[\n,]/g)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .slice(0, 24);
-}
-
-function parseLinks(raw: string): string[] {
-  const s = (raw ?? "").trim();
-  if (!s) return [];
-  return s
-    .split(/\n+/g)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
-
-function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "emails" | "sales" | null {
-  const s0 = (raw ?? "").trim();
-  if (!s0) return null;
-
-  const s = s0
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[’']/g, "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  if (s === "traffic_seo" || s === "trafic_seo" || s === "seo" || s === "trafic") return "traffic_seo";
-  if (s === "authority" || s === "autorite" || s === "autorite_" || s === "autorite__") return "authority";
-  if (s === "emails" || s === "email" || s === "liste_email" || s === "newsletter") return "emails";
-  if (s === "sales" || s === "vente" || s === "ventes" || s === "conversion") return "sales";
-  return null;
-}
-
 /** ---------------------------
  * Offer pyramids helpers (fail-open)
  * -------------------------- */
@@ -812,36 +768,12 @@ async function fetchUserPaidOffer(args: {
 }
 
 /** ---------------------------
- * Provider callers (no extra deps)
+ * Claude caller (owner key)
  * -------------------------- */
 
-type LlmCallArgs = {
-  provider: Provider;
-  apiKey: string;
-  system: string;
-  user: string;
-};
-
-async function callOpenAI(args: LlmCallArgs): Promise<string> {
-  const client = new OpenAI({ apiKey: args.apiKey });
-
-  const model = process.env.TIPOTE_OPENAI_MODEL?.trim() || "gpt-5.2";
-
-  const completion = await client.chat.completions.create({
-    model,
-    temperature: 0.7,
-    messages: [
-      { role: "system", content: args.system },
-      { role: "user", content: args.user },
-    ],
-  });
-
-  return completion.choices?.[0]?.message?.content?.trim() ?? "";
-}
-
-async function callClaude(args: LlmCallArgs): Promise<string> {
-  // Anthropic Messages API
+async function callClaude(args: { apiKey: string; system: string; user: string }): Promise<string> {
   const model = process.env.TIPOTE_CLAUDE_MODEL?.trim() || "claude-3-5-sonnet-20240620";
+
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -864,7 +796,6 @@ async function callClaude(args: LlmCallArgs): Promise<string> {
   }
 
   const json = (await res.json()) as any;
-  // content: [{type:"text", text:"..."}]
   const parts = Array.isArray(json?.content) ? json.content : [];
   const text = parts
     .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -875,47 +806,9 @@ async function callClaude(args: LlmCallArgs): Promise<string> {
   return text || "";
 }
 
-async function callGemini(args: LlmCallArgs): Promise<string> {
-  const model = process.env.TIPOTE_GEMINI_MODEL?.trim() || "gemini-1.5-pro";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(
-    args.apiKey,
-  )}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      generationConfig: { temperature: 0.7 },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `${args.system}\n\n${args.user}` }],
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Gemini API error (${res.status}): ${t || res.statusText}`);
-  }
-
-  const json = (await res.json()) as any;
-  const text =
-    json?.candidates?.[0]?.content?.parts
-      ?.map((p: any) => String(p?.text ?? ""))
-      .filter(Boolean)
-      .join("\n")
-      .trim() ?? "";
-
-  return text || "";
-}
-
-async function callProvider(args: LlmCallArgs): Promise<string> {
-  if (args.provider === "claude") return callClaude(args);
-  if (args.provider === "gemini") return callGemini(args);
-  return callOpenAI(args);
-}
+/** ---------------------------
+ * Main handler
+ * -------------------------- */
 
 export async function POST(req: Request) {
   try {
@@ -932,10 +825,13 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Body;
 
     const type = safeString(body?.type).trim();
-    const provider = normalizeProvider(body?.provider);
     const channel = safeString(body?.channel).trim() || null;
     const scheduledDate = isoDateOrNull(body?.scheduledDate ?? null);
-    const tags = Array.isArray(body?.tags) ? body.tags.filter(Boolean).map(String) : [];
+
+    const tags =
+      Array.isArray(body?.tags)
+        ? body.tags.filter(Boolean).map(String)
+        : arrayFromTextOrJson(body?.tags);
 
     const prompt =
       safeString(body?.prompt).trim() ||
@@ -944,144 +840,33 @@ export async function POST(req: Request) {
       safeString(body?.angle).trim() ||
       safeString(body?.text).trim();
 
-    // Champs structurés (posts + vidéos)
-    const platform = safeString((body as any)?.platform).trim();
-    const theme = safeString((body as any)?.theme).trim();
-    const subject = safeString((body as any)?.subject).trim();
-    const tone = safeString((body as any)?.tone).trim();
-    const batchCountRaw = (body as any)?.batchCount;
-    const promoKind = ((body as any)?.promoKind ?? "paid") as "paid" | "free";
-    const offerLink = safeString((body as any)?.offerLink).trim();
+    if (!type) return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
 
-    // ✅ Vidéo : durée + targetWordCount
-    const duration = safeString((body as any)?.duration).trim();
-    const targetWordCountRaw = (body as any)?.targetWordCount;
-    const targetWordCount =
-      typeof targetWordCountRaw === "number"
-        ? targetWordCountRaw
-        : Number(String(targetWordCountRaw ?? "").trim() || "NaN");
-
-    // ✅ Offres / Lead magnets
-    const offerTypeRaw = safeString((body as any)?.offerType).trim();
-    const offerThemeRaw = safeString((body as any)?.offerTheme).trim();
-    const offerMode = normalizeOfferMode((body as any)?.offerMode);
-    const leadMagnetFormat = safeString((body as any)?.leadMagnetFormat).trim();
-    const sourceOfferId = safeString((body as any)?.sourceOfferId).trim();
-
-    // Champs structurés (emails)
-    const emailTypeRaw = safeString((body as any)?.emailType).trim();
-    const salesModeRaw = safeString((body as any)?.salesMode).trim();
-    const newsletterTheme = safeString((body as any)?.newsletterTheme).trim();
-    const newsletterCta = safeString((body as any)?.newsletterCta).trim();
-    const salesCta = safeString((body as any)?.salesCta).trim();
-    const leadMagnetLink = safeString((body as any)?.leadMagnetLink).trim();
-    const onboardingCta = safeString((body as any)?.onboardingCta).trim();
-
-    const formalityRaw = safeString((body as any)?.formality).trim();
-    const offerId = safeString((body as any)?.offerId).trim();
-    const offerName = safeString((body as any)?.offer).trim();
-    const offerManual = isRecord((body as any)?.offerManual) ? ((body as any).offerManual as any) : null;
-
-    // Champs structurés (articles)
-    const articleStepRaw = safeString((body as any)?.articleStep).trim();
-    const objectiveRaw = safeString((body as any)?.objective).trim();
-    const seoKeyword = safeString((body as any)?.seoKeyword).trim();
-    const secondaryKeywordsRaw = safeString((body as any)?.secondaryKeywords).trim();
-    const linksRaw = safeString((body as any)?.links).trim();
-    const ctaText = safeString((body as any)?.ctaText).trim() || safeString((body as any)?.cta).trim();
-    const ctaLink = safeString((body as any)?.ctaLink).trim();
-    const approvedPlan = safeString((body as any)?.approvedPlan).trim();
-
-    if (!type) {
-      return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
-    }
-
-    // Validation minimale
-    if (type === "email") {
-      if (!prompt && !subject && !newsletterTheme) {
-        return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
-      }
-    } else if (type === "article") {
-      if (!subject && !seoKeyword) {
-        return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
-      }
-      const objectiveCheck = normalizeArticleObjective(objectiveRaw);
-      if (!objectiveCheck) {
-        return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
-      }
-      const stepOk = articleStepRaw === "plan" || articleStepRaw === "write";
-      if (!stepOk) {
-        return NextResponse.json({ ok: false, error: "Missing articleStep" }, { status: 400 });
-      }
-      if (articleStepRaw === "write" && !approvedPlan) {
-        return NextResponse.json({ ok: false, error: "Missing approvedPlan" }, { status: 400 });
-      }
-    } else if (type === "video") {
-      if (!subject && !prompt) {
-        return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
-      }
-      if (!duration) {
-        return NextResponse.json({ ok: false, error: "Missing duration" }, { status: 400 });
-      }
-    } else if (type === "offer") {
-      const offerType = normalizeOfferType(offerTypeRaw);
-      const offerTheme = (offerThemeRaw || theme || subject || prompt || "").trim();
-
-      if (!offerType) {
-        return NextResponse.json({ ok: false, error: "Missing offerType" }, { status: 400 });
-      }
-
-      if (offerMode === "from_scratch") {
-        if (!offerTheme) {
-          return NextResponse.json({ ok: false, error: "Missing offer theme" }, { status: 400 });
-        }
-        if (offerType === "lead_magnet" && !leadMagnetFormat) {
-          return NextResponse.json(
-            { ok: false, error: "Missing leadMagnetFormat (required for lead_magnet from_scratch)" },
-            { status: 400 },
-          );
-        }
-      }
-    } else {
-      if (!prompt && !subject) {
-        return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
-      }
-    }
-
-    // ✅ Clé USER obligatoire (selon provider) — jamais clé owner
-    const userKey = await getDecryptedUserApiKey({
-      supabase,
-      userId,
-      provider, // "openai" | "claude" | "gemini"
-    });
-
-    const apiKey = (userKey ?? "").trim();
-    if (!apiKey) {
+    // ✅ Crédit IA requis (1 crédit = 1 génération)
+    const balance = await ensureUserCredits(userId);
+    if (balance.total_remaining <= 0) {
       return NextResponse.json(
         {
           ok: false,
-          code: "missing_user_api_key",
-          error: "Tu dois ajouter une clé API dans Réglages pour générer du contenu.",
-          provider,
+          code: "NO_CREDITS",
+          error: "Crédits insuffisants. Recharge tes crédits ou upgrade ton abonnement pour continuer.",
+          balance,
+          upgrade_url: "/pricing",
         },
-        { status: 400 },
+        { status: 402 },
       );
     }
 
-    // ✅ Gating plan/quota
-    const gate = await isPaidOrThrowQuota({ supabase, userId });
-    if (!gate.paid) {
-      if (typeof gate.used === "number" && gate.used >= gate.limit) {
-        return NextResponse.json(
-          {
-            ok: false,
-            code: "free_quota_reached",
-            error: `Limite atteinte : ${gate.limit} contenus / ${gate.windowDays} jours. Choisissez un abonnement pour continuer.`,
-            meta: { limit: gate.limit, windowDays: gate.windowDays, used: gate.used },
-          },
-          { status: 402 },
-        );
-      }
+    const apiKey =
+      process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+      process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
+      "";
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { ok: false, code: "missing_owner_api_key", error: "Clé Claude owner manquante (env CLAUDE_API_KEY_OWNER)." },
+        { status: 500 },
+      );
     }
 
     const tagsCsv = joinTagsCsv(tags);
@@ -1091,109 +876,68 @@ export async function POST(req: Request) {
     const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     const planJson = (planRow as any)?.plan_json ?? null;
 
-    // ✅ Persona (optionnel) : public.personas
+    // ✅ Persona (optionnel)
     let personaContext: any = null;
     try {
       const { data: personaRow, error: personaErr } = await supabase
         .from("personas")
-        .select(
-          "persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at",
-        )
+        .select("persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at")
         .eq("user_id", userId)
         .eq("role", "client_ideal")
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (personaErr) {
-        if (!isMissingColumnError(personaErr.message)) {
-          console.error("Error loading personas:", personaErr);
-        }
-      } else if (personaRow) {
-        const pj = coercePersonaJson((personaRow as any).persona_json);
+      if (!personaErr && personaRow) {
+        const pj = (typeof (personaRow as any).persona_json === "object" && (personaRow as any).persona_json) || null;
         personaContext =
           pj ?? {
             title: (personaRow as any).name ?? null,
             current_situation: (personaRow as any).current_situation ?? null,
             desired_situation: (personaRow as any).desired_situation ?? null,
-            awareness_level: (personaRow as any).awareness_level ?? null,
-            budget_level: (personaRow as any).budget_level ?? null,
             pains: arrayFromTextOrJson((personaRow as any).pains),
             desires: arrayFromTextOrJson((personaRow as any).desires),
             objections: arrayFromTextOrJson((personaRow as any).objections),
+            awareness_level: (personaRow as any).awareness_level ?? null,
+            budget_level: (personaRow as any).budget_level ?? null,
             description: (personaRow as any).description ?? null,
+            updated_at: (personaRow as any).updated_at ?? null,
           };
+      } else if (personaErr && !isMissingColumnError(personaErr.message)) {
+        console.error("Error loading personas:", personaErr);
       }
     } catch (e) {
-      console.error("Persona load (fail-open):", e);
+      console.error("Error loading personas (catch):", e);
     }
 
-    // ✅ Offre (emails sales) : best-effort
-    let offerContext: any = null;
+    // ✅ System prompt
+    const systemPrompt =
+      "Tu es un expert francophone en copywriting, marketing et stratégie de contenu. " +
+      "Tu dois produire des contenus très actionnables, concrets, et de haute qualité. " +
+      "Retourne uniquement le contenu final, sans explication, sans markdown.";
 
-    const uiEmailType =
-      emailTypeRaw === "newsletter" || emailTypeRaw === "sales" || emailTypeRaw === "onboarding"
-        ? (emailTypeRaw as "newsletter" | "sales" | "onboarding")
-        : "newsletter";
-
-    const salesMode = salesModeRaw === "sequence_7" ? "sequence_7" : "single";
-
-    const emailPromptType =
-      uiEmailType === "sales"
-        ? salesMode === "sequence_7"
-          ? ("sales_sequence_7" as const)
-          : ("sales_single" as const)
-        : uiEmailType === "onboarding"
-          ? ("onboarding_klt_3" as const)
-          : ("newsletter" as const);
-
-    const formality = formalityRaw === "tu" ? "tu" : "vous";
-
-    // ✅ Gating emails sales : il faut une offre
-    if (type === "email" && (emailPromptType === "sales_single" || emailPromptType === "sales_sequence_7")) {
-      const hasManual =
-        isRecord(offerManual) &&
-        (safeString((offerManual as any)?.name).trim() ||
-          safeString((offerManual as any)?.promise).trim() ||
-          safeString((offerManual as any)?.main_outcome).trim());
-
-      if (!offerId && !offerName && !hasManual) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente.",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (type === "email" && (emailPromptType === "sales_single" || emailPromptType === "sales_sequence_7") && offerId) {
-      try {
-        const { data: offerRow, error: offerErr } = await supabase
-          .from("offer_pyramids")
-          .select(OFFER_PYRAMID_SELECT)
-          .eq("id", offerId)
-          .maybeSingle();
-
-        if (!offerErr && offerRow) offerContext = offerRow as any;
-      } catch {
-        // fail-open
-      }
-    }
+    const batchCount = normalizeBatchCount(body.batchCount);
+    const promoKind = normalizePromoKind(body.promoKind);
 
     /** ---------------------------
-     * ✅ Offer generator: sourceOffer (from_pyramid)
+     * Offre (pyramide) — pour offer generator + emails sales
      * -------------------------- */
-    let sourceOffer: OfferPyramidContext | null = null;
-    if (type === "offer" && offerMode === "from_pyramid") {
-      const ot = normalizeOfferType(offerTypeRaw);
 
+    const offerMode = normalizeOfferMode(body.offerMode);
+    const offerTypeNorm = normalizeOfferType(body.offerType);
+    const sourceOfferId = safeString(body.sourceOfferId).trim();
+    const offerId = safeString(body.offerId).trim();
+    const offerName = safeString(body.offer).trim();
+    const offerManual = isRecord(body.offerManual) ? body.offerManual : null;
+
+    let sourceOffer: OfferPyramidContext | null = null;
+
+    if (type === "offer" && offerMode === "from_pyramid") {
       if (sourceOfferId) {
         sourceOffer = await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId });
-      } else if (ot === "lead_magnet") {
+      } else if (offerTypeNorm === "lead_magnet") {
         sourceOffer = await fetchUserLeadMagnet({ supabase, userId });
-      } else if (ot === "paid_training") {
+      } else if (offerTypeNorm === "paid_training") {
         sourceOffer = await fetchUserPaidOffer({ supabase, userId });
       }
 
@@ -1210,164 +954,240 @@ export async function POST(req: Request) {
       }
     }
 
-    // Articles parsing
-    const articleStep = articleStepRaw === "write" ? ("write" as const) : ("plan" as const);
-    const objective = type === "article" ? normalizeArticleObjective(objectiveRaw) : null;
+    let offerContextForSalesEmail: OfferPyramidContext | null = null;
+    if (type === "email" && offerId) {
+      try {
+        const { data: offerRow, error: offerErr } = await supabase
+          .from("offer_pyramids")
+          .select(OFFER_PYRAMID_SELECT)
+          .eq("id", offerId)
+          .eq("user_id", userId)
+          .maybeSingle();
 
-    const effectivePrompt =
-      type === "post"
-        ? buildPromptByType({
-            type: "post",
-            platform: (platform || "linkedin") as any,
-            theme: ((theme || "educate").toLowerCase() as any) || "educate",
-            subject: subject || prompt,
-            tone: tone || "professional",
-            batchCount: typeof batchCountRaw === "number" ? batchCountRaw : Number(batchCountRaw ?? 1) || 1,
-            promoKind,
-            offerLink,
-          } as any)
-        : type === "video"
-          ? buildPromptByType({
-              type: "video",
-              platform: (platform || "youtube_long") as any,
-              subject: subject || prompt,
-              duration: (duration || "5min") as any,
-              tone: tone || undefined,
-              targetWordCount: Number.isFinite(targetWordCount) ? targetWordCount : undefined,
-              language: "fr",
-            } as any)
-          : type === "offer"
-            ? buildOfferPrompt({
-                offerType: normalizeOfferType(offerTypeRaw) === "paid_training" ? "paid_training" : "lead_magnet",
-                offerMode: (offerMode as OfferMode) || "from_scratch",
-                theme: (offerThemeRaw || theme || subject || prompt || "").trim() || undefined,
-                leadMagnetFormat: leadMagnetFormat || undefined,
-                sourceOffer: sourceOffer || null,
-                language: "fr",
-              })
-            : type === "email"
-              ? buildEmailPrompt({
-                  type: emailPromptType,
-                  formality,
+        if (!offerErr && offerRow) offerContextForSalesEmail = offerRow as any;
+      } catch {
+        // fail-open
+      }
+    }
 
-                  // Newsletter
-                  theme: uiEmailType === "newsletter" ? (newsletterTheme || subject || prompt) : undefined,
-                  cta:
-                    uiEmailType === "newsletter"
-                      ? newsletterCta || undefined
-                      : uiEmailType === "sales"
-                        ? salesCta || undefined
-                        : undefined,
+    // ✅ Validation emails sales : il faut une offre (pyramide ou nom) OU un manuel
+    const emailTypeRaw = safeString(body.emailType).trim().toLowerCase();
+    const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
+    const computedEmailType =
+      emailTypeRaw === "sales"
+        ? (salesModeRaw === "sequence_7" ? ("sales_sequence_7" as const) : ("sales_single" as const))
+        : emailTypeRaw === "onboarding"
+          ? ("onboarding_klt_3" as const)
+          : ("newsletter" as const);
 
-                  // Sales / Onboarding: subject intention
-                  subject:
-                    uiEmailType === "sales"
-                      ? subject || prompt
-                      : uiEmailType === "onboarding"
-                        ? subject || prompt
-                        : undefined,
+    if (type === "email" && (computedEmailType === "sales_single" || computedEmailType === "sales_sequence_7")) {
+      const hasManual =
+        !!offerManual &&
+        (safeString(offerManual?.name).trim() ||
+          safeString(offerManual?.promise).trim() ||
+          safeString(offerManual?.main_outcome).trim());
 
-                  offerLink: offerLink || null,
+      if (!offerId && !offerName && !hasManual) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente.",
+          },
+          { status: 400 },
+        );
+      }
+    }
 
-                  offer:
-                    uiEmailType === "sales"
-                      ? offerContext
-                        ? {
-                            id: (offerContext as any)?.id ?? undefined,
-                            name: (offerContext as any)?.name ?? undefined,
-                            level: (offerContext as any)?.level ?? null,
-                            promise: (offerContext as any)?.promise ?? null,
-                            description: (offerContext as any)?.description ?? null,
-                            price_min: (offerContext as any)?.price_min ?? null,
-                            price_max: (offerContext as any)?.price_max ?? null,
-                            main_outcome: (offerContext as any)?.main_outcome ?? null,
-                            format: (offerContext as any)?.format ?? null,
-                            delivery: (offerContext as any)?.delivery ?? null,
-                          }
-                        : offerName
-                          ? { name: offerName }
-                          : null
-                      : null,
+    /** ---------------------------
+     * Prompt builder
+     * -------------------------- */
 
-                  offerManual:
-                    uiEmailType === "sales" && isRecord(offerManual)
-                      ? {
-                          name: safeString((offerManual as any)?.name) || null,
-                          promise: safeString((offerManual as any)?.promise) || null,
-                          main_outcome: safeString((offerManual as any)?.main_outcome) || null,
-                          description: safeString((offerManual as any)?.description) || null,
-                          price: safeString((offerManual as any)?.price) || null,
-                        }
-                      : null,
+    const effectivePrompt = (() => {
+      if (type === "post") {
+        const platform = safeString(body.platform).trim() as any;
+        const subject = safeString(body.subject).trim();
+        const theme = safeString(body.theme).trim();
+        const tone = safeString(body.tone).trim() as any;
 
-                  // Onboarding
-                  leadMagnetLink: uiEmailType === "onboarding" ? leadMagnetLink || null : null,
-                  onboardingCta: uiEmailType === "onboarding" ? onboardingCta || null : null,
-                })
-              : type === "article"
-                ? buildArticlePrompt({
-                    step: articleStep,
-                    subject: subject || seoKeyword,
-                    objective: objective as any,
-                    primaryKeyword: seoKeyword || undefined,
-                    secondaryKeywords: parseSecondaryKeywords(secondaryKeywordsRaw),
-                    links: parseLinks(linksRaw),
-                    ctaText: ctaText || null,
-                    ctaLink: ctaLink || null,
-                    approvedPlan: articleStep === "write" ? approvedPlan || null : null,
-                  })
-                : prompt;
+        const offerLink = safeString(body.offerLink).trim() || undefined;
+
+        return buildSocialPostPrompt({
+          platform,
+          subject: subject || theme || prompt || "Contenu",
+          tone,
+          batchCount,
+          promoKind,
+          offerLink,
+        } as any);
+      }
+
+      if (type === "video") {
+        const duration = (safeString(body.duration).trim() || "60s") as any;
+        const theme = safeString(body.theme).trim();
+        const subject = safeString(body.subject).trim();
+        const tone = safeString(body.tone).trim();
+
+        return buildVideoScriptPrompt({
+          duration,
+          theme: theme || subject || prompt || "Vidéo",
+          tone: tone || undefined,
+          targetWordCount: typeof body.targetWordCount === "number" ? body.targetWordCount : undefined,
+          offerLink: safeString(body.offerLink).trim() || undefined,
+        } as any);
+      }
+
+      if (type === "email") {
+        const emailTypeRaw = safeString(body.emailType).trim().toLowerCase();
+        const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
+        const formality = normalizeFormality(body.formality);
+
+        const newsletterTheme = safeString(body.newsletterTheme).trim();
+        const newsletterCta = safeString(body.newsletterCta).trim();
+        const salesCta = safeString(body.salesCta).trim();
+        const leadMagnetLink = safeString(body.leadMagnetLink).trim();
+        const onboardingCta = safeString(body.onboardingCta).trim();
+
+        let emailType: any = "newsletter";
+        if (emailTypeRaw === "sales") {
+          emailType = salesModeRaw === "sequence_7" ? "sales_sequence_7" : "sales_single";
+        } else if (emailTypeRaw === "onboarding") {
+          emailType = "onboarding_klt_3";
+        } else {
+          emailType = "newsletter";
+        }
+
+        return buildEmailPrompt({
+          type: emailType,
+          theme:
+            newsletterTheme ||
+            safeString(body.subject).trim() ||
+            safeString(body.theme).trim() ||
+            prompt ||
+            "Email",
+          cta: (newsletterCta || salesCta || onboardingCta || undefined) as any,
+          leadMagnetLink: leadMagnetLink || undefined,
+          offer:
+            emailType === "sales_single" || emailType === "sales_sequence_7"
+              ? offerContextForSalesEmail
+                ? {
+                    id: (offerContextForSalesEmail as any)?.id ?? undefined,
+                    name: (offerContextForSalesEmail as any)?.name ?? undefined,
+                    level: (offerContextForSalesEmail as any)?.level ?? undefined,
+                    promise: (offerContextForSalesEmail as any)?.promise ?? undefined,
+                    description: (offerContextForSalesEmail as any)?.description ?? undefined,
+                    price_min: (offerContextForSalesEmail as any)?.price_min ?? undefined,
+                    price_max: (offerContextForSalesEmail as any)?.price_max ?? undefined,
+                    main_outcome: (offerContextForSalesEmail as any)?.main_outcome ?? undefined,
+                    format: (offerContextForSalesEmail as any)?.format ?? undefined,
+                    delivery: (offerContextForSalesEmail as any)?.delivery ?? undefined,
+                  }
+                : offerName
+                  ? { name: offerName }
+                  : undefined
+              : undefined,
+          offerManual:
+            (emailType === "sales_single" || emailType === "sales_sequence_7") && offerManual
+              ? {
+                  name: safeString(offerManual.name).trim() || null,
+                  promise: safeString(offerManual.promise).trim() || null,
+                  main_outcome: safeString(offerManual.main_outcome).trim() || null,
+                  description: safeString(offerManual.description).trim() || null,
+                  price: safeString(offerManual.price).trim() || null,
+                }
+              : undefined,
+          formality,
+        } as any);
+      }
+
+      if (type === "article") {
+        const step = normalizeArticleStep(body.articleStep);
+        const objective = normalizeArticleObjective(body.objective);
+        if (!objective) return buildPromptByType({ type: "generic", prompt: prompt || "Article" });
+
+        const subject =
+          safeString(body.subject).trim() ||
+          safeString(body.theme).trim() ||
+          prompt ||
+          "Article";
+
+        const primaryKeyword = safeString(body.seoKeyword).trim() || undefined;
+        const secondaryKeywords = parseSecondaryKeywords(safeString(body.secondaryKeywords));
+        const links = parseLinks(safeString(body.links));
+        const ctaText = safeString(body.ctaText).trim() || safeString(body.cta).trim() || null;
+        const ctaLink = safeString(body.ctaLink).trim() || null;
+        const approvedPlan = safeString(body.approvedPlan).trim() || null;
+
+        return buildArticlePrompt({
+          step,
+          subject,
+          objective,
+          primaryKeyword,
+          secondaryKeywords: secondaryKeywords.length ? secondaryKeywords : undefined,
+          links: links.length ? links : undefined,
+          ctaText,
+          ctaLink,
+          approvedPlan: step === "write" ? approvedPlan : null,
+        } as any);
+      }
+
+      if (type === "offer") {
+        const theme = safeString(body.theme).trim() || safeString(body.subject).trim() || prompt || "Offre";
+        const offerType = normalizeOfferType(body.offerType);
+        if (!offerType) return buildPromptByType({ type: "generic", prompt: theme });
+
+        const leadMagnetFormat = safeString(body.leadMagnetFormat).trim() || undefined;
+        const target = safeString(body.target).trim() || undefined;
+
+        return buildOfferPrompt({
+          offerMode,
+          offerType,
+          theme,
+          target,
+          leadMagnetFormat,
+          sourceOffer: offerMode === "from_pyramid" ? sourceOffer : null,
+          language: "fr",
+        } as any);
+      }
+
+      return buildPromptByType({ type: "generic", prompt: prompt || safeString(body.subject).trim() || "Contenu" });
+    })();
 
     const matchPrompt =
       type === "post"
-        ? subject || prompt
+        ? safeString(body.subject).trim() || safeString(body.theme).trim() || prompt
         : type === "email"
-          ? subject || prompt
+          ? safeString(body.subject).trim() || prompt
           : type === "article"
-            ? subject || seoKeyword
+            ? safeString(body.subject).trim() || safeString(body.seoKeyword).trim() || prompt
             : type === "video"
-              ? subject || prompt
+              ? safeString(body.subject).trim() || prompt
               : type === "offer"
                 ? offerMode === "from_pyramid"
                   ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_pyramide")
-                  : (offerThemeRaw || theme || subject || prompt)
+                  : safeString(body.theme).trim() || safeString(body.subject).trim() || prompt
                 : prompt;
 
-    const systemPrompt = [
-      "Tu es Tipote, un assistant business & contenu.",
-      "Tu écris en français, avec un style clair, pro, actionnable.",
-      "Tu ne mentionnes pas que tu es une IA.",
-      "Tu rends un contenu final prêt à publier.",
-      "IMPORTANT: format texte brut (plain text).",
-      type === "article"
-        ? "Exception autorisée: tu peux utiliser **gras** UNIQUEMENT pour mettre en évidence les mots-clés SEO."
-        : "Interdit: markdown (pas de #, pas de **, pas de listes numérotées '1.', pas de backticks).",
-      "Si tu structures: sauts de lignes + tirets simples '- ' uniquement.",
-      "Pas de blabla meta, pas de disclaimers, pas d'intro inutiles.",
-      "Tu adaptes ton vocabulaire, tes angles, et tes CTA au persona (douleurs, désirs, objections, déclencheurs d'achat).",
-      "Tu tiens compte de l'onboarding (business profile) et du business plan si disponibles.",
-    ].join("\n");
+    /** ---------------------------
+     * Context builder
+     * -------------------------- */
 
     const userContextLines: string[] = [];
     userContextLines.push(`Type: ${type}`);
     if (channel) userContextLines.push(`Canal: ${channel}`);
-    if (scheduledDate) userContextLines.push(`Date planifiée : ${scheduledDate}`);
+    if (scheduledDate) userContextLines.push(`Date planifiée: ${scheduledDate}`);
     if (tagsCsv) userContextLines.push(`Tags: ${tagsCsv}`);
 
     if (type === "video") {
-      if (platform) userContextLines.push(`Plateforme vidéo: ${platform}`);
-      if (duration) userContextLines.push(`Durée vidéo: ${duration}`);
-      if (Number.isFinite(targetWordCount)) userContextLines.push(`TargetWordCount (override): ${targetWordCount}`);
+      if (body.platform) userContextLines.push(`Plateforme: ${safeString(body.platform).trim()}`);
+      if (body.duration) userContextLines.push(`Durée: ${safeString(body.duration).trim()}`);
+      if (typeof body.targetWordCount === "number") userContextLines.push(`TargetWordCount: ${body.targetWordCount}`);
     }
 
     if (type === "offer") {
-      if (offerTypeRaw) userContextLines.push(`OfferType: ${offerTypeRaw}`);
+      if (body.offerType) userContextLines.push(`OfferType: ${safeString(body.offerType).trim()}`);
       userContextLines.push(`OfferMode: ${offerMode}`);
-      if (offerMode === "from_scratch") {
-        if (offerThemeRaw || theme || subject) userContextLines.push(`OfferTheme: ${offerThemeRaw || theme || subject}`);
-        if (leadMagnetFormat) userContextLines.push(`LeadMagnetFormat: ${leadMagnetFormat}`);
-      } else {
-        userContextLines.push("SourceOffer: (see below in JSON)");
+      if (offerMode === "from_pyramid") {
+        userContextLines.push("SourceOffer (JSON):");
         userContextLines.push(JSON.stringify(sourceOffer));
       }
     }
@@ -1389,54 +1209,32 @@ export async function POST(req: Request) {
       const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt || effectivePrompt, tags });
       if (knowledgeSnippets.length) {
         userContextLines.push("");
-        userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
-        knowledgeSnippets.forEach((k, idx) => {
-          userContextLines.push("");
-          userContextLines.push(`Ressource ${idx + 1}: ${k.title}`);
-          userContextLines.push(`Source: ${k.source}`);
-          userContextLines.push("Extrait:");
-          userContextLines.push(k.snippet);
-        });
-      }
-    } catch {
-      // fail-open
-    }
-
-    userContextLines.push("");
-    userContextLines.push("Brief :");
-    userContextLines.push(effectivePrompt);
-
-    // ✅ Async job = placeholder row dans content_item
-    const generatingStatus = "generating";
-    const finalStatus = scheduledDate ? "scheduled" : "draft";
-
-    // On insère un placeholder (content vide) => jobId = content_item.id
-    const placeholderEN = await insertContentEN({
-      supabase,
-      userId,
-      type,
-      title: null,
-      content: "",
-      channel,
-      scheduledDate,
-      tags,
-      tagsCsv,
-      status: generatingStatus,
-    });
-
-    let jobId: string | null = null;
-    let schema: "en" | "fr" = "en";
-
-    if (!placeholderEN.error && placeholderEN.data?.id) {
-      jobId = String((placeholderEN.data as any).id);
-      schema = "en";
-    } else {
-      const enErr = placeholderEN.error as PostgrestError | null;
-      if (!isMissingColumnError(enErr?.message)) {
-        return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
+          userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
+          knowledgeSnippets.forEach((k, idx) => {
+            userContextLines.push("");
+            userContextLines.push(`Ressource ${idx + 1}: ${k.title}`);
+            userContextLines.push(`Source: ${k.source}`);
+            userContextLines.push("Extrait:");
+            userContextLines.push(k.snippet);
+          });
+        }
+      } catch {
+        // fail-open
       }
 
-      const placeholderFR = await insertContentFR({
+      userContextLines.push("");
+      userContextLines.push("Brief :");
+      userContextLines.push(effectivePrompt);
+
+      /** ---------------------------
+       * Async job = placeholder row dans content_item
+       * -------------------------- */
+
+      const generatingStatus = "generating";
+      const finalStatus = scheduledDate ? "scheduled" : "draft";
+
+      // Placeholder (content vide) => jobId = content_item.id
+      const placeholderEN = await insertContentEN({
         supabase,
         userId,
         type,
@@ -1449,144 +1247,181 @@ export async function POST(req: Request) {
         status: generatingStatus,
       });
 
-      if (placeholderFR.error || !placeholderFR.data?.id) {
-        return NextResponse.json(
-          { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
-          { status: 400 },
-        );
-      }
+      let jobId: string | null = null;
+      let schema: "en" | "fr" = "en";
 
-      jobId = String((placeholderFR.data as any).id);
-      schema = "fr";
-    }
-
-    // Fire-and-forget: on lance la génération et on update la row
-    // (sur serveur Node Hostinger, ça tient ; si crash => la row reste "generating")
-    void (async () => {
-      try {
-        const raw = await callProvider({
-          provider,
-          apiKey,
-          system: systemPrompt,
-          user: userContextLines.join("\n"),
-        });
-
-        const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-
-        const finalContent = cleaned?.trim() ?? "";
-        if (!finalContent) {
-          throw new Error("Empty content from model");
+      if (!placeholderEN.error && placeholderEN.data?.id) {
+        jobId = String((placeholderEN.data as any).id);
+        schema = "en";
+      } else {
+        const enErr = placeholderEN.error as PostgrestError | null;
+        if (!isMissingColumnError(enErr?.message)) {
+          return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
         }
 
-        const title = (() => {
-          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-          if (!firstLine) return null;
-          const t = firstLine.replace(/^#+\s*/, "").trim();
-          if (!t) return null;
-          return t.slice(0, 120);
-        })();
+        const placeholderFR = await insertContentFR({
+          supabase,
+          userId,
+          type,
+          title: null,
+          content: "",
+          channel,
+          scheduledDate,
+          tags,
+          tagsCsv,
+          status: generatingStatus,
+        });
 
-        if (schema === "en") {
-          const upd = await updateContentEN({
-            supabase,
-            id: jobId!,
-            title,
-            content: finalContent,
-            status: finalStatus,
-            tags,
-            tagsCsv,
+        if (placeholderFR.error || !placeholderFR.data?.id) {
+          return NextResponse.json(
+            { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
+            { status: 400 },
+          );
+        }
+
+        jobId = String((placeholderFR.data as any).id);
+        schema = "fr";
+      }
+
+      // Fire-and-forget: génération + update de la row
+      // Si crash => la row reste "generating" (acceptable)
+      void (async () => {
+        try {
+          const raw = await callClaude({
+            apiKey,
+            system: systemPrompt,
+            user: userContextLines.join("\n"),
           });
 
-          if (upd.error) {
-            const e = upd.error as PostgrestError | null;
-            // Si schéma a changé entre-temps => tentative FR
-            if (isMissingColumnError(e?.message)) {
-              await updateContentFR({
-                supabase,
-                id: jobId!,
-                title,
-                content: finalContent,
-                status: finalStatus,
-                tags,
-                tagsCsv,
-              });
+          const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+          const finalContent = cleaned?.trim() ?? "";
+          if (!finalContent) throw new Error("Empty content from model");
+
+          const title = (() => {
+            const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+            if (!firstLine) return null;
+            const t = firstLine.replace(/^#+\s*/, "").trim();
+            if (!t) return null;
+            return t.slice(0, 120);
+          })();
+
+          // ✅ Consomme 1 crédit uniquement si génération OK (après succès IA)
+          try {
+            await consumeCredits(userId, 1, {
+              kind: "content_generate",
+              type,
+              job_id: jobId,
+              channel,
+              scheduled_date: scheduledDate,
+              tags: tagsCsv,
+            });
+          } catch (e) {
+            const code = (e as any)?.code || (e as any)?.message;
+            if (code === "NO_CREDITS") {
+              throw new Error("NO_CREDITS");
+            }
+            // fail-open: si RPC plante (rare), on ne bloque pas la sauvegarde
+          }
+
+          if (schema === "en") {
+            const upd = await updateContentEN({
+              supabase,
+              id: jobId!,
+              title,
+              content: finalContent,
+              status: finalStatus,
+              tags,
+              tagsCsv,
+            });
+
+            if (upd.error) {
+              const e = upd.error as PostgrestError | null;
+              if (isMissingColumnError(e?.message)) {
+                await updateContentFR({
+                  supabase,
+                  id: jobId!,
+                  title,
+                  content: finalContent,
+                  status: finalStatus,
+                  tags,
+                  tagsCsv,
+                });
+              }
+            }
+          } else {
+            const upd = await updateContentFR({
+              supabase,
+              id: jobId!,
+              title,
+              content: finalContent,
+              status: finalStatus,
+              tags,
+              tagsCsv,
+            });
+
+            if (upd.error) {
+              const e = upd.error as PostgrestError | null;
+              if (isMissingColumnError(e?.message)) {
+                await updateContentEN({
+                  supabase,
+                  id: jobId!,
+                  title,
+                  content: finalContent,
+                  status: finalStatus,
+                  tags,
+                  tagsCsv,
+                });
+              }
             }
           }
-        } else {
-          const upd = await updateContentFR({
-            supabase,
-            id: jobId!,
-            title,
-            content: finalContent,
-            status: finalStatus,
-            tags,
-            tagsCsv,
-          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Unknown error";
 
-          if (upd.error) {
-            const e = upd.error as PostgrestError | null;
-            if (isMissingColumnError(e?.message)) {
+          // Best-effort: repasse en draft avec message minimal
+          try {
+            if (schema === "en") {
               await updateContentEN({
                 supabase,
                 id: jobId!,
-                title,
-                content: finalContent,
-                status: finalStatus,
+                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                status: "draft",
+                tags,
+                tagsCsv,
+              });
+            } else {
+              await updateContentFR({
+                supabase,
+                id: jobId!,
+                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                status: "draft",
                 tags,
                 tagsCsv,
               });
             }
+          } catch {
+            // ignore
           }
         }
-      } catch (err) {
-        // Best-effort: repasse en draft avec message minimal si possible, sinon ignore
-        const msg = err instanceof Error ? err.message : "Unknown error";
+      })();
 
-        try {
-          if (schema === "en") {
-            await updateContentEN({
-              supabase,
-              id: jobId!,
-              title: "Erreur génération",
-              content: `Erreur: ${msg}`,
-              status: "draft",
-              tags,
-              tagsCsv,
-            });
-          } else {
-            await updateContentFR({
-              supabase,
-              id: jobId!,
-              title: "Erreur génération",
-              content: `Erreur: ${msg}`,
-              status: "draft",
-              tags,
-              tagsCsv,
-            });
-          }
-        } catch {
-          // ignore
-        }
-      }
-    })();
-
-    // Réponse immédiate (async)
-    return NextResponse.json(
-      {
-        ok: true,
-        jobId,
-        provider,
-        maskedKey: maskKey(apiKey),
-        status: generatingStatus,
-        note:
-          "Génération en cours. Poll la ressource content_item par jobId (ex: GET /api/content/[id]) pour récupérer le contenu.",
-      },
-      { status: 202 },
-    );
-  } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+      // Réponse immédiate (async)
+      return NextResponse.json(
+        {
+          ok: true,
+          jobId,
+          provider: "claude" as Provider,
+          status: generatingStatus,
+          note:
+            "Génération en cours. Poll la ressource content_item par jobId (ex: GET /api/content/[id]) pour récupérer le contenu.",
+        },
+        { status: 202 },
+      );
+    } catch (e) {
+      return NextResponse.json(
+        { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+        { status: 500 },
+      );
+    }
   }
-}

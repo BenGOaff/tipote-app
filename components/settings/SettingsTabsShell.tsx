@@ -8,9 +8,6 @@ import {
   Globe,
   Brain,
   CreditCard,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
   Save,
   Linkedin,
   Instagram,
@@ -20,32 +17,20 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
-import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 type TabKey = "profile" | "settings" | "ai" | "pricing";
 
@@ -67,30 +52,6 @@ type ProfileRow = {
   niche?: string | null;
   mission?: string | null;
 };
-
-type Provider = "openai" | "claude" | "gemini";
-
-type ApiKeyState = {
-  loading: boolean;
-  configured: boolean;
-  hasKey: boolean;
-  masked: string | null;
-  value: string;
-  saving: boolean;
-  error: string | null;
-};
-
-function makeApiKeyState(): ApiKeyState {
-  return {
-    loading: true,
-    configured: false,
-    hasKey: false,
-    masked: null,
-    value: "",
-    saving: false,
-    error: null,
-  };
-}
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const router = useRouter();
@@ -170,11 +131,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const profileDirty = useMemo(() => {
     const i = initialProfile;
-    return (
-      (i?.first_name ?? "") !== firstName ||
-      (i?.niche ?? "") !== niche ||
-      (i?.mission ?? "") !== mission
-    );
+    return (i?.first_name ?? "") !== firstName || (i?.niche ?? "") !== niche || (i?.mission ?? "") !== mission;
   }, [initialProfile, firstName, niche, mission]);
 
   const saveProfile = () => {
@@ -233,9 +190,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       setResetting(true);
 
       const res = await fetch("/api/account/reset", { method: "POST" });
-      const json = (await res.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
-        | null;
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
 
       if (!res.ok || !json?.ok) {
         toast({
@@ -251,8 +206,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         description: "On te renvoie vers l’onboarding.",
       });
 
-      // ✅ Dans ton code serveur (app/app/page.tsx), l’absence de onboarding_completed => redirect("/onboarding")
-      // Donc aller directement sur /onboarding est OK.
       window.location.href = "/onboarding";
     } catch (e) {
       toast({
@@ -264,129 +217,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       setResetting(false);
     }
   }
-
-  // -------------------------
-  // API Keys (connecté à /api/user/api-keys)
-  // -------------------------
-  const [keys, setKeys] = useState<Record<Provider, ApiKeyState>>({
-    openai: makeApiKeyState(),
-    claude: makeApiKeyState(),
-    gemini: makeApiKeyState(),
-  });
-
-  const loadKey = async (provider: Provider) => {
-    setKeys((s) => ({
-      ...s,
-      [provider]: { ...s[provider], loading: true, error: null },
-    }));
-
-    try {
-      const res = await fetch(`/api/user/api-keys?provider=${provider}`, { method: "GET" });
-      const json = (await res.json().catch(() => null)) as any;
-      if (!json?.ok) throw new Error(json?.error || "Erreur");
-
-      setKeys((s) => ({
-        ...s,
-        [provider]: {
-          ...s[provider],
-          loading: false,
-          configured: Boolean(json.configured),
-          hasKey: Boolean(json.hasKey),
-          masked: json.masked ?? null,
-          value: "",
-          error: null,
-        },
-      }));
-    } catch (e: any) {
-      setKeys((s) => ({
-        ...s,
-        [provider]: {
-          ...s[provider],
-          loading: false,
-          error: e?.message ?? "Erreur",
-        },
-      }));
-    }
-  };
-
-  useEffect(() => {
-    if (tab !== "ai") return;
-    loadKey("openai");
-    loadKey("claude");
-    loadKey("gemini");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
-
-  const saveKey = async (provider: Provider) => {
-    const v = (keys[provider].value ?? "").trim();
-    if (!v) return;
-
-    setKeys((s) => ({
-      ...s,
-      [provider]: { ...s[provider], saving: true, error: null },
-    }));
-
-    try {
-      const res = await fetch("/api/user/api-keys", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: v }),
-      });
-
-      const json = (await res.json().catch(() => null)) as any;
-      if (!json?.ok) throw new Error(json?.error || "Erreur");
-
-      ampTrack("tipote_api_key_saved", {
-        provider,
-      });
-
-      toast({ title: "Clé enregistrée", description: provider.toUpperCase() });
-      await loadKey(provider);
-    } catch (e: any) {
-      setKeys((s) => ({
-        ...s,
-        [provider]: { ...s[provider], saving: false, error: e?.message ?? "Erreur" },
-      }));
-      return;
-    }
-
-    setKeys((s) => ({
-      ...s,
-      [provider]: { ...s[provider], saving: false, value: "" },
-    }));
-  };
-
-  const deleteKey = async (provider: Provider) => {
-    setKeys((s) => ({
-      ...s,
-      [provider]: { ...s[provider], saving: true, error: null },
-    }));
-
-    try {
-      const res = await fetch("/api/user/api-keys", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
-      });
-
-      const json = (await res.json().catch(() => null)) as any;
-      if (!json?.ok) throw new Error(json?.error || "Erreur");
-
-      toast({ title: "Clé supprimée", description: provider.toUpperCase() });
-      await loadKey(provider);
-    } catch (e: any) {
-      setKeys((s) => ({
-        ...s,
-        [provider]: { ...s[provider], saving: false, error: e?.message ?? "Erreur" },
-      }));
-      return;
-    }
-
-    setKeys((s) => ({
-      ...s,
-      [provider]: { ...s[provider], saving: false, value: "" },
-    }));
-  };
 
   return (
     <Tabs defaultValue="profile" value={tab} onValueChange={onTabChange} className="w-full">
@@ -401,7 +231,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </TabsTrigger>
         <TabsTrigger value="ai" className="gap-2">
           <Brain className="w-4 h-4" />
-          IA & API
+          IA & Crédits
         </TabsTrigger>
         <TabsTrigger value="pricing" className="gap-2">
           <CreditCard className="w-4 h-4" />
@@ -422,12 +252,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="name">Prénom</Label>
-              <Input
-                id="name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={profileLoading}
-              />
+              <Input id="name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={profileLoading} />
             </div>
 
             <div className="space-y-2">
@@ -547,9 +372,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Niche et Persona</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Généré automatiquement après l&apos;onboarding. Vous pouvez le modifier ici.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Généré automatiquement après l&apos;onboarding. Vous pouvez le modifier ici.</p>
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -621,306 +444,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </Card>
       </TabsContent>
 
-      {/* IA & API */}
+      {/* IA & CRÉDITS */}
       <TabsContent value="ai" className="space-y-6">
-        <Card className="p-6 bg-primary/5 border-primary/20">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-              <Brain className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-2">Configuration des clés API IA</h3>
-              <p className="text-muted-foreground text-sm">
-                <strong>IA Niveau 1 (Stratégie) :</strong> Gérée par Tipote™
-                <br />
-                <strong>IA Niveau 2 (Contenu) :</strong> Vos clés API personnelles
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* OpenAI */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.openai.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.openai.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium">OpenAI GPT-4</p>
-                <p className="text-sm text-muted-foreground">
-                  {keys.openai.loading
-                    ? "Chargement…"
-                    : keys.openai.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
-                </p>
-              </div>
-            </div>
-
-            {keys.openai.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Input
-              type="password"
-              value={keys.openai.hasKey ? keys.openai.masked ?? "" : keys.openai.value}
-              onChange={(e) =>
-                setKeys((s) => ({ ...s, openai: { ...s.openai, value: e.target.value } }))
-              }
-              placeholder="sk-..."
-              className="flex-1"
-              disabled={keys.openai.loading || keys.openai.hasKey}
-            />
-            {keys.openai.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("openai")}
-                disabled={keys.openai.saving || keys.openai.loading}
-              >
-                Supprimer
-              </Button>
-            ) : (
-              <Button
-                onClick={() => saveKey("openai")}
-                disabled={keys.openai.saving || keys.openai.loading || !keys.openai.value.trim()}
-              >
-                {keys.openai.saving ? "Connexion…" : "Connecter"}
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://platform.openai.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur platform.openai.com <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-
-          {keys.openai.error ? <p className="text-xs text-destructive mt-2">{keys.openai.error}</p> : null}
-        </Card>
-
-        {/* Claude */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.claude.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.claude.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium">Claude (Anthropic)</p>
-                <p className="text-sm text-muted-foreground">
-                  {keys.claude.loading
-                    ? "Chargement…"
-                    : keys.claude.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
-                </p>
-              </div>
-            </div>
-
-            {keys.claude.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Input
-              type="password"
-              value={keys.claude.hasKey ? keys.claude.masked ?? "" : keys.claude.value}
-              onChange={(e) =>
-                setKeys((s) => ({ ...s, claude: { ...s.claude, value: e.target.value } }))
-              }
-              placeholder="sk-ant-..."
-              className="flex-1"
-              disabled={keys.claude.loading || keys.claude.hasKey}
-            />
-            {keys.claude.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("claude")}
-                disabled={keys.claude.saving || keys.claude.loading}
-              >
-                Supprimer
-              </Button>
-            ) : (
-              <Button
-                onClick={() => saveKey("claude")}
-                disabled={keys.claude.saving || keys.claude.loading || !keys.claude.value.trim()}
-              >
-                {keys.claude.saving ? "Connexion…" : "Connecter"}
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://console.anthropic.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur console.anthropic.com <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-
-          {keys.claude.error ? <p className="text-xs text-destructive mt-2">{keys.claude.error}</p> : null}
-        </Card>
-
-        {/* Gemini */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${
-                  keys.gemini.hasKey ? "bg-success/10" : "bg-muted"
-                } flex items-center justify-center`}
-              >
-                {keys.gemini.hasKey ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium">Google Gemini</p>
-                <p className="text-sm text-muted-foreground">
-                  {keys.gemini.loading
-                    ? "Chargement…"
-                    : keys.gemini.hasKey
-                      ? "Clé configurée"
-                      : "Non configuré"}
-                </p>
-              </div>
-            </div>
-
-            {keys.gemini.hasKey ? (
-              <Badge className="bg-success text-success-foreground">Connecté</Badge>
-            ) : (
-              <Badge variant="outline">Non connecté</Badge>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Input
-              type="password"
-              value={keys.gemini.hasKey ? keys.gemini.masked ?? "" : keys.gemini.value}
-              onChange={(e) =>
-                setKeys((s) => ({ ...s, gemini: { ...s.gemini, value: e.target.value } }))
-              }
-              placeholder="AIza..."
-              className="flex-1"
-              disabled={keys.gemini.loading || keys.gemini.hasKey}
-            />
-            {keys.gemini.hasKey ? (
-              <Button
-                variant="outline"
-                onClick={() => deleteKey("gemini")}
-                disabled={keys.gemini.saving || keys.gemini.loading}
-              >
-                Supprimer
-              </Button>
-            ) : (
-              <Button
-                onClick={() => saveKey("gemini")}
-                disabled={keys.gemini.saving || keys.gemini.loading || !keys.gemini.value.trim()}
-              >
-                {keys.gemini.saving ? "Connexion…" : "Connecter"}
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://aistudio.google.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Obtenir une clé sur makersuite.google.com <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-
-          {keys.gemini.error ? <p className="text-xs text-destructive mt-2">{keys.gemini.error}</p> : null}
-        </Card>
-
-        {/* Perplexity (UI only) */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">Perplexity</p>
-                <p className="text-sm text-muted-foreground">Pour sourcing et actualités</p>
-              </div>
-            </div>
-            <Badge variant="outline">Non connecté</Badge>
-          </div>
-          <div className="flex gap-2">
-            <Input type="password" placeholder="pplx-..." className="flex-1" disabled />
-            <Button disabled>Connecter</Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://www.perplexity.ai/help-center/fr/articles/10352995-parametres-de-l-api"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Trouver votre clé Perplexity <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-        </Card>
-
-        {/* Systeme.io API (UI only) */}
-        <Card className="p-6">
-          <h3 className="text-lg font-bold mb-4">API Systeme.io</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Connectez votre compte Systeme.io pour synchroniser vos contacts et ventes.
-          </p>
-          <div className="flex gap-2">
-            <Input type="password" placeholder="Votre clé API Systeme.io" className="flex-1" disabled />
-            <Button disabled>Connecter</Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            <a
-              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Trouver votre clé dans Systeme.io <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-        </Card>
+        <AiCreditsPanel />
       </TabsContent>
 
       {/* ABONNEMENT */}
