@@ -9,10 +9,23 @@ import { Badge } from "@/components/ui/badge";
 
 import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
+const CREDITS_PACK_URL = "https://www.tipote.com/pack-credits";
+
+function safeString(v: unknown) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
 export default function AiCreditsPanel() {
   const { loading, balance, error, refresh } = useCreditsBalance();
 
   const remaining = balance?.total_remaining ?? 0;
+
+  // On n’a pas ici les infos profile (email/adresse),
+  // donc on laisse la version simple (sans prefill) dans ce panneau.
+  // Le prefill complet est fait dans BillingSection (qui a data.profile).
+  const creditsPackUrl = CREDITS_PACK_URL;
 
   return (
     <div className="space-y-6">
@@ -71,7 +84,13 @@ export default function AiCreditsPanel() {
 
           <div className="flex gap-2">
             <Button asChild>
-              <Link href="/settings?tab=billing">Recharger / Upgrade</Link>
+              <a href={creditsPackUrl} target="_blank" rel="noopener noreferrer">
+                Recharger / Upgrade
+              </a>
+            </Button>
+
+            <Button variant="outline" asChild>
+              <Link href="/settings?tab=billing">Voir l’abonnement</Link>
             </Button>
           </div>
         </div>

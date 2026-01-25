@@ -1,4 +1,3 @@
-// components/settings/BillingSection.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +20,16 @@ type SubscriptionPayload = {
     id?: string;
     email?: string | null;
     first_name?: string | null;
+    // Selon les versions, on peut avoir last_name OU surname (Systeme.io = surname)
+    last_name?: string | null;
+    surname?: string | null;
+
+    // Adresse (selon ce que tu as déjà stocké côté profiles)
+    street_address?: string | null;
+    postcode?: string | null;
+    city?: string | null;
+    country?: string | null;
+
     locale?: string | null;
     plan?: string | null;
     sio_contact_id?: string | null;
@@ -33,9 +42,9 @@ type SubscriptionPayload = {
   error?: string;
 };
 
-// ✅ Roadmap: aligner sur free/basic/pro/elite
-// 🔁 Compat: on accepte "essential" comme alias legacy => "pro"
 type PlanKey = "free" | "basic" | "pro" | "elite" | "essential";
+
+const CREDITS_PACK_URL = "https://www.tipote.com/pack-credits";
 
 function safeString(v: unknown) {
   if (v === null || v === undefined) return null;
@@ -92,8 +101,6 @@ function planMeta(plan: Exclude<PlanKey, "essential">) {
   }
 }
 
-// 🔁 On garde les anciennes URLs "essential" pour ne rien casser,
-// mais on expose maintenant "pro" (alias de essential).
 const ORDER_FORMS = {
   basic: {
     monthly: "https://www.tipote.com/tipote-basic-mensuel",
@@ -103,7 +110,6 @@ const ORDER_FORMS = {
     monthly: "https://www.tipote.com/tipote-essential-mensuel",
     annual: "https://www.tipote.com/tipote-essential-annuel",
   },
-  // alias legacy
   essential: {
     monthly: "https://www.tipote.com/tipote-essential-mensuel",
     annual: "https://www.tipote.com/tipote-essential-annuel",
@@ -154,13 +160,7 @@ export default function BillingSection({ email }: Props) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SubscriptionPayload | null>(null);
 
-  // ✅ Crédit centralisé : focus/event/visibility + fetch gérés dans le hook
-  const {
-    loading: creditsLoading,
-    balance: credits,
-    error: creditsError,
-    refresh: refreshCredits,
-  } = useCreditsBalance();
+  const { loading: creditsLoading, balance: credits, error: creditsError, refresh: refreshCredits } = useCreditsBalance();
 
   const activeSub = data?.activeSubscription ?? null;
   const latestSub = data?.latestSubscription ?? null;
@@ -231,13 +231,59 @@ export default function BillingSection({ email }: Props) {
     window.location.href = url;
   };
 
+  /**
+   * ✅ Prefill Systeme.io via query params
+   * Variables attendues:
+   * email, first_name, surname, street_address, postcode, city, country
+   */
+  const openCreditsPack = () => {
+    const qs = new URLSearchParams();
+
+    const profileEmail = safeString(data?.profile?.email) ?? email;
+
+    const firstName = safeString(data?.profile?.first_name) ?? safeString((data?.profile as any)?.firstName) ?? null;
+
+    // Systeme.io attend "surname"
+    const surname =
+      safeString((data?.profile as any)?.surname) ??
+      safeString((data?.profile as any)?.last_name) ??
+      safeString((data?.profile as any)?.lastName) ??
+      null;
+
+    const streetAddress =
+      safeString((data?.profile as any)?.street_address) ??
+      safeString((data?.profile as any)?.address) ??
+      safeString((data?.profile as any)?.streetAddress) ??
+      null;
+
+    const postcode =
+      safeString((data?.profile as any)?.postcode) ??
+      safeString((data?.profile as any)?.postal_code) ??
+      safeString((data?.profile as any)?.zip) ??
+      null;
+
+    const city = safeString((data?.profile as any)?.city) ?? null;
+
+    const country =
+      safeString((data?.profile as any)?.country) ??
+      safeString((data?.profile as any)?.country_code) ??
+      null;
+
+    if (profileEmail) qs.set("email", profileEmail);
+    if (firstName) qs.set("first_name", firstName);
+    if (surname) qs.set("surname", surname);
+    if (streetAddress) qs.set("street_address", streetAddress);
+    if (postcode) qs.set("postcode", postcode);
+    if (city) qs.set("city", city);
+    if (country) qs.set("country", country);
+
+    const url = qs.toString() ? `${CREDITS_PACK_URL}?${qs.toString()}` : CREDITS_PACK_URL;
+    window.location.href = url;
+  };
+
   const basicIsCurrent = currentPlan === "basic";
   const proIsCurrent = currentPlan === "pro";
   const eliteIsCurrent = currentPlan === "elite";
-
-  const basicCta = "Downgrader";
-  const proCta = currentPlan === "elite" ? "Downgrader" : "Upgrader";
-  const eliteCta = "Upgrader";
 
   return (
     <>
@@ -245,9 +291,7 @@ export default function BillingSection({ email }: Props) {
         <div className="flex items-start justify-between">
           <div>
             <Badge className="mb-2 bg-background/20 text-primary-foreground">Plan actuel</Badge>
-            <h2 className="text-2xl font-bold text-primary-foreground mb-1">
-              {loading ? "—" : currentMeta.label}
-            </h2>
+            <h2 className="text-2xl font-bold text-primary-foreground mb-1">{loading ? "—" : currentMeta.label}</h2>
             <p className="text-primary-foreground/80">{loading ? "Chargement…" : currentMeta.desc}</p>
           </div>
           <p className="text-3xl font-bold text-primary-foreground">
@@ -257,7 +301,6 @@ export default function BillingSection({ email }: Props) {
         </div>
       </Card>
 
-      {/* ✅ Crédits IA visibles dans Billing (design Tipote, compteur animé) */}
       <Card className="p-6 bg-primary/5 border-primary/20">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -291,7 +334,7 @@ export default function BillingSection({ email }: Props) {
             <span className="text-base font-medium text-muted-foreground ml-2">crédits</span>
           </div>
 
-          <Button onClick={() => openOrderForm("pro")}>Recharger</Button>
+          <Button onClick={openCreditsPack}>Recharger</Button>
         </div>
 
         {creditsError ? <p className="text-sm text-destructive mt-3">{creditsError}</p> : null}
@@ -305,11 +348,8 @@ export default function BillingSection({ email }: Props) {
       </Card>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Basic */}
         <Card className={basicIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {basicIsCurrent ? (
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge>
-          ) : null}
+          {basicIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Basic</h3>
           <p className="text-3xl font-bold mb-4">
@@ -322,8 +362,7 @@ export default function BillingSection({ email }: Props) {
               Plan stratégique IA
             </li>
             <li className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              1 module activable
+              <CheckCircle2 className="w-4 h-4 text-success" />1 module activable
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
@@ -339,21 +378,13 @@ export default function BillingSection({ email }: Props) {
             </li>
           </ul>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => openOrderForm("basic")}
-            disabled={loading || basicIsCurrent}
-          >
-            {basicIsCurrent ? "Plan actuel" : basicCta}
+          <Button variant="outline" className="w-full" onClick={() => openOrderForm("basic")} disabled={loading || basicIsCurrent}>
+            {basicIsCurrent ? "Plan actuel" : "Downgrader"}
           </Button>
         </Card>
 
-        {/* Pro (ex Essential) */}
         <Card className={proIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {proIsCurrent ? (
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge>
-          ) : null}
+          {proIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Pro</h3>
           <p className="text-3xl font-bold mb-4">
@@ -366,8 +397,7 @@ export default function BillingSection({ email }: Props) {
               Plan stratégique IA
             </li>
             <li className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              3 modules activables
+              <CheckCircle2 className="w-4 h-4 text-success" />3 modules activables
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
@@ -383,21 +413,13 @@ export default function BillingSection({ email }: Props) {
             </li>
           </ul>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => openOrderForm("pro")}
-            disabled={loading || proIsCurrent}
-          >
-            {proIsCurrent ? "Plan actuel" : proCta}
+          <Button variant="outline" className="w-full" onClick={() => openOrderForm("pro")} disabled={loading || proIsCurrent}>
+            {proIsCurrent ? "Plan actuel" : currentPlan === "elite" ? "Downgrader" : "Upgrader"}
           </Button>
         </Card>
 
-        {/* Elite */}
         <Card className={eliteIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {eliteIsCurrent ? (
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge>
-          ) : null}
+          {eliteIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Elite</h3>
           <p className="text-3xl font-bold mb-4">
@@ -427,13 +449,8 @@ export default function BillingSection({ email }: Props) {
             </li>
           </ul>
 
-          <Button
-            variant="hero"
-            className="w-full"
-            onClick={() => openOrderForm("elite")}
-            disabled={loading || eliteIsCurrent}
-          >
-            {eliteIsCurrent ? "Plan actuel" : eliteCta}
+          <Button variant="hero" className="w-full" onClick={() => openOrderForm("elite")} disabled={loading || eliteIsCurrent}>
+            {eliteIsCurrent ? "Plan actuel" : "Upgrader"}
           </Button>
         </Card>
       </div>
@@ -446,7 +463,7 @@ export default function BillingSection({ email }: Props) {
           </div>
 
           <Button variant="outline" asChild>
-            <a href="https://systeme.io" target="_blank" rel="noopener noreferrer">
+            <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
               Gérer sur Systeme.io
             </a>
