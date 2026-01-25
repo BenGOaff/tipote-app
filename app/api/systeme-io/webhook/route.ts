@@ -136,6 +136,9 @@ function toBigIntNumber(v: unknown): number | null {
 // ---------- Body parsing (JSON OU x-www-form-urlencoded) ----------
 
 async function readBodyAny(req: NextRequest): Promise<any> {
+  // NextRequest body can be consumed only once. We use clone() so we can fallback safely.
+  const cloned = req.clone();
+
   // JSON
   try {
     return await req.json();
@@ -144,7 +147,7 @@ async function readBodyAny(req: NextRequest): Promise<any> {
   }
 
   // raw text -> json OR form-encoded
-  const raw = await req.text().catch(() => "");
+  const raw = await cloned.text().catch(() => "");
   if (!raw) return null;
 
   // json string
@@ -215,9 +218,8 @@ function creditsPackFromPriceIdLoose(priceId: string): { pack: CreditPackName; c
   if (exact) return exact;
 
   const pidNum = numericPartFromOfferId(priceId);
-  if (pidNum === null) return null;
+  if (!pidNum) return null;
 
-  // ✅ FIX TS: on force les littéraux à rester des unions (CreditPackName) via `satisfies`
   const envs = [
     { env: PACK_STARTER_PRICE_ID, pack: "starter", credits: 25 },
     { env: PACK_STANDARD_PRICE_ID, pack: "standard", credits: 100 },
@@ -227,9 +229,8 @@ function creditsPackFromPriceIdLoose(priceId: string): { pack: CreditPackName; c
     { env: PRICE_ID_250_LEGACY, pack: "pro", credits: 250 },
   ] satisfies Array<{ env: string; pack: CreditPackName; credits: number }>;
 
-  const filtered = envs.filter((x) => Boolean(x.env));
-
-  for (const e of filtered) {
+  for (const e of envs) {
+    if (!e.env) continue;
     const eNum = numericPartFromOfferId(e.env);
     if (eNum && eNum === pidNum) return { pack: e.pack, credits: e.credits };
   }
@@ -437,18 +438,55 @@ async function addPurchasedCreditsLegacy(params: { userId: string; credits: numb
 
 // ---------- Handler principal ----------
 
+export async function GET(req: NextRequest) {
+  // Simple healthcheck to confirm the route is reachable from the public internet.
+  // (Useful to debug when Systeme.io points to the wrong domain/subdomain.)
+  return NextResponse.json(
+    {
+      ok: true,
+      route: "/api/systeme-io/webhook",
+      host: req.headers.get("host"),
+      now: new Date().toISOString(),
+      env: {
+        SYSTEME_IO_WEBHOOK_SECRET: Boolean(WEBHOOK_SECRET),
+        SIO_CREDITS_PACK_STARTER_PRICE_ID: Boolean(PACK_STARTER_PRICE_ID),
+        SIO_CREDITS_PACK_STANDARD_PRICE_ID: Boolean(PACK_STANDARD_PRICE_ID),
+        SIO_CREDITS_PACK_PRO_PRICE_ID: Boolean(PACK_PRO_PRICE_ID),
+        SIO_CREDITS_PACK_25_PRICE_ID: Boolean(PRICE_ID_25_LEGACY),
+        SIO_CREDITS_PACK_100_PRICE_ID: Boolean(PRICE_ID_100_LEGACY),
+        SIO_CREDITS_PACK_250_PRICE_ID: Boolean(PRICE_ID_250_LEGACY),
+      },
+    },
+    { status: 200 },
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const secret = req.nextUrl.searchParams.get("secret");
 
     if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
+      console.warn("[Systeme.io webhook] Unauthorized", {
+        host: req.headers.get("host"),
+        url: req.nextUrl?.toString?.() ?? null,
+      });
       return NextResponse.json({ error: "Invalid or missing secret" }, { status: 401 });
     }
+
+    console.log("[Systeme.io webhook] Hit", {
+      host: req.headers.get("host"),
+      url: req.nextUrl?.toString?.() ?? null,
+      contentType: req.headers.get("content-type"),
+      userAgent: req.headers.get("user-agent"),
+    });
 
     const rawBody = await readBodyAny(req);
 
     if (!rawBody) {
-      console.error("[Systeme.io webhook] Could not parse body");
+      console.error("[Systeme.io webhook] Could not parse body", {
+        host: req.headers.get("host"),
+        contentType: req.headers.get("content-type"),
+      });
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
