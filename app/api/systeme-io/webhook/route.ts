@@ -137,27 +137,27 @@ function toBigIntNumber(v: unknown): number | null {
 }
 
 // ---------- Body parsing (JSON OU x-www-form-urlencoded) ----------
-
+// ✅ FIX CRITIQUE : NE PAS faire req.json() puis req.text() (le body est consommé).
 async function readBodyAny(req: NextRequest): Promise<any> {
-  try {
-    return await req.json();
-  } catch {
-    // ignore
-  }
-
   const raw = await req.text().catch(() => "");
   if (!raw) return null;
 
+  // 1) JSON
   try {
     return JSON.parse(raw);
   } catch {
+    // 2) x-www-form-urlencoded
     try {
       const params = new URLSearchParams(raw);
       const obj: Record<string, any> = {};
+      let hasAny = false;
+
       params.forEach((v, k) => {
         obj[k] = v;
+        hasAny = true;
       });
-      return obj;
+
+      return hasAny ? obj : null;
     } catch {
       return null;
     }
@@ -214,7 +214,7 @@ function creditsPackFromPriceIdLoose(priceId: string): { pack: CreditPackName; c
   const pidNum = numericPartFromOfferId(priceId);
   if (!pidNum) return null;
 
-  const envs = [
+  const envs: Array<{ env: string; pack: CreditPackName; credits: number }> = [
     { env: PACK_STARTER_PRICE_ID, pack: "starter", credits: 25 },
     { env: PACK_STANDARD_PRICE_ID, pack: "standard", credits: 100 },
     { env: PACK_PRO_PRICE_ID, pack: "pro", credits: 250 },
@@ -224,9 +224,10 @@ function creditsPackFromPriceIdLoose(priceId: string): { pack: CreditPackName; c
     { env: PRODUCT_ID_25, pack: "starter", credits: 25 },
     { env: PRODUCT_ID_100, pack: "standard", credits: 100 },
     { env: PRODUCT_ID_250, pack: "pro", credits: 250 },
-  ] satisfies Array<{ env: string; pack: CreditPackName; credits: number }>;
+  ];
 
-  for (const e of envs.filter((x) => Boolean(x.env))) {
+  for (const e of envs) {
+    if (!e.env) continue;
     const eNum = numericPartFromOfferId(e.env);
     if (eNum && eNum === pidNum) return { pack: e.pack, credits: e.credits };
   }
@@ -319,7 +320,7 @@ async function addPurchasedCreditsLegacy(params: { userId: string; credits: numb
 
   const existing = await supabaseAdmin
     .from("user_credits")
-    .select("user_id, bonus_credits_total, bonus_credits_used, monthly_credits_total, monthly_credits_used")
+    .select("user_id, bonus_credits_total, bonus_credits_used, monthly_credits_total, monthly_credits_used, monthly_reset_at")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -335,6 +336,9 @@ async function addPurchasedCreditsLegacy(params: { userId: string; credits: numb
   const monthlyTotal = Number(row?.monthly_credits_total ?? 0);
   const monthlyUsed = Number(row?.monthly_credits_used ?? 0);
 
+  // ✅ IMPORTANT : monthly_reset_at est NOT NULL chez toi
+  const monthlyResetAt = row?.monthly_reset_at ?? now;
+
   const nextBonusTotal = Math.max(0, bonusTotal + credits);
 
   const { error: upsertErr } = await supabaseAdmin.from("user_credits").upsert(
@@ -344,6 +348,7 @@ async function addPurchasedCreditsLegacy(params: { userId: string; credits: numb
       monthly_credits_used: monthlyUsed,
       bonus_credits_total: nextBonusTotal,
       bonus_credits_used: bonusUsed,
+      monthly_reset_at: monthlyResetAt,
       updated_at: now,
     } as any,
     { onConflict: "user_id" },
@@ -354,16 +359,20 @@ async function addPurchasedCreditsLegacy(params: { userId: string; credits: numb
     throw upsertErr;
   }
 
-  try {
-    await supabaseAdmin.from("credit_transactions").insert({
-      user_id: userId,
-      amount: credits,
-      kind: "purchase",
-      source,
-      created_at: now,
-    } as any);
-  } catch {
-    // ignore
+  // ✅ IMPORTANT : ton schéma credit_transactions = (kind, bucket, amount, context)
+  // Pas de colonne `source`.
+  const { error: txErr } = await supabaseAdmin.from("credit_transactions").insert({
+    user_id: userId,
+    kind: "purchase",
+    bucket: "bonus",
+    amount: credits,
+    context: { source },
+    created_at: now,
+  } as any);
+
+  if (txErr) {
+    // on ne throw pas (best effort), mais on log vraiment
+    console.error("[Systeme.io webhook] insert credit_transactions error:", txErr);
   }
 }
 
@@ -396,18 +405,18 @@ async function grantCreditsIdempotent(params: { userId: string; credits: number;
 
     const inserted = Boolean(data);
 
+    // Best effort audit (schéma OK)
     if (inserted) {
-      try {
-        await supabaseAdmin.from("credit_transactions").insert({
-          user_id: userId,
-          amount: credits,
-          kind: "purchase",
-          source,
-          created_at: now,
-        } as any);
-      } catch {
-        // ignore
-      }
+      const { error: txErr } = await supabaseAdmin.from("credit_transactions").insert({
+        user_id: userId,
+        kind: "purchase",
+        bucket: "bonus",
+        amount: credits,
+        context: { source, order_id: orderId },
+        created_at: now,
+      } as any);
+
+      if (txErr) console.error("[Systeme.io webhook] insert credit_transactions error:", txErr);
     }
 
     return { mode: "rpc_idempotent", granted: inserted };
@@ -456,25 +465,46 @@ export async function POST(req: NextRequest) {
 
     const rawBody = await readBodyAny(req);
     if (!rawBody) {
-      console.error("[Systeme.io webhook] Could not parse body");
+      console.error("[Systeme.io webhook] Could not parse body", {
+        contentType: req.headers.get("content-type"),
+      });
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
+
+    console.log("[Systeme.io webhook] Incoming", {
+      contentType: req.headers.get("content-type"),
+      keys: Object.keys(rawBody ?? {}),
+      type: (rawBody as any)?.type,
+    });
 
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
     const systemeData = parsedSysteme.success ? parsedSysteme.data.data : null;
 
-    const emailMaybe = systemeData?.customer?.email ?? extractString(rawBody, ["data.customer.email", "customer.email", "email"]);
+    const emailMaybe =
+      systemeData?.customer?.email ??
+      extractString(rawBody, ["data.customer.email", "customer.email", "email"]);
     const email = emailMaybe ? String(emailMaybe).toLowerCase() : null;
 
     let firstName =
       systemeData?.customer?.fields?.first_name ??
-      extractString(rawBody, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname"]) ??
+      extractString(rawBody, [
+        "data.customer.fields.first_name",
+        "customer.fields.first_name",
+        "first_name",
+        "firstname",
+      ]) ??
       null;
 
     const sioContactId =
       (systemeData?.customer?.contact_id !== undefined && systemeData?.customer?.contact_id !== null
         ? toStringId(systemeData.customer.contact_id)
-        : extractString(rawBody, ["data.customer.contact_id", "data.customer.contactId", "customer.contact_id", "contact_id", "contactId"])) ?? null;
+        : extractString(rawBody, [
+            "data.customer.contact_id",
+            "data.customer.contactId",
+            "customer.contact_id",
+            "contact_id",
+            "contactId",
+          ])) ?? null;
 
     const offerId = toStringId(
       systemeData?.offer_price_plan?.id ??
@@ -494,16 +524,26 @@ export async function POST(req: NextRequest) {
     const offerName =
       systemeData?.offer_price_plan?.name ??
       systemeData?.offer_price?.name ??
-      extractString(rawBody, ["data.offer_price_plan.name", "data.offer_price.name", "offer_price_plan.name", "offer_price.name"]) ??
+      extractString(rawBody, [
+        "data.offer_price_plan.name",
+        "data.offer_price.name",
+        "offer_price_plan.name",
+        "offer_price.name",
+      ]) ??
       "Unknown";
 
     const offerInner =
       systemeData?.offer_price_plan?.inner_name ??
-      extractString(rawBody, ["data.offer_price_plan.inner_name", "offer_price_plan.inner_name"]) ??
+      extractString(rawBody, [
+        "data.offer_price_plan.inner_name",
+        "offer_price_plan.inner_name",
+      ]) ??
       null;
 
     const orderId = toBigIntNumber(
-      systemeData?.order?.id ?? extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ?? null,
+      systemeData?.order?.id ??
+        extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ??
+        null,
     );
 
     // ✅ fallback: si email absent, on tente via sio_contact_id -> profiles
@@ -520,7 +560,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (resolvedEmail) {
-      console.log("[Systeme.io webhook] Parsed sale", { email: resolvedEmail, sioContactId, offerId, offerName, orderId });
+      console.log("[Systeme.io webhook] Parsed sale", {
+        email: resolvedEmail,
+        sioContactId,
+        offerId,
+        offerName,
+        orderId,
+        schemaMatched: parsedSysteme.success,
+      });
 
       const userId =
         resolvedUserId ??
