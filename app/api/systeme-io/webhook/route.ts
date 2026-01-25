@@ -25,15 +25,27 @@ const systemeNewSaleSchema = z.object({
         .catchall(z.any())
         .optional(),
     }),
-    offer_price_plan: z.object({
-      id: zNumOrStr, // ✅ peut être number OU string ("offer-price-XXXX")
-      name: z.string(),
-      inner_name: z.string().optional().nullable(),
-      type: z.string().optional(),
-    }),
+
+    // ✅ Certains envois peuvent avoir offer_price_plan OU offer_price
+    offer_price_plan: z
+      .object({
+        id: zNumOrStr,
+        name: z.string(),
+        inner_name: z.string().optional().nullable(),
+        type: z.string().optional(),
+      })
+      .optional(),
+
+    offer_price: z
+      .object({
+        id: zNumOrStr,
+        name: z.string().optional(),
+      })
+      .optional(),
+
     order: z
       .object({
-        id: zNumOrStr, // ✅ peut être number OU string, on convertit ensuite en bigint
+        id: zNumOrStr,
         created_at: z.string().optional(),
       })
       .partial()
@@ -51,50 +63,37 @@ const simpleTestSchema = z.object({
 
 // ---------- Mapping offres Systeme.io -> plan interne ----------
 
-// ✅ Roadmap: aligner sur free/basic/pro/elite (plus de "essential")
 type StoredPlan = "free" | "basic" | "pro" | "elite";
 
-function normalizePlanFromOfferName(offer: {
-  name: string;
-  inner_name?: string | null;
-}): StoredPlan | null {
+function normalizePlanFromOfferName(offer: { name: string; inner_name?: string | null }): StoredPlan | null {
   const name = `${offer.inner_name ?? ""} ${offer.name}`.toLowerCase();
 
   if (name.includes("elite")) return "elite";
-  if (name.includes("essential")) return "pro"; // ✅ alias legacy
+  if (name.includes("essential")) return "pro"; // alias legacy
   if (name.includes("pro")) return "pro";
   if (name.includes("basic")) return "basic";
   if (name.includes("free") || name.includes("gratuit")) return "free";
   return null;
 }
 
-// (optionnel) mapping direct par ID (si tu veux l’utiliser plus tard)
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // Exemple :
   // "offer-price-123": "basic",
-  // "offer-price-456": "pro",
-  // "offer-price-789": "elite",
 };
 
-function inferPlanFromOffer(offer: {
-  id: string;
-  name: string;
-  inner_name?: string | null;
-}): StoredPlan | null {
-  if (offer.id && offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) {
-    return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
-  }
+function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
+  if (offer.id && offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
   return normalizePlanFromOfferName(offer);
 }
 
 // ---------- Credits packs (price_id -> credits) ----------
 
-// On supporte les env vars "nouveau naming" (recommandé)
+// nouveau naming
 const PACK_STARTER_PRICE_ID = (process.env.SIO_CREDITS_PACK_STARTER_PRICE_ID ?? "").trim();
 const PACK_STANDARD_PRICE_ID = (process.env.SIO_CREDITS_PACK_STANDARD_PRICE_ID ?? "").trim();
 const PACK_PRO_PRICE_ID = (process.env.SIO_CREDITS_PACK_PRO_PRICE_ID ?? "").trim();
 
-// + compat legacy si déjà présents
+// legacy naming
 const PRICE_ID_25_LEGACY = (process.env.SIO_CREDITS_PACK_25_PRICE_ID ?? "").trim();
 const PRICE_ID_100_LEGACY = (process.env.SIO_CREDITS_PACK_100_PRICE_ID ?? "").trim();
 const PRICE_ID_250_LEGACY = (process.env.SIO_CREDITS_PACK_250_PRICE_ID ?? "").trim();
@@ -104,12 +103,10 @@ type CreditPackName = "starter" | "standard" | "pro";
 function creditsPackFromPriceId(priceId: string): { pack: CreditPackName; credits: number } | null {
   if (!priceId) return null;
 
-  // Nouveau naming
   if (PACK_STARTER_PRICE_ID && priceId === PACK_STARTER_PRICE_ID) return { pack: "starter", credits: 25 };
   if (PACK_STANDARD_PRICE_ID && priceId === PACK_STANDARD_PRICE_ID) return { pack: "standard", credits: 100 };
   if (PACK_PRO_PRICE_ID && priceId === PACK_PRO_PRICE_ID) return { pack: "pro", credits: 250 };
 
-  // Legacy naming
   if (PRICE_ID_25_LEGACY && priceId === PRICE_ID_25_LEGACY) return { pack: "starter", credits: 25 };
   if (PRICE_ID_100_LEGACY && priceId === PRICE_ID_100_LEGACY) return { pack: "standard", credits: 100 };
   if (PRICE_ID_250_LEGACY && priceId === PRICE_ID_250_LEGACY) return { pack: "pro", credits: 250 };
@@ -129,13 +126,42 @@ function toBigIntNumber(v: unknown): number | null {
   return int > 0 ? int : null;
 }
 
+// ---------- Body parsing (JSON OU x-www-form-urlencoded) ----------
+
+async function readBodyAny(req: NextRequest): Promise<any> {
+  // JSON
+  try {
+    return await req.json();
+  } catch {
+    // ignore
+  }
+
+  // raw text -> json OR form-encoded
+  const raw = await req.text().catch(() => "");
+  if (!raw) return null;
+
+  // json string
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // form urlencoded
+    try {
+      const params = new URLSearchParams(raw);
+      const obj: Record<string, any> = {};
+      params.forEach((v, k) => {
+        obj[k] = v;
+      });
+      return obj;
+    } catch {
+      return null;
+    }
+  }
+}
+
 // ---------- Helpers Supabase ----------
 
 async function findUserByEmail(email: string) {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
 
   if (error) {
     console.error("[Systeme.io webhook] listUsers error:", error);
@@ -144,34 +170,20 @@ async function findUserByEmail(email: string) {
 
   const users = (data as any)?.users ?? [];
   const lower = email.toLowerCase();
-
-  return (
-    users.find(
-      (u: any) =>
-        typeof u.email === "string" && u.email.toLowerCase() === lower,
-    ) ?? null
-  );
+  return users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower) ?? null;
 }
 
-async function getOrCreateSupabaseUser(params: {
-  email: string;
-  first_name: string | null;
-  sio_contact_id: string | null;
-}) {
+async function getOrCreateSupabaseUser(params: { email: string; first_name: string | null; sio_contact_id: string | null }) {
   const { email, first_name, sio_contact_id } = params;
 
   const existingUser = await findUserByEmail(email);
   if (existingUser) return existingUser.id as string;
 
-  const { data: createdUser, error: createUserError } =
-    await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        first_name,
-        sio_contact_id,
-      },
-    });
+  const { data: createdUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { first_name, sio_contact_id },
+  });
 
   if (createUserError || !createdUser?.user) {
     console.error("[Systeme.io webhook] Error creating user:", createUserError);
@@ -181,10 +193,6 @@ async function getOrCreateSupabaseUser(params: {
   return createdUser.user.id as string;
 }
 
-/**
- * Upsert du profil dans la table public.profiles
- * ✅ Ne doit JAMAIS écraser le plan avec NULL
- */
 async function upsertProfile(params: {
   userId: string;
   email: string;
@@ -203,15 +211,10 @@ async function upsertProfile(params: {
     updated_at: new Date().toISOString(),
   };
 
-  // ✅ On set plan uniquement si on a une valeur (sinon on conserve l'existant)
   if (plan) payload.plan = plan;
-
-  // product_id : on le stocke si fourni (ex: l’offer_price_plan.id)
   if (typeof product_id !== "undefined") payload.product_id = product_id;
 
-  const { error: upsertError } = await supabaseAdmin
-    .from("profiles")
-    .upsert(payload, { onConflict: "id" });
+  const { error: upsertError } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
 
   if (upsertError) {
     console.error("[Systeme.io webhook] Error upserting profile:", upsertError);
@@ -219,83 +222,7 @@ async function upsertProfile(params: {
   }
 }
 
-/**
- * ✅ Crédit pack (idempotent) via RPC SQL:
- * public.grant_bonus_credits_from_order(p_user_id uuid, p_credits integer, p_order_id bigint) returns boolean
- */
-async function grantCreditsIdempotent(params: {
-  userId: string;
-  credits: number;
-  orderId: number | null;
-  source: string;
-}) {
-  const { userId, credits, orderId, source } = params;
-
-  const now = new Date().toISOString();
-
-  // Si pas d'orderId, on ne peut pas garantir l'idempotence
-  if (!orderId || orderId <= 0) {
-    console.warn("[Systeme.io webhook] Missing/invalid order.id for credits pack — fallback legacy credit.", {
-      user_id: userId,
-      credits,
-      source,
-      orderId,
-    });
-    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_no_order` });
-    return { mode: "legacy_no_order", granted: true };
-  }
-
-  // 1) RPC idempotente
-  try {
-    const { data, error } = await supabaseAdmin.rpc("grant_bonus_credits_from_order", {
-      p_user_id: userId,
-      p_credits: credits,
-      p_order_id: orderId,
-    });
-
-    if (error) {
-      console.error("[Systeme.io webhook] RPC grant_bonus_credits_from_order error:", error);
-      throw error;
-    }
-
-    const inserted = Boolean(data);
-
-    // Audit best-effort (ne bloque jamais)
-    if (inserted) {
-      try {
-        await supabaseAdmin.from("credit_transactions").insert({
-          user_id: userId,
-          amount: credits,
-          kind: "purchase",
-          source,
-          created_at: now,
-        } as any);
-      } catch {
-        // ignore
-      }
-    }
-
-    return { mode: "rpc_idempotent", granted: inserted };
-  } catch {
-    // 2) Fallback legacy (fail-open)
-    console.warn("[Systeme.io webhook] Falling back to legacy credit upsert.", {
-      user_id: userId,
-      credits,
-      source,
-    });
-    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_fallback` });
-    return { mode: "legacy_fallback", granted: true };
-  }
-}
-
-/**
- * Legacy credits add (non-idempotent). Conservé uniquement comme fallback fail-open.
- */
-async function addPurchasedCreditsLegacy(params: {
-  userId: string;
-  credits: number;
-  source: string;
-}) {
+async function addPurchasedCreditsLegacy(params: { userId: string; credits: number; source: string }) {
   const { userId, credits, source } = params;
 
   const existing = await supabaseAdmin
@@ -348,6 +275,56 @@ async function addPurchasedCreditsLegacy(params: {
   }
 }
 
+async function grantCreditsIdempotent(params: { userId: string; credits: number; orderId: number | null; source: string }) {
+  const { userId, credits, orderId, source } = params;
+
+  if (!orderId || orderId <= 0) {
+    console.warn("[Systeme.io webhook] Missing/invalid order.id for credits pack — fallback legacy credit.", {
+      user_id: userId,
+      credits,
+      source,
+      orderId,
+    });
+    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_no_order` });
+    return { mode: "legacy_no_order", granted: true };
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("grant_bonus_credits_from_order", {
+      p_user_id: userId,
+      p_credits: credits,
+      p_order_id: orderId,
+    });
+
+    if (error) {
+      console.error("[Systeme.io webhook] RPC grant_bonus_credits_from_order error:", error);
+      throw error;
+    }
+
+    const inserted = Boolean(data);
+
+    if (inserted) {
+      try {
+        await supabaseAdmin.from("credit_transactions").insert({
+          user_id: userId,
+          amount: credits,
+          kind: "purchase",
+          source,
+          created_at: new Date().toISOString(),
+        } as any);
+      } catch {
+        // ignore
+      }
+    }
+
+    return { mode: "rpc_idempotent", granted: inserted };
+  } catch {
+    console.warn("[Systeme.io webhook] Falling back to legacy credit upsert.", { user_id: userId, credits, source });
+    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_fallback` });
+    return { mode: "legacy_fallback", granted: true };
+  }
+}
+
 // ---------- Handler principal ----------
 
 export async function POST(req: NextRequest) {
@@ -358,13 +335,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or missing secret" }, { status: 401 });
     }
 
-    const rawBody = await req.json();
+    const rawBody = await readBodyAny(req);
+
+    if (!rawBody) {
+      console.error("[Systeme.io webhook] Could not parse body");
+      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    }
+
     console.log("[Systeme.io webhook] Incoming payload", {
       topLevelKeys: Object.keys(rawBody ?? {}),
       type: (rawBody as any)?.type,
     });
 
-    // 1) Essai avec le vrai payload Systeme.io
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
 
     if (parsedSysteme.success) {
@@ -374,14 +356,14 @@ export async function POST(req: NextRequest) {
       const firstName = data.customer.fields?.first_name ?? null;
       const sioContactId = toStringId(data.customer.contact_id);
 
-      const offerId = toStringId(data.offer_price_plan.id);
-      const offer = {
-        id: offerId,
-        name: data.offer_price_plan.name,
-        inner_name: data.offer_price_plan.inner_name ?? null,
-      };
+      // ✅ Priorité: offer_price_plan.id, sinon offer_price.id
+      const offerId = toStringId(data.offer_price_plan?.id ?? data.offer_price?.id ?? "");
+      const offerName = data.offer_price_plan?.name ?? data.offer_price?.name ?? "Unknown";
+      const offerInner = data.offer_price_plan?.inner_name ?? null;
 
       const orderId = toBigIntNumber(data.order?.id ?? null);
+
+      console.log("[Systeme.io webhook] Parsed sale", { email, offerId, offerName, orderId });
 
       const userId = await getOrCreateSupabaseUser({
         email,
@@ -389,8 +371,8 @@ export async function POST(req: NextRequest) {
         sio_contact_id: sioContactId,
       });
 
-      // 1.a) Upsert profile (abonnements) — sans écraser plan si null
-      const plan = inferPlanFromOffer(offer);
+      const plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
+
       await upsertProfile({
         userId,
         email,
@@ -400,7 +382,6 @@ export async function POST(req: NextRequest) {
         product_id: offerId || null,
       });
 
-      // 1.b) Si c’est un pack crédits -> on crédite (idempotent)
       const pack = creditsPackFromPriceId(offerId);
       if (pack) {
         const source = `systemeio:price_id:${offerId}`;
@@ -426,7 +407,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Sinon : comportement historique (abonnements / autres offres)
       return NextResponse.json({
         status: "ok",
         mode: "systeme_new_sale",
@@ -438,13 +418,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2) Sinon, essai avec le format simple pour tests manuels
     const parsedSimple = simpleTestSchema.safeParse(rawBody);
 
     if (parsedSimple.success) {
       const { email, first_name, sio_contact_id, product_id } = parsedSimple.data;
 
-      // ✅ alignement legacy : essential => pro
       const plan: StoredPlan | null =
         product_id === "prod_basic_1"
           ? "basic"
