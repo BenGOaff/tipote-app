@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Sun,
   Target,
@@ -9,6 +10,7 @@ import {
   FolderOpen,
   Settings,
   BarChart3,
+  Coins,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -23,6 +25,8 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+
+import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -61,6 +65,75 @@ const mainItems = [
   { title: "Créer", url: "/create", icon: Sparkles, spotlightId: "create" },
   { title: "Mes Contenus", url: "/contents", icon: FolderOpen, spotlightId: null },
 ] as const;
+
+function useAnimatedNumber(value: number, durationMs = 900) {
+  const [display, setDisplay] = useState<number>(value);
+  const rafRef = useRef<number | null>(null);
+  const fromRef = useRef<number>(value);
+  const toRef = useRef<number>(value);
+  const startRef = useRef<number>(0);
+
+  useEffect(() => {
+    toRef.current = value;
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    fromRef.current = display;
+    startRef.current = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startRef.current) / durationMs);
+      // easing : smooth
+      const eased = 1 - Math.pow(1 - t, 3);
+      const next = Math.round(fromRef.current + (toRef.current - fromRef.current) * eased);
+      setDisplay(next);
+
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, durationMs]);
+
+  return display;
+}
+
+function CreditsSidebarBadge() {
+  // ✅ Plus besoin de dupliquer fetch/event/focus/visibility : centralisé dans le hook
+  const { loading, balance, error } = useCreditsBalance();
+
+  const remaining = useMemo(() => balance?.total_remaining ?? 0, [balance]);
+  const animatedRemaining = useAnimatedNumber(remaining, 900);
+
+  return (
+    <Link
+      href="/settings?tab=billing"
+      className="mx-3 mb-3 block rounded-lg border border-primary/15 bg-primary/10 hover:bg-primary/15 transition-colors"
+      aria-label="Voir mes crédits IA"
+      title="Voir mes crédits IA"
+    >
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+            <Coins className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-xs text-muted-foreground">Crédits</p>
+            <p className="text-sm font-medium text-foreground">
+              {loading ? "…" : error ? "—" : `${animatedRemaining}`}
+              <span className="text-xs font-normal text-muted-foreground"> crédits</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground">{loading ? "" : error ? "" : ">"}</div>
+      </div>
+    </Link>
+  );
+}
 
 export function AppSidebar() {
   const { phase, nextPhase } = useTutorial();
@@ -140,6 +213,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4 space-y-1">
+        {/* ✅ Crédit visible en bas à gauche, au-dessus d'Analytics */}
+        <CreditsSidebarBadge />
+
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>

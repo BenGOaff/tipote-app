@@ -9,7 +9,21 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { listSubscriptionsForContact } from "@/lib/systemeIoClient";
 
-type InternalPlan = "basic" | "essential" | "elite";
+// ✅ Roadmap: aligner sur free/basic/pro/elite
+// 🔁 Compat: "essential" est un alias legacy de "pro"
+type StoredPlan = "free" | "basic" | "pro" | "elite";
+type IncomingPlan = "basic" | "pro" | "elite" | "essential";
+
+function normalizePlan(plan: IncomingPlan | string | null | undefined): StoredPlan {
+  const s = String(plan ?? "").trim().toLowerCase();
+  if (!s) return "free";
+  if (s.includes("elite")) return "elite";
+  if (s.includes("pro")) return "pro";
+  if (s.includes("essential")) return "pro";
+  if (s.includes("basic")) return "basic";
+  if (s.includes("free") || s.includes("gratuit")) return "free";
+  return "free";
+}
 
 function parseContactId(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
@@ -22,7 +36,7 @@ function parseContactId(v: unknown): number | null {
   return null;
 }
 
-function inferPlanFromSubscription(sub: any): InternalPlan | null {
+function inferPlanFromSubscription(sub: any): IncomingPlan | null {
   const offer = sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
 
   const name =
@@ -32,7 +46,9 @@ function inferPlanFromSubscription(sub: any): InternalPlan | null {
 
   if (!name) return null;
   if (name.includes("elite")) return "elite";
+  // ✅ compat legacy
   if (name.includes("essential")) return "essential";
+  if (name.includes("pro")) return "pro";
   if (name.includes("basic")) return "basic";
   return null;
 }
@@ -91,14 +107,17 @@ export async function POST() {
         return st === "active" || st === "trialing";
       }) ?? null;
 
-    const inferredPlan = active ? inferPlanFromSubscription(active) : null;
+    const inferredIncomingPlan = active ? inferPlanFromSubscription(active) : null;
+    const inferredPlan: StoredPlan | null = inferredIncomingPlan ? normalizePlan(inferredIncomingPlan) : null;
+
     const inferredProductId = active ? inferProductId(active) : null;
 
-    const currentPlan = String((profile as any)?.plan ?? "").trim().toLowerCase();
+    const currentPlanRaw = String((profile as any)?.plan ?? "").trim();
+    const currentPlan = normalizePlan(currentPlanRaw);
     const currentProduct = String((profile as any)?.product_id ?? "").trim();
     const currentContact = String((profile as any)?.sio_contact_id ?? "").trim();
 
-    const shouldUpdatePlan = inferredPlan ? !currentPlan || currentPlan !== inferredPlan : false;
+    const shouldUpdatePlan = inferredPlan ? currentPlan !== inferredPlan : false;
     const shouldUpdateProduct = inferredProductId ? !currentProduct || currentProduct !== inferredProductId : false;
     const shouldUpdateContact = !currentContact || parseContactId(currentContact) !== contactId;
 
@@ -116,7 +135,7 @@ export async function POST() {
         ok: true,
         contactId,
         active: Boolean(active),
-        plan: inferredPlan ?? (profile as any)?.plan ?? null,
+        plan: inferredPlan ?? normalizePlan((profile as any)?.plan) ?? "free",
         product_id: inferredProductId ?? (profile as any)?.product_id ?? null,
       },
       { status: 200 }

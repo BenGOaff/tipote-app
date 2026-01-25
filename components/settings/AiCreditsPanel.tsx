@@ -1,47 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { RefreshCcw, Sparkles } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCcw, Sparkles } from "lucide-react";
 
-type Balance = {
-  total_remaining: number;
-  total_purchased: number;
-  total_consumed: number;
-};
+import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
 export default function AiCreditsPanel() {
-  const [loading, setLoading] = useState(true);
-  const [balance, setBalance] = useState<Balance | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch("/api/credits/balance", { method: "GET" });
-      const json = await res.json().catch(() => null);
-
-      if (!res.ok || !json?.ok) {
-        throw new Error(json?.error || "Impossible de charger les crédits.");
-      }
-
-      setBalance(json.balance as Balance);
-    } catch (e: any) {
-      setError(e?.message || "Erreur inconnue");
-      setBalance(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const { loading, balance, error, refresh } = useCreditsBalance();
 
   const remaining = balance?.total_remaining ?? 0;
 
@@ -61,7 +30,14 @@ export default function AiCreditsPanel() {
             </p>
           </div>
 
-          <Button variant="outline" size="icon" onClick={load} disabled={loading} title="Rafraîchir">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={refresh}
+            disabled={loading}
+            title="Rafraîchir"
+            aria-label="Rafraîchir"
+          >
             <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
@@ -95,7 +71,7 @@ export default function AiCreditsPanel() {
 
           <div className="flex gap-2">
             <Button asChild>
-              <Link href="/pricing">Recharger / Upgrade</Link>
+              <Link href="/settings?tab=billing">Recharger / Upgrade</Link>
             </Button>
           </div>
         </div>

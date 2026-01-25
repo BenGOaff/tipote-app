@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ampTrack } from '@/lib/telemetry/amplitude-client'
+import { emitCreditsUpdated } from '@/lib/credits/client'
+import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
 
 type Props = {
   type: string
@@ -30,7 +32,6 @@ type GenerateResponse = {
 
 type KeyStatusResp = {
   ok: boolean
-  configured?: boolean
   hasKey?: boolean
   masked?: string | null
   error?: string
@@ -76,7 +77,7 @@ function metaForType(type: string) {
   if (t === 'script') {
     return {
       title: 'Script vidéo',
-      subtitle: 'Hook + structure + CTA',
+      subtitle: "'Hook + structure + CTA'",
       placeholder:
         'Sujet, format (Reel/TikTok/YouTube), durée, cible, ton…\nEx: 45s, hook fort, 3 points, CTA vers lead magnet.',
       defaultChannel: 'Vidéo',
@@ -96,6 +97,7 @@ function metaForType(type: string) {
 
 export function ContentGenerator({ type, defaultPrompt }: Props) {
   const router = useRouter()
+  const { refresh: refreshCredits } = useCreditsBalance({ auto: false })
 
   const meta = useMemo(() => metaForType(type), [type])
 
@@ -203,7 +205,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: safeType,
-          provider,
           channel: (channel ?? '').trim() || null,
           tags: (tags ?? '')
             .split(',')
@@ -211,6 +212,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             .filter(Boolean)
             .slice(0, 50),
           prompt: safePrompt,
+          provider,
         }),
       })
 
@@ -256,6 +258,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         save_error_present: Boolean(data.saveError),
         usedUserKey: Boolean(data.usedUserKey),
       })
+
+      // ✅ Refresh crédits partout (sidebar/billing/settings) après une génération réussie
+      emitCreditsUpdated()
+      try {
+        await refreshCredits()
+      } catch {
+        // noop
+      }
     } catch (e) {
       setResult({
         ok: false,

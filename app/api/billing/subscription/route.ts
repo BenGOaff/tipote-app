@@ -27,9 +27,23 @@ function parseContactId(v: unknown): number | null {
   return null;
 }
 
-type InternalPlan = "basic" | "essential" | "elite";
+// ✅ Roadmap: aligner le stockage sur free/basic/pro/elite
+// 🔁 Compat: "essential" est un alias legacy de "pro"
+type StoredPlan = "free" | "basic" | "pro" | "elite";
+type IncomingPlan = "basic" | "pro" | "elite" | "essential";
 
-function inferPlanFromSubscription(sub: any): InternalPlan | null {
+function normalizePlan(plan: IncomingPlan | string | null | undefined): StoredPlan {
+  const s = String(plan ?? "").trim().toLowerCase();
+  if (!s) return "free";
+  if (s.includes("elite")) return "elite";
+  if (s.includes("pro")) return "pro";
+  if (s.includes("essential")) return "pro";
+  if (s.includes("basic")) return "basic";
+  if (s.includes("free") || s.includes("gratuit")) return "free";
+  return "free";
+}
+
+function inferPlanFromSubscription(sub: any): IncomingPlan | null {
   // On essaie d’être robuste : selon l’API Systeme.io, la structure peut varier.
   // On teste d’abord offer_price_plan (souvent présent), puis product, puis name.
   const offer = sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
@@ -42,7 +56,9 @@ function inferPlanFromSubscription(sub: any): InternalPlan | null {
   if (!name) return null;
 
   if (name.includes("elite")) return "elite";
+  // ✅ compat legacy
   if (name.includes("essential")) return "essential";
+  if (name.includes("pro")) return "pro";
   if (name.includes("basic")) return "basic";
 
   return null;
@@ -130,14 +146,17 @@ export async function POST(req: NextRequest) {
       }
 
       if (profile) {
-        const inferredPlan = activeSubscription ? inferPlanFromSubscription(activeSubscription) : null;
+        const inferredIncomingPlan = activeSubscription ? inferPlanFromSubscription(activeSubscription) : null;
+        const inferredPlan: StoredPlan | null = inferredIncomingPlan ? normalizePlan(inferredIncomingPlan) : null;
+
         const inferredProductId = activeSubscription ? inferProductId(activeSubscription) : null;
 
         // On met à jour si :
-        // - plan est null/vidé OU différent du plan inféré
+        // - plan est null/vidé OU différent du plan inféré (après normalisation)
         // - product_id manquant et inférable
-        const currentPlan = (profile.plan ?? "").trim().toLowerCase();
-        const shouldUpdatePlan = inferredPlan ? !currentPlan || currentPlan !== inferredPlan : false;
+        const currentPlan = normalizePlan(profile.plan);
+        const shouldUpdatePlan = inferredPlan ? currentPlan !== inferredPlan : false;
+
         const currentProductId = (profile.product_id ?? "").trim();
         const shouldUpdateProduct = inferredProductId ? !currentProductId || currentProductId !== inferredProductId : false;
 
