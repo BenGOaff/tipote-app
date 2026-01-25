@@ -16,7 +16,7 @@ function isMissingTableOrColumnError(message?: string | null) {
 function isMissingRpcError(message?: string | null) {
   const m = (message ?? "").toLowerCase();
   return (
-    m.includes("function") && m.includes("does not exist") ||
+    (m.includes("function") && m.includes("does not exist")) ||
     m.includes("could not find the function") ||
     m.includes("schema cache") ||
     m.includes("pgrst")
@@ -58,22 +58,18 @@ export async function POST() {
       if (rpcRes?.error) {
         if (!isMissingRpcError(rpcRes.error.message)) {
           console.error("reset: rpc(reset_user) failed:", rpcRes.error);
-          // si la RPC existe mais plante pour une autre raison, on renvoie l'erreur (pour debug)
           return NextResponse.json({ ok: false, error: rpcRes.error.message }, { status: 500 });
         }
-        // sinon -> fallback
+        // fallback
       } else {
-        // RPC OK
         return NextResponse.json({ ok: true, via: "rpc" }, { status: 200 });
       }
     } catch (e) {
-      // fallback
       console.error("reset: rpc(reset_user) unexpected error (fallback):", e);
     }
 
     /**
-     * 🔁 Fallback : ton reset best-effort original
-     * (ne casse jamais même si table/colonne manquante)
+     * 🔁 Fallback : reset best-effort
      */
     const deletions: Array<{ table: string; column?: string }> = [
       // stratégie / pyramides / persona / plan
@@ -103,7 +99,11 @@ export async function POST() {
       { table: "user_ai_providers", column: "user_id" },
       { table: "user_api_keys", column: "user_id" },
 
-      // ressources user (si applicable chez toi)
+      // ✅ NOUVEAU : crédits IA
+      { table: "user_credits", column: "user_id" },
+      { table: "credit_transactions", column: "user_id" },
+
+      // ressources user (si applicable)
       { table: "resources", column: "user_id" },
       { table: "resource_chunks", column: "user_id" },
       { table: "prompts", column: "user_id" },
@@ -128,7 +128,7 @@ export async function POST() {
     console.error("Unhandled error in POST /api/account/reset:", err);
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

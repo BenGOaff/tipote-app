@@ -1,11 +1,11 @@
 // app/api/content/generate/route.ts
-// Génération IA + sauvegarde dans content_item
+// Génération IA + sauvegarde dans content_item (mode async via placeholder row)
 // ✅ Fix compile TS : getDecryptedUserApiKey(params) attend 1 seul argument (objet), et retourne string|null
 // ✅ A5 — Gating :
 //    - Plans payants (basic/essential/elite) => OK
 //    - Plan free => quota 7 contenus / 7 jours glissants (même si clé user configurée)
 // ✅ Cohérence calendrier : scheduledDate stockée en YYYY-MM-DD et status "scheduled" si date.
-// ✅ Compat DB : tags peut être array OU texte CSV -> insert avec retry.
+// ✅ Compat DB : tags peut être array OU texte CSV -> insert/update avec retry.
 // ✅ Output : texte brut (pas de markdown)
 // ✅ Knowledge : injecte tipote-knowledge via manifest (xlsx) + lecture des ressources
 // ✅ Persona : lit public.personas (persona_json + colonnes lisibles) et injecte dans le prompt.
@@ -13,6 +13,8 @@
 // ✅ Articles: support 2 étapes (plan -> write) via buildArticlePrompt + mots-clés en gras.
 // ✅ Vidéos: support prompt builder via lib/prompts/content/video (timing strict 160 mots/min)
 // ✅ Offres: support lead magnet + offre payante via lib/prompts/content/offer (mode from_pyramid / from_scratch)
+// ✅ Providers: openai | claude | gemini (clé USER obligatoire, jamais clé owner)
+// ✅ Async: on crée un content_item placeholder => jobId = content_item.id, puis update quand c’est fini.
 
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -41,16 +43,16 @@ type Body = {
   offerLink?: string;
 
   // ✅ Vidéos
-  duration?: string; // "30s" | "60s" | "3min" | "5min" | "10min" | "15min+"
-  targetWordCount?: number; // override (si calcul côté UI)
+  duration?: string;
+  targetWordCount?: number;
 
   // ✅ Offres / Lead magnets
   offerType?: "lead_magnet" | "paid_training";
-  offerTheme?: string; // si UI envoie un champ séparé
-  target?: string; // cible optionnelle (on l'utilise dans le prompt, pas besoin de l'afficher)
-  offerMode?: "from_pyramid" | "from_scratch"; // ✅ nouveau
-  leadMagnetFormat?: string; // ✅ nouveau (si from_scratch + lead_magnet)
-  sourceOfferId?: string; // ✅ optionnel: si UI veut forcer une offre source (sinon auto)
+  offerTheme?: string;
+  target?: string;
+  offerMode?: "from_pyramid" | "from_scratch";
+  leadMagnetFormat?: string;
+  sourceOfferId?: string;
 
   // Emails (nouveau modèle)
   emailType?: "newsletter" | "sales" | "onboarding";
@@ -63,7 +65,7 @@ type Body = {
 
   formality?: "tu" | "vous";
   offerId?: string;
-  offer?: string; // compat ancien fallback
+  offer?: string;
   offerManual?: {
     name?: string;
     promise?: string;
@@ -76,13 +78,12 @@ type Body = {
   articleStep?: "plan" | "write";
   objective?: "traffic_seo" | "authority" | "emails" | "sales";
   seoKeyword?: string;
-  secondaryKeywords?: string; // CSV ou lignes
-  links?: string; // URLs séparées par lignes
+  secondaryKeywords?: string;
+  links?: string;
   ctaText?: string;
   ctaLink?: string;
-  approvedPlan?: string; // plan validé (étape write)
+  approvedPlan?: string;
 
-  // compat UI (certaines versions envoient "cta")
   cta?: string;
 
   type?: string;
@@ -114,11 +115,7 @@ function normalizeProvider(x: unknown): Provider {
 function isoDateOrNull(x: unknown): string | null {
   const s = safeString(x).trim();
   if (!s) return null;
-
-  // Accepte YYYY-MM-DD directement
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-  // Accepte ISO -> convertit en YYYY-MM-DD
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
@@ -178,7 +175,6 @@ function arrayFromTextOrJson(v: unknown): string[] {
   if (typeof v !== "string") return [];
   const parsed = safeJsonParse<unknown>(v);
   if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
-  // fallback CSV
   return v
     .split(",")
     .map((x) => x.trim())
@@ -197,68 +193,37 @@ function coercePersonaJson(v: unknown): Record<string, any> | null {
 
 function toPlainText(input: string): string {
   let s = (input ?? "").replace(/\r\n/g, "\n");
-
-  // Remove fenced code blocks (keep inner content)
   s = s.replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, (_m, code) => String(code ?? "").trim());
-
-  // Convert markdown links to text: [label](url) -> label
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
-
-  // Remove headings, blockquotes
   s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
   s = s.replace(/^\s{0,3}>\s?/gm, "");
-
-  // Remove list markers (-, *, +, 1.)
   s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
   s = s.replace(/^\s{0,3}\d+\.\s+/gm, "");
-
-  // Remove emphasis/bold/code markers
   s = s.replace(/\*\*(.*?)\*\*/g, "$1");
   s = s.replace(/__(.*?)__/g, "$1");
   s = s.replace(/\*(.*?)\*/g, "$1");
   s = s.replace(/_(.*?)_/g, "$1");
   s = s.replace(/`([^`]+)`/g, "$1");
-
-  // Normalize bullets (avoid markdown-like)
   s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
-
-  // Collapse extra blank lines
   s = s.replace(/\n{3,}/g, "\n\n").trim();
-
   return s;
 }
 
 // Version "article": on garde **bold** (mots-clés), mais on nettoie le reste
 function toPlainTextKeepBold(input: string): string {
   let s = (input ?? "").replace(/\r\n/g, "\n");
-
-  // Remove fenced code blocks (keep inner content)
   s = s.replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, (_m, code) => String(code ?? "").trim());
-
-  // Convert markdown links to text: [label](url) -> label
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
-
-  // Remove headings, blockquotes
   s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
   s = s.replace(/^\s{0,3}>\s?/gm, "");
-
-  // Remove list markers (-, *, +) but keep text; keep numbered lists as-is
   s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
-
-  // Remove inline code markers, keep content
   s = s.replace(/`([^`]+)`/g, "$1");
-
-  // Normalize bullets
   s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
-
-  // Collapse extra blank lines
   s = s.replace(/\n{3,}/g, "\n\n").trim();
-
   return s;
 }
 
 // Insert EN (schéma older)
-// - certaines DB ont tags en texte, d'autres en array => on tente array puis CSV
 async function insertContentEN(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -266,7 +231,7 @@ async function insertContentEN(params: {
   title: string | null;
   content: string;
   channel: string | null;
-  scheduledDate: string | null; // YYYY-MM-DD
+  scheduledDate: string | null;
   tags: string[];
   tagsCsv: string;
   status: string;
@@ -311,7 +276,6 @@ async function insertContentEN(params: {
 }
 
 // Insert FR (schéma prod)
-// - certaines DB ont tags en texte, d'autres en array => on tente array puis CSV
 async function insertContentFR(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -319,7 +283,7 @@ async function insertContentFR(params: {
   title: string | null;
   content: string;
   channel: string | null;
-  scheduledDate: string | null; // YYYY-MM-DD
+  scheduledDate: string | null;
   tags: string[];
   tagsCsv: string;
   status: string;
@@ -363,12 +327,93 @@ async function insertContentFR(params: {
   return { data: first.data, error: first.error };
 }
 
-/** ---------------------------
- * Tipote Knowledge (manifest + ressources)
- * - Fail-open
- * - On limite à quelques snippets pertinents
- * -------------------------- */
+async function updateContentEN(params: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  id: string;
+  title: string | null;
+  content: string;
+  status: string;
+  tags: string[];
+  tagsCsv: string;
+}) {
+  const { supabase, ...row } = params;
 
+  const first = await supabase
+    .from("content_item")
+    .update({
+      title: row.title,
+      content: row.content,
+      status: row.status,
+      tags: row.tags,
+    } as any)
+    .eq("id", row.id)
+    .select("id, title")
+    .single();
+
+  if (first.error && isTagsTypeMismatch(first.error.message) && row.tagsCsv) {
+    const retry = await supabase
+      .from("content_item")
+      .update({
+        title: row.title,
+        content: row.content,
+        status: row.status,
+        tags: row.tagsCsv,
+      } as any)
+      .eq("id", row.id)
+      .select("id, title")
+      .single();
+
+    return { data: retry.data, error: retry.error };
+  }
+
+  return { data: first.data, error: first.error };
+}
+
+async function updateContentFR(params: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  id: string;
+  title: string | null;
+  content: string;
+  status: string;
+  tags: string[];
+  tagsCsv: string;
+}) {
+  const { supabase, ...row } = params;
+
+  const first = await supabase
+    .from("content_item")
+    .update({
+      titre: row.title,
+      contenu: row.content,
+      statut: row.status,
+      tags: row.tags,
+    } as any)
+    .eq("id", row.id)
+    .select("id, titre")
+    .single();
+
+  if (first.error && isTagsTypeMismatch(first.error.message) && row.tagsCsv) {
+    const retry = await supabase
+      .from("content_item")
+      .update({
+        titre: row.title,
+        contenu: row.content,
+        statut: row.status,
+        tags: row.tagsCsv,
+      } as any)
+      .eq("id", row.id)
+      .select("id, titre")
+      .single();
+
+    return { data: retry.data, error: retry.error };
+  }
+
+  return { data: first.data, error: first.error };
+}
+
+/** ---------------------------
+ * Tipote Knowledge (manifest + ressources) — fail-open
+ * -------------------------- */
 type KnowledgeEntry = {
   title: string;
   tags: string[];
@@ -431,7 +476,6 @@ async function loadKnowledgeManifestEntries(): Promise<KnowledgeEntry[]> {
     return knowledgeCache.entries;
   }
 
-  // Dynamic import pour éviter de casser si module absent
   let XLSX: any;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -472,7 +516,6 @@ async function loadKnowledgeManifestEntries(): Promise<KnowledgeEntry[]> {
         if (!Number.isNaN(pr)) priority = pr;
 
         if (!title || !relPath) return null;
-
         return { title, relPath, tags, type, priority } as KnowledgeEntry;
       })
       .filter(Boolean) as KnowledgeEntry[];
@@ -535,7 +578,6 @@ function scoreEntry(entry: KnowledgeEntry, tokens: string[], tags: string[], typ
   }
 
   if (typeof entry.priority === "number") score += Math.max(0, Math.min(10, entry.priority));
-
   return score;
 }
 
@@ -559,15 +601,9 @@ async function getKnowledgeSnippets(args: {
     const snippet = await readKnowledgeFileSnippet(it.e.relPath, 1800);
     if (!snippet) continue;
 
-    out.push({
-      title: it.e.title,
-      snippet,
-      source: it.e.relPath,
-    });
-
+    out.push({ title: it.e.title, snippet, source: it.e.relPath });
     if (out.length >= 4) break;
   }
-
   return out;
 }
 
@@ -604,7 +640,6 @@ async function isPaidOrThrowQuota(params: {
   const windowDays = 7;
   try {
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
-
     const { count, error } = await supabase
       .from("content_item")
       .select("id", { count: "exact", head: true })
@@ -644,7 +679,6 @@ function parseLinks(raw: string): string[] {
     .slice(0, 20);
 }
 
-// ✅ Objectif: accepte variantes UI (FR/label) + slug
 function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "emails" | "sales" | null {
   const s0 = (raw ?? "").trim();
   if (!s0) return null;
@@ -660,7 +694,6 @@ function normalizeArticleObjective(raw: string): "traffic_seo" | "authority" | "
   if (s === "authority" || s === "autorite" || s === "autorite_" || s === "autorite__") return "authority";
   if (s === "emails" || s === "email" || s === "liste_email" || s === "newsletter") return "emails";
   if (s === "sales" || s === "vente" || s === "ventes" || s === "conversion") return "sales";
-
   return null;
 }
 
@@ -683,7 +716,6 @@ function normalizeOfferType(raw: unknown): OfferType | null {
   return null;
 }
 
-// Fetch by id (try with user_id then fallback if column missing)
 async function fetchOfferPyramidById(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -709,14 +741,12 @@ async function fetchOfferPyramidById(args: {
   return null;
 }
 
-// Auto-pick user's lead magnet from pyramid (best-effort)
 async function fetchUserLeadMagnet(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
 }): Promise<OfferPyramidContext | null> {
   const { supabase, userId } = args;
 
-  // Require user_id column for safety; if missing => stop (UI should send sourceOfferId)
   const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
   if (probe.error && isMissingColumnError(probe.error.message)) {
     return null;
@@ -732,11 +762,9 @@ async function fetchUserLeadMagnet(args: {
     .maybeSingle();
 
   if (!q.error && q.data) return q.data as any;
-
   return null;
 }
 
-// Auto-pick user's paid offer (middle ticket preferred) (best-effort)
 async function fetchUserPaidOffer(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -781,6 +809,112 @@ async function fetchUserPaidOffer(args: {
   if (!anyPaid.error && anyPaid.data) return anyPaid.data as any;
 
   return null;
+}
+
+/** ---------------------------
+ * Provider callers (no extra deps)
+ * -------------------------- */
+
+type LlmCallArgs = {
+  provider: Provider;
+  apiKey: string;
+  system: string;
+  user: string;
+};
+
+async function callOpenAI(args: LlmCallArgs): Promise<string> {
+  const client = new OpenAI({ apiKey: args.apiKey });
+
+  const model = process.env.TIPOTE_OPENAI_MODEL?.trim() || "gpt-5.2";
+
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.7,
+    messages: [
+      { role: "system", content: args.system },
+      { role: "user", content: args.user },
+    ],
+  });
+
+  return completion.choices?.[0]?.message?.content?.trim() ?? "";
+}
+
+async function callClaude(args: LlmCallArgs): Promise<string> {
+  // Anthropic Messages API
+  const model = process.env.TIPOTE_CLAUDE_MODEL?.trim() || "claude-3-5-sonnet-20240620";
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": args.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4000,
+      temperature: 0.7,
+      system: args.system,
+      messages: [{ role: "user", content: args.user }],
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  // content: [{type:"text", text:"..."}]
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  const text = parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  return text || "";
+}
+
+async function callGemini(args: LlmCallArgs): Promise<string> {
+  const model = process.env.TIPOTE_GEMINI_MODEL?.trim() || "gemini-1.5-pro";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(
+    args.apiKey,
+  )}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      generationConfig: { temperature: 0.7 },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: `${args.system}\n\n${args.user}` }],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Gemini API error (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const text =
+    json?.candidates?.[0]?.content?.parts
+      ?.map((p: any) => String(p?.text ?? ""))
+      .filter(Boolean)
+      .join("\n")
+      .trim() ?? "";
+
+  return text || "";
+}
+
+async function callProvider(args: LlmCallArgs): Promise<string> {
+  if (args.provider === "claude") return callClaude(args);
+  if (args.provider === "gemini") return callGemini(args);
+  return callOpenAI(args);
 }
 
 export async function POST(req: Request) {
@@ -830,7 +964,6 @@ export async function POST(req: Request) {
     // ✅ Offres / Lead magnets
     const offerTypeRaw = safeString((body as any)?.offerType).trim();
     const offerThemeRaw = safeString((body as any)?.offerTheme).trim();
-    const offerTarget = safeString((body as any)?.target).trim();
     const offerMode = normalizeOfferMode((body as any)?.offerMode);
     const leadMagnetFormat = safeString((body as any)?.leadMagnetFormat).trim();
     const sourceOfferId = safeString((body as any)?.sourceOfferId).trim();
@@ -847,7 +980,6 @@ export async function POST(req: Request) {
     const formalityRaw = safeString((body as any)?.formality).trim();
     const offerId = safeString((body as any)?.offerId).trim();
     const offerName = safeString((body as any)?.offer).trim();
-
     const offerManual = isRecord((body as any)?.offerManual) ? ((body as any).offerManual as any) : null;
 
     // Champs structurés (articles)
@@ -873,12 +1005,10 @@ export async function POST(req: Request) {
       if (!subject && !seoKeyword) {
         return NextResponse.json({ ok: false, error: "Missing subject" }, { status: 400 });
       }
-
       const objectiveCheck = normalizeArticleObjective(objectiveRaw);
       if (!objectiveCheck) {
         return NextResponse.json({ ok: false, error: "Missing objective" }, { status: 400 });
       }
-
       const stepOk = articleStepRaw === "plan" || articleStepRaw === "write";
       if (!stepOk) {
         return NextResponse.json({ ok: false, error: "Missing articleStep" }, { status: 400 });
@@ -901,9 +1031,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing offerType" }, { status: 400 });
       }
 
-      // ✅ Règles V2 (offers)
-      // - from_pyramid : pas besoin de thème (on le déduit de l'offre source)
-      // - from_scratch : on a besoin d'un sujet (theme) + si lead_magnet => format obligatoire
       if (offerMode === "from_scratch") {
         if (!offerTheme) {
           return NextResponse.json({ ok: false, error: "Missing offer theme" }, { status: 400 });
@@ -921,21 +1048,25 @@ export async function POST(req: Request) {
       }
     }
 
-    // Provider gating
-    if (provider !== "openai") {
-      return NextResponse.json(
-        { ok: false, error: `Provider "${provider}" pas encore activé côté backend.` },
-        { status: 501 },
-      );
-    }
-
-    // ✅ Clé user (si dispo) — prioritaire
-    const ownerKey = process.env.OPENAI_API_KEY ?? "";
+    // ✅ Clé USER obligatoire (selon provider) — jamais clé owner
     const userKey = await getDecryptedUserApiKey({
       supabase,
       userId,
-      provider: "openai",
+      provider, // "openai" | "claude" | "gemini"
     });
+
+    const apiKey = (userKey ?? "").trim();
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "missing_user_api_key",
+          error: "Tu dois ajouter une clé API dans Réglages pour générer du contenu.",
+          provider,
+        },
+        { status: 400 },
+      );
+    }
 
     // ✅ Gating plan/quota
     const gate = await isPaidOrThrowQuota({ supabase, userId });
@@ -953,16 +1084,12 @@ export async function POST(req: Request) {
       }
     }
 
-    const apiKey = (userKey ?? ownerKey).trim();
+    const tagsCsv = joinTagsCsv(tags);
 
-    if (!apiKey) {
-      return NextResponse.json({ ok: false, error: "Aucune clé OpenAI configurée (user ou owner)." }, { status: 400 });
-    }
-
-    // Contexte (optionnel) : business profile + plan
+    // ✅ Contexte (optionnel) : business profile + plan
     const { data: profile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
-
     const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    const planJson = (planRow as any)?.plan_json ?? null;
 
     // ✅ Persona (optionnel) : public.personas
     let personaContext: any = null;
@@ -984,7 +1111,6 @@ export async function POST(req: Request) {
         }
       } else if (personaRow) {
         const pj = coercePersonaJson((personaRow as any).persona_json);
-
         personaContext =
           pj ?? {
             title: (personaRow as any).name ?? null,
@@ -1001,11 +1127,6 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Persona load (fail-open):", e);
     }
-
-    const planJson = (planRow as any)?.plan_json ?? null;
-
-    const client = new OpenAI({ apiKey });
-    const tagsCsv = joinTagsCsv(tags);
 
     // ✅ Offre (emails sales) : best-effort
     let offerContext: any = null;
@@ -1197,7 +1318,6 @@ export async function POST(req: Request) {
                   })
                 : prompt;
 
-    // ✅ Prompt final (pour knowledge)
     const matchPrompt =
       type === "post"
         ? subject || prompt
@@ -1213,7 +1333,6 @@ export async function POST(req: Request) {
                   : (offerThemeRaw || theme || subject || prompt)
                 : prompt;
 
-    // ✅ Plain text output
     const systemPrompt = [
       "Tu es Tipote, un assistant business & contenu.",
       "Tu écris en français, avec un style clair, pro, actionnable.",
@@ -1287,91 +1406,182 @@ export async function POST(req: Request) {
     userContextLines.push("Brief :");
     userContextLines.push(effectivePrompt);
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-5.2",
-      temperature: 0.7,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContextLines.join("\n") },
-      ],
+    // ✅ Async job = placeholder row dans content_item
+    const generatingStatus = "generating";
+    const finalStatus = scheduledDate ? "scheduled" : "draft";
+
+    // On insère un placeholder (content vide) => jobId = content_item.id
+    const placeholderEN = await insertContentEN({
+      supabase,
+      userId,
+      type,
+      title: null,
+      content: "",
+      channel,
+      scheduledDate,
+      tags,
+      tagsCsv,
+      status: generatingStatus,
     });
 
-    const raw = completion.choices?.[0]?.message?.content?.trim() ?? "";
-    const content = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+    let jobId: string | null = null;
+    let schema: "en" | "fr" = "en";
 
-    if (!content) {
-      return NextResponse.json({ ok: false, error: "Empty content from model" }, { status: 502 });
+    if (!placeholderEN.error && placeholderEN.data?.id) {
+      jobId = String((placeholderEN.data as any).id);
+      schema = "en";
+    } else {
+      const enErr = placeholderEN.error as PostgrestError | null;
+      if (!isMissingColumnError(enErr?.message)) {
+        return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
+      }
+
+      const placeholderFR = await insertContentFR({
+        supabase,
+        userId,
+        type,
+        title: null,
+        content: "",
+        channel,
+        scheduledDate,
+        tags,
+        tagsCsv,
+        status: generatingStatus,
+      });
+
+      if (placeholderFR.error || !placeholderFR.data?.id) {
+        return NextResponse.json(
+          { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
+          { status: 400 },
+        );
+      }
+
+      jobId = String((placeholderFR.data as any).id);
+      schema = "fr";
     }
 
-    const title = (() => {
-      const firstLine = content.split("\n").find((l) => l.trim()) ?? null;
-      if (!firstLine) return null;
-      const t = firstLine.replace(/^#+\s*/, "").trim();
-      if (!t) return null;
-      return t.slice(0, 120);
+    // Fire-and-forget: on lance la génération et on update la row
+    // (sur serveur Node Hostinger, ça tient ; si crash => la row reste "generating")
+    void (async () => {
+      try {
+        const raw = await callProvider({
+          provider,
+          apiKey,
+          system: systemPrompt,
+          user: userContextLines.join("\n"),
+        });
+
+        const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+
+        const finalContent = cleaned?.trim() ?? "";
+        if (!finalContent) {
+          throw new Error("Empty content from model");
+        }
+
+        const title = (() => {
+          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+          if (!firstLine) return null;
+          const t = firstLine.replace(/^#+\s*/, "").trim();
+          if (!t) return null;
+          return t.slice(0, 120);
+        })();
+
+        if (schema === "en") {
+          const upd = await updateContentEN({
+            supabase,
+            id: jobId!,
+            title,
+            content: finalContent,
+            status: finalStatus,
+            tags,
+            tagsCsv,
+          });
+
+          if (upd.error) {
+            const e = upd.error as PostgrestError | null;
+            // Si schéma a changé entre-temps => tentative FR
+            if (isMissingColumnError(e?.message)) {
+              await updateContentFR({
+                supabase,
+                id: jobId!,
+                title,
+                content: finalContent,
+                status: finalStatus,
+                tags,
+                tagsCsv,
+              });
+            }
+          }
+        } else {
+          const upd = await updateContentFR({
+            supabase,
+            id: jobId!,
+            title,
+            content: finalContent,
+            status: finalStatus,
+            tags,
+            tagsCsv,
+          });
+
+          if (upd.error) {
+            const e = upd.error as PostgrestError | null;
+            if (isMissingColumnError(e?.message)) {
+              await updateContentEN({
+                supabase,
+                id: jobId!,
+                title,
+                content: finalContent,
+                status: finalStatus,
+                tags,
+                tagsCsv,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Best-effort: repasse en draft avec message minimal si possible, sinon ignore
+        const msg = err instanceof Error ? err.message : "Unknown error";
+
+        try {
+          if (schema === "en") {
+            await updateContentEN({
+              supabase,
+              id: jobId!,
+              title: "Erreur génération",
+              content: `Erreur: ${msg}`,
+              status: "draft",
+              tags,
+              tagsCsv,
+            });
+          } else {
+            await updateContentFR({
+              supabase,
+              id: jobId!,
+              title: "Erreur génération",
+              content: `Erreur: ${msg}`,
+              status: "draft",
+              tags,
+              tagsCsv,
+            });
+          }
+        } catch {
+          // ignore
+        }
+      }
     })();
 
-    const status = scheduledDate ? "scheduled" : "draft";
-
-    const tryEN = await insertContentEN({
-      supabase,
-      userId,
-      type,
-      title,
-      content,
-      channel,
-      scheduledDate,
-      tags,
-      tagsCsv,
-      status,
-    });
-
-    if (!tryEN.error) {
-      return NextResponse.json(
-        {
-          ok: true,
-          id: tryEN.data?.id,
-          title: (tryEN.data as any)?.title ?? title,
-          content,
-          usedUserKey: Boolean(userKey),
-          maskedKey: maskKey(apiKey),
-        },
-        { status: 200 },
-      );
-    }
-
-    const enErr = tryEN.error as PostgrestError | null;
-    if (!isMissingColumnError(enErr?.message)) {
-      return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
-    }
-
-    const tryFR = await insertContentFR({
-      supabase,
-      userId,
-      type,
-      title,
-      content,
-      channel,
-      scheduledDate,
-      tags,
-      tagsCsv,
-      status,
-    });
-
-    if (tryFR.error) {
-      return NextResponse.json({ ok: false, error: (tryFR.error as any)?.message ?? "Insert error" }, { status: 400 });
-    }
-
+    // Réponse immédiate (async)
     return NextResponse.json(
       {
         ok: true,
-        id: (tryFR.data as any)?.id,
-        title: (tryFR.data as any)?.titre ?? title,
-        content,
-        usedUserKey: Boolean(userKey),
+        jobId,
+        provider,
         maskedKey: maskKey(apiKey),
+        status: generatingStatus,
+        note:
+          "Génération en cours. Poll la ressource content_item par jobId (ex: GET /api/content/[id]) pour récupérer le contenu.",
       },
-      { status: 200 },
+      { status: 202 },
     );
   } catch (e) {
     return NextResponse.json(
