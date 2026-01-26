@@ -879,9 +879,7 @@ export async function POST(req: Request) {
     const scheduledDate = isoDateOrNull(body?.scheduledDate ?? null);
 
     const tags =
-      Array.isArray(body?.tags)
-        ? body.tags.filter(Boolean).map(String)
-        : arrayFromTextOrJson(body?.tags);
+      Array.isArray(body?.tags) ? body.tags.filter(Boolean).map(String) : arrayFromTextOrJson(body?.tags);
 
     const prompt =
       safeString(body?.prompt).trim() ||
@@ -906,10 +904,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey =
-      process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-      process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
-      "";
+    const apiKey = process.env.CLAUDE_API_KEY_OWNER?.trim() || process.env.ANTHROPIC_API_KEY_OWNER?.trim() || "";
 
     if (!apiKey) {
       return NextResponse.json(
@@ -1052,7 +1047,9 @@ export async function POST(req: Request) {
      * Funnel (pyramide) — pages capture / vente
      * -------------------------- */
 
-    const funnelPage = normalizeFunnelPage((body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null);
+    const funnelPage = normalizeFunnelPage(
+      (body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null,
+    );
     const funnelMode = normalizeOfferMode((body as any).funnelMode ?? null);
     const funnelOfferId =
       safeString((body as any).funnelOfferId).trim() ||
@@ -1066,9 +1063,7 @@ export async function POST(req: Request) {
         funnelSourceOffer = await fetchOfferPyramidById({ supabase, userId, id: funnelOfferId });
       } else {
         funnelSourceOffer =
-          funnelPage === "sales"
-            ? await fetchUserPaidOffer({ supabase, userId })
-            : await fetchUserLeadMagnet({ supabase, userId });
+          funnelPage === "sales" ? await fetchUserPaidOffer({ supabase, userId }) : await fetchUserLeadMagnet({ supabase, userId });
       }
 
       if (!funnelSourceOffer) {
@@ -1190,11 +1185,7 @@ export async function POST(req: Request) {
         const objective = normalizeArticleObjective(body.objective);
         if (!objective) return buildPromptByType({ type: "generic", prompt: prompt || "Article" });
 
-        const subject =
-          safeString(body.subject).trim() ||
-          safeString(body.theme).trim() ||
-          prompt ||
-          "Article";
+        const subject = safeString(body.subject).trim() || safeString(body.theme).trim() || prompt || "Article";
 
         const primaryKeyword = safeString(body.seoKeyword).trim() || undefined;
         const secondaryKeywords = parseSecondaryKeywords(safeString(body.secondaryKeywords));
@@ -1412,10 +1403,7 @@ export async function POST(req: Request) {
       });
 
       if (placeholderFR.error || !placeholderFR.data?.id) {
-        return NextResponse.json(
-          { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
-          { status: 400 },
-        );
+        return NextResponse.json({ ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" }, { status: 400 });
       }
 
       jobId = String((placeholderFR.data as any).id);
@@ -1550,9 +1538,6 @@ export async function POST(req: Request) {
       { status: 202 },
     );
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }

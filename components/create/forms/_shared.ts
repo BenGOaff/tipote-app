@@ -1,24 +1,32 @@
-"use client";
+// components/create/forms/_shared.ts
 
-export type CreateFormCommonProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
+export type AnyParams = Record<string, any>;
+
+export type PyramidOfferLite = {
+  id: string;
+  name: string | null;
+  level?: string | null;
+  description?: string | null;
+  promise?: string | null;
+  price_min?: number | null;
+  price_max?: number | null;
+  main_outcome?: string | null;
+  format?: string | null;
+  delivery?: string | null;
+  updated_at?: string | null;
 };
 
-/**
- * On envoie un objet "context" au backend.
- * Ton backend Tipote peut l’ignorer si pas utilisé,
- * mais ça permet de brancher onboarding/persona/offres ensuite.
- */
-export function buildTipoteContext(extra?: Record<string, any>) {
-  return {
-    // placeholders “propres” : à brancher ensuite sur tes vraies sources (onboarding/persona/offres)
-    onboarding: undefined,
-    persona: undefined,
-    offers: undefined,
-    ...extra,
-  };
+export function isLeadMagnetLevel(level: string | null | undefined) {
+  const s = String(level ?? "").toLowerCase();
+  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
+}
+
+export function toNumberOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const s = v.trim().replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }

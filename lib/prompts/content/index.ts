@@ -8,6 +8,11 @@ import {
 } from "@/lib/prompts/content/video";
 import { buildOfferPrompt, type OfferPromptParams } from "@/lib/prompts/content/offer";
 
+// ✅ Ajouts (ne cassent rien)
+export { buildEmailPrompt } from "@/lib/prompts/content/email";
+export { buildArticlePrompt } from "@/lib/prompts/content/article";
+export { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
+
 export type PostBuildArgs = { type: "post" } & SocialPostPromptParams;
 export type VideoBuildArgs = { type: "video" } & VideoScriptPromptParams;
 export type OfferBuildArgs = { type: "offer" } & OfferPromptParams;
@@ -87,4 +92,6 @@ export function buildPromptByType(args: BuildPromptArgs): string {
   if ("prompt" in args && typeof args.prompt === "string") return args.prompt;
   return "";
 }
+
+// ✅ Tu voulais garder cette ligne
 export * from "./funnel";

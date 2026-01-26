@@ -2,304 +2,294 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-type PyramidOfferLite = {
-  id: string;
-  name: string | null;
-  level?: string | null;
-  promise?: string | null;
-  description?: string | null;
-  price_min?: string | number | null;
-  price_max?: string | number | null;
-  main_outcome?: string | null;
-  format?: string | null;
-  delivery?: string | null;
-  updated_at?: string | null;
-};
+import type { PyramidOfferLite } from "@/components/create/forms/_shared";
+import { isLeadMagnetLevel } from "@/components/create/forms/_shared";
 
-interface FunnelFormProps {
+type FunnelPageType = "capture" | "sales";
+type FunnelMode = "from_pyramid" | "from_scratch";
+
+export type FunnelFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
 
-  // Offres issues de la pyramide (optionnel)
-  pyramidOffers?: PyramidOfferLite[] | null;
+  pyramidOffers?: PyramidOfferLite[];
   pyramidLeadMagnet?: PyramidOfferLite | null;
   pyramidPaidOffer?: PyramidOfferLite | null;
-}
+};
 
-type FunnelPage = "capture" | "sales";
-type FunnelMode = "from_pyramid" | "from_scratch";
-
-function isLeadMagnetLevel(level: string | null | undefined) {
-  const s = String(level ?? "").toLowerCase();
-  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
-}
-
-function formatOfferLabel(o: PyramidOfferLite) {
-  const name = (o.name ?? "").trim() || "Offre";
-  const level = (o.level ?? "").trim();
-  const price =
-    o.price_min || o.price_max
-      ? ` — ${String(o.price_min ?? "").trim()}${o.price_max ? `-${String(o.price_max).trim()}` : ""}€`
-      : "";
-  return `${name}${level ? ` (${level})` : ""}${price}`;
-}
-
-export function FunnelForm({
-  onGenerate,
-  onSave,
-  onClose,
-  isGenerating,
-  isSaving,
-  pyramidOffers,
-  pyramidLeadMagnet,
-  pyramidPaidOffer,
-}: FunnelFormProps) {
+export function FunnelForm(props: FunnelFormProps) {
   const { toast } = useToast();
 
-  const [page, setPage] = useState<FunnelPage>("capture");
+  const [pageType, setPageType] = useState<FunnelPageType>("capture");
   const [mode, setMode] = useState<FunnelMode>("from_pyramid");
 
-  // from pyramid
-  const [offerId, setOfferId] = useState<string>("");
+  const [title, setTitle] = useState("");
+  const [result, setResult] = useState("");
 
-  // from scratch
-  const [name, setName] = useState("");
-  const [promise, setPromise] = useState("");
+  // from_pyramid
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+
+  // from_scratch (capture + sales)
+  const [offerName, setOfferName] = useState("");
+  const [pitch, setPitch] = useState("");
   const [target, setTarget] = useState("");
+
+  // sales only
   const [price, setPrice] = useState("");
   const [urgency, setUrgency] = useState("");
   const [guarantee, setGuarantee] = useState("");
 
-  const [title, setTitle] = useState("");
-  const [generated, setGenerated] = useState("");
+  useEffect(() => {
+    setResult("");
+  }, [pageType, mode]);
 
-  const offersForPage = useMemo(() => {
-    const list = (pyramidOffers ?? []).slice();
-    if (!list.length) return [];
-    return page === "capture"
-      ? list.filter((o) => isLeadMagnetLevel(o.level ?? null))
-      : list.filter((o) => !isLeadMagnetLevel(o.level ?? null));
-  }, [pyramidOffers, page]);
+  const offers = props.pyramidOffers ?? [];
+
+  const filteredOffers = useMemo(() => {
+    if (pageType === "capture") return offers.filter((o) => isLeadMagnetLevel(o.level ?? null));
+    return offers.filter((o) => !isLeadMagnetLevel(o.level ?? null));
+  }, [offers, pageType]);
+
+  const defaultOfferFromProps = useMemo(() => {
+    return pageType === "capture" ? props.pyramidLeadMagnet : props.pyramidPaidOffer;
+  }, [pageType, props.pyramidLeadMagnet, props.pyramidPaidOffer]);
 
   useEffect(() => {
     if (mode !== "from_pyramid") return;
-    if (page === "capture") {
-      const preferred = pyramidLeadMagnet?.id || offersForPage?.[0]?.id || "";
-      setOfferId(preferred);
-    } else {
-      const preferred = pyramidPaidOffer?.id || offersForPage?.[0]?.id || "";
-      setOfferId(preferred);
+
+    const idFromDefault = defaultOfferFromProps?.id ?? "";
+    const first = filteredOffers[0]?.id ?? "";
+
+    setSelectedOfferId(idFromDefault || first || "");
+  }, [mode, defaultOfferFromProps, filteredOffers]);
+
+  const selectedOffer = useMemo(() => {
+    const id = selectedOfferId || defaultOfferFromProps?.id || "";
+    return filteredOffers.find((o) => o.id === id) ?? defaultOfferFromProps ?? null;
+  }, [selectedOfferId, filteredOffers, defaultOfferFromProps]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(result || "");
+      toast({ title: "Copié", description: "Le texte a été copié dans le presse-papiers." });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de copier.", variant: "destructive" });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, page, pyramidLeadMagnet?.id, pyramidPaidOffer?.id]);
+  };
+
+  const validateScratch = (): boolean => {
+    if (!offerName.trim()) {
+      toast({ title: "Champ requis", description: "Nom de l'offre requis.", variant: "destructive" });
+      return false;
+    }
+    if (!pitch.trim()) {
+      toast({ title: "Champ requis", description: "Pitch (promesse) requis.", variant: "destructive" });
+      return false;
+    }
+    if (!target.trim()) {
+      toast({ title: "Champ requis", description: "Public cible requis.", variant: "destructive" });
+      return false;
+    }
+    if (pageType === "sales") {
+      if (!price.trim()) {
+        toast({ title: "Champ requis", description: "Prix requis pour une page de vente.", variant: "destructive" });
+        return false;
+      }
+      if (!urgency.trim()) {
+        toast({ title: "Champ requis", description: "Urgence requise (ex: offre de lancement...).", variant: "destructive" });
+        return false;
+      }
+      if (!guarantee.trim()) {
+        toast({ title: "Champ requis", description: "Garantie requise.", variant: "destructive" });
+        return false;
+      }
+    }
+    return true;
+  };
 
   const handleGenerate = async () => {
-    setGenerated("");
+    setResult("");
 
-    if (!title.trim()) {
-      toast({
-        title: "Titre requis",
-        description: "Entre un titre pour générer (et sauvegarder ensuite).",
-        variant: "destructive",
-      });
+    if (mode === "from_pyramid") {
+      if (!selectedOffer?.id) {
+        toast({
+          title: "Aucune offre trouvée",
+          description: "Impossible d'utiliser la pyramide pour ce type de page. Passe en “À partir de zéro”.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const payload = {
+        type: "funnel",
+        funnelPageType: pageType,
+        funnelMode: "from_pyramid",
+        offerId: selectedOffer.id, // réutilise offerId côté API
+        theme: selectedOffer.promise || selectedOffer.name || "Funnel",
+      };
+
+      const text = await props.onGenerate(payload);
+      if (!text?.trim()) return;
+      setResult(text);
       return;
     }
 
-    if (mode === "from_pyramid") {
-      if (!offerId) {
-        toast({
-          title: "Offre requise",
-          description:
-            "Aucune offre trouvée dans ta pyramide. Crée une offre dans la pyramide ou passe en 'À partir de zéro'.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else {
-      if (!name.trim() || !promise.trim() || !target.trim()) {
-        toast({
-          title: "Infos manquantes",
-          description: "Nom de l'offre + promesse + public cible sont requis.",
-          variant: "destructive",
-        });
-        return;
-      }
+    // from_scratch
+    if (!validateScratch()) return;
 
-      if (page === "sales" && !price.trim()) {
-        toast({
-          title: "Prix requis",
-          description: "Pour une page de vente, indique un prix (ou une fourchette).",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    const text = await onGenerate({
+    const payload = {
       type: "funnel",
-      funnelPage: page,
-      funnelMode: mode,
-      funnelOfferId: mode === "from_pyramid" ? offerId : undefined,
-      funnelManual:
-        mode === "from_scratch"
-          ? {
-              name: name.trim(),
-              promise: promise.trim(),
-              target: target.trim(),
-              price: page === "sales" ? price.trim() : "",
-              urgency: page === "sales" ? urgency.trim() : "",
-              guarantee: page === "sales" ? guarantee.trim() : "",
-            }
-          : undefined,
-      title: title.trim(),
-    });
+      funnelPageType: pageType,
+      funnelMode: "from_scratch",
+      theme: offerName || pitch || "Funnel",
+      funnelManual: {
+        name: offerName,
+        pitch,
+        target,
+        price: pageType === "sales" ? price : undefined,
+        urgency: pageType === "sales" ? urgency : undefined,
+        guarantee: pageType === "sales" ? guarantee : undefined,
+      },
+    };
 
-    setGenerated(text || "");
+    const text = await props.onGenerate(payload);
+    if (!text?.trim()) return;
+    setResult(text);
   };
 
   const handleSave = async () => {
     if (!title.trim()) {
-      toast({ title: "Titre requis", description: "Entre un titre pour sauvegarder", variant: "destructive" });
+      toast({ title: "Titre requis", description: "Entre un titre pour sauvegarder.", variant: "destructive" });
       return;
     }
-    if (!generated.trim()) {
-      toast({ title: "Contenu manquant", description: "Génère un contenu avant de sauvegarder", variant: "destructive" });
+    if (!result.trim()) {
+      toast({ title: "Contenu requis", description: "Génère un contenu avant de sauvegarder.", variant: "destructive" });
       return;
     }
 
-    await onSave({
+    await props.onSave({
+      title,
       type: "funnel",
-      title: title.trim(),
-      content: generated.trim(),
-      status: "draft",
+      content: result,
     });
-  };
-
-  const handleCopy = async () => {
-    const text = (generated ?? "").trim();
-    if (!text) return;
-
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({ title: "Copié", description: "Le texte a été copié dans le presse-papiers." });
-    } catch {
-      toast({
-        title: "Impossible de copier",
-        description: "Ton navigateur a bloqué l'accès au presse-papiers.",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Funnels</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl font-semibold">Funnels</h2>
+          <p className="text-sm text-muted-foreground">
             Génère une page de capture ou une page de vente, optimisée conversion, inspirée des ressources Tipote.
           </p>
         </div>
-
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={props.onClose}>
           ✕
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-5">
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-4 space-y-4">
           <div className="space-y-2">
             <Label>Type de page</Label>
-            <div className="flex gap-2">
-              <Button type="button" variant={page === "capture" ? "default" : "outline"} onClick={() => setPage("capture")}>
-                Page de capture
-              </Button>
-              <Button type="button" variant={page === "sales" ? "default" : "outline"} onClick={() => setPage("sales")}>
-                Page de vente
-              </Button>
-            </div>
+            <Tabs value={pageType} onValueChange={(v) => setPageType(v as FunnelPageType)}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="capture">Page de capture</TabsTrigger>
+                <TabsTrigger value="sales">Page de vente</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           <div className="space-y-2">
             <Label>Mode de création</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant={mode === "from_pyramid" ? "default" : "outline"} onClick={() => setMode("from_pyramid")}>
-                À partir de la pyramide
-              </Button>
-              <Button type="button" variant={mode === "from_scratch" ? "default" : "outline"} onClick={() => setMode("from_scratch")}>
-                À partir de zéro
-              </Button>
-            </div>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as FunnelMode)}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="from_pyramid">À partir de la pyramide</TabsTrigger>
+                <TabsTrigger value="from_scratch">À partir de zéro</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {mode === "from_pyramid" ? (
-            <div className="space-y-2">
-              <Label>Offre (pyramide)</Label>
-              <select
-                value={offerId}
-                onChange={(e) => setOfferId(e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">
-                  {offersForPage.length ? "Choisir une offre" : "Aucune offre trouvée pour ce type de page"}
-                </option>
-                {offersForPage.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {formatOfferLabel(o)}
-                  </option>
-                ))}
-              </select>
-
-              <p className="text-xs text-muted-foreground">
-                {page === "capture"
-                  ? "Tip: pour une page de capture, on utilise ton lead magnet."
-                  : "Tip: pour une page de vente, on utilise ton offre payante (middle / premium)."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="grid gap-2">
-                <Label>Nom de l’offre</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Sprint Acquisition 14 jours" />
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Offre (pyramide)</Label>
+                <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une offre..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredOffers.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name ?? "(Sans nom)"} {o.level ? `— ${o.level}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="grid gap-2">
+              <div className="rounded-md border p-3 text-sm">
+                <div className="font-medium mb-1">Résumé</div>
+                {selectedOffer ? (
+                  <div className="space-y-1">
+                    <div><span className="font-medium">Nom :</span> {selectedOffer.name ?? "—"}</div>
+                    <div><span className="font-medium">Promesse :</span> {selectedOffer.promise ?? "—"}</div>
+                    {pageType === "sales" ? (
+                      <div>
+                        <span className="font-medium">Prix :</span>{" "}
+                        {selectedOffer.price_min ?? "—"} → {selectedOffer.price_max ?? "—"}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">Aucune offre disponible pour ce type.</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Nom de l’offre</Label>
+                <Input value={offerName} onChange={(e) => setOfferName(e.target.value)} placeholder="Ex: Quiz Cash Creator" />
+              </div>
+
+              <div className="space-y-2">
                 <Label>Pitch (promesse principale)</Label>
                 <Textarea
-                  value={promise}
-                  onChange={(e) => setPromise(e.target.value)}
-                  placeholder="Ex: Obtenir 10 leads qualifiés en 14 jours sans pub."
-                  className="min-h-[90px]"
+                  value={pitch}
+                  onChange={(e) => setPitch(e.target.value)}
+                  placeholder="Ex: Transforme ton audience en leads qualifiés grâce à..."
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className="space-y-2">
                 <Label>Public cible</Label>
-                <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Ex: Coachs B2B qui vendent en high ticket" />
+                <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Ex: infopreneurs, coaches..." />
               </div>
 
-              {page === "sales" ? (
+              {pageType === "sales" ? (
                 <>
-                  <div className="grid gap-2">
+                  <div className="space-y-2">
                     <Label>Prix</Label>
-                    <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 997€ ou 497-997€" />
+                    <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 49€" />
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label>Urgence (optionnel)</Label>
-                    <Input value={urgency} onChange={(e) => setUrgency(e.target.value)} placeholder="Ex: Offre de lancement jusqu’à dimanche / 20 places" />
+                  <div className="space-y-2">
+                    <Label>Urgence</Label>
+                    <Input value={urgency} onChange={(e) => setUrgency(e.target.value)} placeholder="Ex: offre de lancement 72h..." />
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label>Garantie (optionnel)</Label>
+                  <div className="space-y-2">
+                    <Label>Garantie</Label>
                     <Input value={guarantee} onChange={(e) => setGuarantee(e.target.value)} placeholder="Ex: satisfait ou remboursé 14 jours" />
                   </div>
                 </>
@@ -309,33 +299,33 @@ export function FunnelForm({
 
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Page capture - Lead Magnet" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Page de capture - Quiz Cash Creator" />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handleGenerate} disabled={isGenerating}>
-              {isGenerating ? "Génération..." : "Générer"}
+          <div className="flex gap-2">
+            <Button onClick={handleGenerate} disabled={props.isGenerating}>
+              {props.isGenerating ? "Génération..." : "Générer"}
             </Button>
-            <Button variant="outline" onClick={handleSave} disabled={isSaving || !generated.trim()}>
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+            <Button variant="secondary" onClick={handleSave} disabled={props.isSaving}>
+              {props.isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </div>
-        </div>
+        </Card>
 
-        <div className="space-y-2">
+        <Card className="p-4 space-y-2">
           <div className="flex items-center justify-between">
             <Label>Résultat</Label>
-            <Button variant="outline" onClick={handleCopy} disabled={!generated.trim()}>
+            <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
               Copier
             </Button>
           </div>
           <Textarea
-            value={generated}
-            readOnly
+            value={result}
+            onChange={(e) => setResult(e.target.value)}
+            className="min-h-[520px]"
             placeholder="Le texte généré apparaîtra ici..."
-            className="min-h-[520px] font-mono text-sm"
           />
-        </div>
+        </Card>
       </div>
     </div>
   );
