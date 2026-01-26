@@ -123,11 +123,9 @@ const quickTemplates = [
 type ContentType = (typeof contentTypes)[number]["id"] | null;
 type AnyParams = Record<string, any>;
 
-// ⚠️ IMPORTANT : on évite d'appeler ce type "PyramidOfferLite" pour ne pas créer un conflit
-// avec d'autres modules (OfferForm/FunnelForm) qui peuvent déclarer le même nom.
-type PyramidOfferLiteClient = {
+type PyramidOfferLite = {
   id: string;
-  name?: string | null;
+  name: string | null;
   level?: string | null;
   description?: string | null;
   promise?: string | null;
@@ -139,20 +137,19 @@ type PyramidOfferLiteClient = {
   updated_at?: string | null;
 };
 
+function isLeadMagnetLevel(level: string | null | undefined) {
+  const s = String(level ?? "").toLowerCase();
+  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
+}
+
 function toNumberOrNull(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
     const s = v.trim().replace(",", ".");
-    if (!s) return null;
     const n = Number(s);
     return Number.isFinite(n) ? n : null;
   }
   return null;
-}
-
-function isLeadMagnetLevel(level: string | null | undefined) {
-  const s = String(level ?? "").toLowerCase();
-  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
 }
 
 function buildFallbackPrompt(params: AnyParams): string {
@@ -194,7 +191,9 @@ function ensurePrompt(params: AnyParams): AnyParams {
       (typeof params.instructions === "string" && params.instructions.trim()) ||
       "";
 
-    if (!subject && promptLike) return { ...params, subject: promptLike };
+    if (!subject && promptLike) {
+      return { ...params, subject: promptLike };
+    }
     return params;
   }
 
@@ -224,6 +223,42 @@ function extractGeneratedText(data: any): string {
   return "";
 }
 
+async function pollGeneratedContent(jobId: string, opts?: { timeoutMs?: number; minDelayMs?: number; maxDelayMs?: number }) {
+  const timeoutMs = opts?.timeoutMs ?? 60_000;
+  const minDelayMs = opts?.minDelayMs ?? 900;
+  const maxDelayMs = opts?.maxDelayMs ?? 2_500;
+
+  const start = Date.now();
+  let delay = minDelayMs;
+
+  while (Date.now() - start < timeoutMs) {
+    const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`, { method: "GET" });
+    const raw = await res.text().catch(() => "");
+    let data: any = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = null;
+    }
+
+    if (res.ok && data?.ok && data?.item) {
+      const status = String(data.item.status ?? "").toLowerCase();
+      const content = typeof data.item.content === "string" ? data.item.content.trim() : "";
+
+      if (content && status !== "generating") {
+        return content;
+      }
+      // Même si status reste "generating", on accepte dès qu'il y a du contenu
+      if (content) return content;
+    }
+
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(maxDelayMs, Math.floor(delay * 1.2));
+  }
+
+  return "";
+}
+
 export default function CreateLovableClient() {
   const router = useRouter();
   const { toast } = useToast();
@@ -232,9 +267,9 @@ export default function CreateLovableClient() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [pyramidOffers, setPyramidOffers] = useState<PyramidOfferLiteClient[]>([]);
-  const [pyramidLeadMagnet, setPyramidLeadMagnet] = useState<PyramidOfferLiteClient | null>(null);
-  const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLiteClient | null>(null);
+  const [pyramidOffers, setPyramidOffers] = useState<PyramidOfferLite[]>([]);
+  const [pyramidLeadMagnet, setPyramidLeadMagnet] = useState<PyramidOfferLite | null>(null);
+  const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLite | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,7 +286,7 @@ export default function CreateLovableClient() {
         if (error) return;
 
         const offers = (data as any[] | null) ?? [];
-        const normalized: PyramidOfferLiteClient[] = offers.map((o) => ({
+        const normalized: PyramidOfferLite[] = offers.map((o) => ({
           id: String(o.id),
           name: (o.name ?? null) as any,
           level: (o.level ?? null) as any,
@@ -306,6 +341,21 @@ export default function CreateLovableClient() {
         throw new Error(apiMsg);
       }
 
+      // ✅ Mode async (202): on poll jusqu'à avoir le contenu
+      const jobId = typeof data?.jobId === "string" ? data.jobId.trim() : "";
+      if (jobId) {
+        const final = await pollGeneratedContent(jobId);
+        if (!final) {
+          toast({
+            title: "Génération",
+            description: "La génération a démarré, mais aucun contenu n'a été récupéré (timeout). Va voir dans “Mes Contenus”.",
+            variant: "destructive",
+          });
+        }
+        return final || "";
+      }
+
+      // ✅ Mode sync (si jamais)
       const text = extractGeneratedText(data);
 
       if (!text) {
@@ -390,21 +440,14 @@ export default function CreateLovableClient() {
       case "video":
         return <VideoForm {...common} />;
       case "offer":
-        // cast léger pour éviter tout conflit nominal entre modules
-        return (
-          <OfferForm
-            {...common}
-            pyramidLeadMagnet={pyramidLeadMagnet as any}
-            pyramidPaidOffer={pyramidPaidOffer as any}
-          />
-        );
+        return <OfferForm {...common} pyramidLeadMagnet={pyramidLeadMagnet} pyramidPaidOffer={pyramidPaidOffer} />;
       case "funnel":
         return (
           <FunnelForm
             {...common}
-            pyramidOffers={pyramidOffers as any}
-            pyramidLeadMagnet={pyramidLeadMagnet as any}
-            pyramidPaidOffer={pyramidPaidOffer as any}
+            pyramidOffers={pyramidOffers}
+            pyramidLeadMagnet={pyramidLeadMagnet}
+            pyramidPaidOffer={pyramidPaidOffer}
           />
         );
       default:
