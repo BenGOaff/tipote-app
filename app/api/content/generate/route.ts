@@ -404,7 +404,7 @@ async function updateContentEN(params: {
         status: row.status,
         tags: row.tagsCsv,
       } as any)
-      .eq("id", row.id)
+    .eq("id", row.id)
       .select("id, title")
       .single();
 
@@ -771,8 +771,42 @@ async function fetchUserPaidOffer(args: {
  * Claude caller (owner key)
  * -------------------------- */
 
+function resolveClaudeModel(): string {
+  // ✅ Tipote: tout le contenu est généré avec Claude Sonnet 4.5 (par défaut)
+  // Modèle officiel (API Anthropic): claude-sonnet-4-5-20250929
+  // On garde un mapping tolérant pour éviter les 404 si une ancienne valeur traîne en env.
+  const raw =
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "";
+
+  const v = (raw || "").trim();
+
+  // Valeur par défaut (Sonnet 4.5)
+  const DEFAULT = "claude-sonnet-4-5-20250929";
+
+  if (!v) return DEFAULT;
+
+  const s = v.toLowerCase();
+
+  // Alias tolérés
+  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") {
+    return DEFAULT;
+  }
+
+  // Ancien modèle (causait 404)
+  if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")) {
+    return DEFAULT;
+  }
+
+  // Si l'utilisateur met déjà le bon modèle, on laisse.
+  // Sinon on laisse la valeur brute (utile pour tests), mais on évite les espaces.
+  return v;
+}
+
 async function callClaude(args: { apiKey: string; system: string; user: string }): Promise<string> {
-  const model = process.env.TIPOTE_CLAUDE_MODEL?.trim() || "claude-3-5-sonnet-20240620";
+  const model = resolveClaudeModel();
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -1209,32 +1243,57 @@ export async function POST(req: Request) {
       const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt || effectivePrompt, tags });
       if (knowledgeSnippets.length) {
         userContextLines.push("");
-          userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
-          knowledgeSnippets.forEach((k, idx) => {
-            userContextLines.push("");
-            userContextLines.push(`Ressource ${idx + 1}: ${k.title}`);
-            userContextLines.push(`Source: ${k.source}`);
-            userContextLines.push("Extrait:");
-            userContextLines.push(k.snippet);
-          });
-        }
-      } catch {
-        // fail-open
+        userContextLines.push("Tipote Knowledge (ressources internes à utiliser pour élever la qualité) :");
+        knowledgeSnippets.forEach((k, idx) => {
+          userContextLines.push("");
+          userContextLines.push(`Ressource ${idx + 1}: ${k.title}`);
+          userContextLines.push(`Source: ${k.source}`);
+          userContextLines.push("Extrait:");
+          userContextLines.push(k.snippet);
+        });
+      }
+    } catch {
+      // fail-open
+    }
+
+    userContextLines.push("");
+    userContextLines.push("Brief :");
+    userContextLines.push(effectivePrompt);
+
+    /** ---------------------------
+          * Async job = placeholder row dans content_item
+     * -------------------------- */
+
+    const generatingStatus = "generating";
+    const finalStatus = scheduledDate ? "scheduled" : "draft";
+
+    // Placeholder (content vide) => jobId = content_item.id
+    const placeholderEN = await insertContentEN({
+      supabase,
+      userId,
+      type,
+      title: null,
+      content: "",
+      channel,
+      scheduledDate,
+      tags,
+      tagsCsv,
+      status: generatingStatus,
+    });
+
+    let jobId: string | null = null;
+    let schema: "en" | "fr" = "en";
+
+    if (!placeholderEN.error && placeholderEN.data?.id) {
+      jobId = String((placeholderEN.data as any).id);
+      schema = "en";
+    } else {
+      const enErr = (placeholderEN.error as PostgrestError | null) ?? null;
+      if (!isMissingColumnError(enErr?.message)) {
+        return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
       }
 
-      userContextLines.push("");
-      userContextLines.push("Brief :");
-      userContextLines.push(effectivePrompt);
-
-      /** ---------------------------
-       * Async job = placeholder row dans content_item
-       * -------------------------- */
-
-      const generatingStatus = "generating";
-      const finalStatus = scheduledDate ? "scheduled" : "draft";
-
-      // Placeholder (content vide) => jobId = content_item.id
-      const placeholderEN = await insertContentEN({
+      const placeholderFR = await insertContentFR({
         supabase,
         userId,
         type,
@@ -1247,181 +1306,157 @@ export async function POST(req: Request) {
         status: generatingStatus,
       });
 
-      let jobId: string | null = null;
-      let schema: "en" | "fr" = "en";
-
-      if (!placeholderEN.error && placeholderEN.data?.id) {
-        jobId = String((placeholderEN.data as any).id);
-        schema = "en";
-      } else {
-        const enErr = placeholderEN.error as PostgrestError | null;
-        if (!isMissingColumnError(enErr?.message)) {
-          return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
-        }
-
-        const placeholderFR = await insertContentFR({
-          supabase,
-          userId,
-          type,
-          title: null,
-          content: "",
-          channel,
-          scheduledDate,
-          tags,
-          tagsCsv,
-          status: generatingStatus,
-        });
-
-        if (placeholderFR.error || !placeholderFR.data?.id) {
-          return NextResponse.json(
-            { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
-            { status: 400 },
-          );
-        }
-
-        jobId = String((placeholderFR.data as any).id);
-        schema = "fr";
+      if (placeholderFR.error || !placeholderFR.data?.id) {
+        return NextResponse.json(
+          { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
+          { status: 400 },
+        );
       }
 
-      // Fire-and-forget: génération + update de la row
-      // Si crash => la row reste "generating" (acceptable)
-      void (async () => {
+      jobId = String((placeholderFR.data as any).id);
+      schema = "fr";
+    }
+
+    // Fire-and-forget: génération + update de la row
+    // Si crash => la row reste "generating" (acceptable)
+    void (async () => {
+      try {
+        const raw = await callClaude({
+          apiKey,
+          system: systemPrompt,
+          user: userContextLines.join("\n"),
+        });
+
+        const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+        const finalContent = (cleaned ?? "").trim();
+        if (!finalContent) throw new Error("Empty content from model");
+
+        const title = (() => {
+          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+          if (!firstLine) return null;
+          const t = firstLine.replace(/^#+\s*/, "").trim();
+          if (!t) return null;
+          return t.slice(0, 120);
+        })();
+
+        // ✅ Consomme 1 crédit uniquement si génération OK (après succès IA)
         try {
-          const raw = await callClaude({
-            apiKey,
-            system: systemPrompt,
-            user: userContextLines.join("\n"),
+          await consumeCredits(userId, 1, {
+            kind: "content_generate",
+            type,
+            job_id: jobId,
+            channel,
+            scheduled_date: scheduledDate,
+            tags: tagsCsv,
+          });
+        } catch (e) {
+          const code = (e as any)?.code || (e as any)?.message;
+          if (code === "NO_CREDITS") {
+            throw new Error("NO_CREDITS");
+          }
+          // fail-open: si RPC plante (rare), on ne bloque pas la sauvegarde
+        }
+
+        if (schema === "en") {
+          const upd = await updateContentEN({
+            supabase,
+            id: jobId!,
+            title,
+            content: finalContent,
+            status: finalStatus,
+            tags,
+            tagsCsv,
           });
 
-          const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-          const finalContent = cleaned?.trim() ?? "";
-          if (!finalContent) throw new Error("Empty content from model");
-
-          const title = (() => {
-            const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-            if (!firstLine) return null;
-            const t = firstLine.replace(/^#+\s*/, "").trim();
-            if (!t) return null;
-            return t.slice(0, 120);
-          })();
-
-          // ✅ Consomme 1 crédit uniquement si génération OK (après succès IA)
-          try {
-            await consumeCredits(userId, 1, {
-              kind: "content_generate",
-              type,
-              job_id: jobId,
-              channel,
-              scheduled_date: scheduledDate,
-              tags: tagsCsv,
-            });
-          } catch (e) {
-            const code = (e as any)?.code || (e as any)?.message;
-            if (code === "NO_CREDITS") {
-              throw new Error("NO_CREDITS");
-            }
-            // fail-open: si RPC plante (rare), on ne bloque pas la sauvegarde
-          }
-
-          if (schema === "en") {
-            const upd = await updateContentEN({
-              supabase,
-              id: jobId!,
-              title,
-              content: finalContent,
-              status: finalStatus,
-              tags,
-              tagsCsv,
-            });
-
-            if (upd.error) {
-              const e = upd.error as PostgrestError | null;
-              if (isMissingColumnError(e?.message)) {
-                await updateContentFR({
-                  supabase,
-                  id: jobId!,
-                  title,
-                  content: finalContent,
-                  status: finalStatus,
-                  tags,
-                  tagsCsv,
-                });
-              }
-            }
-          } else {
-            const upd = await updateContentFR({
-              supabase,
-              id: jobId!,
-              title,
-              content: finalContent,
-              status: finalStatus,
-              tags,
-              tagsCsv,
-            });
-
-            if (upd.error) {
-              const e = upd.error as PostgrestError | null;
-              if (isMissingColumnError(e?.message)) {
-                await updateContentEN({
-                  supabase,
-                  id: jobId!,
-                  title,
-                  content: finalContent,
-                  status: finalStatus,
-                  tags,
-                  tagsCsv,
-                });
-              }
-            }
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Unknown error";
-
-          // Best-effort: repasse en draft avec message minimal
-          try {
-            if (schema === "en") {
-              await updateContentEN({
-                supabase,
-                id: jobId!,
-                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-                status: "draft",
-                tags,
-                tagsCsv,
-              });
-            } else {
+          if (upd.error) {
+            const e = (upd.error as PostgrestError | null) ?? null;
+            if (isMissingColumnError(e?.message)) {
               await updateContentFR({
                 supabase,
                 id: jobId!,
-                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-                status: "draft",
+                title,
+                content: finalContent,
+                status: finalStatus,
                 tags,
                 tagsCsv,
               });
             }
-          } catch {
-            // ignore
+          }
+        } else {
+          const upd = await updateContentFR({
+            supabase,
+            id: jobId!,
+            title,
+            content: finalContent,
+            status: finalStatus,
+            tags,
+            tagsCsv,
+          });
+
+          if (upd.error) {
+            const e = (upd.error as PostgrestError | null) ?? null;
+            if (isMissingColumnError(e?.message)) {
+              await updateContentEN({
+                supabase,
+                id: jobId!,
+                title,
+                content: finalContent,
+                status: finalStatus,
+                tags,
+                tagsCsv,
+              });
+            }
           }
         }
-      })();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
 
-      // Réponse immédiate (async)
-      return NextResponse.json(
-        {
-          ok: true,
-          jobId,
-          provider: "claude" as Provider,
-          status: generatingStatus,
-          note:
-            "Génération en cours. Poll la ressource content_item par jobId (ex: GET /api/content/[id]) pour récupérer le contenu.",
-        },
-        { status: 202 },
-      );
-    } catch (e) {
-      return NextResponse.json(
-        { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-        { status: 500 },
-      );
-    }
+        // Best-effort: repasse en draft avec message minimal
+        try {
+          if (schema === "en") {
+            await updateContentEN({
+              supabase,
+              id: jobId!,
+              title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+              content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+              status: "draft",
+              tags,
+              tagsCsv,
+            });
+          } else {
+            await updateContentFR({
+              supabase,
+              id: jobId!,
+              title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+              content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+              status: "draft",
+              tags,
+              tagsCsv,
+            });
+          }
+        } catch {
+          // ignore
+        }
+      }
+    })();
+
+    // Réponse immédiate (async)
+    return NextResponse.json(
+      {
+        ok: true,
+        jobId,
+        provider: "claude" as Provider,
+        status: generatingStatus,
+        note:
+          "Génération en cours. Poll la ressource content_item par jobId (ex: GET /api/content/[id]) pour récupérer le contenu.",
+      },
+      { status: 202 },
+    );
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
   }
+}
+
