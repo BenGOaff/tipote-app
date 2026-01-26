@@ -30,13 +30,6 @@ type GenerateResponse = {
   usedUserKey?: boolean
 }
 
-type KeyStatusResp = {
-  ok: boolean
-  hasKey?: boolean
-  masked?: string | null
-  error?: string
-}
-
 const PROVIDERS: Array<{ key: Provider; label: string; badge: string }> = [
   { key: 'openai', label: 'OpenAI', badge: 'Recommandé' },
   { key: 'claude', label: 'Claude', badge: 'Bientôt' },
@@ -102,8 +95,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
   const meta = useMemo(() => metaForType(type), [type])
 
   const [provider, setProvider] = useState<Provider>('openai')
-  const [providerConfigured, setProviderConfigured] = useState<boolean | null>(null)
-  const [providerMasked, setProviderMasked] = useState<string | null>(null)
 
   const [channel, setChannel] = useState<string>(meta.defaultChannel)
   const [tags, setTags] = useState<string>(() => (meta.defaultTags ?? []).join(', '))
@@ -131,43 +122,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     setDidPrefill(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultPrompt, didPrefill])
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function run() {
-      setProviderConfigured(null)
-      setProviderMasked(null)
-
-      try {
-        const res = await fetch(`/api/user/api-keys?provider=${provider}`, {
-          method: 'GET',
-        })
-
-        const json = (await res.json().catch(() => null)) as KeyStatusResp | null
-        if (cancelled) return
-
-        if (!res.ok || !json?.ok) {
-          setProviderConfigured(false)
-          setProviderMasked(null)
-          return
-        }
-
-        const hasKey = Boolean(json.hasKey)
-        setProviderConfigured(hasKey)
-        setProviderMasked(json.masked ?? null)
-      } catch {
-        if (cancelled) return
-        setProviderConfigured(false)
-        setProviderMasked(null)
-      }
-    }
-
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [provider])
 
   const canGenerate = useMemo(() => {
     return !loading && (prompt ?? '').trim().length > 0
@@ -212,6 +166,8 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             .filter(Boolean)
             .slice(0, 50),
           prompt: safePrompt,
+          // ✅ On garde le champ pour compat backend / futur multi-modèles
+          // mais on ne dépend plus de clés API user : tout passe via la clé owner + crédits.
           provider,
         }),
       })
@@ -343,26 +299,17 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
           </div>
         </div>
 
+        {/* ✅ Fin des clés API user : le système repose sur les crédits Tipote */}
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold text-slate-900">Clé API personnelle</p>
-            <Link href="/settings?tab=api-keys" className="text-xs font-semibold text-[#b042b4] hover:underline">
-              Gérer mes clés
+            <p className="text-xs font-semibold text-slate-900">Crédits IA Tipote</p>
+            <Link href="/settings?tab=billing" className="text-xs font-semibold text-[#b042b4] hover:underline">
+              Gérer mes crédits
             </Link>
           </div>
-
-          {providerConfigured === null ? (
-            <p className="mt-1 text-xs text-slate-600">Vérification…</p>
-          ) : providerConfigured ? (
-            <p className="mt-1 text-xs text-slate-600">
-              Clé détectée{providerMasked ? ` (${providerMasked})` : ''}. La génération utilisera ta clé.
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-slate-600">
-              Aucune clé détectée pour ce provider. La génération utilisera la clé Tipote (si activée) ou échouera si le plan
-              l’exige.
-            </p>
-          )}
+          <p className="mt-1 text-xs text-slate-600">
+            La génération utilise les crédits Tipote (plus de clé API personnelle requise).
+          </p>
         </div>
       </section>
 
