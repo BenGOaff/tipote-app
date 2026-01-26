@@ -92,7 +92,7 @@ const quickTemplates = [
   {
     id: "myth",
     label: "Casser un mythe",
-    description: "Idée reçue + vérité surprenante",
+    description: "Idée reçue + vérité alternative",
     theme: "educate",
     type: "post",
   },
@@ -195,7 +195,38 @@ function extractGeneratedText(data: any): string {
   if (typeof data.result === "string") return data.result;
   if (typeof data.output === "string") return data.output;
   if (typeof data.message === "string") return data.message;
+  if (typeof data.item?.content === "string") return data.item.content;
   return "";
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollGeneratedContent(jobId: string): Promise<{ content: string; item?: any } | null> {
+  // ⚠️ /api/content/generate peut répondre en 202 + { jobId } (génération async)
+  // On poll /api/content/[jobId] jusqu’à récupérer item.content ou un status terminal.
+  const maxTries = 30; // ~45s @ 1500ms
+  for (let i = 0; i < maxTries; i++) {
+    try {
+      const res = await fetch(`/api/content/${jobId}`, { method: "GET", cache: "no-store" });
+      const json = (await res.json().catch(() => null)) as any;
+
+      if (res.ok && json?.ok && json?.item) {
+        const item = json.item;
+        const status = typeof item.status === "string" ? item.status : "";
+        const content = typeof item.content === "string" ? item.content : "";
+
+        if (content.trim()) return { content, item };
+        if (status && status !== "generating") return { content: content || "", item };
+      }
+    } catch {
+      // ignore transient errors
+    }
+
+    await sleep(1500);
+  }
+  return null;
 }
 
 export default function CreateLovableClient() {
@@ -228,14 +259,17 @@ export default function CreateLovableClient() {
       }
 
       if (!res.ok) {
-        const apiMsg =
-          (data && (data.error || data.message)) ||
-          rawText ||
-          "Impossible de générer";
+        const apiMsg = (data && (data.error || data.message)) || rawText || "Impossible de générer";
         throw new Error(apiMsg);
       }
 
-      const text = extractGeneratedText(data);
+      let text = extractGeneratedText(data);
+
+      // ✅ Si génération async (202), on attend le contenu via poll
+      if (!text && res.status === 202 && data?.jobId) {
+        const polled = await pollGeneratedContent(String(data.jobId));
+        text = polled?.content ?? "";
+      }
 
       if (!text) {
         toast({

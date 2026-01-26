@@ -247,3 +247,19 @@
     animation: slideUp 0.3s ease-out;
   }
 }
+
+/* Arrière-plan de bannière */
+.amplitude-engagement-banner-container { 
+  background: linear-gradient(90deg,#667eea,#764ba2) !important; 
+}
+
+/* Bouton CTA principal */
+.amplitude-engagement-cta-button__primary { 
+  border-radius: 8px; 
+  text-transform: uppercase; 
+}
+
+/* Largeur de modale */
+.amplitude-engagement-modal-body { 
+  max-width: 720px; 
+}
