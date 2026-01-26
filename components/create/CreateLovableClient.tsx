@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 import { useToast } from "@/hooks/use-toast";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route } from "lucide-react";
 
@@ -92,7 +93,7 @@ const quickTemplates = [
   {
     id: "myth",
     label: "Casser un mythe",
-    description: "Idée reçue + vérité alternative",
+    description: "Idée reçue + vérité surprenante",
     theme: "educate",
     type: "post",
   },
@@ -121,6 +122,38 @@ const quickTemplates = [
 
 type ContentType = (typeof contentTypes)[number]["id"] | null;
 type AnyParams = Record<string, any>;
+
+// ⚠️ IMPORTANT : on évite d'appeler ce type "PyramidOfferLite" pour ne pas créer un conflit
+// avec d'autres modules (OfferForm/FunnelForm) qui peuvent déclarer le même nom.
+type PyramidOfferLiteClient = {
+  id: string;
+  name?: string | null;
+  level?: string | null;
+  description?: string | null;
+  promise?: string | null;
+  price_min?: number | null;
+  price_max?: number | null;
+  main_outcome?: string | null;
+  format?: string | null;
+  delivery?: string | null;
+  updated_at?: string | null;
+};
+
+function toNumberOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const s = v.trim().replace(",", ".");
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function isLeadMagnetLevel(level: string | null | undefined) {
+  const s = String(level ?? "").toLowerCase();
+  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
+}
 
 function buildFallbackPrompt(params: AnyParams): string {
   const type = typeof params.type === "string" ? params.type : "content";
@@ -152,9 +185,6 @@ function buildFallbackPrompt(params: AnyParams): string {
 }
 
 function ensurePrompt(params: AnyParams): AnyParams {
-  // ✅ PATCH SAFE (sans changer le flow Lovable) :
-  // Pour les posts, le backend peut construire un prompt de haute qualité à partir des champs structurés.
-  // On s'assure donc d'avoir un "subject" même si l'UI envoie plutôt prompt/brief/text.
   if (params?.type === "post") {
     const subject = typeof params.subject === "string" ? params.subject.trim() : "";
     const promptLike =
@@ -164,11 +194,7 @@ function ensurePrompt(params: AnyParams): AnyParams {
       (typeof params.instructions === "string" && params.instructions.trim()) ||
       "";
 
-    if (!subject && promptLike) {
-      return { ...params, subject: promptLike };
-    }
-
-    // Si subject existe, on ne touche pas.
+    if (!subject && promptLike) return { ...params, subject: promptLike };
     return params;
   }
 
@@ -195,38 +221,7 @@ function extractGeneratedText(data: any): string {
   if (typeof data.result === "string") return data.result;
   if (typeof data.output === "string") return data.output;
   if (typeof data.message === "string") return data.message;
-  if (typeof data.item?.content === "string") return data.item.content;
   return "";
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function pollGeneratedContent(jobId: string): Promise<{ content: string; item?: any } | null> {
-  // ⚠️ /api/content/generate peut répondre en 202 + { jobId } (génération async)
-  // On poll /api/content/[jobId] jusqu’à récupérer item.content ou un status terminal.
-  const maxTries = 30; // ~45s @ 1500ms
-  for (let i = 0; i < maxTries; i++) {
-    try {
-      const res = await fetch(`/api/content/${jobId}`, { method: "GET", cache: "no-store" });
-      const json = (await res.json().catch(() => null)) as any;
-
-      if (res.ok && json?.ok && json?.item) {
-        const item = json.item;
-        const status = typeof item.status === "string" ? item.status : "";
-        const content = typeof item.content === "string" ? item.content : "";
-
-        if (content.trim()) return { content, item };
-        if (status && status !== "generating") return { content: content || "", item };
-      }
-    } catch {
-      // ignore transient errors
-    }
-
-    await sleep(1500);
-  }
-  return null;
 }
 
 export default function CreateLovableClient() {
@@ -234,9 +229,58 @@ export default function CreateLovableClient() {
   const { toast } = useToast();
 
   const [selectedType, setSelectedType] = useState<ContentType>(null);
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [pyramidOffers, setPyramidOffers] = useState<PyramidOfferLiteClient[]>([]);
+  const [pyramidLeadMagnet, setPyramidLeadMagnet] = useState<PyramidOfferLiteClient | null>(null);
+  const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLiteClient | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("offer_pyramids")
+          .select("id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .order("updated_at", { ascending: false });
+
+        if (cancelled) return;
+        if (error) return;
+
+        const offers = (data as any[] | null) ?? [];
+        const normalized: PyramidOfferLiteClient[] = offers.map((o) => ({
+          id: String(o.id),
+          name: (o.name ?? null) as any,
+          level: (o.level ?? null) as any,
+          description: (o.description ?? null) as any,
+          promise: (o.promise ?? null) as any,
+          price_min: toNumberOrNull(o.price_min),
+          price_max: toNumberOrNull(o.price_max),
+          main_outcome: (o.main_outcome ?? null) as any,
+          format: (o.format ?? null) as any,
+          delivery: (o.delivery ?? null) as any,
+          updated_at: (o.updated_at ?? null) as any,
+        }));
+
+        setPyramidOffers(normalized);
+
+        const lead = normalized.find((o) => isLeadMagnetLevel(o.level ?? null)) ?? null;
+        setPyramidLeadMagnet(lead);
+
+        const paid = normalized.find((o) => !isLeadMagnetLevel(o.level ?? null)) ?? null;
+        setPyramidPaidOffer(paid);
+      } catch {
+        // fail-open
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleGenerate = async (params: any): Promise<string> => {
     setIsGenerating(true);
@@ -249,7 +293,6 @@ export default function CreateLovableClient() {
         body: JSON.stringify(payload),
       });
 
-      // ✅ Patch tolérant : on essaye JSON, sinon texte brut
       const rawText = await res.text();
       let data: any = null;
       try {
@@ -263,13 +306,7 @@ export default function CreateLovableClient() {
         throw new Error(apiMsg);
       }
 
-      let text = extractGeneratedText(data);
-
-      // ✅ Si génération async (202), on attend le contenu via poll
-      if (!text && res.status === 202 && data?.jobId) {
-        const polled = await pollGeneratedContent(String(data.jobId));
-        text = polled?.content ?? "";
-      }
+      const text = extractGeneratedText(data);
 
       if (!text) {
         toast({
@@ -329,9 +366,6 @@ export default function CreateLovableClient() {
   };
 
   const handleQuickTemplate = (_t: (typeof quickTemplates)[number]) => {
-    // (inchangé) : ouvre le form post.
-    // Les templates rapides pourront être branchés plus tard via un state
-    // sans toucher au JSX Lovable.
     setSelectedType("post");
   };
 
@@ -356,13 +390,27 @@ export default function CreateLovableClient() {
       case "video":
         return <VideoForm {...common} />;
       case "offer":
-        return <OfferForm {...common} />;
+        // cast léger pour éviter tout conflit nominal entre modules
+        return (
+          <OfferForm
+            {...common}
+            pyramidLeadMagnet={pyramidLeadMagnet as any}
+            pyramidPaidOffer={pyramidPaidOffer as any}
+          />
+        );
       case "funnel":
-        return <FunnelForm {...common} />;
+        return (
+          <FunnelForm
+            {...common}
+            pyramidOffers={pyramidOffers as any}
+            pyramidLeadMagnet={pyramidLeadMagnet as any}
+            pyramidPaidOffer={pyramidPaidOffer as any}
+          />
+        );
       default:
         return null;
     }
-  }, [selectedType, isGenerating, isSaving]);
+  }, [selectedType, isGenerating, isSaving, pyramidOffers, pyramidLeadMagnet, pyramidPaidOffer]);
 
   return (
     <SidebarProvider>

@@ -87,3 +87,4 @@ export function buildPromptByType(args: BuildPromptArgs): string {
   if ("prompt" in args && typeof args.prompt === "string") return args.prompt;
   return "";
 }
+export * from "./funnel";

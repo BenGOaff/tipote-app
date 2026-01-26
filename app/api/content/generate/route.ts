@@ -10,6 +10,7 @@
 // ✅ Articles: support 2 étapes via buildArticlePrompt.
 // ✅ Vidéos: support prompt builder via buildVideoScriptPrompt.
 // ✅ Offres: support lead magnet + offre payante via buildOfferPrompt (mode from_pyramid / from_scratch)
+// ✅ Funnels: page capture / vente via buildFunnelPrompt (mode from_pyramid / from_scratch)
 // ✅ Claude uniquement (owner key): jamais de clé user côté API.
 
 import { NextResponse } from "next/server";
@@ -24,6 +25,7 @@ import { buildVideoScriptPrompt } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
+import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/content/offer";
 
 import fs from "node:fs/promises";
@@ -56,8 +58,23 @@ type Body = {
   offerLink?: string;
 
   // video
-  duration?: string; // "30s" | "60s" | "90s" | "120s" | "180s" | "300s" (selon lib)
+  duration?: string;
   targetWordCount?: number;
+
+  // funnel
+  funnelPage?: "capture" | "sales";
+  funnelMode?: "from_pyramid" | "from_scratch";
+  funnelOfferId?: string;
+  urgency?: string;
+  guarantee?: string;
+  funnelManual?: {
+    name?: string;
+    promise?: string;
+    target?: string;
+    price?: string;
+    urgency?: string;
+    guarantee?: string;
+  };
 
   // offer
   offerMode?: "from_pyramid" | "from_scratch";
@@ -82,13 +99,13 @@ type Body = {
   leadMagnetLink?: string;
   onboardingCta?: string;
   formality?: "tu" | "vous";
-  offer?: string; // nom libre si pas de pyramide
-  offerId?: string; // pyramide (optionnel)
+  offer?: string;
+  offerId?: string;
 
   // article (2 étapes)
   articleStep?: "plan" | "write";
   objective?: "traffic_seo" | "authority" | "emails" | "sales";
-  seoKeyword?: string; // => primaryKeyword
+  seoKeyword?: string;
   secondaryKeywords?: string;
   links?: string;
   ctaText?: string;
@@ -97,6 +114,9 @@ type Body = {
 
   // compat legacy
   cta?: string;
+
+  // (front compat)
+  title?: string;
 };
 
 type Provider = "claude";
@@ -193,7 +213,6 @@ function toPlainText(input: string): string {
   return s;
 }
 
-// Version "article": on garde **bold** (mots-clés), mais on nettoie le reste
 function toPlainTextKeepBold(input: string): string {
   let s = (input ?? "").replace(/\r\n/g, "\n");
   s = s.replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, (_m, code) => String(code ?? "").trim());
@@ -404,7 +423,7 @@ async function updateContentEN(params: {
         status: row.status,
         tags: row.tagsCsv,
       } as any)
-    .eq("id", row.id)
+      .eq("id", row.id)
       .select("id, title")
       .single();
 
@@ -672,6 +691,12 @@ function normalizeOfferType(raw: unknown): OfferType | null {
   return null;
 }
 
+function normalizeFunnelPage(raw: unknown): "capture" | "sales" {
+  const s = safeString(raw).trim().toLowerCase();
+  if (s === "sales" || s === "vente" || s.includes("sale") || s.includes("vente")) return "sales";
+  return "capture";
+}
+
 async function fetchOfferPyramidById(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -772,9 +797,6 @@ async function fetchUserPaidOffer(args: {
  * -------------------------- */
 
 function resolveClaudeModel(): string {
-  // ✅ Tipote: tout le contenu est généré avec Claude Sonnet 4.5 (par défaut)
-  // Modèle officiel (API Anthropic): claude-sonnet-4-5-20250929
-  // On garde un mapping tolérant pour éviter les 404 si une ancienne valeur traîne en env.
   const raw =
     process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
     process.env.CLAUDE_MODEL?.trim() ||
@@ -782,26 +804,20 @@ function resolveClaudeModel(): string {
     "";
 
   const v = (raw || "").trim();
-
-  // Valeur par défaut (Sonnet 4.5)
   const DEFAULT = "claude-sonnet-4-5-20250929";
 
   if (!v) return DEFAULT;
 
   const s = v.toLowerCase();
 
-  // Alias tolérés
   if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") {
     return DEFAULT;
   }
 
-  // Ancien modèle (causait 404)
   if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")) {
     return DEFAULT;
   }
 
-  // Si l'utilisateur met déjà le bon modèle, on laisse.
-  // Sinon on laisse la valeur brute (utile pour tests), mais on évite les espaces.
   return v;
 }
 
@@ -876,7 +892,6 @@ export async function POST(req: Request) {
 
     if (!type) return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
 
-    // ✅ Crédit IA requis (1 crédit = 1 génération)
     const balance = await ensureUserCredits(userId);
     if (balance.total_remaining <= 0) {
       return NextResponse.json(
@@ -905,17 +920,18 @@ export async function POST(req: Request) {
 
     const tagsCsv = joinTagsCsv(tags);
 
-    // ✅ Contexte (optionnel) : business profile + plan
     const { data: profile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
     const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     const planJson = (planRow as any)?.plan_json ?? null;
 
-    // ✅ Persona (optionnel)
+    // Persona (optionnel)
     let personaContext: any = null;
     try {
       const { data: personaRow, error: personaErr } = await supabase
         .from("personas")
-        .select("persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at")
+        .select(
+          "persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at",
+        )
         .eq("user_id", userId)
         .eq("role", "client_ideal")
         .order("updated_at", { ascending: false })
@@ -944,7 +960,6 @@ export async function POST(req: Request) {
       console.error("Error loading personas (catch):", e);
     }
 
-    // ✅ System prompt
     const systemPrompt =
       "Tu es un expert francophone en copywriting, marketing et stratégie de contenu. " +
       "Tu dois produire des contenus très actionnables, concrets, et de haute qualité. " +
@@ -988,6 +1003,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // Offre context emails sales
     let offerContextForSalesEmail: OfferPyramidContext | null = null;
     if (type === "email" && offerId) {
       try {
@@ -1004,7 +1020,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ✅ Validation emails sales : il faut une offre (pyramide ou nom) OU un manuel
+    // validation emails sales
     const emailTypeRaw = safeString(body.emailType).trim().toLowerCase();
     const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
     const computedEmailType =
@@ -1026,6 +1042,42 @@ export async function POST(req: Request) {
           {
             ok: false,
             error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    /** ---------------------------
+     * Funnel (pyramide) — pages capture / vente
+     * -------------------------- */
+
+    const funnelPage = normalizeFunnelPage((body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null);
+    const funnelMode = normalizeOfferMode((body as any).funnelMode ?? null);
+    const funnelOfferId =
+      safeString((body as any).funnelOfferId).trim() ||
+      safeString((body as any).offerId).trim() ||
+      safeString((body as any).sourceOfferId).trim();
+
+    let funnelSourceOffer: OfferPyramidContext | null = null;
+
+    if (type === "funnel" && funnelMode === "from_pyramid") {
+      if (funnelOfferId) {
+        funnelSourceOffer = await fetchOfferPyramidById({ supabase, userId, id: funnelOfferId });
+      } else {
+        funnelSourceOffer =
+          funnelPage === "sales"
+            ? await fetchUserPaidOffer({ supabase, userId })
+            : await fetchUserLeadMagnet({ supabase, userId });
+      }
+
+      if (!funnelSourceOffer) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "missing_source_offer",
+            error:
+              "Impossible de retrouver automatiquement l'offre source de la pyramide pour générer le funnel. Réessaie ou choisis explicitement l'offre.",
           },
           { status: 400 },
         );
@@ -1183,6 +1235,33 @@ export async function POST(req: Request) {
         } as any);
       }
 
+      if (type === "funnel") {
+        const manual = isRecord((body as any).funnelManual) ? ((body as any).funnelManual as any) : null;
+
+        return buildFunnelPrompt({
+          page: funnelPage,
+          mode: funnelMode,
+          theme:
+            safeString(body.theme).trim() ||
+            safeString(body.subject).trim() ||
+            prompt ||
+            (funnelPage === "sales" ? "Page de vente" : "Page de capture"),
+          offer: funnelMode === "from_pyramid" ? funnelSourceOffer : null,
+          manual:
+            funnelMode === "from_scratch"
+              ? {
+                  name: safeString(manual?.name).trim() || safeString(body.offer).trim() || null,
+                  promise: safeString(manual?.promise).trim() || null,
+                  target: safeString(manual?.target).trim() || safeString((body as any).target).trim() || null,
+                  price: safeString(manual?.price).trim() || null,
+                  urgency: safeString(manual?.urgency).trim() || safeString((body as any).urgency).trim() || null,
+                  guarantee: safeString(manual?.guarantee).trim() || safeString((body as any).guarantee).trim() || null,
+                }
+              : null,
+          language: "fr",
+        } as any);
+      }
+
       return buildPromptByType({ type: "generic", prompt: prompt || safeString(body.subject).trim() || "Contenu" });
     })();
 
@@ -1199,7 +1278,12 @@ export async function POST(req: Request) {
                 ? offerMode === "from_pyramid"
                   ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_pyramide")
                   : safeString(body.theme).trim() || safeString(body.subject).trim() || prompt
-                : prompt;
+                : type === "funnel"
+                  ? safeString((body as any).offer).trim() ||
+                    safeString((body as any).theme).trim() ||
+                    safeString((body as any).subject).trim() ||
+                    prompt
+                  : prompt;
 
     /** ---------------------------
      * Context builder
@@ -1226,6 +1310,28 @@ export async function POST(req: Request) {
       }
     }
 
+    if (type === "funnel") {
+      userContextLines.push(`FunnelPage: ${funnelPage}`);
+      userContextLines.push(`FunnelMode: ${funnelMode}`);
+
+      if (funnelMode === "from_pyramid") {
+        userContextLines.push("FunnelOffer (JSON):");
+        userContextLines.push(JSON.stringify(funnelSourceOffer));
+      } else {
+        const manual = isRecord((body as any).funnelManual) ? ((body as any).funnelManual as any) : null;
+        const m = {
+          name: safeString(manual?.name).trim() || safeString((body as any).offer).trim() || null,
+          promise: safeString(manual?.promise).trim() || null,
+          target: safeString(manual?.target).trim() || safeString((body as any).target).trim() || null,
+          price: safeString(manual?.price).trim() || null,
+          urgency: safeString(manual?.urgency).trim() || safeString((body as any).urgency).trim() || null,
+          guarantee: safeString(manual?.guarantee).trim() || safeString((body as any).guarantee).trim() || null,
+        };
+        userContextLines.push("FunnelManual (JSON):");
+        userContextLines.push(JSON.stringify(m));
+      }
+    }
+
     userContextLines.push("");
     userContextLines.push("Persona client (si disponible) :");
     userContextLines.push(personaContext ? JSON.stringify(personaContext) : "Aucun persona.");
@@ -1238,7 +1344,7 @@ export async function POST(req: Request) {
     userContextLines.push("Business plan (si disponible) :");
     userContextLines.push(planJson ? JSON.stringify(planJson) : "Aucun plan.");
 
-    // ✅ Tipote Knowledge injection
+    // Tipote Knowledge injection
     try {
       const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt || effectivePrompt, tags });
       if (knowledgeSnippets.length) {
@@ -1261,13 +1367,12 @@ export async function POST(req: Request) {
     userContextLines.push(effectivePrompt);
 
     /** ---------------------------
-          * Async job = placeholder row dans content_item
+     * Async job = placeholder row dans content_item
      * -------------------------- */
 
     const generatingStatus = "generating";
     const finalStatus = scheduledDate ? "scheduled" : "draft";
 
-    // Placeholder (content vide) => jobId = content_item.id
     const placeholderEN = await insertContentEN({
       supabase,
       userId,
@@ -1288,7 +1393,7 @@ export async function POST(req: Request) {
       jobId = String((placeholderEN.data as any).id);
       schema = "en";
     } else {
-      const enErr = (placeholderEN.error as PostgrestError | null) ?? null;
+      const enErr = placeholderEN.error as PostgrestError | null;
       if (!isMissingColumnError(enErr?.message)) {
         return NextResponse.json({ ok: false, error: enErr?.message ?? "Insert error" }, { status: 400 });
       }
@@ -1317,8 +1422,6 @@ export async function POST(req: Request) {
       schema = "fr";
     }
 
-    // Fire-and-forget: génération + update de la row
-    // Si crash => la row reste "generating" (acceptable)
     void (async () => {
       try {
         const raw = await callClaude({
@@ -1328,7 +1431,7 @@ export async function POST(req: Request) {
         });
 
         const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-        const finalContent = (cleaned ?? "").trim();
+        const finalContent = cleaned?.trim() ?? "";
         if (!finalContent) throw new Error("Empty content from model");
 
         const title = (() => {
@@ -1339,7 +1442,6 @@ export async function POST(req: Request) {
           return t.slice(0, 120);
         })();
 
-        // ✅ Consomme 1 crédit uniquement si génération OK (après succès IA)
         try {
           await consumeCredits(userId, 1, {
             kind: "content_generate",
@@ -1351,10 +1453,7 @@ export async function POST(req: Request) {
           });
         } catch (e) {
           const code = (e as any)?.code || (e as any)?.message;
-          if (code === "NO_CREDITS") {
-            throw new Error("NO_CREDITS");
-          }
-          // fail-open: si RPC plante (rare), on ne bloque pas la sauvegarde
+          if (code === "NO_CREDITS") throw new Error("NO_CREDITS");
         }
 
         if (schema === "en") {
@@ -1369,7 +1468,7 @@ export async function POST(req: Request) {
           });
 
           if (upd.error) {
-            const e = (upd.error as PostgrestError | null) ?? null;
+            const e = upd.error as PostgrestError | null;
             if (isMissingColumnError(e?.message)) {
               await updateContentFR({
                 supabase,
@@ -1394,7 +1493,7 @@ export async function POST(req: Request) {
           });
 
           if (upd.error) {
-            const e = (upd.error as PostgrestError | null) ?? null;
+            const e = upd.error as PostgrestError | null;
             if (isMissingColumnError(e?.message)) {
               await updateContentEN({
                 supabase,
@@ -1411,7 +1510,6 @@ export async function POST(req: Request) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
 
-        // Best-effort: repasse en draft avec message minimal
         try {
           if (schema === "en") {
             await updateContentEN({
@@ -1440,7 +1538,6 @@ export async function POST(req: Request) {
       }
     })();
 
-    // Réponse immédiate (async)
     return NextResponse.json(
       {
         ok: true,
@@ -1459,4 +1556,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
