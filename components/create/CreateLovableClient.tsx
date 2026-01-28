@@ -186,7 +186,13 @@ function normalizeSelectedPyramid(userId: string, selected: any, updatedAt: stri
     if (!name) return;
 
     const description = safeString(o.description) ?? safeString(o.desc) ?? null;
-    const promise = safeString(o.promise) ?? safeString(o.promesse) ?? null;
+    const promise =
+      safeString(o.promise) ??
+      safeString(o.promesse) ??
+      safeString(o.purpose) ??
+      safeString(o.objectif) ??
+      safeString(o.benefit) ??
+      null;
     const main_outcome = safeString(o.main_outcome) ?? safeString(o.mainOutcome) ?? safeString(o.outcome) ?? null;
     const format = safeString(o.format) ?? null;
     const delivery = safeString(o.delivery) ?? safeString(o.livraison) ?? null;
@@ -357,12 +363,13 @@ function extractGeneratedText(data: any): string {
 }
 
 async function pollGeneratedContent(jobId: string, opts?: { timeoutMs?: number; minDelayMs?: number; maxDelayMs?: number }) {
-  const timeoutMs = opts?.timeoutMs ?? 60_000;
+  const timeoutMs = opts?.timeoutMs ?? 120_000;
   const minDelayMs = opts?.minDelayMs ?? 900;
   const maxDelayMs = opts?.maxDelayMs ?? 2_500;
 
   const start = Date.now();
   let delay = minDelayMs;
+  let didTriggerProcess = false;
 
   while (Date.now() - start < timeoutMs) {
     const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`, { method: "GET" });
@@ -372,6 +379,13 @@ async function pollGeneratedContent(jobId: string, opts?: { timeoutMs?: number; 
       data = raw ? JSON.parse(raw) : null;
     } catch {
       data = null;
+    }
+
+    // ✅ Fallback prod (PM2/VPS): si le job reste bloqué en "generating" trop longtemps,
+    // on déclenche une tentative de processing côté serveur (idempotent via lock côté API).
+    if (!didTriggerProcess && Date.now() - start > 15_000) {
+      didTriggerProcess = true;
+      void fetch(`/api/content/${encodeURIComponent(jobId)}?process=1`, { method: "GET" }).catch(() => null);
     }
 
     if (res.ok && data?.ok && data?.item) {
