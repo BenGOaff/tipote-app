@@ -697,6 +697,194 @@ function normalizeFunnelPage(raw: unknown): "capture" | "sales" {
   return "capture";
 }
 
+function isUuid(raw: string): boolean {
+  const s = String(raw ?? "").trim();
+  if (!s) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+}
+
+function isLeadMagnetLevel(level: unknown): boolean {
+  const s = String(level ?? "").toLowerCase();
+  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
+}
+
+function isPaidLevel(level: unknown): boolean {
+  const s = String(level ?? "").toLowerCase();
+  if (!s) return false;
+  if (isLeadMagnetLevel(s)) return false;
+  return s.includes("low") || s.includes("middle") || s.includes("mid") || s.includes("high") || s.includes("premium");
+}
+
+function toNumberOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const s = v.trim().replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function safeStringOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+/**
+ * ✅ Source de vérité "temps réel" : business_plan.plan_json.selected_pyramid
+ * Supporte plusieurs shapes (legacy/new) sans dépendre d'un UUID.
+ */
+function extractOffersFromPlanJson(userId: string, planJson: any): OfferPyramidContext[] {
+  const out: OfferPyramidContext[] = [];
+  if (!planJson) return out;
+
+  const selected =
+    (planJson as any)?.selected_pyramid ??
+    (planJson as any)?.pyramid?.selected_pyramid ??
+    (planJson as any)?.pyramid ??
+    (planJson as any)?.offer_pyramid ??
+    null;
+
+  const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
+    const o = isRecord(offerRaw) ? offerRaw : null;
+    if (!o) return;
+
+    const name =
+      safeStringOrNull((o as any).name) ??
+      safeStringOrNull((o as any).title) ??
+      safeStringOrNull((o as any).offer_name) ??
+      safeStringOrNull((o as any).offerTitle) ??
+      null;
+
+    if (!name) return;
+
+    const level =
+      safeStringOrNull(levelRaw) ??
+      safeStringOrNull((o as any).level) ??
+      safeStringOrNull((o as any).offer_level) ??
+      null;
+
+    const idRaw = safeStringOrNull((o as any).id);
+    const id = idRaw ? idRaw : `${userId}:${level ?? "unknown"}:${idxHint ?? 0}`;
+
+    out.push({
+      id,
+      name,
+      level,
+      description: safeStringOrNull((o as any).description) ?? safeStringOrNull((o as any).desc) ?? null,
+      promise: safeStringOrNull((o as any).promise) ?? safeStringOrNull((o as any).promesse) ?? null,
+      price_min:
+        toNumberOrNull((o as any).price_min) ??
+        toNumberOrNull((o as any).priceMin) ??
+        toNumberOrNull((o as any).prix_min) ??
+        toNumberOrNull((o as any).price) ??
+        null,
+      price_max:
+        toNumberOrNull((o as any).price_max) ??
+        toNumberOrNull((o as any).priceMax) ??
+        toNumberOrNull((o as any).prix_max) ??
+        null,
+      main_outcome:
+        safeStringOrNull((o as any).main_outcome) ??
+        safeStringOrNull((o as any).mainOutcome) ??
+        safeStringOrNull((o as any).outcome) ??
+        null,
+      format: safeStringOrNull((o as any).format) ?? null,
+      delivery: safeStringOrNull((o as any).delivery) ?? safeStringOrNull((o as any).livraison) ?? null,
+      is_flagship: (typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null) as any,
+      updated_at: safeStringOrNull((o as any).updated_at) ?? null,
+    } as any);
+  };
+
+  if (Array.isArray(selected)) {
+    selected.forEach((item, idx) => {
+      const level = isRecord(item)
+        ? (item as any).level ?? (item as any).offer_level ?? (item as any).type ?? (item as any).tier
+        : null;
+      pushOffer(level, item, idx);
+    });
+    return out;
+  }
+
+  if (isRecord(selected)) {
+    const nested =
+      (Array.isArray((selected as any).offers) && (selected as any).offers) ||
+      (Array.isArray((selected as any).items) && (selected as any).items) ||
+      (Array.isArray((selected as any).pyramid) && (selected as any).pyramid) ||
+      null;
+
+    if (nested) {
+      nested.forEach((item: any, idx: number) => {
+        const level = isRecord(item) ? item.level ?? item.offer_level ?? item.type ?? item.tier : null;
+        pushOffer(level, item, idx);
+      });
+      return out;
+    }
+
+    const KEY_TO_LEVEL: Array<[string, string]> = [
+      ["lead_magnet", "lead_magnet"],
+      ["leadmagnet", "lead_magnet"],
+      ["free", "lead_magnet"],
+      ["gratuit", "lead_magnet"],
+      ["low_ticket", "low_ticket"],
+      ["lowticket", "low_ticket"],
+      ["middle_ticket", "middle_ticket"],
+      ["mid_ticket", "middle_ticket"],
+      ["midticket", "middle_ticket"],
+      ["middle", "middle_ticket"],
+      ["high_ticket", "high_ticket"],
+      ["highticket", "high_ticket"],
+      ["high", "high_ticket"],
+    ];
+
+    const loweredKeys = Object.keys(selected).reduce<Record<string, string>>((acc, k) => {
+      acc[k.toLowerCase()] = k;
+      return acc;
+    }, {});
+
+    for (const [kLower, level] of KEY_TO_LEVEL) {
+      const realKey = loweredKeys[kLower];
+      if (!realKey) continue;
+      pushOffer(level, (selected as any)[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
+    }
+
+    if (out.length === 0) {
+      const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
+      pushOffer(lvl, selected, 0);
+    }
+
+    return out;
+  }
+
+  return out;
+}
+
+function pickLeadOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidContext | null {
+  const offers = planOffers ?? [];
+  return offers.find((o) => isLeadMagnetLevel((o as any)?.level)) ?? null;
+}
+
+function pickPaidOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidContext | null {
+  const offers = planOffers ?? [];
+  return (
+    offers.find((o) => String((o as any)?.level ?? "").toLowerCase().includes("middle")) ??
+    offers.find((o) => String((o as any)?.level ?? "").toLowerCase().includes("mid")) ??
+    offers.find((o) => String((o as any)?.level ?? "").toLowerCase().includes("high")) ??
+    offers.find((o) => String((o as any)?.level ?? "").toLowerCase().includes("low")) ??
+    offers.find((o) => isPaidLevel((o as any)?.level)) ??
+    offers.find((o) => !isLeadMagnetLevel((o as any)?.level)) ??
+    null
+  );
+}
+
+function findOfferByAnyId(planOffers: OfferPyramidContext[], id: string): OfferPyramidContext | null {
+  const s = String(id ?? "").trim();
+  if (!s) return null;
+  const offers = planOffers ?? [];
+  return offers.find((o) => String((o as any)?.id ?? "") === s) ?? null;
+}
+
 async function fetchOfferPyramidById(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
@@ -919,6 +1107,8 @@ export async function POST(req: Request) {
     const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     const planJson = (planRow as any)?.plan_json ?? null;
 
+    const planOffers = extractOffersFromPlanJson(userId, planJson);
+
     // Persona (optionnel)
     let personaContext: any = null;
     try {
@@ -977,12 +1167,27 @@ export async function POST(req: Request) {
     let sourceOffer: OfferPyramidContext | null = null;
 
     if (type === "offer" && offerMode === "from_pyramid") {
+      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
+      // puis fallback offer_pyramids (legacy).
       if (sourceOfferId) {
-        sourceOffer = await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId });
+        if (isUuid(sourceOfferId)) {
+          sourceOffer =
+            (await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId })) ??
+            findOfferByAnyId(planOffers, sourceOfferId);
+        } else {
+          sourceOffer = findOfferByAnyId(planOffers, sourceOfferId);
+        }
       } else if (offerTypeNorm === "lead_magnet") {
-        sourceOffer = await fetchUserLeadMagnet({ supabase, userId });
+        sourceOffer = pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId }));
       } else if (offerTypeNorm === "paid_training") {
-        sourceOffer = await fetchUserPaidOffer({ supabase, userId });
+        sourceOffer = pickPaidOfferFromPlan(planOffers) ?? (await fetchUserPaidOffer({ supabase, userId }));
+      } else {
+        // fail-open : si le front ne donne pas offerType, on tente paid puis lead
+        sourceOffer =
+          pickPaidOfferFromPlan(planOffers) ??
+          pickLeadOfferFromPlan(planOffers) ??
+          (await fetchUserPaidOffer({ supabase, userId })) ??
+          (await fetchUserLeadMagnet({ supabase, userId }));
       }
 
       if (!sourceOffer) {
@@ -1001,17 +1206,27 @@ export async function POST(req: Request) {
     // Offre context emails sales
     let offerContextForSalesEmail: OfferPyramidContext | null = null;
     if (type === "email" && offerId) {
-      try {
-        const { data: offerRow, error: offerErr } = await supabase
-          .from("offer_pyramids")
-          .select(OFFER_PYRAMID_SELECT)
-          .eq("id", offerId)
-          .eq("user_id", userId)
-          .maybeSingle();
+      // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
+      // on résout via planOffers. Sinon on tente offer_pyramids puis fallback planOffers.
+      if (!isUuid(offerId)) {
+        offerContextForSalesEmail = findOfferByAnyId(planOffers, offerId);
+      } else {
+        try {
+          const { data: offerRow, error: offerErr } = await supabase
+            .from("offer_pyramids")
+            .select(OFFER_PYRAMID_SELECT)
+            .eq("id", offerId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!offerErr && offerRow) offerContextForSalesEmail = offerRow as any;
-      } catch {
-        // fail-open
+          if (!offerErr && offerRow) offerContextForSalesEmail = offerRow as any;
+        } catch {
+          // fail-open
+        }
+
+        if (!offerContextForSalesEmail) {
+          offerContextForSalesEmail = findOfferByAnyId(planOffers, offerId);
+        }
       }
     }
 
@@ -1059,11 +1274,21 @@ export async function POST(req: Request) {
     let funnelSourceOffer: OfferPyramidContext | null = null;
 
     if (type === "funnel" && funnelMode === "from_pyramid") {
+      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
+      // puis fallback offer_pyramids (legacy).
       if (funnelOfferId) {
-        funnelSourceOffer = await fetchOfferPyramidById({ supabase, userId, id: funnelOfferId });
+        if (isUuid(funnelOfferId)) {
+          funnelSourceOffer =
+            (await fetchOfferPyramidById({ supabase, userId, id: funnelOfferId })) ??
+            findOfferByAnyId(planOffers, funnelOfferId);
+        } else {
+          funnelSourceOffer = findOfferByAnyId(planOffers, funnelOfferId);
+        }
       } else {
         funnelSourceOffer =
-          funnelPage === "sales" ? await fetchUserPaidOffer({ supabase, userId }) : await fetchUserLeadMagnet({ supabase, userId });
+          funnelPage === "sales"
+            ? pickPaidOfferFromPlan(planOffers) ?? (await fetchUserPaidOffer({ supabase, userId }))
+            : pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId }));
       }
 
       if (!funnelSourceOffer) {
@@ -1085,7 +1310,7 @@ export async function POST(req: Request) {
 
     const effectivePrompt = (() => {
       if (type === "post") {
-        const platform = safeString(body.platform).trim() as any;
+                const platform = safeString(body.platform).trim() as any;
         const subject = safeString(body.subject).trim();
         const theme = safeString(body.theme).trim();
         const tone = safeString(body.tone).trim() as any;
@@ -1403,7 +1628,10 @@ export async function POST(req: Request) {
       });
 
       if (placeholderFR.error || !placeholderFR.data?.id) {
-        return NextResponse.json({ ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, error: (placeholderFR.error as any)?.message ?? "Insert error" },
+          { status: 400 },
+        );
       }
 
       jobId = String((placeholderFR.data as any).id);
@@ -1541,3 +1769,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }
+
