@@ -268,6 +268,7 @@ export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
   useEffect(() => {
     // si data.niche est déjà "A / B", on repop
     const raw = (data.niche || "").trim();
+
     if (raw.includes(" / ")) {
       const [a, b] = raw.split(" / ").map((s) => s.trim());
       if (a && b) {
@@ -275,6 +276,16 @@ export const StepProfile = ({ data, updateData, onNext }: StepProfileProps) => {
         setNicheA(a);
         setNicheB(b);
       }
+      return;
+    }
+
+    // ✅ FIX MINIMAL :
+    // si l'utilisateur repasse sur une niche simple (raw non vide et sans " / "),
+    // on purge le mode 2 domaines + ses valeurs
+    if (raw && !raw.includes(" / ")) {
+      setTwoDomains(false);
+      setNicheA("");
+      setNicheB("");
     }
   }, [data.niche]);
 

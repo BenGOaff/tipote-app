@@ -106,54 +106,73 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
     }
   }
 
+  const title = mode === 'reset' ? 'Réinitialise ton mot de passe' : 'Crée ton mot de passe';
+  const subtitle =
+    mode === 'reset'
+      ? 'Choisis un nouveau mot de passe pour te reconnecter.'
+      : 'C’est ta première connexion à Tipote. Choisis un mot de passe pour les prochaines fois.';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-200">
-          Nouveau mot de passe
-        </label>
-        <input
-          type="password"
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-          required
-        />
+    <div className="space-y-5">
+      {/* Header brandé Tipote (sans toucher au flow) */}
+      <div className="text-center space-y-2">
+        <div className="text-3xl font-bold tracking-tight text-slate-50">
+          Tipote<span className="text-indigo-400">™</span>
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
+          <p className="text-sm text-slate-300">{subtitle}</p>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-200">
-          Confirmer le mot de passe
-        </label>
-        <input
-          type="password"
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
-          value={passwordConfirm}
-          onChange={(e) => setPasswordConfirm(e.target.value)}
-          autoComplete="new-password"
-          required
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-200">
+            Nouveau mot de passe
+          </label>
+          <input
+            type="password"
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+          />
+        </div>
 
-      {errorMsg && (
-        <p className="text-sm text-red-400 bg-red-950/40 border border-red-900 rounded-md px-3 py-2">
-          {errorMsg}
-        </p>
-      )}
-      {successMsg && (
-        <p className="text-sm text-emerald-400 bg-emerald-950/40 border border-emerald-900 rounded-md px-3 py-2">
-          {successMsg}
-        </p>
-      )}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-200">
+            Confirmer le mot de passe
+          </label>
+          <input
+            type="password"
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            autoComplete="new-password"
+            required
+          />
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
-      >
-        {loading ? 'En cours…' : 'Valider le mot de passe'}
-      </button>
-    </form>
+        {errorMsg && (
+          <p className="text-sm text-red-400 bg-red-950/40 border border-red-900 rounded-md px-3 py-2">
+            {errorMsg}
+          </p>
+        )}
+        {successMsg && (
+          <p className="text-sm text-emerald-400 bg-emerald-950/40 border border-emerald-900 rounded-md px-3 py-2">
+            {successMsg}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
+        >
+          {loading ? 'En cours…' : 'Valider le mot de passe'}
+        </button>
+      </form>
+    </div>
   );
 }

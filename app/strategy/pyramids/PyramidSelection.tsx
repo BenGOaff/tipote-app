@@ -376,11 +376,12 @@ export default function PyramidSelection() {
           {pyramids.map((pyramid) => (
             <Card
               key={pyramid.id}
-              className={`relative overflow-hidden transition-all cursor-pointer ${
+              className={`relative overflow-hidden transition-all cursor-pointer border ${
                 selectedPyramid === pyramid.id
-                  ? "ring-2 ring-primary shadow-lg"
-                  : "hover:shadow-md"
+                  ? "ring-2 ring-primary shadow-lg bg-primary/5 border-primary/30"
+                  : "hover:shadow-md bg-background border-border"
               }`}
+
               onClick={() => setSelectedPyramid(pyramid.id)}
             >
               {selectedPyramid === pyramid.id && (

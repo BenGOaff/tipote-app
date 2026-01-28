@@ -1,11 +1,12 @@
 "use client";
 
 // app/auth/set-password/page.tsx
-// Rôle : page où l'utilisateur définit son mot de passe à la première connexion (invite).
-// NOTE: en client pour fonctionner avec les tokens en hash traités par /auth/callback.
+// Page où l'utilisateur définit son mot de passe à la première connexion (invite).
+// Client component car on dépend de la session Supabase côté navigateur.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/SetPasswordForm";
 
@@ -28,7 +29,7 @@ export default function SetPasswordPage() {
         return;
       }
 
-      // On vérifie si le mot de passe est déjà défini
+      // Si le mot de passe est déjà défini, on renvoie vers l'app
       try {
         const { data: profile, error } = await supabase
           .from("profiles")
@@ -48,7 +49,6 @@ export default function SetPasswordPage() {
           return;
         }
       } catch (e) {
-        // fail-open
         console.error("[set-password] profiles select catch", e);
       }
 
@@ -60,25 +60,28 @@ export default function SetPasswordPage() {
     };
   }, [router]);
 
-  if (!ready) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-          <h1 className="text-xl font-semibold text-slate-50 mb-2">Chargement…</h1>
-          <p className="text-sm text-slate-400">On prépare la création de ton mot de passe.</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-        <h1 className="text-xl font-semibold text-slate-50 mb-2">Crée ton mot de passe</h1>
-        <p className="text-sm text-slate-400 mb-4">
-          C’est la première fois que tu te connectes à Tipote. Choisis un mot de passe pour tes prochaines connexions.
-        </p>
-        <SetPasswordForm mode="first" />
+    <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
+            <span className="text-2xl font-bold text-gray-900">Tipote™</span>
+          </div>
+          <p className="text-gray-600">
+            {ready ? (
+              <>C’est ta première connexion. Choisis un mot de passe pour tes prochaines connexions.</>
+            ) : (
+              <>On prépare la création de ton mot de passe…</>
+            )}
+          </p>
+        </div>
+
+        {ready ? <SetPasswordForm mode="first" /> : <div className="text-sm text-gray-600">Chargement…</div>}
+
+        <div className="mt-8 text-center text-sm text-gray-500">
+          © {new Date().getFullYear()} Tipote™. Tous droits réservés.
+        </div>
       </div>
     </main>
   );
