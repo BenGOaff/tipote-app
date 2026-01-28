@@ -1,5 +1,9 @@
 // components/SetPasswordForm.tsx
 // Rôle : formulaire pour définir / redéfinir un mot de passe.
+//
+// Flow souhaité (Béné) :
+// - invite -> définir mdp -> retour page connexion -> login email+mdp -> onboarding
+// Donc après updateUser(password), on signOut puis redirect vers "/".
 
 'use client';
 
@@ -54,38 +58,46 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
         return;
       }
 
-      // 2) Récupérer l'utilisateur pour mettre à jour le profil
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      // 2) Best-effort: marquer "password_set_at" si la table profiles existe
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error('[SetPasswordForm] getUser error', userError);
-        // on ne bloque pas : le mot de passe est déjà mis à jour
-      } else {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            password_set_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', user.id);
+        if (!userError && user?.id) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              password_set_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
 
-        if (profileError) {
-          console.error('[SetPasswordForm] update profiles error', profileError);
+          if (profileError) {
+            console.error('[SetPasswordForm] update profiles error', profileError);
+          }
         }
+      } catch (e2) {
+        console.error('[SetPasswordForm] profiles best-effort catch', e2);
       }
 
       setSuccessMsg(
         mode === 'first'
-          ? 'Mot de passe créé. Redirection vers ton espace...'
-          : 'Mot de passe mis à jour. Redirection vers ton espace...',
+          ? 'Mot de passe créé. Tu peux maintenant te connecter.'
+          : 'Mot de passe mis à jour. Tu peux maintenant te connecter.',
       );
 
+      // 3) Important : on déconnecte et on renvoie vers la page login (flow Béné)
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // ignore
+      }
+
       setTimeout(() => {
-        router.push('/app');
-      }, 1000);
+        router.push('/?password_set=1');
+      }, 700);
     } catch (err) {
       console.error('[SetPasswordForm] unexpected error', err);
       setErrorMsg('Erreur inattendue. Merci de réessayer.');
@@ -138,13 +150,9 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium text-slate-950 py-2 transition-colors"
+        className="w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
       >
-        {loading
-          ? 'Enregistrement...'
-          : mode === 'first'
-          ? 'Créer mon mot de passe'
-          : 'Mettre à jour mon mot de passe'}
+        {loading ? 'En cours…' : 'Valider le mot de passe'}
       </button>
     </form>
   );
