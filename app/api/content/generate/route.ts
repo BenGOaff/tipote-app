@@ -31,6 +31,13 @@ import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/co
 import fs from "node:fs/promises";
 import path from "node:path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// (optionnel mais conseillé sur Vercel) augmente la durée max si ton plan le permet
+export const maxDuration = 300;
+
+
 /** ---------------------------
  * Types
  * -------------------------- */
@@ -1638,121 +1645,129 @@ export async function POST(req: Request) {
       schema = "fr";
     }
 
-    void (async () => {
+        // ---------------------------
+// Fire-and-forget (compatible Next sans unstable_after)
+// ---------------------------
+setTimeout(() => {
+  void (async () => {
+    try {
+      const raw = await callClaude({
+        apiKey,
+        system: systemPrompt,
+        user: userContextLines.join("\n"),
+      });
+
+      const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+      const finalContent = cleaned?.trim() ?? "";
+      if (!finalContent) throw new Error("Empty content from model");
+
+      const title = (() => {
+        const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+        if (!firstLine) return null;
+        const t = firstLine.replace(/^#+\s*/, "").trim();
+        if (!t) return null;
+        return t.slice(0, 120);
+      })();
+
+      // ✅ Consommer les crédits seulement après succès IA
       try {
-        const raw = await callClaude({
-          apiKey,
-          system: systemPrompt,
-          user: userContextLines.join("\n"),
+        await consumeCredits(userId, 1, {
+          kind: "content_generate",
+          type,
+          job_id: jobId,
+          channel,
+          scheduled_date: scheduledDate,
+          tags: tagsCsv,
+        });
+      } catch (e) {
+        const code = (e as any)?.code || (e as any)?.message;
+        if (code === "NO_CREDITS") throw new Error("NO_CREDITS");
+      }
+
+      if (schema === "en") {
+        const upd = await updateContentEN({
+          supabase,
+          id: jobId!,
+          title,
+          content: finalContent,
+          status: finalStatus,
+          tags,
+          tagsCsv,
         });
 
-        const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-        const finalContent = cleaned?.trim() ?? "";
-        if (!finalContent) throw new Error("Empty content from model");
-
-        const title = (() => {
-          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-          if (!firstLine) return null;
-          const t = firstLine.replace(/^#+\s*/, "").trim();
-          if (!t) return null;
-          return t.slice(0, 120);
-        })();
-
-        try {
-          await consumeCredits(userId, 1, {
-            kind: "content_generate",
-            type,
-            job_id: jobId,
-            channel,
-            scheduled_date: scheduledDate,
-            tags: tagsCsv,
-          });
-        } catch (e) {
-          const code = (e as any)?.code || (e as any)?.message;
-          if (code === "NO_CREDITS") throw new Error("NO_CREDITS");
-        }
-
-        if (schema === "en") {
-          const upd = await updateContentEN({
-            supabase,
-            id: jobId!,
-            title,
-            content: finalContent,
-            status: finalStatus,
-            tags,
-            tagsCsv,
-          });
-
-          if (upd.error) {
-            const e = upd.error as PostgrestError | null;
-            if (isMissingColumnError(e?.message)) {
-              await updateContentFR({
-                supabase,
-                id: jobId!,
-                title,
-                content: finalContent,
-                status: finalStatus,
-                tags,
-                tagsCsv,
-              });
-            }
-          }
-        } else {
-          const upd = await updateContentFR({
-            supabase,
-            id: jobId!,
-            title,
-            content: finalContent,
-            status: finalStatus,
-            tags,
-            tagsCsv,
-          });
-
-          if (upd.error) {
-            const e = upd.error as PostgrestError | null;
-            if (isMissingColumnError(e?.message)) {
-              await updateContentEN({
-                supabase,
-                id: jobId!,
-                title,
-                content: finalContent,
-                status: finalStatus,
-                tags,
-                tagsCsv,
-              });
-            }
-          }
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-
-        try {
-          if (schema === "en") {
-            await updateContentEN({
-              supabase,
-              id: jobId!,
-              title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-              content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-              status: "draft",
-              tags,
-              tagsCsv,
-            });
-          } else {
+        if (upd.error) {
+          const e = upd.error as PostgrestError | null;
+          if (isMissingColumnError(e?.message)) {
             await updateContentFR({
               supabase,
               id: jobId!,
-              title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-              content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-              status: "draft",
+              title,
+              content: finalContent,
+              status: finalStatus,
               tags,
               tagsCsv,
             });
           }
-        } catch {
-          // ignore
+        }
+      } else {
+        const upd = await updateContentFR({
+          supabase,
+          id: jobId!,
+          title,
+          content: finalContent,
+          status: finalStatus,
+          tags,
+          tagsCsv,
+        });
+
+        if (upd.error) {
+          const e = upd.error as PostgrestError | null;
+          if (isMissingColumnError(e?.message)) {
+            await updateContentEN({
+              supabase,
+              id: jobId!,
+              title,
+              content: finalContent,
+              status: finalStatus,
+              tags,
+              tagsCsv,
+            });
+          }
         }
       }
-    })();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+
+      try {
+        if (schema === "en") {
+          await updateContentEN({
+            supabase,
+            id: jobId!,
+            title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+            content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+            status: "draft",
+            tags,
+            tagsCsv,
+          });
+        } else {
+          await updateContentFR({
+            supabase,
+            id: jobId!,
+            title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+            content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+            status: "draft",
+            tags,
+            tagsCsv,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+  })();
+}, 0);
+
+
 
     return NextResponse.json(
       {
