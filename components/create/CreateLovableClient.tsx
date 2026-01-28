@@ -152,6 +152,139 @@ function toNumberOrNull(v: unknown): number | null {
   return null;
 }
 
+function safeString(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+function safeObj(v: unknown): Record<string, any> | null {
+  if (!v || typeof v !== "object") return null;
+  if (Array.isArray(v)) return null;
+  return v as Record<string, any>;
+}
+
+/**
+ * Normalise plan_json.selected_pyramid (legacy + new shapes) vers une liste d'offres.
+ * Objectif: ne jamais dépendre d'un shape rigide (keys / array / nested).
+ */
+function normalizeSelectedPyramid(userId: string, selected: any, updatedAt: string | null): PyramidOfferLite[] {
+  const out: PyramidOfferLite[] = [];
+
+  const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
+    const level = safeString(levelRaw) ?? null;
+    const o = safeObj(offerRaw) ?? (typeof offerRaw === "object" ? offerRaw : null);
+    if (!o) return;
+
+    const name =
+      safeString(o.name) ??
+      safeString(o.title) ??
+      safeString(o.offer_name) ??
+      safeString(o.offerTitle) ??
+      null;
+
+    if (!name) return;
+
+    const description = safeString(o.description) ?? safeString(o.desc) ?? null;
+    const promise = safeString(o.promise) ?? safeString(o.promesse) ?? null;
+    const main_outcome = safeString(o.main_outcome) ?? safeString(o.mainOutcome) ?? safeString(o.outcome) ?? null;
+    const format = safeString(o.format) ?? null;
+    const delivery = safeString(o.delivery) ?? safeString(o.livraison) ?? null;
+
+    const price_min =
+      toNumberOrNull(o.price_min) ??
+      toNumberOrNull(o.priceMin) ??
+      toNumberOrNull(o.prix_min) ??
+      toNumberOrNull(o.price) ??
+      null;
+
+    const price_max =
+      toNumberOrNull(o.price_max) ??
+      toNumberOrNull(o.priceMax) ??
+      toNumberOrNull(o.prix_max) ??
+      null;
+
+    const id = String(o.id ?? `${userId}:${level ?? "unknown"}:${idxHint ?? 0}`);
+
+    out.push({
+      id,
+      name,
+      level,
+      description,
+      promise,
+      price_min,
+      price_max,
+      main_outcome,
+      format,
+      delivery,
+      updated_at: safeString(o.updated_at) ?? updatedAt,
+    });
+  };
+
+  // 1) Array shape: [{ level, name, ... }, ...]
+  if (Array.isArray(selected)) {
+    selected.forEach((item, idx) => {
+      const level = (item && (item.level ?? item.offer_level ?? item.type ?? item.tier)) ?? null;
+      pushOffer(level, item, idx);
+    });
+    return out;
+  }
+
+  // 2) Object shape: may contain offers array nested
+  const selObj = safeObj(selected);
+  if (!selObj) return out;
+
+  const nestedOffers =
+    (Array.isArray(selObj.offers) && selObj.offers) ||
+    (Array.isArray(selObj.items) && selObj.items) ||
+    (Array.isArray(selObj.pyramid) && selObj.pyramid) ||
+    null;
+
+  if (nestedOffers) {
+    nestedOffers.forEach((item: any, idx: number) => {
+      const level = (item && (item.level ?? item.offer_level ?? item.type ?? item.tier)) ?? null;
+      pushOffer(level, item, idx);
+    });
+    return out;
+  }
+
+  // 3) Keyed shape: lead_magnet / low_ticket / middle_ticket / high_ticket (and variants)
+  const KEY_TO_LEVEL: Array<[string, string]> = [
+    ["lead_magnet", "lead_magnet"],
+    ["leadmagnet", "lead_magnet"],
+    ["free", "lead_magnet"],
+    ["gratuit", "lead_magnet"],
+    ["low_ticket", "low_ticket"],
+    ["lowticket", "low_ticket"],
+    ["middle_ticket", "middle_ticket"],
+    ["mid_ticket", "middle_ticket"],
+    ["midticket", "middle_ticket"],
+    ["middle", "middle_ticket"],
+    ["high_ticket", "high_ticket"],
+    ["highticket", "high_ticket"],
+    ["high", "high_ticket"],
+  ];
+
+  const loweredKeys = Object.keys(selObj).reduce<Record<string, string>>((acc, k) => {
+    acc[k.toLowerCase()] = k;
+    return acc;
+  }, {});
+
+  for (const [kLower, level] of KEY_TO_LEVEL) {
+    const realKey = loweredKeys[kLower];
+    if (!realKey) continue;
+    pushOffer(level, selObj[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
+  }
+
+  // 4) Last resort: if object itself looks like an offer
+  if (out.length === 0) {
+    const level = selObj.level ?? selObj.offer_level ?? selObj.type ?? null;
+    pushOffer(level, selObj, 0);
+  }
+
+  return out;
+}
+
 function buildFallbackPrompt(params: AnyParams): string {
   const type = typeof params.type === "string" ? params.type : "content";
   const platform = typeof params.platform === "string" ? params.platform : "";
@@ -271,15 +404,33 @@ export default function CreateLovableClient() {
   const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLite | null>(null);
 
   // ✅ PATCH IMPORTANT :
-  // On lit d’abord business_plan.plan_json.selected_pyramid (source de vérité),
-  // sinon fallback sur offer_pyramids (legacy).
+  // On lit d’abord business_plan.plan_json.selected_pyramid (source de vérité), en supportant les shapes legacy,
+  // puis fallback sur offer_pyramids (legacy).
+  // + abonnement realtime => si user modifie sa pyramide, c'est reflété sans refresh.
   useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
     let cancelled = false;
 
-    (async () => {
-      try {
-        const supabase = getSupabaseBrowserClient();
+    const computeFromOffers = (offers: PyramidOfferLite[]) => {
+      const normalized = (offers ?? []).filter((o) => o && o.name);
+      setPyramidOffers(normalized);
 
+      const lead = normalized.find((o) => isLeadMagnetLevel(o.level ?? null)) ?? null;
+      setPyramidLeadMagnet(lead);
+
+      const paid =
+        normalized.find((o) => String(o.level ?? "").toLowerCase().includes("low")) ??
+        normalized.find((o) => String(o.level ?? "").toLowerCase().includes("middle")) ??
+        normalized.find((o) => String(o.level ?? "").toLowerCase().includes("mid")) ??
+        normalized.find((o) => String(o.level ?? "").toLowerCase().includes("high")) ??
+        normalized.find((o) => !isLeadMagnetLevel(o.level ?? null)) ??
+        null;
+
+      setPyramidPaidOffer(paid);
+    };
+
+    const load = async () => {
+      try {
         const {
           data: { user },
           error: userErr,
@@ -297,52 +448,14 @@ export default function CreateLovableClient() {
 
         if (!cancelled && !planErr && planRow?.plan_json) {
           const planJson: any = planRow.plan_json;
-          const selected = planJson?.selected_pyramid ?? null;
+          const selected = planJson?.selected_pyramid ?? planJson?.pyramid?.selected_pyramid ?? planJson?.pyramid ?? null;
 
           if (selected) {
-            const fromSelected = (level: string, o: any): PyramidOfferLite | null => {
-              if (!o) return null;
-              const name = typeof o.name === "string" ? o.name : null;
-              if (!name) return null;
-
-              return {
-                id: `${user.id}:${level}`,
-                name,
-                level,
-                description: typeof o.description === "string" ? o.description : null,
-                promise: typeof o.promise === "string" ? o.promise : null,
-                price_min: toNumberOrNull(o.price_min),
-                price_max: toNumberOrNull(o.price_max),
-                main_outcome: typeof o.main_outcome === "string" ? o.main_outcome : null,
-                format: typeof o.format === "string" ? o.format : null,
-                delivery: typeof o.delivery === "string" ? o.delivery : null,
-                updated_at: (planRow as any)?.updated_at ?? null,
-              };
-            };
-
-            const candidates: PyramidOfferLite[] = [
-              fromSelected("lead_magnet", selected.lead_magnet),
-              fromSelected("low_ticket", selected.low_ticket),
-              fromSelected("high_ticket", selected.high_ticket),
-            ].filter(Boolean) as PyramidOfferLite[];
-
-            if (!cancelled) {
-              setPyramidOffers(candidates);
-
-              const lead = candidates.find((o) => isLeadMagnetLevel(o.level ?? null)) ?? null;
-              setPyramidLeadMagnet(lead);
-
-              const paid =
-                candidates.find((o) => String(o.level ?? "").toLowerCase().includes("low")) ??
-                candidates.find((o) => String(o.level ?? "").toLowerCase().includes("high")) ??
-                candidates.find((o) => !isLeadMagnetLevel(o.level ?? null)) ??
-                null;
-
-              setPyramidPaidOffer(paid);
+            const offersFromPlan = normalizeSelectedPyramid(user.id, selected, safeString((planRow as any)?.updated_at));
+            if (offersFromPlan.length > 0) {
+              computeFromOffers(offersFromPlan);
+              return; // ✅ si source de vérité existe et exploitable, on s’arrête ici
             }
-
-            // ✅ Important : si selected_pyramid existe, on s’arrête ici
-            return;
           }
         }
 
@@ -371,20 +484,51 @@ export default function CreateLovableClient() {
           updated_at: (o.updated_at ?? null) as any,
         }));
 
-        setPyramidOffers(normalized);
-
-        const lead = normalized.find((o) => isLeadMagnetLevel(o.level ?? null)) ?? null;
-        setPyramidLeadMagnet(lead);
-
-        const paid = normalized.find((o) => !isLeadMagnetLevel(o.level ?? null)) ?? null;
-        setPyramidPaidOffer(paid);
+        computeFromOffers(normalized);
       } catch {
         // fail-open
       }
+    };
+
+    let channel: any = null;
+
+    (async () => {
+      await load();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+      if (!user?.id) return;
+
+      // Realtime: si l'utilisateur modifie business_plan ou offer_pyramids, on reload.
+      channel = supabase
+        .channel(`pyramid-offers:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "business_plan", filter: `user_id=eq.${user.id}` },
+          () => {
+            load();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "offer_pyramids", filter: `user_id=eq.${user.id}` },
+          () => {
+            load();
+          }
+        )
+        .subscribe();
     })();
 
     return () => {
       cancelled = true;
+      try {
+        if (channel) supabase.removeChannel(channel);
+      } catch {
+        // ignore
+      }
     };
   }, []);
 
