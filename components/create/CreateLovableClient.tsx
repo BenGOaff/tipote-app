@@ -248,7 +248,6 @@ async function pollGeneratedContent(jobId: string, opts?: { timeoutMs?: number; 
       if (content && status !== "generating") {
         return content;
       }
-      // Même si status reste "generating", on accepte dès qu'il y a du contenu
       if (content) return content;
     }
 
@@ -271,15 +270,87 @@ export default function CreateLovableClient() {
   const [pyramidLeadMagnet, setPyramidLeadMagnet] = useState<PyramidOfferLite | null>(null);
   const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLite | null>(null);
 
+  // ✅ PATCH IMPORTANT :
+  // On lit d’abord business_plan.plan_json.selected_pyramid (source de vérité),
+  // sinon fallback sur offer_pyramids (legacy).
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
         const supabase = getSupabaseBrowserClient();
+
+        const {
+          data: { user },
+          error: userErr,
+        } = await supabase.auth.getUser();
+
+        if (cancelled) return;
+        if (userErr || !user?.id) return;
+
+        // 1) Source de vérité : business_plan.plan_json.selected_pyramid
+        const { data: planRow, error: planErr } = await supabase
+          .from("business_plan")
+          .select("plan_json, updated_at")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!cancelled && !planErr && planRow?.plan_json) {
+          const planJson: any = planRow.plan_json;
+          const selected = planJson?.selected_pyramid ?? null;
+
+          if (selected) {
+            const fromSelected = (level: string, o: any): PyramidOfferLite | null => {
+              if (!o) return null;
+              const name = typeof o.name === "string" ? o.name : null;
+              if (!name) return null;
+
+              return {
+                id: `${user.id}:${level}`,
+                name,
+                level,
+                description: typeof o.description === "string" ? o.description : null,
+                promise: typeof o.promise === "string" ? o.promise : null,
+                price_min: toNumberOrNull(o.price_min),
+                price_max: toNumberOrNull(o.price_max),
+                main_outcome: typeof o.main_outcome === "string" ? o.main_outcome : null,
+                format: typeof o.format === "string" ? o.format : null,
+                delivery: typeof o.delivery === "string" ? o.delivery : null,
+                updated_at: (planRow as any)?.updated_at ?? null,
+              };
+            };
+
+            const candidates: PyramidOfferLite[] = [
+              fromSelected("lead_magnet", selected.lead_magnet),
+              fromSelected("low_ticket", selected.low_ticket),
+              fromSelected("high_ticket", selected.high_ticket),
+            ].filter(Boolean) as PyramidOfferLite[];
+
+            if (!cancelled) {
+              setPyramidOffers(candidates);
+
+              const lead = candidates.find((o) => isLeadMagnetLevel(o.level ?? null)) ?? null;
+              setPyramidLeadMagnet(lead);
+
+              const paid =
+                candidates.find((o) => String(o.level ?? "").toLowerCase().includes("low")) ??
+                candidates.find((o) => String(o.level ?? "").toLowerCase().includes("high")) ??
+                candidates.find((o) => !isLeadMagnetLevel(o.level ?? null)) ??
+                null;
+
+              setPyramidPaidOffer(paid);
+            }
+
+            // ✅ Important : si selected_pyramid existe, on s’arrête ici
+            return;
+          }
+        }
+
+        // 2) Fallback legacy : offer_pyramids
         const { data, error } = await supabase
           .from("offer_pyramids")
-          .select("id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .select("id,user_id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .eq("user_id", user.id)
           .order("updated_at", { ascending: false });
 
         if (cancelled) return;
@@ -341,7 +412,6 @@ export default function CreateLovableClient() {
         throw new Error(apiMsg);
       }
 
-      // ✅ Mode async (202): on poll jusqu'à avoir le contenu
       const jobId = typeof data?.jobId === "string" ? data.jobId.trim() : "";
       if (jobId) {
         const final = await pollGeneratedContent(jobId);
@@ -355,7 +425,6 @@ export default function CreateLovableClient() {
         return final || "";
       }
 
-      // ✅ Mode sync (si jamais)
       const text = extractGeneratedText(data);
 
       if (!text) {

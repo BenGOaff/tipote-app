@@ -10,6 +10,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 
 type AnyRecord = Record<string, any>;
 
