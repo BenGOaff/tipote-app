@@ -16,9 +16,22 @@ import { Label } from '@/components/ui/label';
 
 import { Eye, EyeOff, Mail, Lock, ArrowRight, ExternalLink, AlertTriangle } from 'lucide-react';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tipote.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.tipote.com';
 
 type Mode = 'password' | 'magic';
+
+function parseHashParams(hash: string): Record<string, string> {
+  const h = (hash || '').replace(/^#/, '').trim();
+  const out: Record<string, string> = {};
+  if (!h) return out;
+
+  for (const part of h.split('&')) {
+    const [k, v] = part.split('=');
+    if (!k) continue;
+    out[decodeURIComponent(k)] = decodeURIComponent(v || '');
+  }
+  return out;
+}
 
 export default function LoginForm() {
   const router = useRouter();
@@ -54,6 +67,32 @@ export default function LoginForm() {
             ? 'Tu dois être connecté pour accéder à cette page.'
             : null;
   }, [authError]);
+
+  // ✅ FIX CRITIQUE : si Supabase redirige sur "/" avec #access_token=...
+  // on renvoie automatiquement vers /auth/callback qui consomme le hash et crée la session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hash = window.location.hash || '';
+    const hp = parseHashParams(hash);
+
+    const hasAccess = !!(hp.access_token || '').trim();
+    const hasRefresh = !!(hp.refresh_token || '').trim();
+
+    // cas le plus fréquent (invite / recovery / magiclink) : access_token + refresh_token
+    if (hasAccess && hasRefresh) {
+      router.replace(`/auth/callback${hash}`);
+      return;
+    }
+
+    // cas PKCE : ?code=...
+    const code = (searchParams.get('code') || '').trim();
+    if (code) {
+      const qs = searchParams.toString();
+      router.replace(`/auth/callback${qs ? `?${qs}` : ''}`);
+      return;
+    }
+  }, [router, searchParams]);
 
   // Si l'utilisateur arrive avec "type=recovery" ou "type=magiclink" (legacy Lovable),
   // on le bascule sur le mode magic pour éviter une page "vide".
@@ -112,6 +151,7 @@ export default function LoginForm() {
       const { error } = await supabase.auth.signInWithOtp({
         email: emailMagic,
         options: {
+          // ⚠️ Très important : doit pointer sur app.tipote.com (pas tipote.com)
           emailRedirectTo: `${SITE_URL}/auth/callback`,
         },
       });
