@@ -2,7 +2,7 @@
 // CRUD simple pour un content_item (GET, PATCH, DELETE)
 // ✅ Compat DB : prod = colonnes FR (titre/contenu/statut/canal/date_planifiee, tags en text)
 // ✅ Compat DB : certaines instances ont colonnes "EN/V2" (title/content/status/channel/scheduled_date, tags array)
-// ✅ Certaines DB n'ont PAS updated_at et/ou prompt => retry sans ces colonnes
+// ✅ Certaines DB n'ont PAS prompt / updated_at => retry sans ces colonnes
 // ✅ PATCH supporte title/content/status/channel/type/scheduledDate/tags (+ prompt si présent)
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,7 +10,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: { id: string } };
+// ⚠️ Chez toi, Next attend params en Promise (cf ton erreur build)
+type RouteContext = { params: Promise<{ id: string }> };
 
 type ContentItemDTO = {
   id: string;
@@ -70,7 +71,7 @@ function tagsToCsv(tags: unknown): string {
 }
 
 async function getAuthedUserId() {
-  // ✅ Cast any pour éviter ts(2590) / unions supabase trop complexes dans ce fichier
+  // cast any => évite TS unions supabase trop complexes (ts2590) dans certains projets
   const supabase = (await getSupabaseServerClient()) as any;
   const { data, error } = await supabase.auth.getUser();
   if (error) return { supabase, userId: null as string | null, authError: error.message };
@@ -111,64 +112,67 @@ function dtoFromFR(row: any): ContentItemDTO {
   };
 }
 
-// Select strings (avec/sans updated_at ; avec prompt si présent)
-const V2_SELECT_WITH_UPDATED =
+// Select strings : on tente prompt+updated_at, puis fallback sans updated_at, puis fallback sans prompt+updated_at
+const V2_SEL_WITH_PROMPT_UPDATED =
   "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at";
-const V2_SELECT_NO_UPDATED =
+const V2_SEL_WITH_PROMPT_NO_UPDATED =
   "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at";
+const V2_SEL_NO_PROMPT_NO_UPDATED =
+  "id,user_id,type,title,content,status,scheduled_date,channel,tags,created_at";
 
-const FR_SELECT_WITH_UPDATED =
+const FR_SEL_WITH_PROMPT_UPDATED =
   "id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at";
-const FR_SELECT_NO_UPDATED =
+const FR_SEL_WITH_PROMPT_NO_UPDATED =
   "id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at";
+const FR_SEL_NO_PROMPT_NO_UPDATED =
+  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,created_at";
 
-async function fetchOne(supabase: any, id: string, userId: string) {
-  // 1) V2
-  let v2 = await supabase
-    .from("content_item")
-    .select(V2_SELECT_WITH_UPDATED)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+async function fetchOne(
+  supabase: any,
+  id: string,
+  userId: string,
+): Promise<{ ok: true; dto: ContentItemDTO } | { ok: false; status: number; error: string }> {
+  // 1) V2 try prompt + updated_at
+  let v2 = await supabase.from("content_item").select(V2_SEL_WITH_PROMPT_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
 
+  // updated_at manquant -> retry sans updated_at (mais avec prompt)
   if (v2.error && isMissingColumnError(v2.error.message)) {
-    v2 = await supabase
-      .from("content_item")
-      .select(V2_SELECT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    v2 = await supabase.from("content_item").select(V2_SEL_WITH_PROMPT_NO_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
+  }
+
+  // prompt (ou autres colonnes) manquant -> retry sans prompt + sans updated_at
+  if (v2.error && isMissingColumnError(v2.error.message)) {
+    v2 = await supabase.from("content_item").select(V2_SEL_NO_PROMPT_NO_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
   }
 
   if (!v2.error) {
-    if (!v2.data) return { ok: false as const, status: 404, error: "Not found" };
-    return { ok: true as const, dto: dtoFromV2(v2.data) };
+    if (!v2.data) {
+      // Not found en V2 => on tente FR
+    } else {
+      // si prompt/updated_at manquent, dtoFromV2 mettra null
+      return { ok: true, dto: dtoFromV2({ ...v2.data, prompt: (v2.data as any).prompt ?? null, updated_at: (v2.data as any).updated_at ?? null }) };
+    }
+  } else if (!isMissingColumnError(v2.error.message)) {
+    return { ok: false, status: 400, error: v2.error.message };
   }
 
-  if (!isMissingColumnError(v2.error.message)) {
-    return { ok: false as const, status: 400, error: v2.error.message };
-  }
+  // 2) FR try prompt + updated_at
+  let fr = await supabase.from("content_item").select(FR_SEL_WITH_PROMPT_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
 
-  // 2) FR
-  let fr = await supabase
-    .from("content_item")
-    .select(FR_SELECT_WITH_UPDATED)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
+  // updated_at manquant -> retry sans updated_at (mais avec prompt)
   if (fr.error && isMissingColumnError(fr.error.message)) {
-    fr = await supabase
-      .from("content_item")
-      .select(FR_SELECT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    fr = await supabase.from("content_item").select(FR_SEL_WITH_PROMPT_NO_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
   }
 
-  if (fr.error) return { ok: false as const, status: 400, error: fr.error.message };
-  if (!fr.data) return { ok: false as const, status: 404, error: "Not found" };
-  return { ok: true as const, dto: dtoFromFR(fr.data) };
+  // prompt manquant -> retry sans prompt + sans updated_at
+  if (fr.error && isMissingColumnError(fr.error.message)) {
+    fr = await supabase.from("content_item").select(FR_SEL_NO_PROMPT_NO_UPDATED).eq("id", id).eq("user_id", userId).maybeSingle();
+  }
+
+  if (fr.error) return { ok: false, status: 400, error: fr.error.message };
+  if (!fr.data) return { ok: false, status: 404, error: "Not found" };
+
+  return { ok: true, dto: dtoFromFR({ ...fr.data, prompt: (fr.data as any).prompt ?? null, updated_at: (fr.data as any).updated_at ?? null }) };
 }
 
 async function updateWithRetries(
@@ -179,95 +183,50 @@ async function updateWithRetries(
   patch: Record<string, any>,
   bodyTags: PatchBody["tags"],
 ) {
-  const selectWith = kind === "v2" ? V2_SELECT_WITH_UPDATED : FR_SELECT_WITH_UPDATED;
-  const selectNo = kind === "v2" ? V2_SELECT_NO_UPDATED : FR_SELECT_NO_UPDATED;
+  const SEL_WITH_PROMPT_UPDATED = kind === "v2" ? V2_SEL_WITH_PROMPT_UPDATED : FR_SEL_WITH_PROMPT_UPDATED;
+  const SEL_WITH_PROMPT_NO_UPDATED = kind === "v2" ? V2_SEL_WITH_PROMPT_NO_UPDATED : FR_SEL_WITH_PROMPT_NO_UPDATED;
+  const SEL_NO_PROMPT_NO_UPDATED = kind === "v2" ? V2_SEL_NO_PROMPT_NO_UPDATED : FR_SEL_NO_PROMPT_NO_UPDATED;
 
-  // 1) try select WITH updated_at
-  let res = await supabase
-    .from("content_item")
-    .update(patch as any)
-    .eq("id", contentId)
-    .eq("user_id", userId)
-    .select(selectWith)
-    .maybeSingle();
+  const doUpdate = async (p: Record<string, any>, selectStr: string) => {
+    return supabase
+      .from("content_item")
+      .update(p as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(selectStr)
+      .maybeSingle();
+  };
 
-  // prompt missing -> retry sans prompt
+  // 1) try prompt + updated_at
+  let res = await doUpdate(patch, SEL_WITH_PROMPT_UPDATED);
+
+  // prompt manquant -> retry sans prompt (même select)
   if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
     const { prompt, ...noPrompt } = patch;
-    res = await supabase
-      .from("content_item")
-      .update(noPrompt as any)
-      .eq("id", contentId)
-      .eq("user_id", userId)
-      .select(selectWith)
-      .maybeSingle();
+    res = await doUpdate(noPrompt, SEL_WITH_PROMPT_UPDATED);
   }
 
-  // updated_at missing -> retry select NO updated_at
+  // updated_at manquant -> retry select sans updated_at (mais avec prompt si possible)
   if (res.error && isMissingColumnError(res.error.message)) {
-    res = await supabase
-      .from("content_item")
-      .update(patch as any)
-      .eq("id", contentId)
-      .eq("user_id", userId)
-      .select(selectNo)
-      .maybeSingle();
+    res = await doUpdate(patch, SEL_WITH_PROMPT_NO_UPDATED);
 
     if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
       const { prompt, ...noPrompt2 } = patch;
-      res = await supabase
-        .from("content_item")
-        .update(noPrompt2 as any)
-        .eq("id", contentId)
-        .eq("user_id", userId)
-        .select(selectNo)
-        .maybeSingle();
+      res = await doUpdate(noPrompt2, SEL_WITH_PROMPT_NO_UPDATED);
     }
   }
 
-  // tags mismatch -> retry tags CSV (garde aussi les retries prompt/updated_at)
+  // prompt manquant (ou encore une colonne) -> retry select sans prompt + sans updated_at
+  if (res.error && isMissingColumnError(res.error.message)) {
+    const pNoPrompt = "prompt" in patch ? (() => { const { prompt, ...rest } = patch; return rest; })() : patch;
+    res = await doUpdate(pNoPrompt, SEL_NO_PROMPT_NO_UPDATED);
+  }
+
+  // tags mismatch -> retry tags CSV (et on repasse toute la stratégie)
   if (res.error && isTagsTypeMismatch(res.error.message) && bodyTags !== undefined) {
     const retryPatch: Record<string, any> = { ...patch, tags: tagsToCsv(bodyTags) };
-
-    res = await supabase
-      .from("content_item")
-      .update(retryPatch as any)
-      .eq("id", contentId)
-      .eq("user_id", userId)
-      .select(selectWith)
-      .maybeSingle();
-
-    if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatch) {
-      const { prompt, ...noPrompt } = retryPatch;
-      res = await supabase
-        .from("content_item")
-        .update(noPrompt as any)
-        .eq("id", contentId)
-        .eq("user_id", userId)
-        .select(selectWith)
-        .maybeSingle();
-    }
-
-    if (res.error && isMissingColumnError(res.error.message)) {
-      res = await supabase
-        .from("content_item")
-        .update(retryPatch as any)
-        .eq("id", contentId)
-        .eq("user_id", userId)
-        .select(selectNo)
-        .maybeSingle();
-
-      if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatch) {
-        const { prompt, ...noPrompt2 } = retryPatch;
-        res = await supabase
-          .from("content_item")
-          .update(noPrompt2 as any)
-          .eq("id", contentId)
-          .eq("user_id", userId)
-          .select(selectNo)
-          .maybeSingle();
-      }
-    }
+    // relance la stratégie une fois (simple, robuste)
+    return updateWithRetries(supabase, kind, contentId, userId, retryPatch, undefined);
   }
 
   return res;
@@ -275,7 +234,8 @@ async function updateWithRetries(
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
-    const contentId = String(ctx.params?.id ?? "").trim();
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();
@@ -293,7 +253,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   try {
-    const contentId = String(ctx.params?.id ?? "").trim();
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();
@@ -302,7 +263,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
     const body = (await req.json().catch(() => ({}))) as PatchBody;
 
-    // si body vide -> renvoyer l'item actuel
+    // Body vide => renvoyer l’item actuel (évite update({}) qui peut planter)
     const hasAnyField =
       body.title !== undefined ||
       body.content !== undefined ||
@@ -364,7 +325,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext) {
   try {
-    const contentId = String(ctx.params?.id ?? "").trim();
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();

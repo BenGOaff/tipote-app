@@ -63,10 +63,15 @@ const simpleTestSchema = z.object({
 
 // ---------- Mapping offres Systeme.io -> plan interne ----------
 
-type StoredPlan = "free" | "basic" | "pro" | "elite";
+// ✅ On ajoute "beta" comme plan stocké (beta = pro en accès, mais tu veux "beta" dans Supabase)
+type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
 function normalizePlanFromOfferName(offer: { name: string; inner_name?: string | null }): StoredPlan | null {
   const name = `${offer.inner_name ?? ""} ${offer.name}`.toLowerCase();
+
+  // ✅ Beta doit rester beta en DB
+  if (name.includes("beta")) return "beta";
+
   if (name.includes("elite")) return "elite";
   if (name.includes("essential")) return "pro"; // alias legacy
   if (name.includes("pro")) return "pro";
@@ -76,7 +81,8 @@ function normalizePlanFromOfferName(offer: { name: string; inner_name?: string |
 }
 
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
-  // "offer-price-123": "basic",
+  // ✅ Ton offre Beta lifetime (97€) => plan "beta" en DB
+  "offerprice-efbd353f": "beta",
 };
 
 function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
