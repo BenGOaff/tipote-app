@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: { id: string } };
 
 type ContentItemDTO = {
   id: string;
@@ -54,11 +54,12 @@ function isTagsTypeMismatch(message: string | null | undefined) {
 
 function asTagsArray(tags: unknown): string[] {
   if (Array.isArray(tags)) return tags.map(String).map((s) => s.trim()).filter(Boolean);
-  if (typeof tags === "string")
+  if (typeof tags === "string") {
     return tags
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+  }
   return [];
 }
 
@@ -107,7 +108,7 @@ function dtoFromFR(row: any): ContentItemDTO {
   };
 }
 
-// Select strings (pour éviter de répéter et pour gérer updated_at manquant)
+// Select strings (pour éviter de répéter et pour gérer updated_at/prompt manquants)
 const V2_SELECT_WITH_UPDATED =
   "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at";
 const V2_SELECT_NO_UPDATED =
@@ -373,8 +374,7 @@ async function fetchOne(
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
-    const { id } = await ctx.params;
-    const contentId = String(id ?? "").trim();
+    const contentId = String(ctx.params?.id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();
@@ -386,17 +386,13 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
     return NextResponse.json({ ok: true, item: res.dto }, { status: 200 });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   try {
-    const { id } = await ctx.params;
-    const contentId = String(id ?? "").trim();
+    const contentId = String(ctx.params?.id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();
@@ -405,7 +401,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
     const body = (await req.json().catch(() => ({}))) as PatchBody;
 
-    // Si body vide, on renvoie l'item actuel (évite update() vide qui peut planter selon drivers)
+    // Si body vide, renvoyer l'item actuel (évite update() vide)
     const hasAnyField =
       body.title !== undefined ||
       body.content !== undefined ||
@@ -428,7 +424,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const patchV2: Record<string, any> = {};
     if (body.title !== undefined) patchV2.title = body.title;
     if (body.content !== undefined) patchV2.content = body.content;
-    if (body.prompt !== undefined) patchV2.prompt = body.prompt; // optionnel selon DB
+    if (body.prompt !== undefined) patchV2.prompt = body.prompt; // optionnel
     if (body.type !== undefined) patchV2.type = body.type;
     if (body.status !== undefined) patchV2.status = body.status;
     if (body.channel !== undefined) patchV2.channel = body.channel;
@@ -452,7 +448,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const patchFR: Record<string, any> = {};
     if (body.title !== undefined) patchFR.titre = body.title;
     if (body.content !== undefined) patchFR.contenu = body.content;
-    if (body.prompt !== undefined) patchFR.prompt = body.prompt; // optionnel selon DB
+    if (body.prompt !== undefined) patchFR.prompt = body.prompt; // optionnel
     if (body.type !== undefined) patchFR.type = body.type;
     if (body.status !== undefined) patchFR.statut = body.status;
     if (body.channel !== undefined) patchFR.canal = body.channel;
@@ -466,17 +462,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
     return NextResponse.json({ ok: true, item: dtoFromFR(fr.data) }, { status: 200 });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext) {
   try {
-    const { id } = await ctx.params;
-    const contentId = String(id ?? "").trim();
+    const contentId = String(ctx.params?.id ?? "").trim();
     if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
     const { supabase, userId, authError } = await getAuthedUserId();
@@ -488,10 +480,7 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }
 
