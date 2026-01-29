@@ -1265,6 +1265,44 @@ export async function POST(req: Request) {
       }
     }
 
+    // --- Offre context posts (offerId / offerManual) ---
+const postOfferId = safeString((body as any).offerId).trim(); // ✅ on réutilise offerId côté post
+const postOfferManual =
+  isRecord((body as any).postOfferManual)
+    ? ((body as any).postOfferManual as any)
+    : isRecord((body as any).offerManual)
+      ? ((body as any).offerManual as any)
+      : null;
+
+
+let offerContextForPost: OfferPyramidContext | null = null;
+
+if (type === "post" && postOfferId) {
+  // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
+  // on résout via planOffers. Sinon on tente offer_pyramids puis fallback planOffers.
+  if (!isUuid(postOfferId)) {
+    offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
+  } else {
+    try {
+      const { data: offerRow, error: offerErr } = await supabase
+        .from("offer_pyramids")
+        .select(OFFER_PYRAMID_SELECT)
+        .eq("id", postOfferId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!offerErr && offerRow) offerContextForPost = offerRow as any;
+    } catch {
+      // fail-open
+    }
+
+    if (!offerContextForPost) {
+      offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
+    }
+  }
+}
+
+
     /** ---------------------------
      * Funnel (pyramide) — pages capture / vente
      * -------------------------- */
@@ -1317,22 +1355,78 @@ export async function POST(req: Request) {
 
     const effectivePrompt = (() => {
       if (type === "post") {
-                const platform = safeString(body.platform).trim() as any;
-        const subject = safeString(body.subject).trim();
-        const theme = safeString(body.theme).trim();
-        const tone = safeString(body.tone).trim() as any;
+  const platform = safeString(body.platform).trim() as any;
+  const subject = safeString(body.subject).trim();
+  const theme = safeString(body.theme).trim();
+  const tone = safeString(body.tone).trim() as any;
 
-        const offerLink = safeString(body.offerLink).trim() || undefined;
+  const offerLink = safeString(body.offerLink).trim() || undefined;
 
-        return buildSocialPostPrompt({
-          platform,
-          subject: subject || theme || prompt || "Contenu",
-          tone,
-          batchCount,
-          promoKind,
-          offerLink,
-        } as any);
-      }
+  const base = buildSocialPostPrompt({
+    platform,
+    subject: subject || theme || prompt || "Contenu",
+    tone,
+    batchCount,
+    promoKind,
+    offerLink,
+  } as any);
+
+  // ✅ Ajout contexte offre (pyramide ou manual)
+  const offerCtxLines: string[] = [];
+
+  if (offerContextForPost) {
+    offerCtxLines.push("Offre (pyramide) :");
+    offerCtxLines.push(
+      JSON.stringify(
+        {
+          id: (offerContextForPost as any)?.id ?? null,
+          name: (offerContextForPost as any)?.name ?? null,
+          level: (offerContextForPost as any)?.level ?? null,
+          promise: (offerContextForPost as any)?.promise ?? null,
+          description: (offerContextForPost as any)?.description ?? null,
+          price_min: (offerContextForPost as any)?.price_min ?? null,
+          price_max: (offerContextForPost as any)?.price_max ?? null,
+          main_outcome: (offerContextForPost as any)?.main_outcome ?? null,
+          format: (offerContextForPost as any)?.format ?? null,
+          delivery: (offerContextForPost as any)?.delivery ?? null,
+        },
+        null,
+        0,
+      ),
+    );
+  }
+
+  if (postOfferManual) {
+    const m = {
+      name: safeString(postOfferManual?.name).trim() || null,
+      promise: safeString(postOfferManual?.promise).trim() || null,
+      main_outcome: safeString(postOfferManual?.main_outcome).trim() || null,
+      description: safeString(postOfferManual?.description).trim() || null,
+      price: safeString(postOfferManual?.price).trim() || null,
+    };
+
+    const hasAny = Object.values(m).some((v) => !!String(v ?? "").trim());
+    if (hasAny) {
+      offerCtxLines.push("Offre (manual) :");
+      offerCtxLines.push(JSON.stringify(m, null, 0));
+    }
+  }
+
+  if (offerCtxLines.length) {
+    return (
+      base +
+      "\n\n" +
+      "Contraintes offre :\n" +
+      "- Si c'est un post promo, ancre le copy sur la promesse et le résultat concret.\n" +
+      "- Ne pas inventer de prix si absent.\n" +
+      "- CTA clair. Si offerLink est présent, l'utiliser.\n\n" +
+      offerCtxLines.join("\n")
+    );
+  }
+
+  return base;
+}
+
 
       if (type === "video") {
         const duration = (safeString(body.duration).trim() || "60s") as any;
@@ -1588,6 +1682,12 @@ export async function POST(req: Request) {
     userContextLines.push("");
     userContextLines.push("Brief :");
     userContextLines.push(effectivePrompt);
+    if (type === "post" && offerContextForPost) {
+  userContextLines.push("");
+  userContextLines.push("Offre de référence pour le post (JSON) :");
+  userContextLines.push(JSON.stringify(offerContextForPost));
+}
+
 
     /** ---------------------------
      * Async job = placeholder row dans content_item

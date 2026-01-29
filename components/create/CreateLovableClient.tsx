@@ -362,7 +362,10 @@ function extractGeneratedText(data: any): string {
   return "";
 }
 
-async function pollGeneratedContent(jobId: string, opts?: { timeoutMs?: number; minDelayMs?: number; maxDelayMs?: number }) {
+async function pollGeneratedContent(
+  jobId: string,
+  opts?: { timeoutMs?: number; minDelayMs?: number; maxDelayMs?: number },
+) {
   const timeoutMs = opts?.timeoutMs ?? 120_000;
   const minDelayMs = opts?.minDelayMs ?? 900;
   const maxDelayMs = opts?.maxDelayMs ?? 2_500;
@@ -465,7 +468,11 @@ export default function CreateLovableClient() {
           const selected = planJson?.selected_pyramid ?? planJson?.pyramid?.selected_pyramid ?? planJson?.pyramid ?? null;
 
           if (selected) {
-            const offersFromPlan = normalizeSelectedPyramid(user.id, selected, safeString((planRow as any)?.updated_at));
+            const offersFromPlan = normalizeSelectedPyramid(
+              user.id,
+              selected,
+              safeString((planRow as any)?.updated_at),
+            );
             if (offersFromPlan.length > 0) {
               computeFromOffers(offersFromPlan);
               return; // ✅ si source de vérité existe et exploitable, on s’arrête ici
@@ -519,20 +526,12 @@ export default function CreateLovableClient() {
       // Realtime: si l'utilisateur modifie business_plan ou offer_pyramids, on reload.
       channel = supabase
         .channel(`pyramid-offers:${user.id}`)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "business_plan", filter: `user_id=eq.${user.id}` },
-          () => {
-            load();
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "offer_pyramids", filter: `user_id=eq.${user.id}` },
-          () => {
-            load();
-          }
-        )
+        .on("postgres_changes", { event: "*", schema: "public", table: "business_plan", filter: `user_id=eq.${user.id}` }, () => {
+          load();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "offer_pyramids", filter: `user_id=eq.${user.id}` }, () => {
+          load();
+        })
         .subscribe();
     })();
 
@@ -576,7 +575,8 @@ export default function CreateLovableClient() {
         if (!final) {
           toast({
             title: "Génération",
-            description: "La génération a démarré, mais aucun contenu n'a été récupéré (timeout). Va voir dans “Mes Contenus”.",
+            description:
+              "La génération a démarré, mais aucun contenu n'a été récupéré (timeout). Va voir dans “Mes Contenus”.",
             variant: "destructive",
           });
         }
@@ -659,6 +659,8 @@ export default function CreateLovableClient() {
 
     switch (selectedType) {
       case "post":
+        // ✅ IMPORTANT: PostForm gère lui-même le chargement des offres/pyramide.
+        // On ne passe pas pyramidOffers ici -> sinon TS2322 (prop inexistante).
         return <PostForm {...common} />;
       case "email":
         return <EmailForm {...common} />;
