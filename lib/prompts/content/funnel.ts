@@ -1,9 +1,10 @@
 // lib/prompts/content/funnel.ts
 // Funnels: page capture / page vente (from_pyramid / from_scratch)
-// Objectif: sortir un 1er jet très haut niveau en s’inspirant OBLIGATOIREMENT des ressources Tipote
-// ⚠️ Garde-fous: ne jamais citer "AIDA", "template", "modèle", "structure", "framework".
-// ⚠️ Capture: pas de "modules", pas de programme, pas de bonus inventés (sauf si offert explicitement).
-// ⚠️ Vente: peut avoir sections complètes, mais uniquement cohérentes avec l’offre et ses données.
+// Objectif: sortir un 1er jet TRÈS QUALITATIF en s’appuyant STRICTEMENT sur les ressources Tipote
+// ⚠️ Garde-fous globaux:
+// - ne jamais citer "AIDA", "template", "modèle", "structure", "framework"
+// - ne jamais expliquer ce que tu fais
+// - retourner UNIQUEMENT le texte final visible par l’utilisateur
 
 export type FunnelPage = "capture" | "sales";
 export type FunnelMode = "from_pyramid" | "from_scratch";
@@ -35,8 +36,8 @@ export type FunnelPromptParams = {
   page: FunnelPage;
   mode: FunnelMode;
   theme: string;
-  offer: PyramidOfferContext | null; // from_pyramid
-  manual: FunnelManual | null; // from_scratch
+  offer: PyramidOfferContext | null;
+  manual: FunnelManual | null;
   language?: "fr";
 };
 
@@ -55,8 +56,7 @@ function isLikelyLeadMagnet(level: unknown) {
 
 function offerToCompactJson(offer: PyramidOfferContext | null): string {
   if (!offer) return "null";
-  const obj = {
-    id: offer.id ?? undefined,
+  return JSON.stringify({
     name: offer.name ?? null,
     level: offer.level ?? null,
     promise: offer.promise ?? null,
@@ -66,149 +66,169 @@ function offerToCompactJson(offer: PyramidOfferContext | null): string {
     price_max: offer.price_max ?? null,
     format: offer.format ?? null,
     delivery: offer.delivery ?? null,
-  };
-  return JSON.stringify(obj);
+  });
 }
 
 function manualToCompactJson(manual: FunnelManual | null): string {
   if (!manual) return "null";
-  const obj = {
+  return JSON.stringify({
     name: manual.name ?? null,
     promise: manual.promise ?? null,
     target: manual.target ?? null,
     price: manual.price ?? null,
     urgency: manual.urgency ?? null,
     guarantee: manual.guarantee ?? null,
-  };
-  return JSON.stringify(obj);
+  });
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                    CAPTURE                                 */
+/* -------------------------------------------------------------------------- */
 
 function buildCapturePrompt(params: FunnelPromptParams): string {
   const { mode, theme, offer, manual } = params;
 
   const offerName =
-    mode === "from_pyramid" ? toOneLine(offer?.name) : toOneLine(manual?.name) || toOneLine(offer?.name);
+    mode === "from_pyramid"
+      ? toOneLine(offer?.name)
+      : toOneLine(manual?.name) || toOneLine(offer?.name);
+
   const promise =
-    mode === "from_pyramid" ? toOneLine(offer?.promise) : toOneLine(manual?.promise) || toOneLine(offer?.promise);
+    mode === "from_pyramid"
+      ? toOneLine(offer?.promise)
+      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
+
   const target =
-    mode === "from_pyramid" ? "" : toOneLine(manual?.target); // utile only scratch
+    mode === "from_scratch" ? toOneLine(manual?.target) : "";
 
   const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
 
-  // ⚠️ Capture: on évite “modules/bonus/programme”
   return `
-Tu dois écrire le TEXTE COMPLET d’une page de capture (opt-in) en français, optimisée conversion.
+Tu écris le TEXTE COMPLET d’une page de capture (opt-in), en français, orientée conversion.
 
-IMPÉRATIF :
-- Tu DOIS t’inspirer des ressources Tipote fournies dans le contexte (Tipote Knowledge). 
-- Tu dois produire directement une excellente version dès le premier jet.
-- Tu n’as PAS le droit de mentionner que tu utilises une ressource, un modèle, un template ou une structure.
-- Tu n’as PAS le droit d’écrire les mots: "AIDA", "template", "modèle", "structure", "framework", "copywriting formula".
-- Tu retournes uniquement le texte final de la page (texte brut), sans explication, sans titres techniques internes.
+RÈGLES ABSOLUES :
+- Tu t’inspires OBLIGATOIREMENT des ressources Tipote présentes dans le contexte.
+- Tu livres une version directement publiable, sans expliquer ton raisonnement.
+- Tu n’emploies JAMAIS les mots : "AIDA", "template", "modèle", "structure", "framework".
+- Tu retournes uniquement le texte final, sans titres techniques ni commentaires.
 
-CONTEXTE (ne pas répéter tel quel) :
-- Objectif / thème : ${theme || "Page de capture"}
+CONTEXTE (ne pas recopier tel quel) :
+- Thème / objectif : ${theme || "Page de capture"}
 - Mode : ${mode}
-- Offre (si pyramide) : ${offerToCompactJson(offer)}
-- Infos manuelles (si zéro) : ${manualToCompactJson(manual)}
+- Offre (pyramide) : ${offerToCompactJson(offer)}
+- Infos manuelles : ${manualToCompactJson(manual)}
 
-RÈGLES CRITIQUES (CAPTURE) :
-- Une page de capture sert à obtenir un email (et éventuellement prénom). Point.
-- Ne crée PAS de "modules", "programme", "bonus", "curriculum", "chapitres" si ce n’est pas explicitement fourni.
-- Ne promets pas une transformation disproportionnée par rapport à un lead magnet simple.
-- Si c’est un lead magnet (probable = ${String(isLM)}), reste simple, direct, orienté bénéfice immédiat.
-- Mets 1 seul objectif : inscription.
+RÈGLES CAPTURE :
+- Objectif unique : obtenir une inscription email (prénom + email).
+- N’invente PAS de modules, programme, bonus ou système complexe.
+- Si lead magnet (= ${String(isLM)}), promesse simple, rapide, crédible.
+- Une seule promesse centrale, très claire.
 
 FORMAT ATTENDU (sans le nommer) :
-- En-tête fort (bénéfice principal + spécificité)
-- Sous-titre (clarifie pour qui + résultat + mécanisme)
-- Puces orientées résultats (3 à 6 max)
-- Bloc formulaire (placeholders "Prénom", "Email") + texte bouton
-- Micro-réassurance (RGPD, pas de spam)
-- Petit bloc "Pour qui / pas pour qui" (très court)
-- Rappel CTA final (court)
+- Accroche très spécifique orientée bénéfice immédiat
+- Sous-accroche : pour qui + résultat + mécanisme concret
+- 3 à 6 puces ultra concrètes (résultats / situations)
+- Bloc formulaire (Prénom / Email) + CTA clair
+- Micro-réassurance (RGPD / pas de spam)
+- Mini bloc “pour qui / pas pour qui”
+- Rappel CTA final
 
-DONNÉES À UTILISER :
-- Nom de l’offre / ressource : ${offerName || "(non fourni)"} 
-- Promesse principale : ${promise || "(non fournie)"} 
-${mode === "from_scratch" ? `- Public cible : ${target || "(non fourni)"}` : ""}
+DONNÉES CLÉS :
+- Nom : ${offerName || "(non fourni)"}
+- Promesse : ${promise || "(non fournie)"}
+${mode === "from_scratch" ? `- Cible : ${target || "(non fournie)"}` : ""}
 
-Ton : clair, premium, concret, pas de blabla.
-Évite les généralités. Fais des formulations spécifiques.
+Ton : premium, direct, précis. Zéro blabla.
 `.trim();
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                     VENTE                                  */
+/* -------------------------------------------------------------------------- */
 
 function buildSalesPrompt(params: FunnelPromptParams): string {
   const { mode, theme, offer, manual } = params;
 
   const offerName =
-    mode === "from_pyramid" ? toOneLine(offer?.name) : toOneLine(manual?.name) || toOneLine(offer?.name);
-  const promise =
-    mode === "from_pyramid" ? toOneLine(offer?.promise) : toOneLine(manual?.promise) || toOneLine(offer?.promise);
-  const desc = mode === "from_pyramid" ? safeStr(offer?.description) : "";
-  const mainOutcome = mode === "from_pyramid" ? toOneLine(offer?.main_outcome) : "";
+    mode === "from_pyramid"
+      ? toOneLine(offer?.name)
+      : toOneLine(manual?.name) || toOneLine(offer?.name);
 
-  const priceMin = mode === "from_pyramid" ? offer?.price_min : null;
-  const priceMax = mode === "from_pyramid" ? offer?.price_max : null;
+  const promise =
+    mode === "from_pyramid"
+      ? toOneLine(offer?.promise)
+      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
+
+  const desc = safeStr(offer?.description);
+  const mainOutcome = toOneLine(offer?.main_outcome);
+
+  const priceMin = offer?.price_min;
+  const priceMax = offer?.price_max;
 
   const priceScratch = toOneLine(manual?.price);
-  const urgency = toOneLine(manual?.urgency) || "";
-  const guarantee = toOneLine(manual?.guarantee) || "";
+  const urgency = toOneLine(manual?.urgency);
+  const guarantee = toOneLine(manual?.guarantee);
 
   return `
-Tu dois écrire le TEXTE COMPLET d’une page de vente en français, optimisée conversion.
+Tu écris le TEXTE COMPLET d’une page de vente, en français, conçue pour convertir.
 
-IMPÉRATIF :
-- Tu DOIS t’inspirer des ressources Tipote fournies dans le contexte (Tipote Knowledge).
-- Pour les pages de vente, tu dois coller au plus près des exemples/templates de pages de vente présents dans les ressources (sans jamais les citer).
-- Tu n’as PAS le droit de mentionner que tu utilises une ressource, un modèle, un template ou une structure.
-- Tu n’as PAS le droit d’écrire les mots: "AIDA", "template", "modèle", "structure", "framework", "copywriting formula".
-- Tu retournes uniquement le texte final (texte brut), sans explication, sans markdown.
+RÈGLE MAJEURE :
+Avant d’écrire la page, tu DOIS raisonner SILENCIEUSEMENT (ne rien afficher) pour définir :
+- l’ANGLE principal de la page
+- le MÉCANISME unique qui rend l’offre crédible
+- les 2 OBJECTIONS majeures du prospect
+- la PREUVE logique disponible (process, expérience, livrable, contrainte)
 
-CONTEXTE (ne pas répéter tel quel) :
-- Objectif / thème : ${theme || "Page de vente"}
+Une fois ces éléments clairs, tu écris la page en les utilisant EXPLICITEMENT dans le texte.
+
+INTERDICTIONS :
+- Ne jamais mentionner ressource, modèle, template, framework.
+- Ne jamais écrire de phrases génériques type “clé en main”, “sans prise de tête”.
+- Ne jamais inventer témoignages, chiffres, logos ou résultats factuels.
+
+CONTEXTE (ne pas recopier) :
+- Thème : ${theme || "Page de vente"}
 - Mode : ${mode}
-- Offre (si pyramide) : ${offerToCompactJson(offer)}
-- Infos manuelles (si zéro) : ${manualToCompactJson(manual)}
+- Offre (pyramide) : ${offerToCompactJson(offer)}
+- Infos manuelles : ${manualToCompactJson(manual)}
 
-RÈGLES CRITIQUES (VENTE) :
-- Ne jamais inventer des éléments factuels (témoignages, chiffres, logos, résultats) si on ne te les a pas donnés.
-- Si l’offre est un outil / agent IA (et pas une formation), ne crée PAS de “modules de formation”. 
-  Tu peux décrire: fonctionnalités, cas d’usage, livrables, onboarding, support, limites, garanties.
-- Si prix inconnu: propose une formulation neutre (ex: "accès immédiat" + CTA), mais évite un montant.
-- Si prix fourni: intègre-le clairement + CTA.
-- Urgence et garantie: uniquement si fournies (mode zéro) ou si présentes dans l’offre (pyramide).
+CONTRAINTES OFFRE :
+- Si outil / service / IA : PAS de modules ou programme fictif.
+- Décris uniquement ce qui est livré, comment, pour quel usage.
+- Si prix inconnu : CTA neutre.
+- Urgence / garantie UNIQUEMENT si fournies.
 
 ÉLÉMENTS À COUVRIR (sans titres techniques) :
-- HERO puissant (promesse + pour qui + mécanisme)
-- Problème / frustration + coût de l’inaction
-- Solution + pourquoi ça marche (mécanisme)
-- Ce que l’acheteur obtient (livrables / accès / fonctionnalités) — pas de programme inventé
+- Ouverture forte : promesse + cible + mécanisme
+- Problème vécu + coût de l’inaction
+- Présentation de la solution + pourquoi elle fonctionne
+- Ce que l’acheteur obtient concrètement
 - Pour qui / pas pour qui
 - Objections + réponses
 - Garantie (si fournie)
-- Urgence / bonus (si fournis)
-- FAQ (5-8 Q/R utiles)
-- CTA répétés
+- Urgence (si fournie)
+- FAQ utile (5–8 questions)
+- CTA répétés et cohérents
 
-DONNÉES À UTILISER :
+DONNÉES CLÉS :
 - Nom : ${offerName || "(non fourni)"}
 - Promesse : ${promise || "(non fournie)"}
 ${desc ? `- Description : ${desc}` : ""}
 ${mainOutcome ? `- Résultat principal : ${mainOutcome}` : ""}
 ${
   mode === "from_pyramid"
-    ? `- Prix (pyramide) : min=${String(priceMin ?? "")} max=${String(priceMax ?? "")}`
-    : `- Prix (manuel) : ${priceScratch || "(non fourni)"}`
+    ? `- Prix indicatif : min=${String(priceMin ?? "")} max=${String(priceMax ?? "")}`
+    : `- Prix : ${priceScratch || "(non fourni)"}`
 }
-${mode === "from_scratch" && urgency ? `- Urgence : ${urgency}` : ""}
-${mode === "from_scratch" && guarantee ? `- Garantie : ${guarantee}` : ""}
+${urgency ? `- Urgence : ${urgency}` : ""}
+${guarantee ? `- Garantie : ${guarantee}` : ""}
 
-Ton : direct, premium, spécifique, orienté bénéfices + preuves logiques.
+Ton : stratégique, incarné, précis. Chaque phrase doit servir la décision.
 `.trim();
 }
 
 export function buildFunnelPrompt(params: FunnelPromptParams): string {
-  const page = params.page === "sales" ? "sales" : "capture";
-  return page === "sales" ? buildSalesPrompt(params) : buildCapturePrompt(params);
+  return params.page === "sales"
+    ? buildSalesPrompt(params)
+    : buildCapturePrompt(params);
 }
