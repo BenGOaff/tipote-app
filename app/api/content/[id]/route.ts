@@ -118,7 +118,7 @@ async function fetchOne(
   // 1) V2 try (avec prompt/updated_at)
   const v2 = await supabase
     .from("content_item")
-    .select("id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at")
+    .select("id,user_id,type,title,content,status,scheduled_date,channel,tags,created_at,updated_at")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -153,7 +153,7 @@ async function fetchOne(
   // 3) FR try (avec prompt/updated_at)
   const fr = await supabase
     .from("content_item")
-    .select("id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
+    .select("id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -222,7 +222,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const patchV2: Record<string, any> = {};
     if (body.title !== undefined) patchV2.title = body.title;
     if (body.content !== undefined) patchV2.content = body.content;
-    if (body.prompt !== undefined) patchV2.prompt = body.prompt;
     if (body.type !== undefined) patchV2.type = body.type;
     if (body.status !== undefined) patchV2.status = body.status;
     if (body.channel !== undefined) patchV2.channel = body.channel;
@@ -235,7 +234,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       .update(patchV2 as any)
       .eq("id", contentId)
       .eq("user_id", userId)
-      .select("id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at")
+      .select("id,user_id,type,title,content,status,scheduled_date,channel,tags,created_at,updated_at")
       .maybeSingle();
 
     // Si prompt n'existe pas => retry sans prompt
@@ -259,7 +258,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
         .update(retryPatch as any)
         .eq("id", contentId)
         .eq("user_id", userId)
-        .select("id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at")
+        .select("id,user_id,type,title,content,status,scheduled_date,channel,tags,created_at,updated_at")
         .maybeSingle();
 
       if (v2.error && isMissingColumnError(v2.error.message) && "prompt" in retryPatch) {
@@ -290,7 +289,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const patchFR: Record<string, any> = {};
     if (body.title !== undefined) patchFR.titre = body.title;
     if (body.content !== undefined) patchFR.contenu = body.content;
-    if (body.prompt !== undefined) patchFR.prompt = body.prompt; // optionnel (souvent absent)
     if (body.type !== undefined) patchFR.type = body.type;
     if (body.status !== undefined) patchFR.statut = body.status;
     if (body.channel !== undefined) patchFR.canal = body.channel;
@@ -302,7 +300,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       .update(patchFR as any)
       .eq("id", contentId)
       .eq("user_id", userId)
-      .select("id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
+      .select("id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
       .maybeSingle();
 
     // prompt absent => retry sans prompt
@@ -326,7 +324,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
         .update(retryPatchFR as any)
         .eq("id", contentId)
         .eq("user_id", userId)
-        .select("id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
+        .select("id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,created_at,updated_at")
         .maybeSingle();
 
       if (fr.error && isMissingColumnError(fr.error.message) && "prompt" in retryPatchFR) {

@@ -247,10 +247,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         // 2) fallback legacy: offer_pyramids
         const { data, error } = await supabase
           .from("offer_pyramids")
-          .select("id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .select("id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .eq("user_id", user.id)
           .order("is_flagship", { ascending: false })
           .order("updated_at", { ascending: false })
           .limit(100);
+
 
         if (!mounted) return;
         if (error) {
