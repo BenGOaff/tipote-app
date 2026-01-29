@@ -1004,7 +1004,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   disabled={!title || isSaving}
                 >
                   <Send className="w-4 h-4 mr-1" />
-                  Publier
+                  Programmer
                 </Button>
 
                 <Button

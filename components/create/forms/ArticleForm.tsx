@@ -278,7 +278,7 @@ export function ArticleForm({ onGenerate, onSave, onClose, isGenerating, isSavin
 
                 <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
                   <Send className="w-4 h-4 mr-1" />
-                  Publier
+                  Programmer
                 </Button>
 
                 <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={isGenerating}>

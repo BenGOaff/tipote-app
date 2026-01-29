@@ -209,7 +209,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                 <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
                   <Send className="w-4 h-4 mr-1" />
-                  Publier
+                  Programmer
                 </Button>
 
                 <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
