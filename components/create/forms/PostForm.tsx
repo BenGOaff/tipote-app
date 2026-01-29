@@ -167,6 +167,46 @@ function normalizeSelectedPyramid(userId: string, selected: any, updatedAt?: str
   if (isRecord(selected) && Array.isArray((selected as any).offers)) {
     const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
     (selected as any).offers.forEach((o: any, idx: number) => pushOffer(lvl, o, idx));
+    return out;
+  }
+
+  // ✅ Shape: objet map { lead_magnet, low_ticket, middle_ticket, high_ticket, ... }
+  if (isRecord(selected)) {
+    const KEY_TO_LEVEL: Array<[string, string]> = [
+      ["lead_magnet", "lead_magnet"],
+      ["leadmagnet", "lead_magnet"],
+      ["free", "lead_magnet"],
+      ["gratuit", "lead_magnet"],
+      ["low_ticket", "low_ticket"],
+      ["lowticket", "low_ticket"],
+      ["middle_ticket", "middle_ticket"],
+      ["mid_ticket", "middle_ticket"],
+      ["midticket", "middle_ticket"],
+      ["middle", "middle_ticket"],
+      ["high_ticket", "high_ticket"],
+      ["highticket", "high_ticket"],
+      ["high", "high_ticket"],
+      ["premium", "high_ticket"],
+    ];
+
+    const loweredKeys = Object.keys(selected).reduce<Record<string, string>>((acc, k) => {
+      acc[k.toLowerCase()] = k;
+      return acc;
+    }, {});
+
+    for (const [kLower, level] of KEY_TO_LEVEL) {
+      const realKey = loweredKeys[kLower];
+      if (!realKey) continue;
+      pushOffer(level, (selected as any)[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
+    }
+
+    // fallback ultime: si selected est directement une offre
+    if (out.length === 0) {
+      const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
+      pushOffer(lvl, selected, 0);
+    }
+
+    return out;
   }
 
   return out;
@@ -228,15 +268,27 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           .eq("user_id", user.id)
           .maybeSingle();
 
+        let row: any = planRow;
+
+        // ✅ retry si updated_at n'existe pas dans business_plan
+        if (planErr && String((planErr as any)?.message || "").toLowerCase().includes("updated_at")) {
+          const retry = await supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle();
+          row = retry.data as any;
+        }
+
         if (!mounted) return;
 
-        if (!planErr && (planRow as any)?.plan_json) {
-          const planJson: any = (planRow as any).plan_json ?? null;
+        if (row?.plan_json) {
+          const planJson: any = row.plan_json ?? null;
           const selected =
-            planJson?.selected_pyramid ?? planJson?.pyramid?.selected_pyramid ?? planJson?.pyramid ?? planJson?.offer_pyramid ?? null;
+            planJson?.selected_pyramid ??
+            planJson?.pyramid?.selected_pyramid ??
+            planJson?.pyramid ??
+            planJson?.offer_pyramid ??
+            null;
 
           if (selected) {
-            const fromPlan = normalizeSelectedPyramid(user.id, selected, safeStringOrNull((planRow as any)?.updated_at));
+            const fromPlan = normalizeSelectedPyramid(user.id, selected, safeStringOrNull(row?.updated_at));
             if (fromPlan.length) {
               setOffers(fromPlan);
               return;
@@ -247,12 +299,13 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         // 2) fallback legacy: offer_pyramids
         const { data, error } = await supabase
           .from("offer_pyramids")
-          .select("id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
+          .select(
+            "id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at",
+          )
           .eq("user_id", user.id)
           .order("is_flagship", { ascending: false })
           .order("updated_at", { ascending: false })
           .limit(100);
-
 
         if (!mounted) return;
         if (error) {
@@ -498,11 +551,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
           <div className="space-y-2">
             <Label>Sujet / angle *</Label>
-            <Input
-              placeholder="Ex: Les 5 erreurs à éviter..."
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
+            <Input placeholder="Ex: Les 5 erreurs à éviter..." value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -568,12 +617,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 </Button>
 
                 {scheduledAt && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave("scheduled")}
-                    disabled={!title || isSaving}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
                     <Calendar className="w-4 h-4 mr-1" />
                     Planifier
                   </Button>
