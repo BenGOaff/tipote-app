@@ -1,8 +1,8 @@
 // lib/prompts/content/funnel.ts
 // Funnels: page capture / page vente (from_pyramid / from_scratch)
-// Objectif: pages NETTEMENT différenciées capture vs vente, qualité premium
+// Objectif: sortir un 1er jet TRÈS QUALITATIF en s’appuyant STRICTEMENT sur les ressources Tipote
 // ⚠️ Règles globales :
-// - jamais citer AIDA / template / framework
+// - jamais citer "AIDA", "template", "modèle", "structure", "framework"
 // - jamais expliquer le raisonnement
 // - retourner UNIQUEMENT le texte final visible
 
@@ -98,39 +98,53 @@ function buildCapturePrompt(params: FunnelPromptParams): string {
       ? toOneLine(offer?.promise)
       : toOneLine(manual?.promise) || toOneLine(offer?.promise);
 
-  const target =
-    mode === "from_scratch" ? toOneLine(manual?.target) : "";
-
+  const target = mode === "from_scratch" ? toOneLine(manual?.target) : "";
   const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
 
   return `
-Tu écris le TEXTE COMPLET d’une page de CAPTURE (opt-in).
+Tu écris le TEXTE COMPLET d’une page de CAPTURE (opt-in), en français.
 
 OBJECTIF UNIQUE :
-→ Obtenir une inscription email (prénom + email).
+→ Obtenir une inscription email (prénom + email). Rien d’autre.
 
-INTERDICTIONS ABSOLUES :
-- Pas de vente.
-- Pas de paiement.
-- Pas de décision engageante.
-- Pas de “commande”, “achat”, “accès payant”.
+RÈGLES ABSOLUES :
+- Tu t’appuies OBLIGATOIREMENT sur les ressources Tipote présentes dans le contexte (Tipote Knowledge).
+- Tu dois choisir UN exemple de page de capture dans les ressources et t’y conformer de très près :
+  - même ordre des sections
+  - même rythme
+  - même niveau de détail
+  - même style de phrases
+  - tu adaptes uniquement au thème et à l’offre
+- Si plusieurs exemples sont disponibles, choisis celui qui colle le plus au thème.
+- Si aucun exemple n’est fourni dans les ressources, applique une version minimaliste premium (mais sans l’indiquer).
 
-FORMAT OBLIGATOIRE :
-- Accroche bénéfice immédiat
-- Sous-accroche (pour qui + résultat)
+INTERDICTIONS :
+- Ne jamais mentionner ressource, modèle, template, framework.
+- Ne jamais mentionner "AIDA", "template", "modèle", "structure", "framework".
+- Pas de vente, pas de paiement, pas de “commande/acheter”.
+
+FORMAT OBLIGATOIRE (sans le nommer) :
+- Accroche bénéfice immédiat + spécifique
+- Sous-accroche : pour qui + résultat + mécanisme concret
 - 3–6 puces orientées gains rapides
-- Formulaire (Prénom / Email)
+- Formulaire : Prénom + Email
 - Bouton orienté “recevoir / accéder gratuitement”
-- Micro-réassurance
+- Micro-réassurance (RGPD / pas de spam)
 - Mini “pour qui / pas pour qui”
+- Rappel CTA final
 
-CONTEXTE :
-- Thème : ${theme}
-- Offre : ${offerName}
-- Promesse : ${promise}
-${mode === "from_scratch" ? `- Cible : ${target}` : ""}
+CONTEXTE (ne pas recopier) :
+- Thème : ${theme || "Page de capture"}
+- Mode : ${mode}
+- Offre (pyramide) : ${offerToCompactJson(offer)}
+- Infos manuelles : ${manualToCompactJson(manual)}
 
-Ton : clair, simple, non agressif.
+DONNÉES CLÉS :
+- Nom : ${offerName || "(non fourni)"}
+- Promesse : ${promise || "(non fournie)"}
+${mode === "from_scratch" ? `- Cible : ${target || "(non fourni)"}` : ""}
+
+Ton : premium, direct, concret. Zéro blabla, zéro promesse irréaliste.
 `.trim();
 }
 
@@ -162,48 +176,68 @@ function buildSalesPrompt(params: FunnelPromptParams): string {
   const guarantee = toOneLine(manual?.guarantee);
 
   return `
-Tu écris le TEXTE COMPLET d’une PAGE DE VENTE.
+Tu écris le TEXTE COMPLET d’une PAGE DE VENTE HIGH TICKET, en français, conçue pour convertir.
 
-C’EST CRITIQUE :
+POINT CLÉ :
 👉 Une page de vente N’EST PAS une page de capture.
 
 INTERDICTIONS ABSOLUES (vente) :
 - AUCUN formulaire email.
-- AUCUN champ prénom / email.
-- AUCUNE phrase de type “inscris-toi”, “reçois gratuitement”.
-- PAS de lead magnet.
-- PAS de tunnel d’opt-in.
+- AUCUN champ prénom/email.
+- AUCUNE phrase “inscris-toi”, “reçois gratuitement”, “télécharge”.
+- PAS de lead magnet, PAS d’opt-in.
+- Ne jamais mentionner ressource, modèle, template, framework.
+- Ne jamais écrire "AIDA", "template", "modèle", "structure", "framework".
+- Ne jamais inventer témoignages, chiffres, logos, résultats.
 
-CTA AUTORISÉS :
-- “Accéder”
-- “Commander”
-- “Acheter”
-- “Installer maintenant”
-- “Passer à l’action”
+OBLIGATION “TEMPLATE LOCK” (TRÈS IMPORTANT) :
+- Tu DOIS choisir UN template / exemple de page de vente présent dans les ressources Tipote (Tipote Knowledge).
+- Tu dois t’y conformer de très près :
+  - même ordre des sections
+  - mêmes types d’arguments
+  - même style et rythme
+  - même densité
+  - tu adaptes UNIQUEMENT au thème + à l’offre + au persona
+- Si plusieurs templates existent, choisis celui qui ressemble le plus à une page high ticket.
+- Si aucun template n’est présent dans les ressources, tu utilises une structure premium “classique” (sans l’indiquer), en restant dense et décisionnelle.
 
-RÈGLE MAJEURE :
-Avant d’écrire, tu DOIS raisonner silencieusement pour définir :
+TRAVAIL INTERNE (SILENCIEUX, NON AFFICHÉ) :
+Avant d’écrire, tu dois clarifier :
 - l’ANGLE principal
-- le MÉCANISME unique
-- 2 objections réelles
-- une preuve logique (process, livrable, contrainte)
+- le MÉCANISME différenciant (1 seul, clair)
+- au moins 3 objections avancées
+- une preuve logique disponible (process, livrable, contraintes, méthode, périmètre)
 
-STRUCTURE ATTENDUE :
-- Ouverture très forte (promesse + cible + mécanisme)
-- Problème réel + frustration
-- Pourquoi les solutions classiques échouent
-- Présentation de l’offre + mécanisme
-- Ce que l’acheteur obtient concrètement
+EXIGENCE DE LONGUEUR :
+- Page volontairement détaillée.
+- Chaque section doit apporter un élément NOUVEAU à la décision.
+- Aucun remplissage, aucune répétition.
+
+CTA AUTORISÉS (transactionnels) :
+- Accéder
+- Commander
+- Acheter
+- Rejoindre
+- Démarrer maintenant
+
+CONTENU À COUVRIR (sans titres techniques) :
+- Ouverture forte : promesse + cible + mécanisme
+- Problème réel + coût de l’inaction (niveau conscient)
+- Pourquoi les solutions habituelles échouent à ce stade
+- Présentation de l’approche + mécanisme (comment ça marche)
+- Ce que l’acheteur obtient exactement (livrables / accès / périmètre)
+- Ce que l’offre ne fait pas (clarification premium)
 - Pour qui / pas pour qui
-- Objections + réponses
+- Objections + réponses argumentées
+- Pourquoi maintenant
 - Garantie (si fournie)
 - Urgence (si fournie)
-- FAQ utile
-- CTA clair et répété (sans formulaire)
+- FAQ utile (6–10 Q/R)
+- CTA répétés (sans formulaire)
 
-DONNÉES :
-- Nom : ${offerName}
-- Promesse : ${promise}
+DONNÉES À UTILISER :
+- Nom : ${offerName || "(non fourni)"}
+- Promesse : ${promise || "(non fournie)"}
 ${desc ? `- Description : ${desc}` : ""}
 ${mainOutcome ? `- Résultat principal : ${mainOutcome}` : ""}
 ${
@@ -214,13 +248,10 @@ ${
 ${urgency ? `- Urgence : ${urgency}` : ""}
 ${guarantee ? `- Garantie : ${guarantee}` : ""}
 
-Ton : direct, assumé, décisionnel.
-On doit sentir un MOMENT DE CHOIX.
+Ton : expert, posé, décisionnel. On doit sentir un moment de choix.
 `.trim();
 }
 
 export function buildFunnelPrompt(params: FunnelPromptParams): string {
-  return params.page === "sales"
-    ? buildSalesPrompt(params)
-    : buildCapturePrompt(params);
+  return params.page === "sales" ? buildSalesPrompt(params) : buildCapturePrompt(params);
 }
