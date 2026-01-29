@@ -1,641 +1,503 @@
-"use client";
+// tipote-app/app/api/content/[id]/route.ts
+// CRUD simple pour un content_item (GET, PATCH, DELETE)
+// ✅ Compat DB : prod = colonnes FR (titre/contenu/statut/canal/date_planifiee, tags en text)
+// ✅ Compat DB : certaines instances ont colonnes "EN/V2" (title/content/status/channel/scheduled_date, tags array)
+// ✅ Certaines DB n'ont PAS prompt / updated_at => retry sans ces colonnes (sinon: "column ... does not exist")
+// ✅ PATCH supporte title/content/status/channel/type/scheduledDate/tags (+ prompt si présent)
 
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+type RouteContext = { params: Promise<{ id: string }> };
 
-interface PostFormProps {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (data: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-}
-
-const platforms = [
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "instagram", label: "Instagram" },
-  { id: "twitter", label: "X (Twitter)" },
-  { id: "facebook", label: "Facebook" },
-  { id: "tiktok", label: "TikTok" },
-];
-
-const themes = [
-  { id: "educate", label: "Éduquer" },
-  { id: "sell", label: "Vendre" },
-  { id: "entertain", label: "Divertir" },
-  { id: "storytelling", label: "Storytelling" },
-  { id: "social_proof", label: "Preuve sociale" },
-];
-
-const tones = [
-  { id: "professional", label: "Professionnel" },
-  { id: "casual", label: "Décontracté" },
-  { id: "inspirational", label: "Inspirant" },
-  { id: "educational", label: "Éducatif" },
-  { id: "humorous", label: "Humoristique" },
-];
-
-type OfferOption = {
+type ContentItemDTO = {
   id: string;
-  name: string;
-  level: string;
-  is_flagship?: boolean | null;
-
-  // détails utiles pour l’IA (et preview UI)
-  promise?: string | null;
-  description?: string | null;
-  price_min?: number | null;
-  price_max?: number | null;
-  main_outcome?: string | null;
-  format?: string | null;
-  delivery?: string | null;
-  target?: string | null; // quand présent dans plan_json
-  updated_at?: string | null;
+  user_id: string;
+  type: string | null;
+  title: string | null;
+  prompt: string | null;
+  content: string | null;
+  status: string | null;
+  scheduled_date: string | null;
+  channel: string | null;
+  tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
 };
 
-function levelLabel(level: string) {
-  const s = String(level ?? "").toLowerCase();
-  if (s.includes("lead") || s.includes("free") || s.includes("gratuit")) return "Gratuit (Lead magnet)";
-  if (s.includes("low")) return "Low ticket";
-  if (s.includes("middle") || s.includes("mid")) return "Middle ticket";
-  if (s.includes("high") || s.includes("premium")) return "High ticket";
-  return level || "Offre";
-}
+type PatchBody = {
+  type?: string | null;
+  title?: string | null;
+  prompt?: string | null;
+  content?: string | null;
+  status?: string | null;
+  scheduledDate?: string | null;
+  channel?: string | null;
+  tags?: string[] | string | null;
+};
 
-function isRecord(v: unknown): v is Record<string, any> {
-  return !!v && typeof v === "object" && !Array.isArray(v);
-}
-
-function safeStringOrNull(v: unknown): string | null {
-  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : null;
-  const out = (s ?? "").trim();
-  return out ? out : null;
-}
-
-function toNumberOrNull(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : null;
-}
-
-/**
- * Normalise business_plan.plan_json.selected_pyramid (legacy + new shapes) vers une liste d'offres
- * (copié depuis EmailForm pour garder exactement le même wiring).
- */
-function normalizeSelectedPyramid(userId: string, selected: any, updatedAt?: string | null): OfferOption[] {
-  const out: OfferOption[] = [];
-
-  const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
-    const o = isRecord(offerRaw) ? offerRaw : null;
-    if (!o) return;
-
-    const name =
-      safeStringOrNull((o as any).name) ??
-      safeStringOrNull((o as any).offer_name) ??
-      safeStringOrNull((o as any).offerTitle) ??
-      safeStringOrNull((o as any).title) ??
-      null;
-
-    if (!name) return;
-
-    // id “synthetic” stable: si le plan fournit déjà un id, on le garde
-    const rawId = safeStringOrNull((o as any).id) ?? safeStringOrNull((o as any).offer_id) ?? null;
-    const id = rawId || `${userId}:${String(levelRaw ?? "offer")}:${String(idxHint ?? out.length)}`;
-
-    const level =
-      safeStringOrNull(levelRaw) ??
-      safeStringOrNull((o as any).level) ??
-      safeStringOrNull((o as any).offer_level) ??
-      "";
-
-    out.push({
-      id,
-      name,
-      level,
-      is_flagship: typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null,
-      description: safeStringOrNull((o as any).description) ?? safeStringOrNull((o as any).desc) ?? null,
-      promise: safeStringOrNull((o as any).promise) ?? safeStringOrNull((o as any).promesse) ?? null,
-      main_outcome: safeStringOrNull((o as any).main_outcome) ?? safeStringOrNull((o as any).outcome) ?? null,
-      format: safeStringOrNull((o as any).format) ?? null,
-      delivery: safeStringOrNull((o as any).delivery) ?? null,
-      target: safeStringOrNull((o as any).target) ?? safeStringOrNull((o as any).target_audience) ?? null,
-      price_min: toNumberOrNull((o as any).price_min ?? (o as any).min_price),
-      price_max: toNumberOrNull((o as any).price_max ?? (o as any).max_price),
-      updated_at: safeStringOrNull((o as any).updated_at) ?? updatedAt ?? null,
-    });
-  };
-
-  if (!selected) return out;
-
-  // shapes possibles :
-  // - { offers: [...] }
-  // - { pyramid: [...] }
-  // - [ { level, offers: [...] } ... ]
-  // - { level, offers: [...] }
-  const topOffers =
-    (Array.isArray((selected as any).offers) && (selected as any).offers) ||
-    (Array.isArray((selected as any).pyramid) && (selected as any).pyramid) ||
-    null;
-
-  if (Array.isArray(topOffers)) {
-    // soit une liste d'offres simples, soit une liste de niveaux
-    topOffers.forEach((item: any, idx: number) => {
-      const isLevelBucket = isRecord(item) && (Array.isArray((item as any).offers) || Array.isArray((item as any).items));
-      if (isLevelBucket) {
-        const level = (item as any).level ?? (item as any).offer_level ?? (item as any).type ?? (item as any).tier;
-        const offersArr = (item as any).offers ?? (item as any).items ?? [];
-        if (Array.isArray(offersArr)) {
-          offersArr.forEach((o: any, j: number) => pushOffer(level, o, j));
-        }
-      } else {
-        // offre direct
-        pushOffer((item as any)?.level ?? (item as any)?.offer_level ?? "", item, idx);
-      }
-    });
-
-    return out;
-  }
-
-  // { level, offers: [...] }
-  if (isRecord(selected) && Array.isArray((selected as any).offers)) {
-    const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
-    (selected as any).offers.forEach((o: any, idx: number) => pushOffer(lvl, o, idx));
-    return out;
-  }
-
-  // ✅ Shape: objet map { lead_magnet, low_ticket, middle_ticket, high_ticket, ... }
-  if (isRecord(selected)) {
-    const KEY_TO_LEVEL: Array<[string, string]> = [
-      ["lead_magnet", "lead_magnet"],
-      ["leadmagnet", "lead_magnet"],
-      ["free", "lead_magnet"],
-      ["gratuit", "lead_magnet"],
-      ["low_ticket", "low_ticket"],
-      ["lowticket", "low_ticket"],
-      ["middle_ticket", "middle_ticket"],
-      ["mid_ticket", "middle_ticket"],
-      ["midticket", "middle_ticket"],
-      ["middle", "middle_ticket"],
-      ["high_ticket", "high_ticket"],
-      ["highticket", "high_ticket"],
-      ["high", "high_ticket"],
-      ["premium", "high_ticket"],
-    ];
-
-    const loweredKeys = Object.keys(selected).reduce<Record<string, string>>((acc, k) => {
-      acc[k.toLowerCase()] = k;
-      return acc;
-    }, {});
-
-    for (const [kLower, level] of KEY_TO_LEVEL) {
-      const realKey = loweredKeys[kLower];
-      if (!realKey) continue;
-      pushOffer(level, (selected as any)[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
-    }
-
-    // fallback ultime: si selected est directement une offre
-    if (out.length === 0) {
-      const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
-      pushOffer(lvl, selected, 0);
-    }
-
-    return out;
-  }
-
-  return out;
-}
-
-function formatPriceRange(offer: OfferOption): string | null {
-  const min = typeof offer.price_min === "number" ? offer.price_min : null;
-  const max = typeof offer.price_max === "number" ? offer.price_max : null;
-  if (min == null && max == null) return null;
-  if (min != null && max != null) {
-    if (min === max) return `${min}€`;
-    return `${min}–${max}€`;
-  }
-  if (min != null) return `à partir de ${min}€`;
-  return `jusqu'à ${max}€`;
-}
-
-export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {
-  const [platform, setPlatform] = useState("linkedin");
-  const [theme, setTheme] = useState("educate");
-  const [subject, setSubject] = useState("");
-  const [tone, setTone] = useState("professional");
-
-  // Branchement pyramide (comme Email/Funnel)
-  const [creationMode, setCreationMode] = useState<"pyramid" | "manual">("pyramid");
-  const [offers, setOffers] = useState<OfferOption[]>([]);
-  const [offersLoading, setOffersLoading] = useState(false);
-  const [offerId, setOfferId] = useState<string>("");
-
-  // Vente / lead magnet
-  const [promoKind, setPromoKind] = useState<"paid" | "free">("paid");
-  const [offerLink, setOfferLink] = useState("");
-
-  const [generatedContent, setGeneratedContent] = useState("");
-  const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-
-  useEffect(() => {
-    let mounted = true;
-    const supabase = getSupabaseBrowserClient();
-
-    const loadOffers = async () => {
-      setOffersLoading(true);
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-        if (!user?.id) {
-          setOffers([]);
-          return;
-        }
-
-        // 1) business_plan.plan_json.selected_pyramid (source de vérité)
-        const { data: planRow, error: planErr } = await supabase
-          .from("business_plan")
-          .select("plan_json, updated_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        let row: any = planRow;
-
-        // ✅ retry si updated_at n'existe pas dans business_plan
-        if (planErr && String((planErr as any)?.message || "").toLowerCase().includes("updated_at")) {
-          const retry = await supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle();
-          row = retry.data as any;
-        }
-
-        if (!mounted) return;
-
-        if (row?.plan_json) {
-          const planJson: any = row.plan_json ?? null;
-          const selected =
-            planJson?.selected_pyramid ??
-            planJson?.pyramid?.selected_pyramid ??
-            planJson?.pyramid ??
-            planJson?.offer_pyramid ??
-            null;
-
-          if (selected) {
-            const fromPlan = normalizeSelectedPyramid(user.id, selected, safeStringOrNull(row?.updated_at));
-            if (fromPlan.length) {
-              setOffers(fromPlan);
-              return;
-            }
-          }
-        }
-
-        // 2) fallback legacy: offer_pyramids
-        const { data, error } = await supabase
-          .from("offer_pyramids")
-          .select(
-            "id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at",
-          )
-          .eq("user_id", user.id)
-          .order("is_flagship", { ascending: false })
-          .order("updated_at", { ascending: false })
-          .limit(100);
-
-        if (!mounted) return;
-        if (error) {
-          setOffers([]);
-          return;
-        }
-
-        const rows = Array.isArray(data) ? data : [];
-        const mapped: OfferOption[] = rows
-          .map((r: any) => {
-            const id = typeof r?.id === "string" ? r.id : "";
-            const name = typeof r?.name === "string" ? r.name : "";
-            if (!id || !name) return null;
-
-            return {
-              id,
-              name,
-              level: typeof r?.level === "string" ? r.level : "",
-              is_flagship: typeof r?.is_flagship === "boolean" ? r.is_flagship : null,
-              description: typeof r?.description === "string" ? r.description : null,
-              promise: typeof r?.promise === "string" ? r.promise : null,
-              price_min: toNumberOrNull(r?.price_min),
-              price_max: toNumberOrNull(r?.price_max),
-              main_outcome: typeof r?.main_outcome === "string" ? r.main_outcome : null,
-              format: typeof r?.format === "string" ? r.format : null,
-              delivery: typeof r?.delivery === "string" ? r.delivery : null,
-              updated_at: typeof r?.updated_at === "string" ? r.updated_at : null,
-            } as OfferOption;
-          })
-          .filter(Boolean) as OfferOption[];
-
-        setOffers(mapped);
-      } catch {
-        if (mounted) setOffers([]);
-      } finally {
-        if (mounted) setOffersLoading(false);
-      }
-    };
-
-    loadOffers();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const selectedOffer = useMemo(() => {
-    if (creationMode !== "pyramid") return null;
-    const id = (offerId ?? "").trim();
-    if (!id) return null;
-    return offers.find((o) => o.id === id) ?? null;
-  }, [creationMode, offerId, offers]);
-
-  const offerContextIsActive = useMemo(() => creationMode === "pyramid" && !!selectedOffer, [creationMode, selectedOffer]);
-
-  const needsOfferLink = useMemo(() => theme === "sell" && !offerContextIsActive, [theme, offerContextIsActive]);
-
-  const canGenerate = useMemo(() => {
-    if (!subject.trim()) return false;
-    if (isGenerating) return false;
-    if (needsOfferLink && !offerLink.trim()) return false;
-    if (creationMode === "pyramid" && offers.length > 0 && !selectedOffer) return false;
-    return true;
-  }, [subject, isGenerating, needsOfferLink, offerLink, creationMode, offers.length, selectedOffer]);
-
-  const handleGenerate = async () => {
-    const payload: any = {
-      type: "post",
-      platform,
-      theme,
-      subject,
-      tone,
-      batchCount: 1,
-
-      promoKind: theme === "sell" ? promoKind : undefined,
-      offerLink: offerLink.trim() ? offerLink : undefined,
-    };
-
-    if (creationMode === "pyramid" && selectedOffer) {
-      // Fail-open: le backend SocialPost sait exploiter offerManual si "offer" n'est pas câblé côté API.
-      payload.offerId = selectedOffer.id || undefined;
-      payload.offerManual = {
-        name: selectedOffer.name || undefined,
-        promise: selectedOffer.promise || undefined,
-        main_outcome: selectedOffer.main_outcome || undefined,
-        description: selectedOffer.description || undefined,
-        price: formatPriceRange(selectedOffer) || undefined,
-        target: selectedOffer.target || undefined,
-      };
-    }
-
-    const content = await onGenerate(payload);
-
-    if (content) {
-      setGeneratedContent(content);
-      if (!title) setTitle(subject || `Post ${platform}`);
-    }
-  };
-
-  const handleSave = async (status: "draft" | "scheduled" | "published") => {
-    await onSave({
-      title,
-      content: generatedContent,
-      type: "post",
-      platform,
-      status,
-      scheduled_at: scheduledAt || undefined,
-    });
-  };
-
+function isMissingColumnError(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Post Réseaux Sociaux</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Plateforme</Label>
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {platforms.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Objectif du post</Label>
-            <Select
-              value={theme}
-              onValueChange={(v) => {
-                setTheme(v);
-                if (v !== "sell") {
-                  setOfferLink("");
-                  setPromoKind("paid");
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {themes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Mode de création</Label>
-            <RadioGroup
-              value={creationMode}
-              onValueChange={(v) => {
-                const next = (v as any) as "pyramid" | "manual";
-                setCreationMode(next);
-                if (next === "manual") setOfferId("");
-              }}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="pyramid" id="pyramid" />
-                <Label htmlFor="pyramid">À partir de la pyramide</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="manual" id="manual" />
-                <Label htmlFor="manual">À partir de zéro</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {creationMode === "pyramid" && (
-            <div className="space-y-2">
-              <Label>Offre (pyramide)</Label>
-              <Select value={offerId} onValueChange={setOfferId} disabled={offersLoading || offers.length === 0}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={offersLoading ? "Chargement..." : offers.length ? "Choisir une offre" : "Aucune offre trouvée"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {offers.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.is_flagship ? "★ " : ""}
-                      {o.name} — {levelLabel(o.level)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedOffer && (
-                <div className="rounded-lg border p-3 text-sm space-y-1">
-                  <div className="font-medium">{selectedOffer.name}</div>
-                  {!!selectedOffer.promise && <div className="text-muted-foreground">Promesse : {selectedOffer.promise}</div>}
-                  {!!selectedOffer.target && <div className="text-muted-foreground">Cible : {selectedOffer.target}</div>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {theme === "sell" && (
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="space-y-2">
-                <Label>Type de promo</Label>
-                <Select value={promoKind} onValueChange={(v) => setPromoKind(v as "paid" | "free")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paid">Offre payante</SelectItem>
-                    <SelectItem value="free">Offre gratuite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{needsOfferLink ? "Lien de la page à étudier *" : "Lien (optionnel)"}</Label>
-                <Input
-                  placeholder={promoKind === "free" ? "Lien de l'offre gratuite" : "Lien de la page de vente"}
-                  value={offerLink}
-                  onChange={(e) => setOfferLink(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Tipote peut étudier ce lien avant de rédiger le post (bénéfices, promesse, objections).{" "}
-                  {offerContextIsActive ? "Avec la pyramide, le contexte de l'offre est déjà pré-rempli." : ""}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Sujet / angle *</Label>
-            <Input placeholder="Ex: Les 5 erreurs à éviter..." value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Ton</Label>
-            <Select value={tone} onValueChange={setTone}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tones.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button className="w-full" onClick={handleGenerate} disabled={!canGenerate}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération...
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-4 h-4 mr-2" />
-                Générer
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Right: Preview */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Titre (pour sauvegarde)</Label>
-            <Input placeholder="Titre de votre contenu" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Prévisualisation</Label>
-            <Textarea
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              rows={10}
-              placeholder="Le contenu généré apparaîtra ici..."
-              className="resize-none"
-            />
-          </div>
-
-          {generatedContent && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Programmer (optionnel)</Label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
-                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                  Brouillon
-                </Button>
-
-                {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Planifier
-                  </Button>
-                )}
-                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />
-                  Programmer
-                </Button>
-
-                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Regénérer
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    m.includes("does not exist") ||
+    m.includes("could not find the '") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
   );
+}
+
+function isTagsTypeMismatch(message: string | null | undefined) {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("malformed array") || m.includes("invalid input") || m.includes("array");
+}
+
+function asTagsArray(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.map(String).map((s) => s.trim()).filter(Boolean);
+  if (typeof tags === "string")
+    return tags
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  return [];
+}
+
+function tagsToCsv(tags: unknown): string {
+  return asTagsArray(tags).join(",");
+}
+
+async function getAuthedUserId() {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) return { supabase, userId: null as string | null, authError: error.message };
+  return { supabase, userId: data.user?.id ?? null, authError: null as string | null };
+}
+
+function dtoFromV2(row: any): ContentItemDTO {
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    type: typeof row.type === "string" ? row.type : row.type ?? null,
+    title: typeof row.title === "string" ? row.title : row.title ?? null,
+    prompt: typeof row.prompt === "string" ? row.prompt : row.prompt ?? null,
+    content: typeof row.content === "string" ? row.content : row.content ?? null,
+    status: typeof row.status === "string" ? row.status : row.status ?? null,
+    scheduled_date: typeof row.scheduled_date === "string" ? row.scheduled_date : row.scheduled_date ?? null,
+    channel: typeof row.channel === "string" ? row.channel : row.channel ?? null,
+    tags: asTagsArray(row.tags),
+    created_at: typeof row.created_at === "string" ? row.created_at : row.created_at ?? null,
+    updated_at: typeof row.updated_at === "string" ? row.updated_at : row.updated_at ?? null,
+  };
+}
+
+function dtoFromFR(row: any): ContentItemDTO {
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    type: typeof row.type === "string" ? row.type : row.type ?? null,
+    title: typeof row.titre === "string" ? row.titre : row.titre ?? null,
+    prompt: typeof row.prompt === "string" ? row.prompt : row.prompt ?? null,
+    content: typeof row.contenu === "string" ? row.contenu : row.contenu ?? null,
+    status: typeof row.statut === "string" ? row.statut : row.statut ?? null,
+    scheduled_date: typeof row.date_planifiee === "string" ? row.date_planifiee : row.date_planifiee ?? null,
+    channel: typeof row.canal === "string" ? row.canal : row.canal ?? null,
+    tags: asTagsArray(row.tags),
+    created_at: typeof row.created_at === "string" ? row.created_at : row.created_at ?? null,
+    updated_at: typeof row.updated_at === "string" ? row.updated_at : row.updated_at ?? null,
+  };
+}
+
+// Select strings (pour éviter de répéter et pour gérer updated_at manquant)
+const V2_SELECT_WITH_UPDATED =
+  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at,updated_at";
+const V2_SELECT_NO_UPDATED =
+  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,created_at";
+
+const FR_SELECT_WITH_UPDATED =
+  "id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at,updated_at";
+const FR_SELECT_NO_UPDATED =
+  "id,user_id,type,titre,prompt,contenu,statut,date_planifiee,canal,tags,created_at";
+
+// Small helper: update + select with retries for missing prompt/updated_at and tags type mismatch
+async function updateV2(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  contentId: string,
+  userId: string,
+  patch: Record<string, any>,
+  bodyTags: PatchBody["tags"],
+) {
+  // 1) try with updated_at
+  let res = await supabase
+    .from("content_item")
+    .update(patch as any)
+    .eq("id", contentId)
+    .eq("user_id", userId)
+    .select(V2_SELECT_WITH_UPDATED)
+    .maybeSingle();
+
+  // prompt missing -> retry without prompt (same select)
+  if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
+    const { prompt, ...noPrompt } = patch;
+    res = await supabase
+      .from("content_item")
+      .update(noPrompt as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(V2_SELECT_WITH_UPDATED)
+      .maybeSingle();
+  }
+
+  // updated_at missing -> retry select without updated_at
+  if (res.error && isMissingColumnError(res.error.message)) {
+    res = await supabase
+      .from("content_item")
+      .update(patch as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(V2_SELECT_NO_UPDATED)
+      .maybeSingle();
+
+    if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
+      const { prompt, ...noPrompt2 } = patch;
+      res = await supabase
+        .from("content_item")
+        .update(noPrompt2 as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(V2_SELECT_NO_UPDATED)
+        .maybeSingle();
+    }
+  }
+
+  // tags mismatch -> retry tags as CSV
+  if (res.error && isTagsTypeMismatch(res.error.message) && bodyTags !== undefined) {
+    const retryPatch: Record<string, any> = { ...patch, tags: tagsToCsv(bodyTags) };
+
+    res = await supabase
+      .from("content_item")
+      .update(retryPatch as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(V2_SELECT_WITH_UPDATED)
+      .maybeSingle();
+
+    if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatch) {
+      const { prompt, ...noPrompt } = retryPatch;
+      res = await supabase
+        .from("content_item")
+        .update(noPrompt as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(V2_SELECT_WITH_UPDATED)
+        .maybeSingle();
+    }
+
+    if (res.error && isMissingColumnError(res.error.message)) {
+      res = await supabase
+        .from("content_item")
+        .update(retryPatch as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(V2_SELECT_NO_UPDATED)
+        .maybeSingle();
+
+      if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatch) {
+        const { prompt, ...noPrompt2 } = retryPatch;
+        res = await supabase
+          .from("content_item")
+          .update(noPrompt2 as any)
+          .eq("id", contentId)
+          .eq("user_id", userId)
+          .select(V2_SELECT_NO_UPDATED)
+          .maybeSingle();
+      }
+    }
+  }
+
+  return res;
+}
+
+async function updateFR(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  contentId: string,
+  userId: string,
+  patch: Record<string, any>,
+  bodyTags: PatchBody["tags"],
+) {
+  // 1) try with updated_at
+  let res = await supabase
+    .from("content_item")
+    .update(patch as any)
+    .eq("id", contentId)
+    .eq("user_id", userId)
+    .select(FR_SELECT_WITH_UPDATED)
+    .maybeSingle();
+
+  // prompt missing -> retry without prompt (same select)
+  if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
+    const { prompt, ...noPromptFR } = patch;
+    res = await supabase
+      .from("content_item")
+      .update(noPromptFR as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(FR_SELECT_WITH_UPDATED)
+      .maybeSingle();
+  }
+
+  // updated_at missing -> retry select without updated_at
+  if (res.error && isMissingColumnError(res.error.message)) {
+    res = await supabase
+      .from("content_item")
+      .update(patch as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(FR_SELECT_NO_UPDATED)
+      .maybeSingle();
+
+    if (res.error && isMissingColumnError(res.error.message) && "prompt" in patch) {
+      const { prompt, ...noPromptFR2 } = patch;
+      res = await supabase
+        .from("content_item")
+        .update(noPromptFR2 as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(FR_SELECT_NO_UPDATED)
+        .maybeSingle();
+    }
+  }
+
+  // tags mismatch -> retry tags as CSV
+  if (res.error && isTagsTypeMismatch(res.error.message) && bodyTags !== undefined) {
+    const retryPatchFR: Record<string, any> = { ...patch, tags: tagsToCsv(bodyTags) };
+
+    res = await supabase
+      .from("content_item")
+      .update(retryPatchFR as any)
+      .eq("id", contentId)
+      .eq("user_id", userId)
+      .select(FR_SELECT_WITH_UPDATED)
+      .maybeSingle();
+
+    if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatchFR) {
+      const { prompt, ...noPromptFR } = retryPatchFR;
+      res = await supabase
+        .from("content_item")
+        .update(noPromptFR as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(FR_SELECT_WITH_UPDATED)
+        .maybeSingle();
+    }
+
+    if (res.error && isMissingColumnError(res.error.message)) {
+      res = await supabase
+        .from("content_item")
+        .update(retryPatchFR as any)
+        .eq("id", contentId)
+        .eq("user_id", userId)
+        .select(FR_SELECT_NO_UPDATED)
+        .maybeSingle();
+
+      if (res.error && isMissingColumnError(res.error.message) && "prompt" in retryPatchFR) {
+        const { prompt, ...noPromptFR2 } = retryPatchFR;
+        res = await supabase
+          .from("content_item")
+          .update(noPromptFR2 as any)
+          .eq("id", contentId)
+          .eq("user_id", userId)
+          .select(FR_SELECT_NO_UPDATED)
+          .maybeSingle();
+      }
+    }
+  }
+
+  return res;
+}
+
+async function fetchOne(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  id: string,
+  userId: string,
+): Promise<{ ok: true; dto: ContentItemDTO } | { ok: false; status: number; error: string }> {
+  // 1) V2 try WITH updated_at
+  let v2 = await supabase
+    .from("content_item")
+    .select(V2_SELECT_WITH_UPDATED)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  // missing columns -> retry without updated_at
+  if (v2.error && isMissingColumnError(v2.error.message)) {
+    v2 = await supabase
+      .from("content_item")
+      .select(V2_SELECT_NO_UPDATED)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+  }
+
+  if (!v2.error) {
+    if (!v2.data) return { ok: false, status: 404, error: "Not found" };
+    return { ok: true, dto: dtoFromV2(v2.data) };
+  }
+
+  // si erreur non liée à colonnes manquantes => stop
+  if (!isMissingColumnError(v2.error.message)) {
+    return { ok: false, status: 400, error: v2.error.message };
+  }
+
+  // 2) FR try WITH updated_at
+  let fr = await supabase
+    .from("content_item")
+    .select(FR_SELECT_WITH_UPDATED)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  // missing columns -> retry without updated_at
+  if (fr.error && isMissingColumnError(fr.error.message)) {
+    fr = await supabase
+      .from("content_item")
+      .select(FR_SELECT_NO_UPDATED)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+  }
+
+  if (fr.error) return { ok: false, status: 400, error: fr.error.message };
+  if (!fr.data) return { ok: false, status: 404, error: "Not found" };
+  return { ok: true, dto: dtoFromFR(fr.data) };
+}
+
+export async function GET(_req: NextRequest, ctx: RouteContext) {
+  try {
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
+    if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+
+    const { supabase, userId, authError } = await getAuthedUserId();
+    if (authError) return NextResponse.json({ ok: false, error: authError }, { status: 401 });
+    if (!userId) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const res = await fetchOne(supabase, contentId, userId);
+    if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: res.status });
+
+    return NextResponse.json({ ok: true, item: res.dto }, { status: 200 });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(req: NextRequest, ctx: RouteContext) {
+  try {
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
+    if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+
+    const { supabase, userId, authError } = await getAuthedUserId();
+    if (authError) return NextResponse.json({ ok: false, error: authError }, { status: 401 });
+    if (!userId) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const body = (await req.json().catch(() => ({}))) as PatchBody;
+
+    // Si body vide, on renvoie l'item actuel (évite update() vide qui peut planter selon drivers)
+    const hasAnyField =
+      body.title !== undefined ||
+      body.content !== undefined ||
+      body.prompt !== undefined ||
+      body.type !== undefined ||
+      body.status !== undefined ||
+      body.channel !== undefined ||
+      body.scheduledDate !== undefined ||
+      body.tags !== undefined;
+
+    if (!hasAnyField) {
+      const current = await fetchOne(supabase, contentId, userId);
+      if (!current.ok) return NextResponse.json({ ok: false, error: current.error }, { status: current.status });
+      return NextResponse.json({ ok: true, item: current.dto }, { status: 200 });
+    }
+
+    // -------------------------
+    // 1) Try V2 update
+    // -------------------------
+    const patchV2: Record<string, any> = {};
+    if (body.title !== undefined) patchV2.title = body.title;
+    if (body.content !== undefined) patchV2.content = body.content;
+    if (body.prompt !== undefined) patchV2.prompt = body.prompt; // optionnel selon DB
+    if (body.type !== undefined) patchV2.type = body.type;
+    if (body.status !== undefined) patchV2.status = body.status;
+    if (body.channel !== undefined) patchV2.channel = body.channel;
+    if (body.scheduledDate !== undefined) patchV2.scheduled_date = body.scheduledDate;
+    if (body.tags !== undefined) patchV2.tags = body.tags;
+
+    const v2 = await updateV2(supabase, contentId, userId, patchV2, body.tags);
+
+    if (!v2.error && v2.data) {
+      return NextResponse.json({ ok: true, item: dtoFromV2(v2.data) }, { status: 200 });
+    }
+
+    // si erreur autre que "colonnes manquantes" => stop
+    if (v2.error && !isMissingColumnError(v2.error.message)) {
+      return NextResponse.json({ ok: false, error: v2.error.message }, { status: 400 });
+    }
+
+    // -------------------------
+    // 2) Fallback FR update
+    // -------------------------
+    const patchFR: Record<string, any> = {};
+    if (body.title !== undefined) patchFR.titre = body.title;
+    if (body.content !== undefined) patchFR.contenu = body.content;
+    if (body.prompt !== undefined) patchFR.prompt = body.prompt; // optionnel selon DB
+    if (body.type !== undefined) patchFR.type = body.type;
+    if (body.status !== undefined) patchFR.statut = body.status;
+    if (body.channel !== undefined) patchFR.canal = body.channel;
+    if (body.scheduledDate !== undefined) patchFR.date_planifiee = body.scheduledDate;
+    if (body.tags !== undefined) patchFR.tags = body.tags;
+
+    const fr = await updateFR(supabase, contentId, userId, patchFR, body.tags);
+
+    if (fr.error) return NextResponse.json({ ok: false, error: fr.error.message }, { status: 400 });
+    if (!fr.data) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+
+    return NextResponse.json({ ok: true, item: dtoFromFR(fr.data) }, { status: 200 });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(_req: NextRequest, ctx: RouteContext) {
+  try {
+    const { id } = await ctx.params;
+    const contentId = String(id ?? "").trim();
+    if (!contentId) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+
+    const { supabase, userId, authError } = await getAuthedUserId();
+    if (authError) return NextResponse.json({ ok: false, error: authError }, { status: 401 });
+    if (!userId) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const del = await supabase.from("content_item").delete().eq("id", contentId).eq("user_id", userId);
+    if (del.error) return NextResponse.json({ ok: false, error: del.error.message }, { status: 400 });
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST() {
+  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
+}
+export async function PUT() {
+  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
 }
