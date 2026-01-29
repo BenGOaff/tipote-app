@@ -1,10 +1,10 @@
 // lib/prompts/content/funnel.ts
 // Funnels: page capture / page vente (from_pyramid / from_scratch)
-// Objectif: sortir un 1er jet TRÈS QUALITATIF en s’appuyant STRICTEMENT sur les ressources Tipote
-// ⚠️ Garde-fous globaux:
-// - ne jamais citer "AIDA", "template", "modèle", "structure", "framework"
-// - ne jamais expliquer ce que tu fais
-// - retourner UNIQUEMENT le texte final visible par l’utilisateur
+// Objectif: pages NETTEMENT différenciées capture vs vente, qualité premium
+// ⚠️ Règles globales :
+// - jamais citer AIDA / template / framework
+// - jamais expliquer le raisonnement
+// - retourner UNIQUEMENT le texte final visible
 
 export type FunnelPage = "capture" | "sales";
 export type FunnelMode = "from_pyramid" | "from_scratch";
@@ -104,41 +104,33 @@ function buildCapturePrompt(params: FunnelPromptParams): string {
   const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
 
   return `
-Tu écris le TEXTE COMPLET d’une page de capture (opt-in), en français, orientée conversion.
+Tu écris le TEXTE COMPLET d’une page de CAPTURE (opt-in).
 
-RÈGLES ABSOLUES :
-- Tu t’inspires OBLIGATOIREMENT des ressources Tipote présentes dans le contexte.
-- Tu livres une version directement publiable, sans expliquer ton raisonnement.
-- Tu n’emploies JAMAIS les mots : "AIDA", "template", "modèle", "structure", "framework".
-- Tu retournes uniquement le texte final, sans titres techniques ni commentaires.
+OBJECTIF UNIQUE :
+→ Obtenir une inscription email (prénom + email).
 
-CONTEXTE (ne pas recopier tel quel) :
-- Thème / objectif : ${theme || "Page de capture"}
-- Mode : ${mode}
-- Offre (pyramide) : ${offerToCompactJson(offer)}
-- Infos manuelles : ${manualToCompactJson(manual)}
+INTERDICTIONS ABSOLUES :
+- Pas de vente.
+- Pas de paiement.
+- Pas de décision engageante.
+- Pas de “commande”, “achat”, “accès payant”.
 
-RÈGLES CAPTURE :
-- Objectif unique : obtenir une inscription email (prénom + email).
-- N’invente PAS de modules, programme, bonus ou système complexe.
-- Si lead magnet (= ${String(isLM)}), promesse simple, rapide, crédible.
-- Une seule promesse centrale, très claire.
+FORMAT OBLIGATOIRE :
+- Accroche bénéfice immédiat
+- Sous-accroche (pour qui + résultat)
+- 3–6 puces orientées gains rapides
+- Formulaire (Prénom / Email)
+- Bouton orienté “recevoir / accéder gratuitement”
+- Micro-réassurance
+- Mini “pour qui / pas pour qui”
 
-FORMAT ATTENDU (sans le nommer) :
-- Accroche très spécifique orientée bénéfice immédiat
-- Sous-accroche : pour qui + résultat + mécanisme concret
-- 3 à 6 puces ultra concrètes (résultats / situations)
-- Bloc formulaire (Prénom / Email) + CTA clair
-- Micro-réassurance (RGPD / pas de spam)
-- Mini bloc “pour qui / pas pour qui”
-- Rappel CTA final
+CONTEXTE :
+- Thème : ${theme}
+- Offre : ${offerName}
+- Promesse : ${promise}
+${mode === "from_scratch" ? `- Cible : ${target}` : ""}
 
-DONNÉES CLÉS :
-- Nom : ${offerName || "(non fourni)"}
-- Promesse : ${promise || "(non fournie)"}
-${mode === "from_scratch" ? `- Cible : ${target || "(non fournie)"}` : ""}
-
-Ton : premium, direct, précis. Zéro blabla.
+Ton : clair, simple, non agressif.
 `.trim();
 }
 
@@ -170,49 +162,48 @@ function buildSalesPrompt(params: FunnelPromptParams): string {
   const guarantee = toOneLine(manual?.guarantee);
 
   return `
-Tu écris le TEXTE COMPLET d’une page de vente, en français, conçue pour convertir.
+Tu écris le TEXTE COMPLET d’une PAGE DE VENTE.
+
+C’EST CRITIQUE :
+👉 Une page de vente N’EST PAS une page de capture.
+
+INTERDICTIONS ABSOLUES (vente) :
+- AUCUN formulaire email.
+- AUCUN champ prénom / email.
+- AUCUNE phrase de type “inscris-toi”, “reçois gratuitement”.
+- PAS de lead magnet.
+- PAS de tunnel d’opt-in.
+
+CTA AUTORISÉS :
+- “Accéder”
+- “Commander”
+- “Acheter”
+- “Installer maintenant”
+- “Passer à l’action”
 
 RÈGLE MAJEURE :
-Avant d’écrire la page, tu DOIS raisonner SILENCIEUSEMENT (ne rien afficher) pour définir :
-- l’ANGLE principal de la page
-- le MÉCANISME unique qui rend l’offre crédible
-- les 2 OBJECTIONS majeures du prospect
-- la PREUVE logique disponible (process, expérience, livrable, contrainte)
+Avant d’écrire, tu DOIS raisonner silencieusement pour définir :
+- l’ANGLE principal
+- le MÉCANISME unique
+- 2 objections réelles
+- une preuve logique (process, livrable, contrainte)
 
-Une fois ces éléments clairs, tu écris la page en les utilisant EXPLICITEMENT dans le texte.
-
-INTERDICTIONS :
-- Ne jamais mentionner ressource, modèle, template, framework.
-- Ne jamais écrire de phrases génériques type “clé en main”, “sans prise de tête”.
-- Ne jamais inventer témoignages, chiffres, logos ou résultats factuels.
-
-CONTEXTE (ne pas recopier) :
-- Thème : ${theme || "Page de vente"}
-- Mode : ${mode}
-- Offre (pyramide) : ${offerToCompactJson(offer)}
-- Infos manuelles : ${manualToCompactJson(manual)}
-
-CONTRAINTES OFFRE :
-- Si outil / service / IA : PAS de modules ou programme fictif.
-- Décris uniquement ce qui est livré, comment, pour quel usage.
-- Si prix inconnu : CTA neutre.
-- Urgence / garantie UNIQUEMENT si fournies.
-
-ÉLÉMENTS À COUVRIR (sans titres techniques) :
-- Ouverture forte : promesse + cible + mécanisme
-- Problème vécu + coût de l’inaction
-- Présentation de la solution + pourquoi elle fonctionne
+STRUCTURE ATTENDUE :
+- Ouverture très forte (promesse + cible + mécanisme)
+- Problème réel + frustration
+- Pourquoi les solutions classiques échouent
+- Présentation de l’offre + mécanisme
 - Ce que l’acheteur obtient concrètement
 - Pour qui / pas pour qui
 - Objections + réponses
 - Garantie (si fournie)
 - Urgence (si fournie)
-- FAQ utile (5–8 questions)
-- CTA répétés et cohérents
+- FAQ utile
+- CTA clair et répété (sans formulaire)
 
-DONNÉES CLÉS :
-- Nom : ${offerName || "(non fourni)"}
-- Promesse : ${promise || "(non fournie)"}
+DONNÉES :
+- Nom : ${offerName}
+- Promesse : ${promise}
 ${desc ? `- Description : ${desc}` : ""}
 ${mainOutcome ? `- Résultat principal : ${mainOutcome}` : ""}
 ${
@@ -223,7 +214,8 @@ ${
 ${urgency ? `- Urgence : ${urgency}` : ""}
 ${guarantee ? `- Garantie : ${guarantee}` : ""}
 
-Ton : stratégique, incarné, précis. Chaque phrase doit servir la décision.
+Ton : direct, assumé, décisionnel.
+On doit sentir un MOMENT DE CHOIX.
 `.trim();
 }
 
