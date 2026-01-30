@@ -107,6 +107,8 @@ Tu écris le TEXTE COMPLET d’une page de CAPTURE (opt-in), en français.
 OBJECTIF UNIQUE :
 → Obtenir une inscription email (prénom + email). Rien d’autre.
 
+Appuye-toi sur la phrase de Blair Warren pour structurer le contenu : encourager les rêves, justifier les échecs, apaiser les peurs, confirmer les soupçons et trouver un « ennemi » à pointer pour se placer du côté du prospect.
+
 RÈGLES ABSOLUES :
 - Tu t’appuies OBLIGATOIREMENT sur les ressources Tipote présentes dans le contexte (Tipote Knowledge).
 - Tu dois choisir UN exemple de page de capture dans les ressources et t’y conformer de très près :
@@ -177,6 +179,8 @@ function buildSalesPrompt(params: FunnelPromptParams): string {
 
   return `
 Tu écris le TEXTE COMPLET d’une PAGE DE VENTE HIGH TICKET, en français, conçue pour convertir.
+
+Appuye-toi sur la phrase de Blair Warren pour structurer le contenu : encourager les rêves, justifier les échecs, apaiser les peurs, confirmer les soupçons et trouver un « ennemi » à pointer pour se placer du côté du prospect.
 
 POINT CLÉ :
 👉 Une page de vente N’EST PAS une page de capture.

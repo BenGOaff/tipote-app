@@ -11,6 +11,9 @@ import {
   Settings,
   BarChart3,
   Coins,
+  HelpCircle,
+  Book,
+  RotateCcw,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -25,6 +28,12 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
@@ -82,7 +91,6 @@ function useAnimatedNumber(value: number, durationMs = 900) {
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - startRef.current) / durationMs);
-      // easing : smooth
       const eased = 1 - Math.pow(1 - t, 3);
       const next = Math.round(fromRef.current + (toRef.current - fromRef.current) * eased);
       setDisplay(next);
@@ -102,7 +110,6 @@ function useAnimatedNumber(value: number, durationMs = 900) {
 }
 
 function CreditsSidebarBadge() {
-  // ✅ Plus besoin de dupliquer fetch/event/focus/visibility : centralisé dans le hook
   const { loading, balance, error } = useCreditsBalance();
 
   const remaining = useMemo(() => balance?.total_remaining ?? 0, [balance]);
@@ -135,11 +142,42 @@ function CreditsSidebarBadge() {
   );
 }
 
+function TutorialMenuItem() {
+  const { tutorialOptOut, resetTutorial, setShowWelcome, setPhase } = useTutorial();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent">
+          <HelpCircle className="w-5 h-5" />
+          <span>Aide & tour guidé</span>
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuItem
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => {
+            if (tutorialOptOut) {
+              resetTutorial();
+              return;
+            }
+            setShowWelcome(true);
+            setPhase("welcome");
+          }}
+        >
+          {tutorialOptOut ? <RotateCcw className="w-4 h-4" /> : <Book className="w-4 h-4" />}
+          {tutorialOptOut ? "Réactiver le tour guidé" : "Refaire le tour guidé"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function AppSidebar() {
   const { phase, nextPhase } = useTutorial();
 
   const handleItemClick = (spotlightId: string | null) => {
-    // Si on clique sur l'élément qui est actuellement en spotlight, passer au suivant
     if (spotlightId === "today" && phase === "tour_today") {
       nextPhase();
     } else if (spotlightId === "create" && phase === "tour_create") {
@@ -150,11 +188,6 @@ export function AppSidebar() {
   };
 
   return (
-    // IMPORTANT (fix layout global) :
-    // - En "collapsible=offcanvas", la sidebar desktop est en fixed + spacer.
-    // - Si le spacer/vars se fait casser par un autre endroit, tout le main passe dessous.
-    // -> On force "collapsible=none" pour une sidebar desktop en flow normal (width réservée),
-    //    ce qui empêche TOUT chevauchement avec le contenu.
     <Sidebar collapsible="none">
       <SidebarHeader className="border-b border-sidebar-border p-6">
         <div className="flex items-center gap-3">
@@ -168,8 +201,6 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      {/* IMPORTANT: Tipote UI sidebar.tsx met overflow-auto par défaut => ça CLIP l'infobulle.
-          On force overflow-x-visible pour matcher Lovable (overflow-y-auto). */}
       <SidebarContent className="overflow-y-auto overflow-x-visible px-3 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -213,7 +244,6 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4 space-y-1">
-        {/* ✅ Crédit visible en bas à gauche, au-dessus d'Analytics */}
         <CreditsSidebarBadge />
 
         <SidebarMenu>
@@ -245,6 +275,11 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </TutorialSpotlight>
+
+          {/* ✅ Remplace la bulle flottante : ne bloque plus la sidebar */}
+          <SidebarMenuItem>
+            <TutorialMenuItem />
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
