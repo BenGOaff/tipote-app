@@ -1,8 +1,13 @@
-// components/create/forms/ArticleEditorModal.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -114,7 +119,10 @@ function getPlainTextFromHtml(html: string) {
   div.innerHTML = html;
 
   // garder une lecture "article": blocs séparés par double saut
-  const text = div.innerText.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const text = div.innerText
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   return text;
 }
@@ -145,7 +153,10 @@ export function ArticleEditorModal({
   // On garde un state qui se met à jour dès que le div contentEditable est monté.
   const [editorEl, setEditorEl] = useState<HTMLDivElement | null>(null);
 
-  const initialHtml = useMemo(() => markdownLightToHtml(initialValue), [initialValue]);
+  const initialHtml = useMemo(
+    () => markdownLightToHtml(initialValue),
+    [initialValue]
+  );
 
   const [docTitle, setDocTitle] = useState("");
   const [copied, setCopied] = useState(false);
@@ -160,7 +171,8 @@ export function ArticleEditorModal({
     setHtml(initialHtml);
 
     // auto-titre (optionnel) basé sur 1ère ligne
-    const firstLine = (initialValue ?? "").split("\n").find((x) => x.trim()) ?? "";
+    const firstLine =
+      (initialValue ?? "").split("\n").find((x) => x.trim()) ?? "";
     setDocTitle(firstLine.replace(/^#+\s+/, "").trim().slice(0, 120));
   }, [open, initialHtml, initialValue]);
 
@@ -259,12 +271,15 @@ export function ArticleEditorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden">
-        <div className="p-6 space-y-4">
+      {/* ✅ Fix UX: le modal ne doit jamais déborder de l'écran */}
+      <DialogContent className="max-w-5xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        {/* ✅ Le contenu (header+form+éditeur) scrolle, pas la page */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
             <div className="text-sm text-muted-foreground">
-              Modifie ton article avec une mise en forme (H1/H2/gras/liens) puis copie-le en gardant le rendu.
+              Modifie ton article avec une mise en forme (H1/H2/gras/liens) puis
+              copie-le en gardant le rendu.
             </div>
           </DialogHeader>
 
@@ -272,7 +287,11 @@ export function ArticleEditorModal({
             <div className="grid md:grid-cols-3 gap-3 items-end">
               <div className="md:col-span-2 space-y-2">
                 <div className="text-sm font-medium">Titre (optionnel)</div>
-                <Input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Titre" />
+                <Input
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  placeholder="Titre"
+                />
               </div>
 
               <div className="md:col-span-1 flex items-center justify-end gap-2">
@@ -428,7 +447,11 @@ export function ArticleEditorModal({
               <div className="flex-1" />
 
               <Button type="button" onClick={handleCopy}>
-                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                {copied ? (
+                  <Check className="w-4 h-4 mr-2" />
+                ) : (
+                  <Copy className="w-4 h-4 mr-2" />
+                )}
                 {copied ? "Copié" : "Copier"}
               </Button>
             </div>
@@ -444,7 +467,7 @@ export function ArticleEditorModal({
                   contentEditable
                   suppressContentEditableWarning
                   onInput={syncFromEditor}
-                  className="min-h-[420px] outline-none prose prose-sm max-w-none"
+                  className="outline-none prose prose-sm max-w-none overflow-y-auto min-h-[420px] max-h-[calc(90vh-360px)]"
                   style={{
                     lineHeight: "1.6",
                     fontSize: "14px",
@@ -454,19 +477,26 @@ export function ArticleEditorModal({
             </div>
 
             <div className="text-xs text-muted-foreground">
-              Astuce : si tu colles dans Systeme.io / Notion / Google Docs, le bouton “Copier” envoie du HTML (gras, titres, liens).
-              Si une plateforme refuse le HTML, elle collera au moins le texte propre.
+              Astuce : si tu colles dans Systeme.io / Notion / Google Docs, le
+              bouton “Copier” envoie du HTML (gras, titres, liens). Si une
+              plateforme refuse le HTML, elle collera au moins le texte propre.
             </div>
           </div>
         </div>
 
+        {/* ✅ Footer reste visible, le body scrolle au-dessus */}
         <DialogFooter className="px-6 py-4 border-t bg-muted/20">
           <div className="flex w-full items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
-              Appliquer = renvoie aussi le texte brut (utile si tu veux sauvegarder en DB sans HTML).
+              Appliquer = renvoie aussi le texte brut (utile si tu veux sauvegarder
+              en DB sans HTML).
             </div>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenChange(false)}
+              >
                 Fermer
               </Button>
               <Button type="button" onClick={apply}>

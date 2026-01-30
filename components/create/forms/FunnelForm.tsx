@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { AIContent } from "@/components/ui/ai-content";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
 import { isLeadMagnetLevel } from "@/components/create/forms/_shared";
@@ -37,6 +38,9 @@ export function FunnelForm(props: FunnelFormProps) {
   const [title, setTitle] = useState("");
   const [result, setResult] = useState("");
 
+  // ✅ UX: aperçu "beau" + option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
   // from_pyramid
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
 
@@ -52,6 +56,7 @@ export function FunnelForm(props: FunnelFormProps) {
 
   useEffect(() => {
     setResult("");
+    setShowRawEditor(false);
   }, [pageType, mode]);
 
   const offers = props.pyramidOffers ?? [];
@@ -120,6 +125,7 @@ export function FunnelForm(props: FunnelFormProps) {
 
   const handleGenerate = async () => {
     setResult("");
+    setShowRawEditor(false);
 
     if (mode === "from_pyramid") {
       if (!selectedOffer?.id) {
@@ -243,12 +249,16 @@ export function FunnelForm(props: FunnelFormProps) {
                 <div className="font-medium mb-1">Résumé</div>
                 {selectedOffer ? (
                   <div className="space-y-1">
-                    <div><span className="font-medium">Nom :</span> {selectedOffer.name ?? "—"}</div>
-                    <div><span className="font-medium">Promesse :</span> {selectedOffer.promise ?? "—"}</div>
+                    <div>
+                      <span className="font-medium">Nom :</span> {selectedOffer.name ?? "—"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Promesse :</span> {selectedOffer.promise ?? "—"}
+                    </div>
                     {pageType === "sales" ? (
                       <div>
-                        <span className="font-medium">Prix :</span>{" "}
-                        {selectedOffer.price_min ?? "—"} → {selectedOffer.price_max ?? "—"}
+                        <span className="font-medium">Prix :</span> {selectedOffer.price_min ?? "—"} →{" "}
+                        {selectedOffer.price_max ?? "—"}
                       </div>
                     ) : null}
                   </div>
@@ -313,18 +323,39 @@ export function FunnelForm(props: FunnelFormProps) {
         </Card>
 
         <Card className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <Label>Résultat</Label>
-            <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
-              Copier
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRawEditor((v) => !v)}
+                disabled={!result.trim()}
+              >
+                {showRawEditor ? "Aperçu" : "Texte brut"}
+              </Button>
+
+              <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
+                Copier
+              </Button>
+            </div>
           </div>
-          <Textarea
-            value={result}
-            onChange={(e) => setResult(e.target.value)}
-            className="min-h-[520px]"
-            placeholder="Le texte généré apparaîtra ici..."
-          />
+
+          {/* ✅ Aperçu “beau” (markdown) par défaut */}
+          {!showRawEditor ? (
+            <div className="rounded-xl border bg-background p-4 min-h-[520px]">
+              <AIContent content={result} mode="auto" />
+            </div>
+          ) : (
+            <Textarea
+              value={result}
+              onChange={(e) => setResult(e.target.value)}
+              className="min-h-[520px]"
+              placeholder="Le texte généré apparaîtra ici..."
+            />
+          )}
         </Card>
       </div>
     </div>

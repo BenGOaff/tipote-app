@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { AIContent } from "@/components/ui/ai-content";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
 
@@ -34,6 +35,9 @@ export function OfferForm(props: OfferFormProps) {
   const [title, setTitle] = useState("");
   const [result, setResult] = useState("");
 
+  // ✅ UX: aperçu "beau" + option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
   // “from_scratch”
   const [name, setName] = useState("");
   const [promise, setPromise] = useState("");
@@ -43,6 +47,7 @@ export function OfferForm(props: OfferFormProps) {
 
   useEffect(() => {
     setResult("");
+    setShowRawEditor(false);
   }, [mode, offerType]);
 
   const selectedPyramidOffer = useMemo(() => {
@@ -60,6 +65,7 @@ export function OfferForm(props: OfferFormProps) {
 
   const handleGenerate = async () => {
     setResult("");
+    setShowRawEditor(false);
 
     const payload =
       mode === "from_pyramid"
@@ -68,10 +74,7 @@ export function OfferForm(props: OfferFormProps) {
             offerMode: "from_pyramid",
             offerType,
             sourceOfferId: selectedPyramidOffer?.id ?? undefined,
-            theme:
-              selectedPyramidOffer?.promise ||
-              selectedPyramidOffer?.name ||
-              "Offre",
+            theme: selectedPyramidOffer?.promise || selectedPyramidOffer?.name || "Offre",
           }
         : {
             type: "offer",
@@ -148,12 +151,16 @@ export function OfferForm(props: OfferFormProps) {
               <div className="font-medium mb-1">Offre détectée</div>
               {selectedPyramidOffer ? (
                 <div className="space-y-1">
-                  <div><span className="font-medium">Nom :</span> {selectedPyramidOffer.name ?? "—"}</div>
-                  <div><span className="font-medium">Promesse :</span> {selectedPyramidOffer.promise ?? "—"}</div>
+                  <div>
+                    <span className="font-medium">Nom :</span> {selectedPyramidOffer.name ?? "—"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Promesse :</span> {selectedPyramidOffer.promise ?? "—"}
+                  </div>
                   {typeof selectedPyramidOffer.price_min === "number" || typeof selectedPyramidOffer.price_max === "number" ? (
                     <div>
-                      <span className="font-medium">Prix :</span>{" "}
-                      {selectedPyramidOffer.price_min ?? "—"} → {selectedPyramidOffer.price_max ?? "—"}
+                      <span className="font-medium">Prix :</span> {selectedPyramidOffer.price_min ?? "—"} →{" "}
+                      {selectedPyramidOffer.price_max ?? "—"}
                     </div>
                   ) : null}
                 </div>
@@ -204,13 +211,39 @@ export function OfferForm(props: OfferFormProps) {
         </Card>
 
         <Card className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <Label>Résultat</Label>
-            <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
-              Copier
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRawEditor((v) => !v)}
+                disabled={!result.trim()}
+              >
+                {showRawEditor ? "Aperçu" : "Texte brut"}
+              </Button>
+
+              <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
+                Copier
+              </Button>
+            </div>
           </div>
-          <Textarea value={result} onChange={(e) => setResult(e.target.value)} className="min-h-[520px]" placeholder="Le texte généré apparaîtra ici..." />
+
+          {/* ✅ Aperçu “beau” (markdown) par défaut */}
+          {!showRawEditor ? (
+            <div className="rounded-xl border bg-background p-4 min-h-[520px]">
+              <AIContent content={result} mode="auto" />
+            </div>
+          ) : (
+            <Textarea
+              value={result}
+              onChange={(e) => setResult(e.target.value)}
+              className="min-h-[520px]"
+              placeholder="Le texte généré apparaîtra ici..."
+            />
+          )}
         </Card>
       </div>
     </div>

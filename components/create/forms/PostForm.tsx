@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { AIContent } from "@/components/ui/ai-content";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -230,6 +231,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [subject, setSubject] = useState("");
   const [tone, setTone] = useState("professional");
 
+  // ✅ UX: aperçu "beau" + option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
   // Branchement pyramide (comme Email/Funnel)
   const [creationMode, setCreationMode] = useState<"pyramid" | "manual">("pyramid");
   const [offers, setOffers] = useState<OfferOption[]>([]);
@@ -299,9 +303,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         // 2) fallback legacy: offer_pyramids
         const { data, error } = await supabase
           .from("offer_pyramids")
-          .select(
-            "id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at",
-          )
+          .select("id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
           .eq("user_id", user.id)
           .order("is_flagship", { ascending: false })
           .order("updated_at", { ascending: false })
@@ -372,6 +374,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   }, [subject, isGenerating, needsOfferLink, offerLink, creationMode, offers.length, selectedOffer]);
 
   const handleGenerate = async () => {
+    setShowRawEditor(false);
+
     const payload: any = {
       type: "post",
       platform,
@@ -593,14 +597,34 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           </div>
 
           <div className="space-y-2">
-            <Label>Prévisualisation</Label>
-            <Textarea
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              rows={10}
-              placeholder="Le contenu généré apparaîtra ici..."
-              className="resize-none"
-            />
+            <div className="flex items-center justify-between gap-2">
+              <Label>Prévisualisation</Label>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRawEditor((v) => !v)}
+                disabled={!generatedContent?.trim()}
+              >
+                {showRawEditor ? "Aperçu" : "Texte brut"}
+              </Button>
+            </div>
+
+            {/* ✅ Aperçu “beau” (markdown) par défaut */}
+            {!showRawEditor ? (
+              <div className="rounded-xl border bg-background p-4 min-h-[260px]">
+                <AIContent content={generatedContent} mode="auto" />
+              </div>
+            ) : (
+              <Textarea
+                value={generatedContent}
+                onChange={(e) => setGeneratedContent(e.target.value)}
+                rows={10}
+                placeholder="Le contenu généré apparaîtra ici..."
+                className="resize-none"
+              />
+            )}
           </div>
 
           {generatedContent && (

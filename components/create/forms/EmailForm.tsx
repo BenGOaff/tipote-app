@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { AIContent } from "@/components/ui/ai-content";
+
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -271,6 +273,9 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [emails, setEmails] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  // ✅ UX: aperçu "beau" + option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
 
   const generatedContent = useMemo(() => joinEmails(emails), [emails]);
 
@@ -465,6 +470,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   useEffect(() => {
     setEmails([]);
     setScheduledAt("");
+    setShowRawEditor(false);
     // ne reset pas title (souvent utile), mais si vide on le remplira au generate
   }, [emailType]);
 
@@ -928,37 +934,55 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           </div>
 
           <div className="space-y-2">
-            <Label>Email généré</Label>
+  <div className="flex items-center justify-between gap-2">
+    <Label>{emails.length <= 1 ? "Email généré" : `Emails générés (${emails.length})`}</Label>
 
-            {emails.length <= 1 ? (
-              <Textarea
-                value={emails[0] ?? ""}
-                onChange={(e) => setEmails([e.target.value])}
-                rows={12}
-                placeholder="L'email apparaîtra ici..."
-                className="resize-none"
-              />
-            ) : (
-              <div className="space-y-3">
-                {emails.map((value, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <Label>Email {idx + 1}</Label>
-                    <Textarea
-                      value={value}
-                      onChange={(e) => {
-                        const next = [...emails];
-                        next[idx] = e.target.value;
-                        setEmails(next);
-                      }}
-                      rows={10}
-                      placeholder={`Email ${idx + 1}...`}
-                      className="resize-none"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => setShowRawEditor((v) => !v)}
+      disabled={!generatedContent?.trim()}
+    >
+      {showRawEditor ? "Aperçu" : "Texte brut"}
+    </Button>
+  </div>
+
+  {/* ✅ Aperçu “beau” (markdown) par défaut */}
+  {!showRawEditor ? (
+    <div className="rounded-xl border bg-background p-4">
+      <AIContent content={generatedContent} mode="auto" />
+    </div>
+  ) : emails.length <= 1 ? (
+    <Textarea
+      value={emails[0] ?? ""}
+      onChange={(e) => setEmails([e.target.value])}
+      rows={12}
+      placeholder="L'email apparaîtra ici..."
+      className="resize-none"
+    />
+  ) : (
+    <div className="space-y-3">
+      {emails.map((value, idx) => (
+        <div key={idx} className="space-y-2">
+          <Label>Email {idx + 1}</Label>
+          <Textarea
+            value={value}
+            onChange={(e) => {
+              const next = [...emails];
+              next[idx] = e.target.value;
+              setEmails(next);
+            }}
+            rows={10}
+            placeholder={`Email ${idx + 1}...`}
+            className="resize-none"
+          />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
 
           {generatedContent && (
             <div className="space-y-3">

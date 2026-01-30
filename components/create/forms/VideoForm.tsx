@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check } from "lucide-react";
+import { AIContent } from "@/components/ui/ai-content";
 
 interface VideoFormProps {
   onGenerate: (params: any) => Promise<string>;
@@ -41,6 +42,9 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // ✅ UX: aperçu "beau" + option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
   useEffect(() => {
     if (!copied) return;
     const t = window.setTimeout(() => setCopied(false), 1600);
@@ -48,12 +52,15 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   }, [copied]);
 
   const handleGenerate = async () => {
+    setShowRawEditor(false);
+
     const content = await onGenerate({
       type: "video",
       platform,
       subject,
       duration,
     });
+
     if (content) {
       setGeneratedContent(content);
       if (!title) setTitle(subject || `Script ${platform}`);
@@ -143,11 +150,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <div className="space-y-2">
             <Label>Sujet *</Label>
-            <Input
-              placeholder="Ex: Comment vendre sans être pushy"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
+            <Input placeholder="Ex: Comment vendre sans être pushy" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
@@ -172,14 +175,34 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           </div>
 
           <div className="space-y-2">
-            <Label>Script généré</Label>
-            <Textarea
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              rows={12}
-              placeholder="Le script apparaîtra ici..."
-              className="resize-none"
-            />
+            <div className="flex items-center justify-between gap-2">
+              <Label>Script généré</Label>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRawEditor((v) => !v)}
+                disabled={!generatedContent?.trim()}
+              >
+                {showRawEditor ? "Aperçu" : "Texte brut"}
+              </Button>
+            </div>
+
+            {/* ✅ Aperçu “beau” (markdown) par défaut */}
+            {!showRawEditor ? (
+              <div className="rounded-xl border bg-background p-4 min-h-[320px]">
+                <AIContent content={generatedContent} mode="auto" />
+              </div>
+            ) : (
+              <Textarea
+                value={generatedContent}
+                onChange={(e) => setGeneratedContent(e.target.value)}
+                rows={12}
+                placeholder="Le script apparaîtra ici..."
+                className="resize-none"
+              />
+            )}
           </div>
 
           {generatedContent && (
@@ -196,12 +219,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 </Button>
 
                 {scheduledAt && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave("scheduled")}
-                    disabled={!title || isSaving}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
                     <Calendar className="w-4 h-4 mr-1" />
                     Planifier
                   </Button>
