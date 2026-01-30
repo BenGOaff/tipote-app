@@ -83,6 +83,7 @@ function normalizePlanFromOfferName(offer: { name: string; inner_name?: string |
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // ✅ Ton offre Beta lifetime (97€) => plan "beta" en DB
   "offerprice-efbd353f": "beta",
+  "offerprice-3066719": "beta",
 };
 
 function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
