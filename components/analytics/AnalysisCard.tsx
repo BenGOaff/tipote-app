@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AIContent } from "@/components/ui/ai-content";
 import { Sparkles, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -43,7 +44,9 @@ export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) 
           </div>
           <div>
             <h3 className="text-lg font-bold">Diagnostic IA</h3>
-            <p className="text-sm text-muted-foreground">Saisis tes métriques pour obtenir une analyse personnalisée</p>
+            <p className="text-sm text-muted-foreground">
+              Saisis tes métriques pour obtenir une analyse personnalisée
+            </p>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
@@ -75,9 +78,9 @@ export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) 
         </Badge>
       </div>
 
-      {/* On garde un rendu “prose” sans dépendance react-markdown */}
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <div className="whitespace-pre-wrap text-sm leading-6">{analysis}</div>
+      {/* Rendu IA : markdown léger (titres, gras, listes, séparateurs, code) */}
+      <div className="rounded-xl border bg-background p-5">
+        <AIContent content={analysis} mode="auto" className="text-sm" />
       </div>
     </Card>
   );
