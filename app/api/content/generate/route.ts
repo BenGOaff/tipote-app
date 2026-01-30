@@ -1016,7 +1016,13 @@ function resolveClaudeModel(): string {
   return v;
 }
 
-async function callClaude(args: { apiKey: string; system: string; user: string }): Promise<string> {
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
   const model = resolveClaudeModel();
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -1028,8 +1034,8 @@ async function callClaude(args: { apiKey: string; system: string; user: string }
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4000,
-      temperature: 0.7,
+      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+      temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
       system: args.system,
       messages: [{ role: "user", content: args.user }],
     }),
@@ -1050,6 +1056,106 @@ async function callClaude(args: { apiKey: string; system: string; user: string }
 
   return text || "";
 }
+
+/** ---------------------------
+ * Article completion (anti-troncature)
+ * -------------------------- */
+
+const ARTICLE_END_MARKER = "<<<END_ARTICLE>>>";
+
+function hasArticleEndMarker(s: string): boolean {
+  return (s ?? "").includes(ARTICLE_END_MARKER);
+}
+
+function tailForContinuity(s: string, maxChars = 1200): string {
+  const x = (s ?? "").trim();
+  if (!x) return "";
+  return x.length > maxChars ? x.slice(-maxChars) : x;
+}
+
+function looksLikeCompleteSeoBlock(s: string): boolean {
+  const x = (s ?? "").toLowerCase();
+  return (
+    x.includes("meta description") &&
+    (x.includes("chemin d'url") || x.includes("chemin d’url") || x.includes("slug")) &&
+    (x.includes("liste de mots-clés") || x.includes("liste de mots cles") || x.includes("mots-clés"))
+  );
+}
+
+
+/**
+ * Génère un article complet même si le modèle tronque.
+ * - 1 réponse finale côté user (invisible)
+ * - plusieurs passes backend
+ */
+async function ensureCompleteArticle(args: {
+  apiKey: string;
+  system: string;
+  baseUserPrompt: string;
+  maxPasses?: number;
+  maxTokens?: number; // ✅ AJOUT
+}): Promise<string> {
+  const maxPasses = Math.max(2, Math.min(6, args.maxPasses ?? 4));
+  const maxTokens = Math.max(2000, Math.min(8000, args.maxTokens ?? 7800)); // ✅ OK maintenant
+
+
+
+  // 1) First pass: force end marker + give enough tokens
+  let combined = await callClaude({
+    apiKey: args.apiKey,
+    system: args.system,
+    user:
+      args.baseUserPrompt +
+      "\n\n" +
+      "IMPORTANT: Termine ta sortie par la balise exacte " +
+      ARTICLE_END_MARKER +
+      ". Ne mets rien après cette balise.",
+    maxTokens,
+    temperature: 0.7,
+  });
+
+  // 2) Continuation loop (only if needed)
+  let pass = 1;
+  while (pass < maxPasses && !hasArticleEndMarker(combined)) {
+    const tail = tailForContinuity(combined, 1600);
+
+    const continuationPrompt =
+      args.baseUserPrompt +
+      "\n\n" +
+      "IMPORTANT: Le texte ci-dessous est un ARTICLE EN COURS qui a été tronqué.\n" +
+      "- Continue exactement là où ça s'arrête, sans recommencer l'introduction.\n" +
+      "- Ne répète pas plus de 1-2 phrases déjà écrites.\n" +
+      "- Garde le même style, le même niveau de détail, et les mêmes règles (gras **uniquement** pour les mots-clés).\n" +
+      "- Si la fin de l'article (Conclusion + FAQ + bloc SEO final: titre final, slug, meta, description blog, liste mots-clés) n'est pas encore écrite, tu DOIS la produire.\n" +
+      "- Termine obligatoirement par " +
+      ARTICLE_END_MARKER +
+      ".\n\n" +
+      "Dernières lignes (pour reprendre le contexte, ne pas réécrire tel quel):\n" +
+      tail +
+      "\n\n" +
+      "Continue maintenant:";
+
+    const next = await callClaude({
+      apiKey: args.apiKey,
+      system: args.system,
+      user: continuationPrompt,
+      maxTokens,
+      temperature: 0.7,
+    });
+
+    if (!next?.trim()) break;
+
+    combined = (combined.trimEnd() + "\n\n" + next.trimStart()).trim();
+    pass += 1;
+  }
+
+    if (!hasArticleEndMarker(combined) && !looksLikeCompleteSeoBlock(combined)) {
+    console.warn("[article] end marker missing after passes:", maxPasses);
+  }
+
+  return combined;
+}
+
 
 /** ---------------------------
  * Main handler
@@ -1745,19 +1851,41 @@ if (type === "post" && postOfferId) {
       schema = "fr";
     }
 
-        // ---------------------------
 // Fire-and-forget (compatible Next sans unstable_after)
-// ---------------------------
+
+// ✅ 1) configurable (safe prod)
+const ARTICLE_MAX_TOKENS = Number(process.env.TIPOTE_ARTICLE_MAX_TOKENS ?? "7800");
+
+const articleStep = type === "article" ? normalizeArticleStep(body.articleStep) : null;
+
 setTimeout(() => {
   void (async () => {
     try {
-      const raw = await callClaude({
-        apiKey,
-        system: systemPrompt,
-        user: userContextLines.join("\n"),
-      });
+      const baseUserPrompt = userContextLines.join("\n");
 
-      const cleaned = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+      const raw =
+        type === "article" && articleStep === "write"
+          ? await ensureCompleteArticle({
+              apiKey,
+              system: systemPrompt,
+              baseUserPrompt,
+              maxPasses: 4,
+              maxTokens: ARTICLE_MAX_TOKENS, // ✅ injecté
+            })
+          : await callClaude({
+              apiKey,
+              system: systemPrompt,
+              user: baseUserPrompt,
+              maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000, // ✅ safe & cohérent
+              temperature: 0.7,
+            });
+
+      // ... le reste de ton code inchangé
+
+
+
+      const cleaned0 = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+const cleaned = type === "article" ? cleaned0.replaceAll("<<<END_ARTICLE>>>", "").trim() : cleaned0;
       const finalContent = cleaned?.trim() ?? "";
       if (!finalContent) throw new Error("Empty content from model");
 
