@@ -6,9 +6,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/SetPasswordForm";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -61,28 +61,39 @@ export default function SetPasswordPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
-            <span className="text-2xl font-bold text-gray-900">Tipote™</span>
-          </div>
-          <p className="text-gray-600">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground">
+            Tipote<span className="text-primary">™</span>
+          </h1>
+          <p className="text-muted-foreground mt-2">Ton assistant stratégique intelligent</p>
+        </div>
+
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-2xl font-bold text-center">Créer ton mot de passe</CardTitle>
+            <CardDescription className="text-center">
+              C’est ta première connexion à Tipote. Choisis un mot de passe pour tes prochaines connexions.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
             {ready ? (
-              <>C’est ta première connexion. Choisis un mot de passe pour tes prochaines connexions.</>
+              <SetPasswordForm mode="first" />
             ) : (
-              <>On prépare la création de ton mot de passe…</>
+              <div className="min-h-[120px] flex items-center justify-center">
+                <p className="text-muted-foreground">Chargement...</p>
+              </div>
             )}
-          </p>
-        </div>
+          </CardContent>
+        </Card>
 
-        {ready ? <SetPasswordForm mode="first" /> : <div className="text-sm text-gray-600">Chargement…</div>}
-
-        <div className="mt-8 text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-muted-foreground mt-6">
           © {new Date().getFullYear()} Tipote™. Tous droits réservés.
-        </div>
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

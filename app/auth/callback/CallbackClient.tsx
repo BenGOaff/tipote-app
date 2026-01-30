@@ -9,7 +9,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { Button } from "@/components/ui/button";
 
 function parseHashParams(hash: string): Record<string, string> {
   const h = (hash || "").replace(/^#/, "").trim();
@@ -31,6 +33,22 @@ function getLower(s: string | null | undefined) {
 function isPkceMissingVerifierError(msg: string) {
   const m = (msg || "").toLowerCase();
   return m.includes("pkce") && m.includes("code verifier") && m.includes("not found");
+}
+
+function normalizeCallbackErrorMessage(raw: string) {
+  const msg = (raw || "").trim();
+  const m = msg.toLowerCase();
+
+  // Cas très fréquent quand on reclique sur un lien déjà consommé / expiré
+  if (m.includes("email link is invalid") || m.includes("has expired")) {
+    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
+  }
+  if (m.includes("token") && (m.includes("expired") || m.includes("invalid"))) {
+    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
+  }
+
+  // Fallback : on garde le message brut (utile en debug)
+  return msg || "Erreur inconnue";
 }
 
 export default function CallbackClient() {
@@ -159,7 +177,7 @@ export default function CallbackClient() {
         if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Erreur inconnue";
         setStatus("error");
-        setErrorMsg(msg);
+        setErrorMsg(normalizeCallbackErrorMessage(msg));
       }
     })();
 
@@ -168,16 +186,25 @@ export default function CallbackClient() {
     };
   }, [router, searchParams, code, tokenHash, type]);
 
+  // UI Tipote (même layout que /auth/set-password existant dans le repo)
   if (status === "loading") {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-          <h1 className="text-xl font-semibold text-slate-50 mb-2">Connexion en cours…</h1>
-          <p className="text-sm text-slate-400">
-            On finalise ton accès à Tipote. Tu vas être redirigée automatiquement.
-          </p>
-          <div className="mt-5 h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full w-2/3 bg-emerald-500/80 rounded-full animate-pulse" />
+      <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
+              <span className="text-2xl font-bold text-gray-900">Tipote™</span>
+            </div>
+            <p className="text-gray-600">Connexion en cours…</p>
+          </div>
+
+          <div className="mt-4 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full w-2/3 bg-gray-300 rounded-full animate-pulse" />
+          </div>
+
+          <div className="mt-8 text-center text-sm text-gray-500">
+            © {new Date().getFullYear()} Tipote™. Tous droits réservés.
           </div>
         </div>
       </main>
@@ -185,18 +212,25 @@ export default function CallbackClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-        <h1 className="text-xl font-semibold text-slate-50 mb-2">Oups, ça n’a pas marché</h1>
-        <p className="text-sm text-slate-400 break-words">{errorMsg || "Erreur inconnue"}</p>
+    <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
+            <span className="text-2xl font-bold text-gray-900">Tipote™</span>
+          </div>
+          <p className="text-gray-600">Oups, ça n’a pas marché</p>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => router.replace("/")}
-          className="mt-6 w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold py-3 transition"
-        >
+        <p className="text-sm text-gray-600 text-center break-words">{errorMsg || "Erreur inconnue"}</p>
+
+        <Button className="mt-6 w-full" type="button" onClick={() => router.replace("/")}>
           Revenir à la connexion
-        </button>
+        </Button>
+
+        <div className="mt-8 text-center text-sm text-gray-500">
+          © {new Date().getFullYear()} Tipote™. Tous droits réservés.
+        </div>
       </div>
     </main>
   );

@@ -5,23 +5,30 @@
 // - invite -> définir mdp -> retour page connexion -> login email+mdp -> onboarding
 // Donc après updateUser(password), on signOut puis redirect vers "/".
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Eye, EyeOff, KeyRound, Lock, ArrowRight } from "lucide-react";
 
 type SetPasswordFormProps = {
-  mode: 'first' | 'reset';
+  mode: "first" | "reset";
 };
 
 export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
 
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -30,31 +37,31 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!password || !passwordConfirm) {
-      setErrorMsg('Merci de remplir les deux champs.');
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setErrorMsg('Les mots de passe ne correspondent pas.');
-      return;
-    }
-    if (password.length < 8) {
-      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
+    if (!password || !confirmPassword) {
+      setErrorMsg("Merci de remplir les deux champs.");
       return;
     }
 
-    setLoading(true);
+    if (password !== confirmPassword) {
+      setErrorMsg("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    // Sécurité : 8 caractères min côté Tipote (on garde la règle existante)
+    if (password.length < 8) {
+      setErrorMsg("Le mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       // 1) Mettre à jour le mot de passe Supabase
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
-
+      const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        console.error('[SetPasswordForm] updateUser error', updateError);
-        setErrorMsg('Impossible de mettre à jour le mot de passe.');
-        setLoading(false);
+        console.error("[SetPasswordForm] updateUser error", updateError);
+        setErrorMsg("Impossible de mettre à jour le mot de passe.");
+        setIsLoading(false);
         return;
       }
 
@@ -67,25 +74,25 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
 
         if (!userError && user?.id) {
           const { error: profileError } = await supabase
-            .from('profiles')
+            .from("profiles")
             .update({
               password_set_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', user.id);
+            .eq("id", user.id);
 
           if (profileError) {
-            console.error('[SetPasswordForm] update profiles error', profileError);
+            console.error("[SetPasswordForm] update profiles error", profileError);
           }
         }
       } catch (e2) {
-        console.error('[SetPasswordForm] profiles best-effort catch', e2);
+        console.error("[SetPasswordForm] profiles best-effort catch", e2);
       }
 
       setSuccessMsg(
-        mode === 'first'
-          ? 'Mot de passe créé. Tu peux maintenant te connecter.'
-          : 'Mot de passe mis à jour. Tu peux maintenant te connecter.',
+        mode === "first"
+          ? "Mot de passe créé. Tu peux maintenant te connecter."
+          : "Mot de passe mis à jour. Tu peux maintenant te connecter."
       );
 
       // 3) Important : on déconnecte et on renvoie vers la page login (flow Béné)
@@ -96,83 +103,83 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
       }
 
       setTimeout(() => {
-        router.push('/?password_set=1');
+        router.push("/?password_set=1");
       }, 700);
     } catch (err) {
-      console.error('[SetPasswordForm] unexpected error', err);
-      setErrorMsg('Erreur inattendue. Merci de réessayer.');
+      console.error("[SetPasswordForm] unexpected error", err);
+      setErrorMsg("Erreur inattendue. Merci de réessayer.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
-  const title = mode === 'reset' ? 'Réinitialise ton mot de passe' : 'Crée ton mot de passe';
-  const subtitle =
-    mode === 'reset'
-      ? 'Choisis un nouveau mot de passe pour te reconnecter.'
-      : 'C’est ta première connexion à Tipote. Choisis un mot de passe pour les prochaines fois.';
-
   return (
-    <div className="space-y-5">
-      {/* Header brandé Tipote (sans toucher au flow) */}
-      <div className="text-center space-y-2">
-        <div className="text-3xl font-bold tracking-tight text-slate-50">
-          Tipote<span className="text-indigo-400">™</span>
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
-          <p className="text-sm text-slate-300">{subtitle}</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-200">
-            Nouveau mot de passe
-          </label>
-          <input
-            type="password"
-            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="new-password">Nouveau mot de passe</Label>
+        <div className="relative">
+          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="new-password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            className="pl-10 pr-10"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             required
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-200">
-            Confirmer le mot de passe
-          </label>
-          <input
-            type="password"
-            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
+      <div className="space-y-2">
+        <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="confirm-password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            className="pl-10"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             autoComplete="new-password"
             required
           />
         </div>
+      </div>
 
-        {errorMsg && (
-          <p className="text-sm text-red-400 bg-red-950/40 border border-red-900 rounded-md px-3 py-2">
-            {errorMsg}
-          </p>
-        )}
-        {successMsg && (
-          <p className="text-sm text-emerald-400 bg-emerald-950/40 border border-emerald-900 rounded-md px-3 py-2">
-            {successMsg}
-          </p>
-        )}
+      <p className="text-xs text-muted-foreground">Minimum 8 caractères</p>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
-        >
-          {loading ? 'En cours…' : 'Valider le mot de passe'}
-        </button>
-      </form>
-    </div>
+      {errorMsg && (
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+          {errorMsg}
+        </p>
+      )}
+
+      {successMsg && (
+        <p className="text-sm text-primary bg-primary/10 border border-primary/30 rounded-md px-3 py-2">
+          {successMsg}
+        </p>
+      )}
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          "Enregistrement..."
+        ) : (
+          <>
+            Valider le mot de passe
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </>
+        )}
+      </Button>
+    </form>
   );
 }
