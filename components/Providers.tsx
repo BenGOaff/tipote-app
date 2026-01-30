@@ -7,7 +7,6 @@ import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TutorialProvider } from "@/hooks/useTutorial";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
-import { HelpButton } from "@/components/tutorial/HelpButton";
 import { CoachWidget } from "@/components/coach/CoachWidget";
 
 type Props = {
@@ -23,9 +22,6 @@ export default function Providers({ children }: Props) {
 
         {/* ✅ Coach (bas droite) */}
         <CoachWidget />
-
-        {/* ✅ Didacticiel (bas gauche) */}
-        <HelpButton />
       </TutorialProvider>
 
       {/* Toaster Shadcn (hook use-toast) */}
