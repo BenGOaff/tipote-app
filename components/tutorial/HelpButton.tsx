@@ -15,7 +15,8 @@ export function HelpButton() {
   const { tutorialOptOut, resetTutorial, setShowWelcome, setPhase } = useTutorial();
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    // ✅ Déplacé en bas à gauche pour libérer le bas droite (coach)
+    <div className="fixed bottom-6 left-6 z-50">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="rounded-full w-14 h-14 shadow-lg shadow-primary/20">
@@ -23,7 +24,7 @@ export function HelpButton() {
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuItem
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => {

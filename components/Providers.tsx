@@ -8,6 +8,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TutorialProvider } from "@/hooks/useTutorial";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { HelpButton } from "@/components/tutorial/HelpButton";
+import { CoachWidget } from "@/components/coach/CoachWidget";
 
 type Props = {
   children: ReactNode;
@@ -19,6 +20,11 @@ export default function Providers({ children }: Props) {
       <TutorialProvider>
         {children}
         <TutorialOverlay />
+
+        {/* ✅ Coach (bas droite) */}
+        <CoachWidget />
+
+        {/* ✅ Didacticiel (bas gauche) */}
         <HelpButton />
       </TutorialProvider>
 
