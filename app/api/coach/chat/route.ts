@@ -4,6 +4,7 @@
 // ✅ Contexte "vivant" : résumé court + métriques + offre sélectionnée + "what changed since last time"
 // ✅ Micro-réponses : hard limit (3–10 lignes) + mode "go deeper"
 // ✅ A6: Gating Free/Basic propre + 1 message teaser / mois (option)
+// ✅ A1.4: "Decision tracker" (tests 14 jours -> check-in auto "verdict ?")
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -118,6 +119,119 @@ function extractGoalEuros(text: string): string | null {
   return null;
 }
 
+type CoachExperiment = {
+  id: string;
+  title: string;
+  start_at: string; // ISO
+  duration_days: number;
+  status: "active" | "completed" | "abandoned";
+};
+
+function uidLite() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+
+function parseDurationDays(text: string): number | null {
+  const s = text.toLowerCase();
+
+  // "14 jours"
+  const mDays = s.match(/\b(\d{1,3})\s*(jour|jours)\b/);
+  if (mDays?.[1]) {
+    const n = Number(mDays[1]);
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 365) : null;
+  }
+
+  // "2 semaines"
+  const mWeeks = s.match(/\b(\d{1,2})\s*(semaine|semaines)\b/);
+  if (mWeeks?.[1]) {
+    const n = Number(mWeeks[1]);
+    const d = n * 7;
+    return Number.isFinite(d) && d > 0 ? Math.min(d, 365) : null;
+  }
+
+  return null;
+}
+
+function extractExperimentTitle(text: string): string | null {
+  // Heuristique: prend ce qui suit "tester" jusqu'à 80 chars / fin phrase
+  const m = text.match(/\b(tester|test|expérimenter|experimenter)\b\s+([\s\S]{0,120})/i);
+  if (!m?.[2]) return null;
+
+  let t = m[2]
+    .replace(/\b(pendant|sur)\b[\s\S]*$/i, "")
+    .replace(/[\n\r]+/g, " ")
+    .trim();
+
+  // Stop sur ponctuation
+  t = t.split(/[\.!\?\:]/)[0]?.trim() ?? t;
+
+  if (!t) return null;
+  if (t.length > 90) t = t.slice(0, 90).trim();
+  return t || null;
+}
+
+function parseExperimentFromText(text: string): CoachExperiment | null {
+  const duration_days = parseDurationDays(text);
+  if (!duration_days) return null;
+
+  const title = extractExperimentTitle(text);
+  if (!title) return null;
+
+  if (!/\b(tester|test|expérimenter|experimenter)\b/i.test(text)) return null;
+
+  return {
+    id: uidLite(),
+    title,
+    start_at: new Date().toISOString(),
+    duration_days,
+    status: "active",
+  };
+}
+
+function collectExperimentsFromFacts(facts: unknown): CoachExperiment[] {
+  if (!isRecord(facts)) return [];
+  const arr = (facts as any).experiments;
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x: any) => (isRecord(x) ? x : null))
+    .filter(Boolean)
+    .map((x: any) => {
+      const id = typeof x.id === "string" ? x.id : uidLite();
+      const title = typeof x.title === "string" ? x.title : "";
+      const start_at = typeof x.start_at === "string" ? x.start_at : "";
+      const duration_days = typeof x.duration_days === "number" ? x.duration_days : Number(x.duration_days);
+      const status = typeof x.status === "string" ? x.status : "active";
+      if (!title || !start_at || !Number.isFinite(duration_days) || duration_days <= 0) return null;
+      if (status !== "active" && status !== "completed" && status !== "abandoned") return null;
+      return { id, title, start_at, duration_days, status } as CoachExperiment;
+    })
+    .filter(Boolean) as CoachExperiment[];
+}
+
+type CoachMessageRow = {
+  role: "user" | "assistant";
+  content: string;
+  summary_tags: string[] | null;
+  facts: Record<string, unknown> | null;
+  created_at: string;
+};
+
+function pickActiveExperiment(rows: CoachMessageRow[]): CoachExperiment | null {
+  for (const r of rows) {
+    const exps = collectExperimentsFromFacts(r.facts);
+    const active = exps.find((e) => e.status === "active");
+    if (active) return active;
+  }
+  return null;
+}
+
+function isExperimentDue(exp: CoachExperiment): boolean {
+  const start = Date.parse(exp.start_at);
+  if (!Number.isFinite(start)) return false;
+  const due = start + exp.duration_days * 24 * 60 * 60 * 1000;
+  return Date.now() >= due;
+}
+
 function deriveMemory(args: {
   userMessage: string;
   assistantMessage: string;
@@ -160,6 +274,15 @@ function deriveMemory(args: {
     pushTag(tags, "has_decision");
   }
 
+  // Expériences / tests (ex: "tester X pendant 14 jours")
+  // On stocke une structure simple pour pouvoir faire un check-in automatique plus tard.
+  const exp = parseExperimentFromText(merged);
+  if (exp) {
+    facts.experiments = Array.isArray((facts as any).experiments) ? (facts as any).experiments : [];
+    (facts.experiments as any[]).unshift(exp);
+    pushTag(tags, "has_experiment");
+  }
+
   if (args.contextSnapshot && isRecord(args.contextSnapshot)) {
     facts.context_snapshot = args.contextSnapshot;
     pushTag(tags, "has_context_snapshot");
@@ -167,14 +290,6 @@ function deriveMemory(args: {
 
   return { summary_tags: Array.from(tags), facts };
 }
-
-type CoachMessageRow = {
-  role: "user" | "assistant";
-  content: string;
-  summary_tags: string[] | null;
-  facts: Record<string, unknown> | null;
-  created_at: string;
-};
 
 function buildMemoryBlock(rows: CoachMessageRow[]) {
   const tags = new Set<string>();
@@ -215,6 +330,24 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
 
   if (lastGoal) lines.push(`- Objectif: ${lastGoal}`);
   if (lastDecision) lines.push(`- Dernière décision: ${lastDecision}`);
+
+  const activeExp = pickActiveExperiment(rows);
+  if (activeExp) {
+    const start = Date.parse(activeExp.start_at);
+    const due = Number.isFinite(start) ? start + activeExp.duration_days * 24 * 60 * 60 * 1000 : null;
+    const daysLeft = due && Number.isFinite(due) ? Math.ceil((due - Date.now()) / (24 * 60 * 60 * 1000)) : null;
+
+    const dueLabel =
+      activeExp.status !== "active"
+        ? activeExp.status
+        : isExperimentDue(activeExp)
+          ? "DUE"
+          : daysLeft !== null
+            ? `${daysLeft}j restants`
+            : "en cours";
+
+    lines.push(`- Test en cours: ${activeExp.title} (${activeExp.duration_days}j) — ${dueLabel}`);
+  }
 
   const aversion = (factsMerged as any)?.aversion;
   if (Array.isArray(aversion) && aversion.length) {
@@ -285,7 +418,12 @@ function detectTopicHints(userMessage: string) {
   return hints;
 }
 
-function summarizeLivingContext(args: { businessProfile: any | null; planJson: any | null; tasks: any[]; contents: any[] }) {
+function summarizeLivingContext(args: {
+  businessProfile: any | null;
+  planJson: any | null;
+  tasks: any[];
+  contents: any[];
+}) {
   const lines: string[] = [];
 
   const goal =
@@ -334,15 +472,19 @@ function summarizeLivingContext(args: { businessProfile: any | null; planJson: a
   const tasksOpen = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() !== "done").length;
   const tasksDone = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() === "done").length;
 
-  const contentScheduled = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "scheduled").length;
-  const contentPublished = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "published").length;
+  const contentScheduled = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "scheduled")
+    .length;
+  const contentPublished = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "published")
+    .length;
 
   lines.push("Où l'user en est (résumé):");
   if (goal) lines.push(`- Objectif: ${String(goal).slice(0, 80)}`);
   if (constraints.length) lines.push(`- Contraintes: ${constraints.join(" • ").slice(0, 160)}`);
 
   if (offerTitle || offerPrice || offerTarget) {
-    lines.push(`- Offre sélectionnée: ${[offerTitle, offerPrice, offerTarget].filter(Boolean).join(" — ").slice(0, 180)}`);
+    lines.push(
+      `- Offre sélectionnée: ${[offerTitle, offerPrice, offerTarget].filter(Boolean).join(" — ").slice(0, 180)}`,
+    );
   } else {
     lines.push("- Offre sélectionnée: (non définie / à clarifier)");
   }
@@ -533,6 +675,16 @@ export async function POST(req: NextRequest) {
     const changedBlock = diffSnapshots(lastSnapshot, living.snapshot);
     const topicHints = detectTopicHints(userMessage);
 
+    const activeExperiment = pickActiveExperiment(memoryRows);
+    const checkInBlock =
+      !isTeaser && activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
+        ? [
+            "CHECK-IN REQUIRED:",
+            `La dernière fois, on avait décidé de tester: "${activeExperiment.title}" pendant ${activeExperiment.duration_days} jours.`,
+            "Tu DOIS commencer par demander le verdict (1 question courte), puis proposer 1 next step.",
+          ].join("\n")
+        : "";
+
     const systemBase = buildCoachSystemPrompt({ locale });
 
     const system = isTeaser
@@ -559,6 +711,8 @@ Rules:
       changedBlock ? changedBlock : "What changed since last time: (unknown / first session)",
       "",
       topicHints.length ? `Topic hints:\n- ${topicHints.join("\n- ")}` : "Topic hints: (none)",
+      "",
+      checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",
       "CONVERSATION (recent):",
       JSON.stringify(history, null, 2),
