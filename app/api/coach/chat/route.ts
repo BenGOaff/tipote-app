@@ -5,12 +5,14 @@
 // ✅ Micro-réponses : hard limit (3–10 lignes) + mode "go deeper"
 // ✅ A6: Gating Free/Basic propre + 1 message teaser / mois (option)
 // ✅ A1.4: "Decision tracker" (tests 14 jours -> check-in auto "verdict ?")
+// ✅ A4 (partiel): Tipote-knowledge first (RAG simple) via match_resource_chunks (no internet yet)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
+import OpenAI from "openai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,6 +93,93 @@ async function callClaude(args: {
     .trim();
 
   return text || "";
+}
+
+type ResourceChunk = {
+  id?: string;
+  content?: string;
+  chunk_text?: string;
+  resource_id?: string;
+  source?: string;
+  title?: string;
+  similarity?: number;
+  metadata?: Record<string, unknown> | null;
+};
+
+function getOpenAIForEmbeddings(): OpenAI | null {
+  const apiKey = process.env.OPENAI_API_KEY_OWNER ?? process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({ apiKey });
+}
+
+async function searchTipoteKnowledge(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  query: string;
+  matchCount?: number;
+  matchThreshold?: number;
+}) {
+  const q = args.query.trim();
+  if (!q) return [];
+
+  const matchCount =
+    typeof args.matchCount === "number" && Number.isFinite(args.matchCount) && args.matchCount > 0
+      ? Math.min(Math.floor(args.matchCount), 12)
+      : 6;
+
+  const matchThreshold =
+    typeof args.matchThreshold === "number" && Number.isFinite(args.matchThreshold)
+      ? args.matchThreshold
+      : 0.55;
+
+  const client = getOpenAIForEmbeddings();
+  if (!client) return [];
+
+  const embedding = await client.embeddings.create({
+    model: "text-embedding-3-small",
+    input: q,
+  });
+
+  const queryEmbedding = embedding.data?.[0]?.embedding;
+  if (!Array.isArray(queryEmbedding) || queryEmbedding.length === 0) return [];
+
+  const { data, error } = await args.supabase.rpc("match_resource_chunks", {
+    query_embedding: queryEmbedding,
+    match_count: matchCount,
+    match_threshold: matchThreshold,
+  });
+
+  if (error) {
+    console.error("[coach/chat] match_resource_chunks error:", error);
+    return [];
+  }
+
+  return Array.isArray(data) ? (data as ResourceChunk[]) : [];
+}
+
+function formatKnowledgeBlock(chunks: ResourceChunk[]) {
+  const cleaned = (chunks ?? [])
+    .map((c) => {
+      const text = String(c.content ?? c.chunk_text ?? "").trim();
+      const sim = typeof c.similarity === "number" ? c.similarity : null;
+      const title = String(c.title ?? c.source ?? c.resource_id ?? "").trim();
+      if (!text) return null;
+      return { text, sim, title };
+    })
+    .filter(Boolean) as Array<{ text: string; sim: number | null; title: string }>;
+
+  if (!cleaned.length) return "";
+
+  const lines: string[] = [];
+  lines.push("TIPOTE-KNOWLEDGE (internal, prioritized):");
+  cleaned.slice(0, 6).forEach((c, i) => {
+    const header = c.title ? `${i + 1}) ${c.title}` : `${i + 1})`;
+    const sim = c.sim !== null ? ` (sim ${c.sim.toFixed(2)})` : "";
+    lines.push(`${header}${sim}`);
+    lines.push(c.text.slice(0, 900));
+    lines.push("");
+  });
+
+  return lines.join("\n").trim();
 }
 
 type CoachMemory = {
@@ -675,6 +764,17 @@ export async function POST(req: NextRequest) {
     const changedBlock = diffSnapshots(lastSnapshot, living.snapshot);
     const topicHints = detectTopicHints(userMessage);
 
+    // ✅ Tipote-knowledge first (RAG simple)
+    // On injecte seulement les meilleurs extraits (pas de dump, pas de liens).
+    const knowledgeChunks = await searchTipoteKnowledge({
+      supabase,
+      query: userMessage,
+      matchCount: 6,
+      matchThreshold: 0.55,
+    });
+
+    const knowledgeBlock = formatKnowledgeBlock(knowledgeChunks);
+
     const activeExperiment = pickActiveExperiment(memoryRows);
     const checkInBlock =
       !isTeaser && activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
@@ -686,9 +786,15 @@ export async function POST(req: NextRequest) {
         : "";
 
     const systemBase = buildCoachSystemPrompt({ locale });
+    const knowledgeRules = `
+TIPOTE-KNOWLEDGE RULES:
+- If internal knowledge is provided, prioritize it over generic advice.
+- Do NOT mention "RAG" or technicalities.
+- Use it to make the answer sharper (1 insight + 1 next step).
+- Never paste large excerpts; synthesize.`;
 
     const system = isTeaser
-      ? `${systemBase}
+      ? `${systemBase}${knowledgeRules}
       
 MODE: TEASER (Free/Basic).
 Rules:
@@ -698,8 +804,8 @@ Rules:
 - End with ONE short CTA to upgrade (Pro/Elite) to unlock full coach + actions.
 - Do NOT output actionable DB suggestions (suggestions[] must be empty).`
       : goDeeper
-        ? `${systemBase}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
-        : `${systemBase}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
+        ? `${systemBase}${knowledgeRules}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
+        : `${systemBase}${knowledgeRules}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
 
     const userPrompt = [
       "LONG-TERM MEMORY (facts/tags + last session):",
@@ -711,6 +817,8 @@ Rules:
       changedBlock ? changedBlock : "What changed since last time: (unknown / first session)",
       "",
       topicHints.length ? `Topic hints:\n- ${topicHints.join("\n- ")}` : "Topic hints: (none)",
+      "",
+      knowledgeBlock ? knowledgeBlock : "TIPOTE-KNOWLEDGE: (none)",
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",
