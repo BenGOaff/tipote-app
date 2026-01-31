@@ -1,7 +1,8 @@
 // app/api/coach/chat/route.ts
 // Coach IA premium (Pro/Elite) : chat court + contextuel + prêt pour suggestions/actions.
-// Ajout PREMIUM : mémoire longue durée "facts/tags + last session" depuis public.coach_messages
-// (ne dépend plus uniquement du history envoyé par le front)
+// ✅ Mémoire longue durée : facts/tags + last session depuis public.coach_messages
+// ✅ Contexte "vivant" : résumé court + métriques + offre sélectionnée + "what changed since last time"
+// ✅ Micro-réponses : hard limit (3–10 lignes) + mode "go deeper"
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -90,30 +91,14 @@ async function callClaude(args: {
   return text || "";
 }
 
-function buildContextBlock(args: {
-  businessProfile: any | null;
-  planJson: any | null;
-  pyramids: any[];
-  tasks: any[];
-  contents: any[];
-}) {
-  return JSON.stringify(
-    {
-      business_profile: args.businessProfile ?? null,
-      plan: args.planJson ?? null,
-      offer_pyramids_recent: args.pyramids ?? [],
-      tasks_recent: args.tasks ?? [],
-      contents_recent: args.contents ?? [],
-    },
-    null,
-    2,
-  );
-}
-
 type CoachMemory = {
   summary_tags: string[];
   facts: Record<string, unknown>;
 };
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
 function pushTag(tags: Set<string>, tag: string) {
   const t = String(tag || "").trim().toLowerCase();
@@ -122,11 +107,10 @@ function pushTag(tags: Set<string>, tag: string) {
 }
 
 function extractGoalEuros(text: string): string | null {
-  // Ex: "10k", "10k€/mois", "10 000", "10000€"
   const s = text.toLowerCase();
-  const m1 = s.match(/\b(\d{1,3})\s?k\b/); // 10k
+  const m1 = s.match(/\b(\d{1,3})\s?k\b/);
   if (m1?.[1]) return `${m1[1]}k`;
-  const m2 = s.match(/\b(\d{2,3})\s?\.?\s?0{3}\b/); // 10000
+  const m2 = s.match(/\b(\d{2,3})\s?\.?\s?0{3}\b/);
   if (m2?.[0]) return m2[0].replace(/\s|\./g, "");
   const m3 = s.match(/\b(\d{1,6})\s?€\b/);
   if (m3?.[1]) return m3[1];
@@ -137,16 +121,14 @@ function deriveMemory(args: {
   userMessage: string;
   assistantMessage: string;
   history?: { role: string; content: string }[];
+  contextSnapshot?: Record<string, unknown>;
 }): CoachMemory {
   const tags = new Set<string>();
   const facts: Record<string, unknown> = {};
 
-  const merged = [args.userMessage, args.assistantMessage, ...(args.history ?? []).map((h) => h.content)].join(
-    "\n",
-  );
+  const merged = [args.userMessage, args.assistantMessage, ...(args.history ?? []).map((h) => h.content)].join("\n");
   const low = merged.toLowerCase();
 
-  // Tags (simples mais utiles)
   if (low.includes("linkedin")) pushTag(tags, "channel_linkedin");
   if (low.includes("instagram")) pushTag(tags, "channel_instagram");
   if (low.includes("tiktok")) pushTag(tags, "channel_tiktok");
@@ -159,7 +141,6 @@ function deriveMemory(args: {
     pushTag(tags, "topic_acquisition");
   if (low.includes("vente") || low.includes("clos") || low.includes("closing")) pushTag(tags, "topic_sales");
 
-  // Preferences / aversions
   if (low.includes("cold call") || low.includes("appel à froid") || low.includes("appels à froid")) {
     facts.aversion = Array.isArray(facts.aversion) ? facts.aversion : [];
     (facts.aversion as any[]).push("cold_call");
@@ -172,18 +153,18 @@ function deriveMemory(args: {
     pushTag(tags, "has_goal");
   }
 
-  // Mini "last decision" heuristique
   const decisionMatch = merged.match(/\b(tester|test|expérimenter|experimenter)\b[\s\S]{0,120}/i);
   if (decisionMatch?.[0]) {
     facts.decision_en_cours = decisionMatch[0].trim().slice(0, 160);
     pushTag(tags, "has_decision");
   }
 
-  return { summary_tags: Array.from(tags), facts };
-}
+  if (args.contextSnapshot && isRecord(args.contextSnapshot)) {
+    facts.context_snapshot = args.contextSnapshot;
+    pushTag(tags, "has_context_snapshot");
+  }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+  return { summary_tags: Array.from(tags), facts };
 }
 
 type CoachMessageRow = {
@@ -195,9 +176,8 @@ type CoachMessageRow = {
 };
 
 function buildMemoryBlock(rows: CoachMessageRow[]) {
-  // rows: DESC (most recent first)
   const tags = new Set<string>();
-  const facts: Record<string, unknown> = {};
+  const factsMerged: Record<string, unknown> = {};
   let lastAssistant: CoachMessageRow | null = null;
   let lastDecision: string | null = null;
   let lastGoal: string | null = null;
@@ -213,16 +193,16 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
     }
 
     if (isRecord(r.facts)) {
-      // Merge shallow, latest wins
       for (const [k, v] of Object.entries(r.facts)) {
-        if (facts[k] === undefined) facts[k] = v;
+        if (factsMerged[k] === undefined) factsMerged[k] = v;
       }
 
-      if (!lastDecision && typeof r.facts.decision_en_cours === "string") {
-        lastDecision = String(r.facts.decision_en_cours).trim() || null;
+      if (!lastDecision && typeof (r.facts as any).decision_en_cours === "string") {
+        lastDecision = String((r.facts as any).decision_en_cours).trim() || null;
       }
-      if (!lastGoal && (typeof r.facts.objectif === "string" || typeof r.facts.goal === "string")) {
-        lastGoal = String((r.facts.objectif ?? r.facts.goal) as any).trim() || null;
+      if (!lastGoal) {
+        const g = (r.facts as any).objectif ?? (r.facts as any).goal;
+        if (typeof g === "string") lastGoal = g.trim() || null;
       }
     }
   }
@@ -235,17 +215,16 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
   if (lastGoal) lines.push(`- Objectif: ${lastGoal}`);
   if (lastDecision) lines.push(`- Dernière décision: ${lastDecision}`);
 
-  const aversion = (facts as any)?.aversion;
+  const aversion = (factsMerged as any)?.aversion;
   if (Array.isArray(aversion) && aversion.length) {
     lines.push(`- Aversions: ${aversion.slice(0, 5).join(", ")}`);
   }
 
-  const coreFactsKeys = Object.keys(facts).filter((k) => !["aversion"].includes(k));
+  const coreFactsKeys = Object.keys(factsMerged).filter((k) => !["aversion", "context_snapshot"].includes(k));
   if (coreFactsKeys.length) {
-    // On évite un dump: juste les clés/valeurs importantes
     const picked: string[] = [];
     for (const k of coreFactsKeys.slice(0, 10)) {
-      const v = (facts as any)[k];
+      const v = (factsMerged as any)[k];
       const vs =
         typeof v === "string"
           ? v
@@ -267,6 +246,140 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
   }
 
   return lines.join("\n").trim();
+}
+
+function detectTopicHints(userMessage: string) {
+  const low = userMessage.toLowerCase();
+  const hints: string[] = [];
+
+  if (low.includes("email") || low.includes("newsletter") || low.includes("mail") || low.includes("e-mail")) {
+    hints.push("Email acquisition : pense lead magnet, landing, CTA, séquence, deliverability.");
+  }
+  if (low.includes("linkedin")) {
+    hints.push("LinkedIn : pense ICP, angle, preuve, DM éthique, cadence.");
+  }
+  if (low.includes("prix") || low.includes("tarif") || low.includes("pricing")) {
+    hints.push("Pricing : pense valeur, offre, preuve, risque perçu, ancrage.");
+  }
+
+  return hints;
+}
+
+function summarizeLivingContext(args: { businessProfile: any | null; planJson: any | null; tasks: any[]; contents: any[] }) {
+  const lines: string[] = [];
+
+  const goal =
+    (isRecord(args.planJson) && typeof (args.planJson as any).objectif === "string" && (args.planJson as any).objectif.trim()) ||
+    (isRecord(args.businessProfile) && typeof (args.businessProfile as any).goal === "string" && (args.businessProfile as any).goal.trim()) ||
+    null;
+
+  const constraints: string[] = [];
+  if (isRecord(args.businessProfile)) {
+    const bp = args.businessProfile as any;
+    if (typeof bp.constraints === "string" && bp.constraints.trim()) constraints.push(bp.constraints.trim().slice(0, 120));
+    if (typeof bp.time_per_week === "number") constraints.push(`temps dispo: ${bp.time_per_week}h/sem`);
+  }
+
+  // Offre sélectionnée (plan_json)
+  let offerTitle: string | null = null;
+  let offerTarget: string | null = null;
+  let offerPrice: string | null = null;
+
+  const plan = isRecord(args.planJson) ? (args.planJson as any) : null;
+  const selected = plan?.selected_offer_pyramid;
+  if (isRecord(selected)) {
+    offerTitle = typeof (selected as any).name === "string" ? (selected as any).name : typeof (selected as any).title === "string" ? (selected as any).title : null;
+    offerTarget =
+      typeof (selected as any).target === "string" ? (selected as any).target : typeof (selected as any).cible === "string" ? (selected as any).cible : null;
+    offerPrice =
+      typeof (selected as any).price === "string" ? (selected as any).price : typeof (selected as any).pricing === "string" ? (selected as any).pricing : null;
+  }
+
+  const tasksOpen = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() !== "done").length;
+  const tasksDone = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() === "done").length;
+
+  const contentScheduled = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "scheduled").length;
+  const contentPublished = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "published").length;
+
+  lines.push("Où l'user en est (résumé):");
+  if (goal) lines.push(`- Objectif: ${String(goal).slice(0, 80)}`);
+  if (constraints.length) lines.push(`- Contraintes: ${constraints.join(" • ").slice(0, 160)}`);
+
+  if (offerTitle || offerPrice || offerTarget) {
+    lines.push(`- Offre sélectionnée: ${[offerTitle, offerPrice, offerTarget].filter(Boolean).join(" — ").slice(0, 180)}`);
+  } else {
+    lines.push("- Offre sélectionnée: (non définie / à clarifier)");
+  }
+
+  lines.push("3 métriques clés:");
+  lines.push(`- Tâches: ${tasksOpen} ouvertes / ${tasksDone} terminées (dans l'échantillon récent)`);
+  lines.push(`- Contenus: ${contentScheduled} planifiés / ${contentPublished} publiés (dans l'échantillon récent)`);
+
+  const snapshot: Record<string, unknown> = {
+    metrics: {
+      tasks_open_recent: tasksOpen,
+      tasks_done_recent: tasksDone,
+      content_scheduled_recent: contentScheduled,
+      content_published_recent: contentPublished,
+    },
+    selected_offer: {
+      title: offerTitle,
+      price: offerPrice,
+      target: offerTarget,
+    },
+  };
+
+  return { text: lines.join("\n"), snapshot };
+}
+
+function diffSnapshots(prev: any, next: any) {
+  if (!isRecord(prev) || !isRecord(next)) return "";
+  const p = prev as any;
+  const n = next as any;
+
+  const lines: string[] = [];
+  const pm = isRecord(p.metrics) ? (p.metrics as any) : null;
+  const nm = isRecord(n.metrics) ? (n.metrics as any) : null;
+
+  if (pm && nm) {
+    const dTasksOpen = (nm.tasks_open_recent ?? 0) - (pm.tasks_open_recent ?? 0);
+    const dScheduled = (nm.content_scheduled_recent ?? 0) - (pm.content_scheduled_recent ?? 0);
+    const dPublished = (nm.content_published_recent ?? 0) - (pm.content_published_recent ?? 0);
+
+    if (dTasksOpen !== 0) lines.push(`- Tâches ouvertes: ${dTasksOpen > 0 ? "+" : ""}${dTasksOpen}`);
+    if (dScheduled !== 0) lines.push(`- Contenus planifiés: ${dScheduled > 0 ? "+" : ""}${dScheduled}`);
+    if (dPublished !== 0) lines.push(`- Contenus publiés: ${dPublished > 0 ? "+" : ""}${dPublished}`);
+  }
+
+  const po = isRecord(p.selected_offer) ? (p.selected_offer as any) : null;
+  const no = isRecord(n.selected_offer) ? (n.selected_offer as any) : null;
+  const prevTitle = po ? String(po.title ?? "") : "";
+  const nextTitle = no ? String(no.title ?? "") : "";
+  if (prevTitle && nextTitle && prevTitle !== nextTitle) {
+    lines.push(`- Offre sélectionnée: "${prevTitle}" → "${nextTitle}"`);
+  }
+
+  if (!lines.length) return "";
+  return ["What changed since last time:", ...lines].join("\n");
+}
+
+function enforceLineLimit(text: string, maxLines: number) {
+  const normalized = String(text || "").trim();
+  if (!normalized) return "";
+  const lines = normalized.split(/\r?\n/).map((l) => l.trimEnd());
+  if (lines.length <= maxLines) return normalized;
+
+  const cut = lines.slice(0, maxLines);
+  cut[maxLines - 1] = "Si tu veux, dis : go deeper.";
+  return cut.join("\n").trim();
+}
+
+function isGoDeeperMessage(userMessage: string) {
+  const s = userMessage.trim().toLowerCase();
+  if (s === "go deeper" || s === "go deeper." || s === "godeeper") return true;
+  if (s.startsWith("go deeper")) return true;
+  if (s.includes("approfondis") || s.includes("vas plus loin")) return true;
+  return false;
 }
 
 export async function POST(req: NextRequest) {
@@ -293,7 +406,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
     }
 
-    // Profile (plan/locale)
     const { data: profileRow } = await supabase
       .from("profiles")
       .select("id, plan, locale, first_name, email")
@@ -303,19 +415,17 @@ export async function POST(req: NextRequest) {
     const plan = normalizePlan((profileRow as any)?.plan);
     const locale = safeLocale((profileRow as any)?.locale);
 
-    // ✅ gating Pro/Elite
     if (plan !== "pro" && plan !== "elite") {
       return NextResponse.json(
-        {
-          ok: false,
-          code: "COACH_LOCKED",
-          error: "Coach premium réservé aux plans Pro/Elite.",
-        },
+        { ok: false, code: "COACH_LOCKED", error: "Coach premium réservé aux plans Pro/Elite." },
         { status: 403 },
       );
     }
 
-    // Mémoire longue durée (best-effort): derniers messages + facts/tags
+    const history = parsed.data.history ?? [];
+    const userMessage = parsed.data.message;
+    const goDeeper = isGoDeeperMessage(userMessage);
+
     const memoryRes = await supabase
       .from("coach_messages")
       .select("role, content, summary_tags, facts, created_at")
@@ -326,49 +436,56 @@ export async function POST(req: NextRequest) {
     const memoryRows = (memoryRes.data ?? []) as CoachMessageRow[];
     const memoryBlock = memoryRows.length ? buildMemoryBlock(memoryRows) : "";
 
-    // Context Tipote (best-effort)
-    const [businessProfileRes, businessPlanRes, pyramidsRes, tasksRes, contentsRes] = await Promise.all([
+    let lastSnapshot: any = null;
+    for (const r of memoryRows) {
+      if (isRecord(r.facts) && isRecord((r.facts as any).context_snapshot)) {
+        lastSnapshot = (r.facts as any).context_snapshot;
+        break;
+      }
+    }
+
+    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes] = await Promise.all([
       supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle(),
-      supabase
-        .from("offer_pyramids")
-        .select("id, level, pyramid_json, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(3),
       supabase
         .from("project_tasks")
         .select("id, title, status, due_date, timeframe, updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
-        .limit(12),
+        .limit(30),
       supabase
         .from("content_item")
         .select("id, type, title, status, scheduled_date, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(10),
+        .limit(30),
     ]);
 
-    const context = buildContextBlock({
+    const living = summarizeLivingContext({
       businessProfile: businessProfileRes.data ?? null,
       planJson: (businessPlanRes.data as any)?.plan_json ?? null,
-      pyramids: pyramidsRes.data ?? [],
       tasks: tasksRes.data ?? [],
       contents: contentsRes.data ?? [],
     });
 
-    const system = buildCoachSystemPrompt({ locale });
+    const changedBlock = diffSnapshots(lastSnapshot, living.snapshot);
+    const topicHints = detectTopicHints(userMessage);
 
-    const history = parsed.data.history ?? [];
-    const userMessage = parsed.data.message;
+    const systemBase = buildCoachSystemPrompt({ locale });
+    const system = goDeeper
+      ? `${systemBase}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
+      : `${systemBase}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
 
     const userPrompt = [
       "LONG-TERM MEMORY (facts/tags + last session):",
       memoryBlock || "(none yet)",
       "",
-      "USER CONTEXT (source of truth from Tipote DB):",
-      context,
+      "LIVING CONTEXT (short, premium):",
+      living.text,
+      "",
+      changedBlock ? changedBlock : "What changed since last time: (unknown / first session)",
+      "",
+      topicHints.length ? `Topic hints:\n- ${topicHints.join("\n- ")}` : "Topic hints: (none)",
       "",
       "CONVERSATION (recent):",
       JSON.stringify(history, null, 2),
@@ -377,7 +494,6 @@ export async function POST(req: NextRequest) {
       userMessage,
     ].join("\n");
 
-    // IA owner : OpenAI si configuré, sinon Claude owner
     let raw = "";
 
     if (openai) {
@@ -413,7 +529,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Parse output (robuste)
     let out: any = null;
     try {
       out = JSON.parse(raw || "{}");
@@ -421,10 +536,18 @@ export async function POST(req: NextRequest) {
       out = { message: String(raw || "").trim() };
     }
 
-    const message = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
+    const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
     const suggestions = Array.isArray(out?.suggestions) ? out.suggestions : [];
 
-    const memory = deriveMemory({ userMessage, assistantMessage: message, history });
+    const maxLines = goDeeper ? 18 : 10;
+    const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
+
+    const memory = deriveMemory({
+      userMessage,
+      assistantMessage: message,
+      history,
+      contextSnapshot: living.snapshot,
+    });
 
     return NextResponse.json({ ok: true, message, suggestions, memory }, { status: 200 });
   } catch (e) {

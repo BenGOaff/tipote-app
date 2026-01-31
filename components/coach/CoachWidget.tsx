@@ -62,6 +62,14 @@ function toUiMessage(m: PersistedCoachMessage): CoachMessage {
   };
 }
 
+const QUICK_REPLIES: Array<{ id: string; label: string; message: string }> = [
+  { id: "clients", label: "Plus de clients", message: "Je veux plus de clients. C’est quoi LE plan le plus rentable là, maintenant ?" },
+  { id: "sell", label: "Vendre mieux", message: "J’ai du mal à vendre. Qu’est-ce qui bloque le plus, selon toi ?" },
+  { id: "offer", label: "Clarifier mon offre", message: "Aide-moi à clarifier mon offre pour qu’elle se vende plus facilement." },
+  { id: "week", label: "Plan de la semaine", message: "Fais-moi un plan simple pour cette semaine (priorités + séquence)." },
+  { id: "deeper", label: "Go deeper", message: "go deeper" },
+];
+
 export function CoachWidget() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,7 +92,6 @@ export function CoachWidget() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  // A1/A3 — Chargement mémoire : au moment où le widget s'ouvre (best-effort)
   useEffect(() => {
     if (!open) return;
 
@@ -104,7 +111,7 @@ export function CoachWidget() {
           }
         }
       } catch {
-        // best-effort : si l'API échoue, on garde la welcome message
+        // best-effort
       } finally {
         if (!cancelled) setBootstrapping(false);
       }
@@ -221,20 +228,19 @@ export function CoachWidget() {
     }
   }
 
-  async function send() {
-    if (!canSend) return;
+  async function sendText(text: string) {
+    const clean = text.trim();
+    if (!clean) return;
 
-    const text = input.trim();
-    setInput("");
     setSuggestions([]);
     setLocked(false);
 
     const userLocalId = uid();
-    const userMsg: CoachMessage = { id: userLocalId, role: "user", content: text, createdAt: Date.now() };
+    const userMsg: CoachMessage = { id: userLocalId, role: "user", content: clean, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setLoading(true);
 
-    void persistOne("user", text).then((saved) => {
+    void persistOne("user", clean).then((saved) => {
       if (!saved) return;
       setMessages((prev) =>
         prev.map((m) =>
@@ -248,11 +254,11 @@ export function CoachWidget() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          message: text,
+          message: clean,
           history: messages
             .slice(-8)
             .map((m) => ({ role: m.role, content: m.content }))
-            .concat([{ role: "user", content: text }]),
+            .concat([{ role: "user", content: clean }]),
         }),
       });
 
@@ -333,6 +339,15 @@ export function CoachWidget() {
     }
   }
 
+  async function send() {
+    if (!canSend) return;
+    const text = input.trim();
+    setInput("");
+    await sendText(text);
+  }
+
+  const showQuickReplies = open && !locked && !bootstrapping && !loading && input.trim().length === 0;
+
   return (
     <>
       {!open ? (
@@ -390,7 +405,7 @@ export function CoachWidget() {
               {loading || bootstrapping ? (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl rounded-bl-md px-3 py-2 text-sm text-muted-foreground">
-                    …
+                    coach is thinking…
                   </div>
                 </div>
               ) : null}
@@ -439,6 +454,25 @@ export function CoachWidget() {
             </div>
 
             <div className="border-t p-3">
+              {showQuickReplies ? (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {QUICK_REPLIES.map((q) => (
+                    <Button
+                      key={q.id}
+                      type="button"
+                      variant="outline"
+                      className="h-7 px-3 rounded-full text-xs"
+                      onClick={() => {
+                        setInput("");
+                        void sendText(q.message);
+                      }}
+                    >
+                      {q.label}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+
               <div className="flex items-center gap-2">
                 <input
                   value={input}
