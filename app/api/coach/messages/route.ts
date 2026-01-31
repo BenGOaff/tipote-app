@@ -1,8 +1,13 @@
 // app/api/coach/messages/route.ts
 // Alias stable pour la persistance mémoire Coach IA.
 //
-// Historique : la persistance a d’abord été implémentée sous /api/coach/chat/messages.
-// Le front (CoachWidget) consomme /api/coach/messages.
-// On expose donc cet alias sans dupliquer la logique.
+// ⚠️ Next.js (Turbopack) n’autorise pas le re-export de la config de route (`runtime`, `dynamic`).
+// Donc : on proxy uniquement GET/POST, et on redéfinit la config ici.
 
-export { GET, POST, runtime, dynamic } from "../chat/messages/route";
+import { GET as ChatMessagesGET, POST as ChatMessagesPOST } from "../chat/messages/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export const GET = ChatMessagesGET;
+export const POST = ChatMessagesPOST;
