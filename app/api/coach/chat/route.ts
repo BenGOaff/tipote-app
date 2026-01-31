@@ -3,6 +3,7 @@
 // ✅ Mémoire longue durée : facts/tags + last session depuis public.coach_messages
 // ✅ Contexte "vivant" : résumé court + métriques + offre sélectionnée + "what changed since last time"
 // ✅ Micro-réponses : hard limit (3–10 lignes) + mode "go deeper"
+// ✅ A6: Gating Free/Basic propre + 1 message teaser / mois (option)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -280,7 +281,6 @@ function summarizeLivingContext(args: { businessProfile: any | null; planJson: a
     if (typeof bp.time_per_week === "number") constraints.push(`temps dispo: ${bp.time_per_week}h/sem`);
   }
 
-  // Offre sélectionnée (plan_json)
   let offerTitle: string | null = null;
   let offerTarget: string | null = null;
   let offerPrice: string | null = null;
@@ -288,11 +288,24 @@ function summarizeLivingContext(args: { businessProfile: any | null; planJson: a
   const plan = isRecord(args.planJson) ? (args.planJson as any) : null;
   const selected = plan?.selected_offer_pyramid;
   if (isRecord(selected)) {
-    offerTitle = typeof (selected as any).name === "string" ? (selected as any).name : typeof (selected as any).title === "string" ? (selected as any).title : null;
+    offerTitle =
+      typeof (selected as any).name === "string"
+        ? (selected as any).name
+        : typeof (selected as any).title === "string"
+          ? (selected as any).title
+          : null;
     offerTarget =
-      typeof (selected as any).target === "string" ? (selected as any).target : typeof (selected as any).cible === "string" ? (selected as any).cible : null;
+      typeof (selected as any).target === "string"
+        ? (selected as any).target
+        : typeof (selected as any).cible === "string"
+          ? (selected as any).cible
+          : null;
     offerPrice =
-      typeof (selected as any).price === "string" ? (selected as any).price : typeof (selected as any).pricing === "string" ? (selected as any).pricing : null;
+      typeof (selected as any).price === "string"
+        ? (selected as any).price
+        : typeof (selected as any).pricing === "string"
+          ? (selected as any).pricing
+          : null;
   }
 
   const tasksOpen = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() !== "done").length;
@@ -415,16 +428,42 @@ export async function POST(req: NextRequest) {
     const plan = normalizePlan((profileRow as any)?.plan);
     const locale = safeLocale((profileRow as any)?.locale);
 
+    // ✅ Gating + teaser (Free/Basic)
+    // - Pro/Elite: accès complet
+    // - Free/Basic: 1 message "teaser" / mois (option), puis lock propre
+    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+    let isTeaser = false;
+
     if (plan !== "pro" && plan !== "elite") {
-      return NextResponse.json(
-        { ok: false, code: "COACH_LOCKED", error: "Coach premium réservé aux plans Pro/Elite." },
-        { status: 403 },
-      );
+      // Best-effort check: déjà utilisé ce mois ?
+      const usedRes = await supabase
+        .from("coach_messages")
+        .select("id")
+        .eq("user_id", user.id)
+        .contains("facts", { teaser_month: monthKey })
+        .limit(1);
+
+      const alreadyUsed = Array.isArray(usedRes.data) && usedRes.data.length > 0;
+
+      if (alreadyUsed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "COACH_LOCKED",
+            error:
+              "Le coach premium est dispo sur les plans Pro et Elite. (Astuce : tu as 1 message teaser / mois en Free/Basic — reviens le mois prochain ou upgrade pour un accès illimité.)",
+          },
+          { status: 403 },
+        );
+      }
+
+      // Autorise 1 message teaser
+      isTeaser = true;
     }
 
     const history = parsed.data.history ?? [];
     const userMessage = parsed.data.message;
-    const goDeeper = isGoDeeperMessage(userMessage);
+    const goDeeper = !isTeaser && isGoDeeperMessage(userMessage);
 
     const memoryRes = await supabase
       .from("coach_messages")
@@ -472,9 +511,20 @@ export async function POST(req: NextRequest) {
     const topicHints = detectTopicHints(userMessage);
 
     const systemBase = buildCoachSystemPrompt({ locale });
-    const system = goDeeper
-      ? `${systemBase}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
-      : `${systemBase}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
+
+    const system = isTeaser
+      ? `${systemBase}
+      
+MODE: TEASER (Free/Basic).
+Rules:
+- 3–6 lines max.
+- 1 idea, 1 next step.
+- Be warm, sharp, human.
+- End with ONE short CTA to upgrade (Pro/Elite) to unlock full coach + actions.
+- Do NOT output actionable DB suggestions (suggestions[] must be empty).`
+      : goDeeper
+        ? `${systemBase}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
+        : `${systemBase}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
 
     const userPrompt = [
       "LONG-TERM MEMORY (facts/tags + last session):",
@@ -537,9 +587,9 @@ export async function POST(req: NextRequest) {
     }
 
     const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = Array.isArray(out?.suggestions) ? out.suggestions : [];
+    const suggestions = isTeaser ? [] : Array.isArray(out?.suggestions) ? out.suggestions : [];
 
-    const maxLines = goDeeper ? 18 : 10;
+    const maxLines = isTeaser ? 6 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
 
     const memory = deriveMemory({
@@ -548,6 +598,17 @@ export async function POST(req: NextRequest) {
       history,
       contextSnapshot: living.snapshot,
     });
+
+    if (isTeaser) {
+      // Marqueur de consommation teaser (1/mois) persistant via facts JSONB
+      memory.facts = {
+        ...(isRecord(memory.facts) ? (memory.facts as Record<string, unknown>) : {}),
+        teaser_used: true,
+        teaser_month: monthKey,
+        teaser_plan: plan,
+      } as any;
+      memory.summary_tags = Array.from(new Set([...(memory.summary_tags || []), "teaser"]));
+    }
 
     return NextResponse.json({ ok: true, message, suggestions, memory }, { status: 200 });
   } catch (e) {
