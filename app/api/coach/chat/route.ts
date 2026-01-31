@@ -109,6 +109,78 @@ function buildContextBlock(args: {
   );
 }
 
+type CoachMemory = {
+  summary_tags: string[];
+  facts: Record<string, unknown>;
+};
+
+function pushTag(tags: Set<string>, tag: string) {
+  const t = String(tag || "").trim().toLowerCase();
+  if (!t) return;
+  tags.add(t.slice(0, 64));
+}
+
+function extractGoalEuros(text: string): string | null {
+  // Ex: "10k", "10k€/mois", "10 000", "10000€"
+  const s = text.toLowerCase();
+  const m1 = s.match(/\b(\d{1,3})\s?k\b/); // 10k
+  if (m1?.[1]) return `${m1[1]}k`;
+  const m2 = s.match(/\b(\d{2,3})\s?\.?\s?0{3}\b/); // 10000
+  if (m2?.[0]) return m2[0].replace(/\s|\./g, "");
+  const m3 = s.match(/\b(\d{1,6})\s?€\b/);
+  if (m3?.[1]) return m3[1];
+  return null;
+}
+
+function deriveMemory(args: {
+  userMessage: string;
+  assistantMessage: string;
+  history?: { role: string; content: string }[];
+}): CoachMemory {
+  const tags = new Set<string>();
+  const facts: Record<string, unknown> = {};
+
+  const merged = [args.userMessage, args.assistantMessage, ...(args.history ?? []).map((h) => h.content)].join(
+    "\n",
+  );
+  const low = merged.toLowerCase();
+
+  // Tags (simples mais utiles)
+  if (low.includes("linkedin")) pushTag(tags, "channel_linkedin");
+  if (low.includes("instagram")) pushTag(tags, "channel_instagram");
+  if (low.includes("tiktok")) pushTag(tags, "channel_tiktok");
+  if (low.includes("youtube")) pushTag(tags, "channel_youtube");
+  if (low.includes("newsletter") || low.includes("email") || low.includes("e-mail")) pushTag(tags, "channel_email");
+
+  if (low.includes("offre") || low.includes("pricing") || low.includes("prix") || low.includes("tarif"))
+    pushTag(tags, "topic_offer");
+  if (low.includes("acquisition") || low.includes("prospect") || low.includes("lead"))
+    pushTag(tags, "topic_acquisition");
+  if (low.includes("vente") || low.includes("clos") || low.includes("closing")) pushTag(tags, "topic_sales");
+
+  // Preferences / aversions
+  if (low.includes("cold call") || low.includes("appel à froid") || low.includes("appels à froid")) {
+    facts.aversion = Array.isArray(facts.aversion) ? facts.aversion : [];
+    (facts.aversion as any[]).push("cold_call");
+    pushTag(tags, "aversion_cold_call");
+  }
+
+  const goal = extractGoalEuros(merged);
+  if (goal) {
+    facts.objectif = goal;
+    pushTag(tags, "has_goal");
+  }
+
+  // Mini "last decision" heuristique : si on voit "tester" / "test" / "14 jours"
+  const decisionMatch = merged.match(/\b(tester|test|expérimenter|experimenter)\b[\s\S]{0,120}/i);
+  if (decisionMatch?.[0]) {
+    facts.decision_en_cours = decisionMatch[0].trim().slice(0, 160);
+    pushTag(tags, "has_decision");
+  }
+
+  return { summary_tags: Array.from(tags), facts };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -253,7 +325,9 @@ export async function POST(req: NextRequest) {
     const message = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
     const suggestions = Array.isArray(out?.suggestions) ? out.suggestions : [];
 
-    return NextResponse.json({ ok: true, message, suggestions }, { status: 200 });
+    const memory = deriveMemory({ userMessage, assistantMessage: message, history });
+
+    return NextResponse.json({ ok: true, message, suggestions, memory }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

@@ -4,14 +4,17 @@
 // Rôle : callback Supabase (invite / recovery / magic link)
 // - Supporte tokens en hash (#access_token=...)
 // - Supporte PKCE (?code=...)
-// - Supporte aussi token_hash (?token_hash=...&type=invite|recovery|magiclink|signup...) ✅ (fix PKCE verifier missing pour invites dashboard)
+// - Supporte aussi token_hash (?token_hash=...&type=invite|recovery|magiclink|signup...)
 // - Redirige vers la bonne page Tipote (set-password / reset-password / app)
+// - ✅ UX durable : si le lien est invalide/expiré/déjà consommé, on affiche une page Tipote + possibilité de renvoyer un lien via "mot de passe oublié" (resetPasswordForEmail).
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function parseHashParams(hash: string): Record<string, string> {
   const h = (hash || "").replace(/^#/, "").trim();
@@ -35,20 +38,32 @@ function isPkceMissingVerifierError(msg: string) {
   return m.includes("pkce") && m.includes("code verifier") && m.includes("not found");
 }
 
+function isLikelyExpiredOrInvalidLink(msg: string) {
+  const m = (msg || "").toLowerCase();
+  return (
+    m.includes("email link is invalid") ||
+    m.includes("has expired") ||
+    (m.includes("token") && (m.includes("expired") || m.includes("invalid"))) ||
+    (m.includes("otp") && m.includes("invalid")) ||
+    (m.includes("otp") && m.includes("expired")) ||
+    (m.includes("invite") && m.includes("expired"))
+  );
+}
+
 function normalizeCallbackErrorMessage(raw: string) {
   const msg = (raw || "").trim();
+  if (!msg) return "Erreur inconnue";
+
+  if (isLikelyExpiredOrInvalidLink(msg)) {
+    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
+  }
+
   const m = msg.toLowerCase();
-
-  // Cas très fréquent quand on reclique sur un lien déjà consommé / expiré
-  if (m.includes("email link is invalid") || m.includes("has expired")) {
-    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
-  }
-  if (m.includes("token") && (m.includes("expired") || m.includes("invalid"))) {
-    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
+  if (m.includes("not authenticated") || m.includes("not_authenticated")) {
+    return "Tu n’es pas connectée. Merci de relancer le lien depuis ton email.";
   }
 
-  // Fallback : on garde le message brut (utile en debug)
-  return msg || "Erreur inconnue";
+  return msg;
 }
 
 export default function CallbackClient() {
@@ -57,6 +72,12 @@ export default function CallbackClient() {
 
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [rawErrorMsg, setRawErrorMsg] = useState<string>("");
+
+  // UX durable (fallback) : permettre de renvoyer un lien de reset password
+  const [email, setEmail] = useState("");
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const [resendMsg, setResendMsg] = useState<string>("");
 
   const code = useMemo(() => (searchParams?.get("code") || "").trim(), [searchParams]);
   const tokenHash = useMemo(
@@ -176,6 +197,7 @@ export default function CallbackClient() {
       } catch (e) {
         if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Erreur inconnue";
+        setRawErrorMsg(msg);
         setStatus("error");
         setErrorMsg(normalizeCallbackErrorMessage(msg));
       }
@@ -186,7 +208,44 @@ export default function CallbackClient() {
     };
   }, [router, searchParams, code, tokenHash, type]);
 
-  // UI Tipote (même layout que /auth/set-password existant dans le repo)
+  async function handleResend(e: React.FormEvent) {
+    e.preventDefault();
+    setResendMsg("");
+    setResendStatus("idle");
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setResendStatus("failed");
+      setResendMsg("Merci de saisir un email valide.");
+      return;
+    }
+
+    setResendStatus("sending");
+    try {
+      const supabase = getSupabaseBrowserClient();
+
+      // ✅ Durable: si l’invite est expirée/déjà utilisée, on retombe sur le flow officiel "Forgot password"
+      // qui envoie un lien valide (type=recovery) et permet à l’utilisateur de définir un mot de passe.
+      const redirectTo = `${window.location.origin}/auth/callback?type=recovery`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
+      if (error) {
+        console.error("[callback] resetPasswordForEmail error", error);
+        setResendStatus("failed");
+        setResendMsg("Impossible d’envoyer le lien. Réessaie dans quelques minutes.");
+        return;
+      }
+
+      setResendStatus("sent");
+      setResendMsg("C’est envoyé ! Vérifie ta boîte mail (et les spams).");
+    } catch (err) {
+      console.error("[callback] handleResend catch", err);
+      setResendStatus("failed");
+      setResendMsg("Impossible d’envoyer le lien. Réessaie dans quelques minutes.");
+    }
+  }
+
+  // UI Tipote : même layout que /auth/set-password existant dans le repo
   if (status === "loading") {
     return (
       <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
@@ -211,6 +270,11 @@ export default function CallbackClient() {
     );
   }
 
+  const showResend =
+    isLikelyExpiredOrInvalidLink(rawErrorMsg) ||
+    (errorMsg || "").toLowerCase().includes("n’est plus valide") ||
+    (errorMsg || "").toLowerCase().includes("expire");
+
   return (
     <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
@@ -224,7 +288,50 @@ export default function CallbackClient() {
 
         <p className="text-sm text-gray-600 text-center break-words">{errorMsg || "Erreur inconnue"}</p>
 
-        <Button className="mt-6 w-full" type="button" onClick={() => router.replace("/")}>
+        {showResend && (
+          <div className="mt-6">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-700 mb-3">
+                Pas de panique : tu peux recevoir un nouveau lien pour définir ton mot de passe.
+              </p>
+
+              <form onSubmit={handleResend} className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="resend-email">Ton email</Label>
+                  <Input
+                    id="resend-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nom@domaine.com"
+                    autoComplete="email"
+                  />
+                </div>
+
+                {resendMsg && (
+                  <p
+                    className={[
+                      "text-sm rounded-md px-3 py-2 border",
+                      resendStatus === "sent"
+                        ? "text-primary bg-primary/10 border-primary/30"
+                        : resendStatus === "failed"
+                          ? "text-destructive bg-destructive/10 border-destructive/30"
+                          : "text-gray-700 bg-white border-gray-200",
+                    ].join(" ")}
+                  >
+                    {resendMsg}
+                  </p>
+                )}
+
+                <Button className="w-full" type="submit" disabled={resendStatus === "sending"}>
+                  {resendStatus === "sending" ? "Envoi…" : "Recevoir un nouveau lien"}
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <Button className="mt-6 w-full" type="button" variant="outline" onClick={() => router.replace("/")}>
           Revenir à la connexion
         </Button>
 

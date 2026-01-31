@@ -28,6 +28,7 @@ type CoachResponse = {
   ok: boolean;
   message?: string;
   suggestions?: CoachSuggestion[];
+  memory?: { summary_tags?: string[]; facts?: Record<string, unknown> };
   error?: string;
   code?: string;
 };
@@ -129,12 +130,21 @@ export function CoachWidget() {
     [input, loading, bootstrapping],
   );
 
-  async function persistOne(role: CoachRole, content: string) {
+  async function persistOne(
+    role: CoachRole,
+    content: string,
+    opts?: { summary_tags?: string[]; facts?: Record<string, unknown> },
+  ) {
     try {
       const res = await fetch("/api/coach/messages", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ role, content }),
+        body: JSON.stringify({
+          role,
+          content,
+          ...(opts?.summary_tags ? { summary_tags: opts.summary_tags } : {}),
+          ...(opts?.facts ? { facts: opts.facts } : {}),
+        }),
       });
       if (!res.ok) return null;
 
@@ -178,10 +188,8 @@ export function CoachWidget() {
         description: "C’est fait. Tipote a été mis à jour.",
       });
 
-      // retire la suggestion appliquée
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
 
-      // feedback dans le chat (premium)
       const assistantLocalId = uid();
       const msg =
         s.type === "update_tasks"
@@ -221,13 +229,11 @@ export function CoachWidget() {
     setSuggestions([]);
     setLocked(false);
 
-    // UI immédiate (optimiste)
     const userLocalId = uid();
     const userMsg: CoachMessage = { id: userLocalId, role: "user", content: text, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setLoading(true);
 
-    // Persistance best-effort du message user
     void persistOne("user", text).then((saved) => {
       if (!saved) return;
       setMessages((prev) =>
@@ -243,7 +249,6 @@ export function CoachWidget() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           message: text,
-          // On envoie un mini historique pour robustesse (au cas où persistance pas activée)
           history: messages
             .slice(-8)
             .map((m) => ({ role: m.role, content: m.content }))
@@ -300,7 +305,12 @@ export function CoachWidget() {
         ...m,
         { id: assistantLocalId, role: "assistant", content: assistantText, createdAt: Date.now() },
       ]);
-      void persistOne("assistant", assistantText);
+
+      void persistOne(
+        "assistant",
+        assistantText,
+        json?.memory ? { summary_tags: json.memory.summary_tags, facts: json.memory.facts } : undefined,
+      );
 
       setSuggestions(Array.isArray(json.suggestions) ? json.suggestions : []);
     } catch (e: any) {
@@ -325,7 +335,6 @@ export function CoachWidget() {
 
   return (
     <>
-      {/* Launcher button */}
       {!open ? (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
@@ -338,7 +347,6 @@ export function CoachWidget() {
         </div>
       ) : null}
 
-      {/* Panel */}
       {open ? (
         <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-24px)]">
           <div className="rounded-2xl border bg-background shadow-xl overflow-hidden">
