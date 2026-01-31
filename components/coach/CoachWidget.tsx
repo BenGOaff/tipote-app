@@ -63,10 +63,26 @@ function toUiMessage(m: PersistedCoachMessage): CoachMessage {
 }
 
 const QUICK_REPLIES: Array<{ id: string; label: string; message: string }> = [
-  { id: "clients", label: "Plus de clients", message: "Je veux plus de clients. C’est quoi LE plan le plus rentable là, maintenant ?" },
-  { id: "sell", label: "Vendre mieux", message: "J’ai du mal à vendre. Qu’est-ce qui bloque le plus, selon toi ?" },
-  { id: "offer", label: "Clarifier mon offre", message: "Aide-moi à clarifier mon offre pour qu’elle se vende plus facilement." },
-  { id: "week", label: "Plan de la semaine", message: "Fais-moi un plan simple pour cette semaine (priorités + séquence)." },
+  {
+    id: "clients",
+    label: "Plus de clients",
+    message: "Je veux plus de clients. C’est quoi LE plan le plus rentable là, maintenant ?",
+  },
+  {
+    id: "sell",
+    label: "Vendre mieux",
+    message: "J’ai du mal à vendre. Qu’est-ce qui bloque le plus, selon toi ?",
+  },
+  {
+    id: "offer",
+    label: "Clarifier mon offre",
+    message: "Aide-moi à clarifier mon offre pour qu’elle se vende plus facilement.",
+  },
+  {
+    id: "week",
+    label: "Plan de la semaine",
+    message: "Fais-moi un plan simple pour cette semaine (priorités + séquence).",
+  },
   { id: "deeper", label: "Go deeper", message: "go deeper" },
 ];
 
@@ -217,7 +233,13 @@ export function CoachWidget() {
       await fetch("/api/coach/actions/reject", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ suggestionId: s.id, type: s.type }),
+        body: JSON.stringify({
+          suggestionId: s.id,
+          type: s.type,
+          title: s.title,
+          description: s.description,
+          payload: s.payload,
+        }),
       }).catch(() => null);
     } finally {
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
