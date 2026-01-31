@@ -1,6 +1,7 @@
 // app/api/coach/chat/route.ts
 // Coach IA premium (Pro/Elite) : chat court + contextuel + prêt pour suggestions/actions.
-// Fix principal : endpoint manquant => 404 côté front.
+// Ajout PREMIUM : mémoire longue durée "facts/tags + last session" depuis public.coach_messages
+// (ne dépend plus uniquement du history envoyé par le front)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -171,7 +172,7 @@ function deriveMemory(args: {
     pushTag(tags, "has_goal");
   }
 
-  // Mini "last decision" heuristique : si on voit "tester" / "test" / "14 jours"
+  // Mini "last decision" heuristique
   const decisionMatch = merged.match(/\b(tester|test|expérimenter|experimenter)\b[\s\S]{0,120}/i);
   if (decisionMatch?.[0]) {
     facts.decision_en_cours = decisionMatch[0].trim().slice(0, 160);
@@ -179,6 +180,93 @@ function deriveMemory(args: {
   }
 
   return { summary_tags: Array.from(tags), facts };
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+type CoachMessageRow = {
+  role: "user" | "assistant";
+  content: string;
+  summary_tags: string[] | null;
+  facts: Record<string, unknown> | null;
+  created_at: string;
+};
+
+function buildMemoryBlock(rows: CoachMessageRow[]) {
+  // rows: DESC (most recent first)
+  const tags = new Set<string>();
+  const facts: Record<string, unknown> = {};
+  let lastAssistant: CoachMessageRow | null = null;
+  let lastDecision: string | null = null;
+  let lastGoal: string | null = null;
+
+  for (const r of rows) {
+    if (!lastAssistant && r.role === "assistant") lastAssistant = r;
+
+    if (Array.isArray(r.summary_tags)) {
+      for (const t of r.summary_tags) {
+        const s = String(t || "").trim().toLowerCase();
+        if (s) tags.add(s.slice(0, 64));
+      }
+    }
+
+    if (isRecord(r.facts)) {
+      // Merge shallow, latest wins
+      for (const [k, v] of Object.entries(r.facts)) {
+        if (facts[k] === undefined) facts[k] = v;
+      }
+
+      if (!lastDecision && typeof r.facts.decision_en_cours === "string") {
+        lastDecision = String(r.facts.decision_en_cours).trim() || null;
+      }
+      if (!lastGoal && (typeof r.facts.objectif === "string" || typeof r.facts.goal === "string")) {
+        lastGoal = String((r.facts.objectif ?? r.facts.goal) as any).trim() || null;
+      }
+    }
+  }
+
+  const lines: string[] = [];
+
+  const tagsArr = Array.from(tags).slice(0, 25);
+  if (tagsArr.length) lines.push(`- Tags: ${tagsArr.join(", ")}`);
+
+  if (lastGoal) lines.push(`- Objectif: ${lastGoal}`);
+  if (lastDecision) lines.push(`- Dernière décision: ${lastDecision}`);
+
+  const aversion = (facts as any)?.aversion;
+  if (Array.isArray(aversion) && aversion.length) {
+    lines.push(`- Aversions: ${aversion.slice(0, 5).join(", ")}`);
+  }
+
+  const coreFactsKeys = Object.keys(facts).filter((k) => !["aversion"].includes(k));
+  if (coreFactsKeys.length) {
+    // On évite un dump: juste les clés/valeurs importantes
+    const picked: string[] = [];
+    for (const k of coreFactsKeys.slice(0, 10)) {
+      const v = (facts as any)[k];
+      const vs =
+        typeof v === "string"
+          ? v
+          : typeof v === "number" || typeof v === "boolean"
+            ? String(v)
+            : Array.isArray(v)
+              ? v.slice(0, 5).map((x) => String(x)).join(", ")
+              : "";
+      if (vs) picked.push(`${k}: ${vs}`.slice(0, 160));
+    }
+    if (picked.length) lines.push(`- Facts: ${picked.join(" | ")}`);
+  }
+
+  if (lastAssistant?.content) {
+    const d = lastAssistant.created_at ? new Date(lastAssistant.created_at).toISOString().slice(0, 10) : "";
+    lines.push("");
+    lines.push(`Dernier message coach (${d}):`);
+    lines.push(lastAssistant.content.slice(0, 900));
+  }
+
+  return lines.join("\n").trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -227,6 +315,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Mémoire longue durée (best-effort): derniers messages + facts/tags
+    const memoryRes = await supabase
+      .from("coach_messages")
+      .select("role, content, summary_tags, facts, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    const memoryRows = (memoryRes.data ?? []) as CoachMessageRow[];
+    const memoryBlock = memoryRows.length ? buildMemoryBlock(memoryRows) : "";
+
     // Context Tipote (best-effort)
     const [businessProfileRes, businessPlanRes, pyramidsRes, tasksRes, contentsRes] = await Promise.all([
       supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
@@ -265,6 +364,9 @@ export async function POST(req: NextRequest) {
     const userMessage = parsed.data.message;
 
     const userPrompt = [
+      "LONG-TERM MEMORY (facts/tags + last session):",
+      memoryBlock || "(none yet)",
+      "",
       "USER CONTEXT (source of truth from Tipote DB):",
       context,
       "",
@@ -275,7 +377,7 @@ export async function POST(req: NextRequest) {
       userMessage,
     ].join("\n");
 
-    // IA owner : OpenAI si configuré, sinon Claude owner (même logique que le reste du projet)
+    // IA owner : OpenAI si configuré, sinon Claude owner
     let raw = "";
 
     if (openai) {
@@ -299,10 +401,7 @@ export async function POST(req: NextRequest) {
         "";
 
       if (!claudeKey) {
-        return NextResponse.json(
-          { ok: false, error: "Missing AI configuration (owner keys)." },
-          { status: 500 },
-        );
+        return NextResponse.json({ ok: false, error: "Missing AI configuration (owner keys)." }, { status: 500 });
       }
 
       raw = await callClaude({
