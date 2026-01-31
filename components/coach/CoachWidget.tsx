@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageCircle, Send, X, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ const QUICK_REPLIES: Array<{ id: string; label: string; message: string }> = [
 ];
 
 export function CoachWidget() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
@@ -183,7 +185,57 @@ export function CoachWidget() {
     }
   }
 
+  function getToolHref(payload: Record<string, unknown> | undefined) {
+    if (!payload) return null;
+    const href = payload["href"] ?? payload["url"] ?? payload["path"];
+    if (typeof href === "string" && href.trim()) return href.trim();
+    const tool = payload["tool"];
+    if (typeof tool === "string") {
+      const key = tool.trim().toLowerCase();
+      // Mapping minimal (pas de nouvelles routes: on s'adapte aux routes existantes)
+      const map: Record<string, string> = {
+        calendar: "/content/calendar",
+        content_calendar: "/content/calendar",
+        content: "/content",
+        tasks: "/projects",
+        project_tasks: "/projects",
+        strategy: "/strategy",
+        offer_pyramid: "/strategy/offers",
+      };
+      if (map[key]) return map[key];
+    }
+    return null;
+  }
+
   async function applySuggestion(s: CoachSuggestion) {
+    // open_tipote_tool : action UI uniquement (navigation) + log via /apply (no-op) best-effort
+    if (s.type === "open_tipote_tool") {
+      const href = getToolHref(s.payload);
+      if (!href) {
+        toast({ title: "Oups", description: "Lien de navigation manquant dans la suggestion." });
+        return;
+      }
+      setApplyingSuggestionId(s.id);
+      try {
+        await fetch("/api/coach/actions/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ suggestionId: s.id, type: s.type, payload: s.payload ?? {} }),
+        }).catch(() => null);
+      } finally {
+        setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+        toast({ title: "OK", description: "Je t’ouvre l’outil." });
+        setOpen(false);
+        try {
+          router.push(href);
+        } catch {
+          window.location.href = href;
+        }
+        setApplyingSuggestionId(null);
+      }
+      return;
+    }
+
     setApplyingSuggestionId(s.id);
     try {
       const res = await fetch("/api/coach/actions/apply", {
@@ -448,7 +500,7 @@ export function CoachWidget() {
                           disabled={!!applyingSuggestionId}
                           onClick={() => void applySuggestion(s)}
                         >
-                          {applyingSuggestionId === s.id ? "…" : "Valider"}
+                          {applyingSuggestionId === s.id ? "…" : s.type === "open_tipote_tool" ? "Ouvrir" : "Valider"}
                         </Button>
                         <Button
                           type="button"

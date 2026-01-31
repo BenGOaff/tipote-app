@@ -6,13 +6,14 @@
 // ✅ A6: Gating Free/Basic propre + 1 message teaser / mois (option)
 // ✅ A1.4: "Decision tracker" (tests 14 jours -> check-in auto "verdict ?")
 // ✅ A4 (partiel): Tipote-knowledge first (RAG simple) via match_resource_chunks (no internet yet)
+// ✅ Refacto: on réutilise lib/resources.ts (évite double implémentation embeddings/RPC)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
-import OpenAI from "openai";
+import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,73 +96,12 @@ async function callClaude(args: {
   return text || "";
 }
 
-type ResourceChunk = {
-  id?: string;
-  content?: string;
-  chunk_text?: string;
-  resource_id?: string;
-  source?: string;
-  title?: string;
-  similarity?: number;
-  metadata?: Record<string, unknown> | null;
-};
-
-function getOpenAIForEmbeddings(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY_OWNER ?? process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey });
-}
-
-async function searchTipoteKnowledge(args: {
-  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
-  query: string;
-  matchCount?: number;
-  matchThreshold?: number;
-}) {
-  const q = args.query.trim();
-  if (!q) return [];
-
-  const matchCount =
-    typeof args.matchCount === "number" && Number.isFinite(args.matchCount) && args.matchCount > 0
-      ? Math.min(Math.floor(args.matchCount), 12)
-      : 6;
-
-  const matchThreshold =
-    typeof args.matchThreshold === "number" && Number.isFinite(args.matchThreshold)
-      ? args.matchThreshold
-      : 0.55;
-
-  const client = getOpenAIForEmbeddings();
-  if (!client) return [];
-
-  const embedding = await client.embeddings.create({
-    model: "text-embedding-3-small",
-    input: q,
-  });
-
-  const queryEmbedding = embedding.data?.[0]?.embedding;
-  if (!Array.isArray(queryEmbedding) || queryEmbedding.length === 0) return [];
-
-  const { data, error } = await args.supabase.rpc("match_resource_chunks", {
-    query_embedding: queryEmbedding,
-    match_count: matchCount,
-    match_threshold: matchThreshold,
-  });
-
-  if (error) {
-    console.error("[coach/chat] match_resource_chunks error:", error);
-    return [];
-  }
-
-  return Array.isArray(data) ? (data as ResourceChunk[]) : [];
-}
-
-function formatKnowledgeBlock(chunks: ResourceChunk[]) {
+function formatKnowledgeBlock(chunks: ResourceChunkMatch[]) {
   const cleaned = (chunks ?? [])
     .map((c) => {
-      const text = String(c.content ?? c.chunk_text ?? "").trim();
+      const text = String(c.content ?? "").trim();
       const sim = typeof c.similarity === "number" ? c.similarity : null;
-      const title = String(c.title ?? c.source ?? c.resource_id ?? "").trim();
+      const title = `resource:${c.resource_id}#${c.chunk_index}`;
       if (!text) return null;
       return { text, sim, title };
     })
@@ -180,6 +120,20 @@ function formatKnowledgeBlock(chunks: ResourceChunk[]) {
   });
 
   return lines.join("\n").trim();
+}
+
+async function safeSearchTipoteKnowledge(query: string) {
+  try {
+    const res = await searchResourceChunks({
+      query,
+      matchCount: 6,
+      matchThreshold: 0.55,
+    });
+    return Array.isArray(res) ? res : [];
+  } catch {
+    // Best-effort: si pas de clés embeddings ou RPC pas dispo => pas de bloc knowledge
+    return [];
+  }
 }
 
 type CoachMemory = {
@@ -766,13 +720,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ Tipote-knowledge first (RAG simple)
     // On injecte seulement les meilleurs extraits (pas de dump, pas de liens).
-    const knowledgeChunks = await searchTipoteKnowledge({
-      supabase,
-      query: userMessage,
-      matchCount: 6,
-      matchThreshold: 0.55,
-    });
-
+    const knowledgeChunks = await safeSearchTipoteKnowledge(userMessage);
     const knowledgeBlock = formatKnowledgeBlock(knowledgeChunks);
 
     const activeExperiment = pickActiveExperiment(memoryRows);
