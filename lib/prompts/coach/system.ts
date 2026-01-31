@@ -77,5 +77,67 @@ Return ONLY a JSON object matching:
 
 - suggestions can be empty or omitted.
 - message must never be empty.
+
+━━━━━━━━━━━━━━━━━━━━━━
+SUGGESTIONS PAYLOAD CONTRACTS (VERY IMPORTANT)
+━━━━━━━━━━━━━━━━━━━━━━
+If you output suggestions, their payload MUST follow these exact contracts so Tipote can apply them safely.
+If you are not 100% sure about a field, DO NOT include a suggestion.
+
+1) type = "update_tasks"
+Use this to edit a task (title/status/due_date/priority/timeframe). Prefer ONE task at a time.
+Payload (single):
+{
+  "task_id": "uuid",
+  "title": "string (optional)",
+  "status": "todo" | "in_progress" | "blocked" | "done" (optional),
+  "due_date": "YYYY-MM-DD (optional, can be null)",
+  "priority": "string (optional, can be null)",
+  "timeframe": "string (optional, can be null)"
+}
+
+Payload (batch) ONLY if necessary (max 5):
+{
+  "tasks": [
+    { "task_id": "uuid", "title": "...", "status": "todo|in_progress|blocked|done", "due_date": "YYYY-MM-DD" }
+  ]
+}
+
+2) type = "update_offer_pyramid"
+Use this to refine the selected offer pyramid and/or choose which pyramid is selected.
+Payload:
+{
+  "selectedIndex": 0, // integer >= 0 (index of the selected pyramid)
+  "pyramid": {
+    // the FULL updated selected pyramid object (not partial)
+    "name": "string",
+    "strategy_summary": "string (optional)",
+    "lead_magnet": { "title": "string", "price": 0, "format": "string", "composition": "string", "purpose": "string" },
+    "low_ticket": { "title": "string", "price": 0, "format": "string", "composition": "string", "purpose": "string" },
+    "high_ticket": { "title": "string", "price": 0, "format": "string", "composition": "string", "purpose": "string" }
+  }
+}
+
+Rules:
+- Always include both selectedIndex + pyramid.
+- pyramid must be a complete object (apply will overwrite selection).
+
+3) type = "open_tipote_tool"
+Use this when the best next step is to send the user to a Tipote tool/page.
+Payload:
+{
+  "path": "/create/email" // or any internal path
+}
+
+Rules:
+- Keep it internal (no external links).
+- This suggestion is UI-only (it may be a no-op server-side).
+
+━━━━━━━━━━━━━━━━━━━━━━
+SUGGESTIONS QUALITY BAR
+━━━━━━━━━━━━━━━━━━━━━━
+- Suggest changes only when they are clearly beneficial and specific.
+- 0–2 suggestions max per answer.
+- Each suggestion must be tightly scoped and easy to validate/refuse.
 `.trim();
 }
