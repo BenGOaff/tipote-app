@@ -32,6 +32,8 @@ const ApplyBodySchema = z
 
 type AnyRecord = Record<string, any>;
 
+type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -59,17 +61,36 @@ function toNumber(v: unknown): number | null {
   return null;
 }
 
-function normalizeDueDate(v: unknown): string | null {
-  if (v === null) return null;
-  const s = cleanString(v, 64);
-  return s ? s : null;
+function isIsoDateYYYYMMDD(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
 
-function normalizeStatus(v: unknown): "todo" | "done" | null {
+function normalizeDueDate(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+
+  const s = cleanString(v, 64);
+  if (!s) return null;
+
+  if (isIsoDateYYYYMMDD(s)) return s;
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeStatus(v: unknown): TaskStatus | null {
   const s = cleanString(v, 32).toLowerCase();
   if (!s) return null;
-  if (s === "todo" || s === "done") return s;
-  if (s === "completed" || s === "fait" || s === "terminé" || s === "termine") return "done";
+
+  if (s === "todo") return "todo";
+  if (s === "in_progress" || s === "in progress" || s === "progress") return "in_progress";
+  if (s === "blocked" || s === "bloqué" || s === "bloque") return "blocked";
+  if (s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine") return "done";
+
   return null;
 }
 
