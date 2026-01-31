@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Send, X, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 type CoachRole = "user" | "assistant";
 
@@ -64,6 +65,7 @@ export function CoachWidget() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
+  const [applyingSuggestionId, setApplyingSuggestionId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<CoachMessage[]>([
     {
@@ -148,6 +150,69 @@ export function CoachWidget() {
     }
   }
 
+  async function applySuggestion(s: CoachSuggestion) {
+    setApplyingSuggestionId(s.id);
+    try {
+      const res = await fetch("/api/coach/actions/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          suggestionId: s.id,
+          type: s.type,
+          payload: s.payload ?? {},
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as any;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Oups",
+          description: json?.error || "Impossible d’appliquer la suggestion.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Appliqué ✅",
+        description: "C’est fait. Tipote a été mis à jour.",
+      });
+
+      // retire la suggestion appliquée
+      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+
+      // feedback dans le chat (premium)
+      const assistantLocalId = uid();
+      const msg =
+        s.type === "update_tasks"
+          ? "✅ Ok, j’ai mis à jour la tâche."
+          : s.type === "update_offer_pyramid"
+            ? "✅ Ok, j’ai mis à jour ta pyramide d’offre."
+            : "✅ Ok.";
+
+      setMessages((m) => [...m, { id: assistantLocalId, role: "assistant", content: msg, createdAt: Date.now() }]);
+      void persistOne("assistant", msg);
+    } finally {
+      setApplyingSuggestionId(null);
+    }
+  }
+
+  async function rejectSuggestion(s: CoachSuggestion) {
+    try {
+      await fetch("/api/coach/actions/reject", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ suggestionId: s.id, type: s.type }),
+      }).catch(() => null);
+    } finally {
+      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+      toast({
+        title: "Noté",
+        description: "Je garde ça en tête.",
+      });
+    }
+  }
+
   async function send() {
     if (!canSend) return;
 
@@ -193,10 +258,10 @@ export function CoachWidget() {
         if (res.status === 403 && code === "COACH_LOCKED") {
           setLocked(true);
 
-          const lockedLocalId = uid();
           const lockedText =
             "Le coach premium est dispo sur les plans **Pro** et **Elite**. Si tu veux, je te dis exactement quoi upgrader et pourquoi (en 30 secondes).";
 
+          const lockedLocalId = uid();
           setMessages((m) => [
             ...m,
             {
@@ -207,21 +272,12 @@ export function CoachWidget() {
             },
           ]);
 
-          // Persistance best-effort du message assistant (locked)
-          void persistOne("assistant", lockedText).then((saved) => {
-            if (!saved) return;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === lockedLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
-              ),
-            );
-          });
-
+          void persistOne("assistant", lockedText);
           return;
         }
 
-        const errorLocalId = uid();
         const errorText = json?.error || "Oups — j’ai eu un souci. Réessaie dans 10 secondes.";
+        const errorLocalId = uid();
 
         setMessages((m) => [
           ...m,
@@ -233,16 +289,7 @@ export function CoachWidget() {
           },
         ]);
 
-        // Persistance best-effort du message assistant (erreur)
-        void persistOne("assistant", errorText).then((saved) => {
-          if (!saved) return;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === errorLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
-            ),
-          );
-        });
-
+        void persistOne("assistant", errorText);
         return;
       }
 
@@ -253,21 +300,12 @@ export function CoachWidget() {
         ...m,
         { id: assistantLocalId, role: "assistant", content: assistantText, createdAt: Date.now() },
       ]);
-
-      // Persistance best-effort du message assistant
-      void persistOne("assistant", assistantText).then((saved) => {
-        if (!saved) return;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
-          ),
-        );
-      });
+      void persistOne("assistant", assistantText);
 
       setSuggestions(Array.isArray(json.suggestions) ? json.suggestions : []);
     } catch (e: any) {
-      const errorLocalId = uid();
       const errorText = e?.message || "Erreur réseau. Réessaie.";
+      const errorLocalId = uid();
 
       setMessages((m) => [
         ...m,
@@ -279,15 +317,7 @@ export function CoachWidget() {
         },
       ]);
 
-      // Persistance best-effort du message assistant (exception)
-      void persistOne("assistant", errorText).then((saved) => {
-        if (!saved) return;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === errorLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
-          ),
-        );
-      });
+      void persistOne("assistant", errorText);
     } finally {
       setLoading(false);
     }
@@ -366,31 +396,21 @@ export function CoachWidget() {
                         <div className="text-xs text-muted-foreground mt-1">{s.description}</div>
                       ) : null}
 
-                      {/* MVP : boutons inactifs (on branchera /api/coach/actions/apply ensuite) */}
                       <div className="mt-2 flex items-center gap-2">
                         <Button
                           type="button"
                           size="sm"
-                          onClick={() => {
-                            setMessages((m) => [
-                              ...m,
-                              {
-                                id: uid(),
-                                role: "assistant",
-                                content:
-                                  "Ok. Pour l’instant je te propose la modif — la validation 1-clic arrive juste après (apply/refuse).",
-                                createdAt: Date.now(),
-                              },
-                            ]);
-                          }}
+                          disabled={!!applyingSuggestionId}
+                          onClick={() => void applySuggestion(s)}
                         >
-                          Valider (bientôt)
+                          {applyingSuggestionId === s.id ? "…" : "Valider"}
                         </Button>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => setSuggestions((prev) => prev.filter((x) => x.id !== s.id))}
+                          disabled={!!applyingSuggestionId}
+                          onClick={() => void rejectSuggestion(s)}
                         >
                           Refuser
                         </Button>
