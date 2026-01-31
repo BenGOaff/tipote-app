@@ -31,13 +31,39 @@ type CoachResponse = {
   code?: string;
 };
 
+type PersistedCoachMessage = {
+  id: string;
+  role: CoachRole;
+  content: string;
+  created_at: string;
+};
+
+type CoachMessagesGetResponse =
+  | { ok: true; items: PersistedCoachMessage[] }
+  | { ok: false; error?: string };
+
+type CoachMessagesPostResponse =
+  | { ok: true; items: PersistedCoachMessage[] }
+  | { ok: false; error?: string };
+
 function uid() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+
+function toUiMessage(m: PersistedCoachMessage): CoachMessage {
+  const ts = Date.parse(m.created_at);
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    createdAt: Number.isFinite(ts) ? ts : Date.now(),
+  };
 }
 
 export function CoachWidget() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
 
   const [messages, setMessages] = useState<CoachMessage[]>([
     {
@@ -55,15 +81,72 @@ export function CoachWidget() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  // A1/A3 — Chargement mémoire : au moment où le widget s'ouvre (best-effort)
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    async function loadMemory() {
+      setBootstrapping(true);
+      try {
+        const res = await fetch("/api/coach/messages?limit=20", { method: "GET" });
+        const json = (await res.json().catch(() => null)) as CoachMessagesGetResponse | null;
+        if (cancelled) return;
+
+        if (res.ok && json && (json as any).ok === true) {
+          const items = (json as any).items as PersistedCoachMessage[];
+          if (Array.isArray(items) && items.length > 0) {
+            setMessages(items.map(toUiMessage));
+          }
+        }
+      } catch {
+        // best-effort : si l'API échoue, on garde la welcome message
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    }
+
+    void loadMemory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
     }, 50);
     return () => clearTimeout(t);
-  }, [open, messages.length, suggestions.length]);
+  }, [open, messages.length, suggestions.length, loading, bootstrapping]);
 
-  const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading]);
+  const canSend = useMemo(
+    () => input.trim().length > 0 && !loading && !bootstrapping,
+    [input, loading, bootstrapping],
+  );
+
+  async function persistOne(role: CoachRole, content: string) {
+    try {
+      const res = await fetch("/api/coach/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role, content }),
+      });
+      if (!res.ok) return null;
+
+      const json = (await res.json().catch(() => null)) as CoachMessagesPostResponse | null;
+      if (!json || (json as any).ok !== true) return null;
+
+      const items = (json as any).items as PersistedCoachMessage[];
+      if (!Array.isArray(items) || items.length === 0) return null;
+
+      return items[items.length - 1];
+    } catch {
+      return null;
+    }
+  }
 
   async function send() {
     if (!canSend) return;
@@ -73,9 +156,21 @@ export function CoachWidget() {
     setSuggestions([]);
     setLocked(false);
 
-    const userMsg: CoachMessage = { id: uid(), role: "user", content: text, createdAt: Date.now() };
+    // UI immédiate (optimiste)
+    const userLocalId = uid();
+    const userMsg: CoachMessage = { id: userLocalId, role: "user", content: text, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setLoading(true);
+
+    // Persistance best-effort du message user
+    void persistOne("user", text).then((saved) => {
+      if (!saved) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === userLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
+        ),
+      );
+    });
 
     try {
       const res = await fetch("/api/coach/chat", {
@@ -97,48 +192,102 @@ export function CoachWidget() {
         const code = json?.code || "";
         if (res.status === 403 && code === "COACH_LOCKED") {
           setLocked(true);
+
+          const lockedLocalId = uid();
+          const lockedText =
+            "Le coach premium est dispo sur les plans **Pro** et **Elite**. Si tu veux, je te dis exactement quoi upgrader et pourquoi (en 30 secondes).";
+
           setMessages((m) => [
             ...m,
             {
-              id: uid(),
+              id: lockedLocalId,
               role: "assistant",
-              content:
-                "Le coach premium est dispo sur les plans **Pro** et **Elite**. Si tu veux, je te dis exactement quoi upgrader et pourquoi (en 30 secondes).",
+              content: lockedText,
               createdAt: Date.now(),
             },
           ]);
+
+          // Persistance best-effort du message assistant (locked)
+          void persistOne("assistant", lockedText).then((saved) => {
+            if (!saved) return;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === lockedLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
+              ),
+            );
+          });
+
           return;
         }
+
+        const errorLocalId = uid();
+        const errorText = json?.error || "Oups — j’ai eu un souci. Réessaie dans 10 secondes.";
 
         setMessages((m) => [
           ...m,
           {
-            id: uid(),
+            id: errorLocalId,
             role: "assistant",
-            content: json?.error || "Oups — j’ai eu un souci. Réessaie dans 10 secondes.",
+            content: errorText,
             createdAt: Date.now(),
           },
         ]);
+
+        // Persistance best-effort du message assistant (erreur)
+        void persistOne("assistant", errorText).then((saved) => {
+          if (!saved) return;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === errorLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
+            ),
+          );
+        });
+
         return;
       }
 
       const assistantText = (json.message || "").trim() || "Ok. Donne-moi 1 précision et on avance.";
+
+      const assistantLocalId = uid();
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "assistant", content: assistantText, createdAt: Date.now() },
+        { id: assistantLocalId, role: "assistant", content: assistantText, createdAt: Date.now() },
       ]);
+
+      // Persistance best-effort du message assistant
+      void persistOne("assistant", assistantText).then((saved) => {
+        if (!saved) return;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
+          ),
+        );
+      });
 
       setSuggestions(Array.isArray(json.suggestions) ? json.suggestions : []);
     } catch (e: any) {
+      const errorLocalId = uid();
+      const errorText = e?.message || "Erreur réseau. Réessaie.";
+
       setMessages((m) => [
         ...m,
         {
-          id: uid(),
+          id: errorLocalId,
           role: "assistant",
-          content: e?.message || "Erreur réseau. Réessaie.",
+          content: errorText,
           createdAt: Date.now(),
         },
       ]);
+
+      // Persistance best-effort du message assistant (exception)
+      void persistOne("assistant", errorText).then((saved) => {
+        if (!saved) return;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === errorLocalId ? { ...m, id: saved.id, createdAt: Date.parse(saved.created_at) } : m,
+          ),
+        );
+      });
     } finally {
       setLoading(false);
     }
@@ -200,7 +349,7 @@ export function CoachWidget() {
                 );
               })}
 
-              {loading ? (
+              {loading || bootstrapping ? (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl rounded-bl-md px-3 py-2 text-sm text-muted-foreground">
                     …
