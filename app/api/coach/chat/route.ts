@@ -221,6 +221,25 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
     lines.push(`- Aversions: ${aversion.slice(0, 5).join(", ")}`);
   }
 
+  const rejected = (factsMerged as any)?.rejected_suggestions;
+  if (Array.isArray(rejected) && rejected.length) {
+    const items = rejected
+      .map((x: any) => {
+        const t = typeof x?.title === "string" ? x.title.trim() : "";
+        const ty = typeof x?.type === "string" ? x.type.trim() : "";
+        const why = typeof x?.reason === "string" ? x.reason.trim() : "";
+        const label = [t || "", ty ? `(${ty})` : "", why ? `— ${why}` : ""].filter(Boolean).join(" ");
+        return label.trim();
+      })
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((s: string) => s.slice(0, 140));
+
+    if (items.length) {
+      lines.push(`- Idées refusées récemment: ${items.join(" | ")}`);
+    }
+  }
+
   const coreFactsKeys = Object.keys(factsMerged).filter((k) => !["aversion", "context_snapshot"].includes(k));
   if (coreFactsKeys.length) {
     const picked: string[] = [];
@@ -270,8 +289,12 @@ function summarizeLivingContext(args: { businessProfile: any | null; planJson: a
   const lines: string[] = [];
 
   const goal =
-    (isRecord(args.planJson) && typeof (args.planJson as any).objectif === "string" && (args.planJson as any).objectif.trim()) ||
-    (isRecord(args.businessProfile) && typeof (args.businessProfile as any).goal === "string" && (args.businessProfile as any).goal.trim()) ||
+    (isRecord(args.planJson) &&
+      typeof (args.planJson as any).objectif === "string" &&
+      (args.planJson as any).objectif.trim()) ||
+    (isRecord(args.businessProfile) &&
+      typeof (args.businessProfile as any).goal === "string" &&
+      (args.businessProfile as any).goal.trim()) ||
     null;
 
   const constraints: string[] = [];
