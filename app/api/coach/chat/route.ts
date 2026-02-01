@@ -7,6 +7,7 @@
 // ✅ A1.4: "Decision tracker" (tests 14 jours -> check-in auto "verdict ?")
 // ✅ A4 (partiel): Tipote-knowledge first (RAG simple) via match_resource_chunks (no internet yet)
 // ✅ Refacto: on réutilise lib/resources.ts (évite double implémentation embeddings/RPC)
+// ✅ A2.2: Sanitization suggestions server-side (contrat payload strict) => jamais de suggestion "dangereuse"
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -35,6 +36,125 @@ const BodySchema = z
   .strict();
 
 type StoredPlan = "free" | "basic" | "pro" | "elite";
+
+type CoachSuggestionType = "update_offer_pyramid" | "update_tasks" | "open_tipote_tool";
+
+type CoachSuggestion = {
+  id: string;
+  type: CoachSuggestionType;
+  title: string;
+  description?: string;
+  payload?: Record<string, unknown>;
+};
+
+const SuggestionSchema = z
+  .object({
+    id: z.string().trim().min(1).max(128).optional(),
+    type: z.enum(["update_offer_pyramid", "update_tasks", "open_tipote_tool"]),
+    title: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(800).optional(),
+    payload: z.record(z.unknown()).optional(),
+  })
+  .strict();
+
+function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSuggestion[] {
+  if (opts.isTeaser) return [];
+  if (!Array.isArray(raw)) return [];
+
+  const out: CoachSuggestion[] = [];
+  const makeId = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+
+  const uuidLike = (v: unknown) => typeof v === "string" && /^[0-9a-fA-F-]{16,64}$/.test(v.trim());
+  const isIsoDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
+
+  for (const item of raw.slice(0, 6)) {
+    const parsed = SuggestionSchema.safeParse(item);
+    if (!parsed.success) continue;
+
+    const s = parsed.data;
+    const payload = (s.payload ?? {}) as Record<string, unknown>;
+
+    // Validate per-type payload contract (safe)
+    if (s.type === "update_tasks") {
+      const taskId = (payload as any).task_id ?? (payload as any).id;
+      if (!uuidLike(taskId)) continue;
+
+      const next: Record<string, unknown> = { task_id: String(taskId) };
+
+      if (typeof (payload as any).title === "string" && (payload as any).title.trim()) {
+        next.title = String((payload as any).title).trim().slice(0, 240);
+      }
+
+      const st = String((payload as any).status ?? "").trim();
+      if (st) {
+        const low = st.toLowerCase();
+        if (!["todo", "in_progress", "blocked", "done"].includes(low)) continue;
+        next.status = low;
+      }
+
+      if ((payload as any).due_date === null) {
+        next.due_date = null;
+      } else if (typeof (payload as any).due_date === "string" && (payload as any).due_date.trim()) {
+        const d = String((payload as any).due_date).trim();
+        if (!isIsoDate(d)) continue;
+        next.due_date = d;
+      }
+
+      if ("priority" in payload) {
+        const p = (payload as any).priority;
+        next.priority = typeof p === "string" ? p.trim().slice(0, 48) || null : null;
+      }
+
+      if ("timeframe" in payload) {
+        const tf = (payload as any).timeframe;
+        next.timeframe = typeof tf === "string" ? tf.trim().slice(0, 48) || null : null;
+      }
+
+      out.push({
+        id: s.id || makeId(),
+        type: "update_tasks",
+        title: s.title,
+        ...(s.description ? { description: s.description } : {}),
+        payload: next,
+      });
+    } else if (s.type === "update_offer_pyramid") {
+      const idx = (payload as any).selectedIndex ?? (payload as any).selected_index;
+      const pyramid = (payload as any).pyramid ?? (payload as any).selected_offer_pyramid;
+      if (typeof idx !== "number" || !Number.isFinite(idx) || idx < 0) continue;
+      if (typeof pyramid !== "object" || pyramid === null || Array.isArray(pyramid)) continue;
+
+      const p = pyramid as any;
+      if (typeof p.name !== "string" || !p.name.trim()) continue;
+      // Minimum structurel: au moins un niveau présent
+      if (!("lead_magnet" in p) && !("low_ticket" in p) && !("high_ticket" in p)) continue;
+
+      out.push({
+        id: s.id || makeId(),
+        type: "update_offer_pyramid",
+        title: s.title,
+        ...(s.description ? { description: s.description } : {}),
+        payload: { selectedIndex: idx, pyramid: p as any },
+      });
+    } else if (s.type === "open_tipote_tool") {
+      const path = (payload as any).path;
+      if (typeof path !== "string") continue;
+      const clean = path.trim();
+      if (!clean.startsWith("/")) continue;
+
+      out.push({
+        id: s.id || makeId(),
+        type: "open_tipote_tool",
+        title: s.title,
+        ...(s.description ? { description: s.description } : {}),
+        payload: { path: clean.slice(0, 240) },
+      });
+    }
+
+    if (out.length >= 2) break;
+  }
+
+  return out;
+}
 
 function normalizePlan(plan: string | null | undefined): StoredPlan {
   const s = String(plan ?? "").trim().toLowerCase();
@@ -461,12 +581,7 @@ function detectTopicHints(userMessage: string) {
   return hints;
 }
 
-function summarizeLivingContext(args: {
-  businessProfile: any | null;
-  planJson: any | null;
-  tasks: any[];
-  contents: any[];
-}) {
+function summarizeLivingContext(args: { businessProfile: any | null; planJson: any | null; tasks: any[]; contents: any[] }) {
   const lines: string[] = [];
 
   const goal =
@@ -525,9 +640,7 @@ function summarizeLivingContext(args: {
   if (constraints.length) lines.push(`- Contraintes: ${constraints.join(" • ").slice(0, 160)}`);
 
   if (offerTitle || offerPrice || offerTarget) {
-    lines.push(
-      `- Offre sélectionnée: ${[offerTitle, offerPrice, offerTarget].filter(Boolean).join(" — ").slice(0, 180)}`,
-    );
+    lines.push(`- Offre sélectionnée: ${[offerTitle, offerPrice, offerTarget].filter(Boolean).join(" — ").slice(0, 180)}`);
   } else {
     lines.push("- Offre sélectionnée: (non définie / à clarifier)");
   }
@@ -820,7 +933,7 @@ Rules:
     }
 
     const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = isTeaser ? [] : Array.isArray(out?.suggestions) ? out.suggestions : [];
+    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser });
 
     const maxLines = isTeaser ? 6 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
