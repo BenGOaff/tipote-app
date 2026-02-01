@@ -1,29 +1,26 @@
 // app/api/coach/actions/apply/route.ts
-// Applique une suggestion validée par l'user (coach "modifie la réalité").
-//
-// ✅ Double ceinture: re-validate + sanitize server-side (même si /chat a filtré)
-// ✅ Ownership: user_id enforced (jamais cross-user)
-// ✅ update_tasks: single + batch (payload.tasks[])
-// ✅ update_offer_pyramid: business_plan.plan_json + best-effort sync offer_pyramids (delete+insert)
-// ✅ Log mémoire: coach_messages.facts.applied_suggestion (continuité premium)
-// ✅ Backward compatible: accepte body "legacy" ET body "suggestion"
+// Apply endpoint: exécute une suggestion validée par l'utilisateur
+// ✅ Anti-régression: support ancien format + nouveau format
+// ✅ Double ceinture: re-validate + sanitize server-side (même si /chat a déjà filtré)
+// ✅ update_tasks: single + batch
+// ✅ update_offer_pyramid: business_plan.plan_json + compat legacy + sync offer_pyramids delete+insert
+// ✅ Log "applied_suggestion" dans coach_messages (facts) pour mémoire long terme
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-
-// 👉 Si tu as déjà un client admin centralisé, garde-le (recommandé)
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-// Sinon, tu peux revenir au createClient(...) inline comme dans ton code court.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+// -------------------- SCHEMAS --------------------
+
 const SuggestionTypeSchema = z.enum(["update_offer_pyramid", "update_tasks", "open_tipote_tool"]);
 type SuggestionType = z.infer<typeof SuggestionTypeSchema>;
 
-const NewBodySchema = z
+const NewApplyBodySchema = z
   .object({
     suggestion: z
       .object({
@@ -37,7 +34,7 @@ const NewBodySchema = z
   })
   .strict();
 
-const LegacyBodySchema = z
+const LegacyApplyBodySchema = z
   .object({
     type: SuggestionTypeSchema,
     payload: z.record(z.unknown()).optional(),
@@ -47,10 +44,7 @@ const LegacyBodySchema = z
   })
   .strict();
 
-const ApplyBodySchema = z.union([NewBodySchema, LegacyBodySchema]);
-
 type AnyRecord = Record<string, any>;
-type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -62,10 +56,10 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-function cleanString(v: unknown, maxLen = 240): string {
+function cleanString(v: unknown, max = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
   if (!s) return "";
-  return s.length > maxLen ? s.slice(0, maxLen) : s;
+  return s.length > max ? s.slice(0, max) : s;
 }
 
 function uuidLike(v: unknown): v is string {
@@ -74,8 +68,19 @@ function uuidLike(v: unknown): v is string {
   return /^[0-9a-fA-F-]{16,64}$/.test(s);
 }
 
-function isIsoYYYYMMDD(v: string): boolean {
+function isIsoDateYYYYMMDD(v: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
+function normalizeStatus(v: unknown): TaskStatus | null {
+  const s = cleanString(v, 32).toLowerCase();
+  if (!s) return null;
+  if (s === "todo") return "todo";
+  if (s === "in_progress" || s === "in progress" || s === "progress") return "in_progress";
+  if (s === "blocked" || s === "bloqué" || s === "bloque") return "blocked";
+  if (s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine") return "done";
+  return null;
 }
 
 function normalizeDueDate(v: unknown): string | null {
@@ -83,7 +88,8 @@ function normalizeDueDate(v: unknown): string | null {
 
   const s = cleanString(v, 64);
   if (!s) return null;
-  if (isIsoYYYYMMDD(s)) return s;
+
+  if (isIsoDateYYYYMMDD(s)) return s;
 
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
@@ -92,18 +98,6 @@ function normalizeDueDate(v: unknown): string | null {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-function normalizeStatus(v: unknown): TaskStatus | null {
-  const s = cleanString(v, 32).toLowerCase();
-  if (!s) return null;
-
-  if (s === "todo") return "todo";
-  if (s === "in_progress" || s === "in progress" || s === "progress") return "in_progress";
-  if (s === "blocked" || s === "bloqué" || s === "bloque") return "blocked";
-  if (s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine") return "done";
-
-  return null;
 }
 
 function toNumber(v: unknown): number | null {
@@ -117,8 +111,7 @@ function toNumber(v: unknown): number | null {
 
 function compactPayload(payload: Record<string, unknown> | undefined) {
   if (!payload || !isRecord(payload)) return null;
-
-  const keys = Object.keys(payload).slice(0, 20);
+  const keys = Object.keys(payload).slice(0, 16);
   const out: Record<string, unknown> = {};
   for (const k of keys) {
     const v = (payload as any)[k];
@@ -126,21 +119,58 @@ function compactPayload(payload: Record<string, unknown> | undefined) {
     else if (typeof v === "string") out[k] = v.slice(0, 400);
     else if (typeof v === "number" || typeof v === "boolean") out[k] = v;
     else if (Array.isArray(v)) out[k] = v.slice(0, 10);
-    else if (isRecord(v)) out[k] = Object.keys(v).slice(0, 15);
+    else if (isRecord(v)) out[k] = Object.keys(v).slice(0, 12);
   }
   return out;
 }
 
+// -------------------- NORMALIZE INPUT (NEW OR LEGACY) --------------------
+
+type NormalizedApply = {
+  type: SuggestionType;
+  payload: AnyRecord;
+  suggestionId?: string;
+  title?: string;
+  description?: string;
+};
+
+function normalizeApplyBody(rawBody: unknown): NormalizedApply | null {
+  const newParsed = NewApplyBodySchema.safeParse(rawBody);
+  if (newParsed.success) {
+    const s = newParsed.data.suggestion;
+    return {
+      type: s.type,
+      payload: (asRecord(s.payload) ?? {}) as AnyRecord,
+      suggestionId: s.id,
+      title: s.title,
+      description: s.description,
+    };
+  }
+
+  const legacyParsed = LegacyApplyBodySchema.safeParse(rawBody);
+  if (!legacyParsed.success) return null;
+
+  return {
+    type: legacyParsed.data.type,
+    payload: (asRecord(legacyParsed.data.payload) ?? {}) as AnyRecord,
+    suggestionId: legacyParsed.data.suggestionId,
+    title: legacyParsed.data.title,
+    description: legacyParsed.data.description,
+  };
+}
+
+// -------------------- LOG MEMORY --------------------
+
 async function logApplied(args: {
   userId: string;
   type: SuggestionType;
-  suggestionId?: string | null;
-  title?: string | null;
-  description?: string | null;
+  suggestionId?: string;
+  title?: string;
+  description?: string;
   payload?: Record<string, unknown>;
   result?: Record<string, unknown>;
 }) {
-  // Best-effort: ne doit jamais casser apply
+  // Best-effort: ne jamais casser l’apply si le log échoue
   try {
     const title = cleanString(args.title, 160);
     const base =
@@ -176,11 +206,12 @@ async function logApplied(args: {
   }
 }
 
+// -------------------- TASKS --------------------
+
 async function applySingleTaskUpdate(args: { userId: string; taskId: string; patch: AnyRecord }) {
   const { userId, taskId, patch } = args;
-
-  // enforce ownership + update
   const nowIso = new Date().toISOString();
+
   const { data, error } = await supabaseAdmin
     .from("project_tasks")
     .update({ ...patch, updated_at: nowIso })
@@ -194,13 +225,16 @@ async function applySingleTaskUpdate(args: { userId: string; taskId: string; pat
   return { ok: true as const, task: data };
 }
 
-function buildTaskPatch(raw: AnyRecord): AnyRecord | null {
+function sanitizeTaskPatch(raw: AnyRecord): { taskId: string; patch: AnyRecord } | null {
+  const taskId = cleanString(raw.task_id ?? raw.id, 128);
+  if (!taskId || !uuidLike(taskId)) return null;
+
   const patch: AnyRecord = {};
 
   if ("title" in raw) {
-    const title = cleanString(raw.title, 240);
-    if (!title) return null;
-    patch.title = title;
+    const t = cleanString(raw.title, 240);
+    if (!t) return null;
+    patch.title = t;
   }
 
   if ("due_date" in raw) patch.due_date = normalizeDueDate(raw.due_date);
@@ -218,11 +252,13 @@ function buildTaskPatch(raw: AnyRecord): AnyRecord | null {
   }
 
   if (Object.keys(patch).length === 0) return null;
-  return patch;
+  return { taskId, patch };
 }
 
+// -------------------- OFFER PYRAMID --------------------
+
 async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRecord }) {
-  // Best-effort sync: replace offer_pyramids rows from selected pyramid
+  // Best-effort sync: delete + insert (comme l’ancien code)
   const { userId, pyramid } = args;
   const now = new Date().toISOString();
 
@@ -234,9 +270,9 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
     const format = cleanString(offer.format, 180);
     const composition = cleanString(offer.composition, 2000);
     const purpose = cleanString(offer.purpose, 800) || cleanString(offer.promise, 800);
-    const delivery = cleanString(offer.insight, 800) || cleanString(offer.delivery, 800);
+    const insight = cleanString(offer.insight, 800) || cleanString(offer.delivery, 800);
+    const price = toNumber(offer.price ?? offer.price_min ?? offer.priceMax ?? offer.price_max);
 
-    const price = toNumber(offer.price ?? offer.price_min ?? offer.price_max ?? offer.priceMax);
     return {
       user_id: userId,
       level,
@@ -244,7 +280,7 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
       description: cleanString(`${pyramidSummary}\n\n${composition}`, 4000),
       promise: purpose,
       format,
-      delivery,
+      delivery: insight,
       ...(price !== null ? { price_min: price, price_max: price } : {}),
       main_outcome: purpose,
       is_flagship: true,
@@ -263,13 +299,31 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
   if (!rows.length) return;
 
   try {
-    // table may not exist => ignore errors
     await supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
     await supabaseAdmin.from("offer_pyramids").insert(rows);
   } catch {
-    // ignore
+    // silent best-effort
   }
 }
+
+function sanitizeOfferPyramidPayload(payload: AnyRecord) {
+  const selectedIndexRaw = payload.selectedIndex ?? payload.selected_index;
+  const pyramidRaw = payload.pyramid ?? payload.selected_offer_pyramid;
+
+  const selectedIndex = toNumber(selectedIndexRaw);
+  if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) return null;
+
+  const pyramid = asRecord(pyramidRaw);
+  if (!pyramid) return null;
+
+  // minimum viable : un nom
+  const name = cleanString(pyramid.name ?? pyramid.title, 180);
+  if (!name) return null;
+
+  return { selectedIndex: Math.floor(selectedIndex), pyramid };
+}
+
+// -------------------- ROUTE --------------------
 
 export async function POST(req: NextRequest) {
   try {
@@ -283,66 +337,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    let raw: unknown = null;
+    let rawBody: unknown = null;
     try {
-      raw = await req.json();
+      rawBody = await req.json();
     } catch {
-      raw = null;
+      rawBody = null;
     }
 
-    const parsed = ApplyBodySchema.safeParse(raw);
-    if (!parsed.success) {
+    const normalized = normalizeApplyBody(rawBody);
+    if (!normalized) {
       return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
     }
 
-    // Normalize to one internal shape
-    const normalized = (() => {
-      const d: any = parsed.data as any;
-      if ("suggestion" in d) {
-        return {
-          type: d.suggestion.type as SuggestionType,
-          payload: (d.suggestion.payload ?? {}) as Record<string, unknown>,
-          suggestionId: d.suggestion.id as string,
-          title: d.suggestion.title as string,
-          description: (d.suggestion.description ?? "") as string,
-        };
-      }
-      return {
-        type: d.type as SuggestionType,
-        payload: (d.payload ?? {}) as Record<string, unknown>,
-        suggestionId: (d.suggestionId ?? null) as string | null,
-        title: (d.title ?? null) as string | null,
-        description: (d.description ?? null) as string | null,
-      };
-    })();
-
     const { type, payload, suggestionId, title, description } = normalized;
 
-    // ------------------------------------------------------------
-    // 1) update_tasks (single or batch)
-    // ------------------------------------------------------------
+    // ---------------- update_tasks (single + batch) ----------------
     if (type === "update_tasks") {
       const p = asRecord(payload);
       if (!p) return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
 
-      // Batch mode: payload.tasks = [{ task_id/id, ...patch }]
-      const tasksArr = asArray(p.tasks);
+      // Batch mode: payload.tasks = [...]
+      const tasksArr = asArray((p as AnyRecord).tasks);
       if (tasksArr.length) {
         const updates = tasksArr.map(asRecord).filter(Boolean).slice(0, 20) as AnyRecord[];
-        if (!updates.length) return NextResponse.json({ ok: false, error: "Invalid tasks batch" }, { status: 400 });
+        if (!updates.length) {
+          return NextResponse.json({ ok: false, error: "Invalid tasks batch" }, { status: 400 });
+        }
 
         const results: AnyRecord[] = [];
         for (const t of updates) {
-          const taskIdRaw = t.task_id ?? t.id;
-          const taskId = typeof taskIdRaw === "string" ? taskIdRaw.trim() : "";
-          if (!taskId || !uuidLike(taskId)) {
-            return NextResponse.json({ ok: false, error: "Invalid task_id in batch" }, { status: 400 });
+          const sanitized = sanitizeTaskPatch(t);
+          if (!sanitized) {
+            return NextResponse.json({ ok: false, error: "Invalid task patch in batch" }, { status: 400 });
           }
 
-          const patch = buildTaskPatch(t);
-          if (!patch) continue;
-
-          const r = await applySingleTaskUpdate({ userId: user.id, taskId, patch });
+          const r = await applySingleTaskUpdate({ userId: user.id, taskId: sanitized.taskId, patch: sanitized.patch });
           if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
           results.push(r.task);
         }
@@ -351,9 +380,9 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           type,
           suggestionId,
-          title: title ?? undefined,
-          description: description ?? undefined,
-          payload: payload as any,
+          title,
+          description,
+          payload: p,
           result: { tasks: results },
         });
 
@@ -361,48 +390,36 @@ export async function POST(req: NextRequest) {
       }
 
       // Single mode
-      const taskIdRaw = p.task_id ?? p.id;
-      const taskId = typeof taskIdRaw === "string" ? taskIdRaw.trim() : "";
-      if (!taskId || !uuidLike(taskId)) {
-        return NextResponse.json({ ok: false, error: "Invalid task_id" }, { status: 400 });
+      const sanitized = sanitizeTaskPatch(p);
+      if (!sanitized) {
+        return NextResponse.json({ ok: false, error: "Invalid update_tasks payload" }, { status: 400 });
       }
 
-      const patch = buildTaskPatch(p);
-      if (!patch) return NextResponse.json({ ok: false, error: "No valid fields to update" }, { status: 400 });
-
-      const r = await applySingleTaskUpdate({ userId: user.id, taskId, patch });
+      const r = await applySingleTaskUpdate({ userId: user.id, taskId: sanitized.taskId, patch: sanitized.patch });
       if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
 
       await logApplied({
         userId: user.id,
         type,
         suggestionId,
-        title: title ?? undefined,
-        description: description ?? undefined,
-        payload: payload as any,
+        title,
+        description,
+        payload: p,
         result: { task: r.task },
       });
 
       return NextResponse.json({ ok: true, type, result: { task: r.task } }, { status: 200 });
     }
 
-    // ------------------------------------------------------------
-    // 2) update_offer_pyramid
-    // ------------------------------------------------------------
+    // ---------------- update_offer_pyramid ----------------
     if (type === "update_offer_pyramid") {
       const p = asRecord(payload);
       if (!p) return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
 
-      const selectedIndexRaw = p.selectedIndex ?? p.selected_index;
-      const pyramidRaw = p.pyramid ?? p.selected_offer_pyramid;
-
-      const selectedIndex = toNumber(selectedIndexRaw);
-      if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) {
-        return NextResponse.json({ ok: false, error: "Invalid selectedIndex" }, { status: 400 });
+      const clean = sanitizeOfferPyramidPayload(p);
+      if (!clean) {
+        return NextResponse.json({ ok: false, error: "Invalid update_offer_pyramid payload" }, { status: 400 });
       }
-
-      const pyramid = asRecord(pyramidRaw);
-      if (!pyramid) return NextResponse.json({ ok: false, error: "Invalid pyramid" }, { status: 400 });
 
       const { data: planRow, error: planErr } = await supabaseAdmin
         .from("business_plan")
@@ -417,11 +434,12 @@ export async function POST(req: NextRequest) {
 
       const nextPlanJson: AnyRecord = {
         ...planJson,
-        selected_offer_pyramid_index: selectedIndex,
-        selected_offer_pyramid: pyramid,
+        selected_offer_pyramid_index: clean.selectedIndex,
+        selected_offer_pyramid: clean.pyramid,
+
         // compat legacy
-        selected_pyramid_index: selectedIndex,
-        selected_pyramid: pyramid,
+        selected_pyramid_index: clean.selectedIndex,
+        selected_pyramid: clean.pyramid,
       };
 
       const { data, error } = await supabaseAdmin
@@ -434,39 +452,45 @@ export async function POST(req: NextRequest) {
       if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
       if (!data) return NextResponse.json({ ok: false, error: "Business plan not found" }, { status: 404 });
 
-      // Best-effort sync offer_pyramids (si table existe)
-      void syncOfferPyramidsFlagship({ userId: user.id, pyramid });
+      // Best-effort sync offer_pyramids (delete+insert)
+      void syncOfferPyramidsFlagship({ userId: user.id, pyramid: clean.pyramid });
 
       await logApplied({
         userId: user.id,
         type,
         suggestionId,
-        title: title ?? undefined,
-        description: description ?? undefined,
-        payload: payload as any,
-        result: { selected_offer_pyramid_index: selectedIndex },
+        title,
+        description,
+        payload: p,
+        result: { selected_offer_pyramid_index: clean.selectedIndex },
       });
 
       return NextResponse.json(
-        { ok: true, type, result: { selected_offer_pyramid_index: selectedIndex } },
+        { ok: true, type, result: { selected_offer_pyramid_index: clean.selectedIndex } },
         { status: 200 },
       );
     }
 
-    // ------------------------------------------------------------
-    // 3) open_tipote_tool (no-op backend)
-    // ------------------------------------------------------------
+    // ---------------- open_tipote_tool ----------------
+    // no-op DB, UI only (mais on log)
+    const p = asRecord(payload) ?? {};
+    const path = cleanString((p as any).path, 240);
+
+    if (path && !path.startsWith("/")) {
+      return NextResponse.json({ ok: false, error: "Invalid open_tipote_tool payload" }, { status: 400 });
+    }
+
     await logApplied({
       userId: user.id,
       type,
       suggestionId,
-      title: title ?? undefined,
-      description: description ?? undefined,
-      payload: payload as any,
-      result: { noop: true },
+      title,
+      description,
+      payload: p,
+      result: path ? { path } : { noop: true },
     });
 
-    return NextResponse.json({ ok: true, type, result: { noop: true } }, { status: 200 });
+    return NextResponse.json({ ok: true, type, result: path ? { path } : { noop: true } }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
