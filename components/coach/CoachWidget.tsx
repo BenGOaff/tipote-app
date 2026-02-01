@@ -265,6 +265,7 @@ export function CoachWidget() {
 
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
 
+      // Micro feedback conversationnel (sans relancer le coach)
       const assistantLocalId = uid();
       const msg =
         s.type === "update_tasks"
@@ -275,12 +276,33 @@ export function CoachWidget() {
 
       setMessages((m) => [...m, { id: assistantLocalId, role: "assistant", content: msg, createdAt: Date.now() }]);
       void persistOne("assistant", msg);
+
+      // 🔁 Important: si l’utilisateur est déjà sur la page concernée, on force un refresh soft.
+      // (sans toucher au layout, best-effort)
+      try {
+        router.refresh();
+      } catch {
+        // ignore
+      }
     } finally {
       setApplyingSuggestionId(null);
     }
   }
 
   async function rejectSuggestion(s: CoachSuggestion) {
+    // Raison optionnelle (premium): on garde une trace pour éviter de reproposer le même truc.
+    // Aucun changement UI structurel: on utilise un prompt natif best-effort.
+    let reason: string | undefined = undefined;
+    try {
+      const r = window.prompt("Pourquoi tu refuses ? (optionnel)", "");
+      if (typeof r === "string") {
+        const clean = r.trim();
+        if (clean) reason = clean.slice(0, 500);
+      }
+    } catch {
+      // ignore
+    }
+
     try {
       await fetch("/api/coach/actions/reject", {
         method: "POST",
@@ -291,13 +313,14 @@ export function CoachWidget() {
           title: s.title,
           description: s.description,
           payload: s.payload,
+          ...(reason ? { reason } : {}),
         }),
       }).catch(() => null);
     } finally {
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
       toast({
         title: "Noté",
-        description: "Je garde ça en tête.",
+        description: reason ? "Je garde ta raison en tête." : "Je garde ça en tête.",
       });
     }
   }
@@ -446,9 +469,7 @@ export function CoachWidget() {
                 </div>
                 <div className="leading-tight">
                   <div className="font-semibold">Coach Tipote</div>
-                  <div className="text-xs text-muted-foreground">
-                    Ton pote business (stratégie • vente • acquisition)
-                  </div>
+                  <div className="text-xs text-muted-foreground">Ton pote business (stratégie • vente • acquisition)</div>
                 </div>
               </div>
 
@@ -489,9 +510,7 @@ export function CoachWidget() {
                   {suggestions.map((s) => (
                     <div key={s.id} className="rounded-xl border bg-card p-3">
                       <div className="font-medium text-sm">{s.title}</div>
-                      {s.description ? (
-                        <div className="text-xs text-muted-foreground mt-1">{s.description}</div>
-                      ) : null}
+                      {s.description ? <div className="text-xs text-muted-foreground mt-1">{s.description}</div> : null}
 
                       <div className="mt-2 flex items-center gap-2">
                         <Button
