@@ -5,9 +5,9 @@
 // ✅ Micro-réponses : hard limit (3–10 lignes) + mode "go deeper"
 // ✅ A6: Gating Free/Basic propre + 1 message teaser / mois (option)
 // ✅ A1.4: "Decision tracker" (tests 14 jours -> check-in auto "verdict ?")
-// ✅ A4 (partiel): Tipote-knowledge first (RAG simple) via match_resource_chunks (no internet yet)
-// ✅ Refacto: on réutilise lib/resources.ts (évite double implémentation embeddings/RPC)
-// ✅ A2.2: Sanitization suggestions server-side (contrat payload strict) => jamais de suggestion "dangereuse"
+// ✅ A4 (partiel): Tipote-knowledge first (RAG simple) via lib/resources.ts (no internet yet)
+// ✅ Contrat fort suggestions côté /chat (sanitization stricte)
+// ✅ Remontée refus + dernière action appliquée via memoryBlock (facts: rejected_suggestions / applied_suggestion)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -150,6 +150,7 @@ function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSu
       });
     }
 
+    // UX: on limite à 2 suggestions max pour rester “premium” et actionnable
     if (out.length >= 2) break;
   }
 
@@ -251,7 +252,7 @@ async function safeSearchTipoteKnowledge(query: string) {
     });
     return Array.isArray(res) ? res : [];
   } catch {
-    // Best-effort: si pas de clés embeddings ou RPC pas dispo => pas de bloc knowledge
+    // Best-effort: si embeddings / RPC pas dispo => pas de bloc knowledge
     return [];
   }
 }
@@ -297,14 +298,12 @@ function uidLite() {
 function parseDurationDays(text: string): number | null {
   const s = text.toLowerCase();
 
-  // "14 jours"
   const mDays = s.match(/\b(\d{1,3})\s*(jour|jours)\b/);
   if (mDays?.[1]) {
     const n = Number(mDays[1]);
     return Number.isFinite(n) && n > 0 ? Math.min(n, 365) : null;
   }
 
-  // "2 semaines"
   const mWeeks = s.match(/\b(\d{1,2})\s*(semaine|semaines)\b/);
   if (mWeeks?.[1]) {
     const n = Number(mWeeks[1]);
@@ -316,7 +315,6 @@ function parseDurationDays(text: string): number | null {
 }
 
 function extractExperimentTitle(text: string): string | null {
-  // Heuristique: prend ce qui suit "tester" jusqu'à 80 chars / fin phrase
   const m = text.match(/\b(tester|test|expérimenter|experimenter)\b\s+([\s\S]{0,120})/i);
   if (!m?.[2]) return null;
 
@@ -325,7 +323,6 @@ function extractExperimentTitle(text: string): string | null {
     .replace(/[\n\r]+/g, " ")
     .trim();
 
-  // Stop sur ponctuation
   t = t.split(/[\.!\?\:]/)[0]?.trim() ?? t;
 
   if (!t) return null;
@@ -437,8 +434,6 @@ function deriveMemory(args: {
     pushTag(tags, "has_decision");
   }
 
-  // Expériences / tests (ex: "tester X pendant 14 jours")
-  // On stocke une structure simple pour pouvoir faire un check-in automatique plus tard.
   const exp = parseExperimentFromText(merged);
   if (exp) {
     facts.experiments = Array.isArray((facts as any).experiments) ? (facts as any).experiments : [];
@@ -517,6 +512,7 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
     lines.push(`- Aversions: ${aversion.slice(0, 5).join(", ")}`);
   }
 
+  // ✅ Remontée refus + raison (“ok, je ne te repropose pas X, tu as refusé car …”)
   const rejected = (factsMerged as any)?.rejected_suggestions;
   if (Array.isArray(rejected) && rejected.length) {
     const items = rejected
@@ -531,12 +527,27 @@ function buildMemoryBlock(rows: CoachMessageRow[]) {
       .slice(0, 3)
       .map((s: string) => s.slice(0, 140));
 
-    if (items.length) {
-      lines.push(`- Idées refusées récemment: ${items.join(" | ")}`);
-    }
+    if (items.length) lines.push(`- Idées refusées récemment: ${items.join(" | ")}`);
   }
 
-  const coreFactsKeys = Object.keys(factsMerged).filter((k) => !["aversion", "context_snapshot"].includes(k));
+  // ✅ Dernière action appliquée (pour continuité premium)
+  const applied = (factsMerged as any)?.applied_suggestion;
+  if (isRecord(applied)) {
+    const a = applied as any;
+    const t = typeof a?.title === "string" ? a.title.trim() : "";
+    const ty = typeof a?.type === "string" ? a.type.trim() : "";
+    const at = typeof a?.at === "string" ? a.at.trim() : "";
+    const why = typeof a?.description === "string" ? a.description.trim() : "";
+    const label = [t || "action appliquée", ty ? `(${ty})` : "", at ? `— ${at.slice(0, 10)}` : ""]
+      .filter(Boolean)
+      .join(" ");
+    lines.push(`- Dernière action appliquée: ${label}`.slice(0, 220));
+    if (why) lines.push(`  ↳ ${why}`.slice(0, 220));
+  }
+
+  const coreFactsKeys = Object.keys(factsMerged).filter(
+    (k) => !["aversion", "context_snapshot", "applied_suggestion", "rejected_suggestions"].includes(k),
+  );
   if (coreFactsKeys.length) {
     const picked: string[] = [];
     for (const k of coreFactsKeys.slice(0, 10)) {
@@ -750,13 +761,10 @@ export async function POST(req: NextRequest) {
     const locale = safeLocale((profileRow as any)?.locale);
 
     // ✅ Gating + teaser (Free/Basic)
-    // - Pro/Elite: accès complet
-    // - Free/Basic: 1 message "teaser" / mois (option), puis lock propre
     const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
     let isTeaser = false;
 
     if (plan !== "pro" && plan !== "elite") {
-      // Best-effort check: déjà utilisé ce mois ?
       const usedRes = await supabase
         .from("coach_messages")
         .select("id")
@@ -778,7 +786,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Autorise 1 message teaser
       isTeaser = true;
     }
 
@@ -831,8 +838,6 @@ export async function POST(req: NextRequest) {
     const changedBlock = diffSnapshots(lastSnapshot, living.snapshot);
     const topicHints = detectTopicHints(userMessage);
 
-    // ✅ Tipote-knowledge first (RAG simple)
-    // On injecte seulement les meilleurs extraits (pas de dump, pas de liens).
     const knowledgeChunks = await safeSearchTipoteKnowledge(userMessage);
     const knowledgeBlock = formatKnowledgeBlock(knowledgeChunks);
 
@@ -856,7 +861,7 @@ TIPOTE-KNOWLEDGE RULES:
 
     const system = isTeaser
       ? `${systemBase}${knowledgeRules}
-      
+
 MODE: TEASER (Free/Basic).
 Rules:
 - 3–6 lines max.
@@ -946,7 +951,6 @@ Rules:
     });
 
     if (isTeaser) {
-      // Marqueur de consommation teaser (1/mois) persistant via facts JSONB
       memory.facts = {
         ...(isRecord(memory.facts) ? (memory.facts as Record<string, unknown>) : {}),
         teaser_used: true,
