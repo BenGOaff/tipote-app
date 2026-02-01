@@ -11,6 +11,8 @@
 // - update_offer_pyramid: met à jour business_plan.plan_json.selected_offer_pyramid_index + selected_offer_pyramid
 //    + best-effort sync offer_pyramids (delete+insert 3 rows) pour refléter rename/précision/restructure
 // - open_tipote_tool: no-op (UI only)
+//
+// ✅ Premium memory: on log en base un message assistant "applied" (coach_messages) pour continuité.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -27,6 +29,8 @@ const ApplyBodySchema = z
     type: SuggestionTypeSchema,
     payload: z.record(z.unknown()).optional(),
     suggestionId: z.string().trim().min(1).max(128).optional(),
+    title: z.string().trim().max(200).optional(),
+    description: z.string().trim().max(800).optional(),
   })
   .strict();
 
@@ -92,6 +96,73 @@ function normalizeStatus(v: unknown): TaskStatus | null {
   if (s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine") return "done";
 
   return null;
+}
+
+function compactPayload(payload: Record<string, unknown> | undefined) {
+  // On garde un payload "léger" (évite de gonfler facts)
+  if (!payload || !isRecord(payload)) return null;
+
+  const keys = Object.keys(payload).slice(0, 12);
+  const out: Record<string, unknown> = {};
+  for (const k of keys) {
+    const v = (payload as any)[k];
+    if (v === null) out[k] = null;
+    else if (typeof v === "string") out[k] = v.slice(0, 240);
+    else if (typeof v === "number" || typeof v === "boolean") out[k] = v;
+    else if (Array.isArray(v)) out[k] = v.slice(0, 6);
+    else if (isRecord(v)) out[k] = Object.keys(v).slice(0, 10);
+  }
+  return out;
+}
+
+async function logApplied(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+  type: "update_offer_pyramid" | "update_tasks" | "open_tipote_tool";
+  suggestionId?: string;
+  title?: string;
+  description?: string;
+  payload?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+}) {
+  // Best-effort: on log un message assistant qui nourrit la mémoire longue durée.
+  try {
+    const title = cleanString(args.title, 160);
+    const base =
+      args.type === "update_tasks"
+        ? "✅ J’ai appliqué la mise à jour de tâche."
+        : args.type === "update_offer_pyramid"
+          ? "✅ J’ai appliqué la mise à jour de ta pyramide d’offre."
+          : "✅ Ok, je t’ai ouvert l’outil.";
+
+    const content = title ? `${base}\n(${title})` : base;
+
+    const facts: Record<string, unknown> = {
+      applied_suggestion: {
+        id: args.suggestionId ?? null,
+        type: args.type,
+        title: title || null,
+        description: cleanString(args.description, 400) || null,
+        at: new Date().toISOString(),
+        payload: compactPayload(args.payload),
+        result: compactPayload(args.result),
+      },
+    };
+
+    const tags = ["applied", args.type];
+
+    await args.supabase.from("coach_messages").insert([
+      {
+        user_id: args.userId,
+        role: "assistant",
+        content,
+        summary_tags: tags,
+        facts,
+      },
+    ]);
+  } catch {
+    // ignore
+  }
 }
 
 async function applySingleTaskUpdate(args: { userId: string; taskId: string; patch: AnyRecord }) {
@@ -190,7 +261,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
     }
 
-    const { type } = parsed.data;
+    const { type, suggestionId, title, description } = parsed.data;
     const payload = parsed.data.payload ?? {};
 
     // ------------------------------------------------------------
@@ -247,6 +318,17 @@ export async function POST(req: NextRequest) {
           results.push(r.task);
         }
 
+        await logApplied({
+          supabase,
+          userId: user.id,
+          type,
+          suggestionId,
+          title,
+          description,
+          payload: payload as any,
+          result: { tasks: results },
+        });
+
         return NextResponse.json({ ok: true, type, result: { tasks: results } }, { status: 200 });
       }
 
@@ -282,6 +364,17 @@ export async function POST(req: NextRequest) {
 
       const r = await applySingleTaskUpdate({ userId: user.id, taskId, patch });
       if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
+
+      await logApplied({
+        supabase,
+        userId: user.id,
+        type,
+        suggestionId,
+        title,
+        description,
+        payload: payload as any,
+        result: { task: r.task },
+      });
 
       return NextResponse.json({ ok: true, type, result: { task: r.task } }, { status: 200 });
     }
@@ -338,12 +431,37 @@ export async function POST(req: NextRequest) {
       // ✅ Best-effort sync offer_pyramids
       void syncOfferPyramidsFlagship({ userId: user.id, pyramid });
 
-      return NextResponse.json({ ok: true, type, result: { selected_offer_pyramid_index: selectedIndex } }, { status: 200 });
+      await logApplied({
+        supabase,
+        userId: user.id,
+        type,
+        suggestionId,
+        title,
+        description,
+        payload: payload as any,
+        result: { selected_offer_pyramid_index: selectedIndex },
+      });
+
+      return NextResponse.json(
+        { ok: true, type, result: { selected_offer_pyramid_index: selectedIndex } },
+        { status: 200 },
+      );
     }
 
     // ------------------------------------------------------------
     // 3) open_tipote_tool (no-op)
     // ------------------------------------------------------------
+    await logApplied({
+      supabase,
+      userId: user.id,
+      type,
+      suggestionId,
+      title,
+      description,
+      payload: payload as any,
+      result: { noop: true },
+    });
+
     return NextResponse.json({ ok: true, type, result: { noop: true } }, { status: 200 });
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
