@@ -19,6 +19,25 @@ type SetPasswordFormProps = {
   mode: "first" | "reset";
 };
 
+function mapUpdateUserErrorMessage(message: string) {
+  const m = (message || "").toLowerCase();
+
+  if (m.includes("auth session missing") || m.includes("session_not_found") || m.includes("not authenticated")) {
+    return "Ta session a expiré. Merci de rouvrir le lien reçu par email et de réessayer.";
+  }
+
+  if (m.includes("password") && (m.includes("should be") || m.includes("at least") || m.includes("weak"))) {
+    // On renvoie le message Supabase (souvent très clair)
+    return message;
+  }
+
+  if (m.includes("same password") || (m.includes("different") && m.includes("password"))) {
+    return "Choisis un mot de passe différent de l’ancien.";
+  }
+
+  return "Impossible de mettre à jour le mot de passe.";
+}
+
 export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
@@ -60,7 +79,7 @@ export default function SetPasswordForm({ mode }: SetPasswordFormProps) {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         console.error("[SetPasswordForm] updateUser error", updateError);
-        setErrorMsg("Impossible de mettre à jour le mot de passe.");
+        setErrorMsg(mapUpdateUserErrorMessage(updateError.message || ""));
         setIsLoading(false);
         return;
       }

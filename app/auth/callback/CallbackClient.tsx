@@ -79,8 +79,16 @@ export default function CallbackClient() {
   const [resendMsg, setResendMsg] = useState<string>("");
 
   const code = useMemo(() => (searchParams?.get("code") || "").trim(), [searchParams]);
-  const tokenHash = useMemo(() => (searchParams?.get("token_hash") || searchParams?.get("token") || "").trim(), [searchParams]);
+  const tokenHash = useMemo(() => (searchParams?.get("token_hash") || "").trim(), [searchParams]);
+  const token = useMemo(() => (searchParams?.get("token") || "").trim(), [searchParams]);
+  const emailFromUrl = useMemo(() => (searchParams?.get("email") || "").trim(), [searchParams]);
   const type = useMemo(() => getLower(searchParams?.get("type")), [searchParams]);
+
+  useEffect(() => {
+    if (!email && emailFromUrl) {
+      setEmail(emailFromUrl);
+    }
+  }, [email, emailFromUrl]);
 
   async function getSessionUserId(supabase: any): Promise<string | null> {
     const { data } = await supabase.auth.getSession();
@@ -124,10 +132,10 @@ export default function CallbackClient() {
       try {
         const supabase = getSupabaseBrowserClient();
 
-        // 0) token_hash flow (invite/recovery/magiclink/...)
-        if (tokenHash) {
-          const otpType = (type || "magiclink") as any;
+        // 0) OTP flow via token_hash (new links) OR token+email (legacy links)
+        const otpType = (type || "magiclink") as any;
 
+        if (tokenHash) {
           const { error } = await supabase.auth.verifyOtp({
             type: otpType,
             token_hash: tokenHash,
@@ -146,6 +154,35 @@ export default function CallbackClient() {
           }
 
           // magiclink / signup / email_change etc => décider selon password_set_at
+          await redirectAfterAuth(supabase);
+          return;
+        }
+
+        if (token) {
+          // Some Supabase emails still use `?token=...&type=...` links.
+          // In that case, verifyOtp expects { token, email } (NOT token_hash).
+          const effectiveEmail = (emailFromUrl || "").trim().toLowerCase();
+          if (!effectiveEmail) {
+            throw new Error("Missing email for OTP token verification");
+          }
+
+          const { error } = await supabase.auth.verifyOtp({
+            type: otpType,
+            token,
+            email: effectiveEmail,
+          } as any);
+          if (error) throw error;
+
+          if (otpType === "recovery") {
+            router.replace("/auth/reset-password");
+            return;
+          }
+
+          if (otpType === "invite") {
+            router.replace("/auth/set-password");
+            return;
+          }
+
           await redirectAfterAuth(supabase);
           return;
         }
@@ -219,7 +256,7 @@ export default function CallbackClient() {
     return () => {
       cancelled = true;
     };
-  }, [router, code, tokenHash, type, searchParams]);
+  }, [router, code, tokenHash, token, type, searchParams]);
 
   async function handleResend(e: React.FormEvent) {
     e.preventDefault();
