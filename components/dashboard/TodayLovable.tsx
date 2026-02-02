@@ -192,23 +192,18 @@ function parseEuroNumber(v: unknown): number | null {
     return Number.isFinite(base) ? Math.round(base * 1000) : null;
   }
 
-  // enlève tout sauf chiffres/./,
   const cleaned = s.replace(/[^\d.,-]/g, "");
   if (!cleaned) return null;
 
-  // heuristique FR: si virgule présente, elle est décimale
   let normalized = cleaned;
   const hasComma = cleaned.includes(",");
   const hasDot = cleaned.includes(".");
 
   if (hasComma && hasDot) {
-    // "1.234,56" => "1234.56"
     normalized = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (hasComma && !hasDot) {
-    // "1234,56" => "1234.56"
     normalized = cleaned.replace(",", ".");
   } else {
-    // "1.234" peut être "1234" (grouping) => si 3 décimales après dot, on enlève
     const dotParts = cleaned.split(".");
     if (dotParts.length === 2 && dotParts[1].length === 3) {
       normalized = cleaned.replace(".", "");
@@ -220,7 +215,6 @@ function parseEuroNumber(v: unknown): number | null {
 }
 
 type BizPulse = {
-  // manuel
   weeklyRevenue: string;
   weeklyLeads: string;
   weeklyCalls: string;
@@ -294,22 +288,11 @@ function normalizeTaskPriority(t: TaskRow): Priority {
 }
 
 function normalizeContentTitle(r: ContentRowAny): string {
-  return (
-    pickFirstNonEmpty(
-      r.title,
-      (r as any)?.titre,
-      (r as any)?.name,
-      (r as any)?.nom,
-      "—",
-    ) || "—"
-  );
+  return pickFirstNonEmpty(r.title, (r as any)?.titre, (r as any)?.name, (r as any)?.nom, "—") || "—";
 }
 
 function normalizeContentType(r: ContentRowAny): string {
-  return (
-    pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") ||
-    "Contenu"
-  );
+  return pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") || "Contenu";
 }
 
 function normalizeContentStatus(r: ContentRowAny): string {
@@ -317,7 +300,6 @@ function normalizeContentStatus(r: ContentRowAny): string {
 }
 
 function normalizeContentScheduledDate(r: ContentRowAny): Date | null {
-  // scheduled_date OR date_planifiee OR scheduledDate
   return (
     parseDate((r as any)?.scheduled_date) ||
     parseDate((r as any)?.date_planifiee) ||
@@ -341,7 +323,6 @@ function isDoneStatus(v: unknown) {
 /**
  * ✅ Fix TS : certains environnements/schemas peuvent retourner un array "d'erreurs"
  * (ex: validateurs internes) typé "GenericStringError[]".
- * On ne cast plus à l’aveugle. On filtre runtime => ContentRowAny[] ou [].
  */
 type GenericStringError = {
   error: true;
@@ -360,6 +341,47 @@ function isObjectArray(v: unknown): v is Record<string, unknown>[] {
   return Array.isArray(v) && v.every((x) => x && typeof x === "object" && !Array.isArray(x));
 }
 
+/** Détecte erreurs “colonne manquante” PostgREST */
+function isSchemaError(message: string) {
+  const s = (message || "").toLowerCase();
+  return (
+    s.includes("column") &&
+    (s.includes("does not exist") || s.includes("not exist") || s.includes("unknown"))
+  );
+}
+
+/** Cache local pour éviter de refaire des requêtes 400 qui spamment la console */
+function schemaCacheKey(userId: string) {
+  return `tipote:schema:${userId}:content_item`;
+}
+
+type ContentSchemaHint = {
+  hasUserId?: boolean; // si false => on n’essaie plus eq(user_id)
+  selectIndex?: number; // variante select qui a marché
+};
+
+function loadContentSchemaHint(userId: string): ContentSchemaHint | null {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(schemaCacheKey(userId));
+    if (!raw) return null;
+    const json = JSON.parse(raw) as ContentSchemaHint;
+    if (!json || typeof json !== "object") return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+function saveContentSchemaHint(userId: string, hint: ContentSchemaHint) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(schemaCacheKey(userId), JSON.stringify(hint));
+  } catch {
+    // ignore
+  }
+}
+
 export default function TodayLovable() {
   const [isPulseOpen, setIsPulseOpen] = useState(false);
 
@@ -372,45 +394,19 @@ export default function TodayLovable() {
   });
 
   const [stats, setStats] = useState<DashboardStat[]>([
-    {
-      label: "Plan stratégique",
-      value: "0%",
-      trend: "0%",
-      icon: Target,
-    },
-    {
-      label: "Contenus planifiés",
-      value: "0/7",
-      trend: "+0",
-      icon: Calendar,
-    },
-    {
-      label: "Objectif engagement",
-      value: "0/7",
-      trend: "+0",
-      icon: TrendingUp,
-    },
+    { label: "Plan stratégique", value: "0%", trend: "0/0", icon: Target },
+    { label: "Contenus planifiés", value: "0/7", trend: "+0", icon: Calendar },
+    { label: "Activité", value: "0/7", trend: "+0", icon: TrendingUp },
   ]);
 
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([
-    {
-      title: "Compléter mon onboarding",
-      type: "Étape",
-      day: "Aujourd'hui",
-      time: "-",
-      status: "À faire",
-    },
-    {
-      title: "Créer mon 1er contenu",
-      type: "Tâche",
-      day: "Cette semaine",
-      time: "-",
-      status: "À faire",
-    },
+    { title: "Compléter mon onboarding", type: "Étape", day: "Aujourd'hui", time: "-", status: "À faire" },
+    { title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" },
   ]);
 
   const [revenueGoalLabel, setRevenueGoalLabel] = useState<string>("—");
   const [revenueGoalValue, setRevenueGoalValue] = useState<number | null>(null);
+
   const [bizPulse, setBizPulse] = useState<BizPulse>({
     weeklyRevenue: "",
     weeklyLeads: "",
@@ -433,11 +429,7 @@ export default function TodayLovable() {
     const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
     const weeklyCalls = parseEuroNumber(bizPulse.weeklyCalls);
 
-    return {
-      weeklyRevenue,
-      weeklyLeads,
-      weeklyCalls,
-    };
+    return { weeklyRevenue, weeklyLeads, weeklyCalls };
   }, [bizPulse.weeklyCalls, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
 
   const revenueToGoalRatio = useMemo(() => {
@@ -456,7 +448,6 @@ export default function TodayLovable() {
     const leads = pulsePreview.weeklyLeads ?? 0;
     const rev = pulsePreview.weeklyRevenue ?? 0;
 
-    // targets simples
     const tCalls = 5;
     const tLeads = 25;
     const tRev = 2000;
@@ -470,8 +461,53 @@ export default function TodayLovable() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-
     let cancelled = false;
+
+    async function loadRevenueGoal(userId: string) {
+      // 1) Source principale : business_profiles.revenue_goal_monthly (confirmée par tes tables)
+      const prof = await supabase
+        .from("business_profiles")
+        .select("revenue_goal_monthly")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!prof.error) {
+        const raw = (prof.data as any)?.revenue_goal_monthly ?? null;
+        const goalNum = parseEuroNumber(raw);
+        if (goalNum && goalNum > 0) {
+          setRevenueGoalValue(goalNum);
+          setRevenueGoalLabel(formatEuroCompact(goalNum));
+          return;
+        }
+      }
+
+      // 2) Fallback réel (confirmé par tes tables) : strategies.target_monthly_revenue / objective_revenue
+      // => utile si l’onboarding stocke ici mais pas dans business_profiles
+      const strat = await supabase
+        .from("strategies")
+        .select("target_monthly_revenue, objective_revenue, updated_at, created_at")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!strat.error) {
+        const raw =
+          (strat.data as any)?.target_monthly_revenue ??
+          (strat.data as any)?.objective_revenue ??
+          null;
+
+        const goalNum = parseEuroNumber(raw);
+        setRevenueGoalValue(goalNum && goalNum > 0 ? goalNum : null);
+        setRevenueGoalLabel(goalNum && goalNum > 0 ? formatEuroCompact(goalNum) : "—");
+        return;
+      }
+
+      // 3) Si erreurs non-schema (RLS/network), on reste silencieux
+      setRevenueGoalValue(null);
+      setRevenueGoalLabel("—");
+    }
 
     async function load() {
       try {
@@ -480,11 +516,7 @@ export default function TodayLovable() {
           error: authError,
         } = await supabase.auth.getUser();
 
-        if (authError || !user?.id) {
-          // Page protégée côté serveur, mais on reste safe.
-          return;
-        }
-
+        if (authError || !user?.id) return;
         const userId = user.id;
 
         if (cancelled) return;
@@ -494,34 +526,7 @@ export default function TodayLovable() {
         const fromStorage = loadPulse(userId);
         if (fromStorage) setBizPulse(fromStorage);
 
-        const profileRes = await supabase
-          .from("business_profiles")
-          .select("onboarding_completed, revenue_goal_monthly")
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (!cancelled) {
-          const goalRaw = (profileRes.data as any)?.revenue_goal_monthly;
-          const goalNum = parseEuroNumber(goalRaw);
-
-          setRevenueGoalValue(goalNum);
-          setRevenueGoalLabel(
-            goalNum ? formatEuroCompact(goalNum) : pickFirstNonEmpty(goalRaw, "—") || "—",
-          );
-        }
-
-        const planRes = await supabase
-          .from("business_plan")
-          .select("plan_json")
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        const planJson = (planRes.data as any)?.plan_json ?? null;
-
-        const selectedIndex =
-          (planJson as any)?.selected_offer_pyramid_index ??
-          (planJson as any)?.selectedOfferPyramidIndex ??
-          null;
+        await loadRevenueGoal(userId);
 
         // Load tasks via API (RLS-safe)
         const tasksRes = await fetch("/api/tasks", { cache: "no-store" })
@@ -537,76 +542,78 @@ export default function TodayLovable() {
         const tasksAll = tasks;
         const tasksDone = tasksAll.filter((t) => isDoneStatus(normalizeTaskStatus(t))).length;
         const tasksTotal = tasksAll.length;
-        const progressionPercent = tasksTotal
-          ? clampPercent((tasksDone / tasksTotal) * 100)
-          : 0;
+        const progressionPercent = tasksTotal ? clampPercent((tasksDone / tasksTotal) * 100) : 0;
 
         // Weekly window
         const startW = startOfWeekMonday(now);
         const endW = endOfWeekSunday(now);
 
-        // Content rows (schema-compat)
+        // Content rows (schema-compat + anti-spam)
         const attempts: { select: string; orderCol: string }[] = [
-          {
-            select:
-              "id,title,content,status,channel,scheduled_date,created_at,type,user_id",
-            orderCol: "scheduled_date",
-          },
-          {
-            select:
-              "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id",
-            orderCol: "date_planifiee",
-          },
+          // versions avec user_id
+          { select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id", orderCol: "scheduled_date" },
+          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id", orderCol: "date_planifiee" },
           { select: "id,title,content,status,created_at,type,user_id", orderCol: "created_at" },
+          // versions sans user_id (legacy)
+          { select: "id,title,content,status,channel,scheduled_date,created_at,type", orderCol: "scheduled_date" },
+          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type", orderCol: "date_planifiee" },
+          { select: "id,title,content,status,created_at,type", orderCol: "created_at" },
         ];
 
-        const isSchemaError = (m: string) => {
-          const s = (m || "").toLowerCase();
-          return (
-            s.includes("column") &&
-            (s.includes("does not exist") || s.includes("not exist") || s.includes("unknown"))
-          );
-        };
-
-        const isUserIdMissing = (m: string) => {
-          const s = (m || "").toLowerCase();
-          return isSchemaError(s) && s.includes("user_id");
-        };
+        const hint = loadContentSchemaHint(userId) || {};
 
         async function loadContentRows(): Promise<unknown[]> {
-          for (const a of attempts) {
-            // 1) essai "normal" avec user_id (meilleures perfs + pas de cross-user si RLS est permissif)
-            let res = await supabase
+          const startIndex = typeof hint.selectIndex === "number" ? hint.selectIndex : 0;
+
+          for (let offset = 0; offset < attempts.length; offset++) {
+            const i = (startIndex + offset) % attempts.length;
+            const a = attempts[i];
+
+            const includesUserId = a.select.includes("user_id");
+
+            // si on sait que user_id n'existe pas => on skip les selects qui l'incluent
+            if (hint.hasUserId === false && includesUserId) continue;
+
+            let q = supabase
               .from("content_item")
               .select(a.select)
-              .eq("user_id", userId)
-              .order(a.orderCol, { ascending: true, nullsFirst: false })
+              .order(a.orderCol as any, { ascending: true, nullsFirst: false })
               .limit(300);
 
-            // 2) fallback si colonne user_id manquante (cas legacy)
-            if (res.error && isUserIdMissing(res.error.message)) {
-              res = await supabase
-                .from("content_item")
-                .select(a.select)
-                .order(a.orderCol, { ascending: true, nullsFirst: false })
-                .limit(300);
+            // n'applique .eq(user_id) que si on pense que user_id existe
+            if (includesUserId && hint.hasUserId !== false) {
+              q = q.eq("user_id", userId);
             }
 
+            const res = await q;
+
             if (!res.error) {
+              saveContentSchemaHint(userId, {
+                hasUserId: includesUserId ? true : hint.hasUserId,
+                selectIndex: i,
+              });
               return Array.isArray(res.data) ? (res.data as unknown[]) : [];
             }
 
-            if (!isSchemaError(res.error.message)) {
-              console.error("TodayLovable content_item error:", res.error);
-              return [];
+            const msg = res.error.message || "";
+
+            // user_id manquant => on mémorise et on ne retente plus
+            if (isSchemaError(msg) && msg.toLowerCase().includes("user_id")) {
+              saveContentSchemaHint(userId, { ...hint, hasUserId: false, selectIndex: i });
+              continue;
             }
+
+            // autres schema errors => on tente autre select
+            if (isSchemaError(msg)) continue;
+
+            // pas schema => RLS/network => stop silencieux (pas de spam)
+            return [];
           }
           return [];
         }
 
         const rawContentRows = await loadContentRows();
 
-        // ✅ Fix ici : on ne cast plus à l’aveugle.
         const contentRows: ContentRowAny[] = (() => {
           if (isGenericStringErrorArray(rawContentRows)) {
             console.error("TodayLovable: content_item returned errors array:", rawContentRows);
@@ -622,10 +629,9 @@ export default function TodayLovable() {
           if (!dt) return false;
           return dt >= startW && dt <= endW;
         });
-
         const plannedCount = plannedThisWeek.length;
 
-        // engagement goal: proxy = tasks done this week / 7
+        // activité = proxy = tâches done cette semaine / 7
         const tasksDoneThisWeek = tasksAll.filter((t) => {
           const done = isDoneStatus(normalizeTaskStatus(t));
           if (!done) return false;
@@ -637,8 +643,9 @@ export default function TodayLovable() {
           return dt >= startW && dt <= endW;
         }).length;
 
-        const engagementValue = `${Math.min(7, tasksDoneThisWeek)}/7`;
+        const activityValue = `${Math.min(7, tasksDoneThisWeek)}/7`;
 
+        // next task (todo) triée
         const nextTodoTask = tasksAll
           .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
           .sort((a, b) => {
@@ -663,98 +670,62 @@ export default function TodayLovable() {
           });
 
           setStats([
-            {
-              label: "Plan stratégique",
-              value: `${progressionPercent}%`,
-              trend: `${tasksDone}/${tasksTotal}`,
-              icon: Target,
-            },
-            {
-              label: "Contenus planifiés",
-              value: `${plannedCount}/7`,
-              trend: plannedCount > 0 ? `+${plannedCount}` : "+0",
-              icon: Calendar,
-            },
-            {
-              label: "Objectif engagement",
-              value: engagementValue,
-              trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0",
-              icon: TrendingUp,
-            },
+            { label: "Plan stratégique", value: `${progressionPercent}%`, trend: `${tasksDone}/${tasksTotal}`, icon: Target },
+            { label: "Contenus planifiés", value: `${plannedCount}/7`, trend: plannedCount > 0 ? `+${plannedCount}` : "+0", icon: Calendar },
+            { label: "Activité", value: activityValue, trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0", icon: TrendingUp },
           ]);
         }
 
         // Upcoming list: mix tasks + content for week
         const upcomingCombined: CombinedUpcoming[] = [];
 
-        // tasks (todo only, next 6 by due)
         const tasksUpcoming = tasksAll
           .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
-          .map((t) => {
-            const dt = normalizeTaskDueDate(t) ?? now;
-            return {
-              kind: "task" as const,
-              title: normalizeTaskTitle(t),
-              type: "Tâche",
-              statusRaw: normalizeTaskStatus(t),
-              dt,
-              priority: normalizeTaskPriority(t),
-            };
-          })
+          .map((t) => ({
+            kind: "task" as const,
+            title: normalizeTaskTitle(t),
+            type: "Tâche",
+            statusRaw: normalizeTaskStatus(t),
+            dt: normalizeTaskDueDate(t) ?? now,
+            priority: normalizeTaskPriority(t),
+          }))
           .sort((a, b) => a.dt.getTime() - b.dt.getTime())
           .slice(0, 6);
 
         upcomingCombined.push(...tasksUpcoming);
 
-        // content (scheduled + draft) for week (next 6)
         const contentUpcoming = contentRows
-          .map((r) => {
-            const dt = normalizeContentScheduledDate(r) ?? now;
-            return {
-              kind: "content" as const,
-              title: normalizeContentTitle(r),
-              type: normalizeContentType(r),
-              statusRaw: normalizeContentStatus(r),
-              dt,
-            };
-          })
+          .map((r) => ({
+            kind: "content" as const,
+            title: normalizeContentTitle(r),
+            type: normalizeContentType(r),
+            statusRaw: normalizeContentStatus(r),
+            dt: normalizeContentScheduledDate(r) ?? now,
+          }))
           .filter((x) => x.dt >= startW && x.dt <= endW)
           .sort((a, b) => a.dt.getTime() - b.dt.getTime())
           .slice(0, 6);
 
         upcomingCombined.push(...contentUpcoming);
-
         upcomingCombined.sort((a, b) => a.dt.getTime() - b.dt.getTime());
 
-        const nextUpcoming: UpcomingItem[] = upcomingCombined.slice(0, 8).map((x) => {
-          const day = formatDayLabel(x.dt, now);
-          const time = formatTimeOrDash(x.dt);
-
-          return {
-            title: x.title,
-            type: x.type,
-            day,
-            time,
-            status:
-              x.kind === "task"
-                ? mapTaskStatusToUi(x.statusRaw)
-                : mapContentStatusToUi(x.statusRaw),
-          };
-        });
+        const nextUpcoming: UpcomingItem[] = upcomingCombined.slice(0, 8).map((x) => ({
+          title: x.title,
+          type: x.type,
+          day: formatDayLabel(x.dt, now),
+          time: formatTimeOrDash(x.dt),
+          status: x.kind === "task" ? mapTaskStatusToUi(x.statusRaw) : mapContentStatusToUi(x.statusRaw),
+        }));
 
         if (!cancelled) {
           setUpcoming(nextUpcoming.length ? nextUpcoming : upcoming);
         }
-
-        // planJson validity (used for CTA)
-        void selectedIndex;
       } catch (e) {
         console.error("TodayLovable load error:", e);
       }
     }
 
     void load();
-
     return () => {
       cancelled = true;
     };
@@ -773,21 +744,18 @@ export default function TodayLovable() {
       weeklyCalls: "",
     };
 
-    // Only revenue is "currency-ish"
     if (next.weeklyRevenue.trim()) {
       const n = parseEuroNumber(next.weeklyRevenue);
       if (n === null || !Number.isFinite(n) || n < 0) {
         errs.weeklyRevenue = "Entre un montant valide (ex: 1200, 1 200, 1.2k).";
       }
     }
-
     if (next.weeklyLeads.trim()) {
       const n = parseEuroNumber(next.weeklyLeads);
       if (n === null || !Number.isFinite(n) || n < 0) {
         errs.weeklyLeads = "Entre un nombre valide (ex: 10).";
       }
     }
-
     if (next.weeklyCalls.trim()) {
       const n = parseEuroNumber(next.weeklyCalls);
       if (n === null || !Number.isFinite(n) || n < 0) {
@@ -796,15 +764,12 @@ export default function TodayLovable() {
     }
 
     setPulseErrors(errs);
-    const has = Object.values(errs).some(Boolean);
-    return !has;
+    return !Object.values(errs).some(Boolean);
   }
 
   const priorityBadge = useMemo(() => {
-    if (nextTask.priority === "high")
-      return { label: "High Priority", variant: "default" as const };
-    if (nextTask.priority === "low")
-      return { label: "Low Priority", variant: "secondary" as const };
+    if (nextTask.priority === "high") return { label: "High Priority", variant: "default" as const };
+    if (nextTask.priority === "low") return { label: "Low Priority", variant: "secondary" as const };
     return { label: "Medium Priority", variant: "outline" as const };
   }, [nextTask.priority]);
 
@@ -819,11 +784,7 @@ export default function TodayLovable() {
             <div className="ml-4 flex-1">
               <h1 className="text-xl font-display font-bold">Aujourd&apos;hui</h1>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsPulseOpen(true)}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={() => setIsPulseOpen(true)} className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Mettre à jour mes chiffres
             </Button>
@@ -846,21 +807,15 @@ export default function TodayLovable() {
 
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    Objectif revenu
-                  </p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {revenueGoalLabel}
-                  </p>
+                  <p className="text-sm text-primary-foreground/70 mb-1">Objectif revenu</p>
+                  <p className="text-2xl font-bold text-primary-foreground">{revenueGoalLabel}</p>
                   <p className="text-sm text-primary-foreground/70 mt-1">
                     Estimation mensuelle à partir de tes chiffres de la semaine
                   </p>
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    Progression vers l&apos;objectif
-                  </p>
+                  <p className="text-sm text-primary-foreground/70 mb-1">Progression vers l&apos;objectif</p>
                   <p className="text-2xl font-bold text-primary-foreground">
                     {revenueGoalValue ? `${revenueToGoalRatio}%` : "—"}
                   </p>
@@ -868,12 +823,8 @@ export default function TodayLovable() {
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    Exécution de la semaine
-                  </p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {weeklyExecutionPercent}%
-                  </p>
+                  <p className="text-sm text-primary-foreground/70 mb-1">Exécution de la semaine</p>
+                  <p className="text-2xl font-bold text-primary-foreground">{weeklyExecutionPercent}%</p>
                   <Progress value={weeklyExecutionPercent} className="mt-3" />
                 </div>
               </div>
@@ -889,12 +840,8 @@ export default function TodayLovable() {
                       <Target className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">
-                        Prochaine action recommandée
-                      </h3>
-                      <p className="text-muted-foreground">
-                        Concentre-toi sur 1 action à la fois.
-                      </p>
+                      <h3 className="text-xl font-bold">Prochaine action recommandée</h3>
+                      <p className="text-muted-foreground">Concentre-toi sur 1 action à la fois.</p>
                     </div>
                   </div>
                   <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
@@ -903,9 +850,7 @@ export default function TodayLovable() {
                 <div className="p-6 rounded-xl bg-muted/30 border border-border/50">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold mb-1">
-                        {nextTask.title}
-                      </h4>
+                      <h4 className="text-lg font-semibold mb-1">{nextTask.title}</h4>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="w-4 h-4" />
@@ -926,8 +871,7 @@ export default function TodayLovable() {
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Tipote te guide phase par phase — coche tes tâches pour voir ta
-                    progression.
+                    Tipote te guide phase par phase — coche tes tâches pour voir ta progression.
                   </div>
                 </div>
               </Card>
@@ -954,9 +898,7 @@ export default function TodayLovable() {
                           : "—"}
                       </span>
                     </div>
-                    <Progress
-                      value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)}
-                    />
+                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)} />
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/30">
@@ -966,9 +908,7 @@ export default function TodayLovable() {
                         {pulsePreview.weeklyLeads !== null ? pulsePreview.weeklyLeads : "—"}
                       </span>
                     </div>
-                    <Progress
-                      value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)}
-                    />
+                    <Progress value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)} />
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/30">
@@ -978,16 +918,10 @@ export default function TodayLovable() {
                         {pulsePreview.weeklyCalls !== null ? pulsePreview.weeklyCalls : "—"}
                       </span>
                     </div>
-                    <Progress
-                      value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)}
-                    />
+                    <Progress value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)} />
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => setIsPulseOpen(true)}
-                  >
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setIsPulseOpen(true)}>
                     <Play className="w-4 h-4" />
                     Mettre à jour mes chiffres
                   </Button>
@@ -1013,9 +947,7 @@ export default function TodayLovable() {
                       value={
                         stat.label === "Plan stratégique"
                           ? clampPercent(Number(stat.value.replace("%", "")) || 0)
-                          : stat.label === "Contenus planifiés"
-                            ? clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
-                            : clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
+                          : clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
                       }
                       className="mt-3"
                     />
@@ -1032,9 +964,7 @@ export default function TodayLovable() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">À venir</h3>
-                  <p className="text-muted-foreground">
-                    Tes tâches et contenus planifiés (cette semaine).
-                  </p>
+                  <p className="text-muted-foreground">Tes tâches et contenus planifiés (cette semaine).</p>
                 </div>
               </div>
 
@@ -1090,8 +1020,8 @@ export default function TodayLovable() {
                   Mettre à jour mes chiffres
                 </DialogTitle>
                 <DialogDescription>
-                  Tes analytics ne sont pas connectables automatiquement : entre tes
-                  chiffres de la semaine pour suivre ta progression vers ton objectif.
+                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres
+                  de la semaine pour suivre ta progression vers ton objectif.
                 </DialogDescription>
               </DialogHeader>
 
@@ -1100,9 +1030,7 @@ export default function TodayLovable() {
                   <Label>Revenu de la semaine</Label>
                   <Input
                     value={bizPulse.weeklyRevenue}
-                    onChange={(e) =>
-                      setBizPulse((p) => ({ ...p, weeklyRevenue: e.target.value }))
-                    }
+                    onChange={(e) => setBizPulse((p) => ({ ...p, weeklyRevenue: e.target.value }))}
                     placeholder="ex: 1200, 1 200, 1.2k"
                   />
                   {pulseErrors.weeklyRevenue ? (
@@ -1115,9 +1043,7 @@ export default function TodayLovable() {
                     <Label>Leads générés</Label>
                     <Input
                       value={bizPulse.weeklyLeads}
-                      onChange={(e) =>
-                        setBizPulse((p) => ({ ...p, weeklyLeads: e.target.value }))
-                      }
+                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklyLeads: e.target.value }))}
                       placeholder="ex: 10"
                     />
                     {pulseErrors.weeklyLeads ? (
@@ -1129,9 +1055,7 @@ export default function TodayLovable() {
                     <Label>Appels / RDV</Label>
                     <Input
                       value={bizPulse.weeklyCalls}
-                      onChange={(e) =>
-                        setBizPulse((p) => ({ ...p, weeklyCalls: e.target.value }))
-                      }
+                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklyCalls: e.target.value }))}
                       placeholder="ex: 2"
                     />
                     {pulseErrors.weeklyCalls ? (
