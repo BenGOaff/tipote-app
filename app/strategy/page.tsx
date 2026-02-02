@@ -19,7 +19,8 @@ function asString(v: unknown): string {
 }
 
 function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v)) return v.map(asString).map((s) => s.trim()).filter(Boolean);
+  if (Array.isArray(v))
+    return v.map(asString).map((s) => s.trim()).filter(Boolean);
   if (typeof v === "string") {
     const s = v.trim();
     if (!s) return [];
@@ -49,8 +50,11 @@ function bucketKey(daysFromNow: number) {
 }
 
 function countPlanTasks(planJson: AnyRecord): number {
-  const plan90 = (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
-  const grouped = (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
+  const plan90 =
+    (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
+  const grouped =
+    (plan90?.tasks_by_timeframe as AnyRecord) ||
+    (planJson.tasks_by_timeframe as AnyRecord);
   if (!grouped) return 0;
 
   const d30 = Array.isArray(grouped.d30) ? grouped.d30.length : 0;
@@ -60,29 +64,77 @@ function countPlanTasks(planJson: AnyRecord): number {
   return d30 + d60 + d90;
 }
 
-function normalizeRevenueGoalText(raw: unknown): string {
-  /**
-   Objectif revenu:
-   - plan_json.revenue_goal (source de vérité côté stratégie)
-   - fallback: business_profiles.revenue_goal_monthly (ajout onboarding)
-   Valeur DB = texte, donc on:
-   - garde les digits
-   - formatte en fr-FR si possible
-  */
-  const s = asString(raw).trim();
-  if (!s) return "";
-
-  const digits = s.replace(/[^\d]/g, "");
-  if (!digits) return "";
-
-  const n = Number(digits);
-  if (!Number.isFinite(n)) return digits;
-
+function formatNumberFR(n: number): string {
   try {
     return new Intl.NumberFormat("fr-FR").format(n);
   } catch {
     return String(n);
   }
+}
+
+function hasCurrencyOrPeriodHints(s: string): boolean {
+  const t = s.toLowerCase();
+  return (
+    t.includes("€") ||
+    t.includes("eur") ||
+    t.includes("euro") ||
+    t.includes("/mois") ||
+    t.includes("mois") ||
+    t.includes("mensuel") ||
+    t.includes("mensuelle") ||
+    t.includes("par mois")
+  );
+}
+
+/**
+ * Normalise un objectif revenu *texte* venant du plan_json OU onboarding.
+ * - supporte: "10k", "10K€/mois", "15 000", "2000-5000", "10000+"
+ * - si pas de nombre exploitable => renvoie le texte clean (pour ne pas afficher "—")
+ */
+function normalizeRevenueGoalText(raw: unknown): {
+  kind: "numeric" | "text";
+  value: string;
+} {
+  const s0 = asString(raw).trim();
+  if (!s0) return { kind: "text", value: "" };
+
+  const s = s0.replace(/\s+/g, " ").trim();
+
+  // 1) Essayez de détecter un pattern type: 10k / 10K / 2.5k / 1,5k
+  //    (on accepte virgule ou point comme séparateur décimal)
+  const kmMatch = s.match(/(\d+(?:[.,]\d+)?)\s*([kKmM])\b/);
+  if (kmMatch) {
+    const numRaw = kmMatch[1].replace(",", ".");
+    const mult = kmMatch[2].toLowerCase() === "m" ? 1_000_000 : 1_000;
+    const n = Number(numRaw);
+    if (Number.isFinite(n)) {
+      const v = Math.round(n * mult);
+      return { kind: "numeric", value: formatNumberFR(v) };
+    }
+  }
+
+  // 2) Range type: "2000-5000" => on prend le haut (plus parlant pour objectif)
+  const rangeMatch = s.match(/(\d[\d\s.,]*)\s*[-–]\s*(\d[\d\s.,]*)/);
+  if (rangeMatch) {
+    const b = rangeMatch[2].replace(/[^\d]/g, "");
+    const n = Number(b);
+    if (Number.isFinite(n) && n > 0) {
+      return { kind: "numeric", value: formatNumberFR(n) };
+    }
+  }
+
+  // 3) Valeur simple (digits)
+  const digits = s.replace(/[^\d]/g, "");
+  if (digits) {
+    const n = Number(digits);
+    if (Number.isFinite(n) && n > 0) {
+      return { kind: "numeric", value: formatNumberFR(n) };
+    }
+    return { kind: "text", value: digits };
+  }
+
+  // 4) Fallback : renvoyer le texte tel quel (utile si l’onboarding stocke une phrase)
+  return { kind: "text", value: s.slice(0, 80) };
 }
 
 type TaskRow = {
@@ -160,27 +212,36 @@ export default async function StrategyPage() {
 
   const firstName = asString(profileRow?.first_name);
 
-  const goals = asStringArray(profileRow?.main_goals) || asStringArray(profileRow?.goals);
-
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
 
   // Persona (depuis plan_json)
   const personaRaw = (planJson.persona ?? {}) as AnyRecord;
   const persona = {
-    title: asString(personaRaw.title) || asString(personaRaw.profile) || asString(personaRaw.name) || "",
+    title:
+      asString(personaRaw.title) ||
+      asString(personaRaw.profile) ||
+      asString(personaRaw.name) ||
+      "",
     pains: asStringArray(personaRaw.pains),
     desires: asStringArray(personaRaw.desires),
-    channels: preferredContentTypes.length ? preferredContentTypes : asStringArray(personaRaw.channels),
+    channels: preferredContentTypes.length
+      ? preferredContentTypes
+      : asStringArray(personaRaw.channels),
   };
 
   // Pyramides (depuis plan_json)
   const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
 
   const hasExplicitSelection =
-    typeof planJson.selected_offer_pyramid_index === "number" && !!planJson.selected_offer_pyramid;
+    typeof planJson.selected_offer_pyramid_index === "number" &&
+    !!planJson.selected_offer_pyramid;
 
-  const initialSelectedIndex = hasExplicitSelection ? (planJson.selected_offer_pyramid_index as number) : 0;
-  const initialSelectedPyramid = hasExplicitSelection ? (planJson.selected_offer_pyramid as AnyRecord) : undefined;
+  const initialSelectedIndex = hasExplicitSelection
+    ? (planJson.selected_offer_pyramid_index as number)
+    : 0;
+  const initialSelectedPyramid = hasExplicitSelection
+    ? (planJson.selected_offer_pyramid as AnyRecord)
+    : undefined;
 
   // ✅ IMPORTANT (prod/RLS-safe):
   // Lecture des tâches via supabaseAdmin (service_role) car les policies RLS peuvent renvoyer [] sans erreur.
@@ -195,7 +256,8 @@ export default async function StrategyPage() {
   const tasks = ((tasksRes.data ?? []) as unknown as TaskRow[]) ?? [];
 
   const totalTasks = tasks.length;
-  const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
+  const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done")
+    .length;
   const progressAll = totalTasks ? clamp01(doneTasks / totalTasks) : 0;
 
   const today = new Date();
@@ -209,7 +271,9 @@ export default async function StrategyPage() {
   for (const t of tasks) {
     const due = t.due_date ? parseDateOnly(t.due_date) : null;
     if (!due) continue;
-    const daysFromNow = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysFromNow = Math.ceil(
+      (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
     const key = bucketKey(daysFromNow);
     if (key === "p1") byPhase.p1.push(t);
     if (key === "p2") byPhase.p2.push(t);
@@ -218,16 +282,21 @@ export default async function StrategyPage() {
 
   // ✅ Objectif revenu :
   // 1) priorité à plan_json.revenue_goal
-  // 2) fallback à business_profiles.revenue_goal_monthly (tant que plan_json n’est pas enrichi)
+  // 2) fallback à business_profiles.revenue_goal_monthly (onboarding)
   // 3) sinon "—"
-  const revenueFromPlan = normalizeRevenueGoalText((planJson as AnyRecord)?.revenue_goal);
-  const revenueFromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
+  const fromPlan = normalizeRevenueGoalText((planJson as AnyRecord)?.revenue_goal);
+  const fromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
 
-  const revenueGoal = revenueFromPlan
-    ? `${revenueFromPlan} € / mois`
-    : revenueFromProfile
-      ? `${revenueFromProfile} € / mois`
-      : "—";
+  const picked = fromPlan.value ? fromPlan : fromProfile;
+
+  const revenueGoal =
+    picked.value && picked.kind === "numeric"
+      ? `${picked.value} € / mois`
+      : picked.value && hasCurrencyOrPeriodHints(picked.value)
+        ? picked.value
+        : picked.value
+          ? `${picked.value} € / mois`
+          : "—";
 
   const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
@@ -236,14 +305,20 @@ export default async function StrategyPage() {
   const totalPlanTasks = totalTasks || planTasksCount || 0;
 
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
-  const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
+  const currentPhaseLabel =
+    currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
 
   // ✅ Jours restants : basé sur created_at du business_plan (approche stable, sans inventer d’autre date)
   const createdAt = asString(planRow?.created_at);
   const createdDate = createdAt ? parseDateOnly(createdAt) : null;
 
   const daysElapsed = createdDate
-    ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.floor(
+          (today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
+        ),
+      )
     : 0;
 
   const daysRemaining = Math.max(0, 90 - daysElapsed);
