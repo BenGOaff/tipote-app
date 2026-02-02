@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Gift,
@@ -78,7 +77,7 @@ const offerConfig = {
 
 const getDefaultOfferDetails = (
   offerType: OfferType,
-  offer: Offer,
+  _offer: Offer,
 ): Partial<Offer> => {
   const baseDetails = {
     lead_magnet: {
@@ -152,10 +151,13 @@ export const OfferDetailModal = ({
 }: OfferDetailModalProps) => {
   const config = offerConfig[offerType];
   const Icon = config.icon;
-  const defaultDetails = getDefaultOfferDetails(offerType, offer);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [localOffer, setLocalOffer] = useState<Offer>({
+  const defaultDetails = useMemo(
+    () => getDefaultOfferDetails(offerType, offer),
+    [offerType, offer],
+  );
+
+  const buildHydratedOffer = (): Offer => ({
     ...offer,
     why: offer.why ?? defaultDetails.why,
     whyPrice: offer.whyPrice ?? defaultDetails.whyPrice,
@@ -163,7 +165,39 @@ export const OfferDetailModal = ({
     howToCreate: offer.howToCreate ?? defaultDetails.howToCreate,
     howToPromote: offer.howToPromote ?? defaultDetails.howToPromote,
   });
-  const [savedOffer, setSavedOffer] = useState<Offer>(localOffer);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedOffer, setEditedOffer] = useState<Offer>(buildHydratedOffer);
+
+  // Important: keep in sync when the modal opens on a different offer.
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsEditing(false);
+    setEditedOffer(buildHydratedOffer());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, offerType, offer.title, offer.price, offer.description, offer.why, offer.whyPrice]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setEditedOffer((prev) => ({
+      ...prev,
+      whatToCreate: (offer.whatToCreate ?? defaultDetails.whatToCreate) || prev.whatToCreate,
+      howToPromote: (offer.howToPromote ?? defaultDetails.howToPromote) || prev.howToPromote,
+      howToCreate: offer.howToCreate ?? defaultDetails.howToCreate ?? prev.howToCreate,
+    }));
+  }, [isOpen, offer.whatToCreate, offer.howToPromote, offer.howToCreate, defaultDetails]);
+
+  const handleSave = () => {
+    onUpdateOffer?.(editedOffer);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedOffer(buildHydratedOffer());
+    setIsEditing(false);
+  };
+
+  const displayOffer = isEditing ? editedOffer : buildHydratedOffer();
 
   return (
     <Dialog
@@ -172,217 +206,214 @@ export const OfferDetailModal = ({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className={`w-12 h-12 rounded-xl ${config.bgColor} flex items-center justify-center border ${config.borderColor}`}
-                >
-                  <Icon className={`w-6 h-6 ${config.color}`} />
-                </div>
-                <div>
-                  <DialogTitle className="text-2xl font-display font-bold">
-                    {localOffer.title}
-                  </DialogTitle>
-                  <DialogDescription className="flex items-center gap-2 mt-1">
-                    <Badge variant={config.badgeVariant}>{config.label}</Badge>
-                    <span className="font-semibold">{localOffer.price}</span>
-                  </DialogDescription>
-                </div>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${config.bgColor}`}>
+                <Icon className={`w-5 h-5 ${config.color}`} />
+              </div>
+              <div>
+                <Badge variant={config.badgeVariant} className="mb-1">
+                  {config.label}
+                </Badge>
+                {isEditing ? (
+                  <Input
+                    value={editedOffer.title}
+                    onChange={(e) =>
+                      setEditedOffer({ ...editedOffer, title: e.target.value })
+                    }
+                    className="text-xl font-bold"
+                  />
+                ) : (
+                  <DialogTitle className="text-xl">{displayOffer.title}</DialogTitle>
+                )}
               </div>
             </div>
-
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setLocalOffer(savedOffer);
-                    setIsEditing(false);
-                  }}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSavedOffer(localOffer);
-                    setIsEditing(false);
-                    onUpdateOffer?.(localOffer);
-                  }}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSavedOffer(localOffer);
-                  setIsEditing(true);
-                }}
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                Modifier
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <Input
+                  value={editedOffer.price}
+                  onChange={(e) =>
+                    setEditedOffer({ ...editedOffer, price: e.target.value })
+                  }
+                  className="w-32 text-right font-bold"
+                />
+              ) : (
+                <span className="text-2xl font-bold">{displayOffer.price}</span>
+              )}
+            </div>
           </div>
+          {isEditing ? (
+            <Textarea
+              value={editedOffer.description}
+              onChange={(e) =>
+                setEditedOffer({ ...editedOffer, description: e.target.value })
+              }
+              className="mt-2"
+            />
+          ) : (
+            <DialogDescription className="mt-2">
+              {displayOffer.description}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Titre</Label>
-              <Input
-                value={localOffer.title}
-                disabled={!isEditing}
-                onChange={(e) =>
-                  setLocalOffer((prev) => ({ ...prev, title: e.target.value }))
-                }
-              />
+        <div className="flex-1 overflow-auto space-y-6 pr-2">
+          {/* Pourquoi cette offre */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Target className={`w-5 h-5 ${config.color}`} />
+              <h3 className="font-semibold">Pourquoi cette offre ?</h3>
             </div>
-            <div className="space-y-2">
-              <Label>Prix</Label>
-              <Input
-                value={localOffer.price}
-                disabled={!isEditing}
+            {isEditing ? (
+              <Textarea
+                value={editedOffer.why ?? ""}
                 onChange={(e) =>
-                  setLocalOffer((prev) => ({ ...prev, price: e.target.value }))
+                  setEditedOffer({ ...editedOffer, why: e.target.value })
                 }
+                rows={3}
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              value={localOffer.description}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setLocalOffer((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-              className="min-h-[80px]"
-            />
+            ) : (
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {displayOffer.why}
+              </p>
+            )}
           </div>
 
           <Separator />
 
-          {/* Why */}
-          <div className="p-4 rounded-xl bg-muted/30 space-y-3">
+          {/* Pourquoi ce prix */}
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold">Pourquoi cette offre ?</h4>
+              <DollarSign className={`w-5 h-5 ${config.color}`} />
+              <h3 className="font-semibold">Pourquoi ce prix ?</h3>
             </div>
-            <Textarea
-              value={localOffer.why || ""}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setLocalOffer((prev) => ({ ...prev, why: e.target.value }))
-              }
-              className="min-h-[80px]"
-            />
-          </div>
-
-          {/* Pricing rationale */}
-          <div className="p-4 rounded-xl bg-muted/30 space-y-3">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold">Pourquoi ce prix ?</h4>
-            </div>
-            <Textarea
-              value={localOffer.whyPrice || ""}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setLocalOffer((prev) => ({ ...prev, whyPrice: e.target.value }))
-              }
-              className="min-h-[80px]"
-            />
+            {isEditing ? (
+              <Textarea
+                value={editedOffer.whyPrice ?? ""}
+                onChange={(e) =>
+                  setEditedOffer({ ...editedOffer, whyPrice: e.target.value })
+                }
+                rows={3}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {displayOffer.whyPrice}
+              </p>
+            )}
           </div>
 
           <Separator />
 
-          {/* What to create */}
+          {/* Quoi créer */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold">Ce que tu dois créer</h4>
+              <FileText className={`w-5 h-5 ${config.color}`} />
+              <h3 className="font-semibold">Quoi créer ?</h3>
             </div>
-
             <ul className="space-y-2">
-              {(localOffer.whatToCreate?.length ? localOffer.whatToCreate : ["—"]).map(
-                (item, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5" />
-                    {isEditing ? (
-                      <Input
-                        value={item}
-                        onChange={(e) => {
-                          const next = [...(localOffer.whatToCreate || [])];
-                          next[idx] = e.target.value;
-                          setLocalOffer((prev) => ({ ...prev, whatToCreate: next }));
-                        }}
-                      />
-                    ) : (
-                      <span className="text-sm">{item}</span>
-                    )}
-                  </li>
-                ),
-              )}
+              {displayOffer.whatToCreate?.map((item, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2
+                    className={`w-4 h-4 ${config.color} mt-0.5 flex-shrink-0`}
+                  />
+                  {isEditing ? (
+                    <Input
+                      value={item}
+                      onChange={(e) => {
+                        const newItems = [...(editedOffer.whatToCreate || [])];
+                        newItems[index] = e.target.value;
+                        setEditedOffer({ ...editedOffer, whatToCreate: newItems });
+                      }}
+                      className="flex-1"
+                    />
+                  ) : (
+                    <span>{item}</span>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* How to create */}
-          <div className="p-4 rounded-xl bg-muted/30 space-y-3">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold">Comment la créer</h4>
-            </div>
-            <Textarea
-              value={localOffer.howToCreate || ""}
-              disabled={!isEditing}
-              onChange={(e) =>
-                setLocalOffer((prev) => ({ ...prev, howToCreate: e.target.value }))
-              }
-              className="min-h-[100px]"
-            />
-          </div>
+          <Separator />
 
-          {/* How to promote */}
+          {/* Comment créer */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold">Comment la promouvoir</h4>
+              <Lightbulb className={`w-5 h-5 ${config.color}`} />
+              <h3 className="font-semibold">Comment créer ?</h3>
             </div>
+            {isEditing ? (
+              <Textarea
+                value={editedOffer.howToCreate ?? ""}
+                onChange={(e) =>
+                  setEditedOffer({ ...editedOffer, howToCreate: e.target.value })
+                }
+                rows={3}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {displayOffer.howToCreate}
+              </p>
+            )}
+          </div>
 
+          <Separator />
+
+          {/* Comment promouvoir */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Megaphone className={`w-5 h-5 ${config.color}`} />
+              <h3 className="font-semibold">Comment promouvoir ?</h3>
+            </div>
             <ul className="space-y-2">
-              {(localOffer.howToPromote?.length ? localOffer.howToPromote : ["—"]).map(
-                (item, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5" />
-                    {isEditing ? (
-                      <Input
-                        value={item}
-                        onChange={(e) => {
-                          const next = [...(localOffer.howToPromote || [])];
-                          next[idx] = e.target.value;
-                          setLocalOffer((prev) => ({ ...prev, howToPromote: next }));
-                        }}
-                      />
-                    ) : (
-                      <span className="text-sm">{item}</span>
-                    )}
-                  </li>
-                ),
-              )}
+              {displayOffer.howToPromote?.map((item, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2
+                    className={`w-4 h-4 ${config.color} mt-0.5 flex-shrink-0`}
+                  />
+                  {isEditing ? (
+                    <Input
+                      value={item}
+                      onChange={(e) => {
+                        const newItems = [...(editedOffer.howToPromote || [])];
+                        newItems[index] = e.target.value;
+                        setEditedOffer({
+                          ...editedOffer,
+                          howToPromote: newItems,
+                        });
+                      }}
+                      className="flex-1"
+                    />
+                  ) : (
+                    <span>{item}</span>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          {!isEditing ? (
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Modifier
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={handleCancel}>
+                <X className="w-4 h-4 mr-2" />
+                Annuler
+              </Button>
+              <Button onClick={handleSave}>
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
