@@ -1,13 +1,12 @@
 // app/api/systeme-io/free-optin/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FREE_SECRET = (process.env.SYSTEME_IO_FREE_WEBHOOK_SECRET ?? "").trim();
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
 
-// client "anon" pour envoyer le magic link (utilise les templates Supabase)
+// Client "anon" pour envoyer le magic link (utilise les templates Supabase)
 const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -19,9 +18,11 @@ async function readBodyAny(req: NextRequest): Promise<any> {
   const raw = await req.text().catch(() => "");
   if (!raw) return null;
 
+  // JSON
   try {
     return JSON.parse(raw);
   } catch {
+    // x-www-form-urlencoded
     try {
       const params = new URLSearchParams(raw);
       const obj: Record<string, any> = {};
@@ -53,12 +54,24 @@ function pickString(body: any, paths: string[]): string | null {
   return null;
 }
 
+// Pagination safe (si > 1000 users)
 async function findUserByEmail(email: string) {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) throw error;
-  const users = (data as any)?.users ?? [];
   const lower = email.toLowerCase();
-  return users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower) ?? null;
+  let page = 1;
+  const perPage = 1000;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = (data as any)?.users ?? [];
+    const found = users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower);
+    if (found) return found;
+
+    if (users.length < perPage) break; // dernière page
+    page += 1;
+  }
+  return null;
 }
 
 async function getOrCreateUser(email: string, first_name: string | null, sio_contact_id: string | null) {
@@ -118,18 +131,26 @@ export async function POST(req: NextRequest) {
     const body = await readBodyAny(req);
     if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-    const email = (pickString(body, ["data.customer.email", "customer.email", "email"]) ?? "").toLowerCase();
+    // Systeme.io opt-in: parfois "email", parfois nested
+    const emailRaw = pickString(body, ["data.customer.email", "customer.email", "email", "Email"]) ?? "";
+    const email = emailRaw.trim().toLowerCase();
     if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
 
     const firstName =
-      pickString(body, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname"]) ?? null;
+      pickString(body, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname", "Prenom"]) ?? null;
 
     const sioContactId =
       pickString(body, ["data.customer.contact_id", "customer.contact_id", "contact_id", "contactId"]) ?? null;
 
     const userId = await getOrCreateUser(email, firstName, sioContactId);
+
+    // IMPORTANT: on force plan=free (opt-in free)
     await upsertProfile(userId, email, firstName, sioContactId);
+
+    // DB = source de vérité des crédits (inclut free one-shot)
     await ensureCredits(userId);
+
+    // Magic link
     await sendMagicLink(email);
 
     return NextResponse.json({

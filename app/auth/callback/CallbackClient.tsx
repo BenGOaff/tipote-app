@@ -1,14 +1,8 @@
 "use client";
 
 // app/auth/callback/CallbackClient.tsx
-// Rôle : callback Supabase (invite / recovery / magic link)
-// - Supporte tokens en hash (#access_token=...)
-// - Supporte PKCE (?code=...)
-// - Supporte aussi token_hash (?token_hash=...&type=invite|recovery|magiclink|signup...)
-// - Redirige vers la bonne page Tipote (set-password / reset-password / app)
-// - ✅ UX durable : si le lien est invalide/expiré/déjà consommé, on affiche une page Tipote + possibilité de renvoyer un lien via "mot de passe oublié" (resetPasswordForEmail).
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -66,15 +60,28 @@ function normalizeCallbackErrorMessage(raw: string) {
   return msg;
 }
 
+async function shouldForceSetPassword(userId: string) {
+  // Si tu n’as pas la colonne password_set_at, ça fail-open => false
+  try {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.from("profiles").select("password_set_at").eq("id", userId).maybeSingle();
+    if (error) return false;
+    return !(data as any)?.password_set_at;
+  } catch {
+    return false;
+  }
+}
+
 export default function CallbackClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const ranRef = useRef(false); // ✅ empêche double verifyOtp/exchange
 
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [rawErrorMsg, setRawErrorMsg] = useState<string>("");
 
-  // UX durable (fallback) : permettre de renvoyer un lien de reset password
   const [email, setEmail] = useState("");
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [resendMsg, setResendMsg] = useState<string>("");
@@ -87,14 +94,16 @@ export default function CallbackClient() {
   const type = useMemo(() => getLower(searchParams?.get("type")), [searchParams]);
 
   useEffect(() => {
+    if (ranRef.current) return; // ✅ run once
+    ranRef.current = true;
+
     let cancelled = false;
 
     (async () => {
       try {
         const supabase = getSupabaseBrowserClient();
 
-        // ✅ 0) Cas "token_hash" (invite/recovery/magiclink/signup/email change…)
-        // Important : ce flow NE dépend PAS d'un code_verifier stocké côté navigateur.
+        // 0) token_hash flow (invite/recovery/magiclink/...)
         if (tokenHash) {
           const otpType = (type || "magiclink") as any;
 
@@ -102,14 +111,11 @@ export default function CallbackClient() {
             type: otpType,
             token_hash: tokenHash,
           });
-
           if (error) throw error;
 
-          // Session devrait être présente après verifyOtp
           const { data } = await supabase.auth.getSession();
           const session = data?.session;
 
-          // Redirections selon type
           if (otpType === "recovery") {
             router.replace("/auth/reset-password");
             return;
@@ -119,8 +125,15 @@ export default function CallbackClient() {
             return;
           }
 
-          if (!session) {
+          if (!session?.user?.id) {
             router.replace("/?auth_error=not_authenticated");
+            return;
+          }
+
+          // ✅ magiclink : si pas de mot de passe => forcer /auth/set-password
+          const forceSet = await shouldForceSetPassword(session.user.id);
+          if (forceSet) {
+            router.replace("/auth/set-password");
             return;
           }
 
@@ -128,11 +141,10 @@ export default function CallbackClient() {
           return;
         }
 
-        // 1) Cas PKCE (query ?code=...)
+        // 1) PKCE flow (?code=...)
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
-            // Fix UX + diagnostic : les liens d'invite Supabase dashboard peuvent arriver sans code_verifier en storage.
             if (isPkceMissingVerifierError(error.message || "")) {
               router.replace("/?auth_error=pkce_missing_verifier");
               return;
@@ -153,8 +165,14 @@ export default function CallbackClient() {
             return;
           }
 
-          if (!session) {
+          if (!session?.user?.id) {
             router.replace("/?auth_error=not_authenticated");
+            return;
+          }
+
+          const forceSet = await shouldForceSetPassword(session.user.id);
+          if (forceSet) {
+            router.replace("/auth/set-password");
             return;
           }
 
@@ -162,7 +180,7 @@ export default function CallbackClient() {
           return;
         }
 
-        // 2) Cas implicit hash (#access_token=...&refresh_token=...&type=invite|recovery)
+        // 2) implicit hash (#access_token=...&refresh_token=...)
         const hashParams = parseHashParams(window.location.hash || "");
         const access_token = (hashParams["access_token"] || "").trim();
         const refresh_token = (hashParams["refresh_token"] || "").trim();
@@ -172,7 +190,6 @@ export default function CallbackClient() {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (error) throw error;
 
-          // Nettoie l'URL (évite de laisser les tokens visibles)
           try {
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
           } catch {
@@ -188,11 +205,20 @@ export default function CallbackClient() {
             return;
           }
 
+          const { data } = await supabase.auth.getSession();
+          const session = data?.session;
+          if (session?.user?.id) {
+            const forceSet = await shouldForceSetPassword(session.user.id);
+            if (forceSet) {
+              router.replace("/auth/set-password");
+              return;
+            }
+          }
+
           router.replace("/app");
           return;
         }
 
-        // 3) Rien à traiter -> retour login
         router.replace("/?auth_error=missing_callback_params");
       } catch (e) {
         if (cancelled) return;
@@ -206,7 +232,7 @@ export default function CallbackClient() {
     return () => {
       cancelled = true;
     };
-  }, [router, searchParams, code, tokenHash, type]);
+  }, [router, code, tokenHash, type, searchParams]);
 
   async function handleResend(e: React.FormEvent) {
     e.preventDefault();
@@ -223,9 +249,6 @@ export default function CallbackClient() {
     setResendStatus("sending");
     try {
       const supabase = getSupabaseBrowserClient();
-
-      // ✅ Durable: si l’invite est expirée/déjà utilisée, on retombe sur le flow officiel "Forgot password"
-      // qui envoie un lien valide (type=recovery) et permet à l’utilisateur de définir un mot de passe.
       const redirectTo = `${window.location.origin}/auth/callback?type=recovery`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
@@ -245,7 +268,6 @@ export default function CallbackClient() {
     }
   }
 
-  // UI Tipote : même layout que /auth/set-password existant dans le repo
   if (status === "loading") {
     return (
       <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
@@ -262,9 +284,7 @@ export default function CallbackClient() {
             <div className="h-full w-2/3 bg-gray-300 rounded-full animate-pulse" />
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} Tipote™. Tous droits réservés.
-          </div>
+          <div className="mt-8 text-center text-sm text-gray-500">© {new Date().getFullYear()} Tipote™.</div>
         </div>
       </main>
     );
@@ -335,9 +355,7 @@ export default function CallbackClient() {
           Revenir à la connexion
         </Button>
 
-        <div className="mt-8 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Tipote™. Tous droits réservés.
-        </div>
+        <div className="mt-8 text-center text-sm text-gray-500">© {new Date().getFullYear()} Tipote™.</div>
       </div>
     </main>
   );
