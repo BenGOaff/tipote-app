@@ -1,6 +1,9 @@
 "use client";
 
 // app/auth/callback/CallbackClient.tsx
+// Callback Supabase (invite / recovery / magiclink / pkce / implicit hash)
+// ✅ Fix principal : après authent, si password_set_at absent => /auth/set-password ; sinon /app
+// ✅ UX durable : si lien invalide/expiré/déjà consommé => UI + resend resetPasswordForEmail
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,41 +63,59 @@ function normalizeCallbackErrorMessage(raw: string) {
   return msg;
 }
 
-async function shouldForceSetPassword(userId: string) {
-  // Si tu n’as pas la colonne password_set_at, ça fail-open => false
-  try {
-    const supabase = getSupabaseBrowserClient();
-    const { data, error } = await supabase.from("profiles").select("password_set_at").eq("id", userId).maybeSingle();
-    if (error) return false;
-    return !(data as any)?.password_set_at;
-  } catch {
-    return false;
-  }
-}
-
 export default function CallbackClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const ranRef = useRef(false); // ✅ empêche double verifyOtp/exchange
+  const ranRef = useRef(false); // ✅ empêche double verifyOtp/exchange en dev
 
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [rawErrorMsg, setRawErrorMsg] = useState<string>("");
 
+  // UX durable : resend reset password
   const [email, setEmail] = useState("");
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [resendMsg, setResendMsg] = useState<string>("");
 
   const code = useMemo(() => (searchParams?.get("code") || "").trim(), [searchParams]);
-  const tokenHash = useMemo(
-    () => (searchParams?.get("token_hash") || searchParams?.get("token") || "").trim(),
-    [searchParams]
-  );
+  const tokenHash = useMemo(() => (searchParams?.get("token_hash") || searchParams?.get("token") || "").trim(), [searchParams]);
   const type = useMemo(() => getLower(searchParams?.get("type")), [searchParams]);
 
+  async function getSessionUserId(supabase: any): Promise<string | null> {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id ?? null;
+  }
+
+  async function mustForceSetPassword(supabase: any, userId: string): Promise<boolean> {
+    // Si la colonne n'existe pas / erreur => fail-open (on n'empêche pas la connexion)
+    try {
+      const { data, error } = await supabase.from("profiles").select("password_set_at").eq("id", userId).maybeSingle();
+      if (error) return false;
+      return !(data as any)?.password_set_at;
+    } catch {
+      return false;
+    }
+  }
+
+  async function redirectAfterAuth(supabase: any) {
+    const userId = await getSessionUserId(supabase);
+    if (!userId) {
+      router.replace("/?auth_error=not_authenticated");
+      return;
+    }
+
+    const force = await mustForceSetPassword(supabase, userId);
+    if (force) {
+      router.replace("/auth/set-password");
+      return;
+    }
+
+    router.replace("/app");
+  }
+
   useEffect(() => {
-    if (ranRef.current) return; // ✅ run once
+    if (ranRef.current) return;
     ranRef.current = true;
 
     let cancelled = false;
@@ -113,31 +134,19 @@ export default function CallbackClient() {
           });
           if (error) throw error;
 
-          const { data } = await supabase.auth.getSession();
-          const session = data?.session;
-
           if (otpType === "recovery") {
             router.replace("/auth/reset-password");
             return;
           }
+
+          // invite => set-password direct
           if (otpType === "invite") {
             router.replace("/auth/set-password");
             return;
           }
 
-          if (!session?.user?.id) {
-            router.replace("/?auth_error=not_authenticated");
-            return;
-          }
-
-          // ✅ magiclink : si pas de mot de passe => forcer /auth/set-password
-          const forceSet = await shouldForceSetPassword(session.user.id);
-          if (forceSet) {
-            router.replace("/auth/set-password");
-            return;
-          }
-
-          router.replace("/app");
+          // magiclink / signup / email_change etc => décider selon password_set_at
+          await redirectAfterAuth(supabase);
           return;
         }
 
@@ -152,35 +161,21 @@ export default function CallbackClient() {
             throw error;
           }
 
-          const { data } = await supabase.auth.getSession();
-          const session = data?.session;
-
-          const t = type;
-          if (t === "recovery") {
+          // Si le type dans l'URL indique recovery/invite, on respecte
+          if (type === "recovery") {
             router.replace("/auth/reset-password");
             return;
           }
-          if (t === "invite") {
+          if (type === "invite") {
             router.replace("/auth/set-password");
             return;
           }
 
-          if (!session?.user?.id) {
-            router.replace("/?auth_error=not_authenticated");
-            return;
-          }
-
-          const forceSet = await shouldForceSetPassword(session.user.id);
-          if (forceSet) {
-            router.replace("/auth/set-password");
-            return;
-          }
-
-          router.replace("/app");
+          await redirectAfterAuth(supabase);
           return;
         }
 
-        // 2) implicit hash (#access_token=...&refresh_token=...)
+        // 2) implicit hash (#access_token=...&refresh_token=...&type=...)
         const hashParams = parseHashParams(window.location.hash || "");
         const access_token = (hashParams["access_token"] || "").trim();
         const refresh_token = (hashParams["refresh_token"] || "").trim();
@@ -190,6 +185,7 @@ export default function CallbackClient() {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (error) throw error;
 
+          // Nettoie l'URL (évite tokens visibles)
           try {
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
           } catch {
@@ -205,20 +201,11 @@ export default function CallbackClient() {
             return;
           }
 
-          const { data } = await supabase.auth.getSession();
-          const session = data?.session;
-          if (session?.user?.id) {
-            const forceSet = await shouldForceSetPassword(session.user.id);
-            if (forceSet) {
-              router.replace("/auth/set-password");
-              return;
-            }
-          }
-
-          router.replace("/app");
+          await redirectAfterAuth(supabase);
           return;
         }
 
+        // 3) Rien à traiter
         router.replace("/?auth_error=missing_callback_params");
       } catch (e) {
         if (cancelled) return;

@@ -168,7 +168,159 @@ function mapContentStatusToUi(statusRaw: string): UpcomingItem["status"] {
   if (s === "published" || s === "publié" || s === "publie") return "Terminé";
   if (s === "scheduled" || s === "planifié" || s === "planifie") return "Planifié";
   if (s === "draft" || s === "brouillon") return "À faire";
-  return "Planifié";
+  return "À faire";
+}
+
+function formatEuroCompact(v: number): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function parseEuroNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const s = toStr(v).replace(/\s/g, "").trim();
+  if (!s) return null;
+
+  // accepte "10000", "10.000", "10 000", "10k", "10K", "10.5k"
+  const kMatch = s.match(/^(\d+(?:[.,]\d+)?)k$/i);
+  if (kMatch?.[1]) {
+    const base = Number(kMatch[1].replace(",", "."));
+    return Number.isFinite(base) ? Math.round(base * 1000) : null;
+  }
+
+  // enlève tout sauf chiffres/./,
+  const cleaned = s.replace(/[^\d.,-]/g, "");
+  if (!cleaned) return null;
+
+  // heuristique FR: si virgule présente, elle est décimale
+  let normalized = cleaned;
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    // "1.234,56" => "1234.56"
+    normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma && !hasDot) {
+    // "1234,56" => "1234.56"
+    normalized = cleaned.replace(",", ".");
+  } else {
+    // "1.234" peut être "1234" (grouping) => si 3 décimales après dot, on enlève
+    const dotParts = cleaned.split(".");
+    if (dotParts.length === 2 && dotParts[1].length === 3) {
+      normalized = cleaned.replace(".", "");
+    }
+  }
+
+  const num = Number(normalized);
+  return Number.isFinite(num) ? Math.round(num) : null;
+}
+
+type BizPulse = {
+  // manuel
+  weeklyRevenue: string;
+  weeklyLeads: string;
+  weeklyCalls: string;
+};
+
+function storageKey(userId: string) {
+  return `tipote:dashboard:pulse:${userId}`;
+}
+
+function loadPulse(userId: string): BizPulse | null {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    if (!raw) return null;
+    const json = JSON.parse(raw) as Partial<BizPulse> | null;
+    if (!json || typeof json !== "object") return null;
+    return {
+      weeklyRevenue: typeof json.weeklyRevenue === "string" ? json.weeklyRevenue : "",
+      weeklyLeads: typeof json.weeklyLeads === "string" ? json.weeklyLeads : "",
+      weeklyCalls: typeof json.weeklyCalls === "string" ? json.weeklyCalls : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function savePulse(userId: string, pulse: BizPulse) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(storageKey(userId), JSON.stringify(pulse));
+  } catch {
+    // ignore
+  }
+}
+
+type TaskRow = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  due_date: string | null;
+  priority: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  source: string | null;
+};
+
+type ContentRowAny = Record<string, unknown>;
+
+function pickFirstNonEmpty(...vals: unknown[]): string {
+  for (const v of vals) {
+    const s = toStr(v).trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function normalizeTaskTitle(t: TaskRow): string {
+  return pickFirstNonEmpty(t.title, (t as any)?.task, (t as any)?.name, "—") || "—";
+}
+
+function normalizeTaskDueDate(t: TaskRow): Date | null {
+  return parseDate(t.due_date ?? (t as any)?.dueDate ?? (t as any)?.date_echeance);
+}
+
+function normalizeTaskStatus(t: TaskRow): string {
+  return pickFirstNonEmpty(t.status, (t as any)?.statut, (t as any)?.state, "todo");
+}
+
+function normalizeTaskPriority(t: TaskRow): Priority {
+  return safePriority(t.priority ?? (t as any)?.priorite ?? "medium");
+}
+
+function normalizeContentTitle(r: ContentRowAny): string {
+  return pickFirstNonEmpty(
+    r.title,
+    (r as any)?.titre,
+    (r as any)?.name,
+    (r as any)?.nom,
+    "—",
+  ) || "—";
+}
+
+function normalizeContentType(r: ContentRowAny): string {
+  return pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") || "Contenu";
+}
+
+function normalizeContentStatus(r: ContentRowAny): string {
+  return pickFirstNonEmpty(r.status, (r as any)?.statut, "draft") || "draft";
+}
+
+function normalizeContentScheduledDate(r: ContentRowAny): Date | null {
+  // scheduled_date OR date_planifiee OR scheduledDate
+  return (
+    parseDate((r as any)?.scheduled_date) ||
+    parseDate((r as any)?.date_planifiee) ||
+    parseDate((r as any)?.scheduledDate) ||
+    parseDate((r as any)?.published_at) ||
+    parseDate((r as any)?.created_at)
+  );
 }
 
 function isDoneStatus(v: unknown) {
@@ -182,100 +334,43 @@ function isDoneStatus(v: unknown) {
   );
 }
 
-function pyramidsLookUseful(pyramids: unknown) {
-  if (!Array.isArray(pyramids) || pyramids.length === 0) return false;
-  const first = pyramids[0] as any;
-  return !!(
-    first?.lead_magnet ||
-    first?.low_ticket ||
-    first?.high_ticket ||
-    first?.leadMagnet ||
-    first?.midTicket ||
-    first?.highTicket
-  );
-}
+export default function TodayLovable() {
+  const [isPulseOpen, setIsPulseOpen] = useState(false);
 
-function parseEuroGoalToNumber(goal: string): number | null {
-  const s = (goal || "").toLowerCase().replace(/\s+/g, " ").trim();
-  if (!s) return null;
-
-  const m = s.match(/([0-9]+(?:[\.,][0-9]+)?)\s*(k)?/i);
-  if (!m) return null;
-
-  const raw = m[1].replace(",", ".");
-  const base = Number(raw);
-  if (!Number.isFinite(base)) return null;
-
-  const hasK = !!m[2];
-  const val = hasK ? base * 1000 : base;
-  if (!Number.isFinite(val) || val <= 0) return null;
-
-  return Math.round(val);
-}
-
-function monthKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-type BizPulse = {
-  revenue: number | null;
-  leads: number | null;
-  sales: number | null;
-};
-
-const BIZPULSE_STORAGE_PREFIX = "tipote:bizpulse:";
-
-const TodayLovable = () => {
   const [nextTask, setNextTask] = useState<NextTask>({
-    title: "Découvrir Tipote et démarrer",
-    type: "Onboarding",
+    title: "Synchroniser ta stratégie",
+    type: "Plan stratégique",
     platform: "Tipote",
-    dueTime: "Maintenant",
+    dueTime: "Aujourd'hui",
     priority: "high",
   });
 
   const [stats, setStats] = useState<DashboardStat[]>([
-    { label: "Contenus publiés", value: "0", trend: "0%", icon: FileText },
-    { label: "Tâches complétées", value: "0%", trend: "0/0", icon: CheckCircle2 },
-    { label: "Activité", value: "0", trend: "0%", icon: TrendingUp },
-    { label: "Prochaine échéance", value: "—", trend: "—", icon: Calendar },
+    {
+      label: "Plan stratégique",
+      value: "0%",
+      trend: "0%",
+      icon: Target,
+    },
+    {
+      label: "Contenus planifiés",
+      value: "0/7",
+      trend: "+0",
+      icon: Calendar,
+    },
+    {
+      label: "Objectif engagement",
+      value: "0/7",
+      trend: "+0",
+      icon: TrendingUp,
+    },
   ]);
 
-  const [weekLabel, setWeekLabel] = useState<string>(formatWeekRangeLabel(new Date()));
-
-  const [weeklyGoalTasks, setWeeklyGoalTasks] = useState<number>(3);
-  const [weeklyDoneTasks, setWeeklyDoneTasks] = useState<number>(0);
-
-  const [weeklyGoalContents, setWeeklyGoalContents] = useState<number>(3);
-  const [weeklyPlannedContents, setWeeklyPlannedContents] = useState<number>(0);
-  const [weeklyPublishedContents, setWeeklyPublishedContents] = useState<number>(0);
-
-  const [weeklyPlanPercent, setWeeklyPlanPercent] = useState<number>(0);
-
-  const [planProgressPercent, setPlanProgressPercent] = useState<number>(0);
-  void planProgressPercent;
-
-  const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([
+  const [upcoming, setUpcoming] = useState<UpcomingItem[]>([
     {
-      title: "Compléter l'onboarding",
-      type: "Tâche",
+      title: "Compléter mon onboarding",
+      type: "Étape",
       day: "Aujourd'hui",
-      time: "-",
-      status: "À faire",
-    },
-    {
-      title: "Générer ma stratégie",
-      type: "Tâche",
-      day: "Aujourd'hui",
-      time: "-",
-      status: "À faire",
-    },
-    {
-      title: "Choisir ma pyramide d'offres",
-      type: "Tâche",
-      day: "Cette semaine",
       time: "-",
       status: "À faire",
     },
@@ -291,73 +386,147 @@ const TodayLovable = () => {
   const [revenueGoalLabel, setRevenueGoalLabel] = useState<string>("—");
   const [revenueGoalValue, setRevenueGoalValue] = useState<number | null>(null);
   const [bizPulse, setBizPulse] = useState<BizPulse>({
-    revenue: null,
-    leads: null,
-    sales: null,
+    weeklyRevenue: "",
+    weeklyLeads: "",
+    weeklyCalls: "",
   });
-  const [isBizDialogOpen, setIsBizDialogOpen] = useState(false);
 
-  const bizMonthKey = useMemo(() => monthKey(new Date()), []);
-  const bizStorageKey = useMemo(
-    () => `${BIZPULSE_STORAGE_PREFIX}${bizMonthKey}`,
-    [bizMonthKey],
-  );
+  const [pulseUserId, setPulseUserId] = useState<string>("");
+
+  const now = useMemo(() => new Date(), []);
+  const weekLabel = useMemo(() => formatWeekRangeLabel(now), [now]);
+
+  const [pulseErrors, setPulseErrors] = useState<Record<keyof BizPulse, string>>({
+    weeklyRevenue: "",
+    weeklyLeads: "",
+    weeklyCalls: "",
+  });
+
+  const pulsePreview = useMemo(() => {
+    const weeklyRevenue = parseEuroNumber(bizPulse.weeklyRevenue);
+    const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
+    const weeklyCalls = parseEuroNumber(bizPulse.weeklyCalls);
+
+    return {
+      weeklyRevenue,
+      weeklyLeads,
+      weeklyCalls,
+    };
+  }, [bizPulse.weeklyCalls, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
+
+  const revenueToGoalRatio = useMemo(() => {
+    if (!revenueGoalValue || revenueGoalValue <= 0) return 0;
+    const rev = pulsePreview.weeklyRevenue;
+    if (!rev || rev <= 0) return 0;
+
+    // weekly vs monthly: approximation (x4)
+    const monthlyEstimate = rev * 4;
+    return clampPercent((monthlyEstimate / revenueGoalValue) * 100);
+  }, [pulsePreview.weeklyRevenue, revenueGoalValue]);
+
+  const weeklyExecutionPercent = useMemo(() => {
+    // proxy motivation: calls + leads + revenue (normalised)
+    const calls = pulsePreview.weeklyCalls ?? 0;
+    const leads = pulsePreview.weeklyLeads ?? 0;
+    const rev = pulsePreview.weeklyRevenue ?? 0;
+
+    // targets simples
+    const tCalls = 5;
+    const tLeads = 25;
+    const tRev = 2000;
+
+    const a = Math.min(1, calls / tCalls);
+    const b = Math.min(1, leads / tLeads);
+    const c = Math.min(1, rev / tRev);
+
+    return clampPercent(((a + b + c) / 3) * 100);
+  }, [pulsePreview.weeklyCalls, pulsePreview.weeklyLeads, pulsePreview.weeklyRevenue]);
 
   useEffect(() => {
-    try {
-      const raw =
-        typeof window !== "undefined" ? window.localStorage.getItem(bizStorageKey) : null;
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<BizPulse> | null;
-      if (!parsed) return;
-      setBizPulse({
-        revenue: typeof parsed.revenue === "number" ? parsed.revenue : null,
-        leads: typeof parsed.leads === "number" ? parsed.leads : null,
-        sales: typeof parsed.sales === "number" ? parsed.sales : null,
-      });
-    } catch {
-      // silent
-    }
-  }, [bizStorageKey]);
+    const supabase = getSupabaseBrowserClient();
 
-  useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
 
-        const now = new Date();
-        setWeekLabel(formatWeekRangeLabel(now));
-        const weekStart = startOfWeekMonday(now);
-        const weekEnd = endOfWeekSunday(now);
+        if (authError || !user?.id) {
+          // Page protégée côté serveur, mais on reste safe.
+          return;
+        }
+
+        const userId = user.id;
+
+        if (cancelled) return;
+
+        setPulseUserId(userId);
+
+        const fromStorage = loadPulse(userId);
+        if (fromStorage) setBizPulse(fromStorage);
 
         const profileRes = await supabase
           .from("business_profiles")
           .select("onboarding_completed, revenue_goal_monthly")
+          .eq("user_id", userId)
           .maybeSingle();
 
-        const onboardingCompleted = !!profileRes.data?.onboarding_completed;
-
-        const rgm = toStr((profileRes.data as any)?.revenue_goal_monthly).trim();
-        const goalNumber = rgm ? parseEuroGoalToNumber(rgm) : null;
-
         if (!cancelled) {
-          setRevenueGoalLabel(rgm || "—");
-          setRevenueGoalValue(goalNumber);
+          const goalRaw = (profileRes.data as any)?.revenue_goal_monthly;
+          const goalNum = parseEuroNumber(goalRaw);
+
+          setRevenueGoalValue(goalNum);
+          setRevenueGoalLabel(
+            goalNum ? formatEuroCompact(goalNum) : pickFirstNonEmpty(goalRaw, "—") || "—",
+          );
         }
 
-        const planRes = await supabase.from("business_plan").select("plan_json").maybeSingle();
-        const planJson = (planRes.data?.plan_json ?? null) as any;
+        const planRes = await supabase
+          .from("business_plan")
+          .select("plan_json")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-        const selectedIdx =
-          typeof planJson?.selected_offer_pyramid_index === "number"
-            ? planJson.selected_offer_pyramid_index
-            : null;
+        const planJson = (planRes.data as any)?.plan_json ?? null;
 
-        const pyramidsOk = pyramidsLookUseful(planJson?.offer_pyramids);
+        const selectedIndex =
+          (planJson as any)?.selected_offer_pyramid_index ??
+          (planJson as any)?.selectedOfferPyramidIndex ??
+          null;
 
-        type Attempt = { select: string; orderCol: string };
+        // Load tasks via API (RLS-safe)
+        const tasksRes = await fetch("/api/tasks", { cache: "no-store" })
+          .then(async (r) => ({ ok: r.ok, json: await r.json().catch(() => null) }))
+          .catch(() => ({ ok: false, json: null as any }));
+
+        const tasks: TaskRow[] = Array.isArray((tasksRes as any).json?.tasks)
+          ? ((tasksRes as any).json.tasks as TaskRow[])
+          : Array.isArray((tasksRes as any).json)
+            ? ((tasksRes as any).json as TaskRow[])
+            : [];
+
+        const tasksAll = tasks;
+        const tasksDone = tasksAll.filter((t) =>
+          isDoneStatus(normalizeTaskStatus(t)),
+        ).length;
+        const tasksTotal = tasksAll.length;
+        const progressionPercent = tasksTotal
+          ? clampPercent((tasksDone / tasksTotal) * 100)
+          : 0;
+
+        // Weekly window
+        const startW = startOfWeekMonday(now);
+        const endW = endOfWeekSunday(now);
+
+        // Content rows (schema-compat)
+        const attempts: { select: string; orderCol: string }[] = [
+          { select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id", orderCol: "scheduled_date" },
+          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id", orderCol: "date_planifiee" },
+          { select: "id,title,content,status,created_at,type,user_id", orderCol: "created_at" },
+        ];
 
         const isSchemaError = (m: string) => {
           const s = (m || "").toLowerCase();
@@ -367,33 +536,29 @@ const TodayLovable = () => {
           );
         };
 
-        const attempts: Attempt[] = [
-          {
-            select:
-              "id, type, title:titre, status:statut, scheduled_date:date_planifiee, channel:canal, created_at",
-            orderCol: "date_planifiee",
-          },
-          {
-            select: "id, type, title, status, scheduled_date, channel, created_at",
-            orderCol: "scheduled_date",
-          },
-          {
-            select: "id, type, title:titre, status:statut, created_at",
-            orderCol: "created_at",
-          },
-          {
-            select: "id, type, title, status, created_at",
-            orderCol: "created_at",
-          },
-        ];
+        const isUserIdMissing = (m: string) => {
+          const s = (m || "").toLowerCase();
+          return isSchemaError(s) && s.includes("user_id");
+        };
 
         async function loadContentRows() {
           for (const a of attempts) {
-            const res = await supabase
+            // 1) essai "normal" avec user_id (meilleures perfs + pas de cross-user si RLS est permissif)
+            let res = await supabase
               .from("content_item")
               .select(a.select)
+              .eq("user_id", userId)
               .order(a.orderCol, { ascending: true, nullsFirst: false })
               .limit(300);
+
+            // 2) fallback si colonne user_id manquante (cas legacy)
+            if (res.error && isUserIdMissing(res.error.message)) {
+              res = await supabase
+                .from("content_item")
+                .select(a.select)
+                .order(a.orderCol, { ascending: true, nullsFirst: false })
+                .limit(300);
+            }
 
             if (!res.error) {
               return Array.isArray(res.data) ? res.data : [];
@@ -407,703 +572,541 @@ const TodayLovable = () => {
           return [];
         }
 
-        const contentRows: any[] = await loadContentRows();
+        const contentRows = (await loadContentRows()) as ContentRowAny[];
 
-        const tasksStatsRes = await fetch("/api/tasks/stats", { method: "GET" }).catch(
-          () => null,
-        );
-        const tasksStatsJson = tasksStatsRes
-          ? await tasksStatsRes.json().catch(() => null)
-          : null;
-
-        const tasksRes = await fetch("/api/tasks", { method: "GET" }).catch(() => null);
-        const tasksJson = tasksRes ? await tasksRes.json().catch(() => null) : null;
-
-        const taskRows: any[] = Array.isArray(tasksJson?.tasks) ? tasksJson.tasks : [];
-
-        const combined: CombinedUpcoming[] = [];
-
-        for (const r of contentRows) {
-          const dt = parseDate(r?.scheduled_date);
-          if (!dt) continue;
-          const t = dt.getTime();
-          if (t < weekStart.getTime() || t > weekEnd.getTime()) continue;
-
-          combined.push({
-            kind: "content",
-            title: toStr(r?.title) || "Sans titre",
-            type: toStr(r?.type) || "Contenu",
-            statusRaw: toStr(r?.status) || "",
-            dt,
-          });
-        }
-
-        for (const r of taskRows) {
-          const dt = parseDate(r?.due_date);
-          if (!dt) continue;
-          const t = dt.getTime();
-          if (t < weekStart.getTime() || t > weekEnd.getTime()) continue;
-
-          combined.push({
-            kind: "task",
-            title: toStr(r?.title) || "Sans titre",
-            type: "Tâche",
-            statusRaw: toStr(r?.status) || "",
-            dt,
-            priority: safePriority(r?.priority),
-          });
-        }
-
-        combined.sort((a, b) => a.dt.getTime() - b.dt.getTime());
-        const firstUpcoming = combined[0] ?? null;
-
-        const undoneTasks = (taskRows || []).filter((t) => !isDoneStatus(t?.status));
-        undoneTasks.sort((a, b) => {
-          const da = parseDate(a?.due_date);
-          const db = parseDate(b?.due_date);
-          const ta = da ? da.getTime() : Number.POSITIVE_INFINITY;
-          const tb = db ? db.getTime() : Number.POSITIVE_INFINITY;
-          if (ta !== tb) return ta - tb;
-
-          const ca = parseDate(a?.created_at);
-          const cb = parseDate(b?.created_at);
-          const tca = ca ? ca.getTime() : 0;
-          const tcb = cb ? cb.getTime() : 0;
-          return tca - tcb;
-        });
-        const nextUndoneTask = undoneTasks[0] ?? null;
-
-        if (!cancelled) {
-          if (!onboardingCompleted) {
-            setNextTask({
-              title: "Compléter l'onboarding",
-              type: "Onboarding",
-              platform: "Tipote",
-              dueTime: "Maintenant",
-              priority: "high",
-            });
-          } else if (!pyramidsOk) {
-            setNextTask({
-              title: "Générer ma stratégie",
-              type: "Stratégie",
-              platform: "Tipote",
-              dueTime: "Maintenant",
-              priority: "high",
-            });
-          } else if (selectedIdx === null) {
-            setNextTask({
-              title: "Choisir ma pyramide d'offres",
-              type: "Stratégie",
-              platform: "Tipote",
-              dueTime: "Maintenant",
-              priority: "high",
-            });
-          } else if (nextUndoneTask) {
-            const due = parseDate(nextUndoneTask?.due_date);
-            const day = due ? formatDayLabel(due, now) : "Cette semaine";
-            const time = due ? formatTimeOrDash(due) : "-";
-            setNextTask({
-              title: toStr(nextUndoneTask?.title) || "Tâche",
-              type: "Tâche",
-              platform: "Projet",
-              dueTime: time === "-" ? day : time,
-              priority: safePriority(nextUndoneTask?.priority),
-            });
-          } else if (firstUpcoming) {
-            const day = formatDayLabel(firstUpcoming.dt, now);
-            const time = formatTimeOrDash(firstUpcoming.dt);
-            setNextTask({
-              title: firstUpcoming.title,
-              type: firstUpcoming.kind === "content" ? firstUpcoming.type : "Tâche",
-              platform: firstUpcoming.kind === "content" ? "Contenu" : "Projet",
-              dueTime: time === "-" ? day : time,
-              priority:
-                firstUpcoming.kind === "task" ? firstUpcoming.priority ?? "medium" : "high",
-            });
-          } else {
-            setNextTask({
-              title: "Créer mon 1er contenu",
-              type: "Contenu",
-              platform: "Tipote",
-              dueTime: "Maintenant",
-              priority: "high",
-            });
-          }
-        }
-
-        if (!cancelled) {
-          if (combined.length > 0) {
-            const mapped: UpcomingItem[] = combined.slice(0, 4).map((x) => {
-              const day = formatDayLabel(x.dt, now);
-              const time = formatTimeOrDash(x.dt);
-              const status =
-                x.kind === "content"
-                  ? mapContentStatusToUi(x.statusRaw)
-                  : mapTaskStatusToUi(x.statusRaw);
-
-              return {
-                title: x.title,
-                type: x.kind === "content" ? x.type : "Tâche",
-                day,
-                time,
-                status,
-              };
-            });
-            setUpcomingItems(mapped);
-          }
-        }
-
-        const prevWeekStart = new Date(weekStart);
-        prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-        const prevWeekEnd = new Date(weekEnd);
-        prevWeekEnd.setDate(prevWeekEnd.getDate() - 7);
-
-        const isPublished = (r: any) => {
-          const s = toStr(r?.status).toLowerCase().trim();
-          return s === "published" || s === "publié" || s === "publie";
-        };
-
-        const publishedTotal = contentRows.filter(isPublished).length;
-
-        const publishedThisWeek = contentRows.filter((r) => {
-          if (!isPublished(r)) return false;
-          const dt = parseDate(r?.created_at) || parseDate(r?.scheduled_date);
-          if (!dt) return false;
-          const t = dt.getTime();
-          return t >= weekStart.getTime() && t <= weekEnd.getTime();
-        }).length;
-
-        const publishedPrevWeek = contentRows.filter((r) => {
-          if (!isPublished(r)) return false;
-          const dt = parseDate(r?.created_at) || parseDate(r?.scheduled_date);
-          if (!dt) return false;
-          const t = dt.getTime();
-          return t >= prevWeekStart.getTime() && t <= prevWeekEnd.getTime();
-        }).length;
-
-        const publishedDelta =
-          publishedPrevWeek > 0
-            ? Math.round(((publishedThisWeek - publishedPrevWeek) / publishedPrevWeek) * 100)
-            : publishedThisWeek > 0
-              ? 100
-              : 0;
-
+        // content planned this week
         const plannedThisWeek = contentRows.filter((r) => {
-          const dt = parseDate(r?.scheduled_date);
+          const dt = normalizeContentScheduledDate(r);
           if (!dt) return false;
-          const t = dt.getTime();
-          return t >= weekStart.getTime() && t <= weekEnd.getTime();
+          return dt >= startW && dt <= endW;
+        });
+
+        const plannedCount = plannedThisWeek.length;
+
+        // engagement goal: we cannot know, so proxy = (completed tasks this week)/(target) or (manual pulse leads/calls)
+        const tasksDoneThisWeek = tasksAll.filter((t) => {
+          const done = isDoneStatus(normalizeTaskStatus(t));
+          if (!done) return false;
+          const dt =
+            parseDate((t as any)?.updated_at) ||
+            parseDate((t as any)?.updatedAt) ||
+            parseDate((t as any)?.created_at);
+          if (!dt) return false;
+          return dt >= startW && dt <= endW;
         }).length;
 
-        const totalTasks =
-          typeof tasksStatsJson?.total === "number" ? tasksStatsJson.total : taskRows.length;
-        const doneTasks =
-          typeof tasksStatsJson?.done === "number"
-            ? tasksStatsJson.done
-            : taskRows.filter((t) => isDoneStatus(t?.status)).length;
+        // "objectif engagement" = proxy = tasks done this week / 7
+        const engagementValue = `${Math.min(7, tasksDoneThisWeek)}/7`;
 
-        const completionRate =
-          typeof tasksStatsJson?.completionRate === "number"
-            ? tasksStatsJson.completionRate
-            : totalTasks > 0
-              ? Math.round((doneTasks / totalTasks) * 100)
-              : 0;
+        const nextTodoTask = tasksAll
+          .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
+          .sort((a, b) => {
+            const da = normalizeTaskDueDate(a)?.getTime() ?? Number.POSITIVE_INFINITY;
+            const db = normalizeTaskDueDate(b)?.getTime() ?? Number.POSITIVE_INFINITY;
+            if (da !== db) return da - db;
+            // priority high first
+            const pa = normalizeTaskPriority(a);
+            const pb = normalizeTaskPriority(b);
+            const w = { high: 0, medium: 1, low: 2 } as const;
+            return w[pa] - w[pb];
+          })[0];
 
-        const doneThisWeek = taskRows.filter((t) => {
-          if (!isDoneStatus(t?.status)) return false;
-          const dt = parseDate(t?.updated_at) || parseDate(t?.created_at);
-          if (!dt) return false;
-          const tt = dt.getTime();
-          return tt >= weekStart.getTime() && tt <= weekEnd.getTime();
-        }).length;
-
-        const donePrevWeek = taskRows.filter((t) => {
-          if (!isDoneStatus(t?.status)) return false;
-          const dt = parseDate(t?.updated_at) || parseDate(t?.created_at);
-          if (!dt) return false;
-          const tt = dt.getTime();
-          return tt >= prevWeekStart.getTime() && tt <= prevWeekEnd.getTime();
-        }).length;
-
-        const activityThisWeek = doneThisWeek + publishedThisWeek;
-        const activityPrevWeek = donePrevWeek + publishedPrevWeek;
-        const activityDelta =
-          activityPrevWeek > 0
-            ? Math.round(((activityThisWeek - activityPrevWeek) / activityPrevWeek) * 100)
-            : activityThisWeek > 0
-              ? 100
-              : 0;
-
-        const todoCount = taskRows.filter((t) => !isDoneStatus(t?.status)).length;
-        const goalTasks = todoCount > 0 ? Math.min(3, todoCount) : 0;
-        const goalContents = 3;
-
-        const planWeekPercent =
-          goalTasks > 0 ? clampPercent((doneThisWeek / goalTasks) * 100) : 0;
+        const nextDue = nextTodoTask ? normalizeTaskDueDate(nextTodoTask) : null;
 
         if (!cancelled) {
-          const planPct = clampPercent(completionRate);
-          setPlanProgressPercent(planPct);
-
-          setWeeklyGoalTasks(goalTasks);
-          setWeeklyDoneTasks(doneThisWeek);
-
-          setWeeklyGoalContents(goalContents);
-          setWeeklyPlannedContents(plannedThisWeek);
-          setWeeklyPublishedContents(publishedThisWeek);
-
-          setWeeklyPlanPercent(planWeekPercent);
-
-          let nextDueValue = "—";
-          let nextDueTrend = "—";
-          if (firstUpcoming) {
-            const days = Math.max(
-              0,
-              Math.round(
-                (startOfDay(firstUpcoming.dt).getTime() - startOfDay(now).getTime()) /
-                  86400000,
-              ),
-            );
-            nextDueValue = `${days}j`;
-            nextDueTrend = firstUpcoming.title || "—";
-          }
+          setNextTask({
+            title: nextTodoTask ? normalizeTaskTitle(nextTodoTask) : "Synchroniser ta stratégie",
+            type: "Plan stratégique",
+            platform: "Tipote",
+            dueTime: nextDue ? formatDayLabel(nextDue, now) : "Aujourd'hui",
+            priority: nextTodoTask ? normalizeTaskPriority(nextTodoTask) : "high",
+          });
 
           setStats([
             {
-              label: "Contenus publiés",
-              value: `${publishedTotal}`,
-              trend: `${publishedDelta >= 0 ? "+" : ""}${publishedDelta}%`,
-              icon: FileText,
+              label: "Plan stratégique",
+              value: `${progressionPercent}%`,
+              trend: `${tasksDone}/${tasksTotal}`,
+              icon: Target,
             },
             {
-              label: "Tâches complétées",
-              value: `${planPct}%`,
-              trend: `${doneTasks}/${totalTasks}`,
-              icon: CheckCircle2,
-            },
-            {
-              label: "Activité",
-              value: `${activityThisWeek}`,
-              trend: `${activityDelta >= 0 ? "+" : ""}${activityDelta}%`,
-              icon: TrendingUp,
-            },
-            {
-              label: "Prochaine échéance",
-              value: nextDueValue,
-              trend: nextDueTrend,
+              label: "Contenus planifiés",
+              value: `${plannedCount}/7`,
+              trend: plannedCount > 0 ? `+${plannedCount}` : "+0",
               icon: Calendar,
+            },
+            {
+              label: "Objectif engagement",
+              value: engagementValue,
+              trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0",
+              icon: TrendingUp,
             },
           ]);
         }
+
+        // Upcoming list: mix tasks + content for week
+        const upcomingCombined: CombinedUpcoming[] = [];
+
+        // tasks (todo only, next 5 by due)
+        const tasksUpcoming = tasksAll
+          .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
+          .map((t) => {
+            const dt = normalizeTaskDueDate(t) ?? now;
+            return {
+              kind: "task" as const,
+              title: normalizeTaskTitle(t),
+              type: "Tâche",
+              statusRaw: normalizeTaskStatus(t),
+              dt,
+              priority: normalizeTaskPriority(t),
+            };
+          })
+          .sort((a, b) => a.dt.getTime() - b.dt.getTime())
+          .slice(0, 6);
+
+        upcomingCombined.push(...tasksUpcoming);
+
+        // content (scheduled + draft) for week (next 6)
+        const contentUpcoming = contentRows
+          .map((r) => {
+            const dt = normalizeContentScheduledDate(r) ?? now;
+            return {
+              kind: "content" as const,
+              title: normalizeContentTitle(r),
+              type: normalizeContentType(r),
+              statusRaw: normalizeContentStatus(r),
+              dt,
+            };
+          })
+          .filter((x) => x.dt >= startW && x.dt <= endW)
+          .sort((a, b) => a.dt.getTime() - b.dt.getTime())
+          .slice(0, 6);
+
+        upcomingCombined.push(...contentUpcoming);
+
+        upcomingCombined.sort((a, b) => a.dt.getTime() - b.dt.getTime());
+
+        const nextUpcoming: UpcomingItem[] = upcomingCombined.slice(0, 8).map((x) => {
+          const day = formatDayLabel(x.dt, now);
+          const time = formatTimeOrDash(x.dt);
+
+          return {
+            title: x.title,
+            type: x.type,
+            day,
+            time,
+            status:
+              x.kind === "task"
+                ? mapTaskStatusToUi(x.statusRaw)
+                : mapContentStatusToUi(x.statusRaw),
+          };
+        });
+
+        if (!cancelled) {
+          setUpcoming(nextUpcoming.length ? nextUpcoming : upcoming);
+        }
+
+        // planJson validity (used for CTA)
+        void selectedIndex;
       } catch (e) {
         console.error("TodayLovable load error:", e);
       }
     }
 
-    load();
+    void load();
 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const primaryHref = useMemo(() => {
-    const t = (nextTask.type || "").toLowerCase();
-    if (t.includes("onboarding")) return "/onboarding";
-    if (t.includes("stratégie") || t.includes("strategie")) return "/strategy";
-    if (t.includes("tâche") || t.includes("tache")) return "/strategy";
-    if (t.includes("contenu")) return "/create";
-    return "/create";
-  }, [nextTask.type]);
+  useEffect(() => {
+    if (!pulseUserId) return;
+    savePulse(pulseUserId, bizPulse);
+  }, [bizPulse, pulseUserId]);
 
-  const weeklyGoalTasksLabel = useMemo(() => {
-    if (weeklyGoalTasks <= 0) return "0";
-    return `${Math.min(weeklyDoneTasks, weeklyGoalTasks)}/${weeklyGoalTasks}`;
-  }, [weeklyDoneTasks, weeklyGoalTasks]);
+  function validatePulse(next: BizPulse) {
+    const errs: Record<keyof BizPulse, string> = {
+      weeklyRevenue: "",
+      weeklyLeads: "",
+      weeklyCalls: "",
+    };
 
-  const weeklyGoalContentsLabel = useMemo(() => {
-    return `${Math.min(weeklyPublishedContents, weeklyGoalContents)}/${weeklyGoalContents}`;
-  }, [weeklyPublishedContents, weeklyGoalContents]);
-
-  const weeklyPlannedLabel = useMemo(() => {
-    return `${weeklyPlannedContents}/${weeklyGoalContents}`;
-  }, [weeklyPlannedContents, weeklyGoalContents]);
-
-  const businessProgressPercent = useMemo(() => {
-    if (!revenueGoalValue || !bizPulse.revenue || revenueGoalValue <= 0) return 0;
-    return clampPercent((bizPulse.revenue / revenueGoalValue) * 100);
-  }, [bizPulse.revenue, revenueGoalValue]);
-
-  const handleSaveBizPulse = () => {
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(bizStorageKey, JSON.stringify(bizPulse));
+    // Only revenue is "currency-ish"
+    if (next.weeklyRevenue.trim()) {
+      const n = parseEuroNumber(next.weeklyRevenue);
+      if (n === null || !Number.isFinite(n) || n < 0) {
+        errs.weeklyRevenue = "Entre un montant valide (ex: 1200, 1 200, 1.2k).";
       }
-    } catch {
-      // silent
     }
-    setIsBizDialogOpen(false);
-  };
+
+    if (next.weeklyLeads.trim()) {
+      const n = parseEuroNumber(next.weeklyLeads);
+      if (n === null || !Number.isFinite(n) || n < 0) {
+        errs.weeklyLeads = "Entre un nombre valide (ex: 10).";
+      }
+    }
+
+    if (next.weeklyCalls.trim()) {
+      const n = parseEuroNumber(next.weeklyCalls);
+      if (n === null || !Number.isFinite(n) || n < 0) {
+        errs.weeklyCalls = "Entre un nombre valide (ex: 2).";
+      }
+    }
+
+    setPulseErrors(errs);
+    const has = Object.values(errs).some(Boolean);
+    return !has;
+  }
+
+  const priorityBadge = useMemo(() => {
+    if (nextTask.priority === "high")
+      return { label: "High Priority", variant: "default" as const };
+    if (nextTask.priority === "low")
+      return { label: "Low Priority", variant: "secondary" as const };
+    return { label: "Medium Priority", variant: "outline" as const };
+  }, [nextTask.priority]);
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-muted/30">
           <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
               <h1 className="text-xl font-display font-bold">Aujourd&apos;hui</h1>
             </div>
-
-            <Link href="/credits">
-              <Button variant="outline" className="hidden sm:inline-flex">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Mes crédits
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              onClick={() => setIsPulseOpen(true)}
+              className="gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Mettre à jour mes chiffres
+            </Button>
           </header>
 
-          <div className="p-6 space-y-6 max-w-6xl mx-auto">
-            {/* Welcome Card with Next Action */}
+          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Hero */}
             <Card className="p-8 gradient-hero border-border/50">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-background/20 backdrop-blur-sm flex items-center justify-center">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
+                    Ta vision stratégique
+                  </h2>
+                  <p className="text-primary-foreground/90 text-lg max-w-2xl">
+                    Dashboard simple et actionnable : prochaine action + progrès réels.
+                  </p>
+                </div>
+                <Brain className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">
+                    Objectif revenu
+                  </p>
+                  <p className="text-2xl font-bold text-primary-foreground">
+                    {revenueGoalLabel}
+                  </p>
+                  <p className="text-sm text-primary-foreground/70 mt-1">
+                    Estimation mensuelle à partir de tes chiffres de la semaine
+                  </p>
+                </div>
+
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">
+                    Progression vers l&apos;objectif
+                  </p>
+                  <p className="text-2xl font-bold text-primary-foreground">
+                    {revenueGoalValue ? `${revenueToGoalRatio}%` : "—"}
+                  </p>
+                  <Progress value={revenueToGoalRatio} className="mt-3" />
+                </div>
+
+                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
+                  <p className="text-sm text-primary-foreground/70 mb-1">
+                    Exécution de la semaine
+                  </p>
+                  <p className="text-2xl font-bold text-primary-foreground">
+                    {weeklyExecutionPercent}%
+                  </p>
+                  <Progress value={weeklyExecutionPercent} className="mt-3" />
+                </div>
+              </div>
+            </Card>
+
+            {/* Main grid */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Next action */}
+              <Card className="p-6 lg:col-span-2">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
                       <Target className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <div>
-                      <p className="text-primary-foreground/80 text-sm">Ta prochaine action</p>
-                      <h2 className="text-2xl font-bold text-primary-foreground">{nextTask.title}</h2>
+                      <h3 className="text-xl font-bold">Prochaine action recommandée</h3>
+                      <p className="text-muted-foreground">
+                        Concentre-toi sur 1 action à la fois.
+                      </p>
                     </div>
                   </div>
+                  <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
+                </div>
 
-                  <div className="flex items-center gap-3 mb-6">
-                    <Badge className="bg-background/20 text-primary-foreground border-none">
-                      {nextTask.type}
-                    </Badge>
-                    <Badge className="bg-background/20 text-primary-foreground border-none">
-                      {nextTask.platform}
-                    </Badge>
-                    <span className="text-primary-foreground/80 text-sm">
-                      Planifié pour {nextTask.dueTime}
-                    </span>
+                <div className="p-6 rounded-xl bg-muted/30 border border-border/50">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold mb-1">{nextTask.title}</h4>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-4 h-4" />
+                          {nextTask.type}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {nextTask.dueTime}
+                        </span>
+                      </div>
+                    </div>
+                    <Button asChild className="gap-2">
+                      <Link href="/strategy">
+                        Commencer <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Link href={primaryHref}>
-                      <Button variant="secondary" size="lg">
-                        <Play className="w-4 h-4 mr-2" />
-                        Commencer
-                      </Button>
-                    </Link>
-                    <Link href="/strategy">
-                      <Button
-                        variant="ghost"
-                        className="text-primary-foreground hover:bg-background/10"
-                      >
-                        Voir la stratégie
-                      </Button>
-                    </Link>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Tipote te guide phase par phase — coche tes tâches pour voir ta progression.
                   </div>
                 </div>
-                <Brain className="w-20 h-20 text-primary-foreground/30 hidden lg:block" />
-              </div>
-            </Card>
+              </Card>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.map((stat, index) => (
-                <Card key={index} className="p-5 hover:shadow-md transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2.5 rounded-xl bg-muted">
-                      <stat.icon className="w-5 h-5 text-primary" />
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {stat.trend}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </Card>
-              ))}
-            </div>
-
-            {/* Progress & Actions */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* This Week */}
+              {/* Weekly pulse */}
               <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold">Cette semaine</h3>
-                    <p className="text-sm text-muted-foreground">Ton focus et tes objectifs</p>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl gradient-secondary flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-secondary-foreground" />
                   </div>
-                  <Badge variant="outline">{weekLabel}</Badge>
-                </div>
-
-                <div className="space-y-6">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Objectif tâches</span>
-                      <span className="text-sm font-medium">{weeklyGoalTasksLabel}</span>
-                    </div>
-                    <Progress value={weeklyPlanPercent} className="h-2" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Contenus publiés</span>
-                      <span className="text-sm font-medium">{weeklyGoalContentsLabel}</span>
-                    </div>
-                    <Progress
-                      value={clampPercent(
-                        (weeklyPublishedContents / Math.max(1, weeklyGoalContents)) * 100,
-                      )}
-                      className="h-2"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Contenus planifiés</span>
-                      <span className="text-sm font-medium">{weeklyPlannedLabel}</span>
-                    </div>
-                    <Progress
-                      value={clampPercent(
-                        (weeklyPlannedContents / Math.max(1, weeklyGoalContents)) * 100,
-                      )}
-                      className="h-2"
-                    />
+                    <h3 className="text-lg font-bold">Progression de la semaine</h3>
+                    <p className="text-sm text-muted-foreground">{weekLabel}</p>
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-3">
-                  <Link href={primaryHref} className="block">
-                    <Button className="w-full">
-                      Continuer
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-
-                  <Link href="/strategy" className="block">
-                    <Button variant="outline" className="w-full">
-                      Voir ma stratégie complète
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-
-                {/* Business pulse */}
-                <div className="mt-8 pt-6 border-t border-border">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <BarChart3 className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">Objectif du mois</p>
-                        <p className="text-sm text-muted-foreground">{revenueGoalLabel}</p>
-                      </div>
-                    </div>
-
-                    <Button variant="outline" onClick={() => setIsBizDialogOpen(true)}>
-                      Renseigner
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Réalisé</span>
-                      <span className="text-sm font-medium">
-                        {bizPulse.revenue !== null ? `${bizPulse.revenue}€` : "—"}
-                        {revenueGoalValue ? ` / ${revenueGoalValue}€` : ""}
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Revenu</span>
+                      <span className="text-sm text-muted-foreground">
+                        {pulsePreview.weeklyRevenue !== null
+                          ? formatEuroCompact(pulsePreview.weeklyRevenue)
+                          : "—"}
                       </span>
                     </div>
-                    <Progress value={businessProgressPercent} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      Astuce : renseigne tes chiffres 1 fois par semaine (ça suffit).
-                    </p>
+                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)} />
                   </div>
-                </div>
-              </Card>
 
-              {/* Quick Actions */}
-              <Card className="p-6">
-                <h3 className="text-lg font-bold mb-6">Actions rapides</h3>
-
-                <div className="space-y-3">
-                  <Link href="/create" className="block">
-                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                          <Sparkles className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold group-hover:text-primary transition-colors">
-                            Créer du contenu
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Posts, emails, articles, vidéos...
-                          </p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Leads</span>
+                      <span className="text-sm text-muted-foreground">
+                        {pulsePreview.weeklyLeads !== null ? pulsePreview.weeklyLeads : "—"}
+                      </span>
                     </div>
-                  </Link>
+                    <Progress value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)} />
+                  </div>
 
-                  <Link href="/contents" className="block">
-                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center flex-shrink-0">
-                          <Calendar className="w-5 h-5 text-secondary-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold group-hover:text-primary transition-colors">
-                            Voir mes contenus
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Liste & calendrier éditorial
-                          </p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Appels</span>
+                      <span className="text-sm text-muted-foreground">
+                        {pulsePreview.weeklyCalls !== null ? pulsePreview.weeklyCalls : "—"}
+                      </span>
                     </div>
-                  </Link>
+                    <Progress value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)} />
+                  </div>
 
-                  <Link href="/strategy" className="block">
-                    <div className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                          <Target className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold group-hover:text-primary transition-colors">
-                            Ma stratégie
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Plan d&apos;action & checklist
-                          </p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </div>
-                  </Link>
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setIsPulseOpen(true)}>
+                    <Play className="w-4 h-4" />
+                    Mettre à jour mes chiffres
+                  </Button>
                 </div>
               </Card>
             </div>
 
-            {/* Upcoming Tasks */}
+            {/* Stats */}
+            <div className="grid md:grid-cols-3 gap-6">
+              {stats.map((stat, idx) => {
+                const Icon = stat.icon;
+                return (
+                  <Card key={idx} className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-semibold">{stat.label}</span>
+                    </div>
+                    <p className="text-3xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {stat.trend}
+                    </p>
+                    <Progress
+                      value={
+                        stat.label === "Plan stratégique"
+                          ? clampPercent(Number(stat.value.replace("%", "")) || 0)
+                          : stat.label === "Contenus planifiés"
+                            ? clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
+                            : clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
+                      }
+                      className="mt-3"
+                    />
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Upcoming */}
             <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold">À venir cette semaine</h3>
-                <Link href="/contents">
-                  <Button variant="ghost" size="sm">
-                    Tout voir
-                  </Button>
-                </Link>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">À venir</h3>
+                  <p className="text-muted-foreground">
+                    Tes tâches et contenus planifiés (cette semaine).
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3">
-                {upcomingItems.map((item, i) => (
+                {upcoming.map((item, index) => (
                   <div
-                    key={i}
+                    key={index}
                     className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex-shrink-0">
-                      <Badge
-                        variant={
-                          item.status === "À faire"
-                            ? "default"
-                            : item.status === "Planifié"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {item.type}
-                      </Badge>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">{item.title}</h4>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{item.type}</span>
+                        <span>{item.day}</span>
+                        <span>{item.time}</span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.day} {item.time !== "-" && `• ${item.time}`}
-                      </p>
-                    </div>
-                    <CheckCircle2
-                      className={`w-5 h-5 flex-shrink-0 ${
-                        item.status === "En cours" ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    />
+                    <Badge
+                      variant={
+                        item.status === "Terminé"
+                          ? "default"
+                          : item.status === "Planifié"
+                            ? "secondary"
+                            : "outline"
+                      }
+                    >
+                      {item.status}
+                    </Badge>
                   </div>
                 ))}
               </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <Button asChild className="flex-1 gap-2">
+                  <Link href="/strategy">
+                    Voir ma stratégie complète <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="flex-1 gap-2">
+                  <Link href="/contents">
+                    Voir mes contenus <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </div>
             </Card>
+          </div>
 
-            <Dialog open={isBizDialogOpen} onOpenChange={setIsBizDialogOpen}>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Renseigner tes chiffres</DialogTitle>
-                  <DialogDescription>
-                    30 secondes, 1 fois par semaine. Ces chiffres restent privés et servent à
-                    visualiser ta progression.
-                  </DialogDescription>
-                </DialogHeader>
+          {/* Pulse dialog */}
+          <Dialog open={isPulseOpen} onOpenChange={setIsPulseOpen}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-display font-bold">
+                  Mettre à jour mes chiffres
+                </DialogTitle>
+                <DialogDescription>
+                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres
+                  de la semaine pour suivre ta progression vers ton objectif.
+                </DialogDescription>
+              </DialogHeader>
 
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>Chiffre d&apos;affaires (ce mois-ci)</Label>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Revenu de la semaine</Label>
+                  <Input
+                    value={bizPulse.weeklyRevenue}
+                    onChange={(e) =>
+                      setBizPulse((p) => ({ ...p, weeklyRevenue: e.target.value }))
+                    }
+                    placeholder="ex: 1200, 1 200, 1.2k"
+                  />
+                  {pulseErrors.weeklyRevenue ? (
+                    <p className="text-xs text-destructive">{pulseErrors.weeklyRevenue}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Leads générés</Label>
                     <Input
-                      inputMode="numeric"
-                      placeholder="ex : 1200"
-                      value={bizPulse.revenue ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9]/g, "");
-                        setBizPulse((p) => ({ ...p, revenue: v ? Number(v) : null }));
-                      }}
+                      value={bizPulse.weeklyLeads}
+                      onChange={(e) =>
+                        setBizPulse((p) => ({ ...p, weeklyLeads: e.target.value }))
+                      }
+                      placeholder="ex: 10"
                     />
+                    {pulseErrors.weeklyLeads ? (
+                      <p className="text-xs text-destructive">{pulseErrors.weeklyLeads}</p>
+                    ) : null}
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label>Leads (optionnel)</Label>
+                  <div className="space-y-2">
+                    <Label>Appels / RDV</Label>
                     <Input
-                      inputMode="numeric"
-                      placeholder="ex : 45"
-                      value={bizPulse.leads ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9]/g, "");
-                        setBizPulse((p) => ({ ...p, leads: v ? Number(v) : null }));
-                      }}
+                      value={bizPulse.weeklyCalls}
+                      onChange={(e) =>
+                        setBizPulse((p) => ({ ...p, weeklyCalls: e.target.value }))
+                      }
+                      placeholder="ex: 2"
                     />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Ventes (optionnel)</Label>
-                    <Input
-                      inputMode="numeric"
-                      placeholder="ex : 3"
-                      value={bizPulse.sales ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9]/g, "");
-                        setBizPulse((p) => ({ ...p, sales: v ? Number(v) : null }));
-                      }}
-                    />
+                    {pulseErrors.weeklyCalls ? (
+                      <p className="text-xs text-destructive">{pulseErrors.weeklyCalls}</p>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="mt-2 flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => setIsBizDialogOpen(false)}>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button variant="ghost" onClick={() => setIsPulseOpen(false)}>
                     Annuler
                   </Button>
-                  <Button onClick={handleSaveBizPulse}>Enregistrer</Button>
+                  <Button
+                    onClick={() => {
+                      const next = { ...bizPulse };
+                      const ok = validatePulse(next);
+                      if (!ok) return;
+                      setIsPulseOpen(false);
+                    }}
+                  >
+                    Enregistrer
+                  </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </SidebarProvider>
   );
-};
-
-export default TodayLovable;
+}
