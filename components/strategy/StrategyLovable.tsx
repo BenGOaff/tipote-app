@@ -35,7 +35,6 @@ import { AddTaskDialog } from "@/components/strategy/AddTaskDialog";
 import {
   Target,
   CheckCircle2,
-  ArrowRight,
   Layers,
   Clock,
   Plus,
@@ -760,25 +759,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     );
                   })}
                 </div>
-
-                {/* Next Step */}
-                <Card className="p-5 bg-primary/5 border-primary/20">
-                  <div className="flex items-start gap-4">
-                    <Target className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-primary mb-1">
-                        Prochaine étape recommandée
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Continue ton exécution : synchronise ton plan puis avance
-                        phase par phase.
-                      </p>
-                      <Button variant="default" size="sm">
-                        Commencer <ArrowRight className="ml-2 w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
               </TabsContent>
 
               {/* Pyramide d'offres Tab */}
