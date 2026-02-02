@@ -9,7 +9,7 @@ const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
 const zNumOrStr = z.union([z.number(), z.string()]);
 
-// Payload "sale completed" (mais le type varie selon le trigger => on ne bloque pas dessus)
+// Payload "sale completed" (le type varie selon le trigger => on ne bloque pas dessus)
 const systemeNewSaleSchema = z.object({
   type: z.string().optional(),
   data: z.object({
@@ -63,15 +63,13 @@ const simpleTestSchema = z.object({
 
 // ---------- Mapping offres Systeme.io -> plan interne ----------
 
-// ✅ On ajoute "beta" comme plan stocké (beta = pro en accès, mais tu veux "beta" dans Supabase)
-type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
+// "beta" est stocké comme plan (beta = pro en accès)
+export type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
 function normalizePlanFromOfferName(offer: { name: string; inner_name?: string | null }): StoredPlan | null {
   const name = `${offer.inner_name ?? ""} ${offer.name}`.toLowerCase();
 
-  // ✅ Beta doit rester beta en DB
   if (name.includes("beta")) return "beta";
-
   if (name.includes("elite")) return "elite";
   if (name.includes("essential")) return "pro"; // alias legacy
   if (name.includes("pro")) return "pro";
@@ -81,7 +79,7 @@ function normalizePlanFromOfferName(offer: { name: string; inner_name?: string |
 }
 
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
-  // ✅ Ton offre Beta lifetime (97€) => plan "beta" en DB
+  // Offre Beta lifetime (97€) => plan "beta" en DB
   "offerprice-efbd353f": "beta",
   "offerprice-3066719": "beta",
 };
@@ -91,45 +89,7 @@ function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: stri
   return normalizePlanFromOfferName(offer);
 }
 
-// ---------- Credits packs (id -> credits) ----------
-
-// Nouveau naming (price ids)
-const PACK_STARTER_PRICE_ID = (process.env.SIO_CREDITS_PACK_STARTER_PRICE_ID ?? "").trim();
-const PACK_STANDARD_PRICE_ID = (process.env.SIO_CREDITS_PACK_STANDARD_PRICE_ID ?? "").trim();
-const PACK_PRO_PRICE_ID = (process.env.SIO_CREDITS_PACK_PRO_PRICE_ID ?? "").trim();
-
-// Legacy naming (price ids)
-const PRICE_ID_25_LEGACY = (process.env.SIO_CREDITS_PACK_25_PRICE_ID ?? "").trim();
-const PRICE_ID_100_LEGACY = (process.env.SIO_CREDITS_PACK_100_PRICE_ID ?? "").trim();
-const PRICE_ID_250_LEGACY = (process.env.SIO_CREDITS_PACK_250_PRICE_ID ?? "").trim();
-
-// ✅ Compat product-id naming (ce que TU as en prod actuellement)
-const PRODUCT_ID_25 = (process.env.SIO_CREDITS_PACK_25_PRODUCT_ID ?? "").trim();
-const PRODUCT_ID_100 = (process.env.SIO_CREDITS_PACK_100_PRODUCT_ID ?? "").trim();
-const PRODUCT_ID_250 = (process.env.SIO_CREDITS_PACK_250_PRODUCT_ID ?? "").trim();
-
-type CreditPackName = "starter" | "standard" | "pro";
-
-function creditsPackFromPriceId(priceId: string): { pack: CreditPackName; credits: number } | null {
-  if (!priceId) return null;
-
-  // Price-id naming
-  if (PACK_STARTER_PRICE_ID && priceId === PACK_STARTER_PRICE_ID) return { pack: "starter", credits: 25 };
-  if (PACK_STANDARD_PRICE_ID && priceId === PACK_STANDARD_PRICE_ID) return { pack: "standard", credits: 100 };
-  if (PACK_PRO_PRICE_ID && priceId === PACK_PRO_PRICE_ID) return { pack: "pro", credits: 250 };
-
-  // Legacy price ids
-  if (PRICE_ID_25_LEGACY && priceId === PRICE_ID_25_LEGACY) return { pack: "starter", credits: 25 };
-  if (PRICE_ID_100_LEGACY && priceId === PRICE_ID_100_LEGACY) return { pack: "standard", credits: 100 };
-  if (PRICE_ID_250_LEGACY && priceId === PRICE_ID_250_LEGACY) return { pack: "pro", credits: 250 };
-
-  // ✅ Product-id naming (numérique)
-  if (PRODUCT_ID_25 && priceId === PRODUCT_ID_25) return { pack: "starter", credits: 25 };
-  if (PRODUCT_ID_100 && priceId === PRODUCT_ID_100) return { pack: "standard", credits: 100 };
-  if (PRODUCT_ID_250 && priceId === PRODUCT_ID_250) return { pack: "pro", credits: 250 };
-
-  return null;
-}
+// ---------- Utils ----------
 
 function toStringId(v: unknown): string {
   return String(v ?? "").trim();
@@ -144,7 +104,7 @@ function toBigIntNumber(v: unknown): number | null {
 }
 
 // ---------- Body parsing (JSON OU x-www-form-urlencoded) ----------
-// ✅ FIX CRITIQUE : NE PAS faire req.json() puis req.text() (le body est consommé).
+// ⚠️ NE PAS faire req.json() puis req.text() (body consommé).
 async function readBodyAny(req: NextRequest): Promise<any> {
   const raw = await req.text().catch(() => "");
   if (!raw) return null;
@@ -202,44 +162,6 @@ function extractNumber(body: any, paths: string[]): number | null {
   if (!Number.isFinite(n)) return null;
   const int = Math.floor(n);
   return int > 0 ? int : null;
-}
-
-function numericPartFromOfferId(id: string): number | null {
-  const m = id.match(/(\d+)$/);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-// ✅ Matching “loose” : si Systeme.io envoie juste 3057068 au lieu de offer-price-3057068
-function creditsPackFromPriceIdLoose(priceId: string): { pack: CreditPackName; credits: number } | null {
-  if (!priceId) return null;
-
-  const exact = creditsPackFromPriceId(priceId);
-  if (exact) return exact;
-
-  const pidNum = numericPartFromOfferId(priceId);
-  if (!pidNum) return null;
-
-  const envs: Array<{ env: string; pack: CreditPackName; credits: number }> = [
-    { env: PACK_STARTER_PRICE_ID, pack: "starter", credits: 25 },
-    { env: PACK_STANDARD_PRICE_ID, pack: "standard", credits: 100 },
-    { env: PACK_PRO_PRICE_ID, pack: "pro", credits: 250 },
-    { env: PRICE_ID_25_LEGACY, pack: "starter", credits: 25 },
-    { env: PRICE_ID_100_LEGACY, pack: "standard", credits: 100 },
-    { env: PRICE_ID_250_LEGACY, pack: "pro", credits: 250 },
-    { env: PRODUCT_ID_25, pack: "starter", credits: 25 },
-    { env: PRODUCT_ID_100, pack: "standard", credits: 100 },
-    { env: PRODUCT_ID_250, pack: "pro", credits: 250 },
-  ];
-
-  for (const e of envs) {
-    if (!e.env) continue;
-    const eNum = numericPartFromOfferId(e.env);
-    if (eNum && eNum === pidNum) return { pack: e.pack, credits: e.credits };
-  }
-
-  return null;
 }
 
 // ---------- Helpers Supabase ----------
@@ -321,120 +243,16 @@ async function upsertProfile(params: {
   }
 }
 
-// Legacy credits add (fallback)
-async function addPurchasedCreditsLegacy(params: { userId: string; credits: number; source: string }) {
-  const { userId, credits, source } = params;
-
-  const existing = await supabaseAdmin
-    .from("user_credits")
-    .select("user_id, bonus_credits_total, bonus_credits_used, monthly_credits_total, monthly_credits_used, monthly_reset_at")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  const now = new Date().toISOString();
-
-  if (existing.error) {
-    console.error("[Systeme.io webhook] read user_credits error:", existing.error);
-  }
-
-  const row = (existing.data as any) ?? null;
-  const bonusTotal = Number(row?.bonus_credits_total ?? 0);
-  const bonusUsed = Number(row?.bonus_credits_used ?? 0);
-  const monthlyTotal = Number(row?.monthly_credits_total ?? 0);
-  const monthlyUsed = Number(row?.monthly_credits_used ?? 0);
-
-  // ✅ IMPORTANT : monthly_reset_at est NOT NULL chez toi
-  const monthlyResetAt = row?.monthly_reset_at ?? now;
-
-  const nextBonusTotal = Math.max(0, bonusTotal + credits);
-
-  const { error: upsertErr } = await supabaseAdmin.from("user_credits").upsert(
-    {
-      user_id: userId,
-      monthly_credits_total: monthlyTotal,
-      monthly_credits_used: monthlyUsed,
-      bonus_credits_total: nextBonusTotal,
-      bonus_credits_used: bonusUsed,
-      monthly_reset_at: monthlyResetAt,
-      updated_at: now,
-    } as any,
-    { onConflict: "user_id" },
-  );
-
-  if (upsertErr) {
-    console.error("[Systeme.io webhook] upsert user_credits error:", upsertErr);
-    throw upsertErr;
-  }
-
-  // ✅ IMPORTANT : ton schéma credit_transactions = (kind, bucket, amount, context)
-  // Pas de colonne `source`.
-  const { error: txErr } = await supabaseAdmin.from("credit_transactions").insert({
-    user_id: userId,
-    kind: "purchase",
-    bucket: "bonus",
-    amount: credits,
-    context: { source },
-    created_at: now,
-  } as any);
-
-  if (txErr) {
-    // on ne throw pas (best effort), mais on log vraiment
-    console.error("[Systeme.io webhook] insert credit_transactions error:", txErr);
-  }
-}
-
-/**
- * Crédit pack idempotent via RPC:
- * public.grant_bonus_credits_from_order(p_user_id uuid, p_credits integer, p_order_id bigint) returns boolean
- */
-async function grantCreditsIdempotent(params: { userId: string; credits: number; orderId: number | null; source: string }) {
-  const { userId, credits, orderId, source } = params;
-
-  const now = new Date().toISOString();
-
-  if (!orderId || orderId <= 0) {
-    console.warn("[Systeme.io webhook] Missing/invalid order.id — fallback legacy.", { user_id: userId, credits, source, orderId });
-    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_no_order` });
-    return { mode: "legacy_no_order", granted: true };
-  }
-
+// Best effort: met en place/actualise le bucket crédits selon le plan (logique DB)
+async function ensureUserCredits(userId: string) {
   try {
-    const { data, error } = await supabaseAdmin.rpc("grant_bonus_credits_from_order", {
-      p_user_id: userId,
-      p_credits: credits,
-      p_order_id: orderId,
-    });
-
-    if (error) {
-      console.error("[Systeme.io webhook] RPC grant_bonus_credits_from_order error:", error);
-      throw error;
-    }
-
-    const inserted = Boolean(data);
-
-    // Best effort audit (schéma OK)
-    if (inserted) {
-      const { error: txErr } = await supabaseAdmin.from("credit_transactions").insert({
-        user_id: userId,
-        kind: "purchase",
-        bucket: "bonus",
-        amount: credits,
-        context: { source, order_id: orderId },
-        created_at: now,
-      } as any);
-
-      if (txErr) console.error("[Systeme.io webhook] insert credit_transactions error:", txErr);
-    }
-
-    return { mode: "rpc_idempotent", granted: inserted };
-  } catch {
-    console.warn("[Systeme.io webhook] Falling back to legacy credit upsert.", { user_id: userId, credits, source });
-    await addPurchasedCreditsLegacy({ userId, credits, source: `${source}:legacy_fallback` });
-    return { mode: "legacy_fallback", granted: true };
+    await supabaseAdmin.rpc("ensure_user_credits", { p_user_id: userId });
+  } catch (e) {
+    console.error("[Systeme.io webhook] ensure_user_credits error:", e);
   }
 }
 
-// ---------- Debug GET (comme ton screenshot) ----------
+// ---------- Debug GET ----------
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({
@@ -444,19 +262,6 @@ export async function GET(req: NextRequest) {
     now: new Date().toISOString(),
     env: {
       SYSTEME_IO_WEBHOOK_SECRET: Boolean(process.env.SYSTEME_IO_WEBHOOK_SECRET),
-
-      // price ids
-      SIO_CREDITS_PACK_STARTER_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_STARTER_PRICE_ID),
-      SIO_CREDITS_PACK_STANDARD_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_STANDARD_PRICE_ID),
-      SIO_CREDITS_PACK_PRO_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_PRO_PRICE_ID),
-      SIO_CREDITS_PACK_25_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_25_PRICE_ID),
-      SIO_CREDITS_PACK_100_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_100_PRICE_ID),
-      SIO_CREDITS_PACK_250_PRICE_ID: Boolean(process.env.SIO_CREDITS_PACK_250_PRICE_ID),
-
-      // ✅ product ids (ce que tu as)
-      SIO_CREDITS_PACK_25_PRODUCT_ID: Boolean(process.env.SIO_CREDITS_PACK_25_PRODUCT_ID),
-      SIO_CREDITS_PACK_100_PRODUCT_ID: Boolean(process.env.SIO_CREDITS_PACK_100_PRODUCT_ID),
-      SIO_CREDITS_PACK_250_PRODUCT_ID: Boolean(process.env.SIO_CREDITS_PACK_250_PRODUCT_ID),
     },
   });
 }
@@ -478,40 +283,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
-    console.log("[Systeme.io webhook] Incoming", {
-      contentType: req.headers.get("content-type"),
-      keys: Object.keys(rawBody ?? {}),
-      type: (rawBody as any)?.type,
-    });
-
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
     const systemeData = parsedSysteme.success ? parsedSysteme.data.data : null;
 
-    const emailMaybe =
-      systemeData?.customer?.email ??
-      extractString(rawBody, ["data.customer.email", "customer.email", "email"]);
+    const emailMaybe = systemeData?.customer?.email ?? extractString(rawBody, ["data.customer.email", "customer.email", "email"]);
     const email = emailMaybe ? String(emailMaybe).toLowerCase() : null;
 
     let firstName =
       systemeData?.customer?.fields?.first_name ??
-      extractString(rawBody, [
-        "data.customer.fields.first_name",
-        "customer.fields.first_name",
-        "first_name",
-        "firstname",
-      ]) ??
+      extractString(rawBody, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname"]) ??
       null;
 
     const sioContactId =
       (systemeData?.customer?.contact_id !== undefined && systemeData?.customer?.contact_id !== null
         ? toStringId(systemeData.customer.contact_id)
-        : extractString(rawBody, [
-            "data.customer.contact_id",
-            "data.customer.contactId",
-            "customer.contact_id",
-            "contact_id",
-            "contactId",
-          ])) ?? null;
+        : extractString(rawBody, ["data.customer.contact_id", "data.customer.contactId", "customer.contact_id", "contact_id", "contactId"])) ?? null;
 
     const offerId = toStringId(
       systemeData?.offer_price_plan?.id ??
@@ -531,29 +317,17 @@ export async function POST(req: NextRequest) {
     const offerName =
       systemeData?.offer_price_plan?.name ??
       systemeData?.offer_price?.name ??
-      extractString(rawBody, [
-        "data.offer_price_plan.name",
-        "data.offer_price.name",
-        "offer_price_plan.name",
-        "offer_price.name",
-      ]) ??
+      extractString(rawBody, ["data.offer_price_plan.name", "data.offer_price.name", "offer_price_plan.name", "offer_price.name"]) ??
       "Unknown";
 
     const offerInner =
       systemeData?.offer_price_plan?.inner_name ??
-      extractString(rawBody, [
-        "data.offer_price_plan.inner_name",
-        "offer_price_plan.inner_name",
-      ]) ??
+      extractString(rawBody, ["data.offer_price_plan.inner_name", "offer_price_plan.inner_name"]) ??
       null;
 
-    const orderId = toBigIntNumber(
-      systemeData?.order?.id ??
-        extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ??
-        null,
-    );
+    const orderId = toBigIntNumber(systemeData?.order?.id ?? extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ?? null);
 
-    // ✅ fallback: si email absent, on tente via sio_contact_id -> profiles
+    // Fallback: si email absent, on tente via sio_contact_id -> profiles
     let resolvedEmail = email;
     let resolvedUserId: string | null = null;
 
@@ -567,15 +341,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (resolvedEmail) {
-      console.log("[Systeme.io webhook] Parsed sale", {
-        email: resolvedEmail,
-        sioContactId,
-        offerId,
-        offerName,
-        orderId,
-        schemaMatched: parsedSysteme.success,
-      });
-
       const userId =
         resolvedUserId ??
         (await getOrCreateSupabaseUser({
@@ -595,23 +360,8 @@ export async function POST(req: NextRequest) {
         product_id: offerId || null,
       });
 
-      const pack = creditsPackFromPriceIdLoose(offerId);
-      if (pack) {
-        const source = `systemeio:offer_or_product_id:${offerId}`;
-        const res = await grantCreditsIdempotent({ userId, credits: pack.credits, orderId, source });
-
-        return NextResponse.json({
-          status: "ok",
-          action: res.granted ? "credits_granted" : "credits_already_granted",
-          email: resolvedEmail,
-          user_id: userId,
-          credits_added: res.granted ? pack.credits : 0,
-          pack: pack.pack,
-          offer_or_product_id: offerId,
-          order_id: orderId,
-          credit_mode: res.mode,
-        });
-      }
+      // ✅ Pas de bonus via webhook. Les crédits sont gérés par ensure_user_credits (DB).
+      await ensureUserCredits(userId);
 
       return NextResponse.json({
         status: "ok",
@@ -620,9 +370,11 @@ export async function POST(req: NextRequest) {
         user_id: userId,
         plan,
         product_id: offerId || null,
+        order_id: orderId,
       });
     }
 
+    // payload simple test
     const parsedSimple = simpleTestSchema.safeParse(rawBody);
     if (parsedSimple.success) {
       const { email, first_name, sio_contact_id, product_id } = parsedSimple.data;
@@ -652,6 +404,8 @@ export async function POST(req: NextRequest) {
         plan,
         product_id: product_id ?? null,
       });
+
+      await ensureUserCredits(userId);
 
       return NextResponse.json({
         status: "ok",
