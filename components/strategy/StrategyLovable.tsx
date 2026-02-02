@@ -422,6 +422,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   const phasesForRender = isEditing ? phases : props.phases;
 
+  const openPhase = useCallback(
+    (phaseIndex: number) => {
+      if (isEditing) return;
+      setSelectedPhaseIndex(phaseIndex);
+    },
+    [isEditing],
+  );
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -594,22 +602,25 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       : 0;
 
                     return (
-                      <Card key={phaseIndex} className="p-6">
-                        <div
-                          className={`flex items-center justify-between mb-4 ${!isEditing ? "cursor-pointer" : ""}`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            if (!isEditing) setSelectedPhaseIndex(phaseIndex);
-                          }}
-                          onKeyDown={(e) => {
-                            if (isEditing) return;
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setSelectedPhaseIndex(phaseIndex);
-                            }
-                          }}
-                        >
+                      <Card
+                        key={phaseIndex}
+                        className={`p-6 ${
+                          !isEditing
+                            ? "cursor-pointer hover:bg-muted/20 transition-colors"
+                            : ""
+                        }`}
+                        role={!isEditing ? "button" : undefined}
+                        tabIndex={!isEditing ? 0 : undefined}
+                        onClick={() => openPhase(phaseIndex)}
+                        onKeyDown={(e) => {
+                          if (isEditing) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openPhase(phaseIndex);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-4">
                           <div>
                             <h3 className="text-lg font-bold">{phase.title}</h3>
                             <p className="text-sm text-muted-foreground">
@@ -633,13 +644,17 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setSelectedPhaseIndex(phaseIndex)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openPhase(phaseIndex);
+                                }}
                               >
                                 <ChevronRight className="w-4 h-4" />
                               </Button>
                             )}
                           </div>
                         </div>
+
                         <Progress value={phaseProgress} className="mb-4" />
 
                         {isEditing ? (
@@ -690,11 +705,16 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       <div
                                         key={item.id}
                                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
                                         <Checkbox
                                           checked={checked}
+                                          onClick={(e) => e.stopPropagation()}
                                           onCheckedChange={(v) =>
-                                            toggleTask(String(item.id), Boolean(v))
+                                            toggleTask(
+                                              String(item.id),
+                                              Boolean(v),
+                                            )
                                           }
                                         />
                                         <span
@@ -709,15 +729,28 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       </div>
                                     );
                                   })}
+
                                 {tasks.length > TASKS_DISPLAY_LIMIT && (
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    +{tasks.length - TASKS_DISPLAY_LIMIT} tâches
-                                    supplémentaires...
-                                  </p>
+                                  <button
+                                    type="button"
+                                    className="text-sm text-primary hover:underline mt-2 inline-flex items-center gap-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openPhase(phaseIndex);
+                                    }}
+                                  >
+                                    Voir les{" "}
+                                    {tasks.length - TASKS_DISPLAY_LIMIT} autres
+                                    tâches
+                                    <ChevronRight className="w-4 h-4" />
+                                  </button>
                                 )}
                               </>
                             ) : (
-                              <div className="text-sm text-muted-foreground">
+                              <div
+                                className="text-sm text-muted-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 Aucune tâche dans cette phase pour l&apos;instant.
                               </div>
                             )}

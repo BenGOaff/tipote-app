@@ -75,6 +75,19 @@ const offerConfig = {
   },
 };
 
+const isMeaningfulString = (v: unknown): v is string =>
+  typeof v === "string" && v.trim().length > 0;
+
+const coalesceString = (
+  value: string | undefined,
+  fallback: string | undefined,
+) => (isMeaningfulString(value) ? value : fallback);
+
+const coalesceStringArray = (
+  value: string[] | undefined,
+  fallback: string[] | undefined,
+) => (Array.isArray(value) && value.length > 0 ? value : fallback);
+
 const getDefaultOfferDetails = (
   offerType: OfferType,
   _offer: Offer,
@@ -159,11 +172,17 @@ export const OfferDetailModal = ({
 
   const buildHydratedOffer = (): Offer => ({
     ...offer,
-    why: offer.why ?? defaultDetails.why,
-    whyPrice: offer.whyPrice ?? defaultDetails.whyPrice,
-    whatToCreate: offer.whatToCreate ?? defaultDetails.whatToCreate,
-    howToCreate: offer.howToCreate ?? defaultDetails.howToCreate,
-    howToPromote: offer.howToPromote ?? defaultDetails.howToPromote,
+    why: coalesceString(offer.why, defaultDetails.why),
+    whyPrice: coalesceString(offer.whyPrice, defaultDetails.whyPrice),
+    whatToCreate: coalesceStringArray(
+      offer.whatToCreate,
+      defaultDetails.whatToCreate,
+    ),
+    howToCreate: coalesceString(offer.howToCreate, defaultDetails.howToCreate),
+    howToPromote: coalesceStringArray(
+      offer.howToPromote,
+      defaultDetails.howToPromote,
+    ),
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -175,17 +194,47 @@ export const OfferDetailModal = ({
     setIsEditing(false);
     setEditedOffer(buildHydratedOffer());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, offerType, offer.title, offer.price, offer.description, offer.why, offer.whyPrice]);
+  }, [
+    isOpen,
+    offerType,
+    offer.title,
+    offer.price,
+    offer.description,
+    offer.why,
+    offer.whyPrice,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;
     setEditedOffer((prev) => ({
       ...prev,
-      whatToCreate: (offer.whatToCreate ?? defaultDetails.whatToCreate) || prev.whatToCreate,
-      howToPromote: (offer.howToPromote ?? defaultDetails.howToPromote) || prev.howToPromote,
-      howToCreate: offer.howToCreate ?? defaultDetails.howToCreate ?? prev.howToCreate,
+      whatToCreate:
+        (coalesceStringArray(offer.whatToCreate, defaultDetails.whatToCreate) ||
+          prev.whatToCreate) ??
+        prev.whatToCreate,
+      howToPromote:
+        (coalesceStringArray(offer.howToPromote, defaultDetails.howToPromote) ||
+          prev.howToPromote) ??
+        prev.howToPromote,
+      howToCreate:
+        coalesceString(offer.howToCreate, defaultDetails.howToCreate) ??
+        prev.howToCreate,
+      why:
+        coalesceString(offer.why, defaultDetails.why) ??
+        prev.why,
+      whyPrice:
+        coalesceString(offer.whyPrice, defaultDetails.whyPrice) ??
+        prev.whyPrice,
     }));
-  }, [isOpen, offer.whatToCreate, offer.howToPromote, offer.howToCreate, defaultDetails]);
+  }, [
+    isOpen,
+    offer.whatToCreate,
+    offer.howToPromote,
+    offer.howToCreate,
+    offer.why,
+    offer.whyPrice,
+    defaultDetails,
+  ]);
 
   const handleSave = () => {
     onUpdateOffer?.(editedOffer);
@@ -226,7 +275,9 @@ export const OfferDetailModal = ({
                     className="text-xl font-bold"
                   />
                 ) : (
-                  <DialogTitle className="text-xl">{displayOffer.title}</DialogTitle>
+                  <DialogTitle className="text-xl">
+                    {displayOffer.title}
+                  </DialogTitle>
                 )}
               </div>
             </div>
