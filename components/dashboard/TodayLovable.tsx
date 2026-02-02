@@ -24,7 +24,6 @@ import {
   TrendingUp,
   Calendar,
   FileText,
-  CheckCircle2,
   ArrowRight,
   Target,
   Sparkles,
@@ -295,17 +294,22 @@ function normalizeTaskPriority(t: TaskRow): Priority {
 }
 
 function normalizeContentTitle(r: ContentRowAny): string {
-  return pickFirstNonEmpty(
-    r.title,
-    (r as any)?.titre,
-    (r as any)?.name,
-    (r as any)?.nom,
-    "—",
-  ) || "—";
+  return (
+    pickFirstNonEmpty(
+      r.title,
+      (r as any)?.titre,
+      (r as any)?.name,
+      (r as any)?.nom,
+      "—",
+    ) || "—"
+  );
 }
 
 function normalizeContentType(r: ContentRowAny): string {
-  return pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") || "Contenu";
+  return (
+    pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") ||
+    "Contenu"
+  );
 }
 
 function normalizeContentStatus(r: ContentRowAny): string {
@@ -332,6 +336,28 @@ function isDoneStatus(v: unknown) {
     s === "terminé" ||
     s === "termine"
   );
+}
+
+/**
+ * ✅ Fix TS : certains environnements/schemas peuvent retourner un array "d'erreurs"
+ * (ex: validateurs internes) typé "GenericStringError[]".
+ * On ne cast plus à l’aveugle. On filtre runtime => ContentRowAny[] ou [].
+ */
+type GenericStringError = {
+  error: true;
+  message?: string;
+  [k: string]: unknown;
+};
+
+function isGenericStringErrorArray(v: unknown): v is GenericStringError[] {
+  if (!Array.isArray(v)) return false;
+  if (v.length === 0) return false;
+  const first = v[0] as any;
+  return Boolean(first && typeof first === "object" && (first as any).error === true);
+}
+
+function isObjectArray(v: unknown): v is Record<string, unknown>[] {
+  return Array.isArray(v) && v.every((x) => x && typeof x === "object" && !Array.isArray(x));
 }
 
 export default function TodayLovable() {
@@ -509,9 +535,7 @@ export default function TodayLovable() {
             : [];
 
         const tasksAll = tasks;
-        const tasksDone = tasksAll.filter((t) =>
-          isDoneStatus(normalizeTaskStatus(t)),
-        ).length;
+        const tasksDone = tasksAll.filter((t) => isDoneStatus(normalizeTaskStatus(t))).length;
         const tasksTotal = tasksAll.length;
         const progressionPercent = tasksTotal
           ? clampPercent((tasksDone / tasksTotal) * 100)
@@ -523,8 +547,16 @@ export default function TodayLovable() {
 
         // Content rows (schema-compat)
         const attempts: { select: string; orderCol: string }[] = [
-          { select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id", orderCol: "scheduled_date" },
-          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id", orderCol: "date_planifiee" },
+          {
+            select:
+              "id,title,content,status,channel,scheduled_date,created_at,type,user_id",
+            orderCol: "scheduled_date",
+          },
+          {
+            select:
+              "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id",
+            orderCol: "date_planifiee",
+          },
           { select: "id,title,content,status,created_at,type,user_id", orderCol: "created_at" },
         ];
 
@@ -541,7 +573,7 @@ export default function TodayLovable() {
           return isSchemaError(s) && s.includes("user_id");
         };
 
-        async function loadContentRows() {
+        async function loadContentRows(): Promise<unknown[]> {
           for (const a of attempts) {
             // 1) essai "normal" avec user_id (meilleures perfs + pas de cross-user si RLS est permissif)
             let res = await supabase
@@ -561,7 +593,7 @@ export default function TodayLovable() {
             }
 
             if (!res.error) {
-              return Array.isArray(res.data) ? res.data : [];
+              return Array.isArray(res.data) ? (res.data as unknown[]) : [];
             }
 
             if (!isSchemaError(res.error.message)) {
@@ -572,7 +604,17 @@ export default function TodayLovable() {
           return [];
         }
 
-        const contentRows = (await loadContentRows()) as ContentRowAny[];
+        const rawContentRows = await loadContentRows();
+
+        // ✅ Fix ici : on ne cast plus à l’aveugle.
+        const contentRows: ContentRowAny[] = (() => {
+          if (isGenericStringErrorArray(rawContentRows)) {
+            console.error("TodayLovable: content_item returned errors array:", rawContentRows);
+            return [];
+          }
+          if (isObjectArray(rawContentRows)) return rawContentRows as ContentRowAny[];
+          return [];
+        })();
 
         // content planned this week
         const plannedThisWeek = contentRows.filter((r) => {
@@ -583,7 +625,7 @@ export default function TodayLovable() {
 
         const plannedCount = plannedThisWeek.length;
 
-        // engagement goal: we cannot know, so proxy = (completed tasks this week)/(target) or (manual pulse leads/calls)
+        // engagement goal: proxy = tasks done this week / 7
         const tasksDoneThisWeek = tasksAll.filter((t) => {
           const done = isDoneStatus(normalizeTaskStatus(t));
           if (!done) return false;
@@ -595,7 +637,6 @@ export default function TodayLovable() {
           return dt >= startW && dt <= endW;
         }).length;
 
-        // "objectif engagement" = proxy = tasks done this week / 7
         const engagementValue = `${Math.min(7, tasksDoneThisWeek)}/7`;
 
         const nextTodoTask = tasksAll
@@ -604,7 +645,6 @@ export default function TodayLovable() {
             const da = normalizeTaskDueDate(a)?.getTime() ?? Number.POSITIVE_INFINITY;
             const db = normalizeTaskDueDate(b)?.getTime() ?? Number.POSITIVE_INFINITY;
             if (da !== db) return da - db;
-            // priority high first
             const pa = normalizeTaskPriority(a);
             const pb = normalizeTaskPriority(b);
             const w = { high: 0, medium: 1, low: 2 } as const;
@@ -647,7 +687,7 @@ export default function TodayLovable() {
         // Upcoming list: mix tasks + content for week
         const upcomingCombined: CombinedUpcoming[] = [];
 
-        // tasks (todo only, next 5 by due)
+        // tasks (todo only, next 6 by due)
         const tasksUpcoming = tasksAll
           .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
           .map((t) => {
@@ -849,7 +889,9 @@ export default function TodayLovable() {
                       <Target className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Prochaine action recommandée</h3>
+                      <h3 className="text-xl font-bold">
+                        Prochaine action recommandée
+                      </h3>
                       <p className="text-muted-foreground">
                         Concentre-toi sur 1 action à la fois.
                       </p>
@@ -861,7 +903,9 @@ export default function TodayLovable() {
                 <div className="p-6 rounded-xl bg-muted/30 border border-border/50">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold mb-1">{nextTask.title}</h4>
+                      <h4 className="text-lg font-semibold mb-1">
+                        {nextTask.title}
+                      </h4>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="w-4 h-4" />
@@ -882,7 +926,8 @@ export default function TodayLovable() {
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Tipote te guide phase par phase — coche tes tâches pour voir ta progression.
+                    Tipote te guide phase par phase — coche tes tâches pour voir ta
+                    progression.
                   </div>
                 </div>
               </Card>
@@ -909,7 +954,9 @@ export default function TodayLovable() {
                           : "—"}
                       </span>
                     </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)} />
+                    <Progress
+                      value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)}
+                    />
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/30">
@@ -919,7 +966,9 @@ export default function TodayLovable() {
                         {pulsePreview.weeklyLeads !== null ? pulsePreview.weeklyLeads : "—"}
                       </span>
                     </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)} />
+                    <Progress
+                      value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)}
+                    />
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/30">
@@ -929,10 +978,16 @@ export default function TodayLovable() {
                         {pulsePreview.weeklyCalls !== null ? pulsePreview.weeklyCalls : "—"}
                       </span>
                     </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)} />
+                    <Progress
+                      value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)}
+                    />
                   </div>
 
-                  <Button variant="outline" className="w-full gap-2" onClick={() => setIsPulseOpen(true)}>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => setIsPulseOpen(true)}
+                  >
                     <Play className="w-4 h-4" />
                     Mettre à jour mes chiffres
                   </Button>
@@ -953,9 +1008,7 @@ export default function TodayLovable() {
                       <span className="font-semibold">{stat.label}</span>
                     </div>
                     <p className="text-3xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {stat.trend}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{stat.trend}</p>
                     <Progress
                       value={
                         stat.label === "Plan stratégique"
@@ -1037,8 +1090,8 @@ export default function TodayLovable() {
                   Mettre à jour mes chiffres
                 </DialogTitle>
                 <DialogDescription>
-                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres
-                  de la semaine pour suivre ta progression vers ton objectif.
+                  Tes analytics ne sont pas connectables automatiquement : entre tes
+                  chiffres de la semaine pour suivre ta progression vers ton objectif.
                 </DialogDescription>
               </DialogHeader>
 
