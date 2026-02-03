@@ -1,13 +1,17 @@
 // lib/templates/render.ts
 // Template renderer for Tipote HTML previews + Systeme.io kits.
 // Reads template fragments from /src/templates and injects contentData into {{placeholders}}.
-// IMPORTANT: templates are treated as trusted local files, but content is user-generated -> we escape HTML.
+//
+// IMPORTANT:
+// - Templates are trusted local files.
+// - Content is user-generated -> we escape HTML.
+// - "Kit" output must be safe to paste into Systeme.io without breaking the host page,
+//   so we scope styles under a wrapper.
 
 import fs from "node:fs/promises";
 import path from "node:path";
 
 export type TemplateKind = "capture" | "vente";
-
 export type RenderMode = "preview" | "kit";
 
 export type RenderTemplateRequest = {
@@ -56,7 +60,6 @@ function applyVariant(
   const v = list.find((x: any) => String(x?.id || "") === String(variantId));
   if (!v) return tokens;
 
-  // Shallow overrides for known token groups
   const out: Tokens = JSON.parse(JSON.stringify(tokens || {}));
   if (typeof v?.sectionPadding === "string") {
     out.layout = { ...(out.layout || {}), sectionPadding: v.sectionPadding };
@@ -88,13 +91,41 @@ function applyBrand(
   return out;
 }
 
-function renderPlaceholders(fragment: string, data: Record<string, unknown>) {
-  return fragment.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
-    return escapeHtml(data[key]);
-  });
+/**
+ * Minimal Mustache-like features:
+ * - {{key}} replaced by escaped scalar
+ * - {{#arr}}...{{/arr}} repeats inner HTML for each string item, using {{.}}
+ */
+function renderFragment(fragment: string, data: Record<string, unknown>) {
+  // handle array sections first
+  const withArrays = fragment.replace(
+    /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
+    (_m, key, inner) => {
+      const v = (data as any)[key];
+      if (!Array.isArray(v) || v.length === 0) return "";
+      return v
+        .map((item) => {
+          const itemStr = escapeHtml(item);
+          return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+        })
+        .join("");
+    }
+  );
+
+  // then scalar placeholders
+  const withScalars = withArrays.replace(
+    /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+    (_m, key) => escapeHtml((data as any)[key])
+  );
+
+  // cleanup: remove empty benefits wrapper if loop produced nothing
+  return withScalars.replace(/<div class="benefits">\s*<\/div>/g, "");
 }
 
-function buildCapture01Css(tokens: Tokens): string {
+function buildCapture01Css(tokens: Tokens, opts?: { scoped?: boolean }): string {
+  const scoped = !!opts?.scoped;
+  const scope = scoped ? ".tpt-scope " : "";
+
   const colors = tokens.colors || {};
   const typo = tokens.typography || {};
   const layout = tokens.layout || {};
@@ -107,10 +138,13 @@ function buildCapture01Css(tokens: Tokens): string {
   const accent = colors.accent || "#2563eb";
   const border = colors.border || "#e5e7eb";
 
+  // Fallbacks must not assume Inter is available in Systeme; we include a font stack.
   const headingFont =
     typo.headingFont ||
-    "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
-  const bodyFont = typo.bodyFont || headingFont;
+    "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+  const bodyFont =
+    typo.bodyFont ||
+    "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
 
   const h1 = typo.h1 || "42px";
   const body = typo.body || "16px";
@@ -125,7 +159,7 @@ function buildCapture01Css(tokens: Tokens): string {
 
   const cardShadow = shadow.card || "0 10px 30px rgba(0,0,0,0.08)";
 
-  return `
+  const base = `
 :root{
   --tpt-bg:${bg};
   --tpt-text:${primary};
@@ -140,7 +174,20 @@ function buildCapture01Css(tokens: Tokens): string {
   --tpt-align:${textAlign};
 }
 
-*{box-sizing:border-box}
+${scope}*{box-sizing:border-box}
+
+${
+  scoped
+    ? `
+${scope}.tpt-scope{
+  background:var(--tpt-bg);
+  color:var(--tpt-text);
+  font-family:${bodyFont};
+  font-size:${body};
+  line-height:${lineHeight};
+}
+`
+    : `
 html,body{height:100%}
 body{
   margin:0;
@@ -150,57 +197,101 @@ body{
   font-size:${body};
   line-height:${lineHeight};
 }
-
 .tpt-page{
   min-height:100%;
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
 }
-
-.hero.capture-01{
-  width:100%;
-  padding:var(--tpt-section-pad);
+`
 }
 
-.hero.capture-01 .container{
+${scope}.hero.capture-01{
+  width:100%;
+  padding:var(--tpt-section-pad);
+  background:
+    radial-gradient(900px 500px at 50% -40%, rgba(37,99,235,0.16), transparent 70%),
+    radial-gradient(700px 450px at 90% 10%, rgba(37,99,235,0.10), transparent 60%);
+}
+
+${scope}.hero.capture-01 .container{
   width:100%;
   max-width:var(--tpt-maxw);
   margin:0 auto;
   text-align:var(--tpt-align);
 }
 
-.hero.capture-01 .eyebrow{
+${scope}.hero.capture-01 .eyebrow{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   padding:6px 12px;
   border-radius:999px;
   border:1px solid var(--tpt-border);
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:saturate(180%) blur(6px);
   color:var(--tpt-muted);
-  font-weight:600;
+  font-weight:700;
   font-size:13px;
+  max-width:100%;
 }
 
-.hero.capture-01 h1{
-  margin:14px 0 0 0;
+${scope}.hero.capture-01 h1{
+  margin:16px 0 0 0;
   font-family:${headingFont};
-  font-weight:800;
-  letter-spacing:-0.02em;
-  font-size:clamp(28px, 3.2vw, ${h1});
-  line-height:1.15;
+  font-weight:850;
+  letter-spacing:-0.03em;
+  font-size:clamp(30px, 3.4vw, ${h1});
+  line-height:1.12;
 }
 
-.hero.capture-01 .subtitle{
+${scope}.hero.capture-01 .subtitle{
   margin:14px auto 0 auto;
-  max-width:740px;
+  max-width:760px;
   color:var(--tpt-muted);
-  font-size:clamp(15px, 1.2vw, 18px);
+  font-size:clamp(15px, 1.25vw, 18px);
 }
 
-.hero.capture-01 .form-preview{
-  margin:28px auto 0 auto;
-  max-width:520px;
+${scope}.hero.capture-01 .benefits{
+  margin:26px auto 0 auto;
+  max-width:860px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+${scope}.hero.capture-01 .benefit{
+  text-align:left;
+  border:1px solid var(--tpt-border);
+  border-radius:var(--tpt-card-radius);
+  background:rgba(255,255,255,0.9);
+  box-shadow:var(--tpt-card-shadow);
+  padding:14px 14px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+${scope}.hero.capture-01 .benefit .dot{
+  margin-top:4px;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:var(--tpt-accent);
+  flex:0 0 auto;
+}
+
+${scope}.hero.capture-01 .benefit p{
+  margin:0;
+  color:var(--tpt-text);
+  font-weight:600;
+  font-size:14px;
+  line-height:1.35;
+}
+
+${scope}.hero.capture-01 .form-preview{
+  margin:26px auto 0 auto;
+  max-width:560px;
   display:flex;
   gap:10px;
   padding:14px;
@@ -210,7 +301,7 @@ body{
   background:#fff;
 }
 
-.hero.capture-01 .form-preview input{
+${scope}.hero.capture-01 .form-preview input{
   flex:1;
   border:1px solid var(--tpt-border);
   border-radius:12px;
@@ -219,29 +310,47 @@ body{
   outline:none;
 }
 
-.hero.capture-01 .form-preview button{
+${scope}.hero.capture-01 .form-preview button{
   border:none;
   border-radius:var(--tpt-btn-radius);
-  padding:12px 14px;
-  font-weight:800;
+  padding:12px 16px;
+  font-weight:850;
+  letter-spacing:-0.01em;
   cursor:default;
   background:var(--tpt-accent);
   color:#fff;
   transition:transform .12s ease, filter .12s ease;
 }
 
-.hero.capture-01 .micro-proof{
+${scope}.hero.capture-01 .systeme-slot{
+  margin:26px auto 0 auto;
+  max-width:560px;
+  border:1px dashed var(--tpt-border);
+  border-radius:var(--tpt-card-radius);
+  background:rgba(255,255,255,0.8);
+  padding:16px;
+  color:var(--tpt-muted);
+  font-size:13px;
+}
+
+${scope}.hero.capture-01 .micro-proof{
   margin:14px auto 0 auto;
   max-width:620px;
   color:var(--tpt-muted);
   font-size:13px;
 }
 
+@media (max-width:860px){
+  ${scope}.hero.capture-01 .benefits{grid-template-columns:1fr}
+}
+
 @media (max-width:560px){
-  .hero.capture-01 .form-preview{flex-direction:column}
-  .hero.capture-01 .form-preview button{width:100%}
+  ${scope}.hero.capture-01 .form-preview{flex-direction:column}
+  ${scope}.hero.capture-01 .form-preview button{width:100%}
 }
 `.trim();
+
+  return base;
 }
 
 export async function renderTemplateHtml(
@@ -276,22 +385,30 @@ export async function renderTemplateHtml(
   const withVariant = applyVariant(tokensJson, variantsJson, req.variantId);
   const withBrand = applyBrand(withVariant, req.brandTokens);
 
-  const renderedFragment = renderPlaceholders(fragment, req.contentData || {});
+  const renderedFragment = renderFragment(fragment, req.contentData || {});
 
-  // For now, template-specific CSS (Capture 01). Later: add styles.css per template.
+  // For now, template-specific CSS (Capture 01).
   let css = "";
   if (kind === "capture" && templateId === "capture-01") {
-    css = buildCapture01Css(withBrand);
+    css = buildCapture01Css(withBrand, { scoped: req.mode === "kit" });
   }
 
+  // Load Inter for preview + kit (safe fallback if blocked)
+  const fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;850&display=swap" rel="stylesheet">`;
+
   if (req.mode === "kit") {
-    // Systeme.io "Code HTML" blocks generally work best with a single snippet.
-    // We include styles inline so the user can paste once and get the right rendering.
+    // Systeme.io: provide a single pasteable snippet.
+    // We scope everything to avoid altering the rest of the funnel page.
     const snippet = `
+${fontLink}
 <style>
 ${css}
 </style>
+<div class="tpt-scope">
 ${renderedFragment}
+</div>
 `.trim();
 
     return { html: snippet, tokens: withBrand };
@@ -304,6 +421,7 @@ ${renderedFragment}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tipote — ${escapeHtml(req.templateId)}</title>
+    ${fontLink}
     <style>${css}</style>
   </head>
   <body>

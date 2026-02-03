@@ -8,6 +8,15 @@
       {{hero_subtitle}}
     </p>
 
+    <div class="benefits">
+      {{#bullets}}
+      <div class="benefit">
+        <span class="dot"></span>
+        <p>{{.}}</p>
+      </div>
+      {{/bullets}}
+    </div>
+
     <div class="form-preview">
       <input type="email" placeholder="Votre email" disabled />
       <button>{{cta_text}}</button>

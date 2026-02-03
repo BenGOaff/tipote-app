@@ -80,32 +80,65 @@ function clampChars(s: string, max: number): string {
   return t.slice(0, Math.max(0, max - 1)).trimEnd() + "…";
 }
 
+function extractBullets(text: string, maxItems: number): string[] {
+  const lines = (text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const bullets = lines
+    .filter((l) => /^[-•–]\s+/.test(l))
+    .map((l) => cleanLine(l))
+    .filter(Boolean);
+
+  const uniq: string[] = [];
+  for (const b of bullets) {
+    if (!uniq.includes(b)) uniq.push(b);
+    if (uniq.length >= maxItems) break;
+  }
+  return uniq;
+}
+
+function softenClamp(s: string, max: number): string {
+  const t = (s || "").trim();
+  if (t.length <= max) return t;
+  // try cut on a word boundary
+  const cut = t.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  const out = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd();
+  return out + "…";
+}
+
 function deriveCapture01Content(params: {
   resultText: string;
   offerName?: string;
   promise?: string;
-}): Record<string, string> {
-  const title = clampChars(
+}): Record<string, unknown> {
+  const rawTitle =
     pickFirstMeaningfulLine(params.resultText) ||
-      params.promise ||
-      params.offerName ||
-      "Télécharge la ressource gratuite",
-    65
-  );
-  const subtitle = clampChars(
-    pickSubtitle(params.resultText) ||
-      params.promise ||
-      "Une ressource simple et actionnable pour obtenir un résultat concret en quelques minutes.",
-    140
-  );
+    params.promise ||
+    params.offerName ||
+    "Télécharge la ressource gratuite";
 
-  const eyebrow = clampChars(params.offerName || "GRATUIT", 30);
-  const reassurance = clampChars(pickReassurance(params.resultText), 90);
+  const rawSubtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "Une ressource simple et actionnable pour obtenir un résultat concret en quelques minutes.";
+
+  const bullets = extractBullets(params.resultText, 6);
+
+  // Eyebrow: keep it short and clean (avoid ugly truncation)
+  const eyebrowSource = (params.offerName || "").trim();
+  const eyebrow =
+    eyebrowSource && eyebrowSource.length <= 30 ? eyebrowSource : "GRATUIT";
+
+  const reassurance = softenClamp(pickReassurance(params.resultText), 110);
 
   return {
-    hero_pretitle: eyebrow || "GRATUIT",
-    hero_title: title,
-    hero_subtitle: subtitle,
+    hero_pretitle: eyebrow,
+    hero_title: softenClamp(rawTitle, 95),
+    hero_subtitle: softenClamp(rawSubtitle, 200),
+    bullets,
     cta_text: "Recevoir gratuitement",
     reassurance_text: reassurance,
   };
@@ -189,7 +222,11 @@ export function FunnelForm(props: FunnelFormProps) {
         description: "Le texte a été copié dans le presse-papiers.",
       });
     } catch {
-      toast({ title: "Erreur", description: "Impossible de copier.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -204,6 +241,23 @@ export function FunnelForm(props: FunnelFormProps) {
       toast({
         title: "Erreur",
         description: "Impossible de copier le code.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openPreviewInNewTab = () => {
+    if (!htmlPreview) return;
+    try {
+      const blob = new Blob([htmlPreview], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      // Revoke later to allow the new tab to load first
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible d’ouvrir la prévisualisation.",
         variant: "destructive",
       });
     }
@@ -362,7 +416,8 @@ export function FunnelForm(props: FunnelFormProps) {
       return;
     }
 
-    const offerLabel = mode === "from_pyramid" ? selectedOffer?.name ?? "" : offerName;
+    const offerLabel =
+      mode === "from_pyramid" ? selectedOffer?.name ?? "" : offerName;
     const promise = mode === "from_pyramid" ? selectedOffer?.promise ?? "" : pitch;
 
     const contentData = deriveCapture01Content({
@@ -388,7 +443,8 @@ export function FunnelForm(props: FunnelFormProps) {
       });
 
       const previewHtml = await previewRes.text();
-      if (!previewRes.ok) throw new Error(previewHtml || "Impossible de générer la preview");
+      if (!previewRes.ok)
+        throw new Error(previewHtml || "Impossible de générer la preview");
 
       const kitRes = await fetch("/api/templates/render", {
         method: "POST",
@@ -405,7 +461,8 @@ export function FunnelForm(props: FunnelFormProps) {
       });
 
       const kitHtml = await kitRes.text();
-      if (!kitRes.ok) throw new Error(kitHtml || "Impossible de générer le kit Systeme");
+      if (!kitRes.ok)
+        throw new Error(kitHtml || "Impossible de générer le kit Systeme");
 
       setHtmlPreview(previewHtml);
       setHtmlKit(kitHtml);
@@ -685,11 +742,23 @@ export function FunnelForm(props: FunnelFormProps) {
                   </div>
                 </div>
 
-                <div className="rounded-xl border overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm">Prévisualisation</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openPreviewInNewTab}
+                    disabled={!htmlPreview}
+                  >
+                    Ouvrir en grand
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border overflow-hidden bg-background">
                   {htmlPreview ? (
                     <iframe
                       title="preview"
-                      className="w-full h-[520px]"
+                      className="w-full h-[75vh] min-h-[520px]"
                       srcDoc={htmlPreview}
                     />
                   ) : (

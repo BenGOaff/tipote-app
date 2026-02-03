@@ -18,5 +18,10 @@
   "reassurance_text": {
     "maxLength": 90,
     "required": false
+  },
+  "bullets": {
+    "maxItems": 6,
+    "itemMaxLength": 120,
+    "required": false
   }
 }
