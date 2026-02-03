@@ -219,11 +219,10 @@ function loadPulse(userId: string): BizPulse | null {
     const json = JSON.parse(raw) as Partial<BizPulse> | null;
     if (!json || typeof json !== "object") return null;
 
-    const legacyCalls = typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
+    const legacyCalls =
+      typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
     const weeklySales =
-      typeof (json as any).weeklySales === "string"
-        ? (json as any).weeklySales
-        : legacyCalls;
+      typeof (json as any).weeklySales === "string" ? (json as any).weeklySales : legacyCalls;
 
     return {
       weeklyRevenue: typeof json.weeklyRevenue === "string" ? json.weeklyRevenue : "",
@@ -242,6 +241,37 @@ function savePulse(userId: string, pulse: BizPulse) {
     // ne pas persister le legacy field si on n'en a pas besoin
     const { weeklyCalls, ...rest } = pulse;
     localStorage.setItem(storageKey(userId), JSON.stringify(rest));
+  } catch {
+    // ignore
+  }
+}
+
+type FocusSettings = { focusGoal: number };
+
+function focusStorageKey(userId: string) {
+  return `tipote:dashboard:focus:${userId}`;
+}
+
+function loadFocusSettings(userId: string): FocusSettings | null {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(focusStorageKey(userId));
+    if (!raw) return null;
+    const json = JSON.parse(raw) as Partial<FocusSettings> | null;
+    if (!json || typeof json !== "object") return null;
+    const n = typeof json.focusGoal === "number" ? json.focusGoal : null;
+    if (!n || !Number.isFinite(n)) return null;
+    const safe = Math.max(1, Math.min(14, Math.round(n)));
+    return { focusGoal: safe };
+  } catch {
+    return null;
+  }
+}
+
+function saveFocusSettings(userId: string, settings: FocusSettings) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(focusStorageKey(userId), JSON.stringify(settings));
   } catch {
     // ignore
   }
@@ -277,7 +307,13 @@ function normalizeTaskPriority(t: any): Priority {
 
 function isDoneStatus(status: string): boolean {
   const s = (status || "").toLowerCase();
-  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
+  return (
+    s === "done" ||
+    s === "completed" ||
+    s === "fait" ||
+    s === "terminé" ||
+    s === "termine"
+  );
 }
 
 function normalizeContentTitle(r: any): string {
@@ -295,8 +331,9 @@ function normalizeContentStatus(r: any): string {
 }
 
 function normalizeContentScheduledDate(r: any): Date | null {
-  const dt =
-    parseDate(r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? "");
+  const dt = parseDate(
+    r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? ""
+  );
   return dt;
 }
 
@@ -356,7 +393,7 @@ export default function TodayLovable() {
   const [stats, setStats] = useState<DashboardStat[]>([
     { label: "Plan stratégique", value: "0%", trend: "0/0", icon: Target },
     { label: "Contenus planifiés", value: "0/7", trend: "+0", icon: Calendar },
-    { label: "Activité (tâches cochées)", value: "0/7", trend: "+0", icon: TrendingUp },
+    { label: "Activité", value: "0/7", trend: "+0 tâches", icon: TrendingUp },
   ]);
 
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([]);
@@ -384,7 +421,9 @@ export default function TodayLovable() {
   const pulsePreview = useMemo(() => {
     const weeklyRevenue = parseEuroNumber(bizPulse.weeklyRevenue);
     const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
-    const weeklySales = parseEuroNumber((bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString());
+    const weeklySales = parseEuroNumber(
+      (bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString()
+    );
 
     return { weeklyRevenue, weeklyLeads, weeklySales };
   }, [bizPulse.weeklyCalls, bizPulse.weeklySales, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
@@ -400,17 +439,27 @@ export default function TodayLovable() {
   }, [pulsePreview.weeklyRevenue, revenueGoalValue]);
 
   const weeklyRevenueTarget = useMemo(() => {
-    if (revenueGoalValue && revenueGoalValue > 0) return Math.max(1, Math.round(revenueGoalValue / 4));
+    if (revenueGoalValue && revenueGoalValue > 0)
+      return Math.max(1, Math.round(revenueGoalValue / 4));
     return 2000;
   }, [revenueGoalValue]);
 
   const [tasksDoneThisWeek, setTasksDoneThisWeek] = useState<number>(0);
   const [plannedCountThisWeek, setPlannedCountThisWeek] = useState<number>(0);
 
-  const focusGoal = 3;
+  const [focusGoal, setFocusGoal] = useState<number>(3);
+  const [isFocusOpen, setIsFocusOpen] = useState(false);
+  const [focusGoalInput, setFocusGoalInput] = useState<string>("3");
+
   const focusLabel = `Terminer ${focusGoal} tâches`;
-  const focusPercent = useMemo(() => clampPercent((Math.min(focusGoal, tasksDoneThisWeek) / focusGoal) * 100), [tasksDoneThisWeek]);
-  const weeklyExecutionPercent = useMemo(() => clampPercent((Math.min(7, tasksDoneThisWeek) / 7) * 100), [tasksDoneThisWeek]);
+  const focusPercent = useMemo(
+    () => clampPercent((Math.min(focusGoal, tasksDoneThisWeek) / Math.max(1, focusGoal)) * 100),
+    [focusGoal, tasksDoneThisWeek]
+  );
+  const weeklyExecutionPercent = useMemo(
+    () => clampPercent((Math.min(7, tasksDoneThisWeek) / 7) * 100),
+    [tasksDoneThisWeek]
+  );
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -477,6 +526,14 @@ export default function TodayLovable() {
         const fromStorage = loadPulse(userId);
         if (fromStorage) setBizPulse(fromStorage);
 
+        const focusSettings = loadFocusSettings(userId);
+        if (focusSettings?.focusGoal) {
+          setFocusGoal(focusSettings.focusGoal);
+          setFocusGoalInput(String(focusSettings.focusGoal));
+        } else {
+          setFocusGoalInput("3");
+        }
+
         await loadRevenueGoal(userId);
 
         // Load tasks via API (RLS-safe)
@@ -502,12 +559,24 @@ export default function TodayLovable() {
         // Content rows (schema-compat + anti-spam)
         const attempts: { select: string; orderCol: string }[] = [
           // versions avec user_id
-          { select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id", orderCol: "scheduled_date" },
-          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id", orderCol: "date_planifiee" },
+          {
+            select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id",
+            orderCol: "scheduled_date",
+          },
+          {
+            select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id",
+            orderCol: "date_planifiee",
+          },
           { select: "id,title,content,status,created_at,type,user_id", orderCol: "created_at" },
           // versions sans user_id (legacy)
-          { select: "id,title,content,status,channel,scheduled_date,created_at,type", orderCol: "scheduled_date" },
-          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type", orderCol: "date_planifiee" },
+          {
+            select: "id,title,content,status,channel,scheduled_date,created_at,type",
+            orderCol: "scheduled_date",
+          },
+          {
+            select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type",
+            orderCol: "date_planifiee",
+          },
           { select: "id,title,content,status,created_at,type", orderCol: "created_at" },
         ];
 
@@ -650,9 +719,24 @@ export default function TodayLovable() {
           });
 
           setStats([
-            { label: "Plan stratégique", value: `${progressionPercent}%`, trend: `${tasksDone}/${tasksTotal}`, icon: Target },
-            { label: "Contenus planifiés", value: `${plannedCount}/7`, trend: plannedCount > 0 ? `+${plannedCount}` : "+0", icon: Calendar },
-            { label: "Activité (tâches cochées)", value: activityValue, trend: doneThisWeek > 0 ? `+${doneThisWeek}` : "+0", icon: TrendingUp },
+            {
+              label: "Plan stratégique",
+              value: `${progressionPercent}%`,
+              trend: `${tasksDone}/${tasksTotal}`,
+              icon: Target,
+            },
+            {
+              label: "Contenus planifiés",
+              value: `${plannedCount}/7`,
+              trend: plannedCount > 0 ? `+${plannedCount}` : "+0",
+              icon: Calendar,
+            },
+            {
+              label: "Activité",
+              value: activityValue,
+              trend: doneThisWeek > 0 ? `+${doneThisWeek} tâches` : "+0 tâche",
+              icon: TrendingUp,
+            },
           ]);
         }
 
@@ -717,6 +801,11 @@ export default function TodayLovable() {
     savePulse(pulseUserId, bizPulse);
   }, [bizPulse, pulseUserId]);
 
+  useEffect(() => {
+    if (!pulseUserId) return;
+    saveFocusSettings(pulseUserId, { focusGoal });
+  }, [focusGoal, pulseUserId]);
+
   function validatePulse(next: BizPulse) {
     const errs: Record<PulseField, string> = {
       weeklyRevenue: "",
@@ -748,8 +837,10 @@ export default function TodayLovable() {
   }
 
   const priorityBadge = useMemo(() => {
-    if (nextTask.priority === "high") return { label: "High Priority", variant: "default" as const };
-    if (nextTask.priority === "low") return { label: "Low Priority", variant: "secondary" as const };
+    if (nextTask.priority === "high")
+      return { label: "High Priority", variant: "default" as const };
+    if (nextTask.priority === "low")
+      return { label: "Low Priority", variant: "secondary" as const };
     return { label: "Medium Priority", variant: "outline" as const };
   }, [nextTask.priority]);
 
@@ -807,7 +898,9 @@ export default function TodayLovable() {
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Progression vers l&apos;objectif</p>
+                  <p className="text-sm text-primary-foreground/70 mb-1">
+                    Progression vers l&apos;objectif
+                  </p>
                   <p className="text-2xl font-bold text-primary-foreground">{revenueToGoalRatio}%</p>
                   <div className="mt-3">
                     <Progress value={revenueToGoalRatio} />
@@ -872,14 +965,27 @@ export default function TodayLovable() {
 
               {/* Focus semaine (V2) */}
               <Card className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl gradient-secondary flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-secondary-foreground" />
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl gradient-secondary flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6 text-secondary-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Focus de la semaine</h3>
+                      <p className="text-sm text-muted-foreground">{weekLabel}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold">Focus de la semaine</h3>
-                    <p className="text-sm text-muted-foreground">{weekLabel}</p>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      setFocusGoalInput(String(focusGoal));
+                      setIsFocusOpen(true);
+                    }}
+                  >
+                    Modifier
+                  </Button>
                 </div>
 
                 <div className="p-4 rounded-lg bg-muted/30">
@@ -898,9 +1004,7 @@ export default function TodayLovable() {
                 <div className="mt-4 p-4 rounded-lg bg-muted/30">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">Contenus planifiés</span>
-                    <span className="text-sm text-muted-foreground">
-                      {plannedCountThisWeek}/7
-                    </span>
+                    <span className="text-sm text-muted-foreground">{plannedCountThisWeek}/7</span>
                   </div>
                   <Progress value={clampPercent((plannedCountThisWeek / 7) * 100)} />
                   <div className="mt-3 flex gap-2">
@@ -1006,6 +1110,51 @@ export default function TodayLovable() {
             </Card>
           </div>
 
+          {/* Focus dialog */}
+          <Dialog open={isFocusOpen} onOpenChange={setIsFocusOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-display font-bold">
+                  Objectif de la semaine
+                </DialogTitle>
+                <DialogDescription>
+                  Choisis ton focus : le nombre de tâches que tu veux terminer cette semaine.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Objectif (tâches)</Label>
+                  <Input
+                    value={focusGoalInput}
+                    onChange={(e) => setFocusGoalInput(e.target.value)}
+                    placeholder="ex: 3"
+                    inputMode="numeric"
+                  />
+                  <p className="text-xs text-muted-foreground">Entre un nombre entre 1 et 14.</p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setIsFocusOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const n = Number(String(focusGoalInput || "").trim().replace(/[^0-9]/g, ""));
+                      const safe =
+                        Number.isFinite(n) && n > 0 ? Math.max(1, Math.min(14, Math.round(n))) : 3;
+                      setFocusGoal(safe);
+                      setFocusGoalInput(String(safe));
+                      setIsFocusOpen(false);
+                    }}
+                  >
+                    Enregistrer
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Pulse dialog */}
           <Dialog open={isPulseOpen} onOpenChange={setIsPulseOpen}>
             <DialogContent className="max-w-xl">
@@ -1014,8 +1163,8 @@ export default function TodayLovable() {
                   Mettre à jour mes chiffres
                 </DialogTitle>
                 <DialogDescription>
-                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres
-                  de la semaine pour suivre ta progression vers ton objectif.
+                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres de la
+                  semaine pour suivre ta progression vers ton objectif.
                 </DialogDescription>
               </DialogHeader>
 
