@@ -1,20 +1,24 @@
 // app/api/onboarding/answers/route.ts
-// Fix prod: Supabase Postgres error "invalid input syntax for type integer: """
-// Root cause: business_profiles.audience_social + audience_email are INT in DB,
-// but onboarding was sending strings (ranges / empty string).
 //
-// ✅ Fix: always send numbers for audience_social / audience_email (never "").
-// ✅ Keep existing robustness (json/text fallback, JSON errors).
-// ✅ Adds: age_range + gender + offer_* analytics columns
-// ✅ Adds: revenue_goal_monthly (TEXT en DB) from onboarding
-// ✅ Adds (V2): diagnostic_answers / diagnostic_profile / diagnostic_summary / diagnostic_completed / onboarding_version
+// ✅ FIX PROD (03/02):
+// - Erreur onboarding Step 1 = 500 "Database error" car on essaye d'UPDATE des colonnes
+//   qui N'EXISTENT PAS dans public.business_profiles (ex: age_range, gender, unique_value, untapped_strength).
+// - Preuve : ton export business_profiles n'a que 34 colonnes (pas age_range/gender/unique_value/...).
 //
-// ✅ FIX (03/02): ne pas écraser revenue_goal_monthly quand le payload ne le contient pas
-// (ex: POST de StepDiagnosticChat / finalizeOnboarding qui envoie seulement diagnostic_*)
+// ✅ Solution:
+// - Ne JAMAIS référencer des colonnes absentes.
+// - N'envoyer/écrire que les colonnes réellement présentes :
+//   first_name, country, niche, mission, business_maturity, biggest_blocker, has_offers, offers,
+//   audience_social, audience_email, social_links, time_available, main_goal, main_goals,
+//   success_definition, biggest_challenge, recent_client_feedback, content_preference, preferred_tone,
+//   persona, revenue_goal_monthly, diagnostic_*, diagnostic_completed, onboarding_version,
+//   onboarding_completed, updated_at.
 //
-// ✅ FIX (03/02 - hotfix 500):
-// ne JAMAIS envoyer "" sur revenue_goal_monthly (si colonne INT en prod => crash).
-// -> si valeur vide: null (ok pour TEXT et INT)
+// ✅ Bonus robustesse conservée :
+// - parsing ints audience_social / audience_email
+// - JSON fallback stringifié si offers/social_links/main_goals sont TEXT
+// - ne pas écraser revenue_goal_monthly si le payload ne le contient pas
+// - ne jamais envoyer "" pour revenue_goal_monthly (null à la place)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -36,13 +40,15 @@ const SocialLinkSchema = z.object({
 
 const OnboardingSchema = z
   .object({
-    // Step 1
+    // Step 1 (UI v2)
     firstName: z.string().optional().default(""),
-    ageRange: z.string().optional().default(""),
-    gender: z.string().optional().default(""),
     country: z.string().optional().default(""),
     niche: z.string().optional().default(""),
     missionStatement: z.string().optional().default(""),
+
+    // Compat (peuvent arriver dans payload, mais PAS stockés en DB si colonnes absentes)
+    ageRange: z.string().optional().default(""),
+    gender: z.string().optional().default(""),
     maturity: z.string().optional().default(""),
     biggestBlocker: z.string().optional().default(""),
 
@@ -55,22 +61,19 @@ const OnboardingSchema = z
     weeklyHours: z.string().optional().default(""),
     mainGoal90Days: z.string().optional().default(""),
 
-    // ✅ NEW: objectif chiffré (texte en DB)
     revenueGoalMonthly: z.string().optional().default(""),
     revenue_goal_monthly: z.string().optional(),
 
     mainGoals: z.array(z.string()).max(2).optional().default([]),
 
-    // Step 3
-    uniqueValue: z.string().optional().default(""),
-    untappedStrength: z.string().optional().default(""),
+    // Step 3 / compat (arrivent parfois depuis anciennes versions)
     biggestChallenge: z.string().optional().default(""),
     successDefinition: z.string().optional().default(""),
     clientFeedback: z.array(z.string()).optional().default([]),
     preferredContentType: z.string().optional().default(""),
     tonePreference: z.array(z.string()).optional().default([]),
 
-    // ✅ NEW (V2 chat)
+    // ✅ V2 chat
     diagnosticAnswers: z.array(z.any()).optional(),
     diagnostic_answers: z.array(z.any()).optional(),
     diagnosticProfile: z.record(z.any()).nullable().optional(),
@@ -114,23 +117,14 @@ function parseAudienceSocial(value: string): number {
   const v = cleanString(value, 50).replace(/\s+/g, "");
   if (!v) return 0;
 
-  const direct = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
-  if (
-    !Number.isNaN(direct) &&
-    /^\d+$/.test(v.replace(/[^\d]/g, "")) &&
-    !v.includes("-") &&
-    !v.includes("+")
-  ) {
-    return direct;
-  }
-
+  // formats range UI
   if (v === "0-500") return 250;
   if (v === "500-2000") return 1250;
   if (v === "2000-10000") return 6000;
   if (v === "10000+") return 15000;
 
-  const n = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
-  return Number.isNaN(n) ? 0 : n;
+  const n = parseIntSafe(v);
+  return n ?? 0;
 }
 
 function parseAudienceEmail(value: string): number {
@@ -166,7 +160,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ✅ Si le payload ne contient pas revenueGoalMonthly, on ne doit PAS écraser la valeur existante
+  // ✅ Ne pas écraser revenue_goal_monthly si le payload ne le contient pas
   const hasRevenueGoalField =
     !!body &&
     typeof body === "object" &&
@@ -183,6 +177,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = user.id;
+  const nowIso = new Date().toISOString();
 
   const normalizedOffers = (d.offers ?? []).slice(0, 50).map((o) => ({
     name: cleanString(o.name, 200),
@@ -210,12 +205,10 @@ export async function POST(req: NextRequest) {
     url: cleanString(s.url, 500),
   }));
 
-  const nowIso = new Date().toISOString();
-
   const audienceSocialInt = parseAudienceSocial(d.socialAudience ?? "");
   const audienceEmailInt = parseAudienceEmail(d.emailListSize ?? "");
 
-  // ⚠️ IMPORTANT: ne jamais envoyer "" pour revenue_goal_monthly (sinon crash si colonne INT)
+  // ⚠️ Ne jamais envoyer "" pour revenue_goal_monthly
   const revenueGoalMonthlyRaw = cleanString(
     ((d as any).revenueGoalMonthly ?? (d as any).revenue_goal_monthly ?? "") as string,
     50,
@@ -232,54 +225,84 @@ export async function POST(req: NextRequest) {
   );
   const diagnosticCompleted =
     (d as any).diagnosticCompleted ?? (d as any).diagnostic_completed ?? undefined;
+
   const onboardingVersion = cleanString(
     (d as any).onboardingVersion ?? (d as any).onboarding_version ?? "",
     50,
   );
 
+  // ✅ IMPORTANT : n'écrire que les colonnes EXISTANTES de business_profiles
+  // (voir ton export: pas de age_range/gender/unique_value/untapped_strength/etc.)
   const rowNative: Record<string, unknown> = {
     user_id: userId,
 
     // Step 1
-    first_name: cleanString(d.firstName, 120),
-    age_range: cleanString(d.ageRange, 50),
-    gender: cleanString(d.gender, 50),
-    country: cleanString(d.country, 120),
-    niche: cleanString(d.niche, 200),
-    mission: cleanString(d.missionStatement, 1500),
-    business_maturity: cleanString(d.maturity, 120),
-    biggest_blocker: cleanString(d.biggestBlocker, 200),
+    ...(cleanString(d.firstName, 120) ? { first_name: cleanString(d.firstName, 120) } : {}),
+    ...(cleanString(d.country, 120) ? { country: cleanString(d.country, 120) } : {}),
+    ...(cleanString(d.niche, 200) ? { niche: cleanString(d.niche, 200) } : {}),
+    ...(cleanString(d.missionStatement, 1500)
+      ? { mission: cleanString(d.missionStatement, 1500) }
+      : {}),
 
-    // Step 2 (IMPORTANT: ints)
-    has_offers: d.hasOffers ?? false,
-    offers: d.hasOffers ? normalizedOffers : [],
-    offer_price: offerPrice,
-    offer_sales_count: offerSalesCount,
-    offer_sales_page_links: offerSalesPageLinks,
-    audience_social: audienceSocialInt,
-    social_links: normalizedSocialLinks,
-    audience_email: audienceEmailInt,
-    time_available: cleanString(d.weeklyHours, 120),
-    main_goal: cleanString(d.mainGoal90Days, 200),
+    // Compat (colonnes EXISTANTES)
+    ...(cleanString(d.maturity, 120)
+      ? { business_maturity: cleanString(d.maturity, 120) }
+      : {}),
+    ...(cleanString(d.biggestBlocker, 200)
+      ? { biggest_blocker: cleanString(d.biggestBlocker, 200) }
+      : {}),
 
-    // ✅ only if provided in payload
-    ...(hasRevenueGoalField ? { revenue_goal_monthly: revenueGoalMonthlyValue } : {}),
+    // Step 2
+    ...(typeof d.hasOffers === "boolean" ? { has_offers: d.hasOffers } : {}),
+    ...(Array.isArray(d.offers) ? { offers: d.hasOffers ? normalizedOffers : [] } : {}),
+    ...(d.hasOffers ? { offer_price: offerPrice, offer_sales_count: offerSalesCount, offer_sales_page_links: offerSalesPageLinks } : {}),
 
-    main_goals: compactArray(d.mainGoals ?? [], 2),
+    // ints existants
+    ...(typeof audienceSocialInt === "number" ? { audience_social: audienceSocialInt } : {}),
+    ...(typeof audienceEmailInt === "number" ? { audience_email: audienceEmailInt } : {}),
 
-    // Step 3
-    unique_value: cleanString(d.uniqueValue, 2000),
-    untapped_strength: cleanString(d.untappedStrength, 2000),
-    biggest_challenge: cleanString(d.biggestChallenge, 200),
-    success_definition: cleanString(d.successDefinition, 2000),
-    recent_client_feedback: (d.clientFeedback ?? [])
+    ...(Array.isArray(d.socialLinks) ? { social_links: normalizedSocialLinks } : {}),
+
+    ...(cleanString(d.weeklyHours, 120)
+      ? { time_available: cleanString(d.weeklyHours, 120) }
+      : {}),
+    ...(cleanString(d.mainGoal90Days, 200)
+      ? { main_goal: cleanString(d.mainGoal90Days, 200) }
+      : {}),
+
+    ...(compactArray(d.mainGoals ?? [], 2).length > 0
+      ? { main_goals: compactArray(d.mainGoals ?? [], 2) }
+      : {}),
+
+    // Step 3 (colonnes EXISTANTES)
+    ...(cleanString(d.successDefinition, 2000)
+      ? { success_definition: cleanString(d.successDefinition, 2000) }
+      : {}),
+    ...(cleanString(d.biggestChallenge, 200)
+      ? { biggest_challenge: cleanString(d.biggestChallenge, 200) }
+      : {}),
+    ...((d.clientFeedback ?? [])
       .map((x) => cleanString(x, 2000))
       .filter(Boolean)
-      .join("\n\n"),
-    content_preference: cleanString(d.preferredContentType, 200),
-    preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", "),
+      .join("\n\n")
+      ? {
+          recent_client_feedback: (d.clientFeedback ?? [])
+            .map((x) => cleanString(x, 2000))
+            .filter(Boolean)
+            .join("\n\n"),
+        }
+      : {}),
+    ...(cleanString(d.preferredContentType, 200)
+      ? { content_preference: cleanString(d.preferredContentType, 200) }
+      : {}),
+    ...(compactArray(d.tonePreference ?? [], 3).join(", ")
+      ? { preferred_tone: compactArray(d.tonePreference ?? [], 3).join(", ") }
+      : {}),
 
-    // ✅ V2
+    // revenue_goal_monthly uniquement si fourni dans payload
+    ...(hasRevenueGoalField ? { revenue_goal_monthly: revenueGoalMonthlyValue } : {}),
+
+    // V2 chat (colonnes EXISTANTES)
     ...(typeof diagnosticAnswers !== "undefined" ? { diagnostic_answers: diagnosticAnswers } : {}),
     ...(typeof diagnosticProfile !== "undefined" ? { diagnostic_profile: diagnosticProfile } : {}),
     ...(diagnosticSummary ? { diagnostic_summary: diagnosticSummary } : {}),
@@ -291,11 +314,12 @@ export async function POST(req: NextRequest) {
     updated_at: nowIso,
   };
 
+  // Fallback stringifié si certaines colonnes sont TEXT (selon schémas historiques)
   const rowFallback: Record<string, unknown> = {
     ...rowNative,
-    offers: JSON.stringify(d.hasOffers ? normalizedOffers : []),
-    social_links: JSON.stringify(normalizedSocialLinks),
-    main_goals: compactArray(d.mainGoals ?? [], 2).join(", "),
+    ...(rowNative.offers ? { offers: JSON.stringify(rowNative.offers) } : {}),
+    ...(rowNative.social_links ? { social_links: JSON.stringify(rowNative.social_links) } : {}),
+    ...(rowNative.main_goals ? { main_goals: JSON.stringify(rowNative.main_goals) } : {}),
   };
 
   async function updateThenInsert(row: Record<string, unknown>): Promise<UpdateResult> {
@@ -322,7 +346,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, stage: nativeRes.stage, id: nativeRes.id });
   }
 
-  // fallback JSON-stringified for columns that might be TEXT
   const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
     return NextResponse.json({
@@ -333,7 +356,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Logs serveur pour retrouver la cause exacte du 500 (RLS / type / colonne manquante)
   console.error("[api/onboarding/answers] native failed", nativeRes);
   console.error("[api/onboarding/answers] fallback failed", fallbackRes);
 

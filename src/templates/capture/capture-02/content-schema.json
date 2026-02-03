@@ -1,0 +1,27 @@
+{
+  "hero_pretitle": {
+    "maxLength": 30,
+    "required": true
+  },
+  "hero_title": {
+    "maxLength": 65,
+    "required": true
+  },
+  "hero_subtitle": {
+    "maxLength": 140,
+    "required": true
+  },
+  "cta_text": {
+    "maxLength": 30,
+    "required": true
+  },
+  "reassurance_text": {
+    "maxLength": 90,
+    "required": false
+  },
+  "bullets": {
+    "maxItems": 6,
+    "itemMaxLength": 120,
+    "required": false
+  }
+}

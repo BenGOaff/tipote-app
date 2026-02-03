@@ -1,0 +1,29 @@
+<section class="hero capture-01">
+  <div class="container">
+    <span class="eyebrow">{{hero_pretitle}}</span>
+
+    <h1>{{hero_title}}</h1>
+
+    <p class="subtitle">
+      {{hero_subtitle}}
+    </p>
+
+    <div class="benefits">
+      {{#bullets}}
+      <div class="benefit">
+        <span class="dot"></span>
+        <p>{{.}}</p>
+      </div>
+      {{/bullets}}
+    </div>
+
+    <div class="form-preview">
+      <input type="email" placeholder="Votre email" disabled />
+      <button>{{cta_text}}</button>
+    </div>
+
+    <p class="micro-proof">
+      {{reassurance_text}}
+    </p>
+  </div>
+</section>
