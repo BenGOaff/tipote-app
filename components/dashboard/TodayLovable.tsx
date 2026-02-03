@@ -28,6 +28,7 @@ import {
   Target,
   Sparkles,
   BarChart3,
+  CheckCircle2,
 } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -403,15 +404,13 @@ export default function TodayLovable() {
     return 2000;
   }, [revenueGoalValue]);
 
-  const weeklyExecutionPercent = useMemo(() => {
-    // ancien "objectif engagement" -> on garde une métrique simple:
-    // nb tâches cochées cette semaine / 7 (proxy).
-    const activityStat = stats.find((s) => s.label.startsWith("Activité"));
-    const raw = activityStat?.value ?? "0/7";
-    const parts = raw.split("/");
-    const done = Number(parts?.[0] ?? 0);
-    return clampPercent((done / 7) * 100);
-  }, [stats]);
+  const [tasksDoneThisWeek, setTasksDoneThisWeek] = useState<number>(0);
+  const [plannedCountThisWeek, setPlannedCountThisWeek] = useState<number>(0);
+
+  const focusGoal = 3;
+  const focusLabel = `Terminer ${focusGoal} tâches`;
+  const focusPercent = useMemo(() => clampPercent((Math.min(focusGoal, tasksDoneThisWeek) / focusGoal) * 100), [tasksDoneThisWeek]);
+  const weeklyExecutionPercent = useMemo(() => clampPercent((Math.min(7, tasksDoneThisWeek) / 7) * 100), [tasksDoneThisWeek]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -582,9 +581,10 @@ export default function TodayLovable() {
           return dt >= startW && dt <= endW;
         });
         const plannedCount = plannedThisWeek.length;
+        setPlannedCountThisWeek(plannedCount);
 
         // activité = tâches cochées cette semaine / 7
-        const tasksDoneThisWeek = tasksAll.filter((t) => {
+        const doneThisWeek = tasksAll.filter((t) => {
           const done = isDoneStatus(normalizeTaskStatus(t));
           if (!done) return false;
           const dt =
@@ -595,7 +595,9 @@ export default function TodayLovable() {
           return dt >= startW && dt <= endW;
         }).length;
 
-        const activityValue = `${Math.min(7, tasksDoneThisWeek)}/7`;
+        setTasksDoneThisWeek(doneThisWeek);
+
+        const activityValue = `${Math.min(7, doneThisWeek)}/7`;
 
         // next task (todo) triée
         const nextTodoTask = tasksAll
@@ -650,7 +652,7 @@ export default function TodayLovable() {
           setStats([
             { label: "Plan stratégique", value: `${progressionPercent}%`, trend: `${tasksDone}/${tasksTotal}`, icon: Target },
             { label: "Contenus planifiés", value: `${plannedCount}/7`, trend: plannedCount > 0 ? `+${plannedCount}` : "+0", icon: Calendar },
-            { label: "Activité (tâches cochées)", value: activityValue, trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0", icon: TrendingUp },
+            { label: "Activité (tâches cochées)", value: activityValue, trend: doneThisWeek > 0 ? `+${doneThisWeek}` : "+0", icon: TrendingUp },
           ]);
         }
 
@@ -787,9 +789,21 @@ export default function TodayLovable() {
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">Objectif revenu</p>
                   <p className="text-2xl font-bold text-primary-foreground">{revenueGoalLabel}</p>
-                  <p className="text-sm text-primary-foreground/70 mt-1">
-                    Estimation mensuelle à partir de tes chiffres de la semaine
-                  </p>
+
+                  {revenueGoalValue ? (
+                    <p className="text-sm text-primary-foreground/70 mt-1">
+                      Estimation mensuelle à partir de tes chiffres de la semaine
+                    </p>
+                  ) : (
+                    <div className="mt-3">
+                      <Button asChild variant="secondary" size="sm" className="h-8">
+                        <Link href="/settings">Définir mon objectif</Link>
+                      </Button>
+                      <p className="text-sm text-primary-foreground/70 mt-2">
+                        Ajoute un objectif pour suivre ta progression.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
@@ -856,49 +870,46 @@ export default function TodayLovable() {
                 </div>
               </Card>
 
-              {/* Weekly pulse */}
+              {/* Focus semaine (V2) */}
               <Card className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 rounded-xl gradient-secondary flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-secondary-foreground" />
+                    <CheckCircle2 className="w-6 h-6 text-secondary-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold">Progression de la semaine</h3>
+                    <h3 className="text-lg font-bold">Focus de la semaine</h3>
                     <p className="text-sm text-muted-foreground">{weekLabel}</p>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-muted/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Revenu</span>
-                      <span className="text-sm text-muted-foreground">
-                        {pulsePreview.weeklyRevenue !== null
-                          ? formatEuroCompact(pulsePreview.weeklyRevenue)
-                          : "—"}
-                      </span>
-                    </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / weeklyRevenueTarget) * 100)} />
+                <div className="p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{focusLabel}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {Math.min(focusGoal, tasksDoneThisWeek)}/{focusGoal}
+                    </span>
                   </div>
+                  <Progress value={focusPercent} />
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Basé sur tes tâches cochées cette semaine.
+                  </p>
+                </div>
 
-                  <div className="p-4 rounded-lg bg-muted/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Leads</span>
-                      <span className="text-sm text-muted-foreground">
-                        {pulsePreview.weeklyLeads !== null ? pulsePreview.weeklyLeads : "—"}
-                      </span>
-                    </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyLeads ?? 0) / 25) * 100)} />
+                <div className="mt-4 p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">Contenus planifiés</span>
+                    <span className="text-sm text-muted-foreground">
+                      {plannedCountThisWeek}/7
+                    </span>
                   </div>
-
-                  <div className="p-4 rounded-lg bg-muted/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Ventes</span>
-                      <span className="text-sm text-muted-foreground">
-                        {pulsePreview.weeklySales !== null ? pulsePreview.weeklySales : "—"}
-                      </span>
-                    </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklySales ?? 0) / 5) * 100)} />
+                  <Progress value={clampPercent((plannedCountThisWeek / 7) * 100)} />
+                  <div className="mt-3 flex gap-2">
+                    <Button asChild variant="outline" size="sm" className="h-8">
+                      <Link href="/tasks">Voir mes tâches</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="h-8">
+                      <Link href="/contents">Voir mes contenus</Link>
+                    </Button>
                   </div>
                 </div>
               </Card>
