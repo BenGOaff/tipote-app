@@ -1,27 +1,12 @@
 {
-  "hero_pretitle": {
-    "maxLength": 30,
-    "required": true
-  },
-  "hero_title": {
-    "maxLength": 65,
-    "required": true
-  },
-  "hero_subtitle": {
-    "maxLength": 140,
-    "required": true
-  },
-  "cta_text": {
-    "maxLength": 30,
-    "required": true
-  },
-  "reassurance_text": {
-    "maxLength": 90,
-    "required": false
-  },
-  "bullets": {
-    "maxItems": 6,
-    "itemMaxLength": 120,
-    "required": false
-  }
+  "hero_pretitle": { "maxLength": 40, "required": true },
+  "hero_title": { "maxLength": 120, "required": true },
+  "hero_title_accent": { "maxLength": 40, "required": false },
+  "hero_subtitle": { "maxLength": 220, "required": true },
+  "video_caption": { "maxLength": 80, "required": false },
+  "cta_text": { "maxLength": 34, "required": true },
+  "reassurance_text": { "maxLength": 110, "required": false },
+  "bullets": { "maxItems": 6, "itemMaxLength": 110, "required": false },
+  "dark_title": { "maxLength": 60, "required": false },
+  "dark_text": { "maxLength": 140, "required": false }
 }

@@ -67,6 +67,9 @@ function applyVariant(
   if (typeof v?.heroAlign === "string") {
     out.layout = { ...(out.layout || {}), textAlign: v.heroAlign };
   }
+  if (typeof v?.maxWidth === "string") {
+    out.layout = { ...(out.layout || {}), maxWidth: v.maxWidth };
+  }
   return out;
 }
 
@@ -94,32 +97,62 @@ function applyBrand(
 /**
  * Minimal Mustache-like features:
  * - {{key}} replaced by escaped scalar
- * - {{#arr}}...{{/arr}} repeats inner HTML for each string item, using {{.}}
+ * - {{#arr}}...{{/arr}} repeats inner HTML for each item, using {{.}}
+ * - {{#str}}...{{/str}} renders once if str is truthy, using {{.}} as the str value
  */
 function renderFragment(fragment: string, data: Record<string, unknown>) {
-  // handle array sections first
-  const withArrays = fragment.replace(
+  const withSections = fragment.replace(
     /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
     (_m, key, inner) => {
       const v = (data as any)[key];
-      if (!Array.isArray(v) || v.length === 0) return "";
-      return v
-        .map((item) => {
-          const itemStr = escapeHtml(item);
-          return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
-        })
-        .join("");
+
+      if (Array.isArray(v)) {
+        if (v.length === 0) return "";
+        return v
+          .map((item) => {
+            const itemStr = escapeHtml(item);
+            return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+          })
+          .join("");
+      }
+
+      if (typeof v === "string" && v.trim()) {
+        const itemStr = escapeHtml(v);
+        return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+      }
+
+      if (typeof v === "number") {
+        const itemStr = escapeHtml(String(v));
+        return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+      }
+
+      return "";
     }
   );
 
-  // then scalar placeholders
-  const withScalars = withArrays.replace(
+  const withScalars = withSections.replace(
     /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
     (_m, key) => escapeHtml((data as any)[key])
   );
 
-  // cleanup: remove empty benefits wrapper if loop produced nothing
-  return withScalars.replace(/<div class="benefits">\s*<\/div>/g, "");
+  // cleanup empty wrappers
+  return withScalars
+    .replace(/<div class="benefits">\s*<\/div>/g, "")
+    .replace(/<div class="tpt-grid">\s*<\/div>/g, "")
+    .replace(/<div class="tpt-section tpt-section--dark">\s*<\/div>/g, "");
+}
+
+function buildFontLink(fontFamily?: string) {
+  const ff = (fontFamily || "").toLowerCase();
+  if (ff.includes("poppins")) {
+    return `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
+  }
+  // default Inter
+  return `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">`;
 }
 
 function buildCapture01Css(tokens: Tokens, opts?: { scoped?: boolean }): string {
@@ -138,7 +171,6 @@ function buildCapture01Css(tokens: Tokens, opts?: { scoped?: boolean }): string 
   const accent = colors.accent || "#2563eb";
   const border = colors.border || "#e5e7eb";
 
-  // Fallbacks must not assume Inter is available in Systeme; we include a font stack.
   const headingFont =
     typo.headingFont ||
     "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
@@ -159,7 +191,7 @@ function buildCapture01Css(tokens: Tokens, opts?: { scoped?: boolean }): string 
 
   const cardShadow = shadow.card || "0 10px 30px rgba(0,0,0,0.08)";
 
-  const base = `
+  return `
 :root{
   --tpt-bg:${bg};
   --tpt-text:${primary};
@@ -239,7 +271,7 @@ ${scope}.hero.capture-01 .eyebrow{
 ${scope}.hero.capture-01 h1{
   margin:16px 0 0 0;
   font-family:${headingFont};
-  font-weight:850;
+  font-weight:900;
   letter-spacing:-0.03em;
   font-size:clamp(30px, 3.4vw, ${h1});
   line-height:1.12;
@@ -314,7 +346,7 @@ ${scope}.hero.capture-01 .form-preview button{
   border:none;
   border-radius:var(--tpt-btn-radius);
   padding:12px 16px;
-  font-weight:850;
+  font-weight:900;
   letter-spacing:-0.01em;
   cursor:default;
   background:var(--tpt-accent);
@@ -349,8 +381,309 @@ ${scope}.hero.capture-01 .micro-proof{
   ${scope}.hero.capture-01 .form-preview button{width:100%}
 }
 `.trim();
+}
 
-  return base;
+function buildCapture02Css(tokens: Tokens, opts?: { scoped?: boolean }): string {
+  const scoped = !!opts?.scoped;
+  const scope = scoped ? ".tpt-scope " : "";
+
+  const colors = tokens.colors || {};
+  const typo = tokens.typography || {};
+  const layout = tokens.layout || {};
+  const radius = tokens.radius || {};
+  const shadow = tokens.shadow || {};
+
+  const bg = colors.background || "#ffffff";
+  const primary = colors.primaryText || "#474747";
+  const secondary = colors.secondaryText || "#6b7280";
+  const accent = colors.accent || "#dd0c14";
+  const border = colors.border || "#e6e6e6";
+  const darkBg = (colors as any).darkBackground || "#15161c";
+
+  const headingFont =
+    typo.headingFont ||
+    "Poppins, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+  const bodyFont =
+    typo.bodyFont ||
+    "Poppins, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+
+  const h1 = typo.h1 || "46px";
+  const body = typo.body || "16px";
+  const lineHeight = typo.lineHeight || "1.6";
+
+  const maxWidth = layout.maxWidth || "980px";
+  const sectionPadding = layout.sectionPadding || "80px 24px";
+  const textAlign = layout.textAlign || "center";
+
+  const cardRadius = radius.card || "18px";
+  const buttonRadius = radius.button || "14px";
+
+  const cardShadow = shadow.card || "0 18px 60px rgba(0,0,0,0.12)";
+
+  return `
+:root{
+  --tpt-bg:${bg};
+  --tpt-text:${primary};
+  --tpt-muted:${secondary};
+  --tpt-accent:${accent};
+  --tpt-border:${border};
+  --tpt-dark:${darkBg};
+  --tpt-card-radius:${cardRadius};
+  --tpt-btn-radius:${buttonRadius};
+  --tpt-card-shadow:${cardShadow};
+  --tpt-maxw:${maxWidth};
+  --tpt-section-pad:${sectionPadding};
+  --tpt-align:${textAlign};
+}
+
+${scope}*{box-sizing:border-box}
+
+${
+  scoped
+    ? `
+${scope}.tpt-scope{
+  background:var(--tpt-bg);
+  color:var(--tpt-text);
+  font-family:${bodyFont};
+  font-size:${body};
+  line-height:${lineHeight};
+}
+`
+    : `
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--tpt-bg);
+  color:var(--tpt-text);
+  font-family:${bodyFont};
+  font-size:${body};
+  line-height:${lineHeight};
+}
+.tpt-page{
+  min-height:100%;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+`
+}
+
+${scope}.hero.capture-02{
+  width:100%;
+  padding:var(--tpt-section-pad);
+  background:
+    radial-gradient(900px 600px at 50% -45%, rgba(221,12,20,0.10), transparent 70%),
+    radial-gradient(800px 520px at 20% 0%, rgba(221,12,20,0.06), transparent 60%);
+}
+
+${scope}.hero.capture-02 .container{
+  width:100%;
+  max-width:var(--tpt-maxw);
+  margin:0 auto;
+  text-align:var(--tpt-align);
+}
+
+${scope}.hero.capture-02 .eyebrow{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 18px;
+  border-radius:999px;
+  border:1px solid var(--tpt-border);
+  background:rgba(255,255,255,0.85);
+  color:var(--tpt-text);
+  font-weight:600;
+  font-size:14px;
+}
+
+${scope}.hero.capture-02 h1{
+  margin:18px 0 0 0;
+  font-family:${headingFont};
+  font-weight:400;
+  letter-spacing:-0.01em;
+  font-size:clamp(30px, 3.6vw, ${h1});
+  line-height:1.26;
+}
+
+${scope}.hero.capture-02 h1 .accent{
+  color:var(--tpt-accent);
+  font-weight:700;
+}
+
+${scope}.hero.capture-02 .subtitle{
+  margin:14px auto 0 auto;
+  max-width:860px;
+  color:var(--tpt-text);
+  font-size:clamp(15px, 1.25vw, 18px);
+  opacity:0.9;
+}
+
+${scope}.hero.capture-02 .tpt-grid{
+  margin:26px auto 0 auto;
+  max-width:980px;
+  display:grid;
+  grid-template-columns:1.2fr 0.8fr;
+  gap:18px;
+  align-items:stretch;
+}
+
+${scope}.hero.capture-02 .video{
+  border:1px solid var(--tpt-border);
+  border-radius:var(--tpt-card-radius);
+  background:linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86));
+  box-shadow:var(--tpt-card-shadow);
+  padding:18px;
+  text-align:left;
+}
+
+${scope}.hero.capture-02 .video .frame{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  border-radius:14px;
+  border:1px solid var(--tpt-border);
+  background:
+    radial-gradient(500px 260px at 30% 30%, rgba(221,12,20,0.10), transparent 55%),
+    linear-gradient(180deg, rgba(21,22,28,0.06), rgba(21,22,28,0.02));
+  overflow:hidden;
+}
+
+${scope}.hero.capture-02 .video .play{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  color:var(--tpt-accent);
+  font-size:44px;
+  text-shadow:0 10px 30px rgba(0,0,0,0.12);
+}
+
+${scope}.hero.capture-02 .video .caption{
+  margin-top:12px;
+  color:var(--tpt-muted);
+  font-size:14px;
+}
+
+${scope}.hero.capture-02 .side{
+  border:1px solid var(--tpt-border);
+  border-radius:var(--tpt-card-radius);
+  background:#fff;
+  box-shadow:var(--tpt-card-shadow);
+  padding:18px;
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+${scope}.hero.capture-02 .side .benefits{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+${scope}.hero.capture-02 .side .benefit{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+${scope}.hero.capture-02 .side .tick{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  background:rgba(221,12,20,0.10);
+  color:var(--tpt-accent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  flex:0 0 auto;
+}
+
+${scope}.hero.capture-02 .side .benefit p{
+  margin:0;
+  color:var(--tpt-text);
+  font-size:14px;
+  line-height:1.35;
+  font-weight:500;
+}
+
+${scope}.hero.capture-02 .cta-preview{
+  margin-top:6px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+${scope}.hero.capture-02 .cta-preview input{
+  width:100%;
+  border:1px solid var(--tpt-border);
+  border-radius:12px;
+  padding:14px 14px;
+  font-size:15px;
+  outline:none;
+}
+
+${scope}.hero.capture-02 .cta-preview button{
+  border:none;
+  border-radius:var(--tpt-btn-radius);
+  padding:18px 18px;
+  font-weight:800;
+  font-size:20px;
+  cursor:default;
+  background:var(--tpt-accent);
+  color:#fff;
+  transition:transform .12s ease, filter .12s ease;
+}
+
+${scope}.hero.capture-02 .systeme-slot{
+  border:1px dashed var(--tpt-border);
+  border-radius:var(--tpt-card-radius);
+  padding:16px;
+  color:var(--tpt-muted);
+  font-size:13px;
+  background:rgba(255,255,255,0.85);
+}
+
+${scope}.hero.capture-02 .micro-proof{
+  margin:16px auto 0 auto;
+  max-width:860px;
+  color:var(--tpt-muted);
+  font-size:13px;
+}
+
+${scope}.hero.capture-02 .tpt-section--dark{
+  margin:32px auto 0 auto;
+  max-width:var(--tpt-maxw);
+  border-radius:24px;
+  background:var(--tpt-dark);
+  color:#fff;
+  padding:34px 24px;
+  text-align:left;
+}
+
+${scope}.hero.capture-02 .tpt-section--dark h2{
+  margin:0;
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+
+${scope}.hero.capture-02 .tpt-section--dark p{
+  margin:10px 0 0 0;
+  color:rgba(255,255,255,0.78);
+  font-size:14px;
+}
+
+@media (max-width:920px){
+  ${scope}.hero.capture-02 .tpt-grid{grid-template-columns:1fr}
+  ${scope}.hero.capture-02 .side{text-align:center}
+  ${scope}.hero.capture-02 .side .benefit{text-align:left}
+}
+`.trim();
 }
 
 export async function renderTemplateHtml(
@@ -387,20 +720,17 @@ export async function renderTemplateHtml(
 
   const renderedFragment = renderFragment(fragment, req.contentData || {});
 
-  // For now, template-specific CSS (Capture 01).
   let css = "";
   if (kind === "capture" && templateId === "capture-01") {
     css = buildCapture01Css(withBrand, { scoped: req.mode === "kit" });
   }
+  if (kind === "capture" && templateId === "capture-02") {
+    css = buildCapture02Css(withBrand, { scoped: req.mode === "kit" });
+  }
 
-  // Load Inter for preview + kit (safe fallback if blocked)
-  const fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;850&display=swap" rel="stylesheet">`;
+  const fontLink = buildFontLink(withBrand.typography?.headingFont);
 
   if (req.mode === "kit") {
-    // Systeme.io: provide a single pasteable snippet.
-    // We scope everything to avoid altering the rest of the funnel page.
     const snippet = `
 ${fontLink}
 <style>

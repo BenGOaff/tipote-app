@@ -1,29 +1,44 @@
-<section class="hero capture-01">
+<section class="hero capture-02">
   <div class="container">
     <span class="eyebrow">{{hero_pretitle}}</span>
 
-    <h1>{{hero_title}}</h1>
+    <h1>
+      {{hero_title}}
+      {{#hero_title_accent}}<span class="accent"> {{.}}</span>{{/hero_title_accent}}
+    </h1>
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+    <p class="subtitle">{{hero_subtitle}}</p>
 
-    <div class="benefits">
-      {{#bullets}}
-      <div class="benefit">
-        <span class="dot"></span>
-        <p>{{.}}</p>
+    <div class="tpt-grid">
+      <div class="video">
+        <div class="frame">
+          <div class="play">▶</div>
+        </div>
+        {{#video_caption}}<div class="caption">{{.}}</div>{{/video_caption}}
       </div>
-      {{/bullets}}
+
+      <div class="side">
+        <div class="benefits">
+          {{#bullets}}
+          <div class="benefit">
+            <div class="tick">✓</div>
+            <p>{{.}}</p>
+          </div>
+          {{/bullets}}
+        </div>
+
+        <div class="systeme-slot systeme-form">
+          <!-- SLOT SYSTEME -->
+          Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
+        </div>
+      </div>
     </div>
 
-    <div class="systeme-slot systeme-form">
-      <!-- SLOT SYSTEME -->
-      Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
-    </div>
+    <p class="micro-proof">{{reassurance_text}}</p>
 
-    <p class="micro-proof">
-      {{reassurance_text}}
-    </p>
+    <div class="tpt-section tpt-section--dark">
+      <h2>{{dark_title}}</h2>
+      <p>{{dark_text}}</p>
+    </div>
   </div>
 </section>

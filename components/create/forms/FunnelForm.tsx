@@ -25,7 +25,7 @@ type FunnelMode = "from_pyramid" | "from_scratch";
 
 type OutputTab = "text" | "html";
 
-type CaptureTemplateId = "capture-01";
+type CaptureTemplateId = "capture-01" | "capture-02";
 
 export type FunnelFormProps = {
   onGenerate: (params: any) => Promise<string>;
@@ -60,7 +60,6 @@ function pickSubtitle(text: string): string {
   const lines = rawLines.map((l) => l.trim());
   const cleaned = lines.map((l) => cleanLine(l)).filter(Boolean);
 
-  // heuristic: subtitle = next non-empty line after title, or first paragraph
   if (cleaned.length >= 2) return cleaned[1];
   return "";
 }
@@ -74,10 +73,13 @@ function pickReassurance(text: string): string {
   return cleanLine(hit || "") || "RGPD : pas de spam. Désinscription en 1 clic.";
 }
 
-function clampChars(s: string, max: number): string {
+function softenClamp(s: string, max: number): string {
   const t = (s || "").trim();
   if (t.length <= max) return t;
-  return t.slice(0, Math.max(0, max - 1)).trimEnd() + "…";
+  const cut = t.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  const out = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd();
+  return out + "…";
 }
 
 function extractBullets(text: string, maxItems: number): string[] {
@@ -99,14 +101,21 @@ function extractBullets(text: string, maxItems: number): string[] {
   return uniq;
 }
 
-function softenClamp(s: string, max: number): string {
-  const t = (s || "").trim();
-  if (t.length <= max) return t;
-  // try cut on a word boundary
-  const cut = t.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  const out = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd();
-  return out + "…";
+function extractKeyNumber(text: string): string {
+  const t = text || "";
+  const euro = t.match(/\b\d[\d\s\.]*\s*€\b/);
+  if (euro?.[0]) return euro[0].replace(/\s+/g, " ").trim();
+
+  const percent = t.match(/\b\d{1,3}\s*%\b/);
+  if (percent?.[0]) return percent[0].replace(/\s+/g, " ").trim();
+
+  const days = t.match(/\b\d{1,2}\s*(jours|jour|semaines|semaine)\b/i);
+  if (days?.[0]) return days[0].replace(/\s+/g, " ").trim();
+
+  const k = t.match(/\b\d{1,3}\s*(k|K|m|M)\b/);
+  if (k?.[0]) return k[0].replace(/\s+/g, " ").trim();
+
+  return "";
 }
 
 function deriveCapture01Content(params: {
@@ -127,7 +136,6 @@ function deriveCapture01Content(params: {
 
   const bullets = extractBullets(params.resultText, 6);
 
-  // Eyebrow: keep it short and clean (avoid ugly truncation)
   const eyebrowSource = (params.offerName || "").trim();
   const eyebrow =
     eyebrowSource && eyebrowSource.length <= 30 ? eyebrowSource : "GRATUIT";
@@ -144,6 +152,54 @@ function deriveCapture01Content(params: {
   };
 }
 
+function deriveCapture02Content(params: {
+  resultText: string;
+  offerName?: string;
+  promise?: string;
+}): Record<string, unknown> {
+  const rawTitle =
+    pickFirstMeaningfulLine(params.resultText) ||
+    params.promise ||
+    params.offerName ||
+    "Rejoins le challenge";
+
+  const rawSubtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "Une série de mini-étapes pour obtenir un résultat concret rapidement — sans technique.";
+
+  const bullets = extractBullets(params.resultText, 6);
+
+  const eyebrowSource = (params.offerName || "").trim();
+  const eyebrow =
+    eyebrowSource && eyebrowSource.length <= 38
+      ? eyebrowSource
+      : "CHALLENGE GRATUIT";
+
+  const keyNumber = extractKeyNumber(params.resultText);
+  const accent =
+    keyNumber ||
+    (params.offerName
+      ? params.offerName.split(/\s+/).slice(0, 3).join(" ")
+      : "");
+
+  const reassurance = softenClamp(pickReassurance(params.resultText), 110);
+
+  return {
+    hero_pretitle: eyebrow,
+    hero_title: softenClamp(rawTitle, 120),
+    hero_title_accent: softenClamp(accent, 40),
+    hero_subtitle: softenClamp(rawSubtitle, 220),
+    bullets,
+    video_caption: "Vidéo de présentation (optionnel)",
+    cta_text: "Rejoindre le challenge (gratuit)",
+    reassurance_text: reassurance,
+    dark_title: "Ce que tu vas débloquer",
+    dark_text:
+      "Un plan d’action simple + une structure claire pour passer à l’exécution sans t’éparpiller.",
+  };
+}
+
 export function FunnelForm(props: FunnelFormProps) {
   const { toast } = useToast();
 
@@ -154,22 +210,16 @@ export function FunnelForm(props: FunnelFormProps) {
   const [result, setResult] = useState("");
   const [outputTab, setOutputTab] = useState<OutputTab>("text");
 
-  // ✅ UX: aperçu "beau" + option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
 
-  // from_pyramid
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
-
-  // from_scratch (capture + sales)
   const [offerName, setOfferName] = useState("");
   const [pitch, setPitch] = useState("");
   const [target, setTarget] = useState("");
-  // sales only
   const [price, setPrice] = useState("");
   const [urgency, setUrgency] = useState("");
   const [guarantee, setGuarantee] = useState("");
 
-  // ✅ HTML preview/export (Capture only for now)
   const [templateId, setTemplateId] = useState<CaptureTemplateId>("capture-01");
   const [variantId, setVariantId] = useState<string>("centered");
   const [htmlPreview, setHtmlPreview] = useState<string>("");
@@ -252,7 +302,6 @@ export function FunnelForm(props: FunnelFormProps) {
       const blob = new Blob([htmlPreview], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
-      // Revoke later to allow the new tab to load first
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch {
       toast({
@@ -323,6 +372,7 @@ export function FunnelForm(props: FunnelFormProps) {
     setOutputTab("text");
     setHtmlPreview("");
     setHtmlKit("");
+    setVariantId("centered");
 
     if (mode === "from_pyramid") {
       if (!selectedOffer?.id) {
@@ -339,7 +389,7 @@ export function FunnelForm(props: FunnelFormProps) {
         type: "funnel",
         funnelPageType: pageType,
         funnelMode: "from_pyramid",
-        offerId: selectedOffer.id, // réutilise offerId côté API
+        offerId: selectedOffer.id,
         theme: selectedOffer.promise || selectedOffer.name || "Funnel",
       };
 
@@ -349,7 +399,6 @@ export function FunnelForm(props: FunnelFormProps) {
       return;
     }
 
-    // from_scratch
     if (!validateScratch()) return;
 
     const payload = {
@@ -418,13 +467,21 @@ export function FunnelForm(props: FunnelFormProps) {
 
     const offerLabel =
       mode === "from_pyramid" ? selectedOffer?.name ?? "" : offerName;
-    const promise = mode === "from_pyramid" ? selectedOffer?.promise ?? "" : pitch;
+    const promise =
+      mode === "from_pyramid" ? selectedOffer?.promise ?? "" : pitch;
 
-    const contentData = deriveCapture01Content({
-      resultText: result,
-      offerName: offerLabel,
-      promise,
-    });
+    const contentData =
+      templateId === "capture-02"
+        ? deriveCapture02Content({
+            resultText: result,
+            offerName: offerLabel,
+            promise,
+          })
+        : deriveCapture01Content({
+            resultText: result,
+            offerName: offerLabel,
+            promise,
+          });
 
     setIsRendering(true);
     setHtmlPreview("");
@@ -454,9 +511,7 @@ export function FunnelForm(props: FunnelFormProps) {
           templateId,
           mode: "kit",
           variantId,
-          contentData: {
-            ...contentData,
-          },
+          contentData,
         }),
       });
 
@@ -498,7 +553,10 @@ export function FunnelForm(props: FunnelFormProps) {
         <Card className="p-4 space-y-4">
           <div className="space-y-2">
             <Label>Type de page</Label>
-            <Tabs value={pageType} onValueChange={(v) => setPageType(v as FunnelPageType)}>
+            <Tabs
+              value={pageType}
+              onValueChange={(v) => setPageType(v as FunnelPageType)}
+            >
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="capture">Page de capture</TabsTrigger>
                 <TabsTrigger value="sales">Page de vente</TabsTrigger>
@@ -510,7 +568,9 @@ export function FunnelForm(props: FunnelFormProps) {
             <Label>Mode de création</Label>
             <Tabs value={mode} onValueChange={(v) => setMode(v as FunnelMode)}>
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="from_pyramid">À partir de la pyramide</TabsTrigger>
+                <TabsTrigger value="from_pyramid">
+                  À partir de la pyramide
+                </TabsTrigger>
                 <TabsTrigger value="from_scratch">À partir de zéro</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -634,7 +694,11 @@ export function FunnelForm(props: FunnelFormProps) {
             <Button onClick={handleGenerate} disabled={props.isGenerating}>
               {props.isGenerating ? "Génération..." : "Générer"}
             </Button>
-            <Button variant="secondary" onClick={handleSave} disabled={props.isSaving}>
+            <Button
+              variant="secondary"
+              onClick={handleSave}
+              disabled={props.isSaving}
+            >
               {props.isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
 
@@ -651,7 +715,10 @@ export function FunnelForm(props: FunnelFormProps) {
         </Card>
 
         <Card className="p-4 space-y-2">
-          <Tabs value={outputTab} onValueChange={(v) => setOutputTab(v as OutputTab)}>
+          <Tabs
+            value={outputTab}
+            onValueChange={(v) => setOutputTab(v as OutputTab)}
+          >
             <div className="flex items-center justify-between gap-2">
               <TabsList className="grid grid-cols-2 w-[240px]">
                 <TabsTrigger value="text">Texte</TabsTrigger>
@@ -723,7 +790,12 @@ export function FunnelForm(props: FunnelFormProps) {
                         <SelectValue placeholder="Choisir un template" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="capture-01">Capture 01 — Capture Ads</SelectItem>
+                        <SelectItem value="capture-01">
+                          Capture 01 — Capture Ads
+                        </SelectItem>
+                        <SelectItem value="capture-02">
+                          Capture 02 — Dream Team
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -763,7 +835,8 @@ export function FunnelForm(props: FunnelFormProps) {
                     />
                   ) : (
                     <div className="p-4 text-sm text-muted-foreground">
-                      Clique sur “Prévisualiser en HTML” pour générer la page (après génération du texte).
+                      Clique sur “Prévisualiser en HTML” pour générer la page (après
+                      génération du texte).
                     </div>
                   )}
                 </div>
@@ -777,7 +850,8 @@ export function FunnelForm(props: FunnelFormProps) {
                     placeholder="Le code Systeme apparaîtra ici..."
                   />
                   <p className="text-xs text-muted-foreground">
-                    Colle ce code dans un bloc “Code HTML” dans Systeme.io, puis ajoute ton formulaire natif dans le SLOT.
+                    Colle ce code dans un bloc “Code HTML” dans Systeme.io, puis
+                    ajoute ton formulaire natif dans le SLOT.
                   </p>
                 </div>
               </div>
