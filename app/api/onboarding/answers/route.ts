@@ -11,6 +11,10 @@
 //
 // ✅ FIX (03/02): ne pas écraser revenue_goal_monthly quand le payload ne le contient pas
 // (ex: POST de StepDiagnosticChat / finalizeOnboarding qui envoie seulement diagnostic_*)
+//
+// ✅ FIX (03/02 - hotfix 500):
+// ne JAMAIS envoyer "" sur revenue_goal_monthly (si colonne INT en prod => crash).
+// -> si valeur vide: null (ok pour TEXT et INT)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -211,10 +215,12 @@ export async function POST(req: NextRequest) {
   const audienceSocialInt = parseAudienceSocial(d.socialAudience ?? "");
   const audienceEmailInt = parseAudienceEmail(d.emailListSize ?? "");
 
+  // ⚠️ IMPORTANT: ne jamais envoyer "" pour revenue_goal_monthly (sinon crash si colonne INT)
   const revenueGoalMonthlyRaw = cleanString(
     ((d as any).revenueGoalMonthly ?? (d as any).revenue_goal_monthly ?? "") as string,
     50,
   );
+  const revenueGoalMonthlyValue: string | null = revenueGoalMonthlyRaw ? revenueGoalMonthlyRaw : null;
 
   const diagnosticAnswers =
     (d as any).diagnosticAnswers ?? (d as any).diagnostic_answers ?? undefined;
@@ -257,7 +263,7 @@ export async function POST(req: NextRequest) {
     main_goal: cleanString(d.mainGoal90Days, 200),
 
     // ✅ only if provided in payload
-    ...(hasRevenueGoalField ? { revenue_goal_monthly: revenueGoalMonthlyRaw } : {}),
+    ...(hasRevenueGoalField ? { revenue_goal_monthly: revenueGoalMonthlyValue } : {}),
 
     main_goals: compactArray(d.mainGoals ?? [], 2),
 
@@ -319,8 +325,17 @@ export async function POST(req: NextRequest) {
   // fallback JSON-stringified for columns that might be TEXT
   const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
-    return NextResponse.json({ ok: true, stage: fallbackRes.stage, id: fallbackRes.id, fallback: true });
+    return NextResponse.json({
+      ok: true,
+      stage: fallbackRes.stage,
+      id: fallbackRes.id,
+      fallback: true,
+    });
   }
+
+  // Logs serveur pour retrouver la cause exacte du 500 (RLS / type / colonne manquante)
+  console.error("[api/onboarding/answers] native failed", nativeRes);
+  console.error("[api/onboarding/answers] fallback failed", fallbackRes);
 
   return NextResponse.json(
     { ok: false, error: "Database error", details: { native: nativeRes, fallback: fallbackRes } },

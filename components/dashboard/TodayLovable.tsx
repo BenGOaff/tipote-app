@@ -1,3 +1,4 @@
+// components/dashboard/TodayLovable.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -29,6 +30,7 @@ import {
   Sparkles,
   BarChart3,
   CheckCircle2,
+  Pencil,
 } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -201,8 +203,7 @@ type BizPulse = {
   weeklyRevenue: string;
   weeklyLeads: string;
   weeklySales: string;
-  // legacy support (old field name)
-  weeklyCalls?: string;
+  weeklyCalls?: string; // legacy support
 };
 
 type PulseField = "weeklyRevenue" | "weeklyLeads" | "weeklySales";
@@ -219,10 +220,11 @@ function loadPulse(userId: string): BizPulse | null {
     const json = JSON.parse(raw) as Partial<BizPulse> | null;
     if (!json || typeof json !== "object") return null;
 
-    const legacyCalls =
-      typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
+    const legacyCalls = typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
     const weeklySales =
-      typeof (json as any).weeklySales === "string" ? (json as any).weeklySales : legacyCalls;
+      typeof (json as any).weeklySales === "string"
+        ? (json as any).weeklySales
+        : legacyCalls;
 
     return {
       weeklyRevenue: typeof json.weeklyRevenue === "string" ? json.weeklyRevenue : "",
@@ -238,7 +240,6 @@ function loadPulse(userId: string): BizPulse | null {
 function savePulse(userId: string, pulse: BizPulse) {
   if (!userId) return;
   try {
-    // ne pas persister le legacy field si on n'en a pas besoin
     const { weeklyCalls, ...rest } = pulse;
     localStorage.setItem(storageKey(userId), JSON.stringify(rest));
   } catch {
@@ -297,8 +298,7 @@ function normalizeTaskStatus(t: any): string {
 }
 
 function normalizeTaskDueDate(t: any): Date | null {
-  const d = parseDate(t?.due_date ?? t?.dueDate ?? t?.due_at ?? t?.dueAt ?? "");
-  return d;
+  return parseDate(t?.due_date ?? t?.dueDate ?? t?.due_at ?? t?.dueAt ?? "");
 }
 
 function normalizeTaskPriority(t: any): Priority {
@@ -307,13 +307,7 @@ function normalizeTaskPriority(t: any): Priority {
 
 function isDoneStatus(status: string): boolean {
   const s = (status || "").toLowerCase();
-  return (
-    s === "done" ||
-    s === "completed" ||
-    s === "fait" ||
-    s === "terminé" ||
-    s === "termine"
-  );
+  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
 }
 
 function normalizeContentTitle(r: any): string {
@@ -331,10 +325,7 @@ function normalizeContentStatus(r: any): string {
 }
 
 function normalizeContentScheduledDate(r: any): Date | null {
-  const dt = parseDate(
-    r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? ""
-  );
-  return dt;
+  return parseDate(r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? "");
 }
 
 type ContentRowAny = Record<string, any>;
@@ -379,6 +370,8 @@ function isGenericStringErrorArray(v: unknown): v is string[] {
 }
 
 export default function TodayLovable() {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+
   const [isPulseOpen, setIsPulseOpen] = useState(false);
 
   const [nextTask, setNextTask] = useState<NextTask>({
@@ -393,7 +386,7 @@ export default function TodayLovable() {
   const [stats, setStats] = useState<DashboardStat[]>([
     { label: "Plan stratégique", value: "0%", trend: "0/0", icon: Target },
     { label: "Contenus planifiés", value: "0/7", trend: "+0", icon: Calendar },
-    { label: "Activité", value: "0/7", trend: "+0 tâches", icon: TrendingUp },
+    { label: "Activité", value: "0/7", trend: "+0 tâche", icon: TrendingUp },
   ]);
 
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([]);
@@ -421,10 +414,7 @@ export default function TodayLovable() {
   const pulsePreview = useMemo(() => {
     const weeklyRevenue = parseEuroNumber(bizPulse.weeklyRevenue);
     const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
-    const weeklySales = parseEuroNumber(
-      (bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString()
-    );
-
+    const weeklySales = parseEuroNumber((bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString());
     return { weeklyRevenue, weeklyLeads, weeklySales };
   }, [bizPulse.weeklyCalls, bizPulse.weeklySales, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
 
@@ -432,15 +422,12 @@ export default function TodayLovable() {
     if (!revenueGoalValue || revenueGoalValue <= 0) return 0;
     const rev = pulsePreview.weeklyRevenue;
     if (!rev || rev <= 0) return 0;
-
-    // weekly vs monthly: approximation (x4)
     const monthlyEstimate = rev * 4;
     return clampPercent((monthlyEstimate / revenueGoalValue) * 100);
   }, [pulsePreview.weeklyRevenue, revenueGoalValue]);
 
   const weeklyRevenueTarget = useMemo(() => {
-    if (revenueGoalValue && revenueGoalValue > 0)
-      return Math.max(1, Math.round(revenueGoalValue / 4));
+    if (revenueGoalValue && revenueGoalValue > 0) return Math.max(1, Math.round(revenueGoalValue / 4));
     return 2000;
   }, [revenueGoalValue]);
 
@@ -456,58 +443,129 @@ export default function TodayLovable() {
     () => clampPercent((Math.min(focusGoal, tasksDoneThisWeek) / Math.max(1, focusGoal)) * 100),
     [focusGoal, tasksDoneThisWeek]
   );
+
   const weeklyExecutionPercent = useMemo(
     () => clampPercent((Math.min(7, tasksDoneThisWeek) / 7) * 100),
     [tasksDoneThisWeek]
   );
 
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    let cancelled = false;
+  // Goal dialog (monthly revenue goal -> supabase)
+  const [isGoalOpen, setIsGoalOpen] = useState(false);
+  const [goalInput, setGoalInput] = useState<string>("");
+  const [goalError, setGoalError] = useState<string>("");
+  const [goalSaving, setGoalSaving] = useState<boolean>(false);
 
-    async function loadRevenueGoal(userId: string) {
-      // 1) Source principale : business_profiles.revenue_goal_monthly
-      const prof = await supabase
+  async function loadRevenueGoal(userId: string) {
+    // 1) Source principale : business_profiles.revenue_goal_monthly
+    const prof = await supabase
+      .from("business_profiles")
+      .select("revenue_goal_monthly")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!prof.error) {
+      const raw = (prof.data as any)?.revenue_goal_monthly ?? null;
+      const goalNum = parseEuroNumber(raw);
+      if (goalNum && goalNum > 0) {
+        setRevenueGoalValue(goalNum);
+        setRevenueGoalLabel(formatEuroCompact(goalNum));
+        setGoalInput(String(goalNum));
+        return;
+      }
+    }
+
+    // 2) Fallback : strategies.target_monthly_revenue / objective_revenue
+    const strat = await supabase
+      .from("strategies")
+      .select("target_monthly_revenue, objective_revenue, updated_at, created_at")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!strat.error) {
+      const raw =
+        (strat.data as any)?.target_monthly_revenue ??
+        (strat.data as any)?.objective_revenue ??
+        null;
+
+      const goalNum = parseEuroNumber(raw);
+      setRevenueGoalValue(goalNum && goalNum > 0 ? goalNum : null);
+      setRevenueGoalLabel(goalNum && goalNum > 0 ? formatEuroCompact(goalNum) : "—");
+      setGoalInput(goalNum && goalNum > 0 ? String(goalNum) : "");
+      return;
+    }
+
+    setRevenueGoalValue(null);
+    setRevenueGoalLabel("—");
+    setGoalInput("");
+  }
+
+  async function saveRevenueGoalToSupabase(userId: string, rawInput: string) {
+    const parsed = parseEuroNumber(rawInput);
+    if (!parsed || parsed <= 0) {
+      setGoalError("Entre un montant mensuel valide (ex: 3000, 3 000, 3k).");
+      return false;
+    }
+
+    setGoalError("");
+    setGoalSaving(true);
+
+    try {
+      // Step 1: does a row exist?
+      const existing = await supabase
         .from("business_profiles")
-        .select("revenue_goal_monthly")
+        .select("id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (!prof.error) {
-        const raw = (prof.data as any)?.revenue_goal_monthly ?? null;
-        const goalNum = parseEuroNumber(raw);
-        if (goalNum && goalNum > 0) {
-          setRevenueGoalValue(goalNum);
-          setRevenueGoalLabel(formatEuroCompact(goalNum));
-          return;
+      const isoNow = new Date().toISOString();
+
+      if (!existing.error && existing.data?.id) {
+        const upd = await supabase
+          .from("business_profiles")
+          .update({ revenue_goal_monthly: String(parsed), updated_at: isoNow } as any)
+          .eq("user_id", userId);
+
+        if (upd.error) {
+          if (isSchemaError(upd.error.message || "")) {
+            setGoalError("Champ objectif indisponible côté base (schema).");
+            return false;
+          }
+          setGoalError("Impossible d’enregistrer l’objectif (réseau/RLS).");
+          return false;
+        }
+      } else {
+        // Insert if missing
+        const ins = await supabase
+          .from("business_profiles")
+          .insert({ user_id: userId, revenue_goal_monthly: String(parsed), onboarding_completed: true, created_at: isoNow, updated_at: isoNow } as any);
+
+        if (ins.error) {
+          if (isSchemaError(ins.error.message || "")) {
+            setGoalError("Table/colonnes business_profiles indisponibles (schema).");
+            return false;
+          }
+          setGoalError("Impossible d’enregistrer l’objectif (réseau/RLS).");
+          return false;
         }
       }
 
-      // 2) Fallback : strategies.target_monthly_revenue / objective_revenue
-      const strat = await supabase
-        .from("strategies")
-        .select("target_monthly_revenue, objective_revenue, updated_at, created_at")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!strat.error) {
-        const raw =
-          (strat.data as any)?.target_monthly_revenue ??
-          (strat.data as any)?.objective_revenue ??
-          null;
-
-        const goalNum = parseEuroNumber(raw);
-        setRevenueGoalValue(goalNum && goalNum > 0 ? goalNum : null);
-        setRevenueGoalLabel(goalNum && goalNum > 0 ? formatEuroCompact(goalNum) : "—");
-        return;
-      }
-
-      setRevenueGoalValue(null);
-      setRevenueGoalLabel("—");
+      setRevenueGoalValue(parsed);
+      setRevenueGoalLabel(formatEuroCompact(parsed));
+      setGoalInput(String(parsed));
+      return true;
+    } catch {
+      setGoalError("Impossible d’enregistrer l’objectif.");
+      return false;
+    } finally {
+      setGoalSaving(false);
     }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
 
     async function load() {
       try {
@@ -518,7 +576,6 @@ export default function TodayLovable() {
 
         if (authError || !user?.id) return;
         const userId = user.id;
-
         if (cancelled) return;
 
         setPulseUserId(userId);
@@ -552,31 +609,16 @@ export default function TodayLovable() {
         const tasksTotal = tasksAll.length;
         const progressionPercent = tasksTotal ? clampPercent((tasksDone / tasksTotal) * 100) : 0;
 
-        // Weekly window
         const startW = startOfWeekMonday(now);
         const endW = endOfWeekSunday(now);
 
         // Content rows (schema-compat + anti-spam)
         const attempts: { select: string; orderCol: string }[] = [
-          // versions avec user_id
-          {
-            select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id",
-            orderCol: "scheduled_date",
-          },
-          {
-            select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id",
-            orderCol: "date_planifiee",
-          },
+          { select: "id,title,content,status,channel,scheduled_date,created_at,type,user_id", orderCol: "scheduled_date" },
+          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type,user_id", orderCol: "date_planifiee" },
           { select: "id,title,content,status,created_at,type,user_id", orderCol: "created_at" },
-          // versions sans user_id (legacy)
-          {
-            select: "id,title,content,status,channel,scheduled_date,created_at,type",
-            orderCol: "scheduled_date",
-          },
-          {
-            select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type",
-            orderCol: "date_planifiee",
-          },
+          { select: "id,title,content,status,channel,scheduled_date,created_at,type", orderCol: "scheduled_date" },
+          { select: "id,titre,contenu,statut,canal,date_planifiee,created_at,type", orderCol: "date_planifiee" },
           { select: "id,title,content,status,created_at,type", orderCol: "created_at" },
         ];
 
@@ -588,10 +630,8 @@ export default function TodayLovable() {
           for (let offset = 0; offset < attempts.length; offset++) {
             const i = (startIndex + offset) % attempts.length;
             const a = attempts[i];
-
             const includesUserId = a.select.includes("user_id");
 
-            // si on sait que user_id n'existe pas => on skip les selects qui l'incluent
             if (hint.hasUserId === false && includesUserId) continue;
 
             let q = supabase
@@ -600,7 +640,6 @@ export default function TodayLovable() {
               .order(a.orderCol as any, { ascending: true, nullsFirst: false })
               .limit(300);
 
-            // n'applique .eq(user_id) que si on pense que user_id existe
             if (includesUserId && hint.hasUserId !== false) {
               q = q.eq("user_id", userId);
             }
@@ -617,42 +656,34 @@ export default function TodayLovable() {
 
             const msg = res.error.message || "";
 
-            // user_id manquant => on mémorise et on ne retente plus
             if (isSchemaError(msg) && msg.toLowerCase().includes("user_id")) {
               saveContentSchemaHint(userId, { ...hint, hasUserId: false, selectIndex: i });
               continue;
             }
-
-            // autres schema errors => on tente autre select
             if (isSchemaError(msg)) continue;
 
-            // pas schema => RLS/network => stop silencieux
             return [];
           }
+
           return [];
         }
 
         const rawContentRows = await loadContentRows();
-
         const contentRows: ContentRowAny[] = (() => {
-          if (isGenericStringErrorArray(rawContentRows)) {
-            console.error("TodayLovable: content_item returned errors array:", rawContentRows);
-            return [];
-          }
+          if (isGenericStringErrorArray(rawContentRows)) return [];
           if (isObjectArray(rawContentRows)) return rawContentRows as ContentRowAny[];
           return [];
         })();
 
-        // content planned this week
         const plannedThisWeek = contentRows.filter((r) => {
           const dt = normalizeContentScheduledDate(r);
           if (!dt) return false;
           return dt >= startW && dt <= endW;
         });
+
         const plannedCount = plannedThisWeek.length;
         setPlannedCountThisWeek(plannedCount);
 
-        // activité = tâches cochées cette semaine / 7
         const doneThisWeek = tasksAll.filter((t) => {
           const done = isDoneStatus(normalizeTaskStatus(t));
           if (!done) return false;
@@ -668,7 +699,6 @@ export default function TodayLovable() {
 
         const activityValue = `${Math.min(7, doneThisWeek)}/7`;
 
-        // next task (todo) triée
         const nextTodoTask = tasksAll
           .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
           .sort((a, b) => {
@@ -696,7 +726,6 @@ export default function TodayLovable() {
               };
             }
 
-            // Pas de tâches -> next action claire
             if (plannedCount > 0) {
               return {
                 title: "Planifier ton prochain contenu",
@@ -740,7 +769,6 @@ export default function TodayLovable() {
           ]);
         }
 
-        // Upcoming list: mix tasks + content for week
         const upcomingCombined: CombinedUpcoming[] = [];
 
         const tasksUpcoming = tasksAll
@@ -781,9 +809,7 @@ export default function TodayLovable() {
           status: x.kind === "task" ? mapTaskStatusToUi(x.statusRaw) : mapContentStatusToUi(x.statusRaw),
         }));
 
-        if (!cancelled) {
-          setUpcoming(nextUpcoming);
-        }
+        if (!cancelled) setUpcoming(nextUpcoming);
       } catch (e) {
         console.error("TodayLovable load error:", e);
       }
@@ -794,7 +820,7 @@ export default function TodayLovable() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [now, supabase]);
 
   useEffect(() => {
     if (!pulseUserId) return;
@@ -837,10 +863,8 @@ export default function TodayLovable() {
   }
 
   const priorityBadge = useMemo(() => {
-    if (nextTask.priority === "high")
-      return { label: "High Priority", variant: "default" as const };
-    if (nextTask.priority === "low")
-      return { label: "Low Priority", variant: "secondary" as const };
+    if (nextTask.priority === "high") return { label: "High Priority", variant: "default" as const };
+    if (nextTask.priority === "low") return { label: "Low Priority", variant: "secondary" as const };
     return { label: "Medium Priority", variant: "outline" as const };
   }, [nextTask.priority]);
 
@@ -878,23 +902,28 @@ export default function TodayLovable() {
 
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Objectif revenu</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-primary-foreground/70 mb-1">Objectif revenu</p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 gap-2"
+                      onClick={() => {
+                        setGoalError("");
+                        setGoalInput(revenueGoalValue ? String(revenueGoalValue) : goalInput || "");
+                        setIsGoalOpen(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      {revenueGoalValue ? "Modifier" : "Définir"}
+                    </Button>
+                  </div>
+
                   <p className="text-2xl font-bold text-primary-foreground">{revenueGoalLabel}</p>
 
-                  {revenueGoalValue ? (
-                    <p className="text-sm text-primary-foreground/70 mt-1">
-                      Estimation mensuelle à partir de tes chiffres de la semaine
-                    </p>
-                  ) : (
-                    <div className="mt-3">
-                      <Button asChild variant="secondary" size="sm" className="h-8">
-                        <Link href="/settings">Définir mon objectif</Link>
-                      </Button>
-                      <p className="text-sm text-primary-foreground/70 mt-2">
-                        Ajoute un objectif pour suivre ta progression.
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-sm text-primary-foreground/70 mt-1">
+                    Objectif mensuel (servira à calculer ta progression).
+                  </p>
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
@@ -1109,6 +1138,61 @@ export default function TodayLovable() {
               </div>
             </Card>
           </div>
+
+          {/* Revenue goal dialog */}
+          <Dialog open={isGoalOpen} onOpenChange={setIsGoalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-display font-bold">
+                  Définir mon objectif revenu
+                </DialogTitle>
+                <DialogDescription>
+                  Objectif mensuel (en €). Il sert à calculer ta progression sur le dashboard.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Objectif mensuel</Label>
+                  <Input
+                    value={goalInput}
+                    onChange={(e) => setGoalInput(e.target.value)}
+                    placeholder="ex: 3000, 3 000, 3k"
+                    inputMode="decimal"
+                  />
+                  {goalError ? <p className="text-xs text-destructive">{goalError}</p> : null}
+                  <p className="text-xs text-muted-foreground">
+                    Astuces : tu peux écrire “3k”, “3 000”, “3000€”…
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setGoalError("");
+                      setIsGoalOpen(false);
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    disabled={goalSaving || !pulseUserId}
+                    onClick={async () => {
+                      if (!pulseUserId) {
+                        setGoalError("Session introuvable.");
+                        return;
+                      }
+                      const ok = await saveRevenueGoalToSupabase(pulseUserId, goalInput);
+                      if (ok) setIsGoalOpen(false);
+                    }}
+                  >
+                    {goalSaving ? "Enregistrement..." : "Enregistrer"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Focus dialog */}
           <Dialog open={isFocusOpen} onOpenChange={setIsFocusOpen}>
