@@ -11,6 +11,7 @@ import {
   Settings,
   BarChart3,
   Coins,
+  Layout,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -62,9 +63,25 @@ function NavLink(props: {
 
 const mainItems = [
   { title: "Aujourd'hui", url: "/dashboard", icon: Sun, spotlightId: "today" },
-  { title: "Ma Stratégie", url: "/strategy", icon: Target, spotlightId: "strategy" },
+  {
+    title: "Ma Stratégie",
+    url: "/strategy",
+    icon: Target,
+    spotlightId: "strategy",
+  },
   { title: "Créer", url: "/create", icon: Sparkles, spotlightId: "create" },
-  { title: "Mes Contenus", url: "/contents", icon: FolderOpen, spotlightId: null },
+  {
+    title: "Mes Contenus",
+    url: "/contents",
+    icon: FolderOpen,
+    spotlightId: null,
+  },
+  {
+    title: "Templates",
+    url: "/templates",
+    icon: Layout,
+    spotlightId: null,
+  },
 ] as const;
 
 function useAnimatedNumber(value: number, durationMs = 900) {
@@ -85,7 +102,9 @@ function useAnimatedNumber(value: number, durationMs = 900) {
       const t = Math.min(1, (now - startRef.current) / durationMs);
       // easing : smooth
       const eased = 1 - Math.pow(1 - t, 3);
-      const next = Math.round(fromRef.current + (toRef.current - fromRef.current) * eased);
+      const next = Math.round(
+        fromRef.current + (toRef.current - fromRef.current) * eased
+      );
       setDisplay(next);
 
       if (t < 1) rafRef.current = requestAnimationFrame(tick);
@@ -125,12 +144,17 @@ function CreditsSidebarBadge() {
             <p className="text-xs text-muted-foreground">Crédits</p>
             <p className="text-sm font-medium text-foreground">
               {loading ? "…" : error ? "—" : `${animatedRemaining}`}
-              <span className="text-xs font-normal text-muted-foreground"> crédits</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {" "}
+                crédits
+              </span>
             </p>
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground">{loading ? "" : error ? "" : ">"}</div>
+        <div className="text-xs text-muted-foreground">
+          {loading ? "" : error ? "" : ">"}
+        </div>
       </div>
     </Link>
   );
@@ -235,7 +259,11 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          <TutorialSpotlight elementId="settings" tooltipPosition="right" showNextButton>
+          <TutorialSpotlight
+            elementId="settings"
+            tooltipPosition="right"
+            showNextButton
+          >
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <NavLink
