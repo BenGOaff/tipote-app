@@ -284,6 +284,19 @@ export async function renderTemplateHtml(
     css = buildCapture01Css(withBrand);
   }
 
+  if (req.mode === "kit") {
+    // Systeme.io "Code HTML" blocks generally work best with a single snippet.
+    // We include styles inline so the user can paste once and get the right rendering.
+    const snippet = `
+<style>
+${css}
+</style>
+${renderedFragment}
+`.trim();
+
+    return { html: snippet, tokens: withBrand };
+  }
+
   const doc = `
 <!doctype html>
 <html lang="fr">
