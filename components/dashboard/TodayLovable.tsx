@@ -27,7 +27,6 @@ import {
   ArrowRight,
   Target,
   Sparkles,
-  Play,
   BarChart3,
 } from "lucide-react";
 
@@ -41,6 +40,7 @@ type NextTask = {
   platform: string;
   dueTime: string;
   priority: Priority;
+  href: string;
 };
 
 type DashboardStat = {
@@ -144,20 +144,9 @@ function safePriority(v: unknown): Priority {
 
 function mapTaskStatusToUi(statusRaw: string): UpcomingItem["status"] {
   const s = (statusRaw || "").toLowerCase().trim();
-  if (
-    s === "done" ||
-    s === "completed" ||
-    s === "fait" ||
-    s === "terminé" ||
-    s === "termine"
-  )
+  if (s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine")
     return "Terminé";
-  if (
-    s === "doing" ||
-    s === "in_progress" ||
-    s === "in progress" ||
-    s === "en cours"
-  )
+  if (s === "doing" || s === "in_progress" || s === "in progress" || s === "en cours")
     return "En cours";
   return "À faire";
 }
@@ -167,48 +156,41 @@ function mapContentStatusToUi(statusRaw: string): UpcomingItem["status"] {
   if (s === "published" || s === "publié" || s === "publie") return "Terminé";
   if (s === "scheduled" || s === "planifié" || s === "planifie") return "Planifié";
   if (s === "draft" || s === "brouillon") return "À faire";
-  return "À faire";
+  return "Planifié";
 }
 
-function formatEuroCompact(v: number): string {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("fr-FR", {
+function isSchemaError(msg: string): boolean {
+  const m = (msg || "").toLowerCase();
+  return (
+    m.includes("column") ||
+    m.includes("does not exist") ||
+    m.includes("unknown column") ||
+    m.includes("invalid input syntax") ||
+    m.includes("relation") ||
+    m.includes("schema") ||
+    m.includes("cannot cast")
+  );
+}
+
+function formatEuroCompact(amount: number): string {
+  const fmt = new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
-  }).format(n);
+  });
+  return fmt.format(amount);
 }
 
-function parseEuroNumber(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  const s = toStr(v).replace(/\s/g, "").trim();
+function parseEuroNumber(raw: unknown): number | null {
+  const s = toStr(raw).trim();
   if (!s) return null;
 
-  // accepte "10000", "10.000", "10 000", "10k", "10K", "10.5k"
-  const kMatch = s.match(/^(\d+(?:[.,]\d+)?)k$/i);
-  if (kMatch?.[1]) {
-    const base = Number(kMatch[1].replace(",", "."));
-    return Number.isFinite(base) ? Math.round(base * 1000) : null;
-  }
-
-  const cleaned = s.replace(/[^\d.,-]/g, "");
-  if (!cleaned) return null;
-
-  let normalized = cleaned;
-  const hasComma = cleaned.includes(",");
-  const hasDot = cleaned.includes(".");
-
-  if (hasComma && hasDot) {
-    normalized = cleaned.replace(/\./g, "").replace(",", ".");
-  } else if (hasComma && !hasDot) {
-    normalized = cleaned.replace(",", ".");
-  } else {
-    const dotParts = cleaned.split(".");
-    if (dotParts.length === 2 && dotParts[1].length === 3) {
-      normalized = cleaned.replace(".", "");
-    }
-  }
+  const normalized = s
+    .toLowerCase()
+    .replace(/\s/g, "")
+    .replace("€", "")
+    .replace(",", ".")
+    .replace(/k$/, "000");
 
   const num = Number(normalized);
   return Number.isFinite(num) ? Math.round(num) : null;
@@ -217,8 +199,12 @@ function parseEuroNumber(v: unknown): number | null {
 type BizPulse = {
   weeklyRevenue: string;
   weeklyLeads: string;
-  weeklyCalls: string;
+  weeklySales: string;
+  // legacy support (old field name)
+  weeklyCalls?: string;
 };
+
+type PulseField = "weeklyRevenue" | "weeklyLeads" | "weeklySales";
 
 function storageKey(userId: string) {
   return `tipote:dashboard:pulse:${userId}`;
@@ -231,10 +217,18 @@ function loadPulse(userId: string): BizPulse | null {
     if (!raw) return null;
     const json = JSON.parse(raw) as Partial<BizPulse> | null;
     if (!json || typeof json !== "object") return null;
+
+    const legacyCalls = typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
+    const weeklySales =
+      typeof (json as any).weeklySales === "string"
+        ? (json as any).weeklySales
+        : legacyCalls;
+
     return {
       weeklyRevenue: typeof json.weeklyRevenue === "string" ? json.weeklyRevenue : "",
       weeklyLeads: typeof json.weeklyLeads === "string" ? json.weeklyLeads : "",
-      weeklyCalls: typeof json.weeklyCalls === "string" ? json.weeklyCalls : "",
+      weeklySales,
+      weeklyCalls: legacyCalls || undefined,
     };
   } catch {
     return null;
@@ -244,7 +238,9 @@ function loadPulse(userId: string): BizPulse | null {
 function savePulse(userId: string, pulse: BizPulse) {
   if (!userId) return;
   try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(pulse));
+    // ne pas persister le legacy field si on n'en a pas besoin
+    const { weeklyCalls, ...rest } = pulse;
+    localStorage.setItem(storageKey(userId), JSON.stringify(rest));
   } catch {
     // ignore
   }
@@ -256,109 +252,67 @@ type TaskRow = {
   status: string | null;
   due_date: string | null;
   priority: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  source: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
 };
 
-type ContentRowAny = Record<string, unknown>;
-
-function pickFirstNonEmpty(...vals: unknown[]): string {
-  for (const v of vals) {
-    const s = toStr(v).trim();
-    if (s) return s;
-  }
-  return "";
+function normalizeTaskTitle(t: any): string {
+  const v = toStr(t?.title ?? t?.name ?? t?.label ?? "").trim();
+  return v || "Tâche";
 }
 
-function normalizeTaskTitle(t: TaskRow): string {
-  return pickFirstNonEmpty(t.title, (t as any)?.task, (t as any)?.name, "—") || "—";
+function normalizeTaskStatus(t: any): string {
+  return toStr(t?.status ?? t?.state ?? "").trim();
 }
 
-function normalizeTaskDueDate(t: TaskRow): Date | null {
-  return parseDate(t.due_date ?? (t as any)?.dueDate ?? (t as any)?.date_echeance);
+function normalizeTaskDueDate(t: any): Date | null {
+  const d = parseDate(t?.due_date ?? t?.dueDate ?? t?.due_at ?? t?.dueAt ?? "");
+  return d;
 }
 
-function normalizeTaskStatus(t: TaskRow): string {
-  return pickFirstNonEmpty(t.status, (t as any)?.statut, (t as any)?.state, "todo");
+function normalizeTaskPriority(t: any): Priority {
+  return safePriority(t?.priority);
 }
 
-function normalizeTaskPriority(t: TaskRow): Priority {
-  return safePriority(t.priority ?? (t as any)?.priorite ?? "medium");
+function isDoneStatus(status: string): boolean {
+  const s = (status || "").toLowerCase();
+  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
 }
 
-function normalizeContentTitle(r: ContentRowAny): string {
-  return pickFirstNonEmpty(r.title, (r as any)?.titre, (r as any)?.name, (r as any)?.nom, "—") || "—";
+function normalizeContentTitle(r: any): string {
+  const v = toStr(r?.title ?? r?.titre ?? r?.name ?? "").trim();
+  return v || "Contenu";
 }
 
-function normalizeContentType(r: ContentRowAny): string {
-  return pickFirstNonEmpty(r.type, (r as any)?.type_contenu, (r as any)?.format, "Contenu") || "Contenu";
+function normalizeContentType(r: any): string {
+  const v = toStr(r?.type ?? r?.channel ?? r?.canal ?? "").trim();
+  return v || "Contenu";
 }
 
-function normalizeContentStatus(r: ContentRowAny): string {
-  return pickFirstNonEmpty(r.status, (r as any)?.statut, "draft") || "draft";
+function normalizeContentStatus(r: any): string {
+  return toStr(r?.status ?? r?.statut ?? "").trim();
 }
 
-function normalizeContentScheduledDate(r: ContentRowAny): Date | null {
-  return (
-    parseDate((r as any)?.scheduled_date) ||
-    parseDate((r as any)?.date_planifiee) ||
-    parseDate((r as any)?.scheduledDate) ||
-    parseDate((r as any)?.published_at) ||
-    parseDate((r as any)?.created_at)
-  );
+function normalizeContentScheduledDate(r: any): Date | null {
+  const dt =
+    parseDate(r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? "");
+  return dt;
 }
 
-function isDoneStatus(v: unknown) {
-  const s = toStr(v).toLowerCase().trim();
-  return (
-    s === "done" ||
-    s === "completed" ||
-    s === "fait" ||
-    s === "terminé" ||
-    s === "termine"
-  );
-}
+type ContentRowAny = Record<string, any>;
 
-/**
- * ✅ Fix TS : certains environnements/schemas peuvent retourner un array "d'erreurs"
- * (ex: validateurs internes) typé "GenericStringError[]".
- */
-type GenericStringError = {
-  error: true;
-  message?: string;
-  [k: string]: unknown;
-};
-
-function isGenericStringErrorArray(v: unknown): v is GenericStringError[] {
-  if (!Array.isArray(v)) return false;
-  if (v.length === 0) return false;
-  const first = v[0] as any;
-  return Boolean(first && typeof first === "object" && (first as any).error === true);
-}
-
-function isObjectArray(v: unknown): v is Record<string, unknown>[] {
+function isObjectArray(v: unknown): v is Record<string, any>[] {
   return Array.isArray(v) && v.every((x) => x && typeof x === "object" && !Array.isArray(x));
 }
 
-/** Détecte erreurs “colonne manquante” PostgREST */
-function isSchemaError(message: string) {
-  const s = (message || "").toLowerCase();
-  return (
-    s.includes("column") &&
-    (s.includes("does not exist") || s.includes("not exist") || s.includes("unknown"))
-  );
-}
-
-/** Cache local pour éviter de refaire des requêtes 400 qui spamment la console */
-function schemaCacheKey(userId: string) {
-  return `tipote:schema:${userId}:content_item`;
-}
-
 type ContentSchemaHint = {
-  hasUserId?: boolean; // si false => on n’essaie plus eq(user_id)
-  selectIndex?: number; // variante select qui a marché
+  hasUserId?: boolean;
+  selectIndex?: number;
 };
+
+function schemaCacheKey(userId: string) {
+  return `tipote:content_item:schema_hint:${userId}`;
+}
 
 function loadContentSchemaHint(userId: string): ContentSchemaHint | null {
   if (!userId) return null;
@@ -382,27 +336,29 @@ function saveContentSchemaHint(userId: string, hint: ContentSchemaHint) {
   }
 }
 
+function isGenericStringErrorArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
 export default function TodayLovable() {
   const [isPulseOpen, setIsPulseOpen] = useState(false);
 
   const [nextTask, setNextTask] = useState<NextTask>({
-    title: "Synchroniser ta stratégie",
-    type: "Plan stratégique",
+    title: "Créer ta prochaine tâche",
+    type: "Tâche",
     platform: "Tipote",
-    dueTime: "Aujourd'hui",
+    dueTime: "Cette semaine",
     priority: "high",
+    href: "/tasks",
   });
 
   const [stats, setStats] = useState<DashboardStat[]>([
     { label: "Plan stratégique", value: "0%", trend: "0/0", icon: Target },
     { label: "Contenus planifiés", value: "0/7", trend: "+0", icon: Calendar },
-    { label: "Activité", value: "0/7", trend: "+0", icon: TrendingUp },
+    { label: "Activité (tâches cochées)", value: "0/7", trend: "+0", icon: TrendingUp },
   ]);
 
-  const [upcoming, setUpcoming] = useState<UpcomingItem[]>([
-    { title: "Compléter mon onboarding", type: "Étape", day: "Aujourd'hui", time: "-", status: "À faire" },
-    { title: "Créer mon 1er contenu", type: "Tâche", day: "Cette semaine", time: "-", status: "À faire" },
-  ]);
+  const [upcoming, setUpcoming] = useState<UpcomingItem[]>([]);
 
   const [revenueGoalLabel, setRevenueGoalLabel] = useState<string>("—");
   const [revenueGoalValue, setRevenueGoalValue] = useState<number | null>(null);
@@ -410,7 +366,7 @@ export default function TodayLovable() {
   const [bizPulse, setBizPulse] = useState<BizPulse>({
     weeklyRevenue: "",
     weeklyLeads: "",
-    weeklyCalls: "",
+    weeklySales: "",
   });
 
   const [pulseUserId, setPulseUserId] = useState<string>("");
@@ -418,19 +374,19 @@ export default function TodayLovable() {
   const now = useMemo(() => new Date(), []);
   const weekLabel = useMemo(() => formatWeekRangeLabel(now), [now]);
 
-  const [pulseErrors, setPulseErrors] = useState<Record<keyof BizPulse, string>>({
+  const [pulseErrors, setPulseErrors] = useState<Record<PulseField, string>>({
     weeklyRevenue: "",
     weeklyLeads: "",
-    weeklyCalls: "",
+    weeklySales: "",
   });
 
   const pulsePreview = useMemo(() => {
     const weeklyRevenue = parseEuroNumber(bizPulse.weeklyRevenue);
     const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
-    const weeklyCalls = parseEuroNumber(bizPulse.weeklyCalls);
+    const weeklySales = parseEuroNumber((bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString());
 
-    return { weeklyRevenue, weeklyLeads, weeklyCalls };
-  }, [bizPulse.weeklyCalls, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
+    return { weeklyRevenue, weeklyLeads, weeklySales };
+  }, [bizPulse.weeklyCalls, bizPulse.weeklySales, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
 
   const revenueToGoalRatio = useMemo(() => {
     if (!revenueGoalValue || revenueGoalValue <= 0) return 0;
@@ -442,29 +398,27 @@ export default function TodayLovable() {
     return clampPercent((monthlyEstimate / revenueGoalValue) * 100);
   }, [pulsePreview.weeklyRevenue, revenueGoalValue]);
 
+  const weeklyRevenueTarget = useMemo(() => {
+    if (revenueGoalValue && revenueGoalValue > 0) return Math.max(1, Math.round(revenueGoalValue / 4));
+    return 2000;
+  }, [revenueGoalValue]);
+
   const weeklyExecutionPercent = useMemo(() => {
-    // proxy motivation: calls + leads + revenue (normalised)
-    const calls = pulsePreview.weeklyCalls ?? 0;
-    const leads = pulsePreview.weeklyLeads ?? 0;
-    const rev = pulsePreview.weeklyRevenue ?? 0;
-
-    const tCalls = 5;
-    const tLeads = 25;
-    const tRev = 2000;
-
-    const a = Math.min(1, calls / tCalls);
-    const b = Math.min(1, leads / tLeads);
-    const c = Math.min(1, rev / tRev);
-
-    return clampPercent(((a + b + c) / 3) * 100);
-  }, [pulsePreview.weeklyCalls, pulsePreview.weeklyLeads, pulsePreview.weeklyRevenue]);
+    // ancien "objectif engagement" -> on garde une métrique simple:
+    // nb tâches cochées cette semaine / 7 (proxy).
+    const activityStat = stats.find((s) => s.label.startsWith("Activité"));
+    const raw = activityStat?.value ?? "0/7";
+    const parts = raw.split("/");
+    const done = Number(parts?.[0] ?? 0);
+    return clampPercent((done / 7) * 100);
+  }, [stats]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let cancelled = false;
 
     async function loadRevenueGoal(userId: string) {
-      // 1) Source principale : business_profiles.revenue_goal_monthly (confirmée par tes tables)
+      // 1) Source principale : business_profiles.revenue_goal_monthly
       const prof = await supabase
         .from("business_profiles")
         .select("revenue_goal_monthly")
@@ -481,8 +435,7 @@ export default function TodayLovable() {
         }
       }
 
-      // 2) Fallback réel (confirmé par tes tables) : strategies.target_monthly_revenue / objective_revenue
-      // => utile si l’onboarding stocke ici mais pas dans business_profiles
+      // 2) Fallback : strategies.target_monthly_revenue / objective_revenue
       const strat = await supabase
         .from("strategies")
         .select("target_monthly_revenue, objective_revenue, updated_at, created_at")
@@ -504,7 +457,6 @@ export default function TodayLovable() {
         return;
       }
 
-      // 3) Si erreurs non-schema (RLS/network), on reste silencieux
       setRevenueGoalValue(null);
       setRevenueGoalLabel("—");
     }
@@ -606,7 +558,7 @@ export default function TodayLovable() {
             // autres schema errors => on tente autre select
             if (isSchemaError(msg)) continue;
 
-            // pas schema => RLS/network => stop silencieux (pas de spam)
+            // pas schema => RLS/network => stop silencieux
             return [];
           }
           return [];
@@ -631,7 +583,7 @@ export default function TodayLovable() {
         });
         const plannedCount = plannedThisWeek.length;
 
-        // activité = proxy = tâches done cette semaine / 7
+        // activité = tâches cochées cette semaine / 7
         const tasksDoneThisWeek = tasksAll.filter((t) => {
           const done = isDoneStatus(normalizeTaskStatus(t));
           if (!done) return false;
@@ -661,18 +613,44 @@ export default function TodayLovable() {
         const nextDue = nextTodoTask ? normalizeTaskDueDate(nextTodoTask) : null;
 
         if (!cancelled) {
-          setNextTask({
-            title: nextTodoTask ? normalizeTaskTitle(nextTodoTask) : "Synchroniser ta stratégie",
-            type: "Plan stratégique",
-            platform: "Tipote",
-            dueTime: nextDue ? formatDayLabel(nextDue, now) : "Aujourd'hui",
-            priority: nextTodoTask ? normalizeTaskPriority(nextTodoTask) : "high",
+          setNextTask(() => {
+            if (nextTodoTask) {
+              return {
+                title: normalizeTaskTitle(nextTodoTask),
+                type: "Tâche",
+                platform: "Tipote",
+                dueTime: nextDue ? formatDayLabel(nextDue, now) : "Cette semaine",
+                priority: normalizeTaskPriority(nextTodoTask),
+                href: "/tasks",
+              };
+            }
+
+            // Pas de tâches -> next action claire
+            if (plannedCount > 0) {
+              return {
+                title: "Planifier ton prochain contenu",
+                type: "Contenu",
+                platform: "Tipote",
+                dueTime: "Cette semaine",
+                priority: "high",
+                href: "/contents",
+              };
+            }
+
+            return {
+              title: "Créer ta prochaine tâche",
+              type: "Tâche",
+              platform: "Tipote",
+              dueTime: "Cette semaine",
+              priority: "high",
+              href: "/tasks",
+            };
           });
 
           setStats([
             { label: "Plan stratégique", value: `${progressionPercent}%`, trend: `${tasksDone}/${tasksTotal}`, icon: Target },
             { label: "Contenus planifiés", value: `${plannedCount}/7`, trend: plannedCount > 0 ? `+${plannedCount}` : "+0", icon: Calendar },
-            { label: "Activité", value: activityValue, trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0", icon: TrendingUp },
+            { label: "Activité (tâches cochées)", value: activityValue, trend: tasksDoneThisWeek > 0 ? `+${tasksDoneThisWeek}` : "+0", icon: TrendingUp },
           ]);
         }
 
@@ -718,7 +696,7 @@ export default function TodayLovable() {
         }));
 
         if (!cancelled) {
-          setUpcoming(nextUpcoming.length ? nextUpcoming : upcoming);
+          setUpcoming(nextUpcoming);
         }
       } catch (e) {
         console.error("TodayLovable load error:", e);
@@ -738,10 +716,10 @@ export default function TodayLovable() {
   }, [bizPulse, pulseUserId]);
 
   function validatePulse(next: BizPulse) {
-    const errs: Record<keyof BizPulse, string> = {
+    const errs: Record<PulseField, string> = {
       weeklyRevenue: "",
       weeklyLeads: "",
-      weeklyCalls: "",
+      weeklySales: "",
     };
 
     if (next.weeklyRevenue.trim()) {
@@ -756,10 +734,10 @@ export default function TodayLovable() {
         errs.weeklyLeads = "Entre un nombre valide (ex: 10).";
       }
     }
-    if (next.weeklyCalls.trim()) {
-      const n = parseEuroNumber(next.weeklyCalls);
+    if ((next.weeklySales ?? "").trim()) {
+      const n = parseEuroNumber(next.weeklySales);
       if (n === null || !Number.isFinite(n) || n < 0) {
-        errs.weeklyCalls = "Entre un nombre valide (ex: 2).";
+        errs.weeklySales = "Entre un nombre valide (ex: 3).";
       }
     }
 
@@ -816,16 +794,18 @@ export default function TodayLovable() {
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">Progression vers l&apos;objectif</p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {revenueGoalValue ? `${revenueToGoalRatio}%` : "—"}
-                  </p>
-                  <Progress value={revenueToGoalRatio} className="mt-3" />
+                  <p className="text-2xl font-bold text-primary-foreground">{revenueToGoalRatio}%</p>
+                  <div className="mt-3">
+                    <Progress value={revenueToGoalRatio} />
+                  </div>
                 </div>
 
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">Exécution de la semaine</p>
                   <p className="text-2xl font-bold text-primary-foreground">{weeklyExecutionPercent}%</p>
-                  <Progress value={weeklyExecutionPercent} className="mt-3" />
+                  <div className="mt-3">
+                    <Progress value={weeklyExecutionPercent} />
+                  </div>
                 </div>
               </div>
             </Card>
@@ -835,7 +815,7 @@ export default function TodayLovable() {
               {/* Next action */}
               <Card className="p-6 lg:col-span-2">
                 <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
                       <Target className="w-6 h-6 text-primary-foreground" />
                     </div>
@@ -863,7 +843,7 @@ export default function TodayLovable() {
                       </div>
                     </div>
                     <Button asChild className="gap-2">
-                      <Link href="/strategy">
+                      <Link href={nextTask.href}>
                         Commencer <ArrowRight className="w-4 h-4" />
                       </Link>
                     </Button>
@@ -871,7 +851,7 @@ export default function TodayLovable() {
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Tipote te guide phase par phase — coche tes tâches pour voir ta progression.
+                    Choisis 1 action claire, coche quand c’est fait, et Tipote met à jour ta progression.
                   </div>
                 </div>
               </Card>
@@ -898,7 +878,7 @@ export default function TodayLovable() {
                           : "—"}
                       </span>
                     </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / 2000) * 100)} />
+                    <Progress value={clampPercent(((pulsePreview.weeklyRevenue ?? 0) / weeklyRevenueTarget) * 100)} />
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/30">
@@ -913,52 +893,46 @@ export default function TodayLovable() {
 
                   <div className="p-4 rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Appels</span>
+                      <span className="text-sm font-medium">Ventes</span>
                       <span className="text-sm text-muted-foreground">
-                        {pulsePreview.weeklyCalls !== null ? pulsePreview.weeklyCalls : "—"}
+                        {pulsePreview.weeklySales !== null ? pulsePreview.weeklySales : "—"}
                       </span>
                     </div>
-                    <Progress value={clampPercent(((pulsePreview.weeklyCalls ?? 0) / 5) * 100)} />
+                    <Progress value={clampPercent(((pulsePreview.weeklySales ?? 0) / 5) * 100)} />
                   </div>
-
-                  <Button variant="outline" className="w-full gap-2" onClick={() => setIsPulseOpen(true)}>
-                    <Play className="w-4 h-4" />
-                    Mettre à jour mes chiffres
-                  </Button>
                 </div>
               </Card>
             </div>
 
             {/* Stats */}
             <div className="grid md:grid-cols-3 gap-6">
-              {stats.map((stat, idx) => {
-                const Icon = stat.icon;
-                return (
-                  <Card key={idx} className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <span className="font-semibold">{stat.label}</span>
+              {stats.map((stat, i) => (
+                <Card key={i} className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <stat.icon className="w-5 h-5 text-primary" />
                     </div>
-                    <p className="text-3xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{stat.trend}</p>
-                    <Progress
-                      value={
-                        stat.label === "Plan stratégique"
-                          ? clampPercent(Number(stat.value.replace("%", "")) || 0)
-                          : clampPercent(((Number(stat.value.split("/")[0]) || 0) / 7) * 100)
-                      }
-                      className="mt-3"
-                    />
-                  </Card>
-                );
-              })}
+                    <div>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-3xl font-bold">{stat.value}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{stat.trend}</p>
+                  <Progress
+                    value={
+                      stat.label === "Plan stratégique"
+                        ? Number(stat.value.replace("%", "")) || 0
+                        : clampPercent((Number(stat.value.split("/")[0] || 0) / 7) * 100)
+                    }
+                    className="mt-3"
+                  />
+                </Card>
+              ))}
             </div>
 
             {/* Upcoming */}
             <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-primary-foreground" />
                 </div>
@@ -969,32 +943,41 @@ export default function TodayLovable() {
               </div>
 
               <div className="space-y-3">
-                {upcoming.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{item.title}</h4>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{item.type}</span>
-                        <span>{item.day}</span>
-                        <span>{item.time}</span>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={
-                        item.status === "Terminé"
-                          ? "default"
-                          : item.status === "Planifié"
-                            ? "secondary"
-                            : "outline"
-                      }
+                {upcoming.length ? (
+                  upcoming.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                     >
-                      {item.status}
-                    </Badge>
+                      <div className="flex-1">
+                        <h4 className="font-semibold mb-1">{item.title}</h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{item.type}</span>
+                          <span>{item.day}</span>
+                          <span>{item.time}</span>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          item.status === "Terminé"
+                            ? "default"
+                            : item.status === "Planifié"
+                              ? "secondary"
+                              : "outline"
+                        }
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="font-semibold mb-1">Rien de planifié cette semaine</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ajoute une tâche ou planifie un contenu pour voir ton planning ici.
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -1052,27 +1035,26 @@ export default function TodayLovable() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Appels / RDV</Label>
+                    <Label>Ventes (optionnel)</Label>
                     <Input
-                      value={bizPulse.weeklyCalls}
-                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklyCalls: e.target.value }))}
-                      placeholder="ex: 2"
+                      value={bizPulse.weeklySales}
+                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklySales: e.target.value }))}
+                      placeholder="ex: 3"
                     />
-                    {pulseErrors.weeklyCalls ? (
-                      <p className="text-xs text-destructive">{pulseErrors.weeklyCalls}</p>
+                    {pulseErrors.weeklySales ? (
+                      <p className="text-xs text-destructive">{pulseErrors.weeklySales}</p>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <Button variant="ghost" onClick={() => setIsPulseOpen(false)}>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setIsPulseOpen(false)}>
                     Annuler
                   </Button>
                   <Button
                     onClick={() => {
                       const next = { ...bizPulse };
-                      const ok = validatePulse(next);
-                      if (!ok) return;
+                      if (!validatePulse(next)) return;
                       setIsPulseOpen(false);
                     }}
                   >
