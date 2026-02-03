@@ -13,7 +13,7 @@ export const templates: Template[] = [
     imageUrl:
       "https://d1yei2z3i6k35z.cloudfront.net/473100/67baf9eba1f77_templatecapture.png",
     shareLink:
-      "https://systeme.io/dashboard/share?hash=5164082432a0858bcd087e5c12f2299711af279&type=funnel?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
+      "https://systeme.io/dashboard/share?hash=5164082432a0858bcd087e5c12f2299711af279&type=funnel",
     features: [
       "Page de capture",
       "Page de segmentation",
@@ -56,7 +56,7 @@ export const templates: Template[] = [
     category: ["Business", "Coach"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc1f8724a6_templatesystemeio2.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc50bafead_2025-01-06_12-56-07.png",
     shareLink:
       "https://systeme.io/funnel/share/492369676efdb1eb2dba30cdc7a7531d850684b?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: [
@@ -74,7 +74,7 @@ export const templates: Template[] = [
     category: ["Challenge", "Coach"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc24a24d5a_templatesystemeio3.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc5b83fe8c_2025-01-06_12-58-57.png",
     shareLink:
       "https://systeme.io/funnel/share/4923735ec525f51f810498db477d64110f2e63e?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de capture", "Page de remerciement", "Page challenge", "Page de vente"],
@@ -87,7 +87,7 @@ export const templates: Template[] = [
     category: ["Event", "Business"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc29d6cdd3_templatesystemeio4.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc6716bee0_2025-01-06_13-01-58.png",
     shareLink:
       "https://systeme.io/funnel/share/4923727465da59184ce558b212d8d76326b5991?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de capture", "Page de vente", "Page de commande", "Page de confirmation"],
@@ -100,7 +100,7 @@ export const templates: Template[] = [
     category: ["Business", "Coach"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc2ed6c3f7_templatesystemeio5.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc70b443a1_2025-01-06_13-04-54.png",
     shareLink:
       "https://systeme.io/funnel/share/49236905c8bf7725c4f342a01c904a8f588f0f6?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de capture", "Page de vente", "Page de commande", "Page de remerciement"],
@@ -113,7 +113,7 @@ export const templates: Template[] = [
     category: ["Business", "Coach"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc379acb40_templatesystemeio6.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc79967257_2025-01-06_13-07-12.png",
     shareLink: "https://systeme.io/funnel/share/49237457a7cf68db67905282db212f0c5d47e41",
     features: ["Page de capture", "Page de vente", "Page de commande", "Page de remerciement"],
   },
@@ -125,7 +125,7 @@ export const templates: Template[] = [
     category: ["Business", "Premium"],
     type: "capture",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc3b2b25bf_templatesystemeio7.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/473100/67b75b59e6705_template-banger-image.png",
     shareLink: "https://systeme.io/funnel/share/5151456e724c974f055850f5fe4fd45e02f4d68",
     features: ["Page de capture", "Page de vente", "Page de commande", "Page de remerciement"],
   },
@@ -138,7 +138,7 @@ export const templates: Template[] = [
     category: ["Formation", "Coach"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc401f190a_templatesystemeio8.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/473100/678fde1f3ea23_2025-01-21_18-42-04.png",
     shareLink:
       "https://systeme.io/funnel/share/4996973088ce1f0a9defe8e139134afb1adfe13?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -150,7 +150,7 @@ export const templates: Template[] = [
     category: ["Lifestyle", "Business"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc44f75c7f_templatesystemeio9.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/473100/6798dbc333c90_2025-01-28_14-05-07.png",
     shareLink:
       "https://systeme.io/funnel/share/5030996488d21093df05bd2eeb0849761c0d683?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de remerciement"],
@@ -162,7 +162,7 @@ export const templates: Template[] = [
     category: ["Business", "Corporate"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc46dbd038_templatesystemeio10.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc8728fc5d_2025-01-06_13-10-41.png",
     shareLink:
       "https://systeme.io/funnel/share/49236999f3d408a080bc5be5f5761c299b0aa07?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -174,7 +174,7 @@ export const templates: Template[] = [
     category: ["Business", "Fun"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc47f0a1c5_templatesystemeio11.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc93d609e7_2025-01-06_13-14-18.png",
     shareLink:
       "https://systeme.io/funnel/share/4923723e21865c0db595549db1242ca6f3b35ca?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -186,7 +186,7 @@ export const templates: Template[] = [
     category: ["Business", "Fun"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc4912bf45_templatesystemeio12.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc9ebde5da_2025-01-06_13-17-23.png",
     shareLink:
       "https://systeme.io/funnel/share/4923716d8535ecdebce8aebfb4d8a920bb5b0e6?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -198,7 +198,7 @@ export const templates: Template[] = [
     category: ["Fitness", "Coach"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc4ab77d5f_templatesystemeio13.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bcaa59bc1c_2025-01-06_13-20-08.png",
     shareLink:
       "https://systeme.io/funnel/share/4923709c992a32ae55d45e4fadc707e56e788c8?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -210,7 +210,7 @@ export const templates: Template[] = [
     category: ["Bien-être", "Coach"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc4ce2c360_templatesystemeio14.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bcb5179e17_2025-01-06_13-23-04.png",
     shareLink:
       "https://systeme.io/funnel/share/4923731703007131679e6bdddc0ad42d54d51c7?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -222,7 +222,7 @@ export const templates: Template[] = [
     category: ["Vidéo", "Business"],
     type: "sales",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc4e28c510_templatesystemeio15.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bcbe6ba940_2025-01-06_13-25-35.png",
     shareLink:
       "https://systeme.io/funnel/share/492371220e0a4b83aea8d7b76d8785b9f7d75cb?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page de vente", "Page de commande", "Page de confirmation"],
@@ -236,7 +236,7 @@ export const templates: Template[] = [
     category: ["Blog", "Coach"],
     type: "blog",
     imageUrl:
-      "https://d1yei2z3i6k35z.cloudfront.net/3969368/677bc507d0d28_templatesystemeio16.png",
+      "https://d1yei2z3i6k35z.cloudfront.net/473100/68238fa276dd4_template-blog-coach.png",
     shareLink:
       "https://systeme.io/dashboard/share?hash=330286d76e33ad9ea75db5fa7b2d890d874c65&type=blog?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
     features: ["Page d'accueil", "Page article", "Page à propos", "Page contact"],
