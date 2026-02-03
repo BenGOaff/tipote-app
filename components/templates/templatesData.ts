@@ -238,7 +238,7 @@ export const templates: Template[] = [
     imageUrl:
       "https://d1yei2z3i6k35z.cloudfront.net/473100/68238fa276dd4_template-blog-coach.png",
     shareLink:
-      "https://systeme.io/dashboard/share?hash=330286d76e33ad9ea75db5fa7b2d890d874c65&type=blog?sa=sa0007878317200141bbe3de2b6644176621db2c6580",
+      "https://systeme.io/dashboard/share?hash=330286d76e33ad9ea75db5fa7b2d890d874c65&type=blog",
     features: ["Page d'accueil", "Page article", "Page à propos", "Page contact"],
   },
 ];
