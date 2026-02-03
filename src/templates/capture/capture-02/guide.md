@@ -1,9 +1,10 @@
-### Capture 01 — Instructions Systeme.io
+### Capture 02 — Instructions Systeme.io
 
-1. Créez une page dans Systeme
-2. Ajoutez un bloc “Code HTML”
-3. Collez le code fourni
-4. Ajoutez un formulaire Systeme dans le SLOT
-5. Configurez :
-   - Tag : lead_capture
-   - Redirection : page suivante
+1) Crée une page dans Systeme.io (tunnel → étape “Page de capture”)
+2) Ajoute un bloc “Code HTML”
+3) Colle le code “Systeme-compatible” généré par Tipote
+4) Dans le SLOT, ajoute un **Formulaire Systeme** (élément natif)
+5) Configure le formulaire :
+   - Action : ajouter tag (ex: lead_capture_02)
+   - Redirection : page suivante / page merci
+6) Optionnel : remplace le bloc “vidéo” par une vraie vidéo dans Systeme (ou garde en visuel)

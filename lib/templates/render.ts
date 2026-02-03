@@ -6,7 +6,7 @@
 // - Templates are trusted local files.
 // - Content is user-generated -> we escape HTML.
 // - "Kit" output must be safe to paste into Systeme.io without breaking the host page,
-//   so we scope styles under a wrapper.
+//   so we scope styles under a wrapper (".tpt-scope").
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -50,11 +50,7 @@ function safeId(v: string) {
   return v.replace(/[^a-z0-9\-]/gi, "").trim();
 }
 
-function applyVariant(
-  tokens: Tokens,
-  variants: any,
-  variantId?: string | null
-): Tokens {
+function applyVariant(tokens: Tokens, variants: any, variantId?: string | null): Tokens {
   if (!variantId) return tokens;
   const list = Array.isArray(variants?.variants) ? variants.variants : [];
   const v = list.find((x: any) => String(x?.id || "") === String(variantId));
@@ -73,24 +69,14 @@ function applyVariant(
   return out;
 }
 
-function applyBrand(
-  tokens: Tokens,
-  brandTokens?: RenderTemplateRequest["brandTokens"] | null
-): Tokens {
+function applyBrand(tokens: Tokens, brandTokens?: RenderTemplateRequest["brandTokens"] | null): Tokens {
   if (!brandTokens) return tokens;
   const out: Tokens = JSON.parse(JSON.stringify(tokens || {}));
-  if (brandTokens.accent)
-    out.colors = { ...(out.colors || {}), accent: brandTokens.accent };
+  if (brandTokens.accent) out.colors = { ...(out.colors || {}), accent: brandTokens.accent };
   if (brandTokens.headingFont)
-    out.typography = {
-      ...(out.typography || {}),
-      headingFont: brandTokens.headingFont,
-    };
+    out.typography = { ...(out.typography || {}), headingFont: brandTokens.headingFont };
   if (brandTokens.bodyFont)
-    out.typography = {
-      ...(out.typography || {}),
-      bodyFont: brandTokens.bodyFont,
-    };
+    out.typography = { ...(out.typography || {}), bodyFont: brandTokens.bodyFont };
   return out;
 }
 
@@ -135,19 +121,19 @@ function renderFragment(fragment: string, data: Record<string, unknown>) {
     (_m, key) => escapeHtml((data as any)[key])
   );
 
-  // cleanup empty wrappers
+  // clean empty wrappers (safe)
   return withScalars
     .replace(/<div class="benefits">\s*<\/div>/g, "")
     .replace(/<div class="tpt-grid">\s*<\/div>/g, "")
     .replace(/<div class="tpt-section tpt-section--dark">\s*<\/div>/g, "");
 }
 
-function buildFontLink(fontFamily?: string) {
-  const ff = (fontFamily || "").toLowerCase();
+function buildFontLink(tokens: Tokens) {
+  const ff = String(tokens.typography?.headingFont || "").toLowerCase();
   if (ff.includes("poppins")) {
     return `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">`;
   }
   // default Inter
   return `<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -494,6 +480,7 @@ ${scope}.hero.capture-02 .eyebrow{
   color:var(--tpt-text);
   font-weight:600;
   font-size:14px;
+  max-width:100%;
 }
 
 ${scope}.hero.capture-02 h1{
@@ -692,13 +679,7 @@ export async function renderTemplateHtml(
   const kind = req.kind;
   const templateId = safeId(req.templateId);
 
-  const templateRoot = path.join(
-    process.cwd(),
-    "src",
-    "templates",
-    kind,
-    templateId
-  );
+  const templateRoot = path.join(process.cwd(), "src", "templates", kind, templateId);
 
   const tokensPath = path.join(templateRoot, "tokens.json");
   const variantsPath = path.join(templateRoot, "variants.json");
@@ -728,7 +709,7 @@ export async function renderTemplateHtml(
     css = buildCapture02Css(withBrand, { scoped: req.mode === "kit" });
   }
 
-  const fontLink = buildFontLink(withBrand.typography?.headingFont);
+  const fontLink = buildFontLink(withBrand);
 
   if (req.mode === "kit") {
     const snippet = `

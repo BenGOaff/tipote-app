@@ -1,12 +1,12 @@
 {
-  "hero_pretitle": { "maxLength": 40, "required": true },
-  "hero_title": { "maxLength": 120, "required": true },
-  "hero_title_accent": { "maxLength": 40, "required": false },
-  "hero_subtitle": { "maxLength": 220, "required": true },
-  "video_caption": { "maxLength": 80, "required": false },
-  "cta_text": { "maxLength": 34, "required": true },
-  "reassurance_text": { "maxLength": 110, "required": false },
-  "bullets": { "maxItems": 6, "itemMaxLength": 110, "required": false },
-  "dark_title": { "maxLength": 60, "required": false },
-  "dark_text": { "maxLength": 140, "required": false }
+  "hero_pretitle": { "maxLength": 35, "required": true },
+  "hero_title": { "maxLength": 90, "required": true },
+  "hero_title_accent": { "maxLength": 28, "required": false },
+  "hero_subtitle": { "maxLength": 170, "required": true },
+  "video_caption": { "maxLength": 60, "required": false },
+  "bullets": { "maxItems": 5, "itemMaxLength": 95, "required": false },
+  "cta_text": { "maxLength": 28, "required": true },
+  "reassurance_text": { "maxLength": 95, "required": false },
+  "dark_title": { "maxLength": 44, "required": false },
+  "dark_text": { "maxLength": 110, "required": false }
 }
