@@ -8,6 +8,9 @@
 // ✅ Adds: age_range + gender + offer_* analytics columns
 // ✅ Adds: revenue_goal_monthly (TEXT en DB) from onboarding
 // ✅ Adds (V2): diagnostic_answers / diagnostic_profile / diagnostic_summary / diagnostic_completed / onboarding_version
+//
+// ✅ FIX (03/02): ne pas écraser revenue_goal_monthly quand le payload ne le contient pas
+// (ex: POST de StepDiagnosticChat / finalizeOnboarding qui envoie seulement diagnostic_*)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -108,7 +111,12 @@ function parseAudienceSocial(value: string): number {
   if (!v) return 0;
 
   const direct = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
-  if (!Number.isNaN(direct) && /^\d+$/.test(v.replace(/[^\d]/g, "")) && !v.includes("-") && !v.includes("+")) {
+  if (
+    !Number.isNaN(direct) &&
+    /^\d+$/.test(v.replace(/[^\d]/g, "")) &&
+    !v.includes("-") &&
+    !v.includes("+")
+  ) {
     return direct;
   }
 
@@ -126,7 +134,9 @@ function parseAudienceEmail(value: string): number {
   return n ?? 0;
 }
 
-type UpdateResult = { ok: true; stage: string; id: string | null } | { ok: false; stage: string; error: any };
+type UpdateResult =
+  | { ok: true; stage: string; id: string | null }
+  | { ok: false; stage: string; error: any };
 
 export async function POST(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
@@ -152,6 +162,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ✅ Si le payload ne contient pas revenueGoalMonthly, on ne doit PAS écraser la valeur existante
+  const hasRevenueGoalField =
+    !!body &&
+    typeof body === "object" &&
+    ("revenueGoalMonthly" in (body as any) || "revenue_goal_monthly" in (body as any));
+
   let d: z.infer<typeof OnboardingSchema>;
   try {
     d = OnboardingSchema.parse(body);
@@ -172,9 +188,18 @@ export async function POST(req: NextRequest) {
     link: cleanString(o.link, 500),
   }));
 
-  const offerPrice = normalizedOffers.map((o) => o.price).filter(Boolean).join(" | ");
-  const offerSalesCount = normalizedOffers.map((o) => o.salesCount).filter(Boolean).join(" | ");
-  const offerSalesPageLinks = normalizedOffers.map((o) => o.link).filter(Boolean).join(" | ");
+  const offerPrice = normalizedOffers
+    .map((o) => o.price)
+    .filter(Boolean)
+    .join(" | ");
+  const offerSalesCount = normalizedOffers
+    .map((o) => o.salesCount)
+    .filter(Boolean)
+    .join(" | ");
+  const offerSalesPageLinks = normalizedOffers
+    .map((o) => o.link)
+    .filter(Boolean)
+    .join(" | ");
 
   const normalizedSocialLinks = (d.socialLinks ?? []).slice(0, 2).map((s) => ({
     platform: cleanString(s.platform, 50),
@@ -230,7 +255,10 @@ export async function POST(req: NextRequest) {
     audience_email: audienceEmailInt,
     time_available: cleanString(d.weeklyHours, 120),
     main_goal: cleanString(d.mainGoal90Days, 200),
-    revenue_goal_monthly: revenueGoalMonthlyRaw,
+
+    // ✅ only if provided in payload
+    ...(hasRevenueGoalField ? { revenue_goal_monthly: revenueGoalMonthlyRaw } : {}),
+
     main_goals: compactArray(d.mainGoals ?? [], 2),
 
     // Step 3
@@ -249,7 +277,9 @@ export async function POST(req: NextRequest) {
     ...(typeof diagnosticAnswers !== "undefined" ? { diagnostic_answers: diagnosticAnswers } : {}),
     ...(typeof diagnosticProfile !== "undefined" ? { diagnostic_profile: diagnosticProfile } : {}),
     ...(diagnosticSummary ? { diagnostic_summary: diagnosticSummary } : {}),
-    ...(typeof diagnosticCompleted !== "undefined" ? { diagnostic_completed: !!diagnosticCompleted } : {}),
+    ...(typeof diagnosticCompleted !== "undefined"
+      ? { diagnostic_completed: !!diagnosticCompleted }
+      : {}),
     ...(onboardingVersion ? { onboarding_version: onboardingVersion } : {}),
 
     updated_at: nowIso,
@@ -266,7 +296,11 @@ export async function POST(req: NextRequest) {
     const rowForUpdate = { ...row };
     delete (rowForUpdate as any).user_id;
 
-    const upd = await supabase.from("business_profiles").update(rowForUpdate).eq("user_id", userId).select("id");
+    const upd = await supabase
+      .from("business_profiles")
+      .update(rowForUpdate)
+      .eq("user_id", userId)
+      .select("id");
     if (upd.error) return { ok: false, stage: "update", error: upd.error };
     if (Array.isArray(upd.data) && upd.data.length > 0) {
       return { ok: true, stage: "update", id: (upd.data[0] as any)?.id ?? null };
@@ -279,23 +313,17 @@ export async function POST(req: NextRequest) {
 
   const nativeRes = await updateThenInsert(rowNative);
   if (nativeRes.ok) {
-    return NextResponse.json({ ok: true, id: nativeRes.id, stage: nativeRes.stage }, { status: 200 });
+    return NextResponse.json({ ok: true, stage: nativeRes.stage, id: nativeRes.id });
   }
 
+  // fallback JSON-stringified for columns that might be TEXT
   const fallbackRes = await updateThenInsert(rowFallback);
   if (fallbackRes.ok) {
-    return NextResponse.json({ ok: true, id: fallbackRes.id, stage: fallbackRes.stage }, { status: 200 });
+    return NextResponse.json({ ok: true, stage: fallbackRes.stage, id: fallbackRes.id, fallback: true });
   }
 
   return NextResponse.json(
-    {
-      ok: false,
-      error: fallbackRes.error?.message || nativeRes.error?.message || "Unable to save onboarding answers",
-      details: {
-        native: { stage: nativeRes.stage, message: nativeRes.error?.message },
-        fallback: { stage: fallbackRes.stage, message: fallbackRes.error?.message },
-      },
-    },
-    { status: 400 },
+    { ok: false, error: "Database error", details: { native: nativeRes, fallback: fallbackRes } },
+    { status: 500 },
   );
 }

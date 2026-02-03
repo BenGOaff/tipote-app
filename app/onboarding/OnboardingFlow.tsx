@@ -133,6 +133,74 @@ function normalizeDiagnosticPayload(payload: DiagnosticPayload): {
   };
 }
 
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function compactStringArray(arr: string[] | undefined): string[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean);
+}
+
+/**
+ * IMPORTANT:
+ * - On n'envoie PAS les champs vides -> évite d'écraser en DB une valeur existante par "".
+ * - On mappe revenueGoalMonthly -> revenue_goal_monthly uniquement si rempli.
+ * - On garde les booléens et les tableaux utiles.
+ */
+function buildOnboardingAnswersPayload(d: OnboardingData) {
+  const payload: Record<string, unknown> = {};
+
+  // Step 1
+  if (isNonEmptyString(d.firstName)) payload.firstName = d.firstName;
+  if (isNonEmptyString(d.country)) payload.country = d.country;
+  if (isNonEmptyString(d.niche)) payload.niche = d.niche;
+  if (isNonEmptyString(d.missionStatement)) payload.missionStatement = d.missionStatement;
+
+  // Compat (si un jour réactivés côté UI)
+  if (isNonEmptyString(d.ageRange)) payload.ageRange = d.ageRange;
+  if (isNonEmptyString(d.gender)) payload.gender = d.gender;
+  if (isNonEmptyString(d.maturity)) payload.maturity = d.maturity;
+  if (isNonEmptyString(d.biggestBlocker)) payload.biggestBlocker = d.biggestBlocker;
+
+  // Step 2
+  if (typeof d.hasOffers === "boolean") payload.hasOffers = d.hasOffers;
+  if (Array.isArray(d.offers) && d.offers.length > 0) payload.offers = d.offers;
+  if (isNonEmptyString(d.socialAudience)) payload.socialAudience = d.socialAudience;
+  if (Array.isArray(d.socialLinks) && d.socialLinks.length > 0) payload.socialLinks = d.socialLinks;
+  if (isNonEmptyString(d.emailListSize)) payload.emailListSize = d.emailListSize;
+  if (isNonEmptyString(d.weeklyHours)) payload.weeklyHours = d.weeklyHours;
+  if (isNonEmptyString(d.mainGoal90Days)) payload.mainGoal90Days = d.mainGoal90Days;
+
+  // Objectif revenu (clé snake_case attendue côté API) - seulement si fourni
+  if (isNonEmptyString(d.revenueGoalMonthly)) {
+    payload.revenueGoalMonthly = d.revenueGoalMonthly;
+    payload.revenue_goal_monthly = d.revenueGoalMonthly;
+  }
+
+  const goals = compactStringArray(d.mainGoals);
+  if (goals.length > 0) payload.mainGoals = goals;
+
+  // Compat (si un jour réactivés côté UI)
+  if (isNonEmptyString(d.uniqueValue)) payload.uniqueValue = d.uniqueValue;
+  if (isNonEmptyString(d.untappedStrength)) payload.untappedStrength = d.untappedStrength;
+  if (isNonEmptyString(d.biggestChallenge)) payload.biggestChallenge = d.biggestChallenge;
+  if (isNonEmptyString(d.successDefinition)) payload.successDefinition = d.successDefinition;
+
+  const feedback = compactStringArray(d.clientFeedback);
+  if (feedback.length > 0) payload.clientFeedback = feedback;
+
+  if (isNonEmptyString(d.preferredContentType)) payload.preferredContentType = d.preferredContentType;
+
+  const tones = compactStringArray(d.tonePreference);
+  if (tones.length > 0) payload.tonePreference = tones;
+
+  // Version (utile analytics)
+  if (isNonEmptyString(d.onboardingVersion)) payload.onboardingVersion = d.onboardingVersion;
+
+  return payload;
+}
+
 const OnboardingFlow = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -145,10 +213,7 @@ const OnboardingFlow = () => {
     setData((prev) => ({ ...prev, ...updates }));
 
   const saveCurrent = async () => {
-    await postJSON("/api/onboarding/answers", {
-      ...data,
-      revenue_goal_monthly: data.revenueGoalMonthly,
-    });
+    await postJSON("/api/onboarding/answers", buildOnboardingAnswersPayload(data));
   };
 
   const nextStep = async () => {
@@ -208,7 +273,9 @@ const OnboardingFlow = () => {
         diagnosticCompleted: true,
       });
 
+      // ✅ on persiste diagnostic + toutes les réponses non-vides déjà saisies
       await postJSON("/api/onboarding/answers", {
+        ...buildOnboardingAnswersPayload(data),
         diagnostic_answers: diagnostic.diagnosticAnswers ?? [],
         diagnostic_profile: diagnostic.diagnosticProfile ?? null,
         diagnostic_summary: diagnostic.diagnosticSummary ?? "",
@@ -257,26 +324,25 @@ const OnboardingFlow = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              Bienvenue sur Tipote
-            </h1>
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            </div>
           </div>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Réponds à quelques questions. Ensuite, on passe en mode diagnostic pour une stratégie ultra personnalisée.
-          </p>
+          <h1 className="text-3xl font-display font-bold text-foreground mb-2">
+            Ton onboarding
+          </h1>
+          <p className="text-muted-foreground">Quelques questions pour personnaliser Tipote™</p>
         </div>
 
         <div className="mb-8">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Étape {step} sur 3</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
           <Progress value={progress} className="h-2" />
+          <p className="text-sm text-muted-foreground mt-2 text-center">
+            Étape {step} sur 3
+          </p>
         </div>
 
-        <div className="space-y-6">
+        <div>
           {step === 1 && <StepProfile data={data} updateData={updateData} onNext={nextStep} />}
           {step === 2 && (
             <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />
