@@ -1,0 +1,12 @@
+{
+  "variants": [
+    {
+      "id": "centered",
+      "heroAlign": "center"
+    },
+    {
+      "id": "compact",
+      "sectionPadding": "64px 24px"
+    }
+  ]
+}

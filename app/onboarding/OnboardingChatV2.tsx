@@ -1,0 +1,189 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { Loader2, Sparkles } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
+
+type ChatRole = "assistant" | "user";
+
+type ChatMsg = {
+  role: ChatRole;
+  content: string;
+  at: string;
+};
+
+type ApiReply = {
+  sessionId: string;
+  message: string;
+  appliedFacts: Array<{ key: string; confidence: string }>;
+  done: boolean;
+  error?: string;
+};
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+async function postJSON<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  return json as T;
+}
+
+export function OnboardingChatV2(props: { firstName?: string | null }) {
+  const { toast } = useToast();
+  const firstName = (props.firstName ?? "").trim();
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>(() => {
+    const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
+    return [
+      {
+        role: "assistant",
+        content:
+          `${greet}\n` +
+          `On va faire ça simplement : je te pose quelques questions (très courtes) pour comprendre ta situation, ` +
+          `et ensuite Tipote s’adapte à toi.\n\n` +
+          `Pour commencer : aujourd’hui, comment tu gagnes de l’argent (ou comment tu veux en gagner) ?`,
+        at: nowIso(),
+      },
+    ];
+  });
+
+  const [input, setInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
+
+  const canSend = useMemo(
+    () => input.trim().length > 0 && !isSending && !isDone,
+    [input, isSending, isDone],
+  );
+
+  const send = async () => {
+    if (!canSend) return;
+
+    const text = input.trim();
+    setInput("");
+    setIsSending(true);
+
+    setMessages((prev) => [...prev, { role: "user", content: text, at: nowIso() }]);
+
+    try {
+      const reply = await postJSON<ApiReply>("/api/onboarding/chat", {
+        message: text,
+        sessionId: sessionId ?? undefined,
+      });
+
+      if (!sessionId) setSessionId(reply.sessionId);
+
+      setMessages((prev) => [...prev, { role: "assistant", content: reply.message, at: nowIso() }]);
+
+      ampTrack("tipote_onboarding_chat_turn", {
+        onboarding_version: "v2_chat",
+        applied_facts_count: reply.appliedFacts?.length ?? 0,
+        done: !!reply.done,
+      });
+
+      if (reply.done) {
+        setIsDone(true);
+        await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
+        ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
+      }
+    } catch (e) {
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Impossible d’envoyer le message.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
+      <div className="mb-6 flex items-center gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <div className="text-xl font-semibold">Onboarding</div>
+          <div className="text-sm text-muted-foreground">
+            Un échange simple pour personnaliser Tipote.
+          </div>
+        </div>
+      </div>
+
+      <Card className="p-4 sm:p-6">
+        <div className="space-y-4">
+          {messages.map((m, idx) => (
+            <div key={idx} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start")}>
+              <div
+                className={cn(
+                  "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                )}
+              >
+                {m.content}
+              </div>
+            </div>
+          ))}
+
+          <div ref={scrollRef} />
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
+            disabled={isSending || isDone}
+            className="min-h-[90px]"
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                send();
+              }
+            }}
+          />
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {isDone
+                ? "Onboarding terminé. Redirection possible depuis le dashboard."
+                : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
+            </div>
+
+            <Button onClick={send} disabled={!canSend}>
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi…
+                </>
+              ) : isDone ? (
+                "Terminé"
+              ) : (
+                "Envoyer"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
