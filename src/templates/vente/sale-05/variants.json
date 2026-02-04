@@ -1,0 +1,7 @@
+{
+  "variants": [
+    { "id": "standard" },
+    { "id": "compact", "sectionPadding": "74px 20px" },
+    { "id": "wide", "maxWidth": "1280px" }
+  ]
+}

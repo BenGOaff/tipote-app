@@ -1,0 +1,245 @@
+<div class="sale-05" id="top">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="#proof">{{nav_link_1}}</a>
+        <a href="#bundle">{{nav_link_2}}</a>
+        <a href="#checkout">{{nav_link_3}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-grid">
+      <div class="hero-left">
+        <h3 class="hero-warning">{{hero_warning}}</h3>
+
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>{{hero_pretitle}}</span>
+        </div>
+
+        <h1 class="hero-title">
+          <span class="line">{{hero_title_line_1}}</span>
+          <span class="line">{{hero_title_line_2}}</span>
+          <span class="line accent">{{hero_title_line_3}}</span>
+        </h1>
+
+        <p class="hero-sub">{{hero_subtitle}}</p>
+
+        <div class="hero-cta">
+          <a class="btn primary" href="#checkout">{{cta_main}}</a>
+          <a class="btn ghost" href="#bundle">{{cta_secondary}}</a>
+          <p class="micro">{{cta_micro}}</p>
+        </div>
+
+        <div class="hero-bullets">
+          {{#hero_bullets}}
+          <div class="hb">
+            <span class="check"></span>
+            <span>{{.}}</span>
+          </div>
+          {{/hero_bullets}}
+        </div>
+      </div>
+
+      <aside class="hero-right">
+        <div class="panel">
+          <div class="panel-top">
+            <div class="pt">{{panel_title}}</div>
+            <div class="pm">{{panel_micro}}</div>
+          </div>
+
+          <div class="panel-body">
+            <div class="panel-video">
+              {{#hero_video_url}}
+              <video class="video" controls playsinline src="{{hero_video_url}}"></video>
+              {{/hero_video_url}}
+              {{^hero_video_url}}
+              <div class="video-ph">VIDÉO (optionnel) — colle une URL mp4 dans <strong>hero_video_url</strong></div>
+              {{/hero_video_url}}
+            </div>
+
+            <div class="panel-stats">
+              {{#panel_stats}}
+              <div class="stat">
+                <div class="stat-k">{{k}}</div>
+                <div class="stat-v">{{v}}</div>
+              </div>
+              {{/panel_stats}}
+            </div>
+          </div>
+
+          <div class="panel-foot">
+            <div class="badge">
+              <span class="badge-dot"></span>
+              <span>{{panel_badge}}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <section class="section section-soft" id="proof">
+    <div class="container">
+      <div class="headline">
+        <h2 class="h2">{{proof_title}}</h2>
+        <p class="lead">{{proof_text}}</p>
+      </div>
+
+      <div class="cards-4">
+        <div class="card">
+          <h3 class="h3">{{proof_card_1_title}}</h3>
+          <p class="p">{{proof_card_1_text}}</p>
+        </div>
+        <div class="card">
+          <h3 class="h3">{{proof_card_2_title}}</h3>
+          <p class="p">{{proof_card_2_text}}</p>
+        </div>
+        <div class="card">
+          <h3 class="h3">{{proof_card_3_title}}</h3>
+          <p class="p">{{proof_card_3_text}}</p>
+        </div>
+        <div class="card">
+          <h3 class="h3">{{proof_card_4_title}}</h3>
+          <p class="p">{{proof_card_4_text}}</p>
+        </div>
+      </div>
+
+      <div class="ribbon">
+        <span class="r-dot"></span>
+        <span>{{proof_ribbon}}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="bundle">
+    <div class="container">
+      <div class="bundle-head">
+        <h2 class="h2">
+          <span class="muted">{{bundle_title_line_1}}</span>
+          <span class="accent">{{bundle_title_line_2}}</span>
+        </h2>
+        <p class="lead">{{bundle_text}}</p>
+      </div>
+
+      <div class="bundle-grid">
+        <div class="bundle-left">
+          <div class="stack">
+            {{#bundle_items}}
+            <div class="item">
+              <div class="item-top">
+                <span class="dot"></span>
+                <div class="item-title">{{title}}</div>
+              </div>
+              <div class="item-text">{{text}}</div>
+              {{#tag}}<div class="tag">{{tag}}</div>{{/tag}}
+            </div>
+            {{/bundle_items}}
+          </div>
+        </div>
+
+        <aside class="bundle-right">
+          <div class="price-card">
+            <div class="pc-pill">{{price_pill}}</div>
+
+            <div class="pc-price">
+              <div class="now">{{price_now}}</div>
+              {{#price_old}}<div class="old">{{.}}</div>{{/price_old}}
+            </div>
+
+            <div class="pc-micro">{{price_micro}}</div>
+
+            <div class="pc-points">
+              {{#price_points}}
+              <div class="pp">
+                <span class="check"></span>
+                <span>{{.}}</span>
+              </div>
+              {{/price_points}}
+            </div>
+
+            <a class="btn primary wide" href="#checkout">{{price_cta}}</a>
+            <div class="safe">{{price_reassurance}}</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark" id="checkout">
+    <div class="container">
+      <div class="checkout">
+        <div class="checkout-left">
+          <h2 class="h2 light">
+            <span class="line">{{checkout_title_line_1}}</span>
+            <span class="line">{{checkout_title_line_2}}</span>
+            <span class="line">{{checkout_title_line_3}}</span>
+          </h2>
+
+          <p class="lead light">{{checkout_text}}</p>
+
+          <div class="guarantee">
+            <span class="g-dot"></span>
+            <span>{{checkout_guarantee}}</span>
+          </div>
+
+          <div class="faq">
+            {{#faq_items}}
+            <details class="qa">
+              <summary>{{q}}</summary>
+              <div class="a">{{a}}</div>
+            </details>
+            {{/faq_items}}
+          </div>
+        </div>
+
+        <aside class="checkout-right">
+          <div class="order">
+            <div class="order-top">
+              <div class="order-title">{{order_title}}</div>
+              <div class="order-price">
+                <div class="now">{{price_now}}</div>
+                {{#price_old}}<div class="old">{{.}}</div>{{/price_old}}
+              </div>
+              <div class="order-micro">{{order_micro}}</div>
+            </div>
+
+            <div class="order-slot">
+              FORMULAIRE DE COMMANDE (Systeme.io)<br />
+              <strong>COLLE ICI TON FORMULAIRE NATIF</strong>
+            </div>
+
+            <div class="order-safe">
+              <span class="lock"></span>
+              <span>{{order_reassurance}}</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+      <div class="footer-links">
+        <a href="#top">{{footer_link_top}}</a>
+        <a href="#bundle">{{footer_link_1}}</a>
+        <a href="#checkout">{{footer_link_2}}</a>
+      </div>
+      <div class="footer-note">{{footer_note}}</div>
+    </div>
+  </footer>
+</div>

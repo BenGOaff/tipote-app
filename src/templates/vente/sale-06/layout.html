@@ -1,0 +1,436 @@
+<div class="sale-06">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#top">
+        <span class="brand-dot"></span>
+        <span class="brand-name">{{brand_name}}</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#problemes">{{nav_link_1}}</a>
+        <a href="#methode">{{nav_link_2}}</a>
+        <a href="#bonus">{{nav_link_3}}</a>
+        <a href="#faq">{{nav_link_4}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="container hero-grid">
+      <div class="hero-left">
+        <div class="kicker">
+          <span class="pill">{{hero_pill}}</span>
+          <span class="kicker-text">{{hero_kicker}}</span>
+        </div>
+
+        <h1 class="hero-title">
+          <span class="line">{{hero_title_line_1}}</span>
+          <span class="line accent">{{hero_title_line_2}}</span>
+        </h1>
+
+        <p class="hero-subtitle">{{hero_subtitle}}</p>
+
+        <div class="hero-cta">
+          <a class="btn primary" href="#checkout">{{cta_main}}</a>
+          <div class="micro">{{cta_micro}}</div>
+        </div>
+
+        <div class="trust">
+          <div class="trust-item">
+            <div class="trust-dot"></div>
+            <div class="trust-text">{{trust_1}}</div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-dot"></div>
+            <div class="trust-text">{{trust_2}}</div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-dot"></div>
+            <div class="trust-text">{{trust_3}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="media-card">
+          <div class="media-top">
+            <div class="media-badge">{{media_badge}}</div>
+            <div class="media-title">{{media_title}}</div>
+          </div>
+
+          <div class="media">
+            <div class="media-placeholder">{{media_placeholder}}</div>
+          </div>
+
+          <div class="media-note">{{media_note}}</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="stripe" id="checkout">
+    <div class="container stripe-grid">
+      <div class="stripe-left">
+        <h2 class="stripe-title">{{checkout_title}}</h2>
+        <p class="stripe-text">{{checkout_text}}</p>
+
+        <div class="price">
+          <div class="price-now">{{price_now}}</div>
+          <div class="price-meta">
+            <div class="price-old">{{price_old}}</div>
+            <div class="price-note">{{price_note}}</div>
+          </div>
+        </div>
+
+        <ul class="checklist">
+          {{#checkout_bullets}}
+          <li>
+            <span class="check"></span>
+            <span class="txt">{{.}}</span>
+          </li>
+          {{/checkout_bullets}}
+        </ul>
+
+        <div class="guarantee">
+          <div class="g-icon"></div>
+          <div class="g-text">
+            <div class="g-title">{{guarantee_title}}</div>
+            <div class="g-sub">{{guarantee_text}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stripe-right">
+        <div class="order-card">
+          <div class="order-head">
+            <div class="order-pill">{{order_pill}}</div>
+            <div class="order-title">{{order_title}}</div>
+            <div class="order-sub">{{order_subtitle}}</div>
+          </div>
+
+          <div class="systeme-form">
+            <!-- SLOT SYSTEME -->
+            Ajoutez ici un BOUTON / FORMULAIRE Systeme.io (bloc “Bouton” ou “Formulaire”), puis supprimez ce texte.
+          </div>
+
+          <div class="order-reassurance">{{checkout_reassurance}}</div>
+
+          <div class="order-badges">
+            <span class="ob">{{order_badge_1}}</span>
+            <span class="ob">{{order_badge_2}}</span>
+            <span class="ob">{{order_badge_3}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section problems" id="problemes">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="h2">{{problems_title}}</h2>
+        <p class="lead">{{problems_subtitle}}</p>
+      </div>
+
+      <div class="cards-grid">
+        {{#situations}}
+        <div class="card problem-card">
+          <div class="card-dot"></div>
+          <div class="card-text">{{text}}</div>
+        </div>
+        {{/situations}}
+      </div>
+
+      <div class="after">{{problems_after}}</div>
+    </div>
+  </section>
+
+  <section class="section timing">
+    <div class="container timing-grid">
+      <div class="timing-left">
+        <h2 class="h2">{{timing_title}}</h2>
+        <div class="big">{{timing_big}}</div>
+        <p class="lead">{{timing_text}}</p>
+
+        <div class="proof">
+          <div class="proof-box">{{proof_box}}</div>
+          <div class="proof-cap">{{proof_caption}}</div>
+        </div>
+      </div>
+
+      <div class="timing-right">
+        <div class="stat-card">
+          <div class="stat-k">{{stat_1_k}}</div>
+          <div class="stat-v">{{stat_1_v}}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-k">{{stat_2_k}}</div>
+          <div class="stat-v">{{stat_2_v}}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-k">{{stat_3_k}}</div>
+          <div class="stat-v">{{stat_3_v}}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section reasons">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="h2">{{reasons_title}}</h2>
+        <p class="lead">{{reasons_subtitle}}</p>
+      </div>
+
+      <div class="reasons-list">
+        {{#reasons}}
+        <div class="reason">
+          <div class="reason-num">{{num}}</div>
+          <div class="reason-body">
+            <div class="reason-title">{{title}}</div>
+            <div class="reason-text">{{text}}</div>
+          </div>
+        </div>
+        {{/reasons}}
+      </div>
+
+      <div class="experts">
+        <div class="experts-title">{{experts_title}}</div>
+        <div class="experts-grid">
+          {{#experts}}
+          <div class="expert-pill">{{.}}</div>
+          {{/experts}}
+        </div>
+        <div class="experts-note">{{experts_note}}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section method" id="methode">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="h2">{{method_title}}</h2>
+        <p class="lead">{{method_subtitle}}</p>
+      </div>
+
+      <div class="steps">
+        {{#steps}}
+        <div class="step">
+          <div class="step-top">
+            <div class="step-dot"></div>
+            <div class="step-title">{{title}}</div>
+          </div>
+          <div class="step-text">{{text}}</div>
+        </div>
+        {{/steps}}
+      </div>
+
+      <div class="mid-cta">
+        <a class="btn primary" href="#checkout">{{mid_cta}}</a>
+        <div class="micro">{{mid_micro}}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section phases">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="h2">{{phases_title}}</h2>
+        <p class="lead">{{phases_subtitle}}</p>
+      </div>
+
+      <div class="phase-grid">
+        <div class="phase">
+          <div class="phase-head">
+            <div class="phase-chip">01</div>
+            <div>
+              <div class="phase-title">{{phase1_title}}</div>
+              <div class="phase-text">{{phase1_text}}</div>
+            </div>
+          </div>
+          <ul class="phase-bullets">
+            {{#phase1_bullets}}
+            <li>{{.}}</li>
+            {{/phase1_bullets}}
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <div class="phase-chip">02</div>
+            <div>
+              <div class="phase-title">{{phase2_title}}</div>
+              <div class="phase-text">{{phase2_text}}</div>
+            </div>
+          </div>
+          <ul class="phase-bullets">
+            {{#phase2_bullets}}
+            <li>{{.}}</li>
+            {{/phase2_bullets}}
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <div class="phase-chip">03</div>
+            <div>
+              <div class="phase-title">{{phase3_title}}</div>
+              <div class="phase-text">{{phase3_text}}</div>
+            </div>
+          </div>
+          <ul class="phase-bullets">
+            {{#phase3_bullets}}
+            <li>{{.}}</li>
+            {{/phase3_bullets}}
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <div class="phase-chip">04</div>
+            <div>
+              <div class="phase-title">{{phase4_title}}</div>
+              <div class="phase-text">{{phase4_text}}</div>
+            </div>
+          </div>
+          <ul class="phase-bullets">
+            {{#phase4_bullets}}
+            <li>{{.}}</li>
+            {{/phase4_bullets}}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bonuses" id="bonus">
+    <div class="container">
+      <div class="bonus-hero">
+        <div class="bonus-badge">{{bonus_badge}}</div>
+        <h2 class="bonus-title">{{bonus_title}}</h2>
+        <p class="lead">{{bonus_subtitle}}</p>
+      </div>
+
+      <div class="bonus-list">
+        {{#bonus_list}}
+        <div class="bonus-li">
+          <div class="bonus-check"></div>
+          <div class="bonus-t">{{.}}</div>
+        </div>
+        {{/bonus_list}}
+      </div>
+
+      <div class="bonus-explain">
+        <h3 class="h3">{{bonus_detail_title}}</h3>
+        <p class="lead">{{bonus_detail_text}}</p>
+      </div>
+
+      <div class="bonus-cards">
+        <div class="bonus-card">
+          <div class="bc-top">
+            <div class="bc-k">{{bonus1_k}}</div>
+            <div class="bc-title">{{bonus1_title}}</div>
+            <div class="bc-sub">{{bonus1_subtitle}}</div>
+          </div>
+          <ul class="bc-bullets">
+            {{#bonus1_bullets}}
+            <li>{{.}}</li>
+            {{/bonus1_bullets}}
+          </ul>
+        </div>
+
+        <div class="bonus-card">
+          <div class="bc-top">
+            <div class="bc-k">{{bonus2_k}}</div>
+            <div class="bc-title">{{bonus2_title}}</div>
+            <div class="bc-sub">{{bonus2_subtitle}}</div>
+          </div>
+          <ul class="bc-bullets">
+            {{#bonus2_bullets}}
+            <li>{{.}}</li>
+            {{/bonus2_bullets}}
+          </ul>
+        </div>
+
+        <div class="bonus-card">
+          <div class="bc-top">
+            <div class="bc-k">{{bonus3_k}}</div>
+            <div class="bc-title">{{bonus3_title}}</div>
+            <div class="bc-sub">{{bonus3_subtitle}}</div>
+          </div>
+          <ul class="bc-bullets">
+            {{#bonus3_bullets}}
+            <li>{{.}}</li>
+            {{/bonus3_bullets}}
+          </ul>
+        </div>
+      </div>
+
+      <div class="recap">
+        <div class="recap-left">
+          <h3 class="h3">{{recap_title}}</h3>
+          <p class="lead">{{recap_text}}</p>
+        </div>
+        <div class="recap-right">
+          <ul class="recap-bullets">
+            {{#recap_bullets}}
+            <li>{{.}}</li>
+            {{/recap_bullets}}
+          </ul>
+          <div class="recap-cta">
+            <a class="btn dark" href="#checkout">{{recap_cta}}</a>
+            <div class="micro">{{recap_micro}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section faq" id="faq">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="h2">{{faq_title}}</h2>
+        <p class="lead">{{faq_subtitle}}</p>
+      </div>
+
+      <div class="faq-list">
+        {{#faq}}
+        <div class="faq-item">
+          <div class="faq-q">{{q}}</div>
+          <div class="faq-a">{{a}}</div>
+        </div>
+        {{/faq}}
+      </div>
+
+      <div class="contact">
+        <div class="contact-title">{{contact_title}}</div>
+        <div class="contact-text">
+          <a href="{{contact_link_1_href}}">{{contact_link_1}}</a>
+          <span class="sep">•</span>
+          <a href="{{contact_link_2_href}}">{{contact_link_2}}</a>
+        </div>
+      </div>
+
+      <div class="final-cta">
+        <a class="btn primary xl" href="#checkout">{{final_cta}}</a>
+        <div class="micro">{{final_micro}}</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <a class="to-top" href="#top">{{footer_link_top}}</a>
+
+      <div class="footer-links">
+        <a href="{{footer_link_1_href}}">{{footer_link_1}}</a>
+        <a href="{{footer_link_2_href}}">{{footer_link_2}}</a>
+        <a href="{{footer_link_3_href}}">{{footer_link_3}}</a>
+      </div>
+
+      <div class="footer-note">{{footer_note}}</div>
+    </div>
+  </footer>
+</div>
