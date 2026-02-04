@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getUserContextBundle, userContextToPromptText } from "@/lib/onboarding/userContext";
 import { openai } from "@/lib/openaiClient";
 import { buildOnboardingClarifierSystemPrompt } from "@/lib/prompts/onboarding/system";
 
@@ -29,167 +30,156 @@ const AiResponseSchema = z
       .array(
         z.object({
           key: z.string().trim().min(1).max(80),
-          value: z.unknown(),
-          confidence: z.enum(["high", "medium", "low"]).optional().default("high"),
-          source: z.string().optional().default("onboarding_chat"),
+          value: z.any().optional(),
+          confidence: z.number().min(0).max(1).optional(),
         }),
       )
-      .optional()
       .default([]),
-    done: z.boolean().optional().default(false),
+    should_finish: z.boolean().optional().default(false),
   })
   .strict();
 
-type Locale = "fr" | "en";
-
-function pickLocale(req: NextRequest): Locale {
-  const h = req.headers.get("accept-language") || "";
-  return h.toLowerCase().includes("fr") ? "fr" : "en";
-}
-
-function safeJsonParse(raw: string): unknown {
+function safeJsonParse(input: string): any {
   try {
-    return JSON.parse(raw);
+    return JSON.parse(input);
   } catch {
     return null;
   }
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return !!v && typeof v === "object" && !Array.isArray(v);
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
 }
 
-function toNumberOrNull(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const cleaned = v.replace(/[^0-9.]/g, "");
-    const n = Number(cleaned);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
+function pickLocaleFromHeaders(req: NextRequest) {
+  const h = req.headers.get("accept-language") || "";
+  const fr = h.toLowerCase().includes("fr");
+  return fr ? "fr" : "en";
 }
 
-function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
-  const patch: Record<string, unknown> = {};
-  const get = (k: string) => facts.find((f) => f.key === k)?.value;
+function normalizeKey(k: string) {
+  return k.trim().toLowerCase();
+}
 
-  const mainTopic = get("main_topic");
-  if (typeof mainTopic === "string" && mainTopic.trim()) patch.niche = mainTopic.trim();
+function factValueIsEmpty(v: unknown) {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string" && v.trim() === "") return true;
+  if (Array.isArray(v) && v.length === 0) return true;
+  if (typeof v === "object" && v && Object.keys(v as any).length === 0) return true;
+  return false;
+}
 
-  const mission = get("mission_statement");
-  if (typeof mission === "string" && mission.trim()) patch.mission = mission.trim();
+function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
+  // Patch minimal & safe : on n'écrase jamais avec du vide
+  const patch: Record<string, any> = {};
+  for (const f of facts) {
+    const k = normalizeKey(f.key);
+    const v = (f as any).value;
 
-  const hasOffers = get("has_offers");
-  if (typeof hasOffers === "boolean") patch.has_offers = hasOffers;
+    if (factValueIsEmpty(v)) continue;
 
-  const emailList = get("email_list_size");
-  const emailN = toNumberOrNull(emailList);
-  if (emailN !== null) patch.audience_email = Math.round(emailN);
+    // mapping clair vers business_profiles
+    if (k === "first_name" || k === "firstname" || k === "prenom") patch.first_name = String(v);
+    if (k === "country" || k === "pays") patch.country = String(v);
+    if (k === "niche") patch.niche = String(v);
+    if (k === "mission") patch.mission = String(v);
 
-  const socialPresence = get("social_presence");
-  if (isRecord(socialPresence)) {
-    const followers = toNumberOrNull(socialPresence.followers);
-    if (followers !== null) patch.audience_social = Math.round(followers);
-    const mainPlatform =
-      typeof socialPresence.main_platform === "string" ? socialPresence.main_platform.trim() : "";
-    if (mainPlatform) {
-      patch.social_links = patch.social_links ?? null; // ne force pas
+    if (k === "business_maturity" || k === "maturity" || k === "niveau") patch.business_maturity = String(v);
+
+    if (k === "audience_social" || k === "social_audience") {
+      const n = Number(String(v).replace(",", "."));
+      if (Number.isFinite(n)) patch.audience_social = Math.max(0, Math.round(n));
     }
+
+    if (k === "audience_email" || k === "email_list" || k === "liste_email") {
+      const n = Number(String(v).replace(",", "."));
+      if (Number.isFinite(n)) patch.audience_email = Math.max(0, Math.round(n));
+    }
+
+    if (k === "time_available" || k === "temps_dispo") patch.time_available = String(v);
+
+    if (k === "main_goal" || k === "objectif_principal") patch.main_goal = String(v);
+    if (k === "revenue_goal_monthly" || k === "objectif_revenu_mensuel") patch.revenue_goal_monthly = String(v);
+
+    if (k === "preferred_tone" || k === "tone" || k === "ton") patch.preferred_tone = String(v);
+    if (k === "content_preference" || k === "content_style") patch.content_preference = String(v);
+
+    if (k === "social_links") patch.social_links = String(v);
+
+    if (k === "has_offers") {
+      if (typeof v === "boolean") patch.has_offers = v;
+      else {
+        const s = String(v).toLowerCase().trim();
+        if (["yes", "oui", "true", "1"].includes(s)) patch.has_offers = true;
+        if (["no", "non", "false", "0"].includes(s)) patch.has_offers = false;
+      }
+    }
+
+    // offres existantes (si user en parle) : stock JSONB "offers"
+    if (k === "offers" && v && typeof v === "object") patch.offers = v;
   }
-
-  const hours = toNumberOrNull(get("time_available_hours_week"));
-  if (hours !== null) patch.time_available = `${Math.round(hours)}h/semaine`;
-
-  const revenue = toNumberOrNull(get("revenue_goal_monthly"));
-  if (revenue !== null) patch.revenue_goal_monthly = String(Math.round(revenue));
-
-  const focus = get("primary_focus");
-  if (typeof focus === "string" && focus.trim()) patch.main_goal = focus.trim();
-
-  const contentChannels = get("content_channels_priority");
-  if (Array.isArray(contentChannels)) {
-    const chans = contentChannels.filter((x) => typeof x === "string" && x.trim()).slice(0, 6);
-    if (chans.length) patch.content_preference = chans.join(", ");
-  }
-
-  const tone = get("tone_preference_hint");
-  if (typeof tone === "string" && tone.trim()) patch.preferred_tone = tone.trim();
-
-  // Onboarding v2 flag (utile pour routing)
-  patch.onboarding_version = "v2_chat";
-
   return patch;
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = await getSupabaseServerClient();
+
   try {
     const body = BodySchema.parse(await req.json());
+    const locale = pickLocaleFromHeaders(req);
 
-    const supabase = await getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Load business profile (for name/country + patch later)
-    const { data: bp } = await supabase
-      .from("business_profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const locale = pickLocale(req);
-
-    // 1) retrieve or create session
-    let sessionId = body.sessionId;
-
-    if (sessionId) {
-      const { data: existing, error } = await supabase
-        .from("onboarding_sessions")
-        .select("id,user_id,status")
-        .eq("id", sessionId)
-        .single();
-
-      if (error || !existing || existing.user_id !== user.id || existing.status !== "in_progress") {
-        sessionId = undefined;
-      }
-    }
+    // 1) find or create session
+    let sessionId = body.sessionId ?? null;
 
     if (!sessionId) {
       const { data: created, error } = await supabase
         .from("onboarding_sessions")
         .insert({
-          user_id: user.id,
-          status: "in_progress",
-          onboarding_version: "v2_chat",
+          user_id: userId,
+          status: "active",
         })
         .select("id")
         .single();
 
       if (error || !created?.id) {
-        return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+        return NextResponse.json({ error: error?.message ?? "Create session error" }, { status: 400 });
       }
-      sessionId = created.id;
+      sessionId = String(created.id);
+    } else {
+      // validate session belongs to user
+      const { data: s, error } = await supabase
+        .from("onboarding_sessions")
+        .select("id,user_id,status")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (error || !s?.id) {
+        return NextResponse.json({ error: "Invalid session" }, { status: 400 });
+      }
+      if (String(s.user_id) !== String(userId)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
-    // 2) log user message
-    await supabase.from("onboarding_messages").insert({
+    // 2) store user message
+    const { error: insertMsgErr } = await supabase.from("onboarding_messages").insert({
       session_id: sessionId,
+      user_id: userId,
       role: "user",
       content: body.message,
     });
+    if (insertMsgErr) {
+      return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
+    }
 
-    // 3) load context: known facts + last messages
-    const [{ data: facts }, { data: history }] = await Promise.all([
-      supabase
-        .from("onboarding_facts")
-        .select("key,value,confidence,source,updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false }),
+    // 3) fetch existing context
+    const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
+      supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId),
       supabase
         .from("onboarding_messages")
         .select("role,content,created_at")
@@ -202,6 +192,15 @@ export async function POST(req: NextRequest) {
     for (const f of facts ?? []) {
       if (!f?.key) continue;
       knownFacts[String((f as any).key)] = (f as any).value;
+    }
+
+    // Contexte unifié (facts + profil) pour mieux guider le clarifier (fail-open)
+    let userContextText = "";
+    try {
+      const bundle = await getUserContextBundle(supabase, userId);
+      userContextText = userContextToPromptText(bundle);
+    } catch {
+      userContextText = "";
     }
 
     const system = buildOnboardingClarifierSystemPrompt({
@@ -219,16 +218,14 @@ export async function POST(req: NextRequest) {
           role: m.role,
           content: m.content,
         })),
+        user_context_text: userContextText || null,
       },
       null,
       2,
     );
 
     if (!openai) {
-      return NextResponse.json(
-        { error: "Missing OpenAI key (OPENAI_API_KEY_OWNER)" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Missing OpenAI key (OPENAI_API_KEY_OWNER)" }, { status: 500 });
     }
 
     const model = process.env.TIPOTE_ONBOARDING_MODEL?.trim() || "gpt-4.1";
@@ -250,78 +247,67 @@ export async function POST(req: NextRequest) {
 
     // 4) apply facts (upsert) + build patch for business_profiles
     const appliedFacts: Array<{ key: string; confidence: string }> = [];
-    const factPairs: Array<{ key: string; value: unknown }> = [];
 
-    for (const f of out.facts ?? []) {
-      const key = (f.key ?? "").trim();
-      if (!key) continue;
+    const toUpsert = (out.facts || [])
+      .map((f) => ({
+        key: f.key,
+        value: (f as any).value ?? null,
+        confidence: typeof f.confidence === "number" ? f.confidence : 0.7,
+      }))
+      .filter((f) => isNonEmptyString(f.key));
 
-      await supabase.rpc("upsert_onboarding_fact", {
-        p_user_id: user.id,
-        p_key: key,
-        p_value: f.value as any,
-        p_confidence: f.confidence,
-        p_source: f.source || "onboarding_chat",
-      });
-
-      appliedFacts.push({ key, confidence: f.confidence });
-      factPairs.push({ key, value: f.value });
-    }
-
-    // Sync only if we have something to sync
-    if (factPairs.length > 0) {
-      const patch = buildBusinessProfilePatchFromFacts(factPairs);
-      const keys = Object.keys(patch);
-      if (keys.length > 0) {
-        // ensure business_profile exists
-        if (!bp?.id) {
-          await supabase.from("business_profiles").insert({
-            user_id: user.id,
-            onboarding_completed: false,
-            diagnostic_completed: false,
-            onboarding_version: "v2_chat",
+    if (toUpsert.length) {
+      for (const f of toUpsert) {
+        try {
+          const { error } = await supabase.rpc("upsert_onboarding_fact", {
+            p_user_id: userId,
+            p_key: f.key,
+            p_value: f.value,
+            p_confidence: f.confidence,
+            p_source: "onboarding_chat",
           });
-        }
-        // never overwrite with null/empty strings
-        const safePatch: Record<string, unknown> = {};
-        for (const k of keys) {
-          const v = patch[k];
-          if (v === null || v === undefined) continue;
-          if (typeof v === "string" && !v.trim()) continue;
-          safePatch[k] = v;
-        }
-
-        if (Object.keys(safePatch).length > 0) {
-          await supabase.from("business_profiles").update(safePatch).eq("user_id", user.id);
+          if (!error) appliedFacts.push({ key: f.key, confidence: String(f.confidence) });
+        } catch {
+          // fail-open
         }
       }
     }
 
-    // 5) log assistant message
+    const patch = mergeBusinessProfilePatchFromFacts(toUpsert as any);
+    if (Object.keys(patch).length) {
+      // patch safe : on ne remplace pas avec du vide grâce au filtre ci-dessus
+      await supabase.from("business_profiles").update(patch).eq("user_id", userId);
+    }
+
+    // 5) store assistant message
+    const assistantMsg = out.message;
     await supabase.from("onboarding_messages").insert({
       session_id: sessionId,
+      user_id: userId,
       role: "assistant",
-      content: out.message,
-      extracted: { appliedFacts },
+      content: assistantMsg,
     });
 
-    // 6) mark done
-    if (out.done) {
+    // 6) optionally finish onboarding
+    if (out.should_finish) {
+      // marque BP onboarding_completed = true
       await supabase
-        .from("onboarding_sessions")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", sessionId)
-        .eq("user_id", user.id);
+        .from("business_profiles")
+        .update({ onboarding_completed: true, onboarding_version: "v2" })
+        .eq("user_id", userId);
+
+      await supabase.from("onboarding_sessions").update({ status: "completed" }).eq("id", sessionId);
     }
 
     return NextResponse.json({
+      ok: true,
       sessionId,
-      message: out.message,
+      message: assistantMsg,
       appliedFacts,
-      done: out.done,
+      shouldFinish: out.should_finish,
     });
   } catch (err: any) {
-    const msg = typeof err?.message === "string" ? err.message : "Unexpected error";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    const message = err?.message ?? "Unknown error";
+    return NextResponse.json({ ok: false, error: message }, { status: 400 });
   }
 }

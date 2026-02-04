@@ -1,0 +1,245 @@
+<div class="sale-04">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="#about">{{nav_link_1}}</a>
+        <a href="#use">{{nav_link_2}}</a>
+        <a href="#bonus">{{nav_link_3}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="container hero-grid">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <span class="spark"></span>
+          <span>{{hero_badge}}</span>
+        </div>
+
+        <h1 class="hero-title">
+          {{offer_name}}
+          {{#hero_title_accent}}<span class="accent">{{.}}</span>{{/hero_title_accent}}
+        </h1>
+
+        <p class="hero-sub">{{hero_subtitle}}</p>
+
+        <div class="hero-cta">
+          <a class="btn primary" href="#checkout">{{cta_main}}</a>
+          <a class="btn ghost" href="#bonus">{{cta_secondary}}</a>
+          <p class="micro">{{cta_micro}}</p>
+        </div>
+      </div>
+
+      <aside class="hero-right">
+        <div class="video-card">
+          <div class="video-top">
+            <div class="vt">{{video_title}}</div>
+            <div class="vm">{{video_micro}}</div>
+          </div>
+
+          <div class="video-frame">
+            {{#hero_video_url}}
+            <video class="video" controls playsinline src="{{hero_video_url}}"></video>
+            {{/hero_video_url}}
+            {{^hero_video_url}}
+            <div class="video-placeholder">VIDÉO (optionnel) — colle une URL mp4 dans <strong>hero_video_url</strong></div>
+            {{/hero_video_url}}
+          </div>
+
+          <div class="video-points">
+            {{#hero_points}}
+            <div class="vp">
+              <span class="dot"></span>
+              <span>{{.}}</span>
+            </div>
+            {{/hero_points}}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <section class="section section-soft" id="about">
+    <div class="container">
+      <h3 class="kicker">{{about_kicker}}</h3>
+      <div class="split">
+        <div>
+          <h2 class="h2">{{about_title}}</h2>
+          <p class="lead">{{about_text}}</p>
+
+          <div class="about-cards">
+            {{#about_cards}}
+            <div class="a-card">
+              <div class="a-title">{{title}}</div>
+              <div class="a-text">{{text}}</div>
+            </div>
+            {{/about_cards}}
+          </div>
+        </div>
+
+        <aside class="quote">
+          <div class="quote-inner">
+            <div class="q-mark">“</div>
+            <div class="q-text">{{about_quote}}</div>
+            <div class="q-by">{{about_quote_by}}</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="use">
+    <div class="container">
+      <h3 class="kicker">{{use_kicker}}</h3>
+      <h2 class="h2">{{use_title}}</h2>
+      <p class="lead">{{use_text}}</p>
+
+      <ol class="steps">
+        {{#use_steps}}
+        <li class="step">
+          <div class="step-num">{{num}}</div>
+          <div class="step-body">
+            <div class="step-title">{{title}}</div>
+            <div class="step-text">{{text}}</div>
+          </div>
+        </li>
+        {{/use_steps}}
+      </ol>
+
+      <div class="note">
+        <span class="note-dot"></span>
+        <span>{{use_note}}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-soft" id="bonus">
+    <div class="container">
+      <h3 class="kicker">{{bonus_kicker}}</h3>
+      <h2 class="h2">{{bonus_title}}</h2>
+      <p class="lead">{{bonus_text}}</p>
+
+      <div class="bonus-grid">
+        {{#bonuses}}
+        <div class="bonus-card">
+          <div class="bonus-media">
+            {{#video_url}}
+            <video class="bvideo" controls playsinline src="{{video_url}}"></video>
+            {{/video_url}}
+            {{^video_url}}
+            <div class="bvideo-placeholder">BONUS VIDEO (optionnel)</div>
+            {{/video_url}}
+          </div>
+          <div class="bonus-body">
+            <div class="bonus-title">{{title}}</div>
+            <div class="bonus-desc">{{text}}</div>
+            {{#tag}}<div class="bonus-tag">{{tag}}</div>{{/tag}}
+          </div>
+        </div>
+        {{/bonuses}}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark" id="checkout">
+    <div class="container">
+      <div class="checkout">
+        <div class="checkout-left">
+          <h2 class="h2 light">{{pricing_title}}</h2>
+          <p class="lead light">{{pricing_text}}</p>
+
+          <div class="pricing-points">
+            {{#pricing_points}}
+            <div class="pp">
+              <span class="check"></span>
+              <span>{{.}}</span>
+            </div>
+            {{/pricing_points}}
+          </div>
+
+          <div class="guarantee">
+            <span class="shield"></span>
+            <span>{{pricing_guarantee}}</span>
+          </div>
+        </div>
+
+        <aside class="checkout-right">
+          <div class="pricebox">
+            <div class="pb-top">
+              <div class="pb-pill">{{pricing_pill}}</div>
+              <div class="pb-price">
+                <div class="now">{{price_now}}</div>
+                {{#price_old}}<div class="old">{{.}}</div>{{/price_old}}
+              </div>
+              <div class="pb-micro">{{pricing_micro}}</div>
+            </div>
+
+            <div class="pb-form">
+              <div class="pb-title">{{checkout_title}}</div>
+              <div class="pb-slot">
+                FORMULAIRE DE COMMANDE (Systeme.io)<br />
+                <strong>COLLE ICI TON FORMULAIRE NATIF</strong>
+              </div>
+              <div class="pb-safe">
+                <span class="lock"></span>
+                <span>{{checkout_reassurance}}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="faq-head">
+        <h2 class="h2">{{faq_title}}</h2>
+        <p class="lead">{{faq_text}}</p>
+      </div>
+
+      <div class="faq">
+        {{#faq_items}}
+        <details class="qa">
+          <summary>{{q}}</summary>
+          <div class="a">{{a}}</div>
+        </details>
+        {{/faq_items}}
+      </div>
+
+      <div class="final">
+        <div class="final-left">
+          <div class="final-title">{{final_title}}</div>
+          <div class="final-text">{{final_text}}</div>
+        </div>
+        <div class="final-right">
+          <a class="btn primary" href="#checkout">{{final_cta}}</a>
+          <div class="final-micro">{{final_micro}}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+      <div class="footer-links">
+        <a href="#top">{{footer_link_top}}</a>
+        <a href="#bonus">{{footer_link_1}}</a>
+        <a href="#checkout">{{footer_link_2}}</a>
+      </div>
+      <div class="footer-note">{{footer_note}}</div>
+    </div>
+  </footer>
+</div>
