@@ -1,14 +1,14 @@
-<div class="sale-11" id="top">
+<div class="sale-12" id="top">
   <nav class="nav">
     <div class="container nav-inner">
       <div class="brand">
-        <span class="mark">▶</span>
+        <span class="logo-dot"></span>
         <span class="name">{{brand_name}}</span>
       </div>
 
       <div class="links">
-        <a href="#method">{{nav_link_1}}</a>
-        <a href="#modules">{{nav_link_2}}</a>
+        <a href="#proof">{{nav_link_1}}</a>
+        <a href="#program">{{nav_link_2}}</a>
         <a href="#faq">{{nav_link_3}}</a>
       </div>
 
@@ -17,16 +17,6 @@
   </nav>
 
   <header class="hero">
-    <div class="hero-bg">
-      {{#hero_bg_video_url}}
-      <video class="bg-video" autoplay muted loop playsinline>
-        <source src="{{.}}" type="video/mp4" />
-      </video>
-      {{/hero_bg_video_url}}
-      <div class="bg-overlay"></div>
-      <div class="bg-glow"></div>
-    </div>
-
     <div class="container hero-inner">
       {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
 
@@ -38,16 +28,16 @@
       <p class="sub">{{hero_subtitle}}</p>
 
       <div class="hero-grid">
-        <div class="hero-left">
-          <div class="panel">
-            <div class="panel-head">
+        <div class="left">
+          <div class="glass" id="proof">
+            <div class="glass-head">
               <div class="pill">{{hero_pill}}</div>
-              <div class="chip">{{hero_chip}}</div>
+              <div class="tag">{{hero_tag}}</div>
             </div>
 
             {{#hero_intro}}<p class="intro">{{.}}</p>{{/hero_intro}}
 
-            <ul class="list">
+            <ul class="bullets">
               {{#hero_bullets}}
               <li>
                 <span class="dot"></span>
@@ -57,33 +47,39 @@
             </ul>
 
             {{#hero_note}}<div class="note">{{.}}</div>{{/hero_note}}
+
+            <div class="mini-cards">
+              {{#mini_cards}}
+              <div class="mini">
+                <div class="mini-t">{{.}}</div>
+              </div>
+              {{/mini_cards}}
+            </div>
           </div>
 
-          <div class="clips" id="method">
-            <div class="clips-title">{{clips_title}}</div>
-            <div class="clips-grid">
-              {{#clips}}
-              <div class="clip">
-                <div class="clip-media">
-                  {{#clip_video_urls}}
-                  <video class="clip-video" autoplay muted loop playsinline>
-                    <source src="{{.}}" type="video/mp4" />
-                  </video>
-                  {{/clip_video_urls}}
-                  {{#clip_placeholder}}
-                  <div class="clip-placeholder">{{.}}</div>
-                  {{/clip_placeholder}}
+          <div class="section" id="program">
+            <div class="section-head">
+              <h2>{{section_title}}</h2>
+              <p class="lead">{{section_subtitle}}</p>
+            </div>
+
+            <div class="steps">
+              {{#steps}}
+              <div class="step">
+                <div class="step-n">{{step_number}}</div>
+                <div class="step-body">
+                  <div class="step-t">{{step_title}}</div>
+                  <div class="step-d">{{step_text}}</div>
                 </div>
-                <div class="clip-cap">{{clip_caption}}</div>
               </div>
-              {{/clips}}
+              {{/steps}}
             </div>
           </div>
         </div>
 
-        <div class="hero-right" id="checkout">
-          <div class="checkout-card">
-            <div class="price-block">
+        <div class="right" id="checkout">
+          <div class="checkout">
+            <div class="price">
               <div class="price-label">{{price_label}}</div>
               <div class="price-row">
                 <div class="price-main">{{price_main}}</div>
@@ -122,57 +118,31 @@
             </div>
           </div>
 
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <div class="side-text">{{side_text}}</div>
-            <ul class="side-list">
-              {{#side_points}}
-              <li><span class="spark">✦</span><span>{{.}}</span></li>
-              {{/side_points}}
+          <div class="bonus">
+            <div class="bonus-head">
+              <div class="bonus-title">{{bonus_title}}</div>
+              {{#bonus_subtitle}}<div class="bonus-sub">{{.}}</div>{{/bonus_subtitle}}
+            </div>
+
+            <ul class="bonus-list">
+              {{#bonus_items}}
+              <li>
+                <span class="spark">✦</span>
+                <span class="b">{{.}}</span>
+              </li>
+              {{/bonus_items}}
             </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
+
+            <a class="bonus-cta" href="#checkout">{{bonus_cta}}</a>
           </div>
         </div>
       </div>
-
-      <div class="scroll">{{scroll_hint}}</div>
     </div>
   </header>
 
-  <section class="modules" id="modules">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{modules_title}}</h2>
-        <p class="lead">{{modules_subtitle}}</p>
-      </div>
-
-      <div class="module-grid">
-        {{#module_cards}}
-        <div class="module-card">
-          <div class="mc-top">
-            <div class="mc-badge">{{module_badge}}</div>
-          </div>
-          <div class="mc-title">{{module_title}}</div>
-          <div class="mc-text">{{module_text}}</div>
-          <ul class="mc-list">
-            {{#module_points}}
-            <li><span class="mini-dot"></span><span>{{.}}</span></li>
-            {{/module_points}}
-          </ul>
-        </div>
-        {{/module_cards}}
-      </div>
-
-      <div class="final-cta">
-        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
-        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
-      </div>
-    </div>
-  </section>
-
   <section class="faq" id="faq">
     <div class="container">
-      <div class="section-head">
+      <div class="faq-head">
         <h2>{{faq_title}}</h2>
         <p class="lead">{{faq_subtitle}}</p>
       </div>
@@ -186,8 +156,9 @@
         {{/faq_items}}
       </div>
 
-      <div class="final-cta-2">
-        <a class="btn-secondary" href="#checkout">{{final_cta_2}}</a>
+      <div class="final-cta">
+        <a class="btn" href="#checkout">{{final_cta}}</a>
+        {{#final_note}}<div class="final-note">{{.}}</div>{{/final_note}}
       </div>
     </div>
   </section>

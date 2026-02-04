@@ -8,10 +8,10 @@
       "heroAlign": "center"
     },
     {
-      "id": "wide",
-      "label": "Wide",
-      "maxWidth": "1280px",
-      "sectionPadding": "78px 24px",
+      "id": "compact",
+      "label": "Compact",
+      "maxWidth": "1040px",
+      "sectionPadding": "76px 24px",
       "heroAlign": "center"
     }
   ]
