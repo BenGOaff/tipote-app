@@ -1,0 +1,195 @@
+<div class="sale-07" id="top">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="#probleme">{{nav_link_1}}</a>
+        <a href="#methode">{{nav_link_2}}</a>
+        <a href="#programme">{{nav_link_3}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-inner">
+      {{#hero_kicker}}
+      <div class="kicker">{{.}}</div>
+      {{/hero_kicker}}
+
+      <h1>{{hero_title}}</h1>
+      <p class="sub">{{hero_subtitle}}</p>
+
+      <div class="cta-row">
+        <a class="btn-primary" href="#checkout">{{hero_cta}}</a>
+        {{#hero_cta_secondary}}
+        <a class="btn-ghost" href="#methode">{{.}}</a>
+        {{/hero_cta_secondary}}
+      </div>
+
+      {{#hero_note}}
+      <p class="note">{{.}}</p>
+      {{/hero_note}}
+
+      {{#hero_bullets}}
+      <ul class="hero-bullets">
+        {{#hero_bullets}}
+        <li><span class="dot"></span><span class="t">{{.}}</span></li>
+        {{/hero_bullets}}
+      </ul>
+      {{/hero_bullets}}
+    </div>
+  </header>
+
+  <section class="section section-soft" id="probleme">
+    <div class="container section-grid">
+      <div class="copy">
+        <h2>{{problem_title}}</h2>
+        <p class="lead">{{problem_lead}}</p>
+        {{#problem_bullets}}
+        <ul class="bullets">
+          {{#problem_bullets}}
+          <li><span class="dot"></span><span>{{.}}</span></li>
+          {{/problem_bullets}}
+        </ul>
+        {{/problem_bullets}}
+      </div>
+
+      <aside class="card">
+        <div class="card-top">
+          <div class="badge">{{problem_card_badge}}</div>
+          <div class="card-title">{{problem_card_title}}</div>
+        </div>
+        <p class="muted">{{problem_card_text}}</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" id="methode">
+    <div class="container">
+      <h2 class="center">{{method_title}}</h2>
+      <p class="center lead">{{method_lead}}</p>
+
+      <div class="tri">
+        <div class="tri-card">
+          <div class="tri-n">{{method_1_title}}</div>
+          <div class="tri-d">{{method_1_text}}</div>
+        </div>
+        <div class="tri-card">
+          <div class="tri-n">{{method_2_title}}</div>
+          <div class="tri-d">{{method_2_text}}</div>
+        </div>
+        <div class="tri-card">
+          <div class="tri-n">{{method_3_title}}</div>
+          <div class="tri-d">{{method_3_text}}</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">{{callout_title}}</div>
+        <p class="callout-text">{{callout_text}}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark" id="programme">
+    <div class="container">
+      <div class="dark-top">
+        <h2>{{program_title}}</h2>
+        <p class="lead">{{program_lead}}</p>
+      </div>
+
+      <div class="modules">
+        {{#modules}}
+        <div class="module">
+          <div class="module-h">
+            <div class="chip">{{module_label}}</div>
+            <div class="module-t">{{module_title}}</div>
+          </div>
+          <p class="module-d">{{module_text}}</p>
+          {{#module_points}}
+          <ul class="module-points">
+            {{#module_points}}
+            <li>{{.}}</li>
+            {{/module_points}}
+          </ul>
+          {{/module_points}}
+        </div>
+        {{/modules}}
+      </div>
+
+      <div class="dark-cta">
+        <a class="btn-primary" href="#checkout">{{program_cta}}</a>
+        {{#program_note}}
+        <div class="note">{{.}}</div>
+        {{/program_note}}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-soft" id="checkout">
+    <div class="container checkout-grid">
+      <div class="checkout-copy">
+        <h2>{{offer_title}}</h2>
+        <p class="lead">{{offer_subtitle}}</p>
+        {{#offer_bullets}}
+        <ul class="bullets">
+          {{#offer_bullets}}
+          <li><span class="dot"></span><span>{{.}}</span></li>
+          {{/offer_bullets}}
+        </ul>
+        {{/offer_bullets}}
+      </div>
+
+      <div class="checkout-card">
+        <div class="price">
+          <div class="price-old">{{price_old}}</div>
+          <div class="price-now">{{price_now}}</div>
+          <div class="price-note">{{price_note}}</div>
+        </div>
+
+        <div class="buy">
+          <div class="systeme-slot" id="SLOT_CHECKOUT">
+          <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
+        </div>
+          <div class="micro">{{checkout_micro}}</div>
+        </div>
+
+        {{#guarantee}}
+        <div class="guarantee">
+          <div class="g-title">{{guarantee_title}}</div>
+          <div class="g-text">{{.}}</div>
+        </div>
+        {{/guarantee}}
+      </div>
+    </div>
+  </section>
+
+  {{#faq}}
+  <section class="section" id="faq">
+    <div class="container">
+      <h2 class="center">{{faq_title}}</h2>
+      <div class="faq">
+        {{#faq}}
+        <div class="qa">
+          <div class="q">{{q}}</div>
+          <div class="a">{{a}}</div>
+        </div>
+        {{/faq}}
+      </div>
+    </div>
+  </section>
+  {{/faq}}
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="muted">{{footer_text}}</div>
+      <a class="top" href="#top">{{footer_top}}</a>
+    </div>
+  </footer>
+</div>

@@ -1,4 +1,5 @@
-'use client';
+// app/onboarding/OnboardingChatV2.tsx
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -72,32 +73,40 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
-  const canSend = useMemo(
-    () => input.trim().length > 0 && !isSending && !isDone,
-    [input, isSending, isDone],
-  );
+  const canSend = useMemo(() => {
+    return input.trim().length > 0 && !isSending && !isDone && !isFinalizing;
+  }, [input, isSending, isDone, isFinalizing]);
 
   const finalize = async () => {
     if (isFinalizing) return;
     setIsFinalizing(true);
 
     try {
-      // 1) Marquer onboarding complété (source de vérité côté app)
-      await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
+      const sid = sessionId ?? undefined;
 
-      // 2) Déclencher la génération stratégie/plan (non bloquant)
-      // On ne bloque pas l'utilisateur si ça échoue.
-      fetch("/api/strategy", { method: "POST" }).catch(() => null);
+      // 1) Marquer onboarding complété (source de vérité côté app)
+      await postJSON<{ ok: boolean }>("/api/onboarding/complete", {
+        sessionId: sid,
+        diagnosticCompleted: true, // ✅ nouveau format (compat côté API)
+      });
+
+      // 2) Déclencher la génération stratégie/plan (idempotent côté API)
+      // On tente en bloquant court; si ça échoue, on n’empêche pas la redirection.
+      try {
+        await postJSON<{ ok?: boolean }>("/api/strategy", { force: true });
+      } catch {
+        // fail-open
+      }
 
       ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
 
-      // 3) Redirection douce vers le dashboard
-      router.push("/app");
-      router.refresh();
+      // 3) Redirect propre (replace => pas de retour arrière vers onboarding)
+      router.replace("/app");
     } catch (e) {
       toast({
         title: "Oups",
-        description: e instanceof Error ? e.message : "Impossible de finaliser l’onboarding.",
+        description:
+          e instanceof Error ? e.message : "Impossible de finaliser l’onboarding.",
         variant: "destructive",
       });
       setIsFinalizing(false);
@@ -111,7 +120,10 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     setInput("");
     setIsSending(true);
 
-    setMessages((prev) => [...prev, { role: "user", content: text, at: nowIso() }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: text, at: nowIso() },
+    ]);
 
     try {
       const reply = await postJSON<ApiReply>("/api/onboarding/chat", {
@@ -119,9 +131,13 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
         sessionId: sessionId ?? undefined,
       });
 
-      if (!sessionId) setSessionId(reply.sessionId);
+      // Toujours garder le sessionId retourné par l’API (même si déjà set)
+      setSessionId(reply.sessionId);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: reply.message, at: nowIso() }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: reply.message, at: nowIso() },
+      ]);
 
       ampTrack("tipote_onboarding_chat_turn", {
         onboarding_version: "v2_chat",
@@ -131,13 +147,13 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
 
       if (reply.done) {
         setIsDone(true);
-        // On finalise en arrière-plan mais on garde l’UX fluide
         void finalize();
       }
     } catch (e) {
       toast({
         title: "Oups",
-        description: e instanceof Error ? e.message : "Impossible d’envoyer le message.",
+        description:
+          e instanceof Error ? e.message : "Impossible d’envoyer le message.",
         variant: "destructive",
       });
     } finally {
@@ -153,7 +169,9 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
         </div>
         <div>
           <div className="text-xl font-semibold">Onboarding</div>
-          <div className="text-sm text-muted-foreground">Un échange simple pour personnaliser Tipote.</div>
+          <div className="text-sm text-muted-foreground">
+            Un échange simple pour personnaliser Tipote.
+          </div>
         </div>
       </div>
 
@@ -162,12 +180,17 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
           {messages.map((m, idx) => (
             <div
               key={idx}
-              className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start")}
+              className={cn(
+                "flex w-full",
+                m.role === "user" ? "justify-end" : "justify-start",
+              )}
             >
               <div
                 className={cn(
                   "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                  m.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground",
                 )}
               >
                 {m.content}
@@ -183,7 +206,7 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
-            disabled={isSending || isDone}
+            disabled={isSending || isDone || isFinalizing}
             className="min-h-[90px]"
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -231,3 +254,5 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     </div>
   );
 }
+
+export default OnboardingChatV2;
