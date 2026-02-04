@@ -1,0 +1,14 @@
+{
+  "hero_pretitle": { "maxLength": 34, "required": false },
+  "hero_title": { "maxLength": 110, "required": true },
+  "hero_subtitle": { "maxLength": 220, "required": true },
+
+  "steps": { "maxItems": 5, "required": false },
+
+  "cta_text": { "maxLength": 28, "required": true },
+  "reassurance_text": { "maxLength": 140, "required": false },
+
+  "side_badge": { "maxLength": 22, "required": false },
+  "side_title": { "maxLength": 46, "required": false },
+  "side_text": { "maxLength": 160, "required": false }
+}

@@ -1,0 +1,42 @@
+<section class="hero capture-04">
+  <div class="container capture-04">
+    <div class="badge">{{hero_badge}}</div>
+
+    <h1>
+      {{hero_title}}
+      <span class="accent"> {{hero_title_accent}}</span>
+    </h1>
+
+    <p class="subtitle">
+      {{hero_subtitle}}
+    </p>
+
+    <div class="form-card">
+      <div class="cta">
+        <input type="email" placeholder="Votre email" disabled />
+        <button disabled>{{cta_text}}</button>
+      </div>
+    </div>
+
+    <p class="micro">{{reassurance_text}}</p>
+  </div>
+</section>
+
+<section class="section capture-04">
+  <div class="inner">
+    <h2>{{section_title}}</h2>
+    <p>{{section_subtitle}}</p>
+
+    <ul class="features">
+      {{#features}}
+      <li class="feature">
+        <span class="dot"></span>
+        <div>
+          <div class="t">{{t}}</div>
+          {{#d}}<div class="d">{{.}}</div>{{/d}}
+        </div>
+      </li>
+      {{/features}}
+    </ul>
+  </div>
+</section>

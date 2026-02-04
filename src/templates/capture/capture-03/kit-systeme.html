@@ -1,0 +1,50 @@
+<section class="hero capture-03">
+  <div class="container capture-03">
+    <div class="date-pill">
+      {{hero_date}}
+    </div>
+
+    <h1>{{hero_title}}</h1>
+
+    <p class="subtitle">
+      {{hero_subtitle}}
+    </p>
+
+    <div class="form-card">
+      <div class="systeme-slot systeme-form">
+        <!-- SLOT SYSTEME -->
+        Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
+      </div>
+    </div>
+
+    <p class="micro">
+      {{reassurance_text}}
+    </p>
+  </div>
+</section>
+
+<section class="section capture-03">
+  <div class="inner">
+    <div>
+      <h2>{{section_title}}</h2>
+
+      <ul class="list">
+        {{#bullets}}
+        <li>
+          <span class="dot"></span>
+          <span>{{.}}</span>
+        </li>
+        {{/bullets}}
+      </ul>
+    </div>
+
+    <aside class="aside">
+      <h3>{{aside_title}}</h3>
+      <p>{{aside_text}}</p>
+
+      <div class="footer-cta">
+        <a class="btn" href="#">{{footer_cta_text}}</a>
+      </div>
+    </aside>
+  </div>
+</section>

@@ -1,0 +1,18 @@
+{
+  "variants": [
+    {
+      "id": "centered",
+      "label": "Centered",
+      "heroAlign": "center",
+      "sectionPadding": "86px 24px",
+      "maxWidth": "1040px"
+    },
+    {
+      "id": "compact",
+      "label": "Compact",
+      "heroAlign": "center",
+      "sectionPadding": "60px 18px",
+      "maxWidth": "980px"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "hero_date": {
+    "maxLength": 48,
+    "required": false
+  },
+  "hero_title": {
+    "maxLength": 90,
+    "required": true
+  },
+  "hero_subtitle": {
+    "maxLength": 210,
+    "required": true
+  },
+  "consent_text": {
+    "maxLength": 80,
+    "required": false
+  },
+  "cta_text": {
+    "maxLength": 28,
+    "required": true
+  },
+  "reassurance_text": {
+    "maxLength": 140,
+    "required": false
+  },
+  "section_title": {
+    "maxLength": 70,
+    "required": false
+  },
+  "bullets": {
+    "maxItems": 6,
+    "itemMaxLength": 110,
+    "required": false
+  },
+  "aside_title": {
+    "maxLength": 44,
+    "required": false
+  },
+  "aside_text": {
+    "maxLength": 170,
+    "required": false
+  },
+  "footer_cta_text": {
+    "maxLength": 28,
+    "required": false
+  }
+}

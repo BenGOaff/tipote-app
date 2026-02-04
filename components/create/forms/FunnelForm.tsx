@@ -25,7 +25,12 @@ type FunnelMode = "from_pyramid" | "from_scratch";
 
 type OutputTab = "text" | "html";
 
-type CaptureTemplateId = "capture-01" | "capture-02";
+type CaptureTemplateId =
+  | "capture-01"
+  | "capture-02"
+  | "capture-03"
+  | "capture-04"
+  | "capture-05";
 
 export type FunnelFormProps = {
   onGenerate: (params: any) => Promise<string>;
@@ -192,11 +197,166 @@ function deriveCapture02Content(params: {
     hero_subtitle: softenClamp(rawSubtitle, 220),
     bullets,
     video_caption: "Vidéo de présentation (optionnel)",
-    cta_text: "Rejoindre le challenge (gratuit)",
+    cta_text: "Rejoindre (gratuit)",
     reassurance_text: reassurance,
     dark_title: "Ce que tu vas débloquer",
     dark_text:
       "Un plan d’action simple + une structure claire pour passer à l’exécution sans t’éparpiller.",
+  };
+}
+
+function deriveCapture03Content(params: {
+  resultText: string;
+  offerName?: string;
+  promise?: string;
+}): Record<string, unknown> {
+  const rawTitle =
+    pickFirstMeaningfulLine(params.resultText) ||
+    params.promise ||
+    params.offerName ||
+    "Rejoins le défi gratuit";
+
+  const rawSubtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "En quelques jours, reprends confiance, passe à l’action et avance avec un plan simple.";
+
+  const bullets = extractBullets(params.resultText, 6);
+  const reassurance = softenClamp(pickReassurance(params.resultText), 120);
+  const dateHint =
+    extractKeyNumber(params.resultText) || "En direct pendant 3 jours";
+
+  return {
+    hero_date: softenClamp(dateHint, 48),
+    hero_title: softenClamp(rawTitle, 90),
+    hero_subtitle: softenClamp(rawSubtitle, 210),
+    consent_text: "Oui, je consens à recevoir des emails",
+    cta_text: "Je m’inscris maintenant",
+    reassurance_text: reassurance,
+
+    section_title: "Ce que vous allez recevoir",
+    bullets: bullets.length
+      ? bullets.slice(0, 6)
+      : [
+          "Un plan clair et concret pour passer à l’action dès aujourd’hui.",
+          "Des exercices simples, actionnables, et faciles à tenir.",
+          "Un boost de motivation avec une communauté qui avance.",
+        ],
+
+    aside_title: "À qui s’adresse ce défi ?",
+    aside_text:
+      "À toutes les personnes qui veulent reprendre le pouvoir sur leur quotidien, sortir du doute et avancer avec un plan concret.",
+    footer_cta_text: "Je rejoins le défi",
+  };
+}
+
+function deriveCapture04Content(params: {
+  resultText: string;
+  offerName?: string;
+  promise?: string;
+}): Record<string, unknown> {
+  const rawTitle =
+    pickFirstMeaningfulLine(params.resultText) ||
+    params.promise ||
+    params.offerName ||
+    "Télécharge le guide gratuit";
+
+  const rawSubtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "Un guide clair, simple et actionnable pour avancer dès aujourd’hui.";
+
+  const bullets = extractBullets(params.resultText, 6);
+
+  const badge =
+    extractKeyNumber(params.resultText) ||
+    (params.offerName ? params.offerName : "GRATUIT");
+
+  const reassurance = softenClamp(pickReassurance(params.resultText), 120);
+
+  const featuresSeed =
+    bullets.length >= 3
+      ? bullets.slice(0, 3)
+      : [
+          "Comprendre exactement quoi faire (et dans quel ordre).",
+          "Éviter les erreurs qui font perdre du temps et de l’énergie.",
+          "Passer à l’action avec une checklist ultra simple.",
+        ];
+
+  const features = featuresSeed.map((line) => {
+    const parts = line.split(":", 2);
+    if (parts.length === 2) {
+      return {
+        t: softenClamp(parts[0].trim(), 42),
+        d: softenClamp(parts[1].trim(), 90),
+      };
+    }
+    return { t: softenClamp(line, 42), d: "" };
+  });
+
+  return {
+    hero_badge: softenClamp(badge, 40),
+    hero_title: softenClamp(rawTitle, 110),
+    hero_title_accent: "maintenant",
+    hero_subtitle: softenClamp(rawSubtitle, 220),
+    cta_text: "Je le veux",
+    reassurance_text: reassurance,
+
+    section_title: "Ce que tu vas obtenir",
+    section_subtitle:
+      "Un contenu court, utile et concret — pensé pour être appliqué tout de suite.",
+    features,
+  };
+}
+
+function deriveCapture05Content(params: {
+  resultText: string;
+  offerName?: string;
+  promise?: string;
+}): Record<string, unknown> {
+  const rawTitle =
+    pickFirstMeaningfulLine(params.resultText) ||
+    params.promise ||
+    params.offerName ||
+    "Relève le challenge";
+
+  const rawSubtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "Un challenge guidé pour avancer vite, sans te disperser, avec des étapes claires.";
+
+  const bullets = extractBullets(params.resultText, 6);
+
+  const pretitleSource = (params.offerName || "").trim();
+  const pretitle =
+    pretitleSource && pretitleSource.length <= 34
+      ? pretitleSource
+      : "CHALLENGE";
+
+  const reassurance = softenClamp(pickReassurance(params.resultText), 120);
+
+  const steps = (bullets.length ? bullets : [
+    "Jour 1 : clarifier l’objectif et poser la stratégie.",
+    "Jour 2 : dérouler le plan d’action sans blocage.",
+    "Jour 3 : passer à l’exécution avec une checklist.",
+  ])
+    .slice(0, 5)
+    .map((s) => softenClamp(s, 90));
+
+  const sideBadge =
+    extractKeyNumber(params.resultText) || "3 jours";
+
+  return {
+    hero_pretitle: pretitle,
+    hero_title: softenClamp(rawTitle, 110),
+    hero_subtitle: softenClamp(rawSubtitle, 220),
+    steps,
+    cta_text: "Je rejoins le challenge",
+    reassurance_text: reassurance,
+    side_badge: softenClamp(sideBadge, 22),
+    side_title: "Ce que tu vas débloquer",
+    side_text:
+      "Une structure simple + des actions concrètes pour avancer dès aujourd’hui.",
   };
 }
 
@@ -477,11 +637,29 @@ export function FunnelForm(props: FunnelFormProps) {
             offerName: offerLabel,
             promise,
           })
-        : deriveCapture01Content({
-            resultText: result,
-            offerName: offerLabel,
-            promise,
-          });
+        : templateId === "capture-03"
+          ? deriveCapture03Content({
+              resultText: result,
+              offerName: offerLabel,
+              promise,
+            })
+          : templateId === "capture-04"
+            ? deriveCapture04Content({
+                resultText: result,
+                offerName: offerLabel,
+                promise,
+              })
+            : templateId === "capture-05"
+              ? deriveCapture05Content({
+                  resultText: result,
+                  offerName: offerLabel,
+                  promise,
+                })
+              : deriveCapture01Content({
+                  resultText: result,
+                  offerName: offerLabel,
+                  promise,
+                });
 
     setIsRendering(true);
     setHtmlPreview("");
@@ -522,7 +700,10 @@ export function FunnelForm(props: FunnelFormProps) {
       setHtmlPreview(previewHtml);
       setHtmlKit(kitHtml);
       setOutputTab("html");
-      toast({ title: "Généré", description: "Preview HTML et code Systeme prêts." });
+      toast({
+        title: "Généré",
+        description: "Preview HTML et code Systeme prêts.",
+      });
     } catch (e: any) {
       toast({
         title: "Erreur",
@@ -580,14 +761,18 @@ export function FunnelForm(props: FunnelFormProps) {
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label>Offre (pyramide)</Label>
-                <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+                <Select
+                  value={selectedOfferId}
+                  onValueChange={setSelectedOfferId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choisir une offre..." />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredOffers.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        {o.name ?? "(Sans nom)"} {o.level ? `— ${o.level}` : ""}
+                        {o.name ?? "(Sans nom)"}{" "}
+                        {o.level ? `— ${o.level}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -791,10 +976,19 @@ export function FunnelForm(props: FunnelFormProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="capture-01">
-                          Capture 01 — Capture Ads
+                          Capture 01 — Clean Blue
                         </SelectItem>
                         <SelectItem value="capture-02">
-                          Capture 02 — Dream Team
+                          Capture 02 — Bold Red
+                        </SelectItem>
+                        <SelectItem value="capture-03">
+                          Capture 03 — Serif Soft
+                        </SelectItem>
+                        <SelectItem value="capture-04">
+                          Capture 04 — Orange Minimal
+                        </SelectItem>
+                        <SelectItem value="capture-05">
+                          Capture 05 — Navy Challenge
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -835,8 +1029,8 @@ export function FunnelForm(props: FunnelFormProps) {
                     />
                   ) : (
                     <div className="p-4 text-sm text-muted-foreground">
-                      Clique sur “Prévisualiser en HTML” pour générer la page (après
-                      génération du texte).
+                      Clique sur “Prévisualiser en HTML” pour générer la page
+                      (après génération du texte).
                     </div>
                   )}
                 </div>
