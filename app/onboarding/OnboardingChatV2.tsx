@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,7 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
 }
 
 export function OnboardingChatV2(props: { firstName?: string | null }) {
+  const router = useRouter();
   const { toast } = useToast();
   const firstName = (props.firstName ?? "").trim();
 
@@ -63,6 +65,7 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -73,6 +76,33 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     () => input.trim().length > 0 && !isSending && !isDone,
     [input, isSending, isDone],
   );
+
+  const finalize = async () => {
+    if (isFinalizing) return;
+    setIsFinalizing(true);
+
+    try {
+      // 1) Marquer onboarding complété (source de vérité côté app)
+      await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
+
+      // 2) Déclencher la génération stratégie/plan (non bloquant)
+      // On ne bloque pas l'utilisateur si ça échoue.
+      fetch("/api/strategy", { method: "POST" }).catch(() => null);
+
+      ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
+
+      // 3) Redirection douce vers le dashboard
+      router.push("/app");
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Impossible de finaliser l’onboarding.",
+        variant: "destructive",
+      });
+      setIsFinalizing(false);
+    }
+  };
 
   const send = async () => {
     if (!canSend) return;
@@ -101,8 +131,8 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
 
       if (reply.done) {
         setIsDone(true);
-        await postJSON("/api/onboarding/complete", { diagnostic_completed: true });
-        ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
+        // On finalise en arrière-plan mais on garde l’UX fluide
+        void finalize();
       }
     } catch (e) {
       toast({
@@ -123,16 +153,17 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
         </div>
         <div>
           <div className="text-xl font-semibold">Onboarding</div>
-          <div className="text-sm text-muted-foreground">
-            Un échange simple pour personnaliser Tipote.
-          </div>
+          <div className="text-sm text-muted-foreground">Un échange simple pour personnaliser Tipote.</div>
         </div>
       </div>
 
       <Card className="p-4 sm:p-6">
         <div className="space-y-4">
           {messages.map((m, idx) => (
-            <div key={idx} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start")}>
+            <div
+              key={idx}
+              className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start")}
+            >
               <div
                 className={cn(
                   "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed",
@@ -165,22 +196,35 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
               {isDone
-                ? "Onboarding terminé. Redirection possible depuis le dashboard."
+                ? isFinalizing
+                  ? "On finalise… tu arrives sur ton dashboard."
+                  : "Onboarding terminé ✅"
                 : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
             </div>
 
-            <Button onClick={send} disabled={!canSend}>
-              {isSending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Envoi…
-                </>
-              ) : isDone ? (
-                "Terminé"
-              ) : (
-                "Envoyer"
-              )}
-            </Button>
+            {isDone ? (
+              <Button onClick={finalize} disabled={isFinalizing}>
+                {isFinalizing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Finalisation…
+                  </>
+                ) : (
+                  "Aller au dashboard"
+                )}
+              </Button>
+            ) : (
+              <Button onClick={send} disabled={!canSend}>
+                {isSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Envoi…
+                  </>
+                ) : (
+                  "Envoyer"
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </Card>

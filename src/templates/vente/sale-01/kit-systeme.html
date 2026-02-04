@@ -1,0 +1,205 @@
+<div class="sale-01">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="nav-badge">
+        <span>{{nav_badge}}</span>
+      </div>
+      <div class="nav-links">
+        <a href="#intervenant">{{nav_link_1}}</a>
+        <a href="#programme">{{nav_link_2}}</a>
+        <a href="#temoignages">{{nav_link_3}}</a>
+      </div>
+      <a class="nav-cta" href="#reservation">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="container hero-grid">
+      <div>
+        <div class="pill">{{hero_pill}}</div>
+        <h1>{{hero_title}}</h1>
+        <p class="hero-sub">{{hero_subtitle}}</p>
+        {{#hero_quote}}
+        <div class="hero-quote">“{{.}}”</div>
+        {{/hero_quote}}
+
+        <div class="stats">
+          <div class="stat">
+            <div class="n">{{stat_1_number}}</div>
+            <div class="d">{{stat_1_label}}</div>
+          </div>
+          <div class="stat">
+            <div class="n">{{stat_2_number}}</div>
+            <div class="d">{{stat_2_label}}</div>
+          </div>
+          <div class="stat">
+            <div class="n">{{stat_3_number}}</div>
+            <div class="d">{{stat_3_label}}</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-card" id="reservation">
+        <div class="media">{{hero_media_label}}</div>
+        <div class="content">
+          <div class="cta-main">
+            <a class="btn-primary" href="#reservation">{{cta_primary}}</a>
+            <a class="btn-secondary" href="#contact">{{cta_secondary}}</a>
+          </div>
+          <p class="mini">{{cta_micro}}</p>
+
+          <div class="systeme-slot systeme-form" style="margin-top:14px">
+            <!-- SLOT SYSTEME -->
+            Ajoutez ici un BOUTON / FORMULAIRE SYSTEME (commande / réservation)
+          </div>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <section class="section" id="intervenant">
+    <div class="container">
+      <h2>{{section_1_title}}</h2>
+      <p class="lead">{{section_1_text}}</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>{{speaker_1_title}}</h3>
+          <p>{{speaker_1_text}}</p>
+        </div>
+        <div class="card">
+          <h3>{{speaker_2_title}}</h3>
+          <p>{{speaker_2_text}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt" id="programme">
+    <div class="container">
+      <h2>{{section_2_title}}</h2>
+      <p class="lead">{{section_2_text}}</p>
+
+      <ul class="bullets">
+        {{#program_bullets}}
+        <li>
+          <span class="dot"></span>
+          <p>{{.}}</p>
+        </li>
+        {{/program_bullets}}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="bonus">
+    <div class="container">
+      <h2>{{section_3_title}}</h2>
+      <p class="lead">{{section_3_text}}</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>{{bonus_1_title}}</h3>
+          <p>{{bonus_1_text}}</p>
+        </div>
+        <div class="card">
+          <h3>{{bonus_2_title}}</h3>
+          <p>{{bonus_2_text}}</p>
+        </div>
+        <div class="card">
+          <h3>{{bonus_3_title}}</h3>
+          <p>{{bonus_3_text}}</p>
+        </div>
+        <div class="card">
+          <h3>{{bonus_4_title}}</h3>
+          <p>{{bonus_4_text}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt" id="offres">
+    <div class="container">
+      <h2>{{pricing_title}}</h2>
+      <p class="lead">{{pricing_text}}</p>
+
+      <div class="pricing">
+        <div class="price">
+          <span class="tag">{{price_1_tag}}</span>
+          <div class="name">{{price_1_name}}</div>
+          {{#price_1_strike}}<p class="strike">{{.}}</p>{{/price_1_strike}}
+          <div class="amount">{{price_1_amount}}</div>
+          <ul class="list">
+            {{#price_1_items}}
+            <li><span class="check"></span><span>{{.}}</span></li>
+            {{/price_1_items}}
+          </ul>
+          <div class="buy"><a href="#reservation">{{price_1_cta}}</a></div>
+        </div>
+
+        <div class="price featured">
+          <span class="tag">{{price_2_tag}}</span>
+          <div class="name">{{price_2_name}}</div>
+          {{#price_2_strike}}<p class="strike">{{.}}</p>{{/price_2_strike}}
+          <div class="amount">{{price_2_amount}}</div>
+          <ul class="list">
+            {{#price_2_items}}
+            <li><span class="check"></span><span>{{.}}</span></li>
+            {{/price_2_items}}
+          </ul>
+          <div class="buy"><a href="#reservation">{{price_2_cta}}</a></div>
+        </div>
+
+        <div class="price">
+          <span class="tag">{{price_3_tag}}</span>
+          <div class="name">{{price_3_name}}</div>
+          {{#price_3_strike}}<p class="strike">{{.}}</p>{{/price_3_strike}}
+          <div class="amount">{{price_3_amount}}</div>
+          <ul class="list">
+            {{#price_3_items}}
+            <li><span class="check"></span><span>{{.}}</span></li>
+            {{/price_3_items}}
+          </ul>
+          <div class="buy"><a href="#reservation">{{price_3_cta}}</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="temoignages">
+    <div class="container">
+      <h2>{{testimonials_title}}</h2>
+      <p class="lead">{{testimonials_text}}</p>
+
+      <ul class="bullets">
+        {{#testimonials}}
+        <li>
+          <span class="dot"></span>
+          <p>{{.}}</p>
+        </li>
+        {{/testimonials}}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section alt" id="faq">
+    <div class="container">
+      <h2>{{faq_title}}</h2>
+      <p class="lead">{{faq_text}}</p>
+
+      <div class="faq">
+        {{#faq_items}}
+        <details>
+          <summary>{{question}}</summary>
+          <p>{{answer}}</p>
+        </details>
+        {{/faq_items}}
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" id="contact">
+    <div class="container">
+      <p>{{footer_text}}</p>
+    </div>
+  </footer>
+</div>
