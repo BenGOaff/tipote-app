@@ -1,14 +1,14 @@
-<div class="sale-10" id="top">
+<div class="sale-11" id="top">
   <nav class="nav">
     <div class="container nav-inner">
       <div class="brand">
-        <span class="mark">✿</span>
+        <span class="mark">▶</span>
         <span class="name">{{brand_name}}</span>
       </div>
 
       <div class="links">
-        <a href="#promise">{{nav_link_1}}</a>
-        <a href="#program">{{nav_link_2}}</a>
+        <a href="#method">{{nav_link_1}}</a>
+        <a href="#modules">{{nav_link_2}}</a>
         <a href="#faq">{{nav_link_3}}</a>
       </div>
 
@@ -17,6 +17,16 @@
   </nav>
 
   <header class="hero">
+    <div class="hero-bg">
+      {{#hero_bg_video_url}}
+      <video class="bg-video" autoplay muted loop playsinline>
+        <source src="{{.}}" type="video/mp4" />
+      </video>
+      {{/hero_bg_video_url}}
+      <div class="bg-overlay"></div>
+      <div class="bg-glow"></div>
+    </div>
+
     <div class="container hero-inner">
       {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
 
@@ -29,15 +39,14 @@
 
       <div class="hero-grid">
         <div class="hero-left">
-          <div class="glass">
-            <div class="glass-head">
+          <div class="panel">
+            <div class="panel-head">
               <div class="pill">{{hero_pill}}</div>
-              <div class="seal">{{hero_seal}}</div>
+              <div class="chip">{{hero_chip}}</div>
             </div>
 
             {{#hero_intro}}<p class="intro">{{.}}</p>{{/hero_intro}}
 
-            {{#hero_bullets_title}}<div class="list-title">{{.}}</div>{{/hero_bullets_title}}
             <ul class="list">
               {{#hero_bullets}}
               <li>
@@ -50,21 +59,30 @@
             {{#hero_note}}<div class="note">{{.}}</div>{{/hero_note}}
           </div>
 
-          <div class="soft-proof">
-            <div class="proof-title">{{proof_title}}</div>
-            <div class="proof-grid">
-              {{#proof_items}}
-              <div class="proof-item">
-                <div class="p-k">{{k}}</div>
-                <div class="p-v">{{v}}</div>
+          <div class="clips" id="method">
+            <div class="clips-title">{{clips_title}}</div>
+            <div class="clips-grid">
+              {{#clips}}
+              <div class="clip">
+                <div class="clip-media">
+                  {{#clip_video_urls}}
+                  <video class="clip-video" autoplay muted loop playsinline>
+                    <source src="{{.}}" type="video/mp4" />
+                  </video>
+                  {{/clip_video_urls}}
+                  {{#clip_placeholder}}
+                  <div class="clip-placeholder">{{.}}</div>
+                  {{/clip_placeholder}}
+                </div>
+                <div class="clip-cap">{{clip_caption}}</div>
               </div>
-              {{/proof_items}}
+              {{/clips}}
             </div>
           </div>
         </div>
 
-        <div class="hero-right">
-          <div class="checkout-card" id="checkout">
+        <div class="hero-right" id="checkout">
+          <div class="checkout-card">
             <div class="price-block">
               <div class="price-label">{{price_label}}</div>
               <div class="price-row">
@@ -103,6 +121,17 @@
               {{/trust_items}}
             </div>
           </div>
+
+          <div class="side-card">
+            <div class="side-title">{{side_title}}</div>
+            <div class="side-text">{{side_text}}</div>
+            <ul class="side-list">
+              {{#side_points}}
+              <li><span class="spark">✦</span><span>{{.}}</span></li>
+              {{/side_points}}
+            </ul>
+            <a class="side-cta" href="#checkout">{{side_cta}}</a>
+          </div>
         </div>
       </div>
 
@@ -110,65 +139,28 @@
     </div>
   </header>
 
-  <section class="promise" id="promise">
+  <section class="modules" id="modules">
     <div class="container">
       <div class="section-head">
-        <h2>{{promise_title}}</h2>
-        <p class="lead">{{promise_subtitle}}</p>
+        <h2>{{modules_title}}</h2>
+        <p class="lead">{{modules_subtitle}}</p>
       </div>
 
-      <div class="promise-grid">
-        {{#promise_cards}}
-        <div class="promise-card">
-          <div class="pc-title">{{title}}</div>
-          <div class="pc-text">{{text}}</div>
+      <div class="module-grid">
+        {{#module_cards}}
+        <div class="module-card">
+          <div class="mc-top">
+            <div class="mc-badge">{{module_badge}}</div>
+          </div>
+          <div class="mc-title">{{module_title}}</div>
+          <div class="mc-text">{{module_text}}</div>
+          <ul class="mc-list">
+            {{#module_points}}
+            <li><span class="mini-dot"></span><span>{{.}}</span></li>
+            {{/module_points}}
+          </ul>
         </div>
-        {{/promise_cards}}
-      </div>
-    </div>
-  </section>
-
-  <section class="program" id="program">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{program_title}}</h2>
-        <p class="lead">{{program_subtitle}}</p>
-      </div>
-
-      <div class="program-grid">
-        <div class="timeline">
-          {{#modules}}
-          <div class="module">
-            <div class="m-dot"></div>
-            <div class="m-body">
-              <div class="m-kicker">{{kicker}}</div>
-              <div class="m-title">{{title}}</div>
-              <div class="m-text">{{text}}</div>
-              {{#bullets}}
-              <ul class="m-list">
-                {{#items}}<li><span class="mini-dot"></span><span>{{.}}</span></li>{{/items}}
-              </ul>
-              {{/bullets}}
-            </div>
-          </div>
-          {{/modules}}
-        </div>
-
-        <aside class="side">
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <div class="side-text">{{side_text}}</div>
-            <ul class="side-list">
-              {{#side_points}}<li><span class="spark">✦</span><span>{{.}}</span></li>{{/side_points}}
-            </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
-          </div>
-
-          <div class="guarantee">
-            <div class="g-title">{{guarantee_title}}</div>
-            <div class="g-text">{{guarantee_text}}</div>
-          </div>
-        </aside>
+        {{/module_cards}}
       </div>
 
       <div class="final-cta">
@@ -188,8 +180,8 @@
       <div class="faq-grid">
         {{#faq_items}}
         <div class="faq-item">
-          <div class="q">{{q}}</div>
-          <div class="a">{{a}}</div>
+          <div class="q">{{faq_q}}</div>
+          <div class="a">{{faq_a}}</div>
         </div>
         {{/faq_items}}
       </div>

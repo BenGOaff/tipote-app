@@ -1,14 +1,14 @@
-<div class="sale-09" id="top">
+<div class="sale-10" id="top">
   <nav class="nav">
     <div class="container nav-inner">
       <div class="brand">
-        <span class="brand-badge">★</span>
-        <span class="brand-name">{{brand_name}}</span>
+        <span class="mark">✿</span>
+        <span class="name">{{brand_name}}</span>
       </div>
 
-      <div class="nav-links">
-        <a href="#story">{{nav_link_1}}</a>
-        <a href="#offer">{{nav_link_2}}</a>
+      <div class="links">
+        <a href="#promise">{{nav_link_1}}</a>
+        <a href="#program">{{nav_link_2}}</a>
         <a href="#faq">{{nav_link_3}}</a>
       </div>
 
@@ -29,33 +29,49 @@
 
       <div class="hero-grid">
         <div class="hero-left">
-          <div class="comic-card">
-            <div class="comic-top">
-              <div class="comic-pill">{{comic_pill}}</div>
-              <div class="comic-emoji">{{comic_emoji}}</div>
+          <div class="glass">
+            <div class="glass-head">
+              <div class="pill">{{hero_pill}}</div>
+              <div class="seal">{{hero_seal}}</div>
             </div>
 
-            <div class="comic-lines">
-              {{#comic_lines}}<div class="comic-line"><span class="spark">✦</span>{{.}}</div>{{/comic_lines}}
-            </div>
+            {{#hero_intro}}<p class="intro">{{.}}</p>{{/hero_intro}}
 
-            {{#hero_bullets_title}}<div class="card-title">{{.}}</div>{{/hero_bullets_title}}
+            {{#hero_bullets_title}}<div class="list-title">{{.}}</div>{{/hero_bullets_title}}
             <ul class="list">
-              {{#hero_bullets}}<li><span class="dot"></span><span class="txt">{{.}}</span></li>{{/hero_bullets}}
+              {{#hero_bullets}}
+              <li>
+                <span class="dot"></span>
+                <span class="txt">{{.}}</span>
+              </li>
+              {{/hero_bullets}}
             </ul>
 
-            {{#hero_note}}<p class="note">{{.}}</p>{{/hero_note}}
+            {{#hero_note}}<div class="note">{{.}}</div>{{/hero_note}}
+          </div>
+
+          <div class="soft-proof">
+            <div class="proof-title">{{proof_title}}</div>
+            <div class="proof-grid">
+              {{#proof_items}}
+              <div class="proof-item">
+                <div class="p-k">{{k}}</div>
+                <div class="p-v">{{v}}</div>
+              </div>
+              {{/proof_items}}
+            </div>
           </div>
         </div>
 
         <div class="hero-right">
           <div class="checkout-card" id="checkout">
-            <div class="price-row">
+            <div class="price-block">
               <div class="price-label">{{price_label}}</div>
-              <div class="price">
-                <span class="price-main">{{price_main}}</span>
-                {{#price_sub}}<span class="price-sub">{{.}}</span>{{/price_sub}}
+              <div class="price-row">
+                <div class="price-main">{{price_main}}</div>
+                {{#price_sub}}<div class="price-sub">{{.}}</div>{{/price_sub}}
               </div>
+              {{#price_note}}<div class="price-note">{{.}}</div>{{/price_note}}
             </div>
 
             <div class="cta-title">{{cta_title}}</div>
@@ -77,73 +93,83 @@
             </div>
 
             <div class="trust">
-              {{#trust_items}}<div class="trust-item"><span class="tick">✓</span><span>{{.}}</span></div>{{/trust_items}}
+              {{#trust_items}}
+              <div class="trust-item">
+                <span class="tick">✓</span>
+                <span class="t">{{.}}</span>
+              </div>
+              {{/trust_items}}
             </div>
           </div>
         </div>
       </div>
 
-      <div class="scroll-hint">{{scroll_hint}}</div>
+      <div class="scroll">{{scroll_hint}}</div>
     </div>
   </header>
 
-  <section class="story" id="story">
+  <section class="promise" id="promise">
     <div class="container">
       <div class="section-head">
-        <h2>{{story_title}}</h2>
-        <p class="lead">{{story_subtitle}}</p>
+        <h2>{{promise_title}}</h2>
+        <p class="lead">{{promise_subtitle}}</p>
       </div>
 
-      <div class="story-grid">
-        <div class="story-card">
-          <div class="story-tag">{{story_tag_1}}</div>
-          <div class="story-body">
-            {{#story_paragraphs}}<p>{{.}}</p>{{/story_paragraphs}}
-          </div>
+      <div class="promise-grid">
+        {{#promise_cards}}
+        <div class="promise-card">
+          <div class="pc-title">{{title}}</div>
+          <div class="pc-text">{{text}}</div>
         </div>
-
-        <div class="story-side">
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <ul class="side-list">
-              {{#side_points}}<li><span class="bolt">⚡</span><span>{{.}}</span></li>{{/side_points}}
-            </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
-          </div>
-
-          <div class="quote">
-            <div class="quote-mark">“</div>
-            <div class="quote-text">{{quote_text}}</div>
-            {{#quote_author}}<div class="quote-author">— {{.}}</div>{{/quote_author}}
-          </div>
-        </div>
+        {{/promise_cards}}
       </div>
     </div>
   </section>
 
-  <section class="offer" id="offer">
+  <section class="program" id="program">
     <div class="container">
       <div class="section-head">
-        <h2>{{offer_title}}</h2>
-        <p class="lead">{{offer_subtitle}}</p>
+        <h2>{{program_title}}</h2>
+        <p class="lead">{{program_subtitle}}</p>
       </div>
 
-      <div class="offer-grid">
-        {{#offer_blocks}}
-        <div class="offer-card">
-          <div class="offer-k">{{block_kicker}}</div>
-          <div class="offer-t">{{block_title}}</div>
-          <div class="offer-d">{{block_text}}</div>
-          {{#block_bullets}}
-          <ul class="mini">
-            {{#items}}<li><span class="dot2"></span><span>{{.}}</span></li>{{/items}}
-          </ul>
-          {{/block_bullets}}
+      <div class="program-grid">
+        <div class="timeline">
+          {{#modules}}
+          <div class="module">
+            <div class="m-dot"></div>
+            <div class="m-body">
+              <div class="m-kicker">{{kicker}}</div>
+              <div class="m-title">{{title}}</div>
+              <div class="m-text">{{text}}</div>
+              {{#bullets}}
+              <ul class="m-list">
+                {{#items}}<li><span class="mini-dot"></span><span>{{.}}</span></li>{{/items}}
+              </ul>
+              {{/bullets}}
+            </div>
+          </div>
+          {{/modules}}
         </div>
-        {{/offer_blocks}}
+
+        <aside class="side">
+          <div class="side-card">
+            <div class="side-title">{{side_title}}</div>
+            <div class="side-text">{{side_text}}</div>
+            <ul class="side-list">
+              {{#side_points}}<li><span class="spark">✦</span><span>{{.}}</span></li>{{/side_points}}
+            </ul>
+            <a class="side-cta" href="#checkout">{{side_cta}}</a>
+          </div>
+
+          <div class="guarantee">
+            <div class="g-title">{{guarantee_title}}</div>
+            <div class="g-text">{{guarantee_text}}</div>
+          </div>
+        </aside>
       </div>
 
-      <div class="big-cta">
+      <div class="final-cta">
         <a class="btn-primary" href="#checkout">{{final_cta}}</a>
         {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
       </div>
@@ -174,9 +200,9 @@
 
   <footer class="footer">
     <div class="container footer-inner">
-      <div class="footer-left">
-        <div class="footer-title">{{footer_title}}</div>
-        <div class="footer-text">{{footer_text}}</div>
+      <div class="left">
+        <div class="ft">{{footer_title}}</div>
+        <div class="fs">{{footer_text}}</div>
       </div>
       <a class="back" href="#top">{{footer_back_to_top}}</a>
     </div>

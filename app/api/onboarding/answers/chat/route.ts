@@ -4,6 +4,10 @@
 // - Stocke la conversation (onboarding_sessions/onboarding_messages)
 // - Stocke des facts propres (onboarding_facts) via RPC upsert_onboarding_fact
 // - Synchronise quelques champs clés vers business_profiles (source de vérité UI) sans écraser par des vides
+//
+// PATCH (A2) :
+// - Compat "done" (prompt) + "should_finish" (backend) => pas de blocage finish
+// - Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -35,7 +39,9 @@ const AiResponseSchema = z
         }),
       )
       .default([]),
-    should_finish: z.boolean().optional().default(false),
+    // compat: prompt renvoie "done", backend historique "should_finish"
+    should_finish: z.boolean().optional(),
+    done: z.boolean().optional(),
   })
   .strict();
 
@@ -67,6 +73,37 @@ function factValueIsEmpty(v: unknown) {
   if (Array.isArray(v) && v.length === 0) return true;
   if (typeof v === "object" && v && Object.keys(v as any).length === 0) return true;
   return false;
+}
+
+function normalizeStringArray(v: unknown): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => (typeof x === "string" ? x.trim() : String(x ?? "").trim()))
+      .filter((s) => s.length > 0);
+  }
+  if (typeof v === "string") {
+    return v
+      .split(/\r?\n|,|;|•|\|/g)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  return [];
+}
+
+function buildPrimaryActivityQuestion(locale: "fr" | "en", activities: string[]) {
+  const clean = activities.map((a) => a.trim()).filter((a) => a.length > 0);
+  const shown = clean.slice(0, 3);
+  const list = shown.map((a) => `- ${a}`).join("\n");
+  if (locale === "en") {
+    const intro = clean.length > 0 ? `You mentioned several activities:\n${list}\n\n` : "";
+    return (
+      intro +
+      "Which ONE do you want to prioritize with Tipote for now? (just answer with the name of the activity)"
+    );
+  }
+  const intro = clean.length > 0 ? `Tu m’as parlé de plusieurs activités :\n${list}\n\n` : "";
+  return intro + "Parmi celles-ci, laquelle veux-tu développer en priorité avec Tipote pour l’instant ?";
 }
 
 function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
@@ -245,6 +282,9 @@ export async function POST(req: NextRequest) {
     const parsed = safeJsonParse(raw);
     const out = AiResponseSchema.parse(parsed);
 
+    // ✅ Compat finish flag
+    let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
+
     // 4) apply facts (upsert) + build patch for business_profiles
     const appliedFacts: Array<{ key: string; confidence: string }> = [];
 
@@ -279,6 +319,25 @@ export async function POST(req: NextRequest) {
       await supabase.from("business_profiles").update(patch).eq("user_id", userId);
     }
 
+    // 4.b) ✅ Fail-safe serveur pour activité prioritaire
+    // Si activities_list >= 2 ET primary_activity absent => on force la question, et on interdit finish
+    try {
+      const mergedFacts: Record<string, unknown> = { ...knownFacts };
+      for (const f of toUpsert as any[]) mergedFacts[String(f.key)] = f.value;
+
+      const activities = normalizeStringArray((mergedFacts as any)["activities_list"]);
+      const primary = (mergedFacts as any)["primary_activity"];
+      const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
+
+      if (activities.length >= 2 && !hasPrimary) {
+        // on force la question (et on bloque finish)
+        (out as any).message = buildPrimaryActivityQuestion(locale, activities);
+        shouldFinish = false;
+      }
+    } catch {
+      // fail-open
+    }
+
     // 5) store assistant message
     const assistantMsg = out.message;
     await supabase.from("onboarding_messages").insert({
@@ -289,7 +348,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 6) optionally finish onboarding
-    if (out.should_finish) {
+    if (shouldFinish) {
       // marque BP onboarding_completed = true
       await supabase
         .from("business_profiles")
@@ -304,7 +363,9 @@ export async function POST(req: NextRequest) {
       sessionId,
       message: assistantMsg,
       appliedFacts,
-      shouldFinish: out.should_finish,
+      // compat front : on renvoie les deux clés
+      shouldFinish,
+      done: shouldFinish,
     });
   } catch (err: any) {
     const message = err?.message ?? "Unknown error";

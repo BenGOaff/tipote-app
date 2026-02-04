@@ -1,0 +1,18 @@
+{
+  "variants": [
+    {
+      "id": "classic",
+      "label": "Classic",
+      "maxWidth": "1180px",
+      "sectionPadding": "86px 24px",
+      "heroAlign": "center"
+    },
+    {
+      "id": "wide",
+      "label": "Wide",
+      "maxWidth": "1280px",
+      "sectionPadding": "78px 24px",
+      "heroAlign": "center"
+    }
+  ]
+}
