@@ -2,7 +2,9 @@
 // Dashboard "Aujourd'hui" — rendu pixel-perfect Lovable (Today.tsx)
 // - Protégé par l'auth Supabase
 // - Si onboarding non complété => redirect /onboarding
-// - Si plan/pyramide manquants => redirect /strategy/pyramids
+// NOTE: on NE bloque plus sur la stratégie/pyramide ici.
+// L'utilisateur arrive sur un dashboard immédiatement (objectif: expérience personnalisée),
+// et la stratégie/pyramide se gère ensuite dans /strategy.
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -17,7 +19,7 @@ export default async function TodayPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) redirect("/login");
+  if (userError || !user) redirect("/");
 
   const userId = user.id;
 
@@ -29,22 +31,6 @@ export default async function TodayPage() {
     .maybeSingle();
 
   if (profileError || !profile?.onboarding_completed) redirect("/onboarding");
-
-  // Plan stratégique
-  const { data: planRow, error: planError } = await supabase
-    .from("business_plan")
-    .select("plan_json")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (planError || !planRow?.plan_json) redirect("/strategy/pyramids");
-
-  const planJson = (planRow.plan_json ?? null) as any;
-  const selectedIndex = planJson?.selected_offer_pyramid_index;
-
-  if (selectedIndex === null || typeof selectedIndex === "undefined") {
-    redirect("/strategy/pyramids");
-  }
 
   return <TodayLovable />;
 }

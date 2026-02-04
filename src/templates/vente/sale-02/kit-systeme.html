@@ -1,0 +1,142 @@
+<div class="sale-02">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="pill">
+        <span>{{nav_badge}}</span>
+        {{#nav_badge_scribble}}<span class="scribble">{{.}}</span>{{/nav_badge_scribble}}
+      </div>
+      <div class="nav-links">
+        <a href="#details">{{nav_link_1}}</a>
+        <a href="#programme">{{nav_link_2}}</a>
+        <a href="#temoignages">{{nav_link_3}}</a>
+      </div>
+      <a class="nav-cta" href="#reservation">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="container hero-grid">
+      <div>
+        <div class="pill">
+          <span>{{hero_pill}}</span>
+          {{#hero_pill_scribble}}<span class="scribble">{{.}}</span>{{/hero_pill_scribble}}
+        </div>
+        <h1>{{hero_title}}</h1>
+        <p class="hero-sub">{{hero_subtitle}}</p>
+
+        <ul class="hero-highlights">
+          {{#hero_bullets}}
+          <li><span class="dot"></span><span>{{.}}</span></li>
+          {{/hero_bullets}}
+        </ul>
+      </div>
+
+      <aside class="order" id="reservation">
+        <div class="pill">
+          <span>{{order_pill}}</span>
+          {{#order_pill_scribble}}<span class="scribble">{{.}}</span>{{/order_pill_scribble}}
+        </div>
+
+        <div class="price">
+          <div class="now">{{price_now}}</div>
+          <div class="old">{{price_old}}</div>
+        </div>
+
+        <div class="cta">
+          <a class="btn" href="#checkout">{{cta_main}}</a>
+          <p class="micro">{{cta_micro}}</p>
+        </div>
+
+        <div class="order-form" id="checkout">
+          FORMULAIRE DE COMMANDE SÉCURISÉ<br />
+          <strong>{{checkout_title}}</strong>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <section class="section alt" id="details">
+    <div class="container">
+      <h2>{{details_title}}</h2>
+      <p class="lead">{{details_text}}</p>
+
+      {{#video_url}}
+      <div class="video">
+        <video controls playsinline preload="metadata" src="{{.}}"></video>
+      </div>
+      {{/video_url}}
+    </div>
+  </section>
+
+  <section class="section" id="programme">
+    <div class="container">
+      <h2>{{agenda_title}}</h2>
+      <p class="lead">{{agenda_subtitle}}</p>
+
+      <div class="agenda">
+        {{#days}}
+        <div class="day">
+          <div class="top">
+            <div class="n">{{day_label}}</div>
+            <div class="date">{{day_date}}</div>
+          </div>
+          <div class="title">{{day_title}}</div>
+          <ul class="bullets">
+            {{#day_bullets}}
+            <li><span class="dot"></span><span>{{.}}</span></li>
+            {{/day_bullets}}
+          </ul>
+        </div>
+        {{/days}}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt" id="temoignages">
+    <div class="container">
+      <h2>{{testimonials_title}}</h2>
+      <p class="lead">{{testimonials_subtitle}}</p>
+
+      <div class="testimonials">
+        {{#testimonials}}
+        <div class="t-card">
+          <p class="q">“{{text}}”</p>
+          <div class="a">{{author}}</div>
+          {{#role}}<div class="r">{{.}}</div>{{/role}}
+        </div>
+        {{/testimonials}}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="grid-3">
+        {{#value_cards}}
+        <div class="card">
+          <div class="k">{{title}}</div>
+          <div class="d">{{desc}}</div>
+        </div>
+        {{/value_cards}}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="container">
+      <div class="guarantee">
+        <h3>{{guarantee_title}}</h3>
+        <p>{{guarantee_text}}</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div>
+        {{footer_links}}
+      </div>
+      <div style="margin-top: 10px">{{footer_disclaimer}}</div>
+    </div>
+  </footer>
+</div>

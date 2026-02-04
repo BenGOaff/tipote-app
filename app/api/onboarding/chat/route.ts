@@ -1,7 +1,12 @@
 // app/api/onboarding/chat/route.ts
-// Wrapper route for onboarding chat v2.
-// L’implémentation vit dans /app/api/onboarding/answers/chat/route.ts (historique).
-// On expose /api/onboarding/chat pour que la nouvelle UI fonctionne,
-// tout en gardant l'ancien chemin intact (zéro régression).
+// Alias stable pour le chat onboarding v2.
+// ⚠️ Next.js n'autorise pas le "re-export" de `runtime` / `dynamic` / `maxDuration`.
+// Donc on les redéclare ici, et on ré-exporte uniquement le handler POST.
 
-export { runtime, dynamic, maxDuration, POST } from "../answers/chat/route";
+import { POST as InnerPOST } from "../answers/chat/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+export const POST = InnerPOST;
