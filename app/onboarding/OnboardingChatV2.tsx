@@ -1,434 +1,251 @@
-// app/api/onboarding/chat/route.ts
-// Onboarding conversationnel v2 (agent Clarifier)
-// - N'écrase pas l'onboarding existant (answers/complete restent en place)
-// - Stocke la conversation (onboarding_sessions/onboarding_messages)
-// - Stocke des facts propres (onboarding_facts) via RPC upsert_onboarding_fact
-// - Synchronise quelques champs clés vers business_profiles (source de vérité UI) sans écraser par des vides
-//
-// PATCH (A2 + DB ALIGNMENT) :
-// - Compat "done" (prompt) + "should_finish" (backend) + "shouldFinish" (API) => pas de blocage finish
-// - Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
-// - Align DB non-null : onboarding_sessions(onboarding_version,started_at,meta), onboarding_messages(extracted)
-// - onboarding_facts: confidence TEXT (high|medium|low) + fallback upsert si RPC absente
-// - Response: renvoie done + shouldFinish pour compat UI
+// app/onboarding/OnboardingChatV2.tsx
+"use client";
 
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getUserContextBundle, userContextToPromptText } from "@/lib/onboarding/userContext";
-import { openai } from "@/lib/openaiClient";
-import { buildOnboardingClarifierSystemPrompt } from "@/lib/prompts/onboarding/system";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { Loader2, Sparkles } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+type ChatRole = "assistant" | "user";
 
-const BodySchema = z
-  .object({
-    message: z.string().trim().min(1).max(4000),
-    sessionId: z.string().uuid().optional(),
-  })
-  .strict();
+type ChatMsg = {
+  role: ChatRole;
+  content: string;
+  at: string;
+};
 
-const AiResponseSchema = z
-  .object({
-    message: z.string().trim().min(1).max(4000),
-    facts: z
-      .array(
-        z.object({
-          key: z.string().trim().min(1).max(80),
-          value: z.any().optional(),
-          confidence: z.union([z.enum(["high", "medium", "low"]), z.number().min(0).max(1)]).optional(),
-          source: z.string().trim().min(1).max(80).optional(),
-        }),
-      )
-      .default([]),
-    should_finish: z.boolean().optional(),
-    done: z.boolean().optional(),
-  })
-  .strict();
+type ApiReply = {
+  sessionId: string;
+  message: string;
+  appliedFacts?: Array<{ key: string; confidence: string }>;
+  done?: boolean;
+  shouldFinish?: boolean;
+  should_finish?: boolean;
+  error?: string;
+};
 
-type Conf = "high" | "medium" | "low";
+function nowIso() {
+  return new Date().toISOString();
+}
 
-function safeJsonParse(input: string): any {
-  try {
-    return JSON.parse(input);
-  } catch {
-    return null;
+async function postJSON<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+
+  if (!res.ok) {
+    throw new Error((json as any)?.error || `HTTP ${res.status}`);
   }
+
+  return json as T;
 }
 
-function isNonEmptyString(v: unknown): v is string {
-  return typeof v === "string" && v.trim().length > 0;
-}
+export function OnboardingChatV2(props: { firstName?: string | null }) {
+  const router = useRouter();
+  const { toast } = useToast();
 
-function pickLocaleFromHeaders(req: NextRequest) {
-  const h = req.headers.get("accept-language") || "";
-  const fr = h.toLowerCase().includes("fr");
-  return fr ? "fr" : "en";
-}
+  const firstName = (props.firstName ?? "").trim();
 
-function normalizeKey(k: string) {
-  return k.trim().toLowerCase();
-}
-
-function normalizeConfidence(v: unknown): Conf {
-  if (v === "high" || v === "medium" || v === "low") return v;
-  if (typeof v === "number" && Number.isFinite(v)) {
-    if (v >= 0.8) return "high";
-    if (v >= 0.55) return "medium";
-    return "low";
-  }
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    if (s === "high" || s === "medium" || s === "low") return s as Conf;
-    const n = Number(s);
-    if (Number.isFinite(n)) return normalizeConfidence(n);
-  }
-  return "medium";
-}
-
-function factValueIsEmpty(v: unknown) {
-  if (v === null || v === undefined) return true;
-  if (typeof v === "string" && v.trim() === "") return true;
-  if (Array.isArray(v) && v.length === 0) return true;
-  if (typeof v === "object" && v && Object.keys(v as any).length === 0) return true;
-  return false;
-}
-
-function normalizeStringArray(v: unknown): string[] {
-  if (!v) return [];
-  if (Array.isArray(v)) {
-    return v
-      .map((x) => (typeof x === "string" ? x.trim() : String(x ?? "").trim()))
-      .filter((s) => s.length > 0);
-  }
-  if (typeof v === "string") {
-    return v
-      .split(/\r?\n|,|;|•|\|/g)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
-  return [];
-}
-
-function buildPrimaryActivityQuestion(locale: "fr" | "en", activities: string[]) {
-  const clean = activities.map((a) => a.trim()).filter((a) => a.length > 0);
-  const shown = clean.slice(0, 3);
-  const list = shown.map((a) => `- ${a}`).join("\n");
-  if (locale === "en") {
-    const intro = clean.length > 0 ? `You mentioned several activities:\n${list}\n\n` : "";
-    return intro + "Which ONE do you want to prioritize with Tipote for now? (just answer with the name of the activity)";
-  }
-  const intro = clean.length > 0 ? `Tu m’as parlé de plusieurs activités :\n${list}\n\n` : "";
-  return intro + "Parmi celles-ci, laquelle veux-tu développer en priorité avec Tipote pour l’instant ?";
-}
-
-function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
-  // Patch minimal & safe : on n'écrase jamais avec du vide
-  const patch: Record<string, any> = {};
-  for (const f of facts) {
-    const k = normalizeKey(f.key);
-    const v = (f as any).value;
-
-    if (factValueIsEmpty(v)) continue;
-
-    if (k === "first_name" || k === "firstname" || k === "prenom") patch.first_name = String(v);
-    if (k === "country" || k === "pays") patch.country = String(v);
-    if (k === "niche") patch.niche = String(v);
-    if (k === "mission") patch.mission = String(v);
-
-    if (k === "business_maturity" || k === "maturity" || k === "niveau") patch.business_maturity = String(v);
-
-    if (k === "audience_social" || k === "social_audience") {
-      const n = Number(String(v).replace(",", "."));
-      if (Number.isFinite(n)) patch.audience_social = Math.max(0, Math.round(n));
-    }
-
-    if (k === "audience_email" || k === "email_list" || k === "liste_email") {
-      const n = Number(String(v).replace(",", "."));
-      if (Number.isFinite(n)) patch.audience_email = Math.max(0, Math.round(n));
-    }
-
-    if (k === "time_available" || k === "temps_dispo") patch.time_available = String(v);
-
-    if (k === "main_goal" || k === "objectif_principal") patch.main_goal = String(v);
-    if (k === "revenue_goal_monthly" || k === "objectif_revenu_mensuel") patch.revenue_goal_monthly = String(v);
-
-    if (k === "preferred_tone" || k === "tone" || k === "ton") patch.preferred_tone = String(v);
-    if (k === "content_preference" || k === "content_style") patch.content_preference = String(v);
-
-    if (k === "social_links") patch.social_links = String(v);
-
-    if (k === "has_offers") {
-      if (typeof v === "boolean") patch.has_offers = v;
-      else {
-        const s = String(v).toLowerCase().trim();
-        if (["yes", "oui", "true", "1"].includes(s)) patch.has_offers = true;
-        if (["no", "non", "false", "0"].includes(s)) patch.has_offers = false;
-      }
-    }
-
-    if (k === "offers" && v && typeof v === "object") patch.offers = v;
-  }
-  return patch;
-}
-
-export async function POST(req: NextRequest) {
-  const supabase = await getSupabaseServerClient();
-
-  try {
-    const body = BodySchema.parse(await req.json());
-    const locale = pickLocaleFromHeaders(req);
-
-    const { data: auth } = await supabase.auth.getUser();
-    const userId = auth?.user?.id;
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // 1) find or create session
-    let sessionId = body.sessionId ?? null;
-
-    if (!sessionId) {
-      const { data: created, error } = await supabase
-        .from("onboarding_sessions")
-        .insert({
-          user_id: userId,
-          status: "active",
-          onboarding_version: "v2",
-          started_at: new Date().toISOString(),
-          meta: {},
-        })
-        .select("id")
-        .single();
-
-      if (error || !created?.id) {
-        return NextResponse.json({ error: error?.message ?? "Create session error" }, { status: 400 });
-      }
-      sessionId = String(created.id);
-    } else {
-      const { data: s, error } = await supabase
-        .from("onboarding_sessions")
-        .select("id,user_id,status")
-        .eq("id", sessionId)
-        .maybeSingle();
-
-      if (error || !s?.id) {
-        return NextResponse.json({ error: "Invalid session" }, { status: 400 });
-      }
-      if (String(s.user_id) !== String(userId)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
-
-    // 2) store user message
-    const { error: insertMsgErr } = await supabase.from("onboarding_messages").insert({
-      session_id: sessionId,
-      role: "user",
-      content: body.message,
-      extracted: {},
-      created_at: new Date().toISOString(),
-    });
-    if (insertMsgErr) {
-      return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
-    }
-
-    // 3) fetch existing context
-    const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
-      supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId),
-      supabase
-        .from("onboarding_messages")
-        .select("role,content,created_at")
-        .eq("session_id", sessionId)
-        .order("created_at", { ascending: true })
-        .limit(24),
-    ]);
-
-    const knownFacts: Record<string, unknown> = {};
-    for (const f of facts ?? []) {
-      if (!f?.key) continue;
-      knownFacts[String((f as any).key)] = (f as any).value;
-    }
-
-    let userContextText = "";
-    try {
-      const bundle = await getUserContextBundle(supabase, userId);
-      userContextText = userContextToPromptText(bundle);
-    } catch {
-      userContextText = "";
-    }
-
-    const system = buildOnboardingClarifierSystemPrompt({
-      locale,
-      userFirstName: typeof (bp as any)?.first_name === "string" ? (bp as any).first_name : null,
-      userCountry: typeof (bp as any)?.country === "string" ? (bp as any).country : null,
-    });
-
-    const userPrompt = JSON.stringify(
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>(() => {
+    const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
+    return [
       {
-        goal: "Collect missing onboarding facts with minimal friction. Ask only one short question.",
-        known_facts: knownFacts,
-        business_profile_snapshot: bp ?? null,
-        conversation_history: (history ?? []).map((m: any) => ({ role: m.role, content: m.content })),
-        user_context_text: userContextText || null,
+        role: "assistant",
+        content:
+          `${greet}\n` +
+          `Tipote va t’aider à développer ton activité (offre, contenus, plan d’action).\n\n` +
+          `Si tu as plusieurs activités, liste-les brièvement.\n` +
+          `Ensuite on choisit ensemble celle à prioriser ici.\n\n` +
+          `Alors : sur quoi tu travailles en ce moment ?`,
+        at: nowIso(),
       },
-      null,
-      2,
-    );
+    ];
+  });
 
-    if (!openai) {
-      return NextResponse.json({ error: "Missing OpenAI key (OPENAI_API_KEY_OWNER)" }, { status: 500 });
-    }
+  const [input, setInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
-    const model = process.env.TIPOTE_ONBOARDING_MODEL?.trim() || "gpt-4.1";
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-    const ai = await openai.chat.completions.create({
-      model,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.35,
-      max_tokens: 900,
-    });
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
 
-    const raw = ai.choices?.[0]?.message?.content ?? "";
-    const parsed = safeJsonParse(raw);
-    const out = AiResponseSchema.parse(parsed);
+  const canSend = useMemo(() => {
+    return input.trim().length > 0 && !isSending && !isDone && !isFinalizing;
+  }, [input, isSending, isDone, isFinalizing]);
 
-    // Compat finish flag (prompt: done, backend: should_finish)
-    let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
+  const finalize = async () => {
+    if (isFinalizing) return;
+    setIsFinalizing(true);
 
-    // 4) apply facts (upsert) + build patch for business_profiles
-    const appliedFacts: Array<{ key: string; confidence: string }> = [];
-
-    const toUpsert = (out.facts || [])
-      .map((f) => ({
-        key: f.key,
-        value: (f as any).value ?? null,
-        confidence: normalizeConfidence((f as any).confidence),
-        source:
-          typeof (f as any).source === "string" && (f as any).source.trim()
-            ? (f as any).source.trim().slice(0, 80)
-            : "onboarding_chat",
-      }))
-      .filter((f) => isNonEmptyString(f.key));
-
-    if (toUpsert.length) {
-      for (const f of toUpsert) {
-        let ok = false;
-
-        // Preferred path: RPC if present
-        try {
-          const { error } = await supabase.rpc("upsert_onboarding_fact", {
-            p_user_id: userId,
-            p_key: f.key,
-            p_value: f.value,
-            p_confidence: f.confidence,
-            p_source: f.source,
-          });
-          if (!error) ok = true;
-        } catch {
-          ok = false;
-        }
-
-        // Fallback: direct upsert
-        if (!ok) {
-          try {
-            const row = {
-              user_id: userId,
-              key: f.key,
-              value: f.value ?? null,
-              confidence: f.confidence,
-              source: f.source,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-            };
-
-            const up = await supabase.from("onboarding_facts").upsert(row as any, { onConflict: "user_id,key" });
-            if (!up?.error) ok = true;
-
-            if (up?.error) {
-              const upd = await supabase
-                .from("onboarding_facts")
-                .update({
-                  value: row.value,
-                  confidence: row.confidence,
-                  source: row.source,
-                  updated_at: row.updated_at,
-                } as any)
-                .eq("user_id", userId)
-                .eq("key", f.key);
-
-              if (!upd?.error) ok = true;
-
-              if (!ok) {
-                const ins = await supabase.from("onboarding_facts").insert(row as any);
-                if (!ins?.error) ok = true;
-              }
-            }
-          } catch {
-            ok = false;
-          }
-        }
-
-        if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
-      }
-    }
-
-    const patch = mergeBusinessProfilePatchFromFacts(toUpsert as any);
-    if (Object.keys(patch).length) {
-      await supabase.from("business_profiles").update(patch).eq("user_id", userId);
-    }
-
-    // 4.b) Fail-safe serveur pour activité prioritaire
     try {
-      const mergedFacts: Record<string, unknown> = { ...knownFacts };
-      for (const f of toUpsert as any[]) mergedFacts[String(f.key)] = f.value;
+      const sid = sessionId ?? undefined;
 
-      const activities = normalizeStringArray((mergedFacts as any)["activities_list"]);
-      const primary = (mergedFacts as any)["primary_activity"];
-      const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
-
-      if (activities.length >= 2 && !hasPrimary) {
-        (out as any).message = buildPrimaryActivityQuestion(locale, activities);
-        shouldFinish = false;
+      try {
+        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
+          sessionId: sid,
+          diagnosticCompleted: true,
+        });
+      } catch {
+        // fail-open
       }
-    } catch {
-      // fail-open
+
+      try {
+        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
+      } catch {
+        // fail-open
+      }
+
+      ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
+      router.replace("/app");
+    } catch (e) {
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Impossible de finaliser l’onboarding.",
+        variant: "destructive",
+      });
+      setIsFinalizing(false);
     }
+  };
 
-    // 5) store assistant message
-    const assistantMsg = out.message;
-    await supabase.from("onboarding_messages").insert({
-      session_id: sessionId,
-      role: "assistant",
-      content: assistantMsg,
-      extracted: { facts: out.facts ?? [], done: shouldFinish },
-      created_at: new Date().toISOString(),
-    });
+  const send = async () => {
+    if (!canSend) return;
 
-    // 6) optionally finish onboarding
-    if (shouldFinish) {
-      await supabase.from("business_profiles").update({ onboarding_completed: true, onboarding_version: "v2" }).eq("user_id", userId);
+    const text = input.trim();
+    setInput("");
+    setIsSending(true);
 
-      await supabase
-        .from("onboarding_sessions")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", sessionId);
+    setMessages((prev) => [...prev, { role: "user", content: text, at: nowIso() }]);
+
+    try {
+      const reply = await postJSON<ApiReply>("/api/onboarding/chat", {
+        message: text,
+        sessionId: sessionId ?? undefined,
+      });
+
+      if (reply?.sessionId) setSessionId(reply.sessionId);
+
+      setMessages((prev) => [...prev, { role: "assistant", content: reply.message, at: nowIso() }]);
+
+      const appliedCount = Array.isArray(reply.appliedFacts) ? reply.appliedFacts.length : 0;
+      const doneFlag = Boolean(reply.shouldFinish ?? reply.should_finish ?? reply.done ?? false);
+
+      ampTrack("tipote_onboarding_chat_turn", {
+        onboarding_version: "v2_chat",
+        applied_facts_count: appliedCount,
+        done: doneFlag,
+      });
+
+      if (doneFlag) {
+        setIsDone(true);
+        void finalize();
+      }
+    } catch (e) {
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Impossible d’envoyer le message.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
     }
+  };
 
-    return NextResponse.json({
-      ok: true,
-      sessionId,
-      message: assistantMsg,
-      appliedFacts,
-      shouldFinish,
-      done: shouldFinish, // ✅ compat UI
-    });
-  } catch (err: any) {
-    const message = err?.message ?? "Unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
-  }
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
+      <div className="mb-6 flex items-center gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <div className="text-xl font-semibold">Onboarding</div>
+          <div className="text-sm text-muted-foreground">Un échange simple pour personnaliser Tipote.</div>
+        </div>
+      </div>
+
+      <Card className="p-4 sm:p-6">
+        <div className="space-y-4">
+          {messages.map((m, idx) => (
+            <div key={idx} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start")}>
+              <div
+                className={cn(
+                  "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                )}
+              >
+                {m.content}
+              </div>
+            </div>
+          ))}
+
+          <div ref={scrollRef} />
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
+            disabled={isSending || isDone || isFinalizing}
+            className="min-h-[90px]"
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {isDone
+                ? isFinalizing
+                  ? "On finalise… tu arrives sur ton dashboard."
+                  : "Onboarding terminé ✅"
+                : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
+            </div>
+
+            {isDone ? (
+              <Button onClick={finalize} disabled={isFinalizing}>
+                {isFinalizing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Finalisation…
+                  </>
+                ) : (
+                  "Aller au dashboard"
+                )}
+              </Button>
+            ) : (
+              <Button onClick={send} disabled={!canSend}>
+                {isSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Envoi…
+                  </>
+                ) : (
+                  "Envoyer"
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
 }
+
+export default OnboardingChatV2;
