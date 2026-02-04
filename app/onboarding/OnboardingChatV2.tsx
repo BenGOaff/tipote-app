@@ -55,9 +55,11 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
         role: "assistant",
         content:
           `${greet}\n` +
-          `On va faire ça simplement : je te pose quelques questions (très courtes) pour comprendre ta situation, ` +
-          `et ensuite Tipote s’adapte à toi.\n\n` +
-          `Pour commencer : aujourd’hui, comment tu gagnes de l’argent (ou comment tu veux en gagner) ?`,
+          `Tipote va t’aider à développer ton activité (offre, contenus, plan d’action).\n\n` +
+          `Si tu as plusieurs activités, liste-les brièvement.\n` +
+          `Ensuite on choisit ensemble celle à prioriser ici.\n\n` +
+          `Alors : sur quoi tu travailles en ce moment ?`,
+
         at: nowIso(),
       },
     ];

@@ -1,0 +1,138 @@
+<div class="sale-08" id="top">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="name">{{brand_name}}</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="#lettre">{{nav_link_1}}</a>
+        <a href="#programme">{{nav_link_2}}</a>
+        <a href="#bonus">{{nav_link_3}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-inner">
+      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
+      <h1>{{hero_title}}</h1>
+      <p class="sub">{{hero_subtitle}}</p>
+
+      <div class="hero-grid">
+        <div class="hero-left">
+          <div class="video">
+            {{#hero_video_label}}<div class="video-label">{{.}}</div>{{/hero_video_label}}
+            <div class="video-box">{{hero_video_placeholder}}</div>
+          </div>
+
+          {{#hero_note}}<p class="note">{{.}}</p>{{/hero_note}}
+        </div>
+
+        <div class="hero-right">
+          <div class="card bullets">
+            <div class="card-title">{{hero_bullets_title}}</div>
+            <ul class="list">
+              {{#hero_bullets}}<li><span class="dot"></span><span class="txt">{{.}}</span></li>{{/hero_bullets}}
+            </ul>
+
+            <div class="cta-box" id="checkout">
+              <div class="cta-title">{{cta_title}}</div>
+
+              <!-- Preview form (disabled) -->
+              <div class="cta-row form-preview">
+                <input type="email" placeholder="{{form_email_placeholder}}" disabled />
+                <button type="button" disabled>{{cta_button}}</button>
+              </div>
+
+              <!-- Systeme.io slot -->
+              <div class="systeme-form">
+                {{systeme_form_slot}}
+              </div>
+
+              {{#cta_reassurance}}<p class="reassurance">{{.}}</p>{{/cta_reassurance}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="letter" id="lettre">
+    <div class="container letter-inner">
+      <div class="letter-card">
+        <div class="letter-head">
+          <div class="letter-title">{{letter_title}}</div>
+          <div class="letter-meta">
+            <span>{{letter_from_label}}</span> <strong>{{letter_from}}</strong>
+            {{#letter_where}}<span class="sep">•</span> <span>{{.}}</span>{{/letter_where}}
+          </div>
+        </div>
+
+        <div class="letter-body">
+          {{#letter_paragraphs}}<p>{{.}}</p>{{/letter_paragraphs}}
+        </div>
+
+        {{#checklist_title}}<div class="checklist-title">{{.}}</div>{{/checklist_title}}
+        <ul class="checklist">
+          {{#checklist_items}}<li><span class="box"></span><span class="txt">{{.}}</span></li>{{/checklist_items}}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="programme" id="programme">
+    <div class="container">
+      <h2>{{programme_title}}</h2>
+      <p class="lead">{{programme_subtitle}}</p>
+
+      <div class="steps">
+        {{#programme_steps}}
+        <div class="step">
+          <div class="step-k">{{step_kicker}}</div>
+          <div class="step-t">{{step_title}}</div>
+          <div class="step-d">{{step_text}}</div>
+        </div>
+        {{/programme_steps}}
+      </div>
+    </div>
+  </section>
+
+  <section class="bonus" id="bonus">
+    <div class="container">
+      <h2>{{bonus_title}}</h2>
+      <p class="lead">{{bonus_subtitle}}</p>
+
+      <div class="bonus-grid">
+        {{#bonus_items}}
+        <div class="bonus-card">
+          <div class="b-top">
+            <div class="b-n">{{bonus_number}}</div>
+            <div class="b-v">{{bonus_value}}</div>
+          </div>
+          <div class="b-t">{{bonus_title}}</div>
+          <div class="b-d">{{bonus_text}}</div>
+        </div>
+        {{/bonus_items}}
+      </div>
+
+      <div class="final-cta">
+        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
+        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-left">
+        <div class="footer-title">{{footer_title}}</div>
+        <div class="footer-text">{{footer_text}}</div>
+      </div>
+      <a class="btn-secondary" href="#top">{{footer_back_to_top}}</a>
+    </div>
+  </footer>
+</div>

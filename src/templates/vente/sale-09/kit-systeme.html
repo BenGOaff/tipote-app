@@ -1,0 +1,186 @@
+<div class="sale-09" id="top">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-badge">★</span>
+        <span class="brand-name">{{brand_name}}</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="#story">{{nav_link_1}}</a>
+        <a href="#offer">{{nav_link_2}}</a>
+        <a href="#faq">{{nav_link_3}}</a>
+      </div>
+
+      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-inner">
+      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
+
+      <h1>
+        {{hero_title}}
+        {{#hero_title_accent}}<span class="accent">{{.}}</span>{{/hero_title_accent}}
+      </h1>
+
+      <p class="sub">{{hero_subtitle}}</p>
+
+      <div class="hero-grid">
+        <div class="hero-left">
+          <div class="comic-card">
+            <div class="comic-top">
+              <div class="comic-pill">{{comic_pill}}</div>
+              <div class="comic-emoji">{{comic_emoji}}</div>
+            </div>
+
+            <div class="comic-lines">
+              {{#comic_lines}}<div class="comic-line"><span class="spark">✦</span>{{.}}</div>{{/comic_lines}}
+            </div>
+
+            {{#hero_bullets_title}}<div class="card-title">{{.}}</div>{{/hero_bullets_title}}
+            <ul class="list">
+              {{#hero_bullets}}<li><span class="dot"></span><span class="txt">{{.}}</span></li>{{/hero_bullets}}
+            </ul>
+
+            {{#hero_note}}<p class="note">{{.}}</p>{{/hero_note}}
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="checkout-card" id="checkout">
+            <div class="price-row">
+              <div class="price-label">{{price_label}}</div>
+              <div class="price">
+                <span class="price-main">{{price_main}}</span>
+                {{#price_sub}}<span class="price-sub">{{.}}</span>{{/price_sub}}
+              </div>
+            </div>
+
+            <div class="cta-title">{{cta_title}}</div>
+
+            <!-- Preview form (disabled) -->
+            <div class="cta-row form-preview">
+              <input type="email" placeholder="{{form_email_placeholder}}" disabled />
+              <button type="button" disabled>{{cta_button}}</button>
+            </div>
+
+            <!-- Systeme.io slot -->
+            <div class="systeme-form">
+              <div class="systeme-slot" id="SLOT_CHECKOUT">
+                <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
+              </div>
+            </div>
+
+            <div class="micro">
+              {{#cta_reassurance}}<div class="reassurance">{{.}}</div>{{/cta_reassurance}}
+              {{#cta_micro}}<div class="micro2">{{.}}</div>{{/cta_micro}}
+            </div>
+
+            <div class="trust">
+              {{#trust_items}}<div class="trust-item"><span class="tick">✓</span><span>{{.}}</span></div>{{/trust_items}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-hint">{{scroll_hint}}</div>
+    </div>
+  </header>
+
+  <section class="story" id="story">
+    <div class="container">
+      <div class="section-head">
+        <h2>{{story_title}}</h2>
+        <p class="lead">{{story_subtitle}}</p>
+      </div>
+
+      <div class="story-grid">
+        <div class="story-card">
+          <div class="story-tag">{{story_tag_1}}</div>
+          <div class="story-body">
+            {{#story_paragraphs}}<p>{{.}}</p>{{/story_paragraphs}}
+          </div>
+        </div>
+
+        <div class="story-side">
+          <div class="side-card">
+            <div class="side-title">{{side_title}}</div>
+            <ul class="side-list">
+              {{#side_points}}<li><span class="bolt">⚡</span><span>{{.}}</span></li>{{/side_points}}
+            </ul>
+            <a class="side-cta" href="#checkout">{{side_cta}}</a>
+          </div>
+
+          <div class="quote">
+            <div class="quote-mark">“</div>
+            <div class="quote-text">{{quote_text}}</div>
+            {{#quote_author}}<div class="quote-author">— {{.}}</div>{{/quote_author}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="offer" id="offer">
+    <div class="container">
+      <div class="section-head">
+        <h2>{{offer_title}}</h2>
+        <p class="lead">{{offer_subtitle}}</p>
+      </div>
+
+      <div class="offer-grid">
+        {{#offer_blocks}}
+        <div class="offer-card">
+          <div class="offer-k">{{block_kicker}}</div>
+          <div class="offer-t">{{block_title}}</div>
+          <div class="offer-d">{{block_text}}</div>
+          {{#block_bullets}}
+          <ul class="mini">
+            {{#items}}<li><span class="dot2"></span><span>{{.}}</span></li>{{/items}}
+          </ul>
+          {{/block_bullets}}
+        </div>
+        {{/offer_blocks}}
+      </div>
+
+      <div class="big-cta">
+        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
+        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="section-head">
+        <h2>{{faq_title}}</h2>
+        <p class="lead">{{faq_subtitle}}</p>
+      </div>
+
+      <div class="faq-grid">
+        {{#faq_items}}
+        <div class="faq-item">
+          <div class="q">{{q}}</div>
+          <div class="a">{{a}}</div>
+        </div>
+        {{/faq_items}}
+      </div>
+
+      <div class="final-cta-2">
+        <a class="btn-secondary" href="#checkout">{{final_cta_2}}</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-left">
+        <div class="footer-title">{{footer_title}}</div>
+        <div class="footer-text">{{footer_text}}</div>
+      </div>
+      <a class="back" href="#top">{{footer_back_to_top}}</a>
+    </div>
+  </footer>
+</div>
