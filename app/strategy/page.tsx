@@ -1,5 +1,7 @@
 // app/strategy/page.tsx
 // Wrapper server minimal — UI 1:1 dans StrategyLovable (client)
+// ✅ Tolérant si le plan n'est pas encore prêt : on affiche un état "génération en cours"
+//    au lieu de redirect vers /strategy/pyramids.
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -101,7 +103,6 @@ function normalizeRevenueGoalText(raw: unknown): {
   const s = s0.replace(/\s+/g, " ").trim();
 
   // 1) Essayez de détecter un pattern type: 10k / 10K / 2.5k / 1,5k
-  //    (on accepte virgule ou point comme séparateur décimal)
   const kmMatch = s.match(/(\d+(?:[.,]\d+)?)\s*([kKmM])\b/);
   if (kmMatch) {
     const numRaw = kmMatch[1].replace(",", ".");
@@ -113,7 +114,7 @@ function normalizeRevenueGoalText(raw: unknown): {
     }
   }
 
-  // 2) Range type: "2000-5000" => on prend le haut (plus parlant pour objectif)
+  // 2) Range type: "2000-5000" => on prend le haut
   const rangeMatch = s.match(/(\d[\d\s.,]*)\s*[-–]\s*(\d[\d\s.,]*)/);
   if (rangeMatch) {
     const b = rangeMatch[2].replace(/[^\d]/g, "");
@@ -133,7 +134,7 @@ function normalizeRevenueGoalText(raw: unknown): {
     return { kind: "text", value: digits };
   }
 
-  // 4) Fallback : renvoyer le texte tel quel (utile si l’onboarding stocke une phrase)
+  // 4) Fallback : texte tel quel
   return { kind: "text", value: s.slice(0, 80) };
 }
 
@@ -168,37 +169,12 @@ export default async function StrategyPage() {
     redirect("/onboarding");
   }
 
-  // Plan
-  const planRes = await supabase
-    .from("business_plan")
-    .select("id, plan_json, created_at, updated_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  // ✅ Si plan non lisible/manquant => c'est un problème de flow stratégie (pas onboarding)
-  if (planRes.error) redirect("/strategy/pyramids");
-
-  const planRow = (planRes.data ?? null) as AnyRecord | null;
-  const planJson = (planRow?.plan_json ?? {}) as AnyRecord;
-
-  // ✅ Si plan_json vide => renvoyer au flow officiel de sélection pyramide
-  if (!Object.keys(planJson).length) redirect("/strategy/pyramids");
-
-  // ✅ si pas de pyramide choisie -> page Lovable de choix
-  const selectedIndex = planJson.selected_offer_pyramid_index;
-  if (selectedIndex === null || typeof selectedIndex === "undefined") {
-    redirect("/strategy/pyramids");
-  }
-
-  // ✅ business_profiles : on lit uniquement ce dont l’UI a besoin
+  // ✅ business_profiles : on lit ce qui est utile même si le plan n'est pas encore prêt
   const profileRes = await supabase
     .from("business_profiles")
     .select(
       [
         "first_name",
-        "niche",
-        "business_maturity",
-        "main_goals",
         "content_preference",
         "revenue_goal_monthly",
         "created_at",
@@ -209,13 +185,75 @@ export default async function StrategyPage() {
     .maybeSingle();
 
   const profileRow = (profileRes.data ?? null) as AnyRecord | null;
-
   const firstName = asString(profileRow?.first_name);
-
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
 
+  // Plan
+  const planRes = await supabase
+    .from("business_plan")
+    .select("id, plan_json, created_at, updated_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const planRow = (planRes.data ?? null) as AnyRecord | null;
+  const planJson = ((planRow?.plan_json ?? {}) as AnyRecord) || {};
+
+  const planExistsAndReadable = !planRes.error && !!planRow;
+  const planJsonHasContent = !!Object.keys(planJson).length;
+
+  // ✅ Si le plan n'existe pas (ou pas encore prêt) => afficher état “génération”
+  if (!planExistsAndReadable || !planJsonHasContent) {
+    const fromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
+    const picked = fromProfile.value ? fromProfile : { kind: "text", value: "" as string };
+
+    const revenueGoal =
+      picked.value && picked.kind === "numeric"
+        ? `${picked.value} € / mois`
+        : picked.value && hasCurrencyOrPeriodHints(picked.value)
+          ? picked.value
+          : picked.value
+            ? `${picked.value} € / mois`
+            : "—";
+
+    return (
+      <StrategyLovable
+        mode="generating"
+        firstName={firstName}
+        revenueGoal={revenueGoal}
+        horizon="90 jours"
+        progressionPercent={0}
+        totalDone={0}
+        totalAll={0}
+        daysRemaining={90}
+        currentPhase={1}
+        currentPhaseLabel="Fondations"
+        phases={[
+          { title: "Phase 1 : Fondations", period: "Jours 1-30", tasks: [] },
+          { title: "Phase 2 : Croissance", period: "Jours 31-60", tasks: [] },
+          { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: [] },
+        ]}
+        persona={{
+          title: "",
+          pains: [],
+          desires: [],
+          channels: preferredContentTypes.length ? preferredContentTypes : [],
+        }}
+        offerPyramids={[]}
+        initialSelectedIndex={0}
+        initialSelectedPyramid={undefined}
+        planTasksCount={0}
+      />
+    );
+  }
+
+  // ✅ si pas de pyramide choisie -> flow officiel
+  const selectedIndex = (planJson as AnyRecord).selected_offer_pyramid_index;
+  if (selectedIndex === null || typeof selectedIndex === "undefined") {
+    redirect("/strategy/pyramids");
+  }
+
   // Persona (depuis plan_json)
-  const personaRaw = (planJson.persona ?? {}) as AnyRecord;
+  const personaRaw = ((planJson as AnyRecord).persona ?? {}) as AnyRecord;
   const persona = {
     title:
       asString(personaRaw.title) ||
@@ -230,17 +268,18 @@ export default async function StrategyPage() {
   };
 
   // Pyramides (depuis plan_json)
-  const offerPyramids = (planJson.offer_pyramids ?? []) as AnyRecord[];
+  const offerPyramids = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
 
   const hasExplicitSelection =
-    typeof planJson.selected_offer_pyramid_index === "number" &&
-    !!planJson.selected_offer_pyramid;
+    typeof (planJson as AnyRecord).selected_offer_pyramid_index === "number" &&
+    !!(planJson as AnyRecord).selected_offer_pyramid;
 
   const initialSelectedIndex = hasExplicitSelection
-    ? (planJson.selected_offer_pyramid_index as number)
+    ? ((planJson as AnyRecord).selected_offer_pyramid_index as number)
     : 0;
+
   const initialSelectedPyramid = hasExplicitSelection
-    ? (planJson.selected_offer_pyramid as AnyRecord)
+    ? ((planJson as AnyRecord).selected_offer_pyramid as AnyRecord)
     : undefined;
 
   // ✅ IMPORTANT (prod/RLS-safe):
@@ -256,8 +295,7 @@ export default async function StrategyPage() {
   const tasks = ((tasksRes.data ?? []) as unknown as TaskRow[]) ?? [];
 
   const totalTasks = tasks.length;
-  const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done")
-    .length;
+  const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
   const progressAll = totalTasks ? clamp01(doneTasks / totalTasks) : 0;
 
   const today = new Date();
@@ -308,16 +346,14 @@ export default async function StrategyPage() {
   const currentPhaseLabel =
     currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
 
-  // ✅ Jours restants : basé sur created_at du business_plan (approche stable, sans inventer d’autre date)
+  // ✅ Jours restants : basé sur created_at du business_plan
   const createdAt = asString(planRow?.created_at);
   const createdDate = createdAt ? parseDateOnly(createdAt) : null;
 
   const daysElapsed = createdDate
     ? Math.max(
         0,
-        Math.floor(
-          (today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
-        ),
+        Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)),
       )
     : 0;
 

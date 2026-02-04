@@ -91,6 +91,9 @@ type StrategyLovableProps = {
   initialSelectedIndex: number;
   initialSelectedPyramid?: AnyRecord;
   planTasksCount: number;
+
+  // ✅ nouveau (optionnel) : permet d’afficher un état “plan en cours”
+  mode?: "ready" | "generating";
 };
 
 function toStr(v: unknown): string {
@@ -151,6 +154,50 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
+
+  // ✅ NEW : génération plan (tolérant)
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  const handleGeneratePlan = useCallback(async () => {
+    if (isGeneratingPlan) return;
+    setIsGeneratingPlan(true);
+
+    try {
+      const res = await fetch("/api/strategy", { method: "POST" });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = (data && (data.error || data.message)) || `Erreur (${res.status})`;
+        toast({
+          title: "Impossible de générer le plan",
+          description: String(msg),
+          variant: "destructive",
+        });
+        setIsGeneratingPlan(false);
+        return;
+      }
+
+      toast({
+        title: "C’est parti ✅",
+        description: "Je prépare ton plan stratégique…",
+      });
+
+      // refresh immédiat + “best effort”
+      router.refresh();
+      setTimeout(() => {
+        try {
+          router.refresh();
+        } catch {}
+      }, 1200);
+    } catch (e) {
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Une erreur est survenue.",
+        variant: "destructive",
+      });
+      setIsGeneratingPlan(false);
+    }
+  }, [isGeneratingPlan, router, toast]);
 
   // --- Sélection pyramide (inchangé) ---
   const selectedPyramid = pickSelectedPyramid(
@@ -461,6 +508,41 @@ export default function StrategyLovable(props: StrategyLovableProps) {
           </header>
 
           <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* ✅ NEW : Bandeau “plan en cours” (sans casser le reste) */}
+            {(props.mode === "generating" ||
+              (!props.planTasksCount &&
+                (!props.offerPyramids || props.offerPyramids.length === 0))) && (
+              <Card className="p-4 bg-primary/5 border-primary/20">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium text-primary">
+                      Ton plan est en cours de préparation
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Si tu viens de terminer l’onboarding, c’est normal. Tu peux
+                      lancer la génération maintenant.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleGeneratePlan}
+                      disabled={isGeneratingPlan}
+                      size="sm"
+                    >
+                      {isGeneratingPlan ? "Génération…" : "Générer mon plan"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.refresh()}
+                    >
+                      Rafraîchir
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Strategic Overview */}
             <Card className="p-8 gradient-hero border-border/50">
               <div className="flex items-start justify-between mb-6">

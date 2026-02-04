@@ -1,0 +1,133 @@
+*{box-sizing:border-box}
+.tpt-scope{
+  background:var(--tpt-bg);
+  color:var(--tpt-text);
+  font-family:var(--tpt-body-font);
+  font-size:var(--tpt-body-size);
+  line-height:var(--tpt-line-height);
+}
+
+.tpt-scope .hero.capture-01{
+  width:100%;
+  padding:var(--tpt-section-pad);
+  text-align:var(--tpt-align);
+  background:
+    radial-gradient(900px 600px at 50% -55%, rgba(37,99,235,0.20), transparent 70%),
+    radial-gradient(900px 600px at 10% 0%, rgba(37,99,235,0.10), transparent 65%);
+}
+
+.tpt-scope .hero.capture-01 .container{
+  width:100%;
+  max-width:var(--tpt-maxw);
+  margin:0 auto;
+}
+
+.tpt-scope .hero.capture-01 .eyebrow{
+  display:inline-flex;
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  background:rgba(37,99,235,0.10);
+  color:var(--tpt-accent);
+  border:1px solid rgba(37,99,235,0.18);
+}
+
+.tpt-scope .hero.capture-01 h1{
+  margin:18px auto 12px auto;
+  font-family:var(--tpt-heading-font);
+  font-weight:900;
+  font-size:var(--tpt-h1);
+  line-height:1.05;
+  max-width:18ch;
+}
+
+.tpt-scope .hero.capture-01 .subtitle{
+  margin:0 auto 26px auto;
+  max-width:70ch;
+  color:var(--tpt-muted);
+  font-weight:500;
+}
+
+.tpt-scope .hero.capture-01 .benefits{
+  margin: 0 auto 26px auto;
+  display:grid;
+  gap:10px;
+  max-width:720px;
+  text-align:left;
+}
+
+.tpt-scope .hero.capture-01 .benefit{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:12px 14px;
+  border-radius:14px;
+  border:1px solid var(--tpt-border);
+  background:rgba(255,255,255,0.7);
+  box-shadow:0 10px 30px rgba(0,0,0,0.04);
+}
+
+.tpt-scope .hero.capture-01 .dot{
+  margin-top:6px;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:var(--tpt-accent);
+  box-shadow:0 10px 20px rgba(37,99,235,0.25);
+  flex:0 0 auto;
+}
+
+.tpt-scope .hero.capture-01 .form-preview,
+.tpt-scope .hero.capture-01 .systeme-form{
+  margin: 0 auto;
+  max-width: 520px;
+  border-radius: var(--tpt-card-radius);
+  box-shadow: var(--tpt-card-shadow);
+  padding: 16px;
+  background: white;
+  border: 1px solid var(--tpt-border);
+  display:flex;
+  gap:10px;
+}
+
+.tpt-scope .hero.capture-01 .form-preview input{
+  flex:1;
+  height:48px;
+  border-radius:12px;
+  border:1px solid var(--tpt-border);
+  padding:0 14px;
+}
+
+.tpt-scope .hero.capture-01 .form-preview button{
+  height:48px;
+  padding:0 18px;
+  border-radius: var(--tpt-btn-radius);
+  border: 1px solid rgba(37,99,235,0.25);
+  background: var(--tpt-accent);
+  color: white;
+  font-weight:800;
+  cursor:not-allowed;
+}
+
+.tpt-scope .hero.capture-01 .systeme-form{
+  display:block;
+  text-align:left;
+  color:var(--tpt-muted);
+}
+
+.tpt-scope .hero.capture-01 .micro-proof{
+  margin: 14px auto 0 auto;
+  max-width: 68ch;
+  color: var(--tpt-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 900px){
+  .tpt-scope .hero.capture-01 h1{font-size:36px}
+  .tpt-scope .hero.capture-01 .benefits{text-align:left}
+  .tpt-scope .hero.capture-01 .form-preview{flex-direction:column}
+  .tpt-scope .hero.capture-01 .form-preview button{width:100%}
+}
