@@ -78,6 +78,26 @@ function toStr(v: unknown): string {
   return "";
 }
 
+function extractStarterPlan(planJson: unknown): {
+  strategy_summary: string;
+  strategy_goals: Array<{ title: string; why: string; metric: string; first_actions: string[] }>;
+} {
+  const pj: any = planJson && typeof planJson === "object" ? (planJson as any) : null;
+  const summary = toStr(pj?.strategy_summary ?? pj?.summary ?? "").trim();
+  const goalsRaw = Array.isArray(pj?.strategy_goals) ? pj.strategy_goals : [];
+  const goals = goalsRaw
+    .map((g: any) => ({
+      title: toStr(g?.title).trim(),
+      why: toStr(g?.why).trim(),
+      metric: toStr(g?.metric).trim(),
+      first_actions: Array.isArray(g?.first_actions)
+        ? g.first_actions.map(toStr).map((s: string) => s.trim()).filter(Boolean).slice(0, 5)
+        : [],
+    }))
+    .filter((g: any) => g.title);
+  return { strategy_summary: summary, strategy_goals: goals };
+}
+
 function clampPercent(v: number): number {
   if (!Number.isFinite(v)) return 0;
   return Math.max(0, Math.min(100, Math.round(v)));
@@ -159,214 +179,163 @@ function mapContentStatusToUi(statusRaw: string): UpcomingItem["status"] {
   if (s === "published" || s === "publié" || s === "publie") return "Terminé";
   if (s === "scheduled" || s === "planifié" || s === "planifie") return "Planifié";
   if (s === "draft" || s === "brouillon") return "À faire";
-  return "Planifié";
+  return "À faire";
 }
 
-function isSchemaError(msg: string): boolean {
+function normalizeTaskTitle(row: any): string {
+  return toStr(row?.title ?? row?.task ?? row?.name ?? "").trim() || "Tâche";
+}
+
+function normalizeTaskStatus(row: any): string {
+  return toStr(row?.status ?? row?.state ?? row?.statut ?? "").trim();
+}
+
+function normalizeTaskPriority(row: any): Priority {
+  return safePriority(row?.priority ?? row?.importance ?? "medium");
+}
+
+function normalizeTaskDueDate(row: any): Date | null {
+  return parseDate(row?.due_date ?? row?.scheduled_for ?? row?.date ?? row?.scheduledDate ?? null);
+}
+
+function isDoneStatus(statusRaw: string): boolean {
+  const s = (statusRaw || "").toLowerCase().trim();
+  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
+}
+
+function isSchemaError(msg: string) {
   const m = (msg || "").toLowerCase();
   return (
     m.includes("column") ||
     m.includes("does not exist") ||
     m.includes("unknown column") ||
-    m.includes("invalid input syntax") ||
-    m.includes("relation") ||
+    m.includes("invalid input") ||
     m.includes("schema") ||
-    m.includes("cannot cast")
+    m.includes("relation") ||
+    m.includes("could not find")
   );
 }
 
-function formatEuroCompact(amount: number): string {
-  const fmt = new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  });
-  return fmt.format(amount);
-}
-
-function parseEuroNumber(raw: unknown): number | null {
-  const s = toStr(raw).trim();
-  if (!s) return null;
-
-  const normalized = s
-    .toLowerCase()
-    .replace(/\s/g, "")
-    .replace("€", "")
-    .replace(",", ".")
-    .replace(/k$/, "000");
-
-  const num = Number(normalized);
-  return Number.isFinite(num) ? Math.round(num) : null;
-}
-
-type BizPulse = {
-  weeklyRevenue: string;
-  weeklyLeads: string;
-  weeklySales: string;
-  weeklyCalls?: string; // legacy support
-};
-
-type PulseField = "weeklyRevenue" | "weeklyLeads" | "weeklySales";
-
-function storageKey(userId: string) {
-  return `tipote:dashboard:pulse:${userId}`;
-}
-
-function loadPulse(userId: string): BizPulse | null {
-  if (!userId) return null;
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return null;
-    const json = JSON.parse(raw) as Partial<BizPulse> | null;
-    if (!json || typeof json !== "object") return null;
-
-    const legacyCalls = typeof (json as any).weeklyCalls === "string" ? (json as any).weeklyCalls : "";
-    const weeklySales =
-      typeof (json as any).weeklySales === "string"
-        ? (json as any).weeklySales
-        : legacyCalls;
-
-    return {
-      weeklyRevenue: typeof json.weeklyRevenue === "string" ? json.weeklyRevenue : "",
-      weeklyLeads: typeof json.weeklyLeads === "string" ? json.weeklyLeads : "",
-      weeklySales,
-      weeklyCalls: legacyCalls || undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function savePulse(userId: string, pulse: BizPulse) {
-  if (!userId) return;
-  try {
-    const { weeklyCalls, ...rest } = pulse;
-    localStorage.setItem(storageKey(userId), JSON.stringify(rest));
-  } catch {
-    // ignore
-  }
-}
-
-type FocusSettings = { focusGoal: number };
-
-function focusStorageKey(userId: string) {
-  return `tipote:dashboard:focus:${userId}`;
-}
-
-function loadFocusSettings(userId: string): FocusSettings | null {
-  if (!userId) return null;
-  try {
-    const raw = localStorage.getItem(focusStorageKey(userId));
-    if (!raw) return null;
-    const json = JSON.parse(raw) as Partial<FocusSettings> | null;
-    if (!json || typeof json !== "object") return null;
-    const n = typeof json.focusGoal === "number" ? json.focusGoal : null;
-    if (!n || !Number.isFinite(n)) return null;
-    const safe = Math.max(1, Math.min(14, Math.round(n)));
-    return { focusGoal: safe };
-  } catch {
-    return null;
-  }
-}
-
-function saveFocusSettings(userId: string, settings: FocusSettings) {
-  if (!userId) return;
-  try {
-    localStorage.setItem(focusStorageKey(userId), JSON.stringify(settings));
-  } catch {
-    // ignore
-  }
-}
-
-type TaskRow = {
-  id: string;
-  title: string | null;
-  status: string | null;
-  due_date: string | null;
-  priority: string | null;
-  updated_at?: string | null;
-  created_at?: string | null;
-};
-
-function normalizeTaskTitle(t: any): string {
-  const v = toStr(t?.title ?? t?.name ?? t?.label ?? "").trim();
-  return v || "Tâche";
-}
-
-function normalizeTaskStatus(t: any): string {
-  return toStr(t?.status ?? t?.state ?? "").trim();
-}
-
-function normalizeTaskDueDate(t: any): Date | null {
-  return parseDate(t?.due_date ?? t?.dueDate ?? t?.due_at ?? t?.dueAt ?? "");
-}
-
-function normalizeTaskPriority(t: any): Priority {
-  return safePriority(t?.priority);
-}
-
-function isDoneStatus(status: string): boolean {
-  const s = (status || "").toLowerCase();
-  return s === "done" || s === "completed" || s === "fait" || s === "terminé" || s === "termine";
-}
-
-function normalizeContentTitle(r: any): string {
-  const v = toStr(r?.title ?? r?.titre ?? r?.name ?? "").trim();
-  return v || "Contenu";
-}
-
-function normalizeContentType(r: any): string {
-  const v = toStr(r?.type ?? r?.channel ?? r?.canal ?? "").trim();
-  return v || "Contenu";
-}
-
-function normalizeContentStatus(r: any): string {
-  return toStr(r?.status ?? r?.statut ?? "").trim();
-}
-
-function normalizeContentScheduledDate(r: any): Date | null {
-  return parseDate(r?.scheduled_date ?? r?.date_planifiee ?? r?.scheduledDate ?? r?.created_at ?? "");
-}
-
+type TaskRow = Record<string, any>;
 type ContentRowAny = Record<string, any>;
 
+function normalizeContentTitle(row: ContentRowAny): string {
+  return toStr(row?.title ?? row?.titre ?? row?.name ?? "Contenu").trim();
+}
+
+function normalizeContentType(row: ContentRowAny): string {
+  return toStr(row?.type ?? row?.content_type ?? row?.kind ?? "Contenu").trim() || "Contenu";
+}
+
+function normalizeContentStatus(row: ContentRowAny): string {
+  return toStr(row?.status ?? row?.statut ?? row?.state ?? "draft").trim();
+}
+
+function normalizeContentScheduledDate(row: ContentRowAny): Date | null {
+  return parseDate(row?.scheduled_date ?? row?.date_planifiee ?? row?.scheduled_for ?? row?.date ?? null);
+}
+
 function isObjectArray(v: unknown): v is Record<string, any>[] {
-  return Array.isArray(v) && v.every((x) => x && typeof x === "object" && !Array.isArray(x));
+  return Array.isArray(v) && v.every((x) => !!x && typeof x === "object" && !Array.isArray(x));
 }
 
-type ContentSchemaHint = {
-  hasUserId?: boolean;
-  selectIndex?: number;
-};
-
-function schemaCacheKey(userId: string) {
-  return `tipote:content_item:schema_hint:${userId}`;
+function isGenericStringErrorArray(v: unknown): boolean {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
+
+type ContentSchemaHint = { hasUserId?: boolean; selectIndex?: number };
 
 function loadContentSchemaHint(userId: string): ContentSchemaHint | null {
-  if (!userId) return null;
   try {
-    const raw = localStorage.getItem(schemaCacheKey(userId));
+    const raw = localStorage.getItem(`tipote_content_schema_hint:${userId}`);
     if (!raw) return null;
-    const json = JSON.parse(raw) as ContentSchemaHint;
-    if (!json || typeof json !== "object") return null;
-    return json;
+    const parsed = JSON.parse(raw) as ContentSchemaHint;
+    return parsed && typeof parsed === "object" ? parsed : null;
   } catch {
     return null;
   }
 }
 
 function saveContentSchemaHint(userId: string, hint: ContentSchemaHint) {
-  if (!userId) return;
   try {
-    localStorage.setItem(schemaCacheKey(userId), JSON.stringify(hint));
+    localStorage.setItem(`tipote_content_schema_hint:${userId}`, JSON.stringify(hint));
   } catch {
     // ignore
   }
 }
 
-function isGenericStringErrorArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
+type PulseState = {
+  level: number;
+  label: string;
+};
+
+type FocusSettings = { focusGoal: number };
+
+function loadPulse(userId: string): PulseState | null {
+  try {
+    const raw = localStorage.getItem(`tipote_pulse:${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PulseState;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.level !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePulse(userId: string, pulse: PulseState) {
+  try {
+    localStorage.setItem(`tipote_pulse:${userId}`, JSON.stringify(pulse));
+  } catch {
+    // ignore
+  }
+}
+
+function loadFocusSettings(userId: string): FocusSettings | null {
+  try {
+    const raw = localStorage.getItem(`tipote_focus_settings:${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as FocusSettings;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.focusGoal !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveFocusSettings(userId: string, settings: FocusSettings) {
+  try {
+    localStorage.setItem(`tipote_focus_settings:${userId}`, JSON.stringify(settings));
+  } catch {
+    // ignore
+  }
+}
+
+function levelLabel(level: number) {
+  if (level <= 1) return "Lent";
+  if (level === 2) return "OK";
+  if (level === 3) return "Bien";
+  if (level >= 4) return "Énorme";
+  return "OK";
+}
+
+function clampPulseLevel(v: number) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 2;
+  return Math.max(1, Math.min(4, Math.round(n)));
+}
+
+function isValidGoalNumber(v: string) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0;
+}
+
+function parseGoalNumber(v: string) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n));
 }
 
 export default function TodayLovable() {
@@ -389,138 +358,72 @@ export default function TodayLovable() {
     { label: "Activité", value: "0/7", trend: "+0 tâche", icon: TrendingUp },
   ]);
 
+  const [starterSummary, setStarterSummary] = useState<string>("");
+  const [starterGoals, setStarterGoals] = useState<
+    Array<{ title: string; why: string; metric: string; first_actions: string[] }>
+  >([]);
+  const [starterPlanError, setStarterPlanError] = useState<string>("");
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  const [plannedCountThisWeek, setPlannedCountThisWeek] = useState(0);
+  const [tasksDoneThisWeek, setTasksDoneThisWeek] = useState(0);
+
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([]);
 
-  const [revenueGoalLabel, setRevenueGoalLabel] = useState<string>("—");
-  const [revenueGoalValue, setRevenueGoalValue] = useState<number | null>(null);
+  const [bizPulse, setBizPulse] = useState<PulseState>({ level: 2, label: levelLabel(2) });
+  const [pulseUserId, setPulseUserId] = useState<string | null>(null);
 
-  const [bizPulse, setBizPulse] = useState<BizPulse>({
-    weeklyRevenue: "",
-    weeklyLeads: "",
-    weeklySales: "",
-  });
+  const [focusGoal, setFocusGoal] = useState(3);
+  const [focusGoalInput, setFocusGoalInput] = useState("3");
 
-  const [pulseUserId, setPulseUserId] = useState<string>("");
-
-  const now = useMemo(() => new Date(), []);
-  const weekLabel = useMemo(() => formatWeekRangeLabel(now), [now]);
-
-  const [pulseErrors, setPulseErrors] = useState<Record<PulseField, string>>({
-    weeklyRevenue: "",
-    weeklyLeads: "",
-    weeklySales: "",
-  });
-
-  const pulsePreview = useMemo(() => {
-    const weeklyRevenue = parseEuroNumber(bizPulse.weeklyRevenue);
-    const weeklyLeads = parseEuroNumber(bizPulse.weeklyLeads);
-    const weeklySales = parseEuroNumber((bizPulse.weeklySales ?? bizPulse.weeklyCalls ?? "").toString());
-    return { weeklyRevenue, weeklyLeads, weeklySales };
-  }, [bizPulse.weeklyCalls, bizPulse.weeklySales, bizPulse.weeklyLeads, bizPulse.weeklyRevenue]);
-
-  const revenueToGoalRatio = useMemo(() => {
-    if (!revenueGoalValue || revenueGoalValue <= 0) return 0;
-    const rev = pulsePreview.weeklyRevenue;
-    if (!rev || rev <= 0) return 0;
-    const monthlyEstimate = rev * 4;
-    return clampPercent((monthlyEstimate / revenueGoalValue) * 100);
-  }, [pulsePreview.weeklyRevenue, revenueGoalValue]);
-
-  const weeklyRevenueTarget = useMemo(() => {
-    if (revenueGoalValue && revenueGoalValue > 0) return Math.max(1, Math.round(revenueGoalValue / 4));
-    return 2000;
-  }, [revenueGoalValue]);
-
-  const [tasksDoneThisWeek, setTasksDoneThisWeek] = useState<number>(0);
-  const [plannedCountThisWeek, setPlannedCountThisWeek] = useState<number>(0);
-
-  const [focusGoal, setFocusGoal] = useState<number>(3);
-  const [isFocusOpen, setIsFocusOpen] = useState(false);
-  const [focusGoalInput, setFocusGoalInput] = useState<string>("3");
-
-  const focusLabel = `Terminer ${focusGoal} tâches`;
-  const focusPercent = useMemo(
-    () => clampPercent((Math.min(focusGoal, tasksDoneThisWeek) / Math.max(1, focusGoal)) * 100),
-    [focusGoal, tasksDoneThisWeek]
-  );
-
-  const weeklyExecutionPercent = useMemo(
-    () => clampPercent((Math.min(7, tasksDoneThisWeek) / 7) * 100),
-    [tasksDoneThisWeek]
-  );
-
-  // Goal dialog (monthly revenue goal -> supabase)
   const [isGoalOpen, setIsGoalOpen] = useState(false);
-  const [goalInput, setGoalInput] = useState<string>("");
-  const [goalError, setGoalError] = useState<string>("");
-  const [goalSaving, setGoalSaving] = useState<boolean>(false);
+  const [revenueGoalValue, setRevenueGoalValue] = useState<string>("");
+  const [goalInput, setGoalInput] = useState("");
+  const [goalError, setGoalError] = useState("");
 
   async function loadRevenueGoal(userId: string) {
-    // 1) Source principale : business_profiles.revenue_goal_monthly
-    const prof = await supabase
-      .from("business_profiles")
-      .select("revenue_goal_monthly")
-      .eq("user_id", userId)
-      .maybeSingle();
+    setGoalError("");
+    try {
+      const attempts = [
+        { col: "revenue_goal_monthly", select: "revenue_goal_monthly" },
+        { col: "target_monthly_revenue", select: "target_monthly_revenue" },
+        { col: "revenue_goal", select: "revenue_goal" },
+      ];
 
-    if (!prof.error) {
-      const raw = (prof.data as any)?.revenue_goal_monthly ?? null;
-      const goalNum = parseEuroNumber(raw);
-      if (goalNum && goalNum > 0) {
-        setRevenueGoalValue(goalNum);
-        setRevenueGoalLabel(formatEuroCompact(goalNum));
-        setGoalInput(String(goalNum));
+      for (const a of attempts) {
+        const res = await supabase
+          .from("business_profiles")
+          .select(a.select)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!res.error) {
+          const raw = (res.data as any)?.[a.col];
+          const value = toStr(raw).trim();
+          setRevenueGoalValue(value);
+          return;
+        }
+
+        const msg = res.error.message || "";
+        if (isSchemaError(msg)) continue;
         return;
       }
+    } catch {
+      // ignore
     }
-
-    // 2) Fallback : strategies.target_monthly_revenue / objective_revenue
-    const strat = await supabase
-      .from("strategies")
-      .select("target_monthly_revenue, objective_revenue, updated_at, created_at")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!strat.error) {
-      const raw =
-        (strat.data as any)?.target_monthly_revenue ??
-        (strat.data as any)?.objective_revenue ??
-        null;
-
-      const goalNum = parseEuroNumber(raw);
-      setRevenueGoalValue(goalNum && goalNum > 0 ? goalNum : null);
-      setRevenueGoalLabel(goalNum && goalNum > 0 ? formatEuroCompact(goalNum) : "—");
-      setGoalInput(goalNum && goalNum > 0 ? String(goalNum) : "");
-      return;
-    }
-
-    setRevenueGoalValue(null);
-    setRevenueGoalLabel("—");
-    setGoalInput("");
   }
 
-  async function saveRevenueGoalToSupabase(userId: string, rawInput: string) {
-    const parsed = parseEuroNumber(rawInput);
-    if (!parsed || parsed <= 0) {
-      setGoalError("Entre un montant mensuel valide (ex: 3000, 3 000, 3k).");
-      return false;
-    }
-
+  async function saveRevenueGoal(userId: string, value: string) {
     setGoalError("");
-    setGoalSaving(true);
-
     try {
-      // Step 1: does a row exist?
+      const isoNow = new Date().toISOString();
+      const parsed = value.trim();
+
       const existing = await supabase
         .from("business_profiles")
         .select("id")
         .eq("user_id", userId)
         .maybeSingle();
-
-      const isoNow = new Date().toISOString();
 
       if (!existing.error && existing.data?.id) {
         const upd = await supabase
@@ -537,14 +440,16 @@ export default function TodayLovable() {
           return false;
         }
       } else {
-        // Insert if missing
-        const ins = await supabase
-          .from("business_profiles")
-          .insert({ user_id: userId, revenue_goal_monthly: String(parsed), onboarding_completed: true, created_at: isoNow, updated_at: isoNow } as any);
+        const ins = await supabase.from("business_profiles").insert({
+          user_id: userId,
+          revenue_goal_monthly: String(parsed),
+          updated_at: isoNow,
+          created_at: isoNow,
+        } as any);
 
         if (ins.error) {
           if (isSchemaError(ins.error.message || "")) {
-            setGoalError("Table/colonnes business_profiles indisponibles (schema).");
+            setGoalError("Champ objectif indisponible côté base (schema).");
             return false;
           }
           setGoalError("Impossible d’enregistrer l’objectif (réseau/RLS).");
@@ -553,14 +458,10 @@ export default function TodayLovable() {
       }
 
       setRevenueGoalValue(parsed);
-      setRevenueGoalLabel(formatEuroCompact(parsed));
-      setGoalInput(String(parsed));
       return true;
     } catch {
       setGoalError("Impossible d’enregistrer l’objectif.");
       return false;
-    } finally {
-      setGoalSaving(false);
     }
   }
 
@@ -593,6 +494,25 @@ export default function TodayLovable() {
 
         await loadRevenueGoal(userId);
 
+        // Starter plan (business_plan.plan_json) — best-effort, non bloquant
+        try {
+          const { data: bpPlan, error: bpPlanErr } = await supabase
+            .from("business_plan")
+            .select("plan_json")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (!bpPlanErr && bpPlan?.plan_json) {
+            const extracted = extractStarterPlan((bpPlan as any).plan_json);
+            if (!cancelled) {
+              setStarterSummary(extracted.strategy_summary);
+              setStarterGoals(extracted.strategy_goals);
+            }
+          }
+        } catch {
+          // fail-open
+        }
+
         // Load tasks via API (RLS-safe)
         const tasksRes = await fetch("/api/tasks", { cache: "no-store" })
           .then(async (r) => ({ ok: r.ok, json: await r.json().catch(() => null) }))
@@ -609,6 +529,7 @@ export default function TodayLovable() {
         const tasksTotal = tasksAll.length;
         const progressionPercent = tasksTotal ? clampPercent((tasksDone / tasksTotal) * 100) : 0;
 
+        const now = new Date();
         const startW = startOfWeekMonday(now);
         const endW = endOfWeekSunday(now);
 
@@ -763,64 +684,77 @@ export default function TodayLovable() {
             {
               label: "Activité",
               value: activityValue,
-              trend: doneThisWeek > 0 ? `+${doneThisWeek} tâches` : "+0 tâche",
+              trend: doneThisWeek > 0 ? `+${doneThisWeek} tâche` : "+0 tâche",
               icon: TrendingUp,
             },
           ]);
+
+          const combined: CombinedUpcoming[] = [];
+
+          for (const t of tasksAll) {
+            const due = normalizeTaskDueDate(t);
+            if (!due) continue;
+            if (due < startW || due > endW) continue;
+            combined.push({
+              kind: "task",
+              title: normalizeTaskTitle(t),
+              type: "Tâche",
+              statusRaw: normalizeTaskStatus(t),
+              dt: due,
+              priority: normalizeTaskPriority(t),
+            });
+          }
+
+          for (const c of contentRows) {
+            const dt = normalizeContentScheduledDate(c);
+            if (!dt) continue;
+            if (dt < startW || dt > endW) continue;
+            combined.push({
+              kind: "content",
+              title: normalizeContentTitle(c),
+              type: normalizeContentType(c),
+              statusRaw: normalizeContentStatus(c),
+              dt,
+            });
+          }
+
+          combined.sort((a, b) => a.dt.getTime() - b.dt.getTime());
+
+          const upcomingUi: UpcomingItem[] = combined.slice(0, 10).map((x) => {
+            if (x.kind === "task") {
+              const statusUi = mapTaskStatusToUi(x.statusRaw);
+              return {
+                title: x.title,
+                type: x.type,
+                day: formatDayLabel(x.dt, now),
+                time: formatTimeOrDash(x.dt),
+                status: statusUi,
+              };
+            }
+
+            const statusUi = mapContentStatusToUi(x.statusRaw);
+            return {
+              title: x.title,
+              type: x.type,
+              day: formatDayLabel(x.dt, now),
+              time: formatTimeOrDash(x.dt),
+              status: statusUi,
+            };
+          });
+
+          setUpcoming(upcomingUi);
         }
-
-        const upcomingCombined: CombinedUpcoming[] = [];
-
-        const tasksUpcoming = tasksAll
-          .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
-          .map((t) => ({
-            kind: "task" as const,
-            title: normalizeTaskTitle(t),
-            type: "Tâche",
-            statusRaw: normalizeTaskStatus(t),
-            dt: normalizeTaskDueDate(t) ?? now,
-            priority: normalizeTaskPriority(t),
-          }))
-          .sort((a, b) => a.dt.getTime() - b.dt.getTime())
-          .slice(0, 6);
-
-        upcomingCombined.push(...tasksUpcoming);
-
-        const contentUpcoming = contentRows
-          .map((r) => ({
-            kind: "content" as const,
-            title: normalizeContentTitle(r),
-            type: normalizeContentType(r),
-            statusRaw: normalizeContentStatus(r),
-            dt: normalizeContentScheduledDate(r) ?? now,
-          }))
-          .filter((x) => x.dt >= startW && x.dt <= endW)
-          .sort((a, b) => a.dt.getTime() - b.dt.getTime())
-          .slice(0, 6);
-
-        upcomingCombined.push(...contentUpcoming);
-        upcomingCombined.sort((a, b) => a.dt.getTime() - b.dt.getTime());
-
-        const nextUpcoming: UpcomingItem[] = upcomingCombined.slice(0, 8).map((x) => ({
-          title: x.title,
-          type: x.type,
-          day: formatDayLabel(x.dt, now),
-          time: formatTimeOrDash(x.dt),
-          status: x.kind === "task" ? mapTaskStatusToUi(x.statusRaw) : mapContentStatusToUi(x.statusRaw),
-        }));
-
-        if (!cancelled) setUpcoming(nextUpcoming);
-      } catch (e) {
-        console.error("TodayLovable load error:", e);
+      } catch {
+        // ignore
       }
     }
 
-    void load();
+    load();
+
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
     if (!pulseUserId) return;
@@ -832,218 +766,153 @@ export default function TodayLovable() {
     saveFocusSettings(pulseUserId, { focusGoal });
   }, [focusGoal, pulseUserId]);
 
-  function validatePulse(next: BizPulse) {
-    const errs: Record<PulseField, string> = {
-      weeklyRevenue: "",
-      weeklyLeads: "",
-      weeklySales: "",
-    };
+  const weekLabel = useMemo(() => {
+    return formatWeekRangeLabel(new Date());
+  }, []);
 
-    if (next.weeklyRevenue.trim()) {
-      const n = parseEuroNumber(next.weeklyRevenue);
-      if (n === null || !Number.isFinite(n) || n < 0) {
-        errs.weeklyRevenue = "Entre un montant valide (ex: 1200, 1 200, 1.2k).";
-      }
-    }
-    if (next.weeklyLeads.trim()) {
-      const n = parseEuroNumber(next.weeklyLeads);
-      if (n === null || !Number.isFinite(n) || n < 0) {
-        errs.weeklyLeads = "Entre un nombre valide (ex: 10).";
-      }
-    }
-    if ((next.weeklySales ?? "").trim()) {
-      const n = parseEuroNumber(next.weeklySales);
-      if (n === null || !Number.isFinite(n) || n < 0) {
-        errs.weeklySales = "Entre un nombre valide (ex: 3).";
-      }
-    }
+  const pulsePercent = useMemo(() => {
+    return clampPercent((bizPulse.level / 4) * 100);
+  }, [bizPulse.level]);
 
-    setPulseErrors(errs);
-    return !Object.values(errs).some(Boolean);
-  }
+  const focusPercent = useMemo(() => {
+    return clampPercent((Math.min(7, tasksDoneThisWeek) / Math.max(1, focusGoal)) * 100);
+  }, [tasksDoneThisWeek, focusGoal]);
 
-  const priorityBadge = useMemo(() => {
-    if (nextTask.priority === "high") return { label: "High Priority", variant: "default" as const };
-    if (nextTask.priority === "low") return { label: "Low Priority", variant: "secondary" as const };
-    return { label: "Medium Priority", variant: "outline" as const };
-  }, [nextTask.priority]);
+  const refreshStarterPlan = async (userId: string) => {
+    try {
+      const { data: bpPlan, error: bpPlanErr } = await supabase
+        .from("business_plan")
+        .select("plan_json")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (bpPlanErr) throw bpPlanErr;
+
+      const extracted = extractStarterPlan((bpPlan as any)?.plan_json);
+      setStarterSummary(extracted.strategy_summary);
+      setStarterGoals(extracted.strategy_goals);
+      setStarterPlanError("");
+    } catch (e: any) {
+      setStarterPlanError("Impossible de charger ton plan de départ.");
+    }
+  };
+
+  const generateStarterPlan = async () => {
+    if (isGeneratingPlan) return;
+    setIsGeneratingPlan(true);
+    setStarterPlanError("");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) throw new Error("Not authenticated");
+
+      const r = await fetch("/api/strategy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error((j as any)?.error || "Erreur génération stratégie");
+      }
+
+      await refreshStarterPlan(userId);
+    } catch (e: any) {
+      setStarterPlanError(e?.message || "Impossible de générer le plan.");
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Aujourd&apos;hui</h1>
+        <main className="flex-1">
+          <div className="p-6 md:p-8 space-y-8">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <div>
+                <h1 className="text-3xl font-bold">Aujourd&apos;hui</h1>
+                <p className="text-muted-foreground">{weekLabel}</p>
+              </div>
             </div>
-            <Button variant="outline" onClick={() => setIsPulseOpen(true)} className="gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Mettre à jour mes chiffres
-            </Button>
-          </header>
 
-          <div className="p-6 space-y-6 max-w-7xl mx-auto">
             {/* Hero */}
-            <Card className="p-8 gradient-hero border-border/50">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
-                    Ta vision stratégique
-                  </h2>
-                  <p className="text-primary-foreground/90 text-lg max-w-2xl">
-                    Dashboard simple et actionnable : prochaine action + progrès réels.
-                  </p>
-                </div>
-                <Brain className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-primary-foreground/70 mb-1">Objectif revenu</p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="h-8 gap-2"
-                      onClick={() => {
-                        setGoalError("");
-                        setGoalInput(revenueGoalValue ? String(revenueGoalValue) : goalInput || "");
-                        setIsGoalOpen(true);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                      {revenueGoalValue ? "Modifier" : "Définir"}
-                    </Button>
+            <div className="grid lg:grid-cols-2 gap-8">
+              <Card className="p-8 gradient-primary text-primary-foreground">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">Ta prochaine action</h2>
+                    <p className="text-primary-foreground/80 mb-6">
+                      Reste focus : une seule action à la fois.
+                    </p>
                   </div>
-
-                  <p className="text-2xl font-bold text-primary-foreground">{revenueGoalLabel}</p>
-
-                  <p className="text-sm text-primary-foreground/70 mt-1">
-                    Objectif mensuel (servira à calculer ta progression).
-                  </p>
-                </div>
-
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    Progression vers l&apos;objectif
-                  </p>
-                  <p className="text-2xl font-bold text-primary-foreground">{revenueToGoalRatio}%</p>
-                  <div className="mt-3">
-                    <Progress value={revenueToGoalRatio} />
+                  <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                    <Brain className="w-6 h-6" />
                   </div>
                 </div>
 
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">Exécution de la semaine</p>
-                  <p className="text-2xl font-bold text-primary-foreground">{weeklyExecutionPercent}%</p>
-                  <div className="mt-3">
-                    <Progress value={weeklyExecutionPercent} />
+                <div className="bg-primary-foreground/10 rounded-xl p-6 mb-6">
+                  <h3 className="text-xl font-semibold mb-2">{nextTask.title}</h3>
+                  <div className="flex items-center gap-4 text-primary-foreground/80">
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      {nextTask.type}
+                    </span>
+                    <span>{nextTask.dueTime}</span>
                   </div>
                 </div>
-              </div>
-            </Card>
 
-            {/* Main grid */}
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Next action */}
-              <Card className="p-6 lg:col-span-2">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-                      <Target className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Prochaine action recommandée</h3>
-                      <p className="text-muted-foreground">Concentre-toi sur 1 action à la fois.</p>
-                    </div>
-                  </div>
-                  <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
-                </div>
-
-                <div className="p-6 rounded-xl bg-muted/30 border border-border/50">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="text-lg font-semibold mb-1">{nextTask.title}</h4>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-4 h-4" />
-                          {nextTask.type}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {nextTask.dueTime}
-                        </span>
-                      </div>
-                    </div>
-                    <Button asChild className="gap-2">
-                      <Link href={nextTask.href}>
-                        Commencer <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    Choisis 1 action claire, coche quand c’est fait, et Tipote met à jour ta progression.
-                  </div>
-                </div>
+                <Button asChild variant="secondary" className="w-full gap-2">
+                  <Link href={nextTask.href}>
+                    Commencer maintenant <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
               </Card>
 
-              {/* Focus semaine (V2) */}
-              <Card className="p-6">
+              <Card className="p-8">
                 <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl gradient-secondary flex items-center justify-center">
-                      <CheckCircle2 className="w-6 h-6 text-secondary-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold">Focus de la semaine</h3>
-                      <p className="text-sm text-muted-foreground">{weekLabel}</p>
-                    </div>
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">Ton focus</h2>
+                    <p className="text-muted-foreground">
+                      {tasksDoneThisWeek}/{focusGoal} tâches cette semaine
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => {
-                      setFocusGoalInput(String(focusGoal));
-                      setIsFocusOpen(true);
-                    }}
-                  >
-                    Modifier
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Target className="w-6 h-6 text-primary" />
+                  </div>
+                </div>
+
+                <Progress value={focusPercent} className="mb-6" />
+
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm font-medium">Objectif (tâches / semaine)</div>
+                  <div className="text-sm text-muted-foreground">0–7</div>
+                </div>
+
+                <Input
+                  value={focusGoalInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFocusGoalInput(v);
+                    if (isValidGoalNumber(v)) setFocusGoal(parseGoalNumber(v));
+                  }}
+                  className="mb-6"
+                  inputMode="numeric"
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Button asChild variant="outline" className="gap-2">
+                    <Link href="/tasks">Voir mes tâches</Link>
                   </Button>
-                </div>
-
-                <div className="p-4 rounded-lg bg-muted/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{focusLabel}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {Math.min(focusGoal, tasksDoneThisWeek)}/{focusGoal}
-                    </span>
-                  </div>
-                  <Progress value={focusPercent} />
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Basé sur tes tâches cochées cette semaine.
-                  </p>
-                </div>
-
-                <div className="mt-4 p-4 rounded-lg bg-muted/30">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Contenus planifiés</span>
-                    <span className="text-sm text-muted-foreground">{plannedCountThisWeek}/7</span>
-                  </div>
-                  <Progress value={clampPercent((plannedCountThisWeek / 7) * 100)} />
-                  <div className="mt-3 flex gap-2">
-                    <Button asChild variant="outline" size="sm" className="h-8">
-                      <Link href="/tasks">Voir mes tâches</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm" className="h-8">
-                      <Link href="/contents">Voir mes contenus</Link>
-                    </Button>
-                  </div>
+                  <Button asChild variant="outline" className="h-8">
+                    <Link href="/contents">Voir mes contenus</Link>
+                  </Button>
                 </div>
               </Card>
             </div>
@@ -1073,6 +942,101 @@ export default function TodayLovable() {
                 </Card>
               ))}
             </div>
+
+            {/* Starter plan */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Ton plan de départ</h3>
+                    <p className="text-muted-foreground">
+                      Une base simple et actionnable pour démarrer (générée depuis ton onboarding).
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={generateStarterPlan}
+                  disabled={isGeneratingPlan}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {isGeneratingPlan ? "Génération…" : "Régénérer"}
+                </Button>
+              </div>
+
+              {starterPlanError ? (
+                <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                  {starterPlanError}
+                </div>
+              ) : null}
+
+              {starterSummary || starterGoals.length ? (
+                <div className="space-y-5">
+                  {starterSummary ? (
+                    <div className="rounded-lg bg-muted/30 p-4">
+                      <p className="text-sm whitespace-pre-wrap">{starterSummary}</p>
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {starterGoals.slice(0, 3).map((g, idx) => (
+                      <div key={idx} className="rounded-xl border border-border/50 bg-background p-4">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <p className="font-semibold leading-snug">{g.title}</p>
+                          <Badge variant="secondary" className="shrink-0">
+                            Objectif
+                          </Badge>
+                        </div>
+
+                        {g.why ? <p className="text-sm text-muted-foreground mb-3">{g.why}</p> : null}
+
+                        {g.metric ? (
+                          <div className="text-xs text-muted-foreground mb-3">
+                            <span className="font-medium text-foreground">Mesure :</span> {g.metric}
+                          </div>
+                        ) : null}
+
+                        {g.first_actions?.length ? (
+                          <ul className="space-y-2 text-sm">
+                            {g.first_actions.slice(0, 3).map((a, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <CheckCircle2 className="w-4 h-4 mt-0.5 text-primary" />
+                                <span>{a}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button asChild className="flex-1 gap-2">
+                      <Link href="/strategy">
+                        Voir ma stratégie <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="flex-1 gap-2">
+                      <Link href="/tasks">
+                        Créer mes premières tâches <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg bg-muted/30 border border-border/50 p-4">
+                  <p className="font-semibold mb-1">Ton plan arrive</p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique sur <span className="font-medium text-foreground">Régénérer</span> pour générer ton plan de départ
+                    depuis ton onboarding.
+                  </p>
+                </div>
+              )}
+            </Card>
 
             {/* Upcoming */}
             <Card className="p-6">
@@ -1131,183 +1095,123 @@ export default function TodayLovable() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="flex-1 gap-2">
-                  <Link href="/contents">
-                    Voir mes contenus <ArrowRight className="w-4 h-4" />
+                  <Link href="/calendar">
+                    Voir mon calendrier <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
               </div>
             </Card>
+
+            {/* Pulse */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Pulse du business</h3>
+                    <p className="text-muted-foreground">Comment tu te sens cette semaine ?</p>
+                  </div>
+                </div>
+                <Button variant="outline" onClick={() => setIsPulseOpen(true)}>
+                  Modifier
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Progress value={pulsePercent} />
+                </div>
+                <Badge variant="secondary">{bizPulse.label}</Badge>
+              </div>
+            </Card>
+
+            <Dialog open={isPulseOpen} onOpenChange={setIsPulseOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Pulse du business</DialogTitle>
+                  <DialogDescription>Dis-nous ton niveau d’énergie / avance cette semaine.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Niveau (1–4)</Label>
+                    <Input
+                      value={String(bizPulse.level)}
+                      inputMode="numeric"
+                      onChange={(e) => {
+                        const n = clampPulseLevel(Number(e.target.value));
+                        setBizPulse({ level: n, label: levelLabel(n) });
+                      }}
+                    />
+                  </div>
+                  <Button onClick={() => setIsPulseOpen(false)}>OK</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isGoalOpen} onOpenChange={setIsGoalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Objectif revenu</DialogTitle>
+                  <DialogDescription>Modifie ton objectif (mensuel) à tout moment.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Objectif (ex: 3000€)</Label>
+                    <Input value={goalInput} onChange={(e) => setGoalInput(e.target.value)} />
+                    {goalError ? <p className="text-sm text-destructive">{goalError}</p> : null}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      className="flex-1"
+                      onClick={async () => {
+                        const {
+                          data: { user },
+                        } = await supabase.auth.getUser();
+                        const userId = user?.id;
+                        if (!userId) return;
+
+                        const ok = await saveRevenueGoal(userId, goalInput);
+                        if (ok) setIsGoalOpen(false);
+                      }}
+                    >
+                      Enregistrer
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setIsGoalOpen(false)}>
+                      Annuler
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Revenue goal widget (Lovable) */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Objectif revenu</p>
+                  <p className="text-2xl font-bold">{revenueGoalValue ? revenueGoalValue : "—"}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 gap-2"
+                  onClick={() => {
+                    setGoalError("");
+                    setGoalInput(revenueGoalValue ? String(revenueGoalValue) : goalInput || "");
+                    setIsGoalOpen(true);
+                  }}
+                >
+                  <Pencil className="w-4 h-4" />
+                  Modifier
+                </Button>
+              </div>
+            </Card>
           </div>
-
-          {/* Revenue goal dialog */}
-          <Dialog open={isGoalOpen} onOpenChange={setIsGoalOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-display font-bold">
-                  Définir mon objectif revenu
-                </DialogTitle>
-                <DialogDescription>
-                  Objectif mensuel (en €). Il sert à calculer ta progression sur le dashboard.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Objectif mensuel</Label>
-                  <Input
-                    value={goalInput}
-                    onChange={(e) => setGoalInput(e.target.value)}
-                    placeholder="ex: 3000, 3 000, 3k"
-                    inputMode="decimal"
-                  />
-                  {goalError ? <p className="text-xs text-destructive">{goalError}</p> : null}
-                  <p className="text-xs text-muted-foreground">
-                    Astuces : tu peux écrire “3k”, “3 000”, “3000€”…
-                  </p>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setGoalError("");
-                      setIsGoalOpen(false);
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    disabled={goalSaving || !pulseUserId}
-                    onClick={async () => {
-                      if (!pulseUserId) {
-                        setGoalError("Session introuvable.");
-                        return;
-                      }
-                      const ok = await saveRevenueGoalToSupabase(pulseUserId, goalInput);
-                      if (ok) setIsGoalOpen(false);
-                    }}
-                  >
-                    {goalSaving ? "Enregistrement..." : "Enregistrer"}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Focus dialog */}
-          <Dialog open={isFocusOpen} onOpenChange={setIsFocusOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-display font-bold">
-                  Objectif de la semaine
-                </DialogTitle>
-                <DialogDescription>
-                  Choisis ton focus : le nombre de tâches que tu veux terminer cette semaine.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Objectif (tâches)</Label>
-                  <Input
-                    value={focusGoalInput}
-                    onChange={(e) => setFocusGoalInput(e.target.value)}
-                    placeholder="ex: 3"
-                    inputMode="numeric"
-                  />
-                  <p className="text-xs text-muted-foreground">Entre un nombre entre 1 et 14.</p>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button variant="outline" onClick={() => setIsFocusOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      const n = Number(String(focusGoalInput || "").trim().replace(/[^0-9]/g, ""));
-                      const safe =
-                        Number.isFinite(n) && n > 0 ? Math.max(1, Math.min(14, Math.round(n))) : 3;
-                      setFocusGoal(safe);
-                      setFocusGoalInput(String(safe));
-                      setIsFocusOpen(false);
-                    }}
-                  >
-                    Enregistrer
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Pulse dialog */}
-          <Dialog open={isPulseOpen} onOpenChange={setIsPulseOpen}>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-display font-bold">
-                  Mettre à jour mes chiffres
-                </DialogTitle>
-                <DialogDescription>
-                  Tes analytics ne sont pas connectables automatiquement : entre tes chiffres de la
-                  semaine pour suivre ta progression vers ton objectif.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Revenu de la semaine</Label>
-                  <Input
-                    value={bizPulse.weeklyRevenue}
-                    onChange={(e) => setBizPulse((p) => ({ ...p, weeklyRevenue: e.target.value }))}
-                    placeholder="ex: 1200, 1 200, 1.2k"
-                  />
-                  {pulseErrors.weeklyRevenue ? (
-                    <p className="text-xs text-destructive">{pulseErrors.weeklyRevenue}</p>
-                  ) : null}
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Leads générés</Label>
-                    <Input
-                      value={bizPulse.weeklyLeads}
-                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklyLeads: e.target.value }))}
-                      placeholder="ex: 10"
-                    />
-                    {pulseErrors.weeklyLeads ? (
-                      <p className="text-xs text-destructive">{pulseErrors.weeklyLeads}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Ventes (optionnel)</Label>
-                    <Input
-                      value={bizPulse.weeklySales}
-                      onChange={(e) => setBizPulse((p) => ({ ...p, weeklySales: e.target.value }))}
-                      placeholder="ex: 3"
-                    />
-                    {pulseErrors.weeklySales ? (
-                      <p className="text-xs text-destructive">{pulseErrors.weeklySales}</p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button variant="outline" onClick={() => setIsPulseOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      const next = { ...bizPulse };
-                      if (!validatePulse(next)) return;
-                      setIsPulseOpen(false);
-                    }}
-                  >
-                    Enregistrer
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </main>
       </div>
     </SidebarProvider>
