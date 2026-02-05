@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Loader2, Sparkles, Undo2, Redo2, RotateCcw, Send } from "lucide-react";
+import { Loader2, Sparkles, Undo2, RotateCcw, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Role = "assistant" | "user" | "system";
@@ -64,8 +64,8 @@ export type TemplateChatPanelProps = {
   onUndo: () => void;
   canUndo: boolean;
 
-  onRedo: () => void;
-  canRedo: boolean;
+  onRedo?: () => void;
+  canRedo?: boolean;
 
   disabled?: boolean;
 };
@@ -82,8 +82,6 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [lastPatches, setLastPatches] = useState<Patch[]>([]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -138,8 +136,6 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
         brandTokens: nextBrandTokens,
         patches: Array.isArray(res.patches) ? res.patches : [],
       });
-
-      setLastPatches(Array.isArray(res.patches) ? res.patches : []);
 
       const appliedCount = Array.isArray(res.patches) ? res.patches.length : 0;
       const explanation =
@@ -196,17 +192,19 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
             onClick={props.onRedo}
             disabled={!props.canRedo || loading || props.disabled}
           >
-            <Redo2 className="w-4 h-4 mr-1" />
-            Refaire
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Rétablir
           </Button>
         </div>
       </div>
 
       <div className="text-xs text-muted-foreground">
+        <span className="font-medium">Coût :</span> chaque modification demandée consomme{" "}
+        <span className="font-medium">0,5 crédit</span>.
+        <br />
         Exemples : <span className="font-medium">“Raccourcis le titre”</span>,{" "}
         <span className="font-medium">“CTA plus direct”</span>,{" "}
-        <span className="font-medium">“Accent en #7C3AED”</span>,{" "}
-        <span className="font-medium">“Police titre: Inter, texte: system-ui”</span>.
+        <span className="font-medium">“Accent en #7C3AED”</span>.
       </div>
 
       <div className="rounded-lg border bg-muted/20">
@@ -217,77 +215,64 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
               return (
                 <div
                   key={`${m.at}-${idx}`}
-                  className={cn("flex", isUser ? "justify-end" : "justify-start")}
+                  className={cn(
+                    "max-w-[92%] rounded-lg px-3 py-2 text-sm",
+                    isUser
+                      ? "ml-auto bg-primary text-primary-foreground"
+                      : "bg-background border"
+                  )}
                 >
-                  <div
-                    className={cn(
-                      "max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                      isUser
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background border"
-                    )}
-                  >
-                    {m.content}
-                  </div>
+                  <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
                 </div>
               );
             })}
-
             {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-2xl px-3 py-2 text-sm bg-background border flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Application des modifications…
-                </div>
+              <div className="max-w-[92%] rounded-lg px-3 py-2 text-sm bg-background border flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                L’IA applique les changements…
               </div>
             )}
-
             <div ref={scrollRef} />
           </div>
         </ScrollArea>
       </div>
 
-      <div className="flex gap-2">
+      <div className="space-y-2">
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Demande une modification…"
-          rows={2}
+          rows={3}
+          placeholder="Ex: Raccourcis le titre, CTA plus direct, accent en orange…"
           className="resize-none"
           disabled={loading || props.disabled}
           onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") send();
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              if (canSend) void send();
+            }
           }}
         />
-        <Button onClick={send} disabled={!canSend} className="shrink-0">
-          {loading ? (
-            <RotateCcw className="w-4 h-4" />
-          ) : (
-            <>
-              <Send className="w-4 h-4 mr-2" />
-              Envoyer
-            </>
-          )}
-        </Button>
-      </div>
 
-      {lastPatches.length > 0 && (
-        <div className="rounded-lg border bg-muted/20 p-3">
-          <div className="text-xs font-medium mb-2">Modifications appliquées</div>
-          <div className="flex flex-wrap gap-2">
-            {lastPatches.slice(0, 8).map((p, i) => (
-              <Badge key={`${p.path}-${i}`} variant="secondary" className="font-mono text-[11px]">
-                {p.op}:{p.path}
-              </Badge>
-            ))}
-            {lastPatches.length > 8 && (
-              <Badge variant="secondary" className="text-[11px]">
-                +{lastPatches.length - 8}
-              </Badge>
-            )}
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium">Astuce :</span> Ctrl/Cmd + Enter pour envoyer
           </div>
+
+          <Button onClick={send} disabled={!canSend} size="sm">
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Envoi…
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Appliquer
+              </>
+            )}
+          </Button>
         </div>
-      )}
+      </div>
 
       <div className="flex items-center gap-2">
         <Button

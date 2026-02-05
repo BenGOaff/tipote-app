@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Wand2, RefreshCw, Save, Send, X, Route } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, Send, X, Route, Eye, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -17,6 +17,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AIContent } from "@/components/ui/ai-content";
 import { TemplateChatPanel } from "@/components/templates/TemplateChatPanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
 import { isLeadMagnetLevel } from "@/components/create/forms/_shared";
@@ -316,8 +323,16 @@ export function FunnelForm(props: FunnelFormProps) {
   const [contentDataJson, setContentDataJson] =
     useState<Record<string, any> | null>(null);
 
-  // Chat / branding + history stacks
+  const [activeOutput, setActiveOutput] = useState<OutputTab>("text");
+
+  const [htmlPreview, setHtmlPreview] = useState("");
+  const [htmlKit, setHtmlKit] = useState("");
+  const [isRendering, setIsRendering] = useState(false);
+
+  // brand tokens edited by chat
   const [brandTokens, setBrandTokens] = useState<Record<string, any>>({});
+
+  // undo/redo for chat iterations
   const [history, setHistory] = useState<
     Array<{ contentData: Record<string, any> | null; brandTokens: Record<string, any> }>
   >([]);
@@ -325,11 +340,13 @@ export function FunnelForm(props: FunnelFormProps) {
     Array<{ contentData: Record<string, any> | null; brandTokens: Record<string, any> }>
   >([]);
 
-  const [activeOutput, setActiveOutput] = useState<OutputTab>("text");
+  // template preview modal
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
-  const [htmlPreview, setHtmlPreview] = useState("");
-  const [htmlKit, setHtmlKit] = useState("");
-  const [isRendering, setIsRendering] = useState(false);
+  const generationCost = pageType === "capture" ? 4 : 6;
+  const iterationCost = 0.5;
 
   // Keep templateId coherent with pageType
   useEffect(() => {
@@ -366,7 +383,8 @@ export function FunnelForm(props: FunnelFormProps) {
     selectedOfferId,
   ]);
 
-  const templatesForType = pageType === "capture" ? captureTemplates : saleTemplates;
+  const templatesForType =
+    pageType === "capture" ? captureTemplates : saleTemplates;
   const variantsForTemplate = useMemo(
     () => pickVariantsForTemplate(templateId),
     [templateId]
@@ -379,34 +397,82 @@ export function FunnelForm(props: FunnelFormProps) {
     );
   }, [mode, selectedOfferId, manualName, manualPromise, manualTarget]);
 
-  const getDerivedContentData = () => {
-    const derived =
-      pageType === "capture"
-        ? deriveCaptureContentData({
-            templateId: templateId as CaptureTemplateId,
-            rawText: result,
-            offerName:
-              mode === "from_pyramid" ? selectedOffer?.name || "" : manualName,
-            promise:
-              mode === "from_pyramid"
-                ? selectedOffer?.promise || ""
-                : manualPromise,
-          })
-        : deriveSaleContentData({
-            templateId: templateId as SaleTemplateId,
-            rawText: result,
-            offerName:
-              mode === "from_pyramid" ? selectedOffer?.name || "" : manualName,
-            promise:
-              mode === "from_pyramid"
-                ? selectedOffer?.promise || ""
-                : manualPromise,
-          });
+  const buildLoremRawText = () => {
+    return [
+      "Découvre la méthode simple pour obtenir un résultat concret rapidement",
+      "Sans y passer des heures, même si tu débutes.",
+      "- Étape 1 : clarifie ton objectif",
+      "- Étape 2 : applique la méthode en 15 minutes",
+      "- Étape 3 : répète sur 7 jours",
+      "- Bonus : un template prêt à copier-coller",
+      "RGPD : Zéro spam. Désinscription en 1 clic.",
+    ].join("\n");
+  };
 
-    return contentDataJson ?? derived;
+  const getPreviewContentData = () => {
+    const rawText = buildLoremRawText();
+    if (pageType === "capture") {
+      return deriveCaptureContentData({
+        templateId: templateId as CaptureTemplateId,
+        rawText,
+        offerName: "Ressource gratuite",
+        promise: "Obtenir un résultat en 7 jours",
+      });
+    }
+    return deriveSaleContentData({
+      templateId: templateId as SaleTemplateId,
+      rawText,
+      offerName: "Offre premium",
+      promise: "Passer au niveau supérieur",
+    });
+  };
+
+  const openTemplatePreview = async () => {
+    setPreviewOpen(true);
+    setIsPreviewLoading(true);
+    setPreviewHtml("");
+
+    try {
+      const contentData = getPreviewContentData();
+      const res = await fetch("/api/templates/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: pageType === "capture" ? "capture" : "vente",
+          templateId,
+          mode: "preview",
+          variantId,
+          contentData,
+          brandTokens,
+        }),
+      });
+
+      const html = await res.text();
+      if (!res.ok) throw new Error(html || "Erreur preview template");
+      setPreviewHtml(html);
+    } catch (e: any) {
+      toast({
+        title: "Erreur preview",
+        description: e?.message || "Impossible d'afficher la preview.",
+        variant: "destructive",
+      });
+      setPreviewHtml(
+        "<html><body style='font-family:system-ui;padding:24px'>Erreur preview.</body></html>"
+      );
+    } finally {
+      setIsPreviewLoading(false);
+    }
   };
 
   const handleGenerate = async () => {
+    toast({
+      title: "Info crédits",
+      description:
+        pageType === "capture"
+          ? "Cette génération coûte 4 crédits."
+          : "Cette génération coûte 6 crédits.",
+    });
+
     const offerPayload =
       mode === "from_pyramid"
         ? selectedOffer
@@ -435,15 +501,17 @@ export function FunnelForm(props: FunnelFormProps) {
       const t =
         mode === "from_pyramid"
           ? `Funnel: ${
-              selectedOffer?.name || (pageType === "capture" ? "Capture" : "Vente")
+              selectedOffer?.name ||
+              (pageType === "capture" ? "Capture" : "Vente")
             }`
           : `Funnel: ${
-              manualName.trim() || (pageType === "capture" ? "Capture" : "Vente")
+              manualName.trim() ||
+              (pageType === "capture" ? "Capture" : "Vente")
             }`;
       setTitle(t);
     }
 
-    // Reset outputs + chat state
+    // Reset HTML cached outputs + edit state
     setHtmlPreview("");
     setHtmlKit("");
     setContentDataJson(null);
@@ -453,8 +521,6 @@ export function FunnelForm(props: FunnelFormProps) {
   };
 
   const handleSave = async (status: "draft" | "published") => {
-    const contentData = getDerivedContentData();
-
     await props.onSave({
       title,
       content: result,
@@ -466,17 +532,42 @@ export function FunnelForm(props: FunnelFormProps) {
         `template:${templateId}`,
         variantId ? `variant:${variantId}` : "",
       ].filter(Boolean),
-      // ✅ NEW: persist template state (best-effort côté API si meta column existe)
+      // meta is ignored by API if not supported yet; kept for forward compatibility
       meta: {
         kind: pageType === "capture" ? "capture" : "vente",
         templateId,
         variantId,
-        contentData,
-        brandTokens: brandTokens || {},
-        // keep room for future:
-        version: 1,
+        contentDataJson: contentDataJson ?? null,
+        brandTokens: brandTokens ?? {},
       },
     });
+  };
+
+  const getDerivedContentData = () => {
+    const derived =
+      pageType === "capture"
+        ? deriveCaptureContentData({
+            templateId: templateId as CaptureTemplateId,
+            rawText: result,
+            offerName:
+              mode === "from_pyramid" ? selectedOffer?.name || "" : manualName,
+            promise:
+              mode === "from_pyramid"
+                ? selectedOffer?.promise || ""
+                : manualPromise,
+          })
+        : deriveSaleContentData({
+            templateId: templateId as SaleTemplateId,
+            rawText: result,
+            offerName:
+              mode === "from_pyramid" ? selectedOffer?.name || "" : manualName,
+            promise:
+              mode === "from_pyramid"
+                ? selectedOffer?.promise || ""
+                : manualPromise,
+          });
+
+    return contentDataJson ?? derived;
   };
 
   const renderHtml = async () => {
@@ -583,23 +674,21 @@ export function FunnelForm(props: FunnelFormProps) {
         brandTokens: structuredClone(brandTokens || {}),
       },
     ]);
-
-    // ✅ any new change clears redo stack
     setFuture([]);
 
     setContentDataJson(next.contentData);
     setBrandTokens(next.brandTokens);
 
-    if (result.trim()) void renderHtml();
+    if (result.trim()) {
+      void renderHtml();
+    }
   };
 
   const undo = () => {
     setHistory((h) => {
       if (!h.length) return h;
-
       const last = h[h.length - 1];
 
-      // push current into future
       setFuture((f) => [
         ...f,
         {
@@ -610,8 +699,8 @@ export function FunnelForm(props: FunnelFormProps) {
 
       setContentDataJson(last.contentData);
       setBrandTokens(last.brandTokens);
-
       if (result.trim()) void renderHtml();
+
       return h.slice(0, -1);
     });
   };
@@ -619,10 +708,8 @@ export function FunnelForm(props: FunnelFormProps) {
   const redo = () => {
     setFuture((f) => {
       if (!f.length) return f;
-
       const last = f[f.length - 1];
 
-      // push current into history
       setHistory((h) => [
         ...h,
         {
@@ -633,8 +720,8 @@ export function FunnelForm(props: FunnelFormProps) {
 
       setContentDataJson(last.contentData);
       setBrandTokens(last.brandTokens);
-
       if (result.trim()) void renderHtml();
+
       return f.slice(0, -1);
     });
   };
@@ -649,6 +736,13 @@ export function FunnelForm(props: FunnelFormProps) {
         <Button variant="ghost" size="icon" onClick={props.onClose}>
           <X className="w-5 h-5" />
         </Button>
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        <span className="font-medium">Crédits :</span> génération{" "}
+        <span className="font-medium">{generationCost}</span> crédits ({pageType === "capture" ? "capture" : "vente"}) •
+        chaque changement via chat{" "}
+        <span className="font-medium">{iterationCost}</span> crédit.
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -740,7 +834,45 @@ export function FunnelForm(props: FunnelFormProps) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Template Systeme (style)</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Template Systeme (style)</Label>
+
+                <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        void openTemplatePreview();
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Preview
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-5xl">
+                    <DialogHeader>
+                      <DialogTitle>Preview template — {templateId}</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="border rounded-lg overflow-hidden bg-background">
+                      <iframe
+                        title="template-preview"
+                        className="w-full h-[72vh]"
+                        sandbox="allow-same-origin"
+                        srcDoc={
+                          isPreviewLoading
+                            ? "<html><body style='font-family:system-ui;padding:24px'>Chargement…</body></html>"
+                            : previewHtml || "<html><body></body></html>"
+                        }
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               <Select
                 value={templateId}
                 onValueChange={(v) => setTemplateId(v as TemplateId)}
@@ -791,7 +923,7 @@ export function FunnelForm(props: FunnelFormProps) {
             ) : (
               <>
                 <Wand2 className="w-4 h-4 mr-2" />
-                Générer (copywriting complet)
+                Générer (copywriting complet) — {generationCost} crédits
               </>
             )}
           </Button>
@@ -979,6 +1111,12 @@ export function FunnelForm(props: FunnelFormProps) {
                       <span className="font-medium">SLOT SYSTEME</span> indiquent où ajouter le formulaire / paiement /
                       redirection natifs.
                     </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <RotateCcw className="w-4 h-4" />
+                      <span>
+                        Tu peux annuler/rétablir les changements du chat (pile Undo/Redo).
+                      </span>
+                    </div>
                   </div>
                 </>
               )}

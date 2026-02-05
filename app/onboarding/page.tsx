@@ -1,14 +1,13 @@
 // app/onboarding/page.tsx
 // Onboarding (obligatoire)
-// V2 (chat) par défaut. Legacy accessible via ?legacy=1
+// ✅ V2 (chat) uniquement (legacy supprimé)
 // Si déjà complété => redirection dashboard principal
 //
-// ✅ V2: reprise de session (resume) si une session onboarding v2 est active
+// ✅ Reprise de session (resume) si une session onboarding v2 est active
 // (fail-open si tables absentes ou erreurs DB, pour ne pas casser l'app)
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { OnboardingFlow } from "./OnboardingFlow";
 import { OnboardingChatV2 } from "./OnboardingChatV2";
 
 type InitialMsg = {
@@ -27,9 +26,7 @@ function isInitialMsg(x: any): x is InitialMsg {
   );
 }
 
-export default async function OnboardingPage(props: {
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
+export default async function OnboardingPage() {
   const supabase = await getSupabaseServerClient();
 
   const {
@@ -47,11 +44,6 @@ export default async function OnboardingPage(props: {
     .maybeSingle();
 
   if (profile?.onboarding_completed) redirect("/app");
-
-  const legacyParam = props.searchParams?.legacy;
-  const legacy = legacyParam === "1" || (Array.isArray(legacyParam) && legacyParam.includes("1"));
-
-  if (legacy) return <OnboardingFlow />;
 
   // ✅ Resume session v2 si existante (best-effort)
   let initialSessionId: string | null = null;

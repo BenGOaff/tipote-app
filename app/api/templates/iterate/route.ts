@@ -1,274 +1,198 @@
-// app/api/contents/route.ts
-// Create content_item (POST) — utilisé par la page Lovable /create
-// ✅ Compat DB : certaines instances ont colonnes EN/V2 (type/title/content/status/channel/scheduled_date, tags array|text)
-// ✅ Compat DB : certaines instances ont colonnes FR (type/titre/contenu/statut/canal/date_planifiee, tags text)
-// ✅ RLS-safe : on tente d’abord avec supabase server (session), puis fallback supabaseAdmin si besoin
-// ✅ Retour JSON simple { ok, id }
+// app/api/templates/iterate/route.ts
+// Iteration endpoint: takes instruction + current contentData/brandTokens and returns safe patches + next state.
+// Auth: requires Supabase session (server) to prevent abuse.
+// IMPORTANT: never edits HTML. Only updates structured data.
 
-import { NextRequest, NextResponse } from "next/server";
-import type { PostgrestError } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getOwnerOpenAI } from "@/lib/openaiClient";
 
-type AnyRecord = Record<string, unknown>;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
-function isRecord(v: unknown): v is AnyRecord {
-  return !!v && typeof v === "object" && !Array.isArray(v);
-}
+type Kind = "capture" | "vente";
 
-function asString(v: unknown, maxLen = 5000): string {
-  const s =
-    typeof v === "string"
-      ? v
-      : typeof v === "number"
-        ? String(v)
-        : typeof v === "boolean"
-          ? v
-            ? "true"
-            : "false"
-          : "";
-  const t = s.trim();
-  if (!t) return "";
-  return t.length > maxLen ? t.slice(0, maxLen) : t;
-}
+type CaptureTemplateId =
+  | "capture-01"
+  | "capture-02"
+  | "capture-03"
+  | "capture-04"
+  | "capture-05";
 
-function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v))
-    return v.map((x) => asString(x, 200)).map((x) => x.trim()).filter(Boolean);
-  if (typeof v === "string") {
-    const s = v.trim();
-    if (!s) return [];
-    const parts = s.includes("|") ? s.split("|") : s.split(",");
-    return parts.map((x) => x.trim()).filter(Boolean);
-  }
-  return [];
-}
+type SaleTemplateId =
+  | "sale-01"
+  | "sale-02"
+  | "sale-03"
+  | "sale-04"
+  | "sale-05"
+  | "sale-06"
+  | "sale-07"
+  | "sale-08"
+  | "sale-09"
+  | "sale-10"
+  | "sale-11"
+  | "sale-12";
 
-function normalizeStatus(v: unknown): string {
-  const s = asString(v, 40).toLowerCase();
-  if (!s) return "draft";
-  if (["draft", "scheduled", "published", "archived"].includes(s)) return s;
-  if (["brouillon"].includes(s)) return "draft";
-  if (["planifie", "planifié", "programmé", "programme"].includes(s)) return "scheduled";
-  if (["publie", "publié"].includes(s)) return "published";
-  return "draft";
-}
+type TemplateId = CaptureTemplateId | SaleTemplateId;
 
-function normalizeScheduledDate(v: unknown): string | null {
-  const s = asString(v, 64);
-  if (!s) return null;
+const PatchSchema = z.object({
+  op: z.enum(["set", "unset"]),
+  // Examples:
+  // - "hero_title"
+  // - "bullets.2"
+  // - "features.0.t"
+  // - "faq_items.1.question"
+  // - "brandTokens.accent"
+  path: z.string().min(1),
+  value: z.any().optional(),
+});
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+const InputSchema = z.object({
+  instruction: z.string().min(3),
+  templateId: z.enum([
+    "capture-01",
+    "capture-02",
+    "capture-03",
+    "capture-04",
+    "capture-05",
+    "sale-01",
+    "sale-02",
+    "sale-03",
+    "sale-04",
+    "sale-05",
+    "sale-06",
+    "sale-07",
+    "sale-08",
+    "sale-09",
+    "sale-10",
+    "sale-11",
+    "sale-12",
+  ]),
+  variantId: z.string().optional().nullable(),
+  kind: z.enum(["capture", "vente"]),
+  contentData: z.record(z.any()),
+  brandTokens: z.record(z.any()).optional().nullable(),
+});
 
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
-}
+const OutputSchema = z.object({
+  patches: z.array(PatchSchema),
+  explanation: z.string().optional(),
+  warnings: z.array(z.string()).optional(),
+});
 
-function isColumnMissing(message: string) {
-  return /column .* does not exist/i.test(message) ||
-    /could not find the .* column/i.test(message);
-}
+const CONTENT_WHITELIST: Record<Kind, string[]> = {
+  capture: [
+    "hero_pretitle",
+    "hero_badge",
+    "hero_kicker",
+    "hero_title",
+    "hero_subtitle",
+    "bullets",
+    "features",
+    "steps",
+    "cta_text",
+    "reassurance_text",
+    "side_badge",
+    "key_number",
+  ],
+  vente: ["hero_title", "hero_subtitle", "hero_bullets", "cta_main", "faq_items"],
+};
 
-function isTagsTypeMismatch(message: string) {
-  return /malformed array literal/i.test(message) ||
-    /invalid input syntax/i.test(message) ||
-    /cannot cast type/i.test(message);
-}
+const BRANDTOKENS_WHITELIST = ["accent", "headingFont", "bodyFont"];
 
-type InsertResult = { data: { id: string } | null; error: PostgrestError | null };
+function isPathAllowed(path: string, kind: Kind) {
+  const p = String(path || "").trim();
+  if (!p) return false;
 
-async function insertContentV2(params: {
-  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>> | typeof supabaseAdmin;
-  userId: string;
-  type: string;
-  title: string;
-  content: string;
-  status: string;
-  channel: string | null;
-  scheduledDate: string | null;
-  tags: string[];
-  tagsCsv: string;
-  meta: AnyRecord | null;
-}): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
-
-  const basePayload: AnyRecord = {
-    user_id: userId,
-    type,
-    title,
-    content,
-    status,
-    channel,
-    scheduled_date: scheduledDate,
-    tags,
-  };
-
-  if (meta) basePayload.meta = meta;
-
-  let first = await (supabase as any)
-    .from("content_item")
-    .insert(basePayload)
-    .select("id")
-    .maybeSingle();
-
-  // tags mismatch fallback (array vs text)
-  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
-    const retryPayload: AnyRecord = {
-      user_id: userId,
-      type,
-      title,
-      content,
-      status,
-      channel,
-      scheduled_date: scheduledDate,
-      tags: tagsCsv,
-    };
-    if (meta) retryPayload.meta = meta;
-
-    first = await (supabase as any)
-      .from("content_item")
-      .insert(retryPayload)
-      .select("id")
-      .maybeSingle();
+  if (p.startsWith("brandTokens.")) {
+    const key = p.replace("brandTokens.", "").split(".")[0] || "";
+    return BRANDTOKENS_WHITELIST.includes(key);
   }
 
-  // meta missing fallback
-  if (first?.error && meta && isColumnMissing(first.error.message)) {
-    // retry without meta
-    let retry = await (supabase as any)
-      .from("content_item")
-      .insert({
-        user_id: userId,
-        type,
-        title,
-        content,
-        status,
-        channel,
-        scheduled_date: scheduledDate,
-        tags,
-      })
-      .select("id")
-      .maybeSingle();
+  const root = p.split(".")[0] || "";
+  return CONTENT_WHITELIST[kind].includes(root);
+}
 
-    if (retry?.error && isTagsTypeMismatch(retry.error.message) && tagsCsv) {
-      retry = await (supabase as any)
-        .from("content_item")
-        .insert({
-          user_id: userId,
-          type,
-          title,
-          content,
-          status,
-          channel,
-          scheduled_date: scheduledDate,
-          tags: tagsCsv,
-        })
-        .select("id")
-        .maybeSingle();
+function deepClone<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v ?? null));
+}
+
+function setByPath(obj: any, path: string, value: any) {
+  const parts = String(path).split(".").filter(Boolean);
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    const nextK = parts[i + 1];
+    const isIndex = /^\d+$/.test(nextK);
+    if (cur[k] == null) cur[k] = isIndex ? [] : {};
+    cur = cur[k];
+  }
+
+  const last = parts[parts.length - 1];
+  if (/^\d+$/.test(last)) {
+    const idx = Number(last);
+    if (!Array.isArray(cur)) return;
+    cur[idx] = value;
+    return;
+  }
+
+  cur[last] = value;
+}
+
+function unsetByPath(obj: any, path: string) {
+  const parts = String(path).split(".").filter(Boolean);
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    if (cur == null) return;
+    cur = cur[k];
+  }
+
+  const last = parts[parts.length - 1];
+  if (cur == null) return;
+
+  if (/^\d+$/.test(last)) {
+    const idx = Number(last);
+    if (!Array.isArray(cur)) return;
+    cur.splice(idx, 1);
+    return;
+  }
+
+  delete cur[last];
+}
+
+function applyPatches(params: {
+  contentData: Record<string, any>;
+  brandTokens: Record<string, any>;
+  patches: Array<{ op: "set" | "unset"; path: string; value?: any }>;
+}) {
+  const contentData = deepClone(params.contentData || {});
+  const brandTokens = deepClone(params.brandTokens || {});
+  const patches = Array.isArray(params.patches) ? params.patches : [];
+
+  for (const p of patches) {
+    const path = String(p.path || "");
+    if (!path) continue;
+
+    if (path.startsWith("brandTokens.")) {
+      const btPath = path.replace("brandTokens.", "");
+      if (p.op === "unset") unsetByPath(brandTokens, btPath);
+      else setByPath(brandTokens, btPath, p.value);
+      continue;
     }
 
-    return { data: retry.data ?? null, error: retry.error ?? null };
+    if (p.op === "unset") unsetByPath(contentData, path);
+    else setByPath(contentData, path, p.value);
   }
 
-  return { data: first.data ?? null, error: first.error ?? null };
+  return { nextContentData: contentData, nextBrandTokens: brandTokens };
 }
 
-async function insertContentFR(params: {
-  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>> | typeof supabaseAdmin;
-  userId: string;
-  type: string;
-  title: string;
-  content: string;
-  status: string;
-  channel: string | null;
-  scheduledDate: string | null;
-  tags: string[];
-  tagsCsv: string;
-  meta: AnyRecord | null;
-}): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
-
-  const basePayload: AnyRecord = {
-    user_id: userId,
-    type,
-    titre: title,
-    contenu: content,
-    statut: status,
-    canal: channel,
-    date_planifiee: scheduledDate,
-    tags,
-  };
-
-  if (meta) basePayload.meta = meta;
-
-  let first = await (supabase as any)
-    .from("content_item")
-    .insert(basePayload)
-    .select("id")
-    .maybeSingle();
-
-  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
-    const retryPayload: AnyRecord = {
-      user_id: userId,
-      type,
-      titre: title,
-      contenu: content,
-      statut: status,
-      canal: channel,
-      date_planifiee: scheduledDate,
-      tags: tagsCsv,
-    };
-    if (meta) retryPayload.meta = meta;
-
-    first = await (supabase as any)
-      .from("content_item")
-      .insert(retryPayload)
-      .select("id")
-      .maybeSingle();
-  }
-
-  if (first?.error && meta && isColumnMissing(first.error.message)) {
-    let retry = await (supabase as any)
-      .from("content_item")
-      .insert({
-        user_id: userId,
-        type,
-        titre: title,
-        contenu: content,
-        statut: status,
-        canal: channel,
-        date_planifiee: scheduledDate,
-        tags,
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (retry?.error && isTagsTypeMismatch(retry.error.message) && tagsCsv) {
-      retry = await (supabase as any)
-        .from("content_item")
-        .insert({
-          user_id: userId,
-          type,
-          titre: title,
-          contenu: content,
-          statut: status,
-          canal: channel,
-          date_planifiee: scheduledDate,
-          tags: tagsCsv,
-        })
-        .select("id")
-        .maybeSingle();
-    }
-
-    return { data: retry.data ?? null, error: retry.error ?? null };
-  }
-
-  return { data: first.data ?? null, error: first.error ?? null };
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const supabase = await getSupabaseServerClient();
   const {
     data: { session },
@@ -278,103 +202,174 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: AnyRecord = {};
-  try {
-    body = (await req.json()) as AnyRecord;
-  } catch {
-    body = {};
-  }
-
-  const userId = session.user.id;
-
-  const type = asString(body.type, 80) || "post";
-  const title = asString(body.title, 240);
-  const content = asString(body.content, 100000);
-  const status = normalizeStatus(body.status);
-  const channel =
-    asString(body.channel, 120) ||
-    asString(body.platform, 120) ||
-    asString((isRecord(body.meta) ? (body.meta as AnyRecord).platform : ""), 120) ||
-    "";
-  const scheduledDate = normalizeScheduledDate(body.scheduledDate ?? body.scheduled_date ?? body.date_planifiee);
-  const tags = asStringArray(body.tags);
-  const tagsCsv = tags.join(",");
-
-  const meta = isRecord(body.meta) ? (body.meta as AnyRecord) : null;
-
-  // 1) try V2 columns
-  let inserted: InsertResult = { data: null, error: null };
-  inserted = await insertContentV2({
-    supabase,
-    userId,
-    type,
-    title,
-    content,
-    status,
-    channel: channel || null,
-    scheduledDate,
-    tags,
-    tagsCsv,
-    meta,
-  });
-
-  // if missing V2 columns -> fallback FR
-  if (inserted.error && isColumnMissing(inserted.error.message)) {
-    inserted = await insertContentFR({
-      supabase,
-      userId,
-      type,
-      title,
-      content,
-      status,
-      channel: channel || null,
-      scheduledDate,
-      tags,
-      tagsCsv,
-      meta,
-    });
-  }
-
-  // if still failing, try admin fallback (RLS)
-  if (inserted.error) {
-    // retry V2 with admin
-    inserted = await insertContentV2({
-      supabase: supabaseAdmin,
-      userId,
-      type,
-      title,
-      content,
-      status,
-      channel: channel || null,
-      scheduledDate,
-      tags,
-      tagsCsv,
-      meta,
-    });
-
-    if (inserted.error && isColumnMissing(inserted.error.message)) {
-      inserted = await insertContentFR({
-        supabase: supabaseAdmin,
-        userId,
-        type,
-        title,
-        content,
-        status,
-        channel: channel || null,
-        scheduledDate,
-        tags,
-        tagsCsv,
-        meta,
-      });
-    }
-  }
-
-  if (inserted.error || !inserted.data?.id) {
+  const openai = getOwnerOpenAI();
+  if (!openai) {
     return NextResponse.json(
-      { error: inserted.error?.message || "Insert failed" },
+      {
+        error:
+          "OpenAI non configuré (OPENAI_API_KEY_OWNER manquant). Impossible d’itérer le template.",
+      },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ ok: true, id: inserted.data.id });
+  let body: unknown = null;
+  try {
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+
+  const parsed = InputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid payload", details: parsed.error.format() },
+      { status: 400 }
+    );
+  }
+
+  const { instruction, templateId, variantId, kind, contentData } = parsed.data;
+
+  // ✅ Template whitelist coherence: templateId must match kind
+  const isCaptureTemplate = String(templateId).startsWith("capture-");
+  if (
+    (kind === "capture" && !isCaptureTemplate) ||
+    (kind === "vente" && isCaptureTemplate)
+  ) {
+    return NextResponse.json(
+      { error: "Template/kind mismatch" },
+      { status: 400 }
+    );
+  }
+
+  // ✅ Credits gating (each iteration costs 0.5)
+  const creditCost = 0.5;
+  const balance = await ensureUserCredits(session.user.id);
+  if (balance.total_remaining < creditCost) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "NO_CREDITS",
+        error:
+          "Crédits insuffisants pour appliquer un changement (0,5 crédit). Recharge ou upgrade pour continuer.",
+        balance,
+        upgrade_url: "/pricing",
+      },
+      { status: 402 }
+    );
+  }
+
+  const brandTokens = parsed.data.brandTokens ?? {};
+
+  const system = [
+    "Tu es un assistant d’édition de templates Systeme.io.",
+    "Tu ne modifies jamais le HTML.",
+    "Tu produis UNIQUEMENT un JSON qui respecte ce schéma :",
+    JSON.stringify(
+      {
+        patches: [{ op: "set", path: "hero_title", value: "Nouveau titre" }],
+        explanation: "Phrase courte expliquant ce qui a été fait.",
+        warnings: ["Optionnel : avertissements"],
+      },
+      null,
+      2
+    ),
+    "",
+    "Règles OBLIGATOIRES :",
+    "- Réponds strictement en JSON valide (pas de markdown, pas de texte autour).",
+    `- kind = ${kind}`,
+    `- templateId = ${templateId}`,
+    `- variantId = ${variantId || ""}`,
+    "",
+    "WHITELIST paths autorisés :",
+    `- contentData roots: ${CONTENT_WHITELIST[kind].join(", ")}`,
+    `- brandTokens roots: ${BRANDTOKENS_WHITELIST.join(", ")}`,
+    "",
+    "Interdictions :",
+    "- Ne propose pas de nouveaux champs hors whitelist.",
+    "- Ne modifie pas des clés non autorisées.",
+    "- Si l’instruction demande quelque chose hors scope, renvoie patches=[] et explique.",
+  ].join("\n");
+
+  const user = [
+    "INSTRUCTION USER :",
+    instruction,
+    "",
+    "ETAT ACTUEL (contentData) :",
+    JSON.stringify(contentData || {}, null, 2),
+    "",
+    "ETAT ACTUEL (brandTokens) :",
+    JSON.stringify(brandTokens || {}, null, 2),
+  ].join("\n");
+
+  let raw = "";
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1",
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    });
+
+    raw = completion.choices?.[0]?.message?.content?.trim() || "";
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "LLM call failed" },
+      { status: 500 }
+    );
+  }
+
+  let out: z.infer<typeof OutputSchema>;
+  try {
+    out = OutputSchema.parse(JSON.parse(raw));
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid AI response", raw },
+      { status: 500 }
+    );
+  }
+
+  const safePatches = (out.patches || []).filter((p) =>
+    isPathAllowed(p.path, kind)
+  );
+
+  const applied = applyPatches({
+    contentData: contentData as any,
+    brandTokens: brandTokens as any,
+    patches: safePatches,
+  });
+
+  // ✅ Consume credits only after a valid iteration response
+  try {
+    await consumeCredits(session.user.id, creditCost, {
+      kind: "template_iterate",
+      template_id: templateId,
+      variant_id: variantId || null,
+      template_kind: kind,
+      patches_count: safePatches.length,
+    });
+  } catch (e: any) {
+    const code = e?.code || e?.message;
+    if (code === "NO_CREDITS") {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "NO_CREDITS",
+          error: "Crédits insuffisants. Recharge ou upgrade pour continuer.",
+          upgrade_url: "/pricing",
+        },
+        { status: 402 }
+      );
+    }
+  }
+
+  return NextResponse.json({
+    patches: safePatches,
+    explanation: out.explanation,
+    warnings: out.warnings,
+    nextContentData: applied.nextContentData,
+    nextBrandTokens: applied.nextBrandTokens,
+  });
 }
