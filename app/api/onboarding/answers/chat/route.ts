@@ -18,6 +18,10 @@
 // - Normalise les keys (lowercase) + normalise les valeurs pour activities_list (array)
 // - Capture directement primary_activity quand l'assistant vient de demander de choisir UNE activité
 //   => évite la dépendance totale à l'extraction IA et garantit le stockage Supabase
+//
+// ✅ PATCH "100% V2" :
+// - Ne dépend plus d'une row business_profiles déjà existante.
+//   => update THEN insert (sinon /api/onboarding/complete ne marque rien et boucle /onboarding)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -206,6 +210,34 @@ function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if (k === "offers" && v && typeof v === "object") patch.offers = v;
   }
   return patch;
+}
+
+async function updateThenInsertBusinessProfile(
+  supabase: any,
+  userId: string,
+  patch: Record<string, any>,
+): Promise<void> {
+  // Objectif: ne jamais dépendre d'une row business_profiles pré-existante.
+  // - update d'abord (comportement normal)
+  // - si 0 row affectée => insert minimal (user_id + patch)
+  const row: Record<string, any> = {
+    user_id: userId,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  };
+
+  // 1) tentative UPDATE
+  const upd = await supabase.from("business_profiles").update(row).eq("user_id", userId).select("id");
+  if (!upd.error) {
+    if (Array.isArray(upd.data) && upd.data.length > 0) return;
+  }
+
+  // Si erreur "no rows" on insert; si vraie erreur, on tente quand même insert (fail-open)
+  const ins = await supabase.from("business_profiles").insert(row).select("id");
+  if (ins.error) {
+    // dernier recours: ne pas casser le chat
+    console.warn("[OnboardingChatV2] updateThenInsertBusinessProfile failed:", ins.error);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -482,7 +514,7 @@ export async function POST(req: NextRequest) {
     const patch = mergeBusinessProfilePatchFromFacts(toUpsert as any);
     if (Object.keys(patch).length) {
       // patch safe : on ne remplace pas avec du vide grâce au filtre ci-dessus
-      await supabase.from("business_profiles").update(patch).eq("user_id", userId);
+      await updateThenInsertBusinessProfile(supabase, userId, patch);
     }
 
     // 4.b) ✅ Fail-safe serveur pour activité prioritaire
@@ -520,10 +552,7 @@ export async function POST(req: NextRequest) {
     // 6) optionally finish onboarding
     if (shouldFinish) {
       // marque BP onboarding_completed = true
-      await supabase
-        .from("business_profiles")
-        .update({ onboarding_completed: true, onboarding_version: "v2" })
-        .eq("user_id", userId);
+      await updateThenInsertBusinessProfile(supabase, userId, { onboarding_completed: true, onboarding_version: "v2" });
 
       await supabase
         .from("onboarding_sessions")

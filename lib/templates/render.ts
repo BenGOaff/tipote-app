@@ -232,6 +232,7 @@ ${params.head || ""}
 
 function wrapKitHtml(params: { head: string; body: string; css: string }): string {
   // Systeme-safe: no <html>/<head>/<body>, and scope everything.
+  // NOTE: head is intentionally not injected here (Systeme may strip it).
   return `<style>${params.css || ""}</style>
 <div class="tpt-scope">
 ${params.body || ""}
@@ -241,32 +242,39 @@ ${params.body || ""}
 async function readTemplateFiles(kind: TemplateKind, templateId: string) {
   const safeKind = safeId(kind);
   const safeTemplate = safeId(templateId);
-  const baseDir = path.join(
-    process.cwd(),
-    "src",
-    "templates",
-    safeKind,
-    safeTemplate
-  );
+  const baseDir = path.join(process.cwd(), "src", "templates", safeKind, safeTemplate);
 
   const layoutPath = path.join(baseDir, "layout.html");
   const fontsPath = path.join(baseDir, "fonts.html");
   const tokensPath = path.join(baseDir, "tokens.json");
   const variantsPath = path.join(baseDir, "variants.json");
-  const previewCssPath = path.join(baseDir, "styles.preview.css");
+
+  // In repo, preview css file is "styles.css" (legacy name was "styles.preview.css").
+  const previewCssPathModern = path.join(baseDir, "styles.css");
+  const previewCssPathLegacy = path.join(baseDir, "styles.preview.css");
+
   const kitCssPath = path.join(baseDir, "styles.kit.css");
   const kitSystemePath = path.join(baseDir, "kit-systeme.html");
 
-  const [layout, fonts, tokensJson, variantsJson, previewCss, kitCss, kitSysteme] =
-    await Promise.all([
-      fs.readFile(layoutPath, "utf-8"),
-      readOptional(fontsPath),
-      readOptional(tokensPath),
-      readOptional(variantsPath),
-      readOptional(previewCssPath),
-      readOptional(kitCssPath),
-      readOptional(kitSystemePath),
-    ]);
+  const [
+    layout,
+    fonts,
+    tokensJson,
+    variantsJson,
+    previewCssModern,
+    previewCssLegacy,
+    kitCss,
+    kitSysteme,
+  ] = await Promise.all([
+    fs.readFile(layoutPath, "utf-8"),
+    readOptional(fontsPath),
+    readOptional(tokensPath),
+    readOptional(variantsPath),
+    readOptional(previewCssPathModern),
+    readOptional(previewCssPathLegacy),
+    readOptional(kitCssPath),
+    readOptional(kitSystemePath),
+  ]);
 
   const tokens: Tokens =
     typeof tokensJson === "string" && tokensJson.trim()
@@ -284,15 +292,13 @@ async function readTemplateFiles(kind: TemplateKind, templateId: string) {
     fonts: fonts || "",
     tokens,
     variants,
-    previewCss: previewCss || "",
+    previewCss: previewCssModern || previewCssLegacy || "",
     kitCss: kitCss || "",
     kitSysteme: kitSysteme || "",
   };
 }
 
-export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{
-  html: string;
-}> {
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
   const { kind, templateId, mode, variantId, contentData, brandTokens } = req;
 
   if (!templateId) throw new Error("templateId required");
