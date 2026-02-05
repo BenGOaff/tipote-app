@@ -40,7 +40,7 @@ async function readBodyAny(req: NextRequest): Promise<any> {
 
 function deepGet(obj: any, path: string): any {
   if (!obj) return undefined;
-  return path.split(".").reduce((acc, key) => (acc && key in acc ? acc[key] : undefined), obj);
+  return path.split(".").reduce((acc, key) => (acc && key in acc ? (acc as any)[key] : undefined), obj);
 }
 
 function pickString(body: any, paths: string[]): string | null {
@@ -74,33 +74,43 @@ async function findUserByEmail(email: string) {
   return null;
 }
 
-async function getOrCreateUser(email: string, first_name: string | null, sio_contact_id: string | null) {
+async function getOrCreateUser(
+  email: string,
+  first_name: string | null,
+  last_name: string | null,
+  sio_contact_id: string | null,
+) {
   const existing = await findUserByEmail(email);
   if (existing) return existing.id as string;
 
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { first_name, sio_contact_id },
+    user_metadata: { first_name, last_name, sio_contact_id },
   });
 
   if (error || !data?.user) throw error ?? new Error("createUser failed");
   return data.user.id as string;
 }
 
-async function upsertProfile(userId: string, email: string, first_name: string | null, sio_contact_id: string | null) {
-  const { error } = await supabaseAdmin.from("profiles").upsert(
-    {
-      id: userId,
-      email,
-      first_name,
-      sio_contact_id,
-      plan: "free",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
-  );
+async function upsertProfile(
+  userId: string,
+  email: string,
+  first_name: string | null,
+  last_name: string | null,
+  sio_contact_id: string | null,
+) {
+  const payload: Record<string, any> = {
+    id: userId,
+    email,
+    first_name,
+    last_name,
+    sio_contact_id,
+    plan: "free",
+    updated_at: new Date().toISOString(),
+  };
 
+  const { error } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
   if (error) throw error;
 }
 
@@ -137,15 +147,33 @@ export async function POST(req: NextRequest) {
     if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
 
     const firstName =
-      pickString(body, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname", "Prenom"]) ?? null;
+      pickString(body, [
+        "data.customer.fields.first_name",
+        "customer.fields.first_name",
+        "first_name",
+        "firstname",
+        "Prenom",
+      ]) ?? null;
+
+    // ✅ Ajout last_name (Systeme.io le met souvent dans "surname")
+    const lastName =
+      pickString(body, [
+        "data.customer.fields.last_name",
+        "data.customer.fields.surname",
+        "customer.fields.last_name",
+        "customer.fields.surname",
+        "last_name",
+        "surname",
+        "Nom",
+      ]) ?? null;
 
     const sioContactId =
       pickString(body, ["data.customer.contact_id", "customer.contact_id", "contact_id", "contactId"]) ?? null;
 
-    const userId = await getOrCreateUser(email, firstName, sioContactId);
+    const userId = await getOrCreateUser(email, firstName, lastName, sioContactId);
 
     // IMPORTANT: on force plan=free (opt-in free)
-    await upsertProfile(userId, email, firstName, sioContactId);
+    await upsertProfile(userId, email, firstName, lastName, sioContactId);
 
     // DB = source de vérité des crédits (inclut free one-shot)
     await ensureCredits(userId);

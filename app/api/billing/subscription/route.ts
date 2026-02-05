@@ -8,6 +8,7 @@ type ProfileRow = {
   id: string;
   email: string | null;
   first_name: string | null;
+  last_name: string | null;
   locale: string | null;
   plan: string | null;
   sio_contact_id: string | null;
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     if (!contactId) {
       return NextResponse.json(
         { error: "contactId manquant : fournis sio_contact_id/contactId/contact ou un email déjà connu." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -132,7 +133,8 @@ export async function POST(req: NextRequest) {
     const activeSubscription =
       items.find(
         (sub) =>
-          String(sub.status ?? "").toLowerCase() === "active" || String(sub.status ?? "").toLowerCase() === "trialing"
+          String(sub.status ?? "").toLowerCase() === "active" ||
+          String(sub.status ?? "").toLowerCase() === "trialing",
       ) ?? null;
 
     const latestSubscription = items[0] ?? null;
@@ -158,7 +160,9 @@ export async function POST(req: NextRequest) {
         const shouldUpdatePlan = inferredPlan ? currentPlan !== inferredPlan : false;
 
         const currentProductId = (profile.product_id ?? "").trim();
-        const shouldUpdateProduct = inferredProductId ? !currentProductId || currentProductId !== inferredProductId : false;
+        const shouldUpdateProduct = inferredProductId
+          ? !currentProductId || currentProductId !== inferredProductId
+          : false;
 
         // Toujours backfill sio_contact_id si manquant
         const currentContact = (profile.sio_contact_id ?? "").trim();
@@ -186,9 +190,9 @@ export async function POST(req: NextRequest) {
         subscriptions: items,
         activeSubscription,
         latestSubscription,
-        raw: collection.raw ?? collection,
+        raw: (collection as any).raw ?? collection,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err: any) {
     console.error("[Billing/subscription] Unexpected error:", err);

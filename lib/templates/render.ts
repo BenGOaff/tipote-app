@@ -46,7 +46,7 @@ function escapeHtml(input: unknown): string {
     .replaceAll("'", "&#039;");
 }
 
-function safeId(v: string) {
+function safeId(v: string): string {
   return (v || "").replace(/[^a-z0-9\-]/gi, "").trim();
 }
 
@@ -105,58 +105,85 @@ function applyBrand(
  * - {{#arr}}...{{/arr}} repeats inner HTML for each item, using {{.}} and (optionally) {{key}} for object items
  * - {{#str}}...{{/str}} renders once if str is truthy, using {{.}} as the str value
  */
-function renderFragment(fragment: string, data: Record<string, unknown>) {
-  const withSections = fragment.replace(
+function renderFragment(fragment: string, data: Record<string, unknown>): string {
+  // Minimal Mustache-like renderer with *recursive* section support.
+  // Important: templates may contain nested sections inside array object items
+  // (ex: {{#features}} ... {{#d}}...{{/d}} ... {{/features}}).
+  // We therefore render array-object items by recursively rendering the inner fragment
+  // with the item merged into the parent scope.
+
+  const withSections: string = fragment.replace(
     /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
-    (_m: string, key: string, inner: string) => {
+    (_m: string, key: string, inner: string): string => {
       const v = (data as any)[key];
 
       if (Array.isArray(v)) {
         if (v.length === 0) return "";
         return v
-          .map((item: any) => {
-            // Support arrays of scalars (string/number) and arrays of objects.
+          .map((item: any): string => {
+            // Arrays of objects: merge into parent scope and recurse.
             if (item != null && typeof item === "object" && !Array.isArray(item)) {
-              let out = inner;
+              const merged = { ...(data as any), ...(item as any) } as Record<
+                string,
+                unknown
+              >;
 
-              // {{.}} fallback for objects -> empty
-              out = out.replace(/\{\{\s*\.\s*\}\}/g, "");
+              // For objects, {{.}} is usually not expected; keep it empty by default.
+              (merged as any)["."] = "";
 
-              // Replace {{key}} inside the section with item[key]
-              out = out.replace(
-                /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
-                (_mm: string, k: string) => escapeHtml((item as any)[k])
-              );
-
-              return out;
+              return renderFragment(inner, merged);
             }
 
+            // Arrays of scalars: support {{.}}
             const itemStr = escapeHtml(item);
-            return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+            const merged = { ...(data as any), ".": itemStr } as Record<
+              string,
+              unknown
+            >;
+
+            return renderFragment(
+              inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr),
+              merged
+            );
           })
           .join("");
       }
 
       if (typeof v === "string" && v.trim()) {
         const itemStr = escapeHtml(v);
-        return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+        const merged = { ...(data as any), ".": itemStr } as Record<
+          string,
+          unknown
+        >;
+        return renderFragment(inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr), merged);
       }
 
       if (typeof v === "number") {
         const itemStr = escapeHtml(String(v));
-        return inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr);
+        const merged = { ...(data as any), ".": itemStr } as Record<
+          string,
+          unknown
+        >;
+        return renderFragment(inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr), merged);
       }
 
       return "";
     }
   );
 
-  const withScalars = withSections.replace(
+  // Scalars (excluding {{.}} which is handled via merged scope above)
+  const withScalars: string = withSections.replace(
     /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
-    (_m: string, key: string) => escapeHtml((data as any)[key])
+    (_m: string, key: string): string => escapeHtml((data as any)[key])
   );
 
-  return withScalars.replace(/\n{3,}/g, "\n\n").trim();
+  // Any remaining {{.}} (rare) -> data["."] if provided.
+  const withDot: string = withScalars.replace(
+    /\{\{\s*\.\s*\}\}/g,
+    (): string => escapeHtml((data as any)["."])
+  );
+
+  return withDot.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function cssVarsFromTokens(tokens: Tokens): string {
@@ -167,124 +194,133 @@ function cssVarsFromTokens(tokens: Tokens): string {
   const shadow = tokens.shadow || {};
 
   const vars: Record<string, string> = {
-    "--tpt-bg": colors.background || "#ffffff",
-    "--tpt-soft": (colors as any).softBackground || "",
-    "--tpt-text": colors.primaryText || "#111827",
-    "--tpt-muted": colors.secondaryText || "#4b5563",
     "--tpt-accent": colors.accent || "#2563eb",
-    "--tpt-accent2": (colors as any).accent2 || "",
-    "--tpt-border": colors.border || "#e5e7eb",
-    "--tpt-dark": (colors as any).darkBackground || "",
-
-    "--tpt-heading-font":
-      typo.headingFont ||
-      "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    "--tpt-body-font":
-      typo.bodyFont ||
-      "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    "--tpt-h1": typo.h1 || "42px",
-    "--tpt-body-size": typo.body || "16px",
-    "--tpt-line-height": typo.lineHeight || "1.6",
-
+    "--tpt-bg": colors.bg || "#ffffff",
+    "--tpt-fg": colors.fg || "#0f172a",
+    "--tpt-muted": colors.muted || "#64748b",
+    "--tpt-border": colors.border || "#e2e8f0",
+    "--tpt-card": colors.card || "#ffffff",
+    "--tpt-card-fg": colors.cardFg || "#0f172a",
+    "--tpt-hero-grad-1": colors.heroGrad1 || "#eff6ff",
+    "--tpt-hero-grad-2": colors.heroGrad2 || "#ffffff",
+    "--tpt-heading-font": typo.headingFont || "ui-sans-serif, system-ui",
+    "--tpt-body-font": typo.bodyFont || "ui-sans-serif, system-ui",
     "--tpt-maxw": layout.maxWidth || "980px",
-    "--tpt-section-pad": layout.sectionPadding || "80px 24px",
-    "--tpt-align": layout.textAlign || "center",
-
-    "--tpt-card-radius": radius.card || "16px",
-    "--tpt-btn-radius": radius.button || "12px",
-    "--tpt-card-shadow": shadow.card || "0 10px 30px rgba(0,0,0,0.08)",
+    "--tpt-pad": layout.sectionPadding || "64px",
+    "--tpt-text-align": layout.textAlign || "left",
+    "--tpt-radius": radius.base || "16px",
+    "--tpt-shadow": shadow.base || "0 12px 40px rgba(2, 6, 23, 0.08)",
   };
 
-  const lines = Object.entries(vars)
-    .filter(([, v]) => String(v || "").trim().length > 0)
-    .map(([k, v]) => `  ${k}:${v};`);
-
-  return `:root{\n${lines.join("\n")}\n}`;
+  return Object.entries(vars)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
 }
 
-export async function renderTemplateHtml(
-  req: RenderTemplateRequest
-): Promise<{ html: string; tokens: Tokens }> {
-  const kind = req.kind;
-  const templateId = safeId(req.templateId);
+function wrapPreviewHtml(params: { head: string; body: string; css: string }): string {
+  return `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+${params.head || ""}
+<style>${params.css || ""}</style>
+</head>
+<body>${params.body || ""}</body>
+</html>`;
+}
 
-  const templateRoot = path.join(process.cwd(), "src", "templates", kind, templateId);
+function wrapKitHtml(params: { head: string; body: string; css: string }): string {
+  // Systeme-safe: no <html>/<head>/<body>, and scope everything.
+  return `<style>${params.css || ""}</style>
+<div class="tpt-scope">
+${params.body || ""}
+</div>`;
+}
 
-  const tokensPath = path.join(templateRoot, "tokens.json");
-  const variantsPath = path.join(templateRoot, "variants.json");
+async function readTemplateFiles(kind: TemplateKind, templateId: string) {
+  const safeKind = safeId(kind);
+  const safeTemplate = safeId(templateId);
+  const baseDir = path.join(
+    process.cwd(),
+    "src",
+    "templates",
+    safeKind,
+    safeTemplate
+  );
 
-  const fragmentFile = req.mode === "kit" ? "kit-systeme.html" : "layout.html";
-  const fragmentPath = path.join(templateRoot, fragmentFile);
+  const layoutPath = path.join(baseDir, "layout.html");
+  const fontsPath = path.join(baseDir, "fonts.html");
+  const tokensPath = path.join(baseDir, "tokens.json");
+  const variantsPath = path.join(baseDir, "variants.json");
+  const previewCssPath = path.join(baseDir, "styles.preview.css");
+  const kitCssPath = path.join(baseDir, "styles.kit.css");
+  const kitSystemePath = path.join(baseDir, "kit-systeme.html");
 
-  const [tokensRaw, variantsRaw, fragment] = await Promise.all([
-    fs.readFile(tokensPath, "utf-8"),
-    readOptional(variantsPath),
-    fs.readFile(fragmentPath, "utf-8"),
-  ]);
+  const [layout, fonts, tokensJson, variantsJson, previewCss, kitCss, kitSysteme] =
+    await Promise.all([
+      fs.readFile(layoutPath, "utf-8"),
+      readOptional(fontsPath),
+      readOptional(tokensPath),
+      readOptional(variantsPath),
+      readOptional(previewCssPath),
+      readOptional(kitCssPath),
+      readOptional(kitSystemePath),
+    ]);
 
-  const tokensJson = (tokensRaw ? JSON.parse(tokensRaw) : {}) as Tokens;
-  const variantsJson = variantsRaw ? JSON.parse(variantsRaw) : null;
+  const tokens: Tokens =
+    typeof tokensJson === "string" && tokensJson.trim()
+      ? (JSON.parse(tokensJson) as Tokens)
+      : {};
 
-  const withVariant = applyVariant(tokensJson, variantsJson, req.variantId);
-  const withBrand = applyBrand(withVariant, req.brandTokens);
+  const variants =
+    typeof variantsJson === "string" && variantsJson.trim()
+      ? JSON.parse(variantsJson)
+      : null;
 
-  const renderedFragment = renderFragment(fragment, req.contentData || {});
+  return {
+    baseDir,
+    layout,
+    fonts: fonts || "",
+    tokens,
+    variants,
+    previewCss: previewCss || "",
+    kitCss: kitCss || "",
+    kitSysteme: kitSysteme || "",
+  };
+}
 
-  const cssFilePrimary = req.mode === "kit" ? "styles.kit.css" : "styles.css";
-  const cssFileFallback = "styles.css";
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{
+  html: string;
+}> {
+  const { kind, templateId, mode, variantId, contentData, brandTokens } = req;
 
-  const cssPrimaryPath = path.join(templateRoot, cssFilePrimary);
-  const cssFallbackPath = path.join(templateRoot, cssFileFallback);
+  if (!templateId) throw new Error("templateId required");
 
-  const [cssPrimary, cssFallback, fontsHtml] = await Promise.all([
-    readOptional(cssPrimaryPath),
-    cssFilePrimary !== cssFileFallback ? readOptional(cssFallbackPath) : null,
-    readOptional(path.join(templateRoot, "fonts.html")),
-  ]);
+  const files = await readTemplateFiles(kind, templateId);
 
-  const cssBody = (cssPrimary || cssFallback || "").trim();
-  if (!cssBody) {
-    throw new Error(
-      `Template ${kind}/${templateId} missing styles. Add ${cssFilePrimary} (or styles.css) in the template folder.`
-    );
-  }
+  const withVariant = applyVariant(files.tokens, files.variants, variantId);
+  const withBrand = applyBrand(withVariant, brandTokens);
 
   const cssVars = cssVarsFromTokens(withBrand);
-  const css = `${cssVars}\n\n${cssBody}`.trim();
+  const baseCss = `:root{${cssVars}}`;
 
-  const fontLink = (fontsHtml || "").trim();
+  const css =
+    mode === "kit"
+      ? `${baseCss}\n${files.kitCss || ""}`
+      : `${baseCss}\n${files.previewCss || ""}`;
 
-  if (req.mode === "kit") {
-    const snippet = `
-${fontLink}
-<style>
-${css}
-</style>
-<div class="tpt-scope">
-${renderedFragment}
-</div>
-`.trim();
+  const head = `${files.fonts || ""}`.trim();
 
-    return { html: snippet, tokens: withBrand };
-  }
+  const bodyTemplate =
+    mode === "kit" && files.kitSysteme?.trim() ? files.kitSysteme : files.layout;
 
-  const doc = `
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tipote — ${escapeHtml(req.templateId)}</title>
-    ${fontLink}
-    <style>${css}</style>
-  </head>
-  <body>
-    <div class="tpt-page">
-      ${renderedFragment}
-    </div>
-  </body>
-</html>
-`.trim();
+  const body = renderFragment(bodyTemplate, contentData);
 
-  return { html: doc, tokens: withBrand };
+  const html =
+    mode === "kit"
+      ? wrapKitHtml({ head, body, css })
+      : wrapPreviewHtml({ head, body, css });
+
+  return { html };
 }

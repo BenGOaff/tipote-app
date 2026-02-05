@@ -21,6 +21,8 @@ const systemeNewSaleSchema = z.object({
         .object({
           first_name: z.string().optional(),
           surname: z.string().optional(),
+          // ✅ certains setups peuvent déjà envoyer last_name
+          last_name: z.string().optional(),
         })
         .catchall(z.any())
         .optional(),
@@ -57,6 +59,7 @@ const systemeNewSaleSchema = z.object({
 const simpleTestSchema = z.object({
   email: z.string().email(),
   first_name: z.string().optional(),
+  last_name: z.string().optional(),
   sio_contact_id: z.string().optional(),
   product_id: z.string().optional(),
 });
@@ -183,7 +186,7 @@ async function findProfileByContactId(contactId: string) {
 
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("id, email, first_name, sio_contact_id")
+    .select("id, email, first_name, last_name, sio_contact_id")
     .eq("sio_contact_id", cid)
     .maybeSingle();
 
@@ -195,8 +198,13 @@ async function findProfileByContactId(contactId: string) {
   return data ?? null;
 }
 
-async function getOrCreateSupabaseUser(params: { email: string; first_name: string | null; sio_contact_id: string | null }) {
-  const { email, first_name, sio_contact_id } = params;
+async function getOrCreateSupabaseUser(params: {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  sio_contact_id: string | null;
+}) {
+  const { email, first_name, last_name, sio_contact_id } = params;
 
   const existingUser = await findUserByEmail(email);
   if (existingUser) return existingUser.id as string;
@@ -204,7 +212,7 @@ async function getOrCreateSupabaseUser(params: { email: string; first_name: stri
   const { data: createdUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { first_name, sio_contact_id },
+    user_metadata: { first_name, last_name, sio_contact_id },
   });
 
   if (createUserError || !createdUser?.user) {
@@ -219,16 +227,18 @@ async function upsertProfile(params: {
   userId: string;
   email: string;
   first_name: string | null;
+  last_name: string | null;
   sio_contact_id: string | null;
   plan: StoredPlan | null;
   product_id?: string | null;
 }) {
-  const { userId, email, first_name, sio_contact_id, plan, product_id } = params;
+  const { userId, email, first_name, last_name, sio_contact_id, plan, product_id } = params;
 
   const payload: any = {
     id: userId,
     email,
     first_name,
+    last_name,
     sio_contact_id,
     updated_at: new Date().toISOString(),
   };
@@ -294,6 +304,20 @@ export async function POST(req: NextRequest) {
       extractString(rawBody, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname"]) ??
       null;
 
+    // ✅ last_name (Systeme.io => souvent surname)
+    let lastName =
+      systemeData?.customer?.fields?.last_name ??
+      systemeData?.customer?.fields?.surname ??
+      extractString(rawBody, [
+        "data.customer.fields.last_name",
+        "data.customer.fields.surname",
+        "customer.fields.last_name",
+        "customer.fields.surname",
+        "last_name",
+        "surname",
+      ]) ??
+      null;
+
     const sioContactId =
       (systemeData?.customer?.contact_id !== undefined && systemeData?.customer?.contact_id !== null
         ? toStringId(systemeData.customer.contact_id)
@@ -325,7 +349,9 @@ export async function POST(req: NextRequest) {
       extractString(rawBody, ["data.offer_price_plan.inner_name", "offer_price_plan.inner_name"]) ??
       null;
 
-    const orderId = toBigIntNumber(systemeData?.order?.id ?? extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ?? null);
+    const orderId = toBigIntNumber(
+      systemeData?.order?.id ?? extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ?? null,
+    );
 
     // Fallback: si email absent, on tente via sio_contact_id -> profiles
     let resolvedEmail = email;
@@ -337,6 +363,7 @@ export async function POST(req: NextRequest) {
         resolvedUserId = prof.id as string;
         resolvedEmail = (prof.email as string | null)?.toLowerCase() ?? null;
         if (!firstName) firstName = (prof.first_name as string | null) ?? null;
+        if (!lastName) lastName = (prof.last_name as string | null) ?? null;
       }
     }
 
@@ -346,6 +373,7 @@ export async function POST(req: NextRequest) {
         (await getOrCreateSupabaseUser({
           email: resolvedEmail,
           first_name: firstName,
+          last_name: lastName,
           sio_contact_id: sioContactId,
         }));
 
@@ -355,6 +383,7 @@ export async function POST(req: NextRequest) {
         userId,
         email: resolvedEmail,
         first_name: firstName,
+        last_name: lastName,
         sio_contact_id: sioContactId,
         plan,
         product_id: offerId || null,
@@ -377,7 +406,7 @@ export async function POST(req: NextRequest) {
     // payload simple test
     const parsedSimple = simpleTestSchema.safeParse(rawBody);
     if (parsedSimple.success) {
-      const { email, first_name, sio_contact_id, product_id } = parsedSimple.data;
+      const { email, first_name, last_name, sio_contact_id, product_id } = parsedSimple.data;
 
       const plan: StoredPlan | null =
         product_id === "prod_basic_1"
@@ -393,6 +422,7 @@ export async function POST(req: NextRequest) {
       const userId = await getOrCreateSupabaseUser({
         email: email.toLowerCase(),
         first_name: first_name ?? null,
+        last_name: last_name ?? null,
         sio_contact_id: sio_contact_id ?? null,
       });
 
@@ -400,6 +430,7 @@ export async function POST(req: NextRequest) {
         userId,
         email: email.toLowerCase(),
         first_name: first_name ?? null,
+        last_name: last_name ?? null,
         sio_contact_id: sio_contact_id ?? null,
         plan,
         product_id: product_id ?? null,

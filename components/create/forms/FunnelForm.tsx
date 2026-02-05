@@ -32,6 +32,22 @@ type CaptureTemplateId =
   | "capture-04"
   | "capture-05";
 
+type SaleTemplateId =
+  | "sale-01"
+  | "sale-02"
+  | "sale-03"
+  | "sale-04"
+  | "sale-05"
+  | "sale-06"
+  | "sale-07"
+  | "sale-08"
+  | "sale-09"
+  | "sale-10"
+  | "sale-11"
+  | "sale-12";
+
+type TemplateId = CaptureTemplateId | SaleTemplateId;
+
 export type FunnelFormProps = {
   onGenerate: (params: any) => Promise<string>;
   onSave: (payload: any) => Promise<void>;
@@ -75,52 +91,51 @@ function pickReassurance(text: string): string {
     .map((l) => l.trim())
     .filter(Boolean);
   const hit = lines.find((l) => /rgpd|spam|désinscrire|confidenti/i.test(l));
-  return cleanLine(hit || "") || "RGPD : pas de spam. Désinscription en 1 clic.";
+  return (
+    cleanLine(hit || "") ||
+    "Tes données sont protégées. Zéro spam, juste du concret. Tu peux te désinscrire à tout moment."
+  );
 }
 
-function softenClamp(s: string, max: number): string {
-  const t = (s || "").trim();
-  if (t.length <= max) return t;
-  const cut = t.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  const out = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd();
-  return out + "…";
+function softenClamp(s: string, maxLen: number) {
+  const t = cleanLine(s);
+  if (!t) return "";
+  if (t.length <= maxLen) return t;
+  return t.slice(0, maxLen - 1).trim() + "…";
 }
 
-function extractBullets(text: string, maxItems: number): string[] {
-  const lines = (text || "")
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+function extractBullets(text: string, max: number) {
+  const lines = (text || "").split(/\r?\n/);
 
-  const bullets = lines
-    .filter((l) => /^[-•–]\s+/.test(l))
-    .map((l) => cleanLine(l))
-    .filter(Boolean);
-
-  const uniq: string[] = [];
-  for (const b of bullets) {
-    if (!uniq.includes(b)) uniq.push(b);
-    if (uniq.length >= maxItems) break;
+  const bullets: string[] = [];
+  for (const l of lines) {
+    const m = l.match(/^\s*(?:[-•–]|\d+[\.\)])\s+(.*)$/);
+    if (m?.[1]) {
+      const b = cleanLine(m[1]);
+      if (b) bullets.push(b);
+    }
   }
-  return uniq;
+
+  // Fallback: split paragraphs
+  if (bullets.length === 0) {
+    const chunks = (text || "")
+      .split(/\n{2,}/)
+      .map((c) => cleanLine(c))
+      .filter(Boolean);
+    bullets.push(...chunks);
+  }
+
+  return bullets
+    .map((b) => softenClamp(b, 110))
+    .filter(Boolean)
+    .slice(0, max);
 }
 
-function extractKeyNumber(text: string): string {
-  const t = text || "";
-  const euro = t.match(/\b\d[\d\s\.]*\s*€\b/);
-  if (euro?.[0]) return euro[0].replace(/\s+/g, " ").trim();
-
-  const percent = t.match(/\b\d{1,3}\s*%\b/);
-  if (percent?.[0]) return percent[0].replace(/\s+/g, " ").trim();
-
-  const days = t.match(/\b\d{1,2}\s*(jours|jour|semaines|semaine)\b/i);
-  if (days?.[0]) return days[0].replace(/\s+/g, " ").trim();
-
-  const k = t.match(/\b\d{1,3}\s*(k|K|m|M)\b/);
-  if (k?.[0]) return k[0].replace(/\s+/g, " ").trim();
-
-  return "";
+function extractKeyNumber(text: string) {
+  const m =
+    (text || "").match(/\b(\d+)\s*(?:jours|jour|minutes|min|semaines|semaine)\b/i) ||
+    (text || "").match(/\b(\d+)\b/);
+  return m?.[1] ? m[1] : "";
 }
 
 function deriveCapture01Content(params: {
@@ -166,42 +181,25 @@ function deriveCapture02Content(params: {
     pickFirstMeaningfulLine(params.resultText) ||
     params.promise ||
     params.offerName ||
-    "Rejoins le challenge";
+    "5 ressources prêtes à copier-coller";
 
   const rawSubtitle =
     pickSubtitle(params.resultText) ||
     params.promise ||
-    "Une série de mini-étapes pour obtenir un résultat concret rapidement — sans technique.";
+    "Des templates concrets pour obtenir des résultats rapidement, sans te compliquer la vie.";
 
   const bullets = extractBullets(params.resultText, 6);
 
-  const eyebrowSource = (params.offerName || "").trim();
-  const eyebrow =
-    eyebrowSource && eyebrowSource.length <= 38
-      ? eyebrowSource
-      : "CHALLENGE GRATUIT";
-
-  const keyNumber = extractKeyNumber(params.resultText);
-  const accent =
-    keyNumber ||
-    (params.offerName
-      ? params.offerName.split(/\s+/).slice(0, 3).join(" ")
-      : "");
-
+  const badge = "GRATUIT";
   const reassurance = softenClamp(pickReassurance(params.resultText), 110);
 
   return {
-    hero_pretitle: eyebrow,
-    hero_title: softenClamp(rawTitle, 120),
-    hero_title_accent: softenClamp(accent, 40),
+    hero_badge: badge,
+    hero_title: softenClamp(rawTitle, 110),
     hero_subtitle: softenClamp(rawSubtitle, 220),
     bullets,
-    video_caption: "Vidéo de présentation (optionnel)",
-    cta_text: "Rejoindre (gratuit)",
+    cta_text: "Je le veux",
     reassurance_text: reassurance,
-    dark_title: "Ce que tu vas débloquer",
-    dark_text:
-      "Un plan d’action simple + une structure claire pour passer à l’exécution sans t’éparpiller.",
   };
 }
 
@@ -214,39 +212,25 @@ function deriveCapture03Content(params: {
     pickFirstMeaningfulLine(params.resultText) ||
     params.promise ||
     params.offerName ||
-    "Rejoins le défi gratuit";
+    "Télécharge ton guide";
 
   const rawSubtitle =
     pickSubtitle(params.resultText) ||
     params.promise ||
-    "En quelques jours, reprends confiance, passe à l’action et avance avec un plan simple.";
+    "Une ressource courte, utile et concrète pour passer à l’action dès aujourd’hui.";
 
   const bullets = extractBullets(params.resultText, 6);
+
+  const badge = "En direct pendant 3 jours";
   const reassurance = softenClamp(pickReassurance(params.resultText), 120);
-  const dateHint =
-    extractKeyNumber(params.resultText) || "En direct pendant 3 jours";
 
   return {
-    hero_date: softenClamp(dateHint, 48),
-    hero_title: softenClamp(rawTitle, 90),
-    hero_subtitle: softenClamp(rawSubtitle, 210),
-    consent_text: "Oui, je consens à recevoir des emails",
+    hero_badge: badge,
+    hero_title: softenClamp(rawTitle, 110),
+    hero_subtitle: softenClamp(rawSubtitle, 220),
+    bullets,
     cta_text: "Je m’inscris maintenant",
     reassurance_text: reassurance,
-
-    section_title: "Ce que vous allez recevoir",
-    bullets: bullets.length
-      ? bullets.slice(0, 6)
-      : [
-          "Un plan clair et concret pour passer à l’action dès aujourd’hui.",
-          "Des exercices simples, actionnables, et faciles à tenir.",
-          "Un boost de motivation avec une communauté qui avance.",
-        ],
-
-    aside_title: "À qui s’adresse ce défi ?",
-    aside_text:
-      "À toutes les personnes qui veulent reprendre le pouvoir sur leur quotidien, sortir du doute et avancer avec un plan concret.",
-    footer_cta_text: "Je rejoins le défi",
   };
 }
 
@@ -259,53 +243,34 @@ function deriveCapture04Content(params: {
     pickFirstMeaningfulLine(params.resultText) ||
     params.promise ||
     params.offerName ||
-    "Télécharge le guide gratuit";
+    "Lance ton prochain lead magnet";
 
   const rawSubtitle =
     pickSubtitle(params.resultText) ||
     params.promise ||
-    "Un guide clair, simple et actionnable pour avancer dès aujourd’hui.";
+    "Une structure simple et une progression claire pour exécuter vite, sans t’éparpiller.";
 
-  const bullets = extractBullets(params.resultText, 6);
-
-  const badge =
-    extractKeyNumber(params.resultText) ||
-    (params.offerName ? params.offerName : "GRATUIT");
-
-  const reassurance = softenClamp(pickReassurance(params.resultText), 120);
-
-  const featuresSeed =
-    bullets.length >= 3
-      ? bullets.slice(0, 3)
-      : [
-          "Comprendre exactement quoi faire (et dans quel ordre).",
-          "Éviter les erreurs qui font perdre du temps et de l’énergie.",
-          "Passer à l’action avec une checklist ultra simple.",
-        ];
-
-  const features = featuresSeed.map((line) => {
-    const parts = line.split(":", 2);
-    if (parts.length === 2) {
-      return {
-        t: softenClamp(parts[0].trim(), 42),
-        d: softenClamp(parts[1].trim(), 90),
-      };
-    }
-    return { t: softenClamp(line, 42), d: "" };
+  const features = extractBullets(params.resultText, 6).map((b) => {
+    const parts = b.split("—");
+    const t = softenClamp(cleanLine(parts[0] || b), 42);
+    const d = softenClamp(cleanLine(parts.slice(1).join("—")), 90);
+    return { t, d: d || undefined };
   });
 
+  const badge = "CHALLENGE";
+  const reassurance = softenClamp(pickReassurance(params.resultText), 120);
+
   return {
-    hero_badge: softenClamp(badge, 40),
+    hero_badge: badge,
     hero_title: softenClamp(rawTitle, 110),
     hero_title_accent: "maintenant",
     hero_subtitle: softenClamp(rawSubtitle, 220),
-    cta_text: "Je le veux",
-    reassurance_text: reassurance,
-
     section_title: "Ce que tu vas obtenir",
     section_subtitle:
       "Un contenu court, utile et concret — pensé pour être appliqué tout de suite.",
     features,
+    cta_text: "Je le veux",
+    reassurance_text: reassurance,
   };
 }
 
@@ -335,16 +300,19 @@ function deriveCapture05Content(params: {
 
   const reassurance = softenClamp(pickReassurance(params.resultText), 120);
 
-  const steps = (bullets.length ? bullets : [
-    "Jour 1 : clarifier l’objectif et poser la stratégie.",
-    "Jour 2 : dérouler le plan d’action sans blocage.",
-    "Jour 3 : passer à l’exécution avec une checklist.",
-  ])
+  const steps = (
+    bullets.length
+      ? bullets
+      : [
+          "Jour 1 : clarifier l’objectif et poser la stratégie.",
+          "Jour 2 : dérouler le plan d’action sans blocage.",
+          "Jour 3 : passer à l’exécution avec une checklist.",
+        ]
+  )
     .slice(0, 5)
     .map((s) => softenClamp(s, 90));
 
-  const sideBadge =
-    extractKeyNumber(params.resultText) || "3 jours";
+  const sideBadge = extractKeyNumber(params.resultText) || "3 jours";
 
   return {
     hero_pretitle: pretitle,
@@ -360,17 +328,300 @@ function deriveCapture05Content(params: {
   };
 }
 
+function formatOfferPrice(offer?: PyramidOfferLite | null): string | undefined {
+  if (!offer) return undefined;
+  const min =
+    typeof offer.price_min === "number" && Number.isFinite(offer.price_min)
+      ? offer.price_min
+      : null;
+  const max =
+    typeof offer.price_max === "number" && Number.isFinite(offer.price_max)
+      ? offer.price_max
+      : null;
+
+  if (min == null && max == null) return undefined;
+  if (min != null && max != null && min !== max) return `${min}€ → ${max}€`;
+  return `${(min ?? max) as number}€`;
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function deriveFaqItems(text: string, maxItems: number) {
+  const lines = (text || "").split(/\r?\n/).map((l) => l.trim());
+  const pairs: { q: string; a: string }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l) continue;
+    // Patterns: "Q: ...", "Question: ..."
+    const qMatch = l.match(/^(?:q\s*[:\-]|question\s*[:\-])\s*(.+)$/i);
+    if (qMatch?.[1]) {
+      const q = cleanLine(qMatch[1]);
+      const aLine = lines
+        .slice(i + 1)
+        .find(
+          (x) =>
+            x &&
+            !/^(?:q\s*[:\-]|question\s*[:\-])\s*/i.test(x)
+        );
+      const a = cleanLine(aLine || "");
+      if (q && a) pairs.push({ q, a });
+    }
+  }
+
+  // Fallback
+  if (pairs.length === 0) {
+    const bullets = extractBullets(text, Math.max(3, Math.min(6, maxItems)));
+    pairs.push(
+      {
+        q: "Est-ce que c’est adapté si je débute ?",
+        a: "Oui. Tu repars avec une structure claire + les prochaines actions pour avancer sans te disperser.",
+      },
+      {
+        q: "Combien de temps ça prend ?",
+        a: "Compte 20–30 minutes pour appliquer la méthode et repartir avec un plan prêt à exécuter.",
+      },
+      {
+        q: "Je peux me désinscrire ?",
+        a: "Oui, à tout moment. Tes données sont protégées.",
+      }
+    );
+    if (bullets[0]) {
+      pairs[0] = {
+        q: "Qu’est-ce que je reçois exactement ?",
+        a: bullets[0],
+      };
+    }
+  }
+
+  return pairs.slice(0, maxItems);
+}
+
+function deriveSaleContent(params: {
+  resultText: string;
+  offerName?: string;
+  promise?: string;
+  price?: string;
+  templateId: SaleTemplateId;
+}): Record<string, unknown> {
+  const title =
+    pickFirstMeaningfulLine(params.resultText) ||
+    params.promise ||
+    params.offerName ||
+    "Découvre l’offre";
+
+  const subtitle =
+    pickSubtitle(params.resultText) ||
+    params.promise ||
+    "Une page de vente optimisée conversion, structurée et prête à publier.";
+
+  const bullets = extractBullets(params.resultText, 9);
+  const reassurance = softenClamp(pickReassurance(params.resultText), 110);
+
+  // Common defaults (many templates reuse these keys)
+  const common: Record<string, unknown> = {
+    brand_name: params.offerName || "Tipote",
+    nav_badge: "OFFRE",
+    nav_cta: "Je m’inscris",
+    nav_link_1: "Bénéfices",
+    nav_link_2: "Contenu",
+    nav_link_3: "FAQ",
+    hero_badge: "EN DIRECT",
+    hero_pill: "OFFRE",
+    kicker: params.offerName || "OFFRE",
+    hero_title: softenClamp(title, 120),
+    hero_title_accent: "",
+    hero_subtitle: softenClamp(subtitle, 220),
+    cta_main: "Je rejoins",
+    cta_secondary: "Voir le programme",
+    cta_micro: reassurance,
+    price_now: params.price || "",
+    price_old: "",
+    checkout_title: "Réserve ta place",
+    checkout_reassurance: reassurance,
+    proof_chips: bullets.slice(0, 3),
+    hero_bullets: bullets.slice(0, 4).length
+      ? bullets.slice(0, 4)
+      : ["Un plan clair et concret", "Des actions simples", "Un cadre pour avancer"],
+    faq_items: deriveFaqItems(params.resultText, 5).map((x) => ({
+      q: x.q,
+      a: x.a,
+      question: x.q,
+      answer: x.a,
+    })),
+    footer_note: "Tes données sont protégées. Zéro spam, juste du concret.",
+    footer_link_top: "Haut de page",
+    footer_link_1: "Mentions légales",
+    footer_link_2: "Politique de confidentialité",
+  };
+
+  // Template-specific mappings to match the original structures.
+  if (params.templateId === "sale-01") {
+    const faq = deriveFaqItems(params.resultText, 6);
+    const program = bullets.slice(0, 6).length
+      ? bullets.slice(0, 6)
+      : [
+          "Les étapes exactes pour structurer ta page de vente",
+          "Les éléments de copywriting qui convertissent",
+          "La checklist pour publier sans friction",
+        ];
+
+    const testimonialsScalar = bullets.slice(0, 3).length
+      ? bullets.slice(0, 3)
+      : ["“Ultra clair et actionnable.”", "“J’ai enfin une structure.”", "“Simple et efficace.”"];
+
+    return {
+      ...common,
+      nav_badge: "MASTERCLASS",
+      nav_cta: "Réserver",
+      nav_link_1: "Intervenant",
+      nav_link_2: "Programme",
+      nav_link_3: "Témoignages",
+      hero_pill: params.offerName || "MASTERCLASS",
+      hero_title: softenClamp(title, 90),
+      hero_subtitle: softenClamp(subtitle, 200),
+      hero_quote: "",
+      stat_1_number: extractKeyNumber(params.resultText) || "3",
+      stat_1_label: "jours",
+      stat_2_number: "20",
+      stat_2_label: "minutes",
+      stat_3_number: "1",
+      stat_3_label: "plan d’action",
+      program_title: "Ce que tu vas maîtriser",
+      program_text: "Une structure simple, une progression claire, et de l’action chaque jour.",
+      program_bullets: program,
+      testimonials: testimonialsScalar,
+      faq_items: faq.map((x) => ({ question: x.q, answer: x.a })),
+      cta_primary: "Je réserve",
+      cta_secondary: "Voir le programme",
+      cta_micro: reassurance,
+      price_1_name: "Accès",
+      price_1_amount: params.price || "—",
+      price_1_tag: "Recommandé",
+      price_1_cta: "Je m’inscris",
+      price_1_items: bullets.slice(0, 4).length ? bullets.slice(0, 4) : ["Accès immédiat", "Bonus inclus", "Mises à jour"],
+      price_2_name: "Plus",
+      price_2_amount: "",
+      price_2_tag: "",
+      price_2_cta: "Me contacter",
+      price_2_items: [],
+      price_3_name: "",
+      price_3_amount: "",
+      price_3_tag: "",
+      price_3_cta: "",
+      price_3_items: [],
+      footer_text: "© Tipote",
+    };
+  }
+
+  if (params.templateId === "sale-02") {
+    const dayChunks = chunk(
+      bullets.length
+        ? bullets
+        : [
+            "Clarifier l’objectif et poser la stratégie.",
+            "Dérouler le plan d’action sans blocage.",
+            "Passer à l’exécution avec une checklist.",
+          ],
+      3
+    );
+
+    const days = dayChunks.slice(0, 3).map((b, i) => ({
+      day_label: `Jour ${i + 1}`,
+      day_date: i === 0 ? "Aujourd’hui" : "",
+      day_title: b[0] ? softenClamp(b[0], 70) : `Étape ${i + 1}`,
+      day_bullets: (b.slice(1).length ? b.slice(1) : b)
+        .slice(0, 3)
+        .map((x) => softenClamp(x, 90)),
+    }));
+
+    const testimonials = [
+      {
+        text: "J’ai enfin une structure claire, sans me prendre la tête.",
+        author: "Entrepreneur",
+        role: "Solo",
+      },
+      { text: "Actionnable. En 20 minutes j’avais un plan précis.", author: "Coach", role: "Service" },
+    ];
+
+    return {
+      ...common,
+      nav_badge: "CHALLENGE GRATUIT",
+      nav_badge_scribble: params.offerName ? `${params.offerName} —` : "TEMPLATES VIRAL™ —",
+      hero_pill_scribble: "TEMPLATES VIRAL™ —",
+      order_pill_scribble: "TEMPLATES VIRAL™ —",
+      hero_title: softenClamp(title, 110),
+      hero_subtitle: softenClamp(subtitle, 210),
+      hero_bullets: bullets.slice(0, 4),
+      days,
+      value_cards: [
+        { title: "Plan d’action", desc: "Une progression claire et concrète pour passer à l’action." },
+        { title: "Templates", desc: "Des scripts prêts à copier-coller." },
+        { title: "Checklist", desc: "Les points clés pour publier sans friction." },
+      ],
+      testimonials,
+      video_url: "",
+      cta_main: "Rejoindre (gratuit)",
+      cta_micro: reassurance,
+      checkout_title: "Rejoins le challenge",
+    };
+  }
+
+  // sale-03 (and default)
+  const benefitCards = (
+    bullets.length
+      ? bullets
+      : [
+          "Un plan clair et concret pour passer à l’action dès aujourd’hui.",
+          "Des exercices simples, actionnables, et faciles à tenir.",
+          "Un boost de motivation avec une communauté qui avance.",
+        ]
+  )
+    .slice(0, 6)
+    .map((b) => {
+      const parts = b.split("—");
+      const t = softenClamp(cleanLine(parts[0] || b), 48);
+      const d = softenClamp(cleanLine(parts.slice(1).join("—")), 90);
+      return { t, d: d || undefined };
+    });
+
+  return {
+    ...common,
+    nav_cta: "Je le veux",
+    hero_badge: "CHALLENGE",
+    hero_title: softenClamp(title, 120),
+    hero_title_accent: "",
+    hero_subtitle: softenClamp(subtitle, 220),
+    benefit_cards: benefitCards,
+    benefits_title: "Ce que tu vas obtenir",
+    benefits_text: "Un contenu court, utile et concret — pensé pour être appliqué tout de suite.",
+    steps: [
+      "Étape 1 : clarifier l’objectif",
+      "Étape 2 : dérouler le plan",
+      "Étape 3 : passer à l’exécution",
+    ],
+    side_bullets: bullets.slice(0, 3),
+    dark_title: "À qui s’adresse ce défi ?",
+    dark_text:
+      "À toutes les personnes qui veulent reprendre le pouvoir sur leur quotidien, sortir du doute et avancer avec un plan concret.",
+    dark_cta: "Je rejoins le défi",
+    dark_micro: reassurance,
+    final_title: "Prêt à passer à l’action ?",
+    final_text: "Reçois le plan + les templates et avance dès aujourd’hui.",
+    final_cta: "Je m’inscris maintenant",
+    final_micro: reassurance,
+  };
+}
+
 export function FunnelForm(props: FunnelFormProps) {
   const { toast } = useToast();
 
   const [pageType, setPageType] = useState<FunnelPageType>("capture");
   const [mode, setMode] = useState<FunnelMode>("from_pyramid");
-
-  const [title, setTitle] = useState("");
-  const [result, setResult] = useState("");
-  const [outputTab, setOutputTab] = useState<OutputTab>("text");
-
-  const [showRawEditor, setShowRawEditor] = useState(false);
 
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [offerName, setOfferName] = useState("");
@@ -380,11 +631,18 @@ export function FunnelForm(props: FunnelFormProps) {
   const [urgency, setUrgency] = useState("");
   const [guarantee, setGuarantee] = useState("");
 
-  const [templateId, setTemplateId] = useState<CaptureTemplateId>("capture-01");
-  const [variantId, setVariantId] = useState<string>("centered");
-  const [htmlPreview, setHtmlPreview] = useState<string>("");
-  const [htmlKit, setHtmlKit] = useState<string>("");
-  const [isRendering, setIsRendering] = useState<boolean>(false);
+  const [title, setTitle] = useState("");
+  const [result, setResult] = useState("");
+
+  const [showRawEditor, setShowRawEditor] = useState(false);
+  const [outputTab, setOutputTab] = useState<OutputTab>("text");
+
+  const [templateId, setTemplateId] = useState<TemplateId>("capture-01");
+  const [variantId, setVariantId] = useState("centered");
+
+  const [isRendering, setIsRendering] = useState(false);
+  const [htmlPreview, setHtmlPreview] = useState("");
+  const [htmlKit, setHtmlKit] = useState("");
 
   useEffect(() => {
     setResult("");
@@ -392,6 +650,14 @@ export function FunnelForm(props: FunnelFormProps) {
     setOutputTab("text");
     setHtmlPreview("");
     setHtmlKit("");
+
+    // Keep a valid template for the selected page type.
+    setTemplateId((current) => {
+      if (pageType === "capture") {
+        return String(current).startsWith("capture-") ? current : "capture-01";
+      }
+      return String(current).startsWith("sale-") ? current : "sale-03";
+    });
   }, [pageType, mode]);
 
   const offers = props.pyramidOffers ?? [];
@@ -403,38 +669,31 @@ export function FunnelForm(props: FunnelFormProps) {
   }, [offers, pageType]);
 
   const defaultOfferFromProps = useMemo(() => {
-    return pageType === "capture"
-      ? props.pyramidLeadMagnet
-      : props.pyramidPaidOffer;
+    if (pageType === "capture") return props.pyramidLeadMagnet ?? null;
+    return props.pyramidPaidOffer ?? null;
   }, [pageType, props.pyramidLeadMagnet, props.pyramidPaidOffer]);
 
   useEffect(() => {
     if (mode !== "from_pyramid") return;
-
-    const idFromDefault = defaultOfferFromProps?.id ?? "";
-    const first = filteredOffers[0]?.id ?? "";
-
-    setSelectedOfferId(idFromDefault || first || "");
-  }, [mode, defaultOfferFromProps, filteredOffers]);
+    const candidate = defaultOfferFromProps?.id || filteredOffers[0]?.id || "";
+    setSelectedOfferId(candidate);
+  }, [defaultOfferFromProps, filteredOffers, mode]);
 
   const selectedOffer = useMemo(() => {
-    const id = selectedOfferId || defaultOfferFromProps?.id || "";
-    return (
-      filteredOffers.find((o) => o.id === id) ?? defaultOfferFromProps ?? null
-    );
-  }, [selectedOfferId, filteredOffers, defaultOfferFromProps]);
+    return filteredOffers.find((o) => o.id === selectedOfferId) || null;
+  }, [filteredOffers, selectedOfferId]);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(result || "");
       toast({
         title: "Copié",
-        description: "Le texte a été copié dans le presse-papiers.",
+        description: "Le contenu a été copié dans le presse-papiers.",
       });
     } catch {
       toast({
         title: "Erreur",
-        description: "Impossible de copier.",
+        description: "Impossible de copier le contenu.",
         variant: "destructive",
       });
     }
@@ -615,51 +874,52 @@ export function FunnelForm(props: FunnelFormProps) {
       });
       return;
     }
-    if (pageType !== "capture") {
-      toast({
-        title: "Bientôt",
-        description:
-          "La génération HTML est disponible d’abord pour les pages de capture.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const offerLabel =
       mode === "from_pyramid" ? selectedOffer?.name ?? "" : offerName;
     const promise =
       mode === "from_pyramid" ? selectedOffer?.promise ?? "" : pitch;
 
     const contentData =
-      templateId === "capture-02"
-        ? deriveCapture02Content({
-            resultText: result,
-            offerName: offerLabel,
-            promise,
-          })
-        : templateId === "capture-03"
-          ? deriveCapture03Content({
+      pageType === "capture"
+        ? templateId === "capture-02"
+          ? deriveCapture02Content({
               resultText: result,
               offerName: offerLabel,
               promise,
             })
-          : templateId === "capture-04"
-            ? deriveCapture04Content({
+          : templateId === "capture-03"
+            ? deriveCapture03Content({
                 resultText: result,
                 offerName: offerLabel,
                 promise,
               })
-            : templateId === "capture-05"
-              ? deriveCapture05Content({
+            : templateId === "capture-04"
+              ? deriveCapture04Content({
                   resultText: result,
                   offerName: offerLabel,
                   promise,
                 })
-              : deriveCapture01Content({
-                  resultText: result,
-                  offerName: offerLabel,
-                  promise,
-                });
+              : templateId === "capture-05"
+                ? deriveCapture05Content({
+                    resultText: result,
+                    offerName: offerLabel,
+                    promise,
+                  })
+                : deriveCapture01Content({
+                    resultText: result,
+                    offerName: offerLabel,
+                    promise,
+                  })
+        : deriveSaleContent({
+            resultText: result,
+            offerName: offerLabel,
+            promise,
+            price:
+              mode === "from_pyramid"
+                ? formatOfferPrice(selectedOffer)
+                : price || undefined,
+            templateId: templateId as SaleTemplateId,
+          });
 
     setIsRendering(true);
     setHtmlPreview("");
@@ -669,7 +929,7 @@ export function FunnelForm(props: FunnelFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind: "capture",
+          kind: pageType === "capture" ? "capture" : "vente",
           templateId,
           mode: "preview",
           variantId,
@@ -685,7 +945,7 @@ export function FunnelForm(props: FunnelFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind: "capture",
+          kind: pageType === "capture" ? "capture" : "vente",
           templateId,
           mode: "kit",
           variantId,
@@ -771,8 +1031,7 @@ export function FunnelForm(props: FunnelFormProps) {
                   <SelectContent>
                     {filteredOffers.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        {o.name ?? "(Sans nom)"}{" "}
-                        {o.level ? `— ${o.level}` : ""}
+                        {o.name ?? "(Sans nom)"} {o.level ? `— ${o.level}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -887,15 +1146,13 @@ export function FunnelForm(props: FunnelFormProps) {
               {props.isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
 
-            {pageType === "capture" ? (
-              <Button
-                variant="outline"
-                onClick={renderHtml}
-                disabled={props.isGenerating || isRendering}
-              >
-                {isRendering ? "Préparation..." : "Prévisualiser en HTML"}
-              </Button>
-            ) : null}
+            <Button
+              variant="outline"
+              onClick={renderHtml}
+              disabled={props.isGenerating || isRendering}
+            >
+              {isRendering ? "Préparation..." : "Prévisualiser en HTML"}
+            </Button>
           </div>
         </Card>
 
@@ -907,9 +1164,7 @@ export function FunnelForm(props: FunnelFormProps) {
             <div className="flex items-center justify-between gap-2">
               <TabsList className="grid grid-cols-2 w-[240px]">
                 <TabsTrigger value="text">Texte</TabsTrigger>
-                <TabsTrigger value="html" disabled={pageType !== "capture"}>
-                  Page HTML
-                </TabsTrigger>
+                <TabsTrigger value="html">Page HTML</TabsTrigger>
               </TabsList>
 
               <div className="flex items-center gap-2">
@@ -969,27 +1224,52 @@ export function FunnelForm(props: FunnelFormProps) {
                     <Label>Template</Label>
                     <Select
                       value={templateId}
-                      onValueChange={(v) => setTemplateId(v as CaptureTemplateId)}
+                      onValueChange={(v) => setTemplateId(v as TemplateId)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir un template" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="capture-01">
-                          Capture 01 — Clean Blue
-                        </SelectItem>
-                        <SelectItem value="capture-02">
-                          Capture 02 — Bold Red
-                        </SelectItem>
-                        <SelectItem value="capture-03">
-                          Capture 03 — Serif Soft
-                        </SelectItem>
-                        <SelectItem value="capture-04">
-                          Capture 04 — Orange Minimal
-                        </SelectItem>
-                        <SelectItem value="capture-05">
-                          Capture 05 — Navy Challenge
-                        </SelectItem>
+                        {pageType === "capture" ? (
+                          <>
+                            <SelectItem value="capture-01">
+                              Capture 01 — Clean Blue
+                            </SelectItem>
+                            <SelectItem value="capture-02">
+                              Capture 02 — Bold Red
+                            </SelectItem>
+                            <SelectItem value="capture-03">
+                              Capture 03 — Serif Soft
+                            </SelectItem>
+                            <SelectItem value="capture-04">
+                              Capture 04 — Orange Minimal
+                            </SelectItem>
+                            <SelectItem value="capture-05">
+                              Capture 05 — Navy Challenge
+                            </SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="sale-01">
+                              Vente 01 — Webinar
+                            </SelectItem>
+                            <SelectItem value="sale-02">
+                              Vente 02 — Orderform
+                            </SelectItem>
+                            <SelectItem value="sale-03">
+                              Vente 03 — Modern Accent
+                            </SelectItem>
+                            <SelectItem value="sale-04">Vente 04</SelectItem>
+                            <SelectItem value="sale-05">Vente 05</SelectItem>
+                            <SelectItem value="sale-06">Vente 06</SelectItem>
+                            <SelectItem value="sale-07">Vente 07</SelectItem>
+                            <SelectItem value="sale-08">Vente 08</SelectItem>
+                            <SelectItem value="sale-09">Vente 09</SelectItem>
+                            <SelectItem value="sale-10">Vente 10</SelectItem>
+                            <SelectItem value="sale-11">Vente 11</SelectItem>
+                            <SelectItem value="sale-12">Vente 12</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
