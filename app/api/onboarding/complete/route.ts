@@ -2,6 +2,11 @@
 // Mark onboarding as completed (business_profiles.onboarding_completed)
 // V2: also sets onboarding_version="v2" (routing) + optional diagnostic_completed
 // Best-effort: also closes onboarding_sessions if sessionId provided (fail-open on schema diffs)
+//
+// ✅ PATCH (suite logique onboarding 3.0) :
+// - Fix boucle /onboarding si business_profiles row n’existe pas encore : update THEN insert (fail-open)
+// - Conserve la compat colonne onboarding_version (si absente, retry sans)
+// - Ne casse rien : aucune nouvelle route, aucun changement front requis
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -15,6 +20,49 @@ function isMissingColumnError(message: string | null | undefined) {
     m.includes("pgrst") ||
     (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
   );
+}
+
+async function updateThenInsertBusinessProfile(
+  supabase: any,
+  userId: string,
+  patch: Record<string, unknown>,
+) {
+  const now = new Date().toISOString();
+
+  // On garde l’update d’abord (anti-régression)
+  const upd = await supabase
+    .from("business_profiles")
+    .update({ ...patch, updated_at: now } as any)
+    .eq("user_id", userId)
+    .select("id");
+
+  if (!upd.error) {
+    if (Array.isArray(upd.data) && upd.data.length > 0) return { ok: true, error: null as any };
+  }
+
+  // Si erreur “colonne manquante”, on laisse caller gérer (retry sans colonne).
+  if (upd.error && isMissingColumnError(upd.error.message)) {
+    return { ok: false, error: upd.error };
+  }
+
+  // Si 0 row (ou autre cas), insert best-effort
+  const ins = await supabase.from("business_profiles").insert({
+    user_id: userId,
+    ...patch,
+    created_at: now,
+    updated_at: now,
+  } as any);
+
+  if (ins.error && isMissingColumnError(ins.error.message)) {
+    // On retente sans created_at/updated_at si jamais ces colonnes diffèrent (fail-open)
+    const ins2 = await supabase.from("business_profiles").insert({
+      user_id: userId,
+      ...patch,
+    } as any);
+    return { ok: !ins2.error, error: ins2.error };
+  }
+
+  return { ok: !ins.error, error: ins.error };
 }
 
 export async function POST(req: Request) {
@@ -47,19 +95,19 @@ export async function POST(req: Request) {
     };
     if (diagnosticCompleted) patch.diagnostic_completed = true;
 
-    const upd = await supabase.from("business_profiles").update(patch as any).eq("user_id", userId);
+    const r1 = await updateThenInsertBusinessProfile(supabase, userId, patch);
 
-    if (upd.error && isMissingColumnError(upd.error.message)) {
+    if (!r1.ok && r1.error && isMissingColumnError(r1.error.message)) {
       // Retry sans onboarding_version si colonne absente
       const patch2: Record<string, unknown> = { onboarding_completed: true };
       if (diagnosticCompleted) patch2.diagnostic_completed = true;
 
-      const upd2 = await supabase.from("business_profiles").update(patch2 as any).eq("user_id", userId);
-      if (upd2.error) {
-        return NextResponse.json({ ok: false, error: upd2.error.message }, { status: 400 });
+      const r2 = await updateThenInsertBusinessProfile(supabase, userId, patch2);
+      if (!r2.ok) {
+        return NextResponse.json({ ok: false, error: r2.error?.message ?? "Failed to complete onboarding" }, { status: 400 });
       }
-    } else if (upd.error) {
-      return NextResponse.json({ ok: false, error: upd.error.message }, { status: 400 });
+    } else if (!r1.ok) {
+      return NextResponse.json({ ok: false, error: r1.error?.message ?? "Failed to complete onboarding" }, { status: 400 });
     }
 
     // 2) best-effort: fermer la session si fournie (ne jamais casser si schema différent)

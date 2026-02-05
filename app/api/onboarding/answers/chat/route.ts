@@ -22,6 +22,10 @@
 // ✅ PATCH "100% V2" :
 // - Ne dépend plus d'une row business_profiles déjà existante.
 //   => update THEN insert (sinon completion peut ne rien marquer et reboucler /onboarding)
+//
+// ✅ PATCH (A2 suite logique — verrou activité prioritaire) :
+// - Auto-capture activities_list depuis le message user si plusieurs items détectés (confidence low)
+//   => garantit activities_list (array) même si l’IA rate ce tour
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -246,16 +250,16 @@ export async function POST(req: NextRequest) {
         .from("onboarding_sessions")
         .insert({
           user_id: userId,
-          status: "active",
           onboarding_version: "v2",
+          status: "active",
           started_at: new Date().toISOString(),
           meta: {},
         })
         .select("id")
-        .single();
+        .maybeSingle();
 
       if (error || !created?.id) {
-        return NextResponse.json({ error: error?.message ?? "Create session error" }, { status: 400 });
+        return NextResponse.json({ error: error?.message ?? "Failed to create session" }, { status: 400 });
       }
       sessionId = String(created.id);
     } else {
@@ -317,22 +321,19 @@ export async function POST(req: NextRequest) {
         });
         if (!error) return true;
       } catch {
-        // ignore
+        // fallthrough
       }
 
+      // fallback upsert (si RPC indispo)
       try {
         const row = {
           user_id: userId,
           key,
-          value: value ?? null,
+          value,
           confidence: fact.confidence,
           source: fact.source,
           updated_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
         };
-
-        const up = await supabase.from("onboarding_facts").upsert(row as any, { onConflict: "user_id,key" });
-        if (!up?.error) return true;
 
         const upd = await supabase
           .from("onboarding_facts")
@@ -352,6 +353,29 @@ export async function POST(req: NextRequest) {
       } catch {
         return false;
       }
+    }
+
+    // ✅ auto-capture activities_list (si l'utilisateur liste plusieurs activités)
+    // Objectif: garantir le stockage même si l'extraction IA rate ce tour.
+    // Confidence volontairement basse => l'IA pourra corriger/affiner ensuite.
+    try {
+      const existing = normalizeStringArray((knownFacts as any)["activities_list"]);
+      const fromUser = normalizeStringArray(body.message)
+        .map((s) => s.trim().replace(/^[-–—\s]+/, ""))
+        .filter((s) => s.length > 1 && s.length <= 80)
+        .slice(0, 8);
+
+      if (fromUser.length >= 2 && existing.length < 2) {
+        const ok = await upsertOneFact({
+          key: "activities_list",
+          value: fromUser,
+          confidence: "low",
+          source: "user_message_list",
+        });
+        if (ok) knownFacts["activities_list"] = fromUser;
+      }
+    } catch {
+      // fail-open
     }
 
     // ✅ auto-capture du choix activité prioritaire (si l'assistant vient de demander UNE activité)

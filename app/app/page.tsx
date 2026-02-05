@@ -13,6 +13,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import TodayLovable from "@/components/dashboard/TodayLovable";
 import StrategyAutoBootstrap from "@/components/strategy/StrategyAutoBootstrap";
+import StarterPlanBanner from "@/components/dashboard/StarterPlanBanner";
 
 export default async function TodayPage() {
   const supabase = await getSupabaseServerClient();
@@ -35,9 +36,25 @@ export default async function TodayPage() {
 
   if (profileError || !profile?.onboarding_completed) redirect("/onboarding");
 
+  // Best-effort: récupérer le plan (pour afficher un “plan de départ” visible immédiatement)
+  // ⚠️ Fail-open total : ne jamais casser l'accès /app si table/colonne indisponible.
+  let planJson: unknown | null = null;
+  try {
+    const { data: bp, error: bpErr } = await supabase
+      .from("business_plan")
+      .select("plan_json")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!bpErr && bp?.plan_json) planJson = (bp as any).plan_json;
+  } catch {
+    // fail-open
+  }
+
   return (
     <>
       <StrategyAutoBootstrap />
+      <StarterPlanBanner planJson={planJson} />
       <TodayLovable />
     </>
   );
