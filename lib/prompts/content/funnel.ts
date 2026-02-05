@@ -39,6 +39,17 @@ export type FunnelPromptParams = {
   offer: PyramidOfferContext | null;
   manual: FunnelManual | null;
   language?: "fr";
+
+  /**
+   * OPTIONNEL (premium rendering):
+   * - outputFormat = "contentData_json" => l’IA doit retourner UNIQUEMENT un JSON (contentData)
+   * - templateSchemaPrompt = texte décrivant les clés/arrays attendus pour FIT le template choisi
+   * - templateId / templateKind uniquement informatifs
+   */
+  outputFormat?: "text" | "contentData_json";
+  templateSchemaPrompt?: string;
+  templateId?: string;
+  templateKind?: "capture" | "vente";
 };
 
 function safeStr(v: unknown): string {
@@ -256,6 +267,73 @@ Ton : expert, posé, décisionnel. On doit sentir un moment de choix.
 `.trim();
 }
 
+/* -------------------------------------------------------------------------- */
+/*                         PREMIUM: contentData JSON FIT                        */
+/* -------------------------------------------------------------------------- */
+
+function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
+  const { mode, theme, offer, manual, page, templateSchemaPrompt } = params;
+
+  const offerName =
+    mode === "from_pyramid"
+      ? toOneLine(offer?.name)
+      : toOneLine(manual?.name) || toOneLine(offer?.name);
+
+  const promise =
+    mode === "from_pyramid"
+      ? toOneLine(offer?.promise)
+      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
+
+  const target = mode === "from_scratch" ? toOneLine(manual?.target) : "";
+  const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
+
+  const context = {
+    page,
+    theme: toOneLine(theme),
+    offerName,
+    promise,
+    target,
+    isLeadMagnet: isLM,
+    offer: offer ? JSON.parse(offerToCompactJson(offer)) : null,
+    manual: manual ? JSON.parse(manualToCompactJson(manual)) : null,
+  };
+
+  return `
+Tu es un copywriter senior premium.
+Tu écris en français.
+
+CONTEXTE (JSON) :
+${JSON.stringify(context, null, 2)}
+
+OBJECTIF :
+- Produire le contentData (JSON) qui remplit la page ${page === "sales" ? "de vente" : "de capture"}.
+- Le texte DOIT être adapté à l'offre et au thème, et être lisible, concret, très premium.
+
+INTERDICTIONS :
+- Ne jamais mentionner ressource, modèle, template, framework.
+- Pas de markdown. Pas de HTML.
+- Pas d’explications. Pas de méta.
+
+IMPORTANT :
+- Le rendu final doit être court, rythmé, très clair.
+- Une promesse forte, des bénéfices concrets, CTA irrésistible.
+- Si page capture: focus inscription email (gratuit). Si page vente: focus conversion.
+
+SCHÉMA À RESPECTER STRICTEMENT :
+${templateSchemaPrompt || ""}
+
+RENDU :
+Retourne UNIQUEMENT l'objet JSON final (sans texte autour).
+`.trim();
+}
+
 export function buildFunnelPrompt(params: FunnelPromptParams): string {
+  const wantsJson =
+    params.outputFormat === "contentData_json" &&
+    typeof params.templateSchemaPrompt === "string" &&
+    params.templateSchemaPrompt.trim().length > 0;
+
+  if (wantsJson) return buildPremiumJsonPrompt(params);
+
   return params.page === "sales" ? buildSalesPrompt(params) : buildCapturePrompt(params);
 }

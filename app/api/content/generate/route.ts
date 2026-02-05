@@ -26,6 +26,7 @@ import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
+import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/content/offer";
 
 import fs from "node:fs/promises";
@@ -74,6 +75,7 @@ type Body = {
   funnelOfferId?: string;
   urgency?: string;
   guarantee?: string;
+  templateId?: string;
   funnelManual?: {
     name?: string;
     promise?: string;
@@ -1459,7 +1461,7 @@ if (type === "post" && postOfferId) {
      * Prompt builder
      * -------------------------- */
 
-    const effectivePrompt = (() => {
+    const effectivePrompt = await (async () => {
       if (type === "post") {
   const platform = safeString(body.platform).trim() as any;
   const subject = safeString(body.subject).trim();
@@ -1658,17 +1660,41 @@ if (type === "post" && postOfferId) {
         } as any);
       }
 
-      if (type === "funnel") {
-        const manual = isRecord((body as any).funnelManual) ? ((body as any).funnelManual as any) : null;
+            if (type === "funnel") {
+            const manual = isRecord((body as any).funnelManual)
+              ? ((body as any).funnelManual as any)
+              : null;
+
+            const theme =
+              safeString((body as any).theme).trim() ||
+              safeString((body as any).subject).trim() ||
+              safeString((body as any).prompt).trim() ||
+              prompt ||
+              (funnelPage === "sales" ? "Page de vente" : "Page de capture");
+
+            // NEW (optional): if templateId is provided, ask the model to return contentData JSON that FITS the template.
+            // Otherwise we keep the historical behavior (text only).
+            const templateId = safeString((body as any).templateId).trim();
+            const templateKind: "vente" | "capture" =
+              funnelPage === "sales" ? "vente" : "capture";
+
+            let templateSchemaPrompt = "";
+            if (templateId.length > 0) {
+              try {
+                const inferred = await inferTemplateSchema({
+                  kind: templateKind,
+                  templateId,
+                });
+                templateSchemaPrompt = schemaToPrompt(inferred);
+              } catch (e) {
+                templateSchemaPrompt = "";
+              }
+            }
 
         return buildFunnelPrompt({
           page: funnelPage,
           mode: funnelMode,
-          theme:
-            safeString(body.theme).trim() ||
-            safeString(body.subject).trim() ||
-            prompt ||
-            (funnelPage === "sales" ? "Page de vente" : "Page de capture"),
+          theme,
           offer: funnelMode === "from_pyramid" ? funnelSourceOffer : null,
           manual:
             funnelMode === "from_scratch"
@@ -1681,9 +1707,16 @@ if (type === "post" && postOfferId) {
                   guarantee: safeString(manual?.guarantee).trim() || safeString((body as any).guarantee).trim() || null,
                 }
               : null,
+
+          outputFormat: templateSchemaPrompt ? "contentData_json" : "text",
+          templateKind: templateSchemaPrompt ? (templateKind as any) : undefined,
+          templateId: templateSchemaPrompt ? templateId : undefined,
+          templateSchemaPrompt: templateSchemaPrompt || undefined,
+
           language: "fr",
         } as any);
       }
+
 
       return buildPromptByType({ type: "generic", prompt: prompt || safeString(body.subject).trim() || "Contenu" });
     })();

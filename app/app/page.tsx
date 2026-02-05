@@ -5,11 +5,14 @@
 // NOTE: on NE bloque plus sur la stratégie/pyramide ici.
 // L'utilisateur arrive sur un dashboard immédiatement (objectif: expérience personnalisée),
 // et la stratégie/pyramide se gère ensuite dans /strategy.
+//
+// ✅ Suite logique : bootstrap silencieux de la stratégie si absente (sans bloquer l'UI)
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import TodayLovable from "@/components/dashboard/TodayLovable";
+import StrategyAutoBootstrap from "@/components/strategy/StrategyAutoBootstrap";
 
 export default async function TodayPage() {
   const supabase = await getSupabaseServerClient();
@@ -32,5 +35,10 @@ export default async function TodayPage() {
 
   if (profileError || !profile?.onboarding_completed) redirect("/onboarding");
 
-  return <TodayLovable />;
+  return (
+    <>
+      <StrategyAutoBootstrap />
+      <TodayLovable />
+    </>
+  );
 }
