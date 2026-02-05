@@ -13,6 +13,11 @@
 // - onboarding_sessions: onboarding_version, started_at, meta sont NOT NULL
 // - onboarding_messages: pas de user_id, extracted JSONB NOT NULL
 // - onboarding_facts: confidence TEXT (high|medium|low) + fallback upsert si RPC absente
+//
+// PATCH (A2+ lock activité prioritaire) :
+// - Normalise les keys (lowercase) + normalise les valeurs pour activities_list (array)
+// - Capture directement primary_activity quand l'assistant vient de demander de choisir UNE activité
+//   => évite la dépendance totale à l'extraction IA et garantit le stockage Supabase
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -112,6 +117,31 @@ function normalizeStringArray(v: unknown): string[] {
       .filter((s) => s.length > 0);
   }
   return [];
+}
+
+function normalizeFactValue(key: string, value: unknown): unknown {
+  const k = normalizeKey(key);
+
+  // Toujours stocker proprement les activités (array) pour éviter les divergences côté prompt
+  if (k === "activities_list" || k === "activities" || k === "activity_list") {
+    return normalizeStringArray(value);
+  }
+
+  // Choix explicite de l'activité prioritaire
+  if (k === "primary_activity" || k === "main_activity") {
+    return typeof value === "string" ? value.trim() : String(value ?? "").trim();
+  }
+
+  // Booléens fréquents
+  if (k === "has_offers") {
+    if (typeof value === "boolean") return value;
+    const s = String(value ?? "").toLowerCase().trim();
+    if (["yes", "oui", "true", "1"].includes(s)) return true;
+    if (["no", "non", "false", "0"].includes(s)) return false;
+    return value;
+  }
+
+  return value;
 }
 
 function buildPrimaryActivityQuestion(locale: "fr" | "en", activities: string[]) {
@@ -252,7 +282,111 @@ export async function POST(req: NextRequest) {
     const knownFacts: Record<string, unknown> = {};
     for (const f of facts ?? []) {
       if (!f?.key) continue;
-      knownFacts[String((f as any).key)] = (f as any).value;
+      const k = normalizeKey(String((f as any).key));
+      knownFacts[k] = normalizeFactValue(k, (f as any).value);
+    }
+
+    async function upsertOneFact(fact: {
+      key: string;
+      value: unknown;
+      confidence: "high" | "medium" | "low";
+      source: string;
+    }): Promise<boolean> {
+      const key = normalizeKey(fact.key).slice(0, 80);
+      const value = normalizeFactValue(key, fact.value);
+
+      // 1) preferred path: RPC if present in DB
+      try {
+        const { error } = await supabase.rpc("upsert_onboarding_fact", {
+          p_user_id: userId,
+          p_key: key,
+          p_value: value,
+          p_confidence: fact.confidence,
+          p_source: fact.source,
+        });
+        if (!error) return true;
+      } catch {
+        // ignore
+      }
+
+      // 2) fallback: direct upsert into onboarding_facts
+      try {
+        const row = {
+          user_id: userId,
+          key,
+          value: value ?? null,
+          confidence: fact.confidence,
+          source: fact.source,
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+
+        const up = await supabase.from("onboarding_facts").upsert(row as any, { onConflict: "user_id,key" });
+        if (!up?.error) return true;
+
+        // If no unique constraint exists, try update then insert (best-effort)
+        const upd = await supabase
+          .from("onboarding_facts")
+          .update({
+            value: row.value,
+            confidence: row.confidence,
+            source: row.source,
+            updated_at: row.updated_at,
+          } as any)
+          .eq("user_id", userId)
+          .eq("key", key);
+
+        if (!upd?.error) return true;
+
+        const ins = await supabase.from("onboarding_facts").insert(row as any);
+        return !ins?.error;
+      } catch {
+        return false;
+      }
+    }
+
+    // ✅ Verrou UX "activité prioritaire" (backend fail-safe + auto-capture du choix)
+    // Si le dernier message assistant demandait explicitement de choisir UNE activité,
+    // et qu'on a activities_list>=2 sans primary_activity, on capture directement la réponse user
+    // (évite de dépendre à 100% de l'extraction IA).
+    try {
+      const activities = normalizeStringArray((knownFacts as any)["activities_list"]);
+      const primary = (knownFacts as any)["primary_activity"];
+      const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
+
+      if (activities.length >= 2 && !hasPrimary) {
+        const lastAssistant = [...(history ?? [])]
+          .slice(0, Math.max(0, (history ?? []).length - 1)) // exclut le user message courant si présent
+          .reverse()
+          .find((m: any) => m?.role === "assistant")?.content as string | undefined;
+
+        const la = String(lastAssistant ?? "").toLowerCase();
+        const isPrimaryQuestion =
+          la.includes("laquelle veux-tu développer en priorité") ||
+          la.includes("laquelle veux-tu prioriser") ||
+          la.includes("which one do you want to prioritize");
+
+        const candidate = body.message.trim();
+
+        if (isPrimaryQuestion && candidate.length > 0 && candidate.length <= 120 && !candidate.includes("\n")) {
+          const ok = await upsertOneFact({
+            key: "primary_activity",
+            value: candidate,
+            confidence: "high",
+            source: "user_choice",
+          });
+
+          if (ok) {
+            knownFacts["primary_activity"] = candidate;
+            // best-effort: garder aussi trace des activités détectées (normalisées)
+            if (!Array.isArray((knownFacts as any)["activities_list"])) {
+              knownFacts["activities_list"] = activities;
+            }
+          }
+        }
+      }
+    } catch {
+      // fail-open
     }
 
     // Contexte unifié (facts + profil) pour mieux guider le clarifier (fail-open)
@@ -313,76 +447,33 @@ export async function POST(req: NextRequest) {
     const appliedFacts: Array<{ key: string; confidence: string }> = [];
 
     const toUpsert = (out.facts || [])
-      .map((f) => ({
-        key: f.key,
-        value: (f as any).value ?? null,
-        confidence: normalizeConfidence((f as any).confidence),
-        source:
-          typeof (f as any).source === "string" && (f as any).source.trim()
-            ? (f as any).source.trim().slice(0, 80)
-            : "onboarding_chat",
-      }))
+      .map((f) => {
+        const rawKey = typeof f.key === "string" ? f.key : String((f as any).key ?? "");
+        const key = normalizeKey(rawKey).slice(0, 80);
+
+        const rawValue = (f as any).value ?? null;
+        const value = normalizeFactValue(key, rawValue);
+
+        return {
+          key,
+          value,
+          confidence: normalizeConfidence((f as any).confidence),
+          source:
+            typeof (f as any).source === "string" && (f as any).source.trim()
+              ? (f as any).source.trim().slice(0, 80)
+              : "onboarding_chat",
+        };
+      })
       .filter((f) => isNonEmptyString(f.key));
 
     if (toUpsert.length) {
       for (const f of toUpsert) {
-        let ok = false;
-
-        // 4.a) preferred path: RPC if present in DB
-        try {
-          const { error } = await supabase.rpc("upsert_onboarding_fact", {
-            p_user_id: userId,
-            p_key: f.key,
-            p_value: f.value,
-            p_confidence: f.confidence,
-            p_source: f.source,
-          });
-          if (!error) ok = true;
-        } catch {
-          ok = false;
-        }
-
-        // 4.b) fallback: direct upsert into onboarding_facts (schema-driven)
-        if (!ok) {
-          try {
-            const row = {
-              user_id: userId,
-              key: f.key,
-              value: f.value ?? null,
-              confidence: f.confidence,
-              source: f.source,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-            };
-
-            const up = await supabase.from("onboarding_facts").upsert(row as any, { onConflict: "user_id,key" });
-
-            if (!up?.error) ok = true;
-
-            // If no unique constraint exists, try update then insert (best-effort)
-            if (up?.error) {
-              const upd = await supabase
-                .from("onboarding_facts")
-                .update({
-                  value: row.value,
-                  confidence: row.confidence,
-                  source: row.source,
-                  updated_at: row.updated_at,
-                } as any)
-                .eq("user_id", userId)
-                .eq("key", f.key);
-
-              if (!upd?.error) ok = true;
-
-              if (!ok) {
-                const ins = await supabase.from("onboarding_facts").insert(row as any);
-                if (!ins?.error) ok = true;
-              }
-            }
-          } catch {
-            ok = false;
-          }
-        }
+        const ok = await upsertOneFact({
+          key: f.key,
+          value: f.value ?? null,
+          confidence: f.confidence,
+          source: f.source,
+        });
 
         if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
       }
@@ -429,7 +520,10 @@ export async function POST(req: NextRequest) {
     // 6) optionally finish onboarding
     if (shouldFinish) {
       // marque BP onboarding_completed = true
-      await supabase.from("business_profiles").update({ onboarding_completed: true, onboarding_version: "v2" }).eq("user_id", userId);
+      await supabase
+        .from("business_profiles")
+        .update({ onboarding_completed: true, onboarding_version: "v2" })
+        .eq("user_id", userId);
 
       await supabase
         .from("onboarding_sessions")

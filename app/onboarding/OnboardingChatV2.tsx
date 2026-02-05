@@ -49,6 +49,34 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
+function normalizeActivities(input: string): string[] {
+  const raw = input
+    .split(/\r?\n|,|;|\||•|\u2022/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Best-effort: on ne considère "liste d'activités" que si on a vraiment >=2 items.
+  const uniq: string[] = [];
+  for (const item of raw) {
+    const cleaned = item.replace(/^[-–—\s]+/, "").trim();
+    if (!cleaned) continue;
+    if (cleaned.length > 80) continue;
+    if (!uniq.some((u) => u.toLowerCase() === cleaned.toLowerCase())) uniq.push(cleaned);
+  }
+
+  return uniq.slice(0, 6);
+}
+
+function isPrimaryActivityPrompt(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("laquelle veux-tu développer en priorité") ||
+    t.includes("laquelle veux-tu prioriser") ||
+    t.includes("parmi celles-ci") ||
+    t.includes("which one do you want to prioritize")
+  );
+}
+
 export function OnboardingChatV2(props: { firstName?: string | null }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -77,11 +105,25 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
   const [isDone, setIsDone] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
+  // ✅ Verrou UX "activité prioritaire" (sans nouvelle route/API)
+  // On mémorise les activités listées par l'utilisateur (best-effort),
+  // puis on propose des boutons quand Tipote demande explicitement d'en choisir UNE.
+  const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
+
+  const lastAssistantMessage = useMemo(() => {
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    return last?.content ?? "";
+  }, [messages]);
+
+  const needsPrimaryChoice = useMemo(() => {
+    return isPrimaryActivityPrompt(lastAssistantMessage);
+  }, [lastAssistantMessage]);
 
   const canSend = useMemo(() => {
     return input.trim().length > 0 && !isSending && !isDone && !isFinalizing;
@@ -121,10 +163,14 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     }
   };
 
-  const send = async () => {
-    if (!canSend) return;
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || isSending || isDone || isFinalizing) return;
 
-    const text = input.trim();
+    // Capture best-effort des activités listées
+    const maybeList = normalizeActivities(text);
+    if (maybeList.length >= 2) setActivityCandidates(maybeList);
+
     setInput("");
     setIsSending(true);
 
@@ -164,6 +210,12 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
     }
   };
 
+  const quickPick = async (value: string) => {
+    if (!value) return;
+    // UX : envoi direct du choix (et ça garantit le stockage côté backend)
+    await send(value);
+  };
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
       <div className="mb-6 flex items-center gap-2">
@@ -195,6 +247,32 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
         </div>
 
         <div className="mt-6 space-y-3">
+          {needsPrimaryChoice ? (
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground">
+                Réponds juste avec le nom de l’activité à prioriser (une seule).
+              </div>
+
+              {activityCandidates.length >= 2 ? (
+                <div className="flex flex-wrap gap-2">
+                  {activityCandidates.map((a) => (
+                    <Button
+                      key={a}
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void quickPick(a)}
+                      disabled={isSending || isDone || isFinalizing}
+                      className="rounded-xl"
+                    >
+                      {a}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -230,7 +308,7 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
                 )}
               </Button>
             ) : (
-              <Button onClick={send} disabled={!canSend}>
+              <Button onClick={() => void send()} disabled={!canSend}>
                 {isSending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
