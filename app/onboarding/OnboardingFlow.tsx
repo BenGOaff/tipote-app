@@ -12,6 +12,16 @@ import { StepProfile } from "./StepProfile";
 import { StepBusiness } from "./StepBusiness";
 import { StepDiagnosticChat, type DiagnosticPayload } from "./StepDiagnosticChat";
 
+/**
+ * ✅ FIX COMPILATION ERROR:
+ * StepBusiness imports `SocialLink` from "./OnboardingFlow".
+ * We re-export SocialLink here to satisfy that import.
+ */
+export interface SocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface Offer {
   name: string;
   price: string;
@@ -29,6 +39,9 @@ export interface OnboardingData {
   revenueGoalMonthly: string;
   hasOffers: boolean;
   offers: Offer[];
+
+  // Optional (compat) — only used if some step needs it
+  socialLinks?: SocialLink[];
 
   diagnosticCompleted?: boolean;
   diagnosticAnswers?: Array<{ question: string; answer: string }>;
@@ -49,6 +62,7 @@ const initialData: OnboardingData = {
   revenueGoalMonthly: "",
   hasOffers: false,
   offers: [],
+  socialLinks: [],
   diagnosticCompleted: false,
   diagnosticAnswers: [],
   diagnosticSummary: "",
@@ -133,6 +147,7 @@ function buildOnboardingAnswersPayload(data: OnboardingData) {
     revenue_goal_monthly: data.revenueGoalMonthly,
     has_offers: data.hasOffers,
     offers: data.offers ?? [],
+    social_links: data.socialLinks ?? [],
   };
 }
 
@@ -148,8 +163,7 @@ const OnboardingFlow = () => {
   const [finalizingLabel, setFinalizingLabel] = useState("Préparation…");
   const [finalizingProgress, setFinalizingProgress] = useState(0);
 
-  const updateData = (updates: Partial<OnboardingData>) =>
-    setData((prev) => ({ ...prev, ...updates }));
+  const updateData = (updates: Partial<OnboardingData>) => setData((prev) => ({ ...prev, ...updates }));
 
   const saveCurrent = async (fields: Partial<OnboardingData>) => {
     try {
@@ -237,7 +251,7 @@ const OnboardingFlow = () => {
         setFinalizingLabel("Choix automatique de la meilleure option…");
         setFinalizingProgress(45);
 
-        // 2) Sélection automatique (index 0) — le PATCH sait récupérer la pyramide depuis business_plan
+        // 2) Sélection automatique (index 0)
         await patchJSON("/api/strategy/offer-pyramid", { selectedIndex: 0 });
         setFinalizingLabel("Génération de ta stratégie + plan 90 jours…");
         setFinalizingProgress(70);
