@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Loader2, Sparkles, Undo2, RotateCcw, Send } from "lucide-react";
+import { Loader2, Sparkles, Undo2, Redo2, RotateCcw, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Role = "assistant" | "user" | "system";
@@ -64,6 +64,9 @@ export type TemplateChatPanelProps = {
   onUndo: () => void;
   canUndo: boolean;
 
+  onRedo: () => void;
+  canRedo: boolean;
+
   disabled?: boolean;
 };
 
@@ -80,13 +83,14 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [lastPatches, setLastPatches] = useState<Patch[]>([]);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const canSend = useMemo(() => input.trim().length >= 3 && !loading && !props.disabled, [
-    input,
-    loading,
-    props.disabled,
-  ]);
+  const canSend = useMemo(
+    () => input.trim().length >= 3 && !loading && !props.disabled,
+    [input, loading, props.disabled]
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -135,6 +139,8 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
         patches: Array.isArray(res.patches) ? res.patches : [],
       });
 
+      setLastPatches(Array.isArray(res.patches) ? res.patches : []);
+
       const appliedCount = Array.isArray(res.patches) ? res.patches.length : 0;
       const explanation =
         res.explanation?.trim() ||
@@ -182,6 +188,16 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
           >
             <Undo2 className="w-4 h-4 mr-1" />
             Annuler
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={props.onRedo}
+            disabled={!props.canRedo || loading || props.disabled}
+          >
+            <Redo2 className="w-4 h-4 mr-1" />
+            Refaire
           </Button>
         </div>
       </div>
@@ -254,6 +270,24 @@ export function TemplateChatPanel(props: TemplateChatPanelProps) {
           )}
         </Button>
       </div>
+
+      {lastPatches.length > 0 && (
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="text-xs font-medium mb-2">Modifications appliquées</div>
+          <div className="flex flex-wrap gap-2">
+            {lastPatches.slice(0, 8).map((p, i) => (
+              <Badge key={`${p.path}-${i}`} variant="secondary" className="font-mono text-[11px]">
+                {p.op}:{p.path}
+              </Badge>
+            ))}
+            {lastPatches.length > 8 && (
+              <Badge variant="secondary" className="text-[11px]">
+                +{lastPatches.length - 8}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <Button

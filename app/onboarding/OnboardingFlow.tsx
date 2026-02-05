@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Sparkles, Loader2 } from "lucide-react";
 import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
 import { StepProfile } from "./StepProfile";
@@ -13,96 +14,57 @@ import { StepDiagnosticChat, type DiagnosticPayload } from "./StepDiagnosticChat
 
 export interface Offer {
   name: string;
-  type: string;
   price: string;
-  salesCount?: string;
-  sales?: string | number;
-  link?: string;
-}
-
-export interface SocialLink {
-  platform: string;
-  url: string;
+  description: string;
 }
 
 export interface OnboardingData {
-  // Socle minimal (écran 1)
   firstName: string;
   country: string;
+  businessType: string;
   niche: string;
   missionStatement: string;
-
-  // Gardés pour compat (anciens champs — peuvent rester vides)
-  ageRange: string;
-  gender: string;
-  maturity: string;
-  biggestBlocker: string;
-
-  // Socle minimal (écran 2)
-  hasOffers: boolean | null;
-  offers: Offer[];
-  socialAudience: string;
-  socialLinks: SocialLink[];
-  emailListSize: string;
+  businessModel: string;
   weeklyHours: string;
-  mainGoal90Days: string;
-
   revenueGoalMonthly: string;
-  mainGoals: string[];
+  hasOffers: boolean;
+  offers: Offer[];
 
-  // Gardés pour compat (anciens champs — chat ensuite)
-  uniqueValue: string;
-  untappedStrength: string;
-  biggestChallenge: string;
-  successDefinition: string;
-  clientFeedback: string[];
-  preferredContentType: string;
-  tonePreference: string[];
-
-  // Phase 2 chat
-  diagnosticAnswers?: unknown[];
-  diagnosticProfile?: Record<string, unknown> | null;
-  diagnosticSummary?: string;
   diagnosticCompleted?: boolean;
+  diagnosticAnswers?: Array<{ question: string; answer: string }>;
+  diagnosticSummary?: string;
+  diagnosticProfile?: Record<string, unknown> | null;
+
   onboardingVersion?: string;
 }
 
 const initialData: OnboardingData = {
   firstName: "",
-  country: "",
+  country: "France",
+  businessType: "",
   niche: "",
   missionStatement: "",
-
-  ageRange: "",
-  gender: "",
-  maturity: "",
-  biggestBlocker: "",
-
-  hasOffers: null,
-  offers: [],
-  socialAudience: "",
-  socialLinks: [],
-  emailListSize: "",
+  businessModel: "",
   weeklyHours: "",
-  mainGoal90Days: "",
-
   revenueGoalMonthly: "",
-  mainGoals: [],
-
-  uniqueValue: "",
-  untappedStrength: "",
-  biggestChallenge: "",
-  successDefinition: "",
-  clientFeedback: [""],
-  preferredContentType: "",
-  tonePreference: [],
-
-  diagnosticAnswers: [],
-  diagnosticProfile: null,
-  diagnosticSummary: "",
+  hasOffers: false,
+  offers: [],
   diagnosticCompleted: false,
+  diagnosticAnswers: [],
+  diagnosticSummary: "",
+  diagnosticProfile: null,
   onboardingVersion: "v2_min_form+chat",
 };
+
+type AnyRecord = Record<string, any>;
+
+function isRecord(v: unknown): v is AnyRecord {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function asRecord(v: unknown): AnyRecord | null {
+  return isRecord(v) ? (v as AnyRecord) : null;
+}
 
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -116,89 +78,62 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
+async function patchJSON<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  return json as T;
+}
+
 function normalizeDiagnosticPayload(payload: DiagnosticPayload): {
-  diagnosticAnswers?: unknown[];
-  diagnosticProfile?: Record<string, unknown> | null;
-  diagnosticSummary?: string;
+  diagnosticAnswers: Array<{ question: string; answer: string }>;
+  diagnosticProfile: Record<string, unknown> | null;
+  diagnosticSummary: string;
 } {
-  const p: any = payload as any;
-  const answers =
-    p?.diagnosticAnswers ?? p?.diagnostic_answers ?? p?.answers ?? p?.messages ?? [];
-  const profile = p?.diagnosticProfile ?? p?.diagnostic_profile ?? p?.profile ?? null;
-  const summary = p?.diagnosticSummary ?? p?.diagnostic_summary ?? p?.summary ?? "";
+  const p = asRecord(payload) ?? {};
+  const answersRaw = Array.isArray(p.answers) ? p.answers : Array.isArray(p.diagnosticAnswers) ? p.diagnosticAnswers : [];
+  const diagnosticAnswers = answersRaw
+    .map((a: any) => ({
+      question: typeof a?.question === "string" ? a.question : "",
+      answer: typeof a?.answer === "string" ? a.answer : "",
+    }))
+    .filter((x) => x.question.trim() && x.answer.trim());
+
+  const diagnosticProfile = asRecord(p.diagnostic_profile ?? p.diagnosticProfile ?? p.profile ?? null);
+  const diagnosticSummary =
+    typeof p.diagnostic_summary === "string"
+      ? p.diagnostic_summary
+      : typeof p.diagnosticSummary === "string"
+        ? p.diagnosticSummary
+        : typeof p.summary === "string"
+          ? p.summary
+          : "";
+
   return {
-    diagnosticAnswers: Array.isArray(answers) ? answers : [],
-    diagnosticProfile: profile && typeof profile === "object" ? profile : null,
-    diagnosticSummary: typeof summary === "string" ? summary : "",
+    diagnosticAnswers,
+    diagnosticProfile: diagnosticProfile ?? null,
+    diagnosticSummary: diagnosticSummary ?? "",
   };
 }
 
-function isNonEmptyString(v: unknown): v is string {
-  return typeof v === "string" && v.trim().length > 0;
-}
-
-function compactStringArray(arr: string[] | undefined): string[] {
-  if (!Array.isArray(arr)) return [];
-  return arr.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean);
-}
-
-/**
- * IMPORTANT:
- * - On n'envoie PAS les champs vides -> évite d'écraser en DB une valeur existante par "".
- * - On mappe revenueGoalMonthly -> revenue_goal_monthly uniquement si rempli.
- * - On garde les booléens et les tableaux utiles.
- */
-function buildOnboardingAnswersPayload(d: OnboardingData) {
-  const payload: Record<string, unknown> = {};
-
-  // Step 1
-  if (isNonEmptyString(d.firstName)) payload.firstName = d.firstName;
-  if (isNonEmptyString(d.country)) payload.country = d.country;
-  if (isNonEmptyString(d.niche)) payload.niche = d.niche;
-  if (isNonEmptyString(d.missionStatement)) payload.missionStatement = d.missionStatement;
-
-  // Compat (si un jour réactivés côté UI)
-  if (isNonEmptyString(d.ageRange)) payload.ageRange = d.ageRange;
-  if (isNonEmptyString(d.gender)) payload.gender = d.gender;
-  if (isNonEmptyString(d.maturity)) payload.maturity = d.maturity;
-  if (isNonEmptyString(d.biggestBlocker)) payload.biggestBlocker = d.biggestBlocker;
-
-  // Step 2
-  if (typeof d.hasOffers === "boolean") payload.hasOffers = d.hasOffers;
-  if (Array.isArray(d.offers) && d.offers.length > 0) payload.offers = d.offers;
-  if (isNonEmptyString(d.socialAudience)) payload.socialAudience = d.socialAudience;
-  if (Array.isArray(d.socialLinks) && d.socialLinks.length > 0) payload.socialLinks = d.socialLinks;
-  if (isNonEmptyString(d.emailListSize)) payload.emailListSize = d.emailListSize;
-  if (isNonEmptyString(d.weeklyHours)) payload.weeklyHours = d.weeklyHours;
-  if (isNonEmptyString(d.mainGoal90Days)) payload.mainGoal90Days = d.mainGoal90Days;
-
-  // Objectif revenu (clé snake_case attendue côté API) - seulement si fourni
-  if (isNonEmptyString(d.revenueGoalMonthly)) {
-    payload.revenueGoalMonthly = d.revenueGoalMonthly;
-    payload.revenue_goal_monthly = d.revenueGoalMonthly;
-  }
-
-  const goals = compactStringArray(d.mainGoals);
-  if (goals.length > 0) payload.mainGoals = goals;
-
-  // Compat (si un jour réactivés côté UI)
-  if (isNonEmptyString(d.uniqueValue)) payload.uniqueValue = d.uniqueValue;
-  if (isNonEmptyString(d.untappedStrength)) payload.untappedStrength = d.untappedStrength;
-  if (isNonEmptyString(d.biggestChallenge)) payload.biggestChallenge = d.biggestChallenge;
-  if (isNonEmptyString(d.successDefinition)) payload.successDefinition = d.successDefinition;
-
-  const feedback = compactStringArray(d.clientFeedback);
-  if (feedback.length > 0) payload.clientFeedback = feedback;
-
-  if (isNonEmptyString(d.preferredContentType)) payload.preferredContentType = d.preferredContentType;
-
-  const tones = compactStringArray(d.tonePreference);
-  if (tones.length > 0) payload.tonePreference = tones;
-
-  // Version (utile analytics)
-  if (isNonEmptyString(d.onboardingVersion)) payload.onboardingVersion = d.onboardingVersion;
-
-  return payload;
+function buildOnboardingAnswersPayload(data: OnboardingData) {
+  return {
+    first_name: data.firstName,
+    country: data.country,
+    business_type: data.businessType,
+    niche: data.niche,
+    mission_statement: data.missionStatement,
+    business_model: data.businessModel,
+    weekly_hours: data.weeklyHours,
+    revenue_goal_monthly: data.revenueGoalMonthly,
+    has_offers: data.hasOffers,
+    offers: data.offers ?? [],
+  };
 }
 
 const OnboardingFlow = () => {
@@ -209,48 +144,44 @@ const OnboardingFlow = () => {
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalizingLabel, setFinalizingLabel] = useState("Préparation…");
+  const [finalizingProgress, setFinalizingProgress] = useState(0);
+
   const updateData = (updates: Partial<OnboardingData>) =>
     setData((prev) => ({ ...prev, ...updates }));
 
-  const saveCurrent = async () => {
-    await postJSON("/api/onboarding/answers", buildOnboardingAnswersPayload(data));
-  };
-
-  const nextStep = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  const saveCurrent = async (fields: Partial<OnboardingData>) => {
     try {
-      await saveCurrent();
-
-      const next = Math.min(step + 1, 3);
-
-      ampTrack("tipote_onboarding_step_completed", {
-        step,
-        next_step: next,
+      await postJSON("/api/onboarding/answers", {
+        ...buildOnboardingAnswersPayload({ ...data, ...fields }),
+        diagnostic_completed: Boolean(data.diagnosticCompleted),
         onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
       });
-
-      setStep(next);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Impossible d'enregistrer tes réponses.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    } catch {
+      // fail-open
     }
   };
 
+  const nextStep = async () => {
+    const next = Math.min(3, step + 1);
+
+    ampTrack("tipote_onboarding_next_step", {
+      step,
+      next_step: next,
+      onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
+    });
+
+    setStep(next);
+
+    // best-effort save (non-bloquant)
+    await saveCurrent({});
+  };
+
   const prevStep = () => {
-    if (isSubmitting) return;
+    const prev = Math.max(1, step - 1);
 
-    const prev = Math.max(step - 1, 1);
-
-    ampTrack("tipote_onboarding_back_clicked", {
+    ampTrack("tipote_onboarding_prev_step", {
       step,
       prev_step: prev,
       onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
@@ -293,11 +224,36 @@ const OnboardingFlow = () => {
         diagnostic_summary_len: (diagnostic.diagnosticSummary ?? "").length,
       });
 
-      router.push("/strategy/pyramids");
-      router.refresh();
+      // ✅ Onboarding 3.0 : on finalise la stratégie + tâches AVANT d'envoyer vers le dashboard.
+      // - On n'ajoute rien dans /app : le rendu reste Lovable.
+      // - En cas d'erreur, fail-open : on redirige quand même vers /app.
+      setFinalizing(true);
+      setFinalizingLabel("Tipote prépare tes options…");
+      setFinalizingProgress(20);
 
-      // ✅ anti-régression
-      postJSON("/api/strategy").catch(() => {});
+      try {
+        // 1) Génère les pyramides (idempotent)
+        await postJSON("/api/strategy", {});
+        setFinalizingLabel("Choix automatique de la meilleure option…");
+        setFinalizingProgress(45);
+
+        // 2) Sélection automatique (index 0) — le PATCH sait récupérer la pyramide depuis business_plan
+        await patchJSON("/api/strategy/offer-pyramid", { selectedIndex: 0 });
+        setFinalizingLabel("Génération de ta stratégie + plan 90 jours…");
+        setFinalizingProgress(70);
+
+        // 3) Génère la stratégie complète (idempotent)
+        await postJSON("/api/strategy", {});
+        setFinalizingLabel("Presque fini…");
+        setFinalizingProgress(90);
+      } catch (e) {
+        // fail-open : on ne bloque jamais l'accès à l'app
+        console.error("Onboarding finalize strategy failed (non-blocking):", e);
+      }
+
+      setFinalizingProgress(100);
+      router.push("/app");
+      router.refresh();
     } catch (error) {
       ampTrack("tipote_onboarding_error", {
         onboarding_version: data.onboardingVersion ?? "v2_min_form+chat",
@@ -307,10 +263,7 @@ const OnboardingFlow = () => {
 
       toast({
         title: "Erreur",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Impossible de finaliser ton onboarding.",
+        description: error instanceof Error ? error.message : "Impossible de finaliser ton onboarding.",
         variant: "destructive",
       });
     } finally {
@@ -322,6 +275,31 @@ const OnboardingFlow = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {finalizing ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
+          <Card className="w-full max-w-lg p-6 md:p-8">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">On finalise ton setup</p>
+                <h2 className="text-lg md:text-xl font-semibold truncate">{finalizingLabel}</h2>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <Progress value={finalizingProgress} className="h-2" />
+              <p className="mt-2 text-xs text-muted-foreground">{finalizingProgress}%</p>
+            </div>
+
+            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+              Tipote génère ta stratégie, ton plan 90 jours et tes tâches. Tu arrives ensuite directement sur ton dashboard.
+            </p>
+          </Card>
+        </div>
+      ) : null}
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -329,31 +307,20 @@ const OnboardingFlow = () => {
               <Sparkles className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            Ton onboarding
-          </h1>
+          <h1 className="text-3xl font-display font-bold text-foreground mb-2">Ton onboarding</h1>
           <p className="text-muted-foreground">Quelques questions pour personnaliser Tipote™</p>
         </div>
 
         <div className="mb-8">
           <Progress value={progress} className="h-2" />
-          <p className="text-sm text-muted-foreground mt-2 text-center">
-            Étape {step} sur 3
-          </p>
+          <p className="text-sm text-muted-foreground mt-2 text-center">Étape {step} sur 3</p>
         </div>
 
         <div>
           {step === 1 && <StepProfile data={data} updateData={updateData} onNext={nextStep} />}
-          {step === 2 && (
-            <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />
-          )}
+          {step === 2 && <StepBusiness data={data} updateData={updateData} onNext={nextStep} onBack={prevStep} />}
           {step === 3 && (
-            <StepDiagnosticChat
-              data={data}
-              onBack={prevStep}
-              isSubmitting={isSubmitting}
-              onComplete={finalizeOnboarding}
-            />
+            <StepDiagnosticChat data={data} onBack={prevStep} isSubmitting={isSubmitting} onComplete={finalizeOnboarding} />
           )}
         </div>
       </main>

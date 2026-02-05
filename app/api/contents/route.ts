@@ -18,14 +18,24 @@ function isRecord(v: unknown): v is AnyRecord {
 }
 
 function asString(v: unknown, maxLen = 5000): string {
-  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "true" : "false") : "";
+  const s =
+    typeof v === "string"
+      ? v
+      : typeof v === "number"
+        ? String(v)
+        : typeof v === "boolean"
+          ? v
+            ? "true"
+            : "false"
+          : "";
   const t = s.trim();
   if (!t) return "";
   return t.length > maxLen ? t.slice(0, maxLen) : t;
 }
 
 function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v)) return v.map((x) => asString(x, 200)).map((x) => x.trim()).filter(Boolean);
+  if (Array.isArray(v))
+    return v.map((x) => asString(x, 200)).map((x) => x.trim()).filter(Boolean);
   if (typeof v === "string") {
     const s = v.trim();
     if (!s) return [];
@@ -38,7 +48,6 @@ function asStringArray(v: unknown): string[] {
 function normalizeStatus(v: unknown): string {
   const s = asString(v, 40).toLowerCase();
   if (!s) return "draft";
-  // on garde compatible avec le reste de l’app
   if (["draft", "scheduled", "published", "archived"].includes(s)) return s;
   if (["brouillon"].includes(s)) return "draft";
   if (["planifie", "planifié", "programmé", "programme"].includes(s)) return "scheduled";
@@ -50,22 +59,22 @@ function normalizeScheduledDate(v: unknown): string | null {
   const s = asString(v, 64);
   if (!s) return null;
 
-  // accepte YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // accepte ISO/date string
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
 }
 
 function isColumnMissing(message: string) {
-  return /column .* does not exist/i.test(message) || /Could not find the .* column/i.test(message);
+  return /column .* does not exist/i.test(message) ||
+    /could not find the .* column/i.test(message);
 }
 
 function isTagsTypeMismatch(message: string) {
-  // cas typique: "invalid input syntax for type json" / "malformed array literal" / etc.
-  return /malformed array literal/i.test(message) || /invalid input syntax/i.test(message) || /cannot cast type/i.test(message);
+  return /malformed array literal/i.test(message) ||
+    /invalid input syntax/i.test(message) ||
+    /cannot cast type/i.test(message);
 }
 
 type InsertResult = { data: { id: string } | null; error: PostgrestError | null };
@@ -81,12 +90,32 @@ async function insertContentV2(params: {
   scheduledDate: string | null;
   tags: string[];
   tagsCsv: string;
+  meta: AnyRecord | null;
 }): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv } = params;
+  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
 
-  const first = await (supabase as any)
+  const basePayload: AnyRecord = {
+    user_id: userId,
+    type,
+    title,
+    content,
+    status,
+    channel,
+    scheduled_date: scheduledDate,
+    tags,
+  };
+
+  if (meta) basePayload.meta = meta;
+
+  let first = await (supabase as any)
     .from("content_item")
-    .insert({
+    .insert(basePayload)
+    .select("id")
+    .maybeSingle();
+
+  // tags mismatch fallback (array vs text)
+  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
+    const retryPayload: AnyRecord = {
       user_id: userId,
       type,
       title,
@@ -94,13 +123,21 @@ async function insertContentV2(params: {
       status,
       channel,
       scheduled_date: scheduledDate,
-      tags,
-    })
-    .select("id")
-    .maybeSingle();
+      tags: tagsCsv,
+    };
+    if (meta) retryPayload.meta = meta;
 
-  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
-    const retry = await (supabase as any)
+    first = await (supabase as any)
+      .from("content_item")
+      .insert(retryPayload)
+      .select("id")
+      .maybeSingle();
+  }
+
+  // meta missing fallback
+  if (first?.error && meta && isColumnMissing(first.error.message)) {
+    // retry without meta
+    let retry = await (supabase as any)
       .from("content_item")
       .insert({
         user_id: userId,
@@ -110,10 +147,27 @@ async function insertContentV2(params: {
         status,
         channel,
         scheduled_date: scheduledDate,
-        tags: tagsCsv,
+        tags,
       })
       .select("id")
       .maybeSingle();
+
+    if (retry?.error && isTagsTypeMismatch(retry.error.message) && tagsCsv) {
+      retry = await (supabase as any)
+        .from("content_item")
+        .insert({
+          user_id: userId,
+          type,
+          title,
+          content,
+          status,
+          channel,
+          scheduled_date: scheduledDate,
+          tags: tagsCsv,
+        })
+        .select("id")
+        .maybeSingle();
+    }
 
     return { data: retry.data ?? null, error: retry.error ?? null };
   }
@@ -132,12 +186,31 @@ async function insertContentFR(params: {
   scheduledDate: string | null;
   tags: string[];
   tagsCsv: string;
+  meta: AnyRecord | null;
 }): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv } = params;
+  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
 
-  const first = await (supabase as any)
+  const basePayload: AnyRecord = {
+    user_id: userId,
+    type,
+    titre: title,
+    contenu: content,
+    statut: status,
+    canal: channel,
+    date_planifiee: scheduledDate,
+    tags,
+  };
+
+  if (meta) basePayload.meta = meta;
+
+  let first = await (supabase as any)
     .from("content_item")
-    .insert({
+    .insert(basePayload)
+    .select("id")
+    .maybeSingle();
+
+  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
+    const retryPayload: AnyRecord = {
       user_id: userId,
       type,
       titre: title,
@@ -145,13 +218,19 @@ async function insertContentFR(params: {
       statut: status,
       canal: channel,
       date_planifiee: scheduledDate,
-      tags,
-    })
-    .select("id")
-    .maybeSingle();
+      tags: tagsCsv,
+    };
+    if (meta) retryPayload.meta = meta;
 
-  if (first?.error && isTagsTypeMismatch(first.error.message) && tagsCsv) {
-    const retry = await (supabase as any)
+    first = await (supabase as any)
+      .from("content_item")
+      .insert(retryPayload)
+      .select("id")
+      .maybeSingle();
+  }
+
+  if (first?.error && meta && isColumnMissing(first.error.message)) {
+    let retry = await (supabase as any)
       .from("content_item")
       .insert({
         user_id: userId,
@@ -161,10 +240,27 @@ async function insertContentFR(params: {
         statut: status,
         canal: channel,
         date_planifiee: scheduledDate,
-        tags: tagsCsv,
+        tags,
       })
       .select("id")
       .maybeSingle();
+
+    if (retry?.error && isTagsTypeMismatch(retry.error.message) && tagsCsv) {
+      retry = await (supabase as any)
+        .from("content_item")
+        .insert({
+          user_id: userId,
+          type,
+          titre: title,
+          contenu: content,
+          statut: status,
+          canal: channel,
+          date_planifiee: scheduledDate,
+          tags: tagsCsv,
+        })
+        .select("id")
+        .maybeSingle();
+    }
 
     return { data: retry.data ?? null, error: retry.error ?? null };
   }
@@ -173,55 +269,60 @@ async function insertContentFR(params: {
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: AnyRecord = {};
   try {
-    const supabase = await getSupabaseServerClient();
+    body = (await req.json()) as AnyRecord;
+  } catch {
+    body = {};
+  }
 
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabase.auth.getUser();
+  const userId = session.user.id;
 
-    if (userErr) {
-      return NextResponse.json({ ok: false, error: userErr.message }, { status: 401 });
-    }
-    if (!user) {
-      return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
-    }
+  const type = asString(body.type, 80) || "post";
+  const title = asString(body.title, 240);
+  const content = asString(body.content, 100000);
+  const status = normalizeStatus(body.status);
+  const channel =
+    asString(body.channel, 120) ||
+    asString(body.platform, 120) ||
+    asString((isRecord(body.meta) ? (body.meta as AnyRecord).platform : ""), 120) ||
+    "";
+  const scheduledDate = normalizeScheduledDate(body.scheduledDate ?? body.scheduled_date ?? body.date_planifiee);
+  const tags = asStringArray(body.tags);
+  const tagsCsv = tags.join(",");
 
-    const body = (await req.json().catch(() => ({}))) as AnyRecord;
+  const meta = isRecord(body.meta) ? (body.meta as AnyRecord) : null;
 
-    const type = asString(body.type, 40);
-    const title = asString(body.title, 200);
-    const content = asString(body.content, 20000);
+  // 1) try V2 columns
+  let inserted: InsertResult = { data: null, error: null };
+  inserted = await insertContentV2({
+    supabase,
+    userId,
+    type,
+    title,
+    content,
+    status,
+    channel: channel || null,
+    scheduledDate,
+    tags,
+    tagsCsv,
+    meta,
+  });
 
-    // Lovable forms: platform (post), sinon channel peut arriver direct
-    const channel =
-      asString(body.channel, 120) ||
-      asString(body.platform, 120) ||
-      asString((isRecord(body.meta) ? (body.meta as AnyRecord).platform : ""), 120) ||
-      "";
-
-    const scheduledDate = normalizeScheduledDate(body.scheduledDate ?? body.scheduled_date ?? body.date_planifiee);
-
-    const status = normalizeStatus(body.status ?? (scheduledDate ? "scheduled" : "draft"));
-
-    const tags = asStringArray(body.tags);
-    const tagsCsv = tags.join(", ");
-
-    if (!type) {
-      return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
-    }
-    if (!title) {
-      return NextResponse.json({ ok: false, error: "Missing title" }, { status: 400 });
-    }
-    if (!content) {
-      return NextResponse.json({ ok: false, error: "Missing content" }, { status: 400 });
-    }
-
-    // 1) Insert V2 (EN) via supabase (session)
-    let ins = await insertContentV2({
+  // if missing V2 columns -> fallback FR
+  if (inserted.error && isColumnMissing(inserted.error.message)) {
+    inserted = await insertContentFR({
       supabase,
-      userId: user.id,
+      userId,
       type,
       title,
       content,
@@ -230,13 +331,31 @@ export async function POST(req: NextRequest) {
       scheduledDate,
       tags,
       tagsCsv,
+      meta,
+    });
+  }
+
+  // if still failing, try admin fallback (RLS)
+  if (inserted.error) {
+    // retry V2 with admin
+    inserted = await insertContentV2({
+      supabase: supabaseAdmin,
+      userId,
+      type,
+      title,
+      content,
+      status,
+      channel: channel || null,
+      scheduledDate,
+      tags,
+      tagsCsv,
+      meta,
     });
 
-    // 2) Si colonnes manquantes => fallback FR
-    if (ins.error && isColumnMissing(ins.error.message)) {
-      ins = await insertContentFR({
-        supabase,
-        userId: user.id,
+    if (inserted.error && isColumnMissing(inserted.error.message)) {
+      inserted = await insertContentFR({
+        supabase: supabaseAdmin,
+        userId,
         type,
         title,
         content,
@@ -245,68 +364,17 @@ export async function POST(req: NextRequest) {
         scheduledDate,
         tags,
         tagsCsv,
+        meta,
       });
     }
+  }
 
-    // 3) Si RLS ou autre souci côté session => fallback admin (best effort)
-    if (ins.error) {
-      const msg = ins.error.message || "";
-      const looksLikeRls =
-        /permission denied/i.test(msg) ||
-        /violates row-level security/i.test(msg) ||
-        /new row violates row-level security policy/i.test(msg);
-
-      if (looksLikeRls) {
-        // retente V2 puis FR en admin
-        ins = await insertContentV2({
-          supabase: supabaseAdmin,
-          userId: user.id,
-          type,
-          title,
-          content,
-          status,
-          channel: channel || null,
-          scheduledDate,
-          tags,
-          tagsCsv,
-        });
-
-        if (ins.error && isColumnMissing(ins.error.message)) {
-          ins = await insertContentFR({
-            supabase: supabaseAdmin,
-            userId: user.id,
-            type,
-            title,
-            content,
-            status,
-            channel: channel || null,
-            scheduledDate,
-            tags,
-            tagsCsv,
-          });
-        }
-      }
-    }
-
-    if (ins.error) {
-      return NextResponse.json({ ok: false, error: ins.error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true, id: ins.data?.id ?? null }, { status: 200 });
-  } catch (e) {
+  if (inserted.error || !inserted.data?.id) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Internal server error" },
-      { status: 500 },
+      { error: inserted.error?.message || "Insert failed" },
+      { status: 500 }
     );
   }
-}
 
-export async function GET() {
-  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
-}
-export async function PATCH() {
-  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
-}
-export async function DELETE() {
-  return NextResponse.json({ ok: false, error: "Method not allowed" }, { status: 405 });
+  return NextResponse.json({ ok: true, id: inserted.data.id });
 }

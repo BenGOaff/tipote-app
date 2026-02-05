@@ -316,9 +316,12 @@ export function FunnelForm(props: FunnelFormProps) {
   const [contentDataJson, setContentDataJson] =
     useState<Record<string, any> | null>(null);
 
-  // Chat / branding
+  // Chat / branding + history stacks
   const [brandTokens, setBrandTokens] = useState<Record<string, any>>({});
   const [history, setHistory] = useState<
+    Array<{ contentData: Record<string, any> | null; brandTokens: Record<string, any> }>
+  >([]);
+  const [future, setFuture] = useState<
     Array<{ contentData: Record<string, any> | null; brandTokens: Record<string, any> }>
   >([]);
 
@@ -440,15 +443,18 @@ export function FunnelForm(props: FunnelFormProps) {
       setTitle(t);
     }
 
-    // Reset HTML cached outputs + chat state
+    // Reset outputs + chat state
     setHtmlPreview("");
     setHtmlKit("");
     setContentDataJson(null);
     setBrandTokens({});
     setHistory([]);
+    setFuture([]);
   };
 
   const handleSave = async (status: "draft" | "published") => {
+    const contentData = getDerivedContentData();
+
     await props.onSave({
       title,
       content: result,
@@ -460,6 +466,16 @@ export function FunnelForm(props: FunnelFormProps) {
         `template:${templateId}`,
         variantId ? `variant:${variantId}` : "",
       ].filter(Boolean),
+      // ✅ NEW: persist template state (best-effort côté API si meta column existe)
+      meta: {
+        kind: pageType === "capture" ? "capture" : "vente",
+        templateId,
+        variantId,
+        contentData,
+        brandTokens: brandTokens || {},
+        // keep room for future:
+        version: 1,
+      },
     });
   };
 
@@ -477,7 +493,6 @@ export function FunnelForm(props: FunnelFormProps) {
 
     setIsRendering(true);
     try {
-      // Preview
       const resPrev = await fetch("/api/templates/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -487,7 +502,7 @@ export function FunnelForm(props: FunnelFormProps) {
           mode: "preview",
           variantId,
           contentData,
-          brandTokens, // optional (ignored if API doesn't use it)
+          brandTokens,
         }),
       });
 
@@ -495,7 +510,6 @@ export function FunnelForm(props: FunnelFormProps) {
       if (!resPrev.ok) throw new Error(htmlPrev || "Erreur rendu preview");
       setHtmlPreview(htmlPrev);
 
-      // Kit Systeme
       const resKit = await fetch("/api/templates/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -505,7 +519,7 @@ export function FunnelForm(props: FunnelFormProps) {
           mode: "kit",
           variantId,
           contentData,
-          brandTokens, // optional
+          brandTokens,
         }),
       });
 
@@ -570,6 +584,9 @@ export function FunnelForm(props: FunnelFormProps) {
       },
     ]);
 
+    // ✅ any new change clears redo stack
+    setFuture([]);
+
     setContentDataJson(next.contentData);
     setBrandTokens(next.brandTokens);
 
@@ -579,13 +596,46 @@ export function FunnelForm(props: FunnelFormProps) {
   const undo = () => {
     setHistory((h) => {
       if (!h.length) return h;
+
       const last = h[h.length - 1];
+
+      // push current into future
+      setFuture((f) => [
+        ...f,
+        {
+          contentData: contentDataJson ? structuredClone(contentDataJson) : null,
+          brandTokens: structuredClone(brandTokens || {}),
+        },
+      ]);
 
       setContentDataJson(last.contentData);
       setBrandTokens(last.brandTokens);
 
       if (result.trim()) void renderHtml();
       return h.slice(0, -1);
+    });
+  };
+
+  const redo = () => {
+    setFuture((f) => {
+      if (!f.length) return f;
+
+      const last = f[f.length - 1];
+
+      // push current into history
+      setHistory((h) => [
+        ...h,
+        {
+          contentData: contentDataJson ? structuredClone(contentDataJson) : null,
+          brandTokens: structuredClone(brandTokens || {}),
+        },
+      ]);
+
+      setContentDataJson(last.contentData);
+      setBrandTokens(last.brandTokens);
+
+      if (result.trim()) void renderHtml();
+      return f.slice(0, -1);
     });
   };
 
@@ -900,7 +950,6 @@ export function FunnelForm(props: FunnelFormProps) {
                     </div>
                   </div>
 
-                  {/* ✅ CHAT (Lovable-like) — ajouté sans changer ton layout */}
                   <TemplateChatPanel
                     kind={pageType === "capture" ? "capture" : "vente"}
                     templateId={templateId}
@@ -912,6 +961,8 @@ export function FunnelForm(props: FunnelFormProps) {
                     }
                     onUndo={undo}
                     canUndo={history.length > 0}
+                    onRedo={redo}
+                    canRedo={future.length > 0}
                     disabled={isRendering || !result.trim()}
                   />
 
