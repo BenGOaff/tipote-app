@@ -1,4 +1,4 @@
-// app/api/onboarding/chat/route.ts
+// app/api/onboarding/answers/chat/route.ts
 // Onboarding conversationnel v2 (agent Clarifier)
 // - N'écrase pas l'onboarding existant (answers/complete restent en place)
 // - Stocke la conversation (onboarding_sessions/onboarding_messages)
@@ -21,7 +21,7 @@
 //
 // ✅ PATCH "100% V2" :
 // - Ne dépend plus d'une row business_profiles déjà existante.
-//   => update THEN insert (sinon /api/onboarding/complete ne marque rien et boucle /onboarding)
+//   => update THEN insert (sinon completion peut ne rien marquer et reboucler /onboarding)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -49,13 +49,11 @@ const AiResponseSchema = z
         z.object({
           key: z.string().trim().min(1).max(80),
           value: z.any().optional(),
-          // prompt canonical : "high|medium|low" (DB = text)
           confidence: z.union([z.enum(["high", "medium", "low"]), z.number().min(0).max(1)]).optional(),
           source: z.string().trim().min(1).max(80).optional(),
         }),
       )
       .default([]),
-    // compat: prompt renvoie "done", backend historique "should_finish"
     should_finish: z.boolean().optional(),
     done: z.boolean().optional(),
   })
@@ -126,17 +124,14 @@ function normalizeStringArray(v: unknown): string[] {
 function normalizeFactValue(key: string, value: unknown): unknown {
   const k = normalizeKey(key);
 
-  // Toujours stocker proprement les activités (array) pour éviter les divergences côté prompt
   if (k === "activities_list" || k === "activities" || k === "activity_list") {
     return normalizeStringArray(value);
   }
 
-  // Choix explicite de l'activité prioritaire
   if (k === "primary_activity" || k === "main_activity") {
     return typeof value === "string" ? value.trim() : String(value ?? "").trim();
   }
 
-  // Booléens fréquents
   if (k === "has_offers") {
     if (typeof value === "boolean") return value;
     const s = String(value ?? "").toLowerCase().trim();
@@ -161,7 +156,6 @@ function buildPrimaryActivityQuestion(locale: "fr" | "en", activities: string[])
 }
 
 function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
-  // Patch minimal & safe : on n'écrase jamais avec du vide
   const patch: Record<string, any> = {};
   for (const f of facts) {
     const k = normalizeKey(f.key);
@@ -169,7 +163,6 @@ function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
 
     if (factValueIsEmpty(v)) continue;
 
-    // mapping clair vers business_profiles
     if (k === "first_name" || k === "firstname" || k === "prenom") patch.first_name = String(v);
     if (k === "country" || k === "pays") patch.country = String(v);
     if (k === "niche") patch.niche = String(v);
@@ -206,7 +199,6 @@ function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
       }
     }
 
-    // offres existantes (si user en parle) : stock JSONB "offers"
     if (k === "offers" && v && typeof v === "object") patch.offers = v;
   }
   return patch;
@@ -217,25 +209,20 @@ async function updateThenInsertBusinessProfile(
   userId: string,
   patch: Record<string, any>,
 ): Promise<void> {
-  // Objectif: ne jamais dépendre d'une row business_profiles pré-existante.
-  // - update d'abord (comportement normal)
-  // - si 0 row affectée => insert minimal (user_id + patch)
   const row: Record<string, any> = {
     user_id: userId,
     ...patch,
     updated_at: new Date().toISOString(),
   };
 
-  // 1) tentative UPDATE
   const upd = await supabase.from("business_profiles").update(row).eq("user_id", userId).select("id");
   if (!upd.error) {
     if (Array.isArray(upd.data) && upd.data.length > 0) return;
   }
 
-  // Si erreur "no rows" on insert; si vraie erreur, on tente quand même insert (fail-open)
   const ins = await supabase.from("business_profiles").insert(row).select("id");
   if (ins.error) {
-    // dernier recours: ne pas casser le chat
+    // fail-open : ne pas casser l'onboarding chat
     console.warn("[OnboardingChatV2] updateThenInsertBusinessProfile failed:", ins.error);
   }
 }
@@ -272,19 +259,14 @@ export async function POST(req: NextRequest) {
       }
       sessionId = String(created.id);
     } else {
-      // validate session belongs to user
       const { data: s, error } = await supabase
         .from("onboarding_sessions")
         .select("id,user_id,status")
         .eq("id", sessionId)
         .maybeSingle();
 
-      if (error || !s?.id) {
-        return NextResponse.json({ error: "Invalid session" }, { status: 400 });
-      }
-      if (String(s.user_id) !== String(userId)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+      if (error || !s?.id) return NextResponse.json({ error: "Invalid session" }, { status: 400 });
+      if (String(s.user_id) !== String(userId)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // 2) store user message
@@ -295,9 +277,7 @@ export async function POST(req: NextRequest) {
       extracted: {},
       created_at: new Date().toISOString(),
     });
-    if (insertMsgErr) {
-      return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
-    }
+    if (insertMsgErr) return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
 
     // 3) fetch existing context
     const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
@@ -327,7 +307,6 @@ export async function POST(req: NextRequest) {
       const key = normalizeKey(fact.key).slice(0, 80);
       const value = normalizeFactValue(key, fact.value);
 
-      // 1) preferred path: RPC if present in DB
       try {
         const { error } = await supabase.rpc("upsert_onboarding_fact", {
           p_user_id: userId,
@@ -341,7 +320,6 @@ export async function POST(req: NextRequest) {
         // ignore
       }
 
-      // 2) fallback: direct upsert into onboarding_facts
       try {
         const row = {
           user_id: userId,
@@ -356,7 +334,6 @@ export async function POST(req: NextRequest) {
         const up = await supabase.from("onboarding_facts").upsert(row as any, { onConflict: "user_id,key" });
         if (!up?.error) return true;
 
-        // If no unique constraint exists, try update then insert (best-effort)
         const upd = await supabase
           .from("onboarding_facts")
           .update({
@@ -377,10 +354,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ✅ Verrou UX "activité prioritaire" (backend fail-safe + auto-capture du choix)
-    // Si le dernier message assistant demandait explicitement de choisir UNE activité,
-    // et qu'on a activities_list>=2 sans primary_activity, on capture directement la réponse user
-    // (évite de dépendre à 100% de l'extraction IA).
+    // ✅ auto-capture du choix activité prioritaire (si l'assistant vient de demander UNE activité)
     try {
       const activities = normalizeStringArray((knownFacts as any)["activities_list"]);
       const primary = (knownFacts as any)["primary_activity"];
@@ -388,7 +362,7 @@ export async function POST(req: NextRequest) {
 
       if (activities.length >= 2 && !hasPrimary) {
         const lastAssistant = [...(history ?? [])]
-          .slice(0, Math.max(0, (history ?? []).length - 1)) // exclut le user message courant si présent
+          .slice(0, Math.max(0, (history ?? []).length - 1))
           .reverse()
           .find((m: any) => m?.role === "assistant")?.content as string | undefined;
 
@@ -408,13 +382,7 @@ export async function POST(req: NextRequest) {
             source: "user_choice",
           });
 
-          if (ok) {
-            knownFacts["primary_activity"] = candidate;
-            // best-effort: garder aussi trace des activités détectées (normalisées)
-            if (!Array.isArray((knownFacts as any)["activities_list"])) {
-              knownFacts["activities_list"] = activities;
-            }
-          }
+          if (ok) knownFacts["primary_activity"] = candidate;
         }
       }
     } catch {
@@ -472,10 +440,9 @@ export async function POST(req: NextRequest) {
     const parsed = safeJsonParse(raw);
     const out = AiResponseSchema.parse(parsed);
 
-    // ✅ Compat finish flag
     let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
 
-    // 4) apply facts (upsert) + build patch for business_profiles
+    // 4) apply facts + patch business_profiles
     const appliedFacts: Array<{ key: string; confidence: string }> = [];
 
     const toUpsert = (out.facts || [])
@@ -498,27 +465,22 @@ export async function POST(req: NextRequest) {
       })
       .filter((f) => isNonEmptyString(f.key));
 
-    if (toUpsert.length) {
-      for (const f of toUpsert) {
-        const ok = await upsertOneFact({
-          key: f.key,
-          value: f.value ?? null,
-          confidence: f.confidence,
-          source: f.source,
-        });
-
-        if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
-      }
+    for (const f of toUpsert) {
+      const ok = await upsertOneFact({
+        key: f.key,
+        value: f.value ?? null,
+        confidence: f.confidence,
+        source: f.source,
+      });
+      if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
     }
 
     const patch = mergeBusinessProfilePatchFromFacts(toUpsert as any);
     if (Object.keys(patch).length) {
-      // patch safe : on ne remplace pas avec du vide grâce au filtre ci-dessus
       await updateThenInsertBusinessProfile(supabase, userId, patch);
     }
 
-    // 4.b) ✅ Fail-safe serveur pour activité prioritaire
-    // Si activities_list >= 2 ET primary_activity absent => on force la question, et on interdit finish
+    // 4.b) fail-safe : pas de finish tant que primary_activity manquante si activities_list >= 2
     try {
       const mergedFacts: Record<string, unknown> = { ...knownFacts };
       for (const f of toUpsert as any[]) mergedFacts[String(f.key)] = f.value;
@@ -528,7 +490,6 @@ export async function POST(req: NextRequest) {
       const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
 
       if (activities.length >= 2 && !hasPrimary) {
-        // on force la question (et on bloque finish)
         (out as any).message = buildPrimaryActivityQuestion(locale, activities);
         shouldFinish = false;
       }
@@ -551,8 +512,10 @@ export async function POST(req: NextRequest) {
 
     // 6) optionally finish onboarding
     if (shouldFinish) {
-      // marque BP onboarding_completed = true
-      await updateThenInsertBusinessProfile(supabase, userId, { onboarding_completed: true, onboarding_version: "v2" });
+      await updateThenInsertBusinessProfile(supabase, userId, {
+        onboarding_completed: true,
+        onboarding_version: "v2",
+      });
 
       await supabase
         .from("onboarding_sessions")
