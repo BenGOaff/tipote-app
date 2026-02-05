@@ -1,0 +1,660 @@
+{
+  "kind": "vente",
+  "templateId": "sale-06",
+  "fields": [
+    {
+      "key": "checkout_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "situations",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "reasons",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "num",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "experts",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "steps",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "phase1_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "phase2_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "phase3_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "phase4_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "bonus_list",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "bonus1_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "bonus2_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "bonus3_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "recap_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "faq",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_4",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_kicker",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_title_line_1",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_title_line_2",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "cta_main",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "trust_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "trust_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "trust_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "media_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "media_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "media_placeholder",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "media_note",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "checkout_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "price_now",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_old",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_note",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "guarantee_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "guarantee_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "order_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "order_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "order_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_reassurance",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "order_badge_1",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "order_badge_2",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "order_badge_3",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "problems_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "problems_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "problems_after",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "timing_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "timing_big",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "timing_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_box",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "proof_caption",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_1_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_1_v",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_2_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_2_v",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_3_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "stat_3_v",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "reasons_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "reasons_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "experts_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "experts_note",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "method_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "method_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "mid_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "mid_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "phases_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phases_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phase1_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phase1_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "phase2_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phase2_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "phase3_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phase3_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "phase4_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "phase4_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "bonus_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "bonus_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_detail_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_detail_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "bonus1_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "bonus1_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus1_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus2_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "bonus2_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus2_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus3_k",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "bonus3_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus3_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "recap_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "recap_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "recap_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "recap_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "faq_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "faq_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "contact_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "contact_link_1_href",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "contact_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "contact_link_2_href",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "contact_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "final_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "final_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_top",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_1_href",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_2_href",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_3_href",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_note",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

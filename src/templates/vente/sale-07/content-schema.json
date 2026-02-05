@@ -1,0 +1,272 @@
+{
+  "kind": "vente",
+  "templateId": "sale-07",
+  "fields": [
+    {
+      "key": "hero_kicker",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_cta_secondary",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "hero_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "problem_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "modules",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "program_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "offer_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "guarantee",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "faq",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "faq_title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "problem_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "problem_lead",
+      "type": "string",
+      "maxLength": 140
+    },
+    {
+      "key": "problem_card_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "problem_card_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "problem_card_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "method_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "method_lead",
+      "type": "string",
+      "maxLength": 140
+    },
+    {
+      "key": "method_1_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "method_1_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "method_2_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "method_2_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "method_3_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "method_3_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "callout_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "callout_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "program_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "program_lead",
+      "type": "string",
+      "maxLength": 140
+    },
+    {
+      "key": "program_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "offer_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "offer_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "price_old",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_now",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_note",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "checkout_url",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "checkout_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "checkout_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "footer_top",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

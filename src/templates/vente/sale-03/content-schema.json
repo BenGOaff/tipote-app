@@ -1,0 +1,313 @@
+{
+  "kind": "vente",
+  "templateId": "sale-03",
+  "fields": [
+    {
+      "key": "hero_title_accent",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 90
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "proof_chips",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "price_old",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "benefit_cards",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "kicker",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "steps",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "num",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "side_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "dark_cards",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "faq_items",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "cta_main",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_secondary",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "order_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "price_now",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "order_meta",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "checkout_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_reassurance",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "benefits_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "benefits_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "content_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "content_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "side_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "side_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "side_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "side_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "dark_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "dark_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "dark_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "dark_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "faq_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "faq_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "final_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "final_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "final_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "final_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_top",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_note",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

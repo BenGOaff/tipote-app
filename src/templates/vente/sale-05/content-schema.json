@@ -1,0 +1,340 @@
+{
+  "kind": "vente",
+  "templateId": "sale-05",
+  "fields": [
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_video_url",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": []
+    },
+    {
+      "key": "panel_stats",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "k",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "v",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "bundle_items",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "fields": [
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "maxLength": 240
+        },
+        {
+          "key": "tag",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "price_old",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "price_points",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "faq_items",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "price_old",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_warning",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_pretitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_title_line_1",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_title_line_2",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_title_line_3",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "cta_main",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_secondary",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "panel_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "panel_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "panel_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "proof_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "proof_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_card_1_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "proof_card_1_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_card_2_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "proof_card_2_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_card_3_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "proof_card_3_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_card_4_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "proof_card_4_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "proof_ribbon",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "bundle_title_line_1",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bundle_title_line_2",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bundle_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "price_pill",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_now",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_micro",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "price_reassurance",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "checkout_title_line_1",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_title_line_2",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_title_line_3",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "checkout_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "checkout_guarantee",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "order_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "order_micro",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "order_reassurance",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_top",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_note",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

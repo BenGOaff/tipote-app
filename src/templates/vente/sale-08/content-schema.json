@@ -1,0 +1,247 @@
+{
+  "kind": "vente",
+  "templateId": "sale-08",
+  "fields": [
+    {
+      "key": "hero_kicker",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_video_label",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 24
+    },
+    {
+      "key": "hero_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "cta_reassurance",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "letter_where",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "letter_paragraphs",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 240
+    },
+    {
+      "key": "checklist_title",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 90
+    },
+    {
+      "key": "checklist_items",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "programme_steps",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "fields": [
+        {
+          "key": "step_kicker",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "step_title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "step_text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "bonus_items",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "fields": [
+        {
+          "key": "bonus_number",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "bonus_value",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "bonus_title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "bonus_text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "final_cta_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_video_placeholder",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_bullets_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "cta_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "form_email_placeholder",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "cta_button",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "systeme_form_slot",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "letter_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "letter_from_label",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "letter_from",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "programme_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "programme_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "final_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "footer_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "footer_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "footer_back_to_top",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

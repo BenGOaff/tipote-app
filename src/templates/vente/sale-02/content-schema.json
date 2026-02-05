@@ -1,0 +1,193 @@
+{
+  "kind": "vente",
+  "templateId": "sale-02",
+  "fields": [
+    {
+      "key": "nav_badge_scribble",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 24
+    },
+    {
+      "key": "hero_pill_scribble",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "order_pill_scribble",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "video_url",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "days",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "testimonials",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "value_cards",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "desc",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "nav_badge",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "order_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "price_now",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "price_old",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "cta_main",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "checkout_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "details_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "details_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "agenda_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "agenda_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "testimonials_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "testimonials_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "guarantee_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "guarantee_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "footer_links",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "footer_disclaimer",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

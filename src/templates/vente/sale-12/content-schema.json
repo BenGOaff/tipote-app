@@ -1,0 +1,270 @@
+{
+  "kind": "vente",
+  "templateId": "sale-12",
+  "fields": [
+    {
+      "key": "hero_kicker",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_title_accent",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 90
+    },
+    {
+      "key": "hero_intro",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "mini_cards",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "steps",
+      "type": "object[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "fields": [
+        {
+          "key": "step_number",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "step_title",
+          "type": "string",
+          "maxLength": 90
+        },
+        {
+          "key": "step_text",
+          "type": "string",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "key": "price_sub",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "price_note",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "cta_reassurance",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "trust_items",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "bonus_subtitle",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 90
+    },
+    {
+      "key": "bonus_items",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "faq_items",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "faq_q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "faq_a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "final_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_tag",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "section_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "section_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "price_label",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "price_main",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "cta_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "form_email_placeholder",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "cta_button",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "systeme_form_slot",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "bonus_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "bonus_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "faq_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "faq_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "final_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "footer_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "footer_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "footer_back_to_top",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+{
+  "kind": "vente",
+  "templateId": "sale-11",
+  "fields": [
+    {
+      "key": "hero_bg_video_url",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_kicker",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_title_accent",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 90
+    },
+    {
+      "key": "hero_intro",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_bullets",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "hero_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "clips",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "price_sub",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "price_note",
+      "type": "string[]",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40
+    },
+    {
+      "key": "cta_reassurance",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "cta_micro",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "trust_items",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "side_points",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 7,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "module_cards",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 160
+    },
+    {
+      "key": "final_cta_note",
+      "type": "string[]",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 32
+    },
+    {
+      "key": "faq_items",
+      "type": "object[]",
+      "minItems": 5,
+      "maxItems": 10,
+      "fields": [
+        {
+          "key": "faq_q",
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "key": "faq_a",
+          "type": "string",
+          "maxLength": 160
+        }
+      ]
+    },
+    {
+      "key": "brand_name",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_1",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_2",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_link_3",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "nav_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "hero_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "hero_pill",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "hero_chip",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "clips_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "price_label",
+      "type": "string",
+      "maxLength": 24
+    },
+    {
+      "key": "price_main",
+      "type": "string",
+      "maxLength": 40
+    },
+    {
+      "key": "cta_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "form_email_placeholder",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "cta_button",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "systeme_form_slot",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "side_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "side_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "side_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "scroll_hint",
+      "type": "string",
+      "maxLength": 160
+    },
+    {
+      "key": "modules_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "modules_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "final_cta",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "faq_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "faq_subtitle",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "final_cta_2",
+      "type": "string",
+      "maxLength": 32
+    },
+    {
+      "key": "footer_title",
+      "type": "string",
+      "maxLength": 90
+    },
+    {
+      "key": "footer_text",
+      "type": "string",
+      "maxLength": 240
+    },
+    {
+      "key": "footer_back_to_top",
+      "type": "string",
+      "maxLength": 160
+    }
+  ]
+}

@@ -28,10 +28,15 @@ import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/content/offer";
+import { renderTemplateHtml } from "@/lib/templates/render";
+import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
+
+
+
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { renderTemplateHtml } from "@/lib/templates/render";
+
 
 
 export const runtime = "nodejs";
@@ -2045,24 +2050,20 @@ setTimeout(() => {
 
         const contentData = coerceContentDataToSchema(schema as any, parsed);
 
-        // Render preview HTML
-        const rendered = await renderTemplateHtml({
-          kind: funnelTemplateKind as any,
-          templateId: funnelTemplateId,
-          mode: "preview",
-          contentData,
-          variantId: null,
-          brandTokens: null,
-        });
+        finalContent = JSON.stringify(
+            {
+              kind: funnelTemplateKind,
+              templateId: funnelTemplateId,
+              contentData,
+            },
+            null,
+            0,
+          );
 
-        finalContent = rendered.html;
-        title = pickTitleFromContentData(contentData) ?? null;
-      } else {
-        // ✅ comportement historique (texte)
-        const cleaned0 = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-        const cleaned = type === "article" ? cleaned0.replaceAll("<<<END_ARTICLE>>>", "").trim() : cleaned0;
-        finalContent = cleaned?.trim() ?? "";
-        if (!finalContent) throw new Error("Empty content from model");
+          // Optionnel: titre depuis contentData (fallback simple)
+          title = pickTitleFromContentData(contentData) ?? null;
+
+
 
         title = (() => {
           const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
