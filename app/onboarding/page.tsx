@@ -37,7 +37,8 @@ export default async function OnboardingPage(props: {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) redirect("/login");
+  // ✅ La page login est "/" dans ce repo
+  if (userError || !user) redirect("/");
 
   const { data: profile } = await supabase
     .from("business_profiles")

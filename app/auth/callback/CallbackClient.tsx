@@ -3,9 +3,10 @@
 // app/auth/callback/CallbackClient.tsx
 // Callback Supabase (invite / recovery / magiclink / pkce / implicit hash)
 // ✅ Fix principal : après authent, si password_set_at absent => /auth/set-password ; sinon /app
+// ✅ Onboarding V2 : après authent, si onboarding incomplet => /onboarding
 // ✅ UX durable : si lien invalide/expiré/déjà consommé => UI + resend resetPasswordForEmail
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -106,6 +107,23 @@ export default function CallbackClient() {
     }
   }
 
+  async function isOnboardingCompleted(supabase: any, userId: string): Promise<boolean> {
+    // Source de vérité onboarding = business_profiles.onboarding_completed
+    // Fail-open DB : en cas d'erreur schema/RLS, on renvoie true (ne jamais bloquer la connexion).
+    try {
+      const { data, error } = await supabase
+        .from("business_profiles")
+        .select("onboarding_completed")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) return true;
+      return Boolean((data as any)?.onboarding_completed);
+    } catch {
+      return true;
+    }
+  }
+
   async function redirectAfterAuth(supabase: any) {
     const userId = await getSessionUserId(supabase);
     if (!userId) {
@@ -116,6 +134,12 @@ export default function CallbackClient() {
     const force = await mustForceSetPassword(supabase, userId);
     if (force) {
       router.replace("/auth/set-password");
+      return;
+    }
+
+    const completed = await isOnboardingCompleted(supabase, userId);
+    if (!completed) {
+      router.replace("/onboarding");
       return;
     }
 
@@ -147,20 +171,16 @@ export default function CallbackClient() {
             return;
           }
 
-          // invite => set-password direct
           if (otpType === "invite") {
             router.replace("/auth/set-password");
             return;
           }
 
-          // magiclink / signup / email_change etc => décider selon password_set_at
           await redirectAfterAuth(supabase);
           return;
         }
 
         if (token) {
-          // Some Supabase emails still use `?token=...&type=...` links.
-          // In that case, verifyOtp expects { token, email } (NOT token_hash).
           const effectiveEmail = (emailFromUrl || "").trim().toLowerCase();
           if (!effectiveEmail) {
             throw new Error("Missing email for OTP token verification");
@@ -256,9 +276,9 @@ export default function CallbackClient() {
     return () => {
       cancelled = true;
     };
-  }, [router, code, tokenHash, token, type, searchParams]);
+  }, [router, code, tokenHash, token, type, emailFromUrl]);
 
-  async function handleResend(e: React.FormEvent) {
+  async function handleResend(e: FormEvent) {
     e.preventDefault();
     setResendMsg("");
     setResendStatus("idle");
