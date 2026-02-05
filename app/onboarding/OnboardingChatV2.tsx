@@ -83,6 +83,34 @@ function isPrimaryActivityPrompt(text: string) {
   );
 }
 
+function normalizeChoice(s: string) {
+  return (s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[“”"]/g, '"')
+    .replace(/[’]/g, "'")
+    .replace(/\.$/, "");
+}
+
+function matchCandidate(input: string, candidates: string[]): string | null {
+  const n = normalizeChoice(input);
+  if (!n) return null;
+
+  // Match exact (case/space insensitive)
+  for (const c of candidates) {
+    if (normalizeChoice(c) === n) return c;
+  }
+
+  // Match "contains" léger (ex: user tape un bout)
+  for (const c of candidates) {
+    const cn = normalizeChoice(c);
+    if (cn && (cn.includes(n) || n.includes(cn))) return c;
+  }
+
+  return null;
+}
+
 function buildDefaultGreeting(firstName: string) {
   const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
   return (
@@ -159,9 +187,27 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     return isPrimaryActivityPrompt(lastAssistantMessage);
   }, [lastAssistantMessage]);
 
+  const isPrimaryChoiceLockActive = useMemo(() => {
+    return needsPrimaryChoice && activityCandidates.length >= 2;
+  }, [needsPrimaryChoice, activityCandidates.length]);
+
+  const primaryChoiceMatched = useMemo(() => {
+    if (!isPrimaryChoiceLockActive) return null;
+    return matchCandidate(input, activityCandidates);
+  }, [input, activityCandidates, isPrimaryChoiceLockActive]);
+
   const canSend = useMemo(() => {
-    return input.trim().length > 0 && !isSending && !isDone && !isFinalizing;
-  }, [input, isSending, isDone, isFinalizing]);
+    if (isSending || isDone || isFinalizing) return false;
+    if (input.trim().length === 0) return false;
+
+    // ✅ Lock strict: quand Tipote demande l’activité prioritaire ET qu’on a une liste,
+    // on n’envoie que si l’input match une des options (ou l’utilisateur clique).
+    if (isPrimaryChoiceLockActive) {
+      return Boolean(primaryChoiceMatched);
+    }
+
+    return true;
+  }, [input, isSending, isDone, isFinalizing, isPrimaryChoiceLockActive, primaryChoiceMatched]);
 
   const finalize = async () => {
     if (isFinalizing) return;
@@ -198,21 +244,35 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   };
 
   const send = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || isSending || isDone || isFinalizing) return;
+    const rawText = (overrideText ?? input).trim();
+    if (!rawText || isSending || isDone || isFinalizing) return;
+
+    // ✅ Lock strict côté submit (au cas où) :
+    // si l’assistant demande l’activité prioritaire et qu’on a la liste, on force une option valide.
+    if (!overrideText && isPrimaryChoiceLockActive) {
+      const matched = matchCandidate(rawText, activityCandidates);
+      if (!matched) {
+        toast({
+          title: "Choisis une activité",
+          description: "Sélectionne une option ci-dessus (ou écris exactement l’une des activités).",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     // Capture best-effort des activités listées
-    const maybeList = normalizeActivities(text);
+    const maybeList = normalizeActivities(rawText);
     if (maybeList.length >= 2) setActivityCandidates(maybeList);
 
     setInput("");
     setIsSending(true);
 
-    setMessages((prev) => [...prev, { role: "user", content: text, at: nowIso() }]);
+    setMessages((prev) => [...prev, { role: "user", content: rawText, at: nowIso() }]);
 
     try {
       const reply = await postJSON<ApiReply>("/api/onboarding/chat", {
-        message: text,
+        message: rawText,
         sessionId: sessionId ?? undefined,
       });
 
@@ -301,6 +361,12 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                       {a}
                     </Button>
                   ))}
+                </div>
+              ) : null}
+
+              {activityCandidates.length >= 2 && input.trim().length > 0 && !primaryChoiceMatched ? (
+                <div className="text-xs text-destructive">
+                  Choisis une option ci-dessus (ou écris exactement l’une des activités).
                 </div>
               ) : null}
             </div>

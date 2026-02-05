@@ -31,6 +31,8 @@ import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/co
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { renderTemplateHtml } from "@/lib/templates/render";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -165,6 +167,109 @@ function safeJsonParse<T>(v: unknown): T | null {
     return null;
   }
 }
+
+function extractFirstJsonObject(raw: string): string | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+
+  // strip ```json ... ```
+  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const t = (fenced?.[1] ?? s).trim();
+
+  // already JSON object/array
+  if (t.startsWith("{") || t.startsWith("[")) return t;
+
+  // find first {...}
+  const i = t.indexOf("{");
+  const j = t.lastIndexOf("}");
+  if (i >= 0 && j > i) return t.slice(i, j + 1);
+  return null;
+}
+
+function toCleanString(v: unknown, maxLen?: number): string {
+  const s = typeof v === "string" ? v : v == null ? "" : String(v);
+  const oneLine = s.replace(/\s+/g, " ").trim();
+  if (typeof maxLen === "number" && Number.isFinite(maxLen)) {
+    return oneLine.slice(0, Math.max(0, Math.floor(maxLen)));
+  }
+  return oneLine;
+}
+
+function coerceContentDataToSchema(schema: any, input: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+
+  for (const f of fields) {
+    const kind = String(f?.kind || "");
+    const key = String(f?.key || "").trim();
+    if (!key) continue;
+
+    if (kind === "scalar") {
+      out[key] = toCleanString(input?.[key], f?.maxLength);
+      continue;
+    }
+
+    if (kind === "array_scalar") {
+      const minItems = Math.max(0, Number(f?.minItems ?? 0) || 0);
+      const maxItems = Math.max(minItems, Number(f?.maxItems ?? minItems) || minItems);
+
+      const rawArr = Array.isArray(input?.[key]) ? input[key] : [];
+      const cleaned = rawArr.map((x: any) => toCleanString(x, f?.itemMaxLength)).filter(Boolean);
+
+      // clamp + pad
+      const sliced = cleaned.slice(0, maxItems);
+      while (sliced.length < minItems) sliced.push("");
+      out[key] = sliced;
+      continue;
+    }
+
+    if (kind === "array_object") {
+      const minItems = Math.max(0, Number(f?.minItems ?? 0) || 0);
+      const maxItems = Math.max(minItems, Number(f?.maxItems ?? minItems) || minItems);
+
+      const fieldsDef = Array.isArray(f?.fields) ? f.fields : [];
+      const rawArr = Array.isArray(input?.[key]) ? input[key] : [];
+
+      const cleaned = rawArr
+        .filter((x: any) => x && typeof x === "object" && !Array.isArray(x))
+        .map((obj: any) => {
+          const o: Record<string, string> = {};
+          for (const fd of fieldsDef) {
+            const k = String(fd?.key || "").trim();
+            if (!k) continue;
+            o[k] = toCleanString(obj?.[k], fd?.maxLength);
+          }
+          return o;
+        });
+
+      const sliced = cleaned.slice(0, maxItems);
+      while (sliced.length < minItems) {
+        const empty: Record<string, string> = {};
+        for (const fd of fieldsDef) {
+          const k = String(fd?.key || "").trim();
+          if (k) empty[k] = "";
+        }
+        sliced.push(empty);
+      }
+
+      out[key] = sliced;
+      continue;
+    }
+  }
+
+  return out;
+}
+
+function pickTitleFromContentData(contentData: Record<string, unknown>): string | null {
+  const candidates = ["title", "hero_title", "headline", "h1", "heroHeadline"];
+  for (const k of candidates) {
+    const v = contentData[k];
+    const s = typeof v === "string" ? v.trim() : "";
+    if (s) return s.slice(0, 120);
+  }
+  return null;
+}
+
 
 function arrayFromTextOrJson(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
@@ -1917,18 +2022,57 @@ setTimeout(() => {
 
 
 
-      const cleaned0 = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
-const cleaned = type === "article" ? cleaned0.replaceAll("<<<END_ARTICLE>>>", "").trim() : cleaned0;
-      const finalContent = cleaned?.trim() ?? "";
-      if (!finalContent) throw new Error("Empty content from model");
+            let finalContent = "";
+      let title: string | null = null;
 
-      const title = (() => {
-        const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-        if (!firstLine) return null;
-        const t = firstLine.replace(/^#+\s*/, "").trim();
-        if (!t) return null;
-        return t.slice(0, 120);
-      })();
+      // ✅ FUNNEL + template => on attend du JSON contentData et on rend HTML via le template renderer
+      const funnelTemplateId = safeString((body as any).templateId).trim();
+      const funnelTemplateKind: "vente" | "capture" =
+        funnelPage === "sales" ? "vente" : "capture";
+
+      if (type === "funnel" && funnelTemplateId) {
+        const jsonStr = extractFirstJsonObject(raw);
+        if (!jsonStr) throw new Error("Funnel contentData JSON not found in model output");
+
+        const parsed = safeJsonParse<any>(jsonStr);
+        if (!parsed || typeof parsed !== "object") throw new Error("Invalid funnel contentData JSON");
+
+        // ✅ enforce schema (content-schema.json if present, else inferred)
+        const schema = await inferTemplateSchema({
+          kind: funnelTemplateKind,
+          templateId: funnelTemplateId,
+        });
+
+        const contentData = coerceContentDataToSchema(schema as any, parsed);
+
+        // Render preview HTML
+        const rendered = await renderTemplateHtml({
+          kind: funnelTemplateKind as any,
+          templateId: funnelTemplateId,
+          mode: "preview",
+          contentData,
+          variantId: null,
+          brandTokens: null,
+        });
+
+        finalContent = rendered.html;
+        title = pickTitleFromContentData(contentData) ?? null;
+      } else {
+        // ✅ comportement historique (texte)
+        const cleaned0 = type === "article" ? toPlainTextKeepBold(raw) : toPlainText(raw);
+        const cleaned = type === "article" ? cleaned0.replaceAll("<<<END_ARTICLE>>>", "").trim() : cleaned0;
+        finalContent = cleaned?.trim() ?? "";
+        if (!finalContent) throw new Error("Empty content from model");
+
+        title = (() => {
+          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+          if (!firstLine) return null;
+          const t = firstLine.replace(/^#+\s*/, "").trim();
+          if (!t) return null;
+          return t.slice(0, 120);
+        })();
+      }
+
 
       // ✅ Consommer les crédits seulement après succès IA
       try {
