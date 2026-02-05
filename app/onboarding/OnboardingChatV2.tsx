@@ -29,6 +29,12 @@ type ApiReply = {
   error?: string;
 };
 
+export type OnboardingChatV2Props = {
+  firstName?: string | null;
+  initialSessionId?: string | null;
+  initialMessages?: ChatMsg[];
+};
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -77,24 +83,41 @@ function isPrimaryActivityPrompt(text: string) {
   );
 }
 
-export function OnboardingChatV2(props: { firstName?: string | null }) {
+function buildDefaultGreeting(firstName: string) {
+  const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
+  return (
+    `${greet}\n` +
+    `Tipote va t’aider à développer ton activité (offre, contenus, plan d’action).\n\n` +
+    `Si tu as plusieurs activités, liste-les brièvement.\n` +
+    `Ensuite on choisit ensemble celle à prioriser ici.\n\n` +
+    `Alors : sur quoi tu travailles en ce moment ?`
+  );
+}
+
+export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const router = useRouter();
   const { toast } = useToast();
 
   const firstName = (props.firstName ?? "").trim();
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() =>
+    props.initialSessionId ? String(props.initialSessionId) : null,
+  );
+
   const [messages, setMessages] = useState<ChatMsg[]>(() => {
-    const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
+    const initial = Array.isArray(props.initialMessages) ? props.initialMessages : null;
+    if (initial && initial.length > 0) {
+      return initial.map((m) => ({
+        role: m.role === "user" ? "user" : "assistant",
+        content: String(m.content ?? ""),
+        at: String(m.at ?? nowIso()),
+      }));
+    }
+
     return [
       {
         role: "assistant",
-        content:
-          `${greet}\n` +
-          `Tipote va t’aider à développer ton activité (offre, contenus, plan d’action).\n\n` +
-          `Si tu as plusieurs activités, liste-les brièvement.\n` +
-          `Ensuite on choisit ensemble celle à prioriser ici.\n\n` +
-          `Alors : sur quoi tu travailles en ce moment ?`,
+        content: buildDefaultGreeting(firstName),
         at: nowIso(),
       },
     ];
@@ -105,9 +128,7 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
   const [isDone, setIsDone] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
-  // ✅ Verrou UX "activité prioritaire" (sans nouvelle route/API)
-  // On mémorise les activités listées par l'utilisateur (best-effort),
-  // puis on propose des boutons quand Tipote demande explicitement d'en choisir UNE.
+  // ✅ Verrou UX "activité prioritaire"
   const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -115,6 +136,19 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
+
+  // ✅ Best-effort: si on reprend une session et qu'un user a déjà listé plusieurs activités,
+  // on re-seed les boutons.
+  useEffect(() => {
+    try {
+      const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+      const list = normalizeActivities(String(lastUser));
+      if (list.length >= 2) setActivityCandidates(list);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const lastAssistantMessage = useMemo(() => {
     const last = [...messages].reverse().find((m) => m.role === "assistant");
@@ -212,7 +246,6 @@ export function OnboardingChatV2(props: { firstName?: string | null }) {
 
   const quickPick = async (value: string) => {
     if (!value) return;
-    // UX : envoi direct du choix (et ça garantit le stockage côté backend)
     await send(value);
   };
 
