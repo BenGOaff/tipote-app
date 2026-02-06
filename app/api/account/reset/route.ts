@@ -33,71 +33,88 @@ async function bestEffortDeleteByUserId(
 }
 
 async function bestEffortResetBusinessProfileAdmin(userId: string) {
-  // Objectif: forcer le retour onboarding à coup sûr (bypass RLS via service_role)
-  // On ne supprime pas forcément la ligne: on remet les flags/infos onboarding à zéro.
-  const payload: Record<string, any> = {
-    onboarding_completed: false,
+  /**
+   * IMPORTANT (anti-régression & basé sur tes logs Supabase)
+   * - La colonne business_profiles.onboarding_version est NOT NULL (log: "null value in column onboarding_version")
+   * - Donc on NE DOIT PAS la mettre à null pendant un reset.
+   *
+   * Objectif reset:
+   * - Forcer onboarding_completed=false (et diagnostic_completed=false) => middleware + /app redirect vers /onboarding
+   * - Best-effort sur les autres champs (sans jamais bloquer le reset)
+   */
 
-    // Reset diagnostic si présent (vu dans tes rows)
-    diagnostic_completed: false,
-    diagnostic_answers: null,
-    diagnostic_profile: null,
-    diagnostic_summary: null,
-
-    // Reset champs onboarding usuels
-    first_name: null,
-    country: null,
-    niche: null,
-    mission: null,
-    business_maturity: null,
-    offers: null,
-    main_goal: null,
-    main_goals: null,
-    success_definition: null,
-    biggest_challenge: null,
-    recent_client_feedback: null,
-    biggest_blocker: null,
-    has_offers: null,
-
-    // Préférences contenu
-    content_preference: null,
-    preferred_tone: null,
-
-    // Persona / offre
-    persona: null,
-    offer_price: null,
-    offer_sales_count: null,
-    offer_sales_page_links: null,
-
-    // Champs onboarding “version”
-    onboarding_version: null,
-    persona_source: null,
-  };
-
+  // 1) Minimal, doit réussir à coup sûr (ne touche pas aux colonnes contraintes)
   try {
-    const upd = await supabaseAdmin
+    const updMin = await supabaseAdmin
       .from("business_profiles")
-      .update(payload)
+      .update({
+        onboarding_completed: false,
+        diagnostic_completed: false,
+      })
       .eq("user_id", userId);
 
-    if (upd?.error) {
-      // Si certaines colonnes n’existent pas (env diff), on retombe en minimal.
-      if (isMissingTableOrColumnError(upd.error.message)) {
-        const upd2 = await supabaseAdmin
-          .from("business_profiles")
-          .update({ onboarding_completed: false, diagnostic_completed: false })
-          .eq("user_id", userId);
-
-        if (upd2?.error && !isMissingTableOrColumnError(upd2.error.message)) {
-          console.error("reset: business_profiles minimal update failed", upd2.error);
-        }
-        return;
+    if (updMin?.error) {
+      if (!isMissingTableOrColumnError(updMin.error.message)) {
+        console.error("reset: business_profiles minimal update failed", updMin.error);
       }
-
-      console.error("reset: business_profiles update failed", upd.error);
+      // Même si ça échoue, on tente quand même la suite (best-effort)
     }
   } catch (e) {
-    console.error("reset: business_profiles update threw", e);
+    console.error("reset: business_profiles minimal update threw", e);
+  }
+
+  // 2) Optional best-effort : vider les champs diagnostics (normalement nullable)
+  // ⚠️ ne jamais toucher onboarding_version / persona_source ici.
+  try {
+    const updDiag = await supabaseAdmin
+      .from("business_profiles")
+      .update({
+        diagnostic_answers: null,
+        diagnostic_profile: null,
+        diagnostic_summary: null,
+      })
+      .eq("user_id", userId);
+
+    if (updDiag?.error && !isMissingTableOrColumnError(updDiag.error.message)) {
+      console.warn("reset: business_profiles diagnostic clear failed (ignored)", updDiag.error);
+    }
+  } catch (e) {
+    console.warn("reset: business_profiles diagnostic clear threw (ignored)", e);
+  }
+
+  // 3) Optional best-effort : nettoyer quelques champs onboarding typiquement nullable
+  // (si un champ est NOT NULL côté DB, l’update échouera mais on ignore)
+  try {
+    const updSoft = await supabaseAdmin
+      .from("business_profiles")
+      .update({
+        first_name: null,
+        country: null,
+        niche: null,
+        mission: null,
+        business_maturity: null,
+        offers: null,
+        main_goal: null,
+        main_goals: null,
+        success_definition: null,
+        biggest_challenge: null,
+        recent_client_feedback: null,
+        biggest_blocker: null,
+        has_offers: null,
+        content_preference: null,
+        preferred_tone: null,
+        persona: null,
+        offer_price: null,
+        offer_sales_count: null,
+        offer_sales_page_links: null,
+      })
+      .eq("user_id", userId);
+
+    if (updSoft?.error && !isMissingTableOrColumnError(updSoft.error.message)) {
+      console.warn("reset: business_profiles soft clear failed (ignored)", updSoft.error);
+    }
+  } catch (e) {
+    console.warn("reset: business_profiles soft clear threw (ignored)", e);
   }
 }
 
@@ -122,7 +139,6 @@ export async function POST() {
      * - ❌ On ne touche PAS aux crédits, abonnement, ni auth user
      *
      * ✅ On utilise supabaseAdmin (service_role) pour BYPASS RLS
-     * sinon business_profiles.onboarding_completed reste à true (ce que tu observes).
      */
 
     const deletions: Array<{ table: string; column?: string }> = [
@@ -190,7 +206,7 @@ export async function POST() {
       await bestEffortDeleteByUserId(supabaseAdmin, t, userId, "owner_id");
     }
 
-    // ✅ Forcer le retour onboarding
+    // ✅ Forcer le retour onboarding (sans casser NOT NULL onboarding_version)
     await bestEffortResetBusinessProfileAdmin(userId);
 
     return NextResponse.json({ ok: true }, { status: 200 });
