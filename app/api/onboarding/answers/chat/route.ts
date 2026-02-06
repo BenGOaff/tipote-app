@@ -20,9 +20,12 @@
 //   => évite la dépendance totale à l'extraction IA
 //
 // ✅ PATCH (A2 anti-boucle “tu m’as déjà répondu”) :
-// - Heuristique serveur: si l’assistant demande “as-tu déjà vendu / ventes / clients payants”
-//   et que l’utilisateur répond (même en long ou en mode agacé), on infère conversion_status
-//   et on l’upsert AVANT appel IA => l’agent ne repose pas la même question.
+// - Heuristique serveur (ventes) : si l’assistant demande “as-tu déjà vendu / ventes / clients payants”
+//   et que l’utilisateur répond, on infère conversion_status et on l’upsert AVANT appel IA => pas de question répétée.
+//
+// ✅ PATCH (A2 anti-boucle acquisition / trafic) :
+// - Heuristique serveur : si l’assistant demande “d’où vient ton trafic / comment tes clients entendent parler”
+//   et que l’utilisateur répond, on infère acquisition_channels + traffic_source_today AVANT appel IA => pas de question répétée.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -162,7 +165,7 @@ function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inco
     t.includes("0 vente") ||
     t.includes("zéro") ||
     t.includes("zero") ||
-    t.includes("je n'ai pas") && (t.includes("vendu") || t.includes("clients payants"))
+    (t.includes("je n'ai pas") && (t.includes("vendu") || t.includes("clients payants")))
   ) {
     return "not_selling";
   }
@@ -197,6 +200,68 @@ function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inco
   }
 
   return "unknown";
+}
+
+function isAcquisitionQuestion(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("d'où vient") ||
+    t.includes("d’où vient") ||
+    t.includes("vient principalement ton trafic") ||
+    t.includes("tes premiers clients") ||
+    t.includes("entendent parler") ||
+    t.includes("comment tes premiers clients") ||
+    t.includes("source de trafic") ||
+    t.includes("trafic aujourd'hui") ||
+    t.includes("trafic aujourd’hui") ||
+    t.includes("traffic source") ||
+    t.includes("where do your leads come")
+  );
+}
+
+function extractAcquisitionChannels(answer: string): string[] {
+  const t = (answer || "").toLowerCase();
+  const out: string[] = [];
+
+  const push = (v: string) => {
+    if (!out.includes(v)) out.push(v);
+  };
+
+  if (t.includes("bouche") || t.includes("oreille") || t.includes("recommand") || t.includes("referr")) push("word_of_mouth");
+  if (
+    t.includes("réseaux") ||
+    t.includes("reseaux") ||
+    t.includes("social") ||
+    t.includes("instagram") ||
+    t.includes("tiktok") ||
+    t.includes("linkedin") ||
+    t.includes("facebook") ||
+    t.includes("threads") ||
+    t.includes("x ") ||
+    t.includes("twitter")
+  )
+    push("social");
+  if (t.includes("youtube")) push("youtube");
+  if (t.includes("blog")) push("blog");
+  if (t.includes("seo")) push("seo");
+  if (t.includes("email") || t.includes("newsletter") || t.includes("liste")) push("email");
+  if (t.includes("pub") || t.includes("ads") || t.includes("publicit")) push("ads");
+  if (t.includes("parten") || t.includes("collab") || t.includes("affiliation") || t.includes("affiliate")) push("partnerships");
+
+  return out.slice(0, 6);
+}
+
+function inferTrafficSourceTodayFromChannels(
+  channels: string[],
+): "organic_social" | "seo" | "ads" | "partnerships" | "affiliate_platforms" | "none" {
+  const set = new Set(channels);
+  if (set.has("ads")) return "ads";
+  if (set.has("seo")) return "seo";
+  if (set.has("partnerships")) return "partnerships";
+  // bouche à oreille + social + youtube + blog => organic_social (au sens "organique")
+  if (set.has("social") || set.has("word_of_mouth") || set.has("youtube") || set.has("blog") || set.has("email"))
+    return "organic_social";
+  return "none";
 }
 
 function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: any }>) {
@@ -379,6 +444,43 @@ export async function POST(req: NextRequest) {
       // fail-open
     }
 
+    // ---- ✅ PATCH anti-boucle acquisition / trafic : inférer acquisition_channels + traffic_source_today
+    try {
+      const acqKey = "acquisition_channels";
+      const trafficKey = "traffic_source_today";
+      const alreadyAcq = knownFacts[acqKey];
+      const alreadyTraffic = knownFacts[trafficKey];
+      const hist = Array.isArray(history) ? history : [];
+      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
+
+      if ((!alreadyAcq || !alreadyTraffic) && isAcquisitionQuestion(String(prevAssistant))) {
+        const lastUserBeforeThis = [...hist]
+          .reverse()
+          .filter((m: any) => m?.role === "user")
+          .slice(0, 3)
+          .map((m: any) => String(m?.content ?? ""))
+          .join("\n\n");
+
+        const answerToAnalyze = looksFrustrated(body.message) ? lastUserBeforeThis : body.message;
+        const channels = extractAcquisitionChannels(String(answerToAnalyze || ""));
+
+        if (!alreadyAcq && channels.length > 0) {
+          const ok = await upsertOneFact({ key: acqKey, value: channels, confidence: "medium", source: "heuristic_acquisition_answer" });
+          if (ok) knownFacts[acqKey] = channels;
+        }
+
+        if (!alreadyTraffic) {
+          const traffic = inferTrafficSourceTodayFromChannels(channels);
+          if (traffic && traffic !== "none") {
+            const ok2 = await upsertOneFact({ key: trafficKey, value: traffic, confidence: "medium", source: "heuristic_acquisition_answer" });
+            if (ok2) knownFacts[trafficKey] = traffic;
+          }
+        }
+      }
+    } catch {
+      // fail-open
+    }
+
     // ---- existing: auto-capture activities_list from last user message if multiple items (confidence low)
     try {
       const txt = String(body.message || "");
@@ -520,9 +622,7 @@ export async function POST(req: NextRequest) {
 
     // Patch business_profiles (best-effort)
     try {
-      const patch = buildBusinessProfilePatchFromFacts(
-        Object.entries(knownFacts).map(([key, value]) => ({ key, value })),
-      );
+      const patch = buildBusinessProfilePatchFromFacts(Object.entries(knownFacts).map(([key, value]) => ({ key, value })));
       if (Object.keys(patch).length > 0) {
         await updateThenInsertBusinessProfile(supabase, userId, patch);
       }
