@@ -708,6 +708,21 @@ function fullStrategyLooksUseful(planJson: AnyRecord | null): boolean {
   );
 }
 
+// ✅ NEW: “plan de départ” (starter plan) utilitaire
+function starterPlanLooksUseful(planJson: AnyRecord | null): boolean {
+  if (!planJson) return false;
+
+  const summary = cleanString(
+    planJson.strategy_summary ?? planJson.summary ?? planJson.strategySummary ?? "",
+    2400,
+  );
+
+  const goals = Array.isArray(planJson.strategy_goals) ? planJson.strategy_goals : [];
+  const focus = Array.isArray(planJson.dashboard_focus) ? planJson.dashboard_focus : [];
+
+  return Boolean(summary) || goals.length >= 1 || focus.length >= 1;
+}
+
 function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | null {
   if (!planJson) return null;
 
@@ -880,7 +895,8 @@ export async function POST(req: Request) {
       console.error("Error checking existing business_plan:", existingPlanError);
     }
 
-    const existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
+    // ✅ IMPORTANT: on veut pouvoir mettre à jour le plan en mémoire après un upsert
+    let existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
 
     const existingOfferPyramids = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
     const existingSelectedIndex =
@@ -893,22 +909,7 @@ export async function POST(req: Request) {
     const hasSelected = typeof existingSelectedIndex === "number";
     const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
     const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
-
-    // ✅ Si l'user a déjà choisi ET que la stratégie complète existe => on ne régénère rien
-    if (hasSelected && !needFullStrategy) {
-      return NextResponse.json(
-        { success: true, planId: null, skipped: true, reason: "already_complete" },
-        { status: 200 },
-      );
-    }
-
-    // ✅ Si pas encore choisi, mais déjà généré les pyramides proprement => on ne régénère pas
-    if (!hasSelected && hasUsefulPyramids) {
-      return NextResponse.json(
-        { success: true, planId: null, skipped: true, reason: "already_generated" },
-        { status: 200 },
-      );
-    }
+    const hasStarter = starterPlanLooksUseful(existingPlanJson);
 
     // 1) Lire business_profile (onboarding)
     const { data: businessProfile, error: profileError } = await supabase
@@ -972,6 +973,65 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, error: "OPENAI_API_KEY_OWNER is not set (strategy generation disabled)" },
         { status: 500 },
+      );
+    }
+
+    /**
+     * ✅ 2.5) Starter plan : le générer si manquant, même si pyramides déjà présentes.
+     * - Fail-open: ne bloque jamais.
+     */
+    if (!hasStarter) {
+      try {
+        const starter = await generateStarterStrategyGoals({
+          ai,
+          locale,
+          businessProfile: businessProfile as AnyRecord,
+          onboardingFacts: onboardingFacts ?? {},
+        });
+
+        if (starter) {
+          const basePlan: AnyRecord = isRecord(existingPlanJson) ? (existingPlanJson as AnyRecord) : {};
+          const nextPlan: AnyRecord = {
+            ...basePlan,
+            strategy_summary: starter.strategy_summary,
+            strategy_goals: starter.strategy_goals,
+            ...(starter.dashboard_focus?.length ? { dashboard_focus: starter.dashboard_focus } : {}),
+            updated_at: new Date().toISOString(),
+          };
+
+          await supabase
+            .from("business_plan")
+            .upsert(
+              {
+                user_id: userId,
+                plan_json: nextPlan,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            );
+
+          // refresh in-memory
+          existingPlanJson = nextPlan;
+        }
+      } catch (e) {
+        console.error("starter plan generation (early) failed (non-blocking):", e);
+      }
+    }
+
+    // ✅ Early returns (APRÈS starter plan best-effort)
+    // ✅ Si l'user a déjà choisi ET que la stratégie complète existe => on ne régénère rien
+    if (hasSelected && !needFullStrategy && starterPlanLooksUseful(existingPlanJson)) {
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_complete" },
+        { status: 200 },
+      );
+    }
+
+    // ✅ Si pas encore choisi, mais déjà généré les pyramides proprement => on ne régénère pas
+    if (!hasSelected && hasUsefulPyramids && starterPlanLooksUseful(existingPlanJson)) {
+      return NextResponse.json(
+        { success: true, planId: null, skipped: true, reason: "already_generated" },
+        { status: 200 },
       );
     }
 
@@ -1124,11 +1184,9 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
 
       // ✅ AJOUT MINIMAL : générer le “plan de départ” si absent (best-effort, n'empêche jamais le save)
       try {
-        const hasGoals =
-          Array.isArray((plan_json as any).strategy_goals) && (plan_json as any).strategy_goals.length > 0;
+        const hasGoals = Array.isArray((plan_json as any).strategy_goals) && (plan_json as any).strategy_goals.length > 0;
         const hasSummary =
-          typeof (plan_json as any).strategy_summary === "string" &&
-          (plan_json as any).strategy_summary.trim().length > 0;
+          typeof (plan_json as any).strategy_summary === "string" && (plan_json as any).strategy_summary.trim().length > 0;
 
         if (!hasGoals || !hasSummary) {
           const starter = await generateStarterStrategyGoals({

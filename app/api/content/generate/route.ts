@@ -31,20 +31,14 @@ import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/co
 import { renderTemplateHtml } from "@/lib/templates/render";
 import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
 
-
-
-
 import fs from "node:fs/promises";
 import path from "node:path";
-
-
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // (optionnel mais conseillé sur Vercel) augmente la durée max si ton plan le permet
 export const maxDuration = 300;
-
 
 /** ---------------------------
  * Types
@@ -274,7 +268,6 @@ function pickTitleFromContentData(contentData: Record<string, unknown>): string 
   }
   return null;
 }
-
 
 function arrayFromTextOrJson(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
@@ -1194,7 +1187,6 @@ function looksLikeCompleteSeoBlock(s: string): boolean {
   );
 }
 
-
 /**
  * Génère un article complet même si le modèle tronque.
  * - 1 réponse finale côté user (invisible)
@@ -1205,12 +1197,10 @@ async function ensureCompleteArticle(args: {
   system: string;
   baseUserPrompt: string;
   maxPasses?: number;
-  maxTokens?: number; // ✅ AJOUT
+  maxTokens?: number;
 }): Promise<string> {
   const maxPasses = Math.max(2, Math.min(6, args.maxPasses ?? 4));
-  const maxTokens = Math.max(2000, Math.min(8000, args.maxTokens ?? 7800)); // ✅ OK maintenant
-
-
+  const maxTokens = Math.max(2000, Math.min(8000, args.maxTokens ?? 7800));
 
   // 1) First pass: force end marker + give enough tokens
   let combined = await callClaude({
@@ -1261,13 +1251,12 @@ async function ensureCompleteArticle(args: {
     pass += 1;
   }
 
-    if (!hasArticleEndMarker(combined) && !looksLikeCompleteSeoBlock(combined)) {
+  if (!hasArticleEndMarker(combined) && !looksLikeCompleteSeoBlock(combined)) {
     console.warn("[article] end marker missing after passes:", maxPasses);
   }
 
   return combined;
 }
-
 
 /** ---------------------------
  * Main handler
@@ -1303,13 +1292,26 @@ export async function POST(req: Request) {
 
     if (!type) return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
 
+    // ✅ Crédit cost serveur (source de vérité)
+    // - funnel capture = 4 crédits
+    // - funnel vente (sales) = 6 crédits
+    // - autres types = 1 crédit
+    const __funnelPageForCost =
+      type === "funnel"
+        ? normalizeFunnelPage(
+            (body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null,
+          )
+        : "capture";
+    const cost = type === "funnel" ? (__funnelPageForCost === "sales" ? 6 : 4) : 1;
+
     const balance = await ensureUserCredits(userId);
-    if (balance.total_remaining <= 0) {
+    if (balance.total_remaining < cost) {
       return NextResponse.json(
         {
           ok: false,
           code: "NO_CREDITS",
           error: "Crédits insuffisants. Recharge tes crédits ou upgrade ton abonnement pour continuer.",
+          required_cost: cost,
           balance,
           upgrade_url: "/pricing",
         },
@@ -1460,7 +1462,9 @@ export async function POST(req: Request) {
     const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
     const computedEmailType =
       emailTypeRaw === "sales"
-        ? (salesModeRaw === "sequence_7" ? ("sales_sequence_7" as const) : ("sales_single" as const))
+        ? salesModeRaw === "sequence_7"
+          ? ("sales_sequence_7" as const)
+          : ("sales_single" as const)
         : emailTypeRaw === "onboarding"
           ? ("onboarding_klt_3" as const)
           : ("newsletter" as const);
@@ -1484,42 +1488,37 @@ export async function POST(req: Request) {
     }
 
     // --- Offre context posts (offerId / offerManual) ---
-const postOfferId = safeString((body as any).offerId).trim(); // ✅ on réutilise offerId côté post
-const postOfferManual =
-  isRecord((body as any).postOfferManual)
-    ? ((body as any).postOfferManual as any)
-    : isRecord((body as any).offerManual)
-      ? ((body as any).offerManual as any)
-      : null;
+    const postOfferId = safeString((body as any).offerId).trim();
+    const postOfferManual = isRecord((body as any).postOfferManual)
+      ? ((body as any).postOfferManual as any)
+      : isRecord((body as any).offerManual)
+        ? ((body as any).offerManual as any)
+        : null;
 
+    let offerContextForPost: OfferPyramidContext | null = null;
 
-let offerContextForPost: OfferPyramidContext | null = null;
+    if (type === "post" && postOfferId) {
+      if (!isUuid(postOfferId)) {
+        offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
+      } else {
+        try {
+          const { data: offerRow, error: offerErr } = await supabase
+            .from("offer_pyramids")
+            .select(OFFER_PYRAMID_SELECT)
+            .eq("id", postOfferId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-if (type === "post" && postOfferId) {
-  // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
-  // on résout via planOffers. Sinon on tente offer_pyramids puis fallback planOffers.
-  if (!isUuid(postOfferId)) {
-    offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
-  } else {
-    try {
-      const { data: offerRow, error: offerErr } = await supabase
-        .from("offer_pyramids")
-        .select(OFFER_PYRAMID_SELECT)
-        .eq("id", postOfferId)
-        .eq("user_id", userId)
-        .maybeSingle();
+          if (!offerErr && offerRow) offerContextForPost = offerRow as any;
+        } catch {
+          // fail-open
+        }
 
-      if (!offerErr && offerRow) offerContextForPost = offerRow as any;
-    } catch {
-      // fail-open
+        if (!offerContextForPost) {
+          offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
+        }
+      }
     }
-
-    if (!offerContextForPost) {
-      offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
-    }
-  }
-}
-
 
     /** ---------------------------
      * Funnel (pyramide) — pages capture / vente
@@ -1537,8 +1536,6 @@ if (type === "post" && postOfferId) {
     let funnelSourceOffer: OfferPyramidContext | null = null;
 
     if (type === "funnel" && funnelMode === "from_pyramid") {
-      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
-      // puis fallback offer_pyramids (legacy).
       if (funnelOfferId) {
         if (isUuid(funnelOfferId)) {
           funnelSourceOffer =
@@ -1573,78 +1570,76 @@ if (type === "post" && postOfferId) {
 
     const effectivePrompt = await (async () => {
       if (type === "post") {
-  const platform = safeString(body.platform).trim() as any;
-  const subject = safeString(body.subject).trim();
-  const theme = safeString(body.theme).trim();
-  const tone = safeString(body.tone).trim() as any;
+        const platform = safeString(body.platform).trim() as any;
+        const subject = safeString(body.subject).trim();
+        const theme = safeString(body.theme).trim();
+        const tone = safeString(body.tone).trim() as any;
 
-  const offerLink = safeString(body.offerLink).trim() || undefined;
+        const offerLink = safeString(body.offerLink).trim() || undefined;
 
-  const base = buildSocialPostPrompt({
-    platform,
-    subject: subject || theme || prompt || "Contenu",
-    tone,
-    batchCount,
-    promoKind,
-    offerLink,
-  } as any);
+        const base = buildSocialPostPrompt({
+          platform,
+          subject: subject || theme || prompt || "Contenu",
+          tone,
+          batchCount,
+          promoKind,
+          offerLink,
+        } as any);
 
-  // ✅ Ajout contexte offre (pyramide ou manual)
-  const offerCtxLines: string[] = [];
+        const offerCtxLines: string[] = [];
 
-  if (offerContextForPost) {
-    offerCtxLines.push("Offre (pyramide) :");
-    offerCtxLines.push(
-      JSON.stringify(
-        {
-          id: (offerContextForPost as any)?.id ?? null,
-          name: (offerContextForPost as any)?.name ?? null,
-          level: (offerContextForPost as any)?.level ?? null,
-          promise: (offerContextForPost as any)?.promise ?? null,
-          description: (offerContextForPost as any)?.description ?? null,
-          price_min: (offerContextForPost as any)?.price_min ?? null,
-          price_max: (offerContextForPost as any)?.price_max ?? null,
-          main_outcome: (offerContextForPost as any)?.main_outcome ?? null,
-          format: (offerContextForPost as any)?.format ?? null,
-          delivery: (offerContextForPost as any)?.delivery ?? null,
-        },
-        null,
-        0,
-      ),
-    );
-  }
+        if (offerContextForPost) {
+          offerCtxLines.push("Offre (pyramide) :");
+          offerCtxLines.push(
+            JSON.stringify(
+              {
+                id: (offerContextForPost as any)?.id ?? null,
+                name: (offerContextForPost as any)?.name ?? null,
+                level: (offerContextForPost as any)?.level ?? null,
+                promise: (offerContextForPost as any)?.promise ?? null,
+                description: (offerContextForPost as any)?.description ?? null,
+                price_min: (offerContextForPost as any)?.price_min ?? null,
+                price_max: (offerContextForPost as any)?.price_max ?? null,
+                main_outcome: (offerContextForPost as any)?.main_outcome ?? null,
+                format: (offerContextForPost as any)?.format ?? null,
+                delivery: (offerContextForPost as any)?.delivery ?? null,
+              },
+              null,
+              0,
+            ),
+          );
+        }
 
-  if (postOfferManual) {
-    const m = {
-      name: safeString(postOfferManual?.name).trim() || null,
-      promise: safeString(postOfferManual?.promise).trim() || null,
-      main_outcome: safeString(postOfferManual?.main_outcome).trim() || null,
-      description: safeString(postOfferManual?.description).trim() || null,
-      price: safeString(postOfferManual?.price).trim() || null,
-    };
+        if (postOfferManual) {
+          const m = {
+            name: safeString(postOfferManual?.name).trim() || null,
+            promise: safeString(postOfferManual?.promise).trim() || null,
+            main_outcome: safeString(postOfferManual?.main_outcome).trim() || null,
+            description: safeString(postOfferManual?.description).trim() || null,
+            price: safeString(postOfferManual?.price).trim() || null,
+          };
 
-    const hasAny = Object.values(m).some((v) => !!String(v ?? "").trim());
-    if (hasAny) {
-      offerCtxLines.push("Offre (manual) :");
-      offerCtxLines.push(JSON.stringify(m, null, 0));
-    }
-  }
+          const hasAny = Object.values(m).some((v) => !!String(v ?? "").trim());
+          if (hasAny) {
+            offerCtxLines.push("Offre (manual) :");
+            offerCtxLines.push(JSON.stringify(m, null, 0));
+          }
+        }
 
-  if (offerCtxLines.length) {
-    return (
-      base +
-      "\n\n" +
-      "Contraintes offre :\n" +
-      "- Si c'est un post promo, ancre le copy sur la promesse et le résultat concret.\n" +
-      "- Ne pas inventer de prix si absent.\n" +
-      "- CTA clair. Si offerLink est présent, l'utiliser.\n\n" +
-      offerCtxLines.join("\n")
-    );
-  }
+        if (offerCtxLines.length) {
+          return (
+            base +
+            "\n\n" +
+            "Contraintes offre :\n" +
+            "- Si c'est un post promo, ancre le copy sur la promesse et le résultat concret.\n" +
+            "- Ne pas inventer de prix si absent.\n" +
+            "- CTA clair. Si offerLink est présent, l'utiliser.\n\n" +
+            offerCtxLines.join("\n")
+          );
+        }
 
-  return base;
-}
-
+        return base;
+      }
 
       if (type === "video") {
         const duration = (safeString(body.duration).trim() || "60s") as any;
@@ -1770,36 +1765,31 @@ if (type === "post" && postOfferId) {
         } as any);
       }
 
-            if (type === "funnel") {
-            const manual = isRecord((body as any).funnelManual)
-              ? ((body as any).funnelManual as any)
-              : null;
+      if (type === "funnel") {
+        const manual = isRecord((body as any).funnelManual) ? ((body as any).funnelManual as any) : null;
 
-            const theme =
-              safeString((body as any).theme).trim() ||
-              safeString((body as any).subject).trim() ||
-              safeString((body as any).prompt).trim() ||
-              prompt ||
-              (funnelPage === "sales" ? "Page de vente" : "Page de capture");
+        const theme =
+          safeString((body as any).theme).trim() ||
+          safeString((body as any).subject).trim() ||
+          safeString((body as any).prompt).trim() ||
+          prompt ||
+          (funnelPage === "sales" ? "Page de vente" : "Page de capture");
 
-            // NEW (optional): if templateId is provided, ask the model to return contentData JSON that FITS the template.
-            // Otherwise we keep the historical behavior (text only).
-            const templateId = safeString((body as any).templateId).trim();
-            const templateKind: "vente" | "capture" =
-              funnelPage === "sales" ? "vente" : "capture";
+        const templateId = safeString((body as any).templateId).trim();
+        const templateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
 
-            let templateSchemaPrompt = "";
-            if (templateId.length > 0) {
-              try {
-                const inferred = await inferTemplateSchema({
-                  kind: templateKind,
-                  templateId,
-                });
-                templateSchemaPrompt = schemaToPrompt(inferred);
-              } catch (e) {
-                templateSchemaPrompt = "";
-              }
-            }
+        let templateSchemaPrompt = "";
+        if (templateId.length > 0) {
+          try {
+            const inferred = await inferTemplateSchema({
+              kind: templateKind,
+              templateId,
+            });
+            templateSchemaPrompt = schemaToPrompt(inferred);
+          } catch (e) {
+            templateSchemaPrompt = "";
+          }
+        }
 
         return buildFunnelPrompt({
           page: funnelPage,
@@ -1826,7 +1816,6 @@ if (type === "post" && postOfferId) {
           language: "fr",
         } as any);
       }
-
 
       return buildPromptByType({ type: "generic", prompt: prompt || safeString(body.subject).trim() || "Contenu" });
     })();
@@ -1932,11 +1921,10 @@ if (type === "post" && postOfferId) {
     userContextLines.push("Brief :");
     userContextLines.push(effectivePrompt);
     if (type === "post" && offerContextForPost) {
-  userContextLines.push("");
-  userContextLines.push("Offre de référence pour le post (JSON) :");
-  userContextLines.push(JSON.stringify(offerContextForPost));
-}
-
+      userContextLines.push("");
+      userContextLines.push("Offre de référence pour le post (JSON) :");
+      userContextLines.push(JSON.stringify(offerContextForPost));
+    }
 
     /** ---------------------------
      * Async job = placeholder row dans content_item
@@ -1994,117 +1982,94 @@ if (type === "post" && postOfferId) {
       schema = "fr";
     }
 
-// Fire-and-forget (compatible Next sans unstable_after)
+    // Fire-and-forget (compatible Next sans unstable_after)
 
-// ✅ 1) configurable (safe prod)
-const ARTICLE_MAX_TOKENS = Number(process.env.TIPOTE_ARTICLE_MAX_TOKENS ?? "7800");
+    // ✅ 1) configurable (safe prod)
+    const ARTICLE_MAX_TOKENS = Number(process.env.TIPOTE_ARTICLE_MAX_TOKENS ?? "7800");
 
-const articleStep = type === "article" ? normalizeArticleStep(body.articleStep) : null;
+    const articleStep = type === "article" ? normalizeArticleStep(body.articleStep) : null;
 
-setTimeout(() => {
-  void (async () => {
-    try {
-      const baseUserPrompt = userContextLines.join("\n");
+    setTimeout(() => {
+      void (async () => {
+        try {
+          const baseUserPrompt = userContextLines.join("\n");
 
-      const raw =
-        type === "article" && articleStep === "write"
-          ? await ensureCompleteArticle({
-              apiKey,
-              system: systemPrompt,
-              baseUserPrompt,
-              maxPasses: 4,
-              maxTokens: ARTICLE_MAX_TOKENS, // ✅ injecté
-            })
-          : await callClaude({
-              apiKey,
-              system: systemPrompt,
-              user: baseUserPrompt,
-              maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000, // ✅ safe & cohérent
-              temperature: 0.7,
-            });
+          const raw =
+            type === "article" && articleStep === "write"
+              ? await ensureCompleteArticle({
+                  apiKey,
+                  system: systemPrompt,
+                  baseUserPrompt,
+                  maxPasses: 4,
+                  maxTokens: ARTICLE_MAX_TOKENS,
+                })
+              : await callClaude({
+                  apiKey,
+                  system: systemPrompt,
+                  user: baseUserPrompt,
+                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000,
+                  temperature: 0.7,
+                });
 
-      // ... le reste de ton code inchangé
+          let finalContent = "";
+          let title: string | null = null;
 
+          // ✅ FUNNEL + template => on attend du JSON contentData et on rend HTML via le template renderer
+          const funnelTemplateId = safeString((body as any).templateId).trim();
+          const funnelTemplateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
 
+          if (type === "funnel" && funnelTemplateId) {
+            const jsonStr = extractFirstJsonObject(raw);
+            if (!jsonStr) throw new Error("Funnel contentData JSON not found in model output");
 
-            let finalContent = "";
-      let title: string | null = null;
+            const parsed = safeJsonParse<any>(jsonStr);
+            if (!parsed || typeof parsed !== "object") throw new Error("Invalid funnel contentData JSON");
 
-      // ✅ FUNNEL + template => on attend du JSON contentData et on rend HTML via le template renderer
-      const funnelTemplateId = safeString((body as any).templateId).trim();
-      const funnelTemplateKind: "vente" | "capture" =
-        funnelPage === "sales" ? "vente" : "capture";
-
-      if (type === "funnel" && funnelTemplateId) {
-        const jsonStr = extractFirstJsonObject(raw);
-        if (!jsonStr) throw new Error("Funnel contentData JSON not found in model output");
-
-        const parsed = safeJsonParse<any>(jsonStr);
-        if (!parsed || typeof parsed !== "object") throw new Error("Invalid funnel contentData JSON");
-
-        // ✅ enforce schema (content-schema.json if present, else inferred)
-        const schema = await inferTemplateSchema({
-          kind: funnelTemplateKind,
-          templateId: funnelTemplateId,
-        });
-
-        const contentData = coerceContentDataToSchema(schema as any, parsed);
-
-        finalContent = JSON.stringify(
-            {
+            const schema = await inferTemplateSchema({
               kind: funnelTemplateKind,
               templateId: funnelTemplateId,
-              contentData,
-            },
-            null,
-            0,
-          );
+            });
 
-          // Optionnel: titre depuis contentData (fallback simple)
-          title = pickTitleFromContentData(contentData) ?? null;
+            const contentData = coerceContentDataToSchema(schema as any, parsed);
 
+            finalContent = JSON.stringify(
+              {
+                kind: funnelTemplateKind,
+                templateId: funnelTemplateId,
+                contentData,
+              },
+              null,
+              0,
+            );
 
+            title = pickTitleFromContentData(contentData) ?? null;
 
-        title = (() => {
-          const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-          if (!firstLine) return null;
-          const t = firstLine.replace(/^#+\s*/, "").trim();
-          if (!t) return null;
-          return t.slice(0, 120);
-        })();
-      }
+            title = (() => {
+              const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
+              if (!firstLine) return null;
+              const t = firstLine.replace(/^#+\s*/, "").trim();
+              if (!t) return null;
+              return t.slice(0, 120);
+            })();
+          }
 
+          // ✅ Consommer les crédits seulement après succès IA
+          try {
+            await consumeCredits(userId, cost, {
+              kind: "content_generate",
+              type,
+              job_id: jobId,
+              channel,
+              scheduled_date: scheduledDate,
+              tags: tagsCsv,
+            });
+          } catch (e) {
+            const code = (e as any)?.code || (e as any)?.message;
+            if (code === "NO_CREDITS") throw new Error("NO_CREDITS");
+          }
 
-      // ✅ Consommer les crédits seulement après succès IA
-      try {
-        await consumeCredits(userId, 1, {
-          kind: "content_generate",
-          type,
-          job_id: jobId,
-          channel,
-          scheduled_date: scheduledDate,
-          tags: tagsCsv,
-        });
-      } catch (e) {
-        const code = (e as any)?.code || (e as any)?.message;
-        if (code === "NO_CREDITS") throw new Error("NO_CREDITS");
-      }
-
-      if (schema === "en") {
-        const upd = await updateContentEN({
-          supabase,
-          id: jobId!,
-          title,
-          content: finalContent,
-          status: finalStatus,
-          tags,
-          tagsCsv,
-        });
-
-        if (upd.error) {
-          const e = upd.error as PostgrestError | null;
-          if (isMissingColumnError(e?.message)) {
-            await updateContentFR({
+          if (schema === "en") {
+            const upd = await updateContentEN({
               supabase,
               id: jobId!,
               title,
@@ -2113,23 +2078,23 @@ setTimeout(() => {
               tags,
               tagsCsv,
             });
-          }
-        }
-      } else {
-        const upd = await updateContentFR({
-          supabase,
-          id: jobId!,
-          title,
-          content: finalContent,
-          status: finalStatus,
-          tags,
-          tagsCsv,
-        });
 
-        if (upd.error) {
-          const e = upd.error as PostgrestError | null;
-          if (isMissingColumnError(e?.message)) {
-            await updateContentEN({
+            if (upd.error) {
+              const e = upd.error as PostgrestError | null;
+              if (isMissingColumnError(e?.message)) {
+                await updateContentFR({
+                  supabase,
+                  id: jobId!,
+                  title,
+                  content: finalContent,
+                  status: finalStatus,
+                  tags,
+                  tagsCsv,
+                });
+              }
+            }
+          } else {
+            const upd = await updateContentFR({
               supabase,
               id: jobId!,
               title,
@@ -2138,42 +2103,53 @@ setTimeout(() => {
               tags,
               tagsCsv,
             });
+
+            if (upd.error) {
+              const e = upd.error as PostgrestError | null;
+              if (isMissingColumnError(e?.message)) {
+                await updateContentEN({
+                  supabase,
+                  id: jobId!,
+                  title,
+                  content: finalContent,
+                  status: finalStatus,
+                  tags,
+                  tagsCsv,
+                });
+              }
+            }
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+
+          try {
+            if (schema === "en") {
+              await updateContentEN({
+                supabase,
+                id: jobId!,
+                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                status: "draft",
+                tags,
+                tagsCsv,
+              });
+            } else {
+              await updateContentFR({
+                supabase,
+                id: jobId!,
+                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
+                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                status: "draft",
+                tags,
+                tagsCsv,
+              });
+            }
+          } catch {
+            // ignore
           }
         }
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-
-      try {
-        if (schema === "en") {
-          await updateContentEN({
-            supabase,
-            id: jobId!,
-            title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-            content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-            status: "draft",
-            tags,
-            tagsCsv,
-          });
-        } else {
-          await updateContentFR({
-            supabase,
-            id: jobId!,
-            title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-            content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
-            status: "draft",
-            tags,
-            tagsCsv,
-          });
-        }
-      } catch {
-        // ignore
-      }
-    }
-  })();
-}, 0);
-
-
+      })();
+    }, 0);
 
     return NextResponse.json(
       {

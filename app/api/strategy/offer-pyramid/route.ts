@@ -733,14 +733,15 @@ export async function PATCH(req: Request) {
     const pyramidRaw = body?.pyramid;
 
     const selectedIndex =
-      typeof selectedIndexRaw === "number" ? selectedIndexRaw : typeof selectedIndexRaw === "string" ? Number(selectedIndexRaw) : null;
+      typeof selectedIndexRaw === "number"
+        ? selectedIndexRaw
+        : typeof selectedIndexRaw === "string"
+          ? Number(selectedIndexRaw)
+          : null;
 
     if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) {
       return NextResponse.json({ success: false, error: "Invalid selectedIndex" }, { status: 400 });
     }
-
-    const pyramid = asRecord(pyramidRaw);
-    if (!pyramid) return NextResponse.json({ success: false, error: "Invalid pyramid" }, { status: 400 });
 
     const { data: planRow, error: planErr } = await supabase
       .from("business_plan")
@@ -751,13 +752,33 @@ export async function PATCH(req: Request) {
     if (planErr) console.error("Error reading business_plan for PATCH:", planErr);
 
     const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
+
+    // ✅ 1) Si pyramid est fournie, on l’utilise (backward compatible)
+    // ✅ 2) Sinon, on la récupère depuis offer_pyramids[selectedIndex]
+    let pyramid: AnyRecord | null = asRecord(pyramidRaw);
+
+    if (!pyramid) {
+      const pyramidsArr = asArray(basePlan.offer_pyramids);
+      const picked = pyramidsArr[selectedIndex];
+      pyramid = asRecord(picked);
+
+      if (!pyramid) {
+        return NextResponse.json(
+          { success: false, error: "Missing pyramid: no pyramid provided and offer_pyramids[selectedIndex] not found" },
+          { status: 400 },
+        );
+      }
+    }
+
     const nextPlan: AnyRecord = {
       ...basePlan,
       selected_offer_pyramid_index: selectedIndex,
       selected_offer_pyramid: pyramid,
+
       // compat legacy
       selected_pyramid_index: selectedIndex,
       selected_pyramid: pyramid,
+
       updated_at: new Date().toISOString(),
     };
 
@@ -803,6 +824,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : "Internal server error" }, { status: 500 });
   }
 }
+
 
 /**
  * -----------------------

@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TemplateChatPanel } from "@/components/templates/TemplateChatPanel";
 import { toast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
@@ -24,7 +26,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { Copy, Save, Trash2, CheckCircle2, CalendarDays, FileText, CopyPlus, CalendarX } from "lucide-react";
+import {
+  Copy,
+  Save,
+  Trash2,
+  CheckCircle2,
+  CalendarDays,
+  FileText,
+  CopyPlus,
+  CalendarX,
+  Download,
+  Eye,
+  Loader2,
+  Wand2,
+} from "lucide-react";
 
 type ContentItem = {
   id: string;
@@ -109,63 +124,230 @@ export function ContentEditor({ initialItem }: Props) {
   const [title, setTitle] = useState(baseline.title ?? "");
   const [channel, setChannel] = useState(baseline.channel ?? "");
   const [type, setType] = useState(baseline.type ?? "");
-  const [scheduledDate, setScheduledDate] = useState<string>(baseline.scheduled_date ? toYmdOrEmpty(baseline.scheduled_date) : "");
-  const [status, setStatus] = useState<string>(normalizeStatusValue(baseline.status));
-  const [tags, setTags] = useState(tagsToString(baseline.tags));
+  const [status, setStatus] = useState(normalizeStatusValue(baseline.status));
+  const [scheduledDate, setScheduledDate] = useState(toYmdOrEmpty(baseline.scheduled_date ?? null));
+  const [tags, setTags] = useState(tagsToString(baseline.tags ?? []));
   const [prompt, setPrompt] = useState(baseline.prompt ?? "");
   const [content, setContent] = useState(baseline.content ?? "");
 
+  // -----------------------------
+  // Funnel (pages HTML) support
+  // -----------------------------
+  type FunnelPayload = {
+    kind?: "capture" | "vente";
+    templateId?: string;
+    variantId?: string | null;
+    contentData?: Record<string, any>;
+    brandTokens?: Record<string, any> | null;
+  };
+
+  const parseFunnelPayload = (raw: string): FunnelPayload | null => {
+    const s = (raw ?? "").trim();
+    if (!s) return null;
+    if (!(s.startsWith("{") && s.endsWith("}"))) return null;
+    try {
+      const obj = JSON.parse(s) as any;
+      if (!obj || typeof obj !== "object") return null;
+      if (typeof obj.templateId !== "string" || !obj.templateId.trim()) return null;
+      if (!obj.contentData || typeof obj.contentData !== "object") return null;
+      return {
+        kind: obj.kind === "vente" ? "vente" : "capture",
+        templateId: String(obj.templateId),
+        variantId: typeof obj.variantId === "string" ? obj.variantId : null,
+        contentData: obj.contentData as any,
+        brandTokens: obj.brandTokens && typeof obj.brandTokens === "object" ? (obj.brandTokens as any) : null,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const initialFunnel = useMemo(() => parseFunnelPayload(content), [content]);
+  const isFunnel = baseline.type === "funnel" || !!initialFunnel;
+
+  const [funnelKind, setFunnelKind] = useState<"capture" | "vente">(initialFunnel?.kind ?? "capture");
+  const [funnelTemplateId, setFunnelTemplateId] = useState<string>(initialFunnel?.templateId ?? "");
+  const [funnelVariantId, setFunnelVariantId] = useState<string | null>(initialFunnel?.variantId ?? null);
+  const [funnelContentData, setFunnelContentData] = useState<Record<string, any>>(initialFunnel?.contentData ?? {});
+  const [funnelBrandTokens, setFunnelBrandTokens] = useState<Record<string, any> | null>(
+    initialFunnel?.brandTokens ?? null
+  );
+
+  const [htmlPreview, setHtmlPreview] = useState("");
+  const [htmlKit, setHtmlKit] = useState("");
+  const [isRenderingHtml, setIsRenderingHtml] = useState(false);
+
+  const [history, setHistory] = useState<
+    Array<{ contentData: Record<string, any>; brandTokens: Record<string, any> | null }>
+  >(initialFunnel ? [{ contentData: initialFunnel.contentData ?? {}, brandTokens: initialFunnel.brandTokens ?? null }] : []);
+  const [future, setFuture] = useState<Array<{ contentData: Record<string, any>; brandTokens: Record<string, any> | null }>>(
+    []
+  );
+
+  const funnelPayloadString = useMemo(() => {
+    if (!isFunnel || !funnelTemplateId.trim()) return content;
+    return JSON.stringify(
+      {
+        kind: funnelKind,
+        templateId: funnelTemplateId.trim(),
+        variantId: funnelVariantId,
+        contentData: funnelContentData ?? {},
+        brandTokens: funnelBrandTokens ?? null,
+      },
+      null,
+      0
+    );
+  }, [content, isFunnel, funnelKind, funnelTemplateId, funnelVariantId, funnelContentData, funnelBrandTokens]);
+
+  // Keep "content" in sync with structured funnel payload (so Save persists it)
+  React.useEffect(() => {
+    if (!isFunnel || !funnelTemplateId.trim()) return;
+    if ((content ?? "").trim() === (funnelPayloadString ?? "").trim()) return;
+    setContent(funnelPayloadString);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFunnel, funnelPayloadString, funnelTemplateId]);
+
+  const renderFunnelHtml = async () => {
+    if (!funnelTemplateId.trim()) {
+      toast({
+        title: "Template manquant",
+        description: "Choisis un template avant de rendre le HTML.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRenderingHtml(true);
+    try {
+      const body = {
+        kind: funnelKind,
+        templateId: funnelTemplateId.trim(),
+        mode: "preview",
+        variantId: funnelVariantId,
+        contentData: funnelContentData ?? {},
+        brandTokens: funnelBrandTokens ?? null,
+      };
+
+      const resPrev = await fetch("/api/templates/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const htmlPrev = await resPrev.text();
+      if (!resPrev.ok) throw new Error(htmlPrev || "Erreur rendu preview");
+      setHtmlPreview(htmlPrev);
+
+      const resKit = await fetch("/api/templates/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, mode: "kit" }),
+      });
+
+      const htmlK = await resKit.text();
+      if (!resKit.ok) throw new Error(htmlK || "Erreur rendu kit");
+      setHtmlKit(htmlK);
+    } catch (e: any) {
+      toast({ title: "Erreur rendu HTML", description: e?.message || "Erreur HTML", variant: "destructive" });
+    } finally {
+      setIsRenderingHtml(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copié", description: label });
+    } catch {
+      toast({
+        title: "Impossible de copier",
+        description: "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadHtml = (html: string, filename: string) => {
+    try {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        title: "Téléchargement impossible",
+        description: "Ton navigateur a bloqué le téléchargement.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const applyFromChat = (next: { contentData: Record<string, any>; brandTokens: Record<string, any>; patches: any[] }) => {
+    setHistory((h) => [...h, { contentData: funnelContentData ?? {}, brandTokens: funnelBrandTokens ?? null }]);
+    setFuture([]);
+    setFunnelContentData(next.contentData ?? {});
+    setFunnelBrandTokens(next.brandTokens ?? null);
+    // Invalidate HTML until next render
+    setHtmlPreview("");
+    setHtmlKit("");
+  };
+
+  const undoChat = () => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setFuture((f) => [{ contentData: funnelContentData ?? {}, brandTokens: funnelBrandTokens ?? null }, ...f]);
+      setFunnelContentData(prev.contentData ?? {});
+      setFunnelBrandTokens(prev.brandTokens ?? null);
+      setHtmlPreview("");
+      setHtmlKit("");
+      return h.slice(0, -1);
+    });
+  };
+
+  const redoChat = () => {
+    setFuture((f) => {
+      if (f.length === 0) return f;
+      const next = f[0];
+      setHistory((h) => [...h, { contentData: funnelContentData ?? {}, brandTokens: funnelBrandTokens ?? null }]);
+      setFunnelContentData(next.contentData ?? {});
+      setFunnelBrandTokens(next.brandTokens ?? null);
+      setHtmlPreview("");
+      setHtmlKit("");
+      return f.slice(1);
+    });
+  };
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
+
+  const statusLabel = useMemo(() => normalizeStatusLabel(status), [status]);
+  const statusBadgeVariant = useMemo(() => badgeVariantForStatus(status), [status]);
 
   const dirty = useMemo(() => {
-    const a = baseline;
+    const baseTags = tagsToString(baseline.tags ?? []);
+    const baseDate = toYmdOrEmpty(baseline.scheduled_date ?? null);
+    const baseStatus = normalizeStatusValue(baseline.status);
     return (
-      (a.title ?? "") !== title ||
-      (a.channel ?? "") !== channel ||
-      (a.type ?? "") !== type ||
-      toYmdOrEmpty(a.scheduled_date) !== toYmdOrEmpty(scheduledDate) ||
-      normalizeStatusValue(a.status) !== normalizeStatusValue(status) ||
-      (a.prompt ?? "") !== prompt ||
-      (a.content ?? "") !== content ||
-      tagsToString(a.tags) !== tags
+      (title ?? "").trim() !== (baseline.title ?? "").trim() ||
+      (channel ?? "").trim() !== (baseline.channel ?? "").trim() ||
+      (type ?? "").trim() !== (baseline.type ?? "").trim() ||
+      normalizeStatusValue(status) !== baseStatus ||
+      (scheduledDate ?? "").trim() !== (baseDate ?? "").trim() ||
+      normalizeTags(tags).join(",") !== normalizeTags(baseTags).join(",") ||
+      (prompt ?? "").trim() !== (baseline.prompt ?? "").trim() ||
+      (content ?? "").trim() !== (baseline.content ?? "").trim()
     );
-  }, [baseline, title, channel, type, scheduledDate, status, prompt, content, tags]);
+  }, [baseline, title, channel, type, status, scheduledDate, tags, prompt, content]);
 
-  // Cohérence UX: si une date est saisie et que statut est "draft", on passe "scheduled"
-  React.useEffect(() => {
-    const d = toYmdOrEmpty(scheduledDate);
-    const s = normalizeStatusValue(status);
+  const canSchedule = useMemo(() => normalizeStatusValue(status) === "scheduled", [status]);
 
-    if (d && s === "draft") setStatus("scheduled");
-    if (!d && s === "scheduled") {
-      // si l'user retire la date, on repasse en draft (cohérent pour le calendrier)
-      setStatus("draft");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scheduledDate]);
-
-  React.useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const isSave = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s";
-      if (!isSave) return;
-      e.preventDefault();
-      if (!saving && dirty) void onSave();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saving, dirty, title, channel, type, scheduledDate, status, tags, prompt, content]);
-
-  async function savePatch(overrides?: Partial<{ status: string; scheduledDate: string | null }>) {
-    const nextStatus = normalizeStatusValue(overrides?.status ?? status);
-    const nextScheduledDate =
-      overrides?.scheduledDate !== undefined
-        ? overrides.scheduledDate
-        : toYmdOrEmpty(scheduledDate)
-          ? toYmdOrEmpty(scheduledDate)
-          : null;
+  const save = async () => {
+    const nextStatus = normalizeStatusValue(status);
+    const nextScheduledDate = scheduledDate?.trim() || null;
 
     if (nextStatus === "scheduled" && !nextScheduledDate) {
       toast({
@@ -178,7 +360,7 @@ export function ContentEditor({ initialItem }: Props) {
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         title: title.trim() || "Sans titre",
         channel: channel.trim() || null,
         type: type.trim() || null,
@@ -188,6 +370,20 @@ export function ContentEditor({ initialItem }: Props) {
         content,
         prompt: prompt.trim() || null,
       };
+
+      // ✅ Funnel: duplique les infos structurées en meta (si la colonne existe en DB, le backend fera un best-effort)
+      if (isFunnel && funnelTemplateId.trim()) {
+        payload.meta = {
+          ...(payload.meta || {}),
+          funnel: {
+            kind: funnelKind,
+            templateId: funnelTemplateId.trim(),
+            variantId: funnelVariantId,
+            contentData: funnelContentData ?? {},
+            brandTokens: funnelBrandTokens ?? null,
+          },
+        };
+      }
 
       const res = await fetch(`/api/content/${baseline.id}`, {
         method: "PATCH",
@@ -213,124 +409,153 @@ export function ContentEditor({ initialItem }: Props) {
         setBaseline((prev) => ({
           ...prev,
           title: typeof returned.title === "string" ? returned.title : prev.title,
-          channel: typeof returned.channel === "string" ? returned.channel : returned.channel ?? prev.channel,
-          type: typeof returned.type === "string" ? returned.type : returned.type ?? prev.type,
-          status: typeof returned.status === "string" ? returned.status : nextStatus,
-          scheduled_date: typeof returned.scheduled_date === "string" ? toYmdOrEmpty(returned.scheduled_date) : nextScheduledDate,
-          tags: Array.isArray(returned.tags) ? returned.tags.map(String) : normalizeTags(tags),
-          prompt: typeof returned.prompt === "string" ? returned.prompt : payload.prompt,
-          content: typeof returned.content === "string" ? returned.content : payload.content,
-          updated_at: typeof returned.updated_at === "string" ? returned.updated_at : prev.updated_at,
+          channel: typeof returned.channel === "string" ? returned.channel : prev.channel,
+          type: typeof returned.type === "string" ? returned.type : prev.type,
+          status: typeof returned.status === "string" ? normalizeStatusValue(returned.status) : prev.status,
+          scheduled_date: returned.scheduled_date ? toYmdOrEmpty(returned.scheduled_date) : null,
+          tags: Array.isArray(returned.tags) ? returned.tags : prev.tags,
+          prompt: typeof returned.prompt === "string" ? returned.prompt : prev.prompt,
+          content: typeof returned.content === "string" ? returned.content : prev.content,
+          updated_at: returned.updated_at ?? prev.updated_at,
         }));
       } else {
         setBaseline((prev) => ({
           ...prev,
-          title: payload.title,
-          channel: payload.channel,
-          type: payload.type,
-          status: nextStatus,
-          scheduled_date: nextScheduledDate,
-          tags: normalizeTags(tags),
-          prompt: payload.prompt,
-          content: payload.content,
+          title: payload.title ?? prev.title,
+          channel: payload.channel ?? prev.channel,
+          type: payload.type ?? prev.type,
+          status: payload.status ?? prev.status,
+          scheduled_date: payload.scheduledDate ?? prev.scheduled_date,
+          tags: Array.isArray(payload.tags) ? payload.tags : prev.tags,
+          prompt: payload.prompt ?? prev.prompt,
+          content: payload.content ?? prev.content,
+          updated_at: new Date().toISOString(),
         }));
       }
 
-      toast({ title: "Sauvegardé ✅", description: "Les modifications ont été enregistrées." });
+      toast({ title: "Enregistré", description: "Ton contenu a été sauvegardé." });
+
+      // refresh server data (best-effort)
       router.refresh();
       return true;
-    } catch (e) {
+    } catch (e: any) {
       toast({
         title: "Enregistrement impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        description: e?.message || "Erreur",
         variant: "destructive",
       });
       return false;
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function onSave() {
-    if (!dirty) return;
-    await savePatch();
-  }
-
-  async function onPublish() {
-    await savePatch({ status: "published" });
-  }
-
-  async function onPlan() {
-    await savePatch({ status: "scheduled" });
-  }
-
-  async function onUnplan() {
-    setStatus("draft");
-    setScheduledDate("");
-    await savePatch({ status: "draft", scheduledDate: null });
-  }
-
-  async function onDelete() {
+  const remove = async () => {
     setDeleting(true);
     try {
       const res = await fetch(`/api/content/${baseline.id}`, { method: "DELETE" });
       const data = (await res.json().catch(() => ({}))) as ApiResponse;
 
-      if (!("ok" in data) || !data.ok) {
+      if (!res.ok || !("ok" in data) || !data.ok) {
         toast({
           title: "Suppression impossible",
           description: (data as any).error ?? "Erreur",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
-      toast({ title: "Supprimé ✅", description: "Le contenu a été supprimé." });
+      toast({ title: "Supprimé", description: "Le contenu a été supprimé." });
       router.push("/contents");
-      router.refresh();
-    } catch (e) {
+      return true;
+    } catch (e: any) {
       toast({
         title: "Suppression impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        description: e?.message || "Erreur",
         variant: "destructive",
       });
+      return false;
     } finally {
       setDeleting(false);
     }
-  }
+  };
 
-  async function onDuplicate() {
-    setDuplicating(true);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(content ?? "");
+      toast({ title: "Copié", description: "Le contenu est dans le presse-papiers." });
+    } catch {
+      toast({
+        title: "Impossible de copier",
+        description: "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const duplicate = async () => {
     try {
       const res = await fetch(`/api/content/${baseline.id}/duplicate`, { method: "POST" });
-      const data = (await res.json().catch(() => ({}))) as { ok: boolean; id?: string | null; error?: string };
-
-      if (!data.ok || !data.id) {
+      const data = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok || !data?.ok || !data?.id) {
         toast({
           title: "Duplication impossible",
-          description: data.error ?? "Erreur",
+          description: data?.error ?? "Erreur",
           variant: "destructive",
         });
         return;
       }
-
-      toast({ title: "Dupliqué ✅", description: "Une copie a été créée." });
+      toast({ title: "Dupliqué", description: "Un nouveau contenu a été créé." });
       router.push(`/contents/${data.id}`);
       router.refresh();
-    } catch (e) {
+    } catch (e: any) {
       toast({
         title: "Duplication impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        description: e?.message || "Erreur",
         variant: "destructive",
       });
-    } finally {
-      setDuplicating(false);
     }
-  }
+  };
 
-  const statusLabel = normalizeStatusLabel(status);
-  const statusBadgeVariant = badgeVariantForStatus(status);
-  const isPlanned = normalizeStatusValue(status) === "scheduled";
+  const setPublished = async () => {
+    setStatus("published");
+    setScheduledDate("");
+    await save();
+  };
+
+  const setScheduled = async () => {
+    setStatus("scheduled");
+    // si pas de date, on met aujourd’hui (UX simple)
+    if (!scheduledDate?.trim()) setScheduledDate(new Date().toISOString().slice(0, 10));
+    await save();
+  };
+
+  const setDraft = async () => {
+    setStatus("draft");
+    setScheduledDate("");
+    await save();
+  };
+
+  const setArchived = async () => {
+    setStatus("archived");
+    setScheduledDate("");
+    await save();
+  };
+
+  // Cmd/Ctrl + S
+  React.useEffect(() => {
+    const onKeyDown = async (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes("mac");
+      const combo = isMac ? e.metaKey : e.ctrlKey;
+      if (!combo) return;
+      if (e.key.toLowerCase() !== "s") return;
+      e.preventDefault();
+      if (!dirty) return;
+      await save();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
@@ -339,119 +564,59 @@ export function ContentEditor({ initialItem }: Props) {
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
-              {dirty ? <Badge variant="outline">Modifications non enregistrées</Badge> : <Badge variant="secondary">À jour</Badge>}
+              {dirty ? (
+                <Badge variant="outline">Modifications non enregistrées</Badge>
+              ) : (
+                <Badge variant="secondary">À jour</Badge>
+              )}
             </div>
 
             <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                {type?.trim() || "—"}
-              </span>
-              <span aria-hidden>•</span>
-              <span>{channel?.trim() || "—"}</span>
-              <span aria-hidden>•</span>
               <span className="inline-flex items-center gap-1">
-                <CalendarDays className="w-4 h-4" />
-                {toYmdOrEmpty(scheduledDate) ? toYmdOrEmpty(scheduledDate) : "Non planifié"}
+                <CalendarDays className="w-4 h-4" /> {baseline.created_at ? new Date(baseline.created_at).toLocaleString() : "—"}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <FileText className="w-4 h-4" /> {baseline.type || "—"}
               </span>
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              className="gap-2 rounded-xl"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(content ?? "");
-                  toast({ title: "Copié ✅", description: "Le contenu a été copié dans le presse-papier." });
-                } catch {
-                  toast({
-                    title: "Copie impossible",
-                    description: "Ton navigateur a bloqué l’accès au presse-papier.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              disabled={saving || deleting || duplicating}
-            >
-              <Copy className="w-4 h-4" />
-              Copier
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="secondary" onClick={copy} size="sm">
+              <Copy className="w-4 h-4 mr-1" /> Copier
             </Button>
 
-            <Button onClick={() => void onSave()} disabled={saving || deleting || duplicating || !dirty} className="gap-2 rounded-xl">
-              <Save className="w-4 h-4" />
-              {saving ? "Enregistrement…" : "Enregistrer"}
+            <Button variant="secondary" onClick={duplicate} size="sm">
+              <CopyPlus className="w-4 h-4 mr-1" /> Dupliquer
             </Button>
 
-            <Button
-              variant="secondary"
-              onClick={() => void onPlan()}
-              disabled={saving || deleting || duplicating}
-              className="gap-2 rounded-xl"
-            >
-              <CalendarDays className="w-4 h-4" />
-              Planifier
-            </Button>
-
-            {isPlanned ? (
-              <Button
-                variant="outline"
-                onClick={() => void onUnplan()}
-                disabled={saving || deleting || duplicating}
-                className="gap-2 rounded-xl"
-              >
-                <CalendarX className="w-4 h-4" />
-                Déplanifier
-              </Button>
-            ) : null}
-
-            <Button onClick={() => void onPublish()} disabled={saving || deleting || duplicating} className="gap-2 rounded-xl">
-              <CheckCircle2 className="w-4 h-4" />
-              Publier
-            </Button>
-
-            <Button
-              variant="outline"
-              className="gap-2 rounded-xl"
-              onClick={() => void onDuplicate()}
-              disabled={saving || deleting || duplicating}
-            >
-              <CopyPlus className="w-4 h-4" />
-              {duplicating ? "Duplication…" : "Dupliquer"}
+            <Button onClick={save} disabled={!dirty || saving} size="sm">
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Enregistrement…
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-1" /> Enregistrer
+                </>
+              )}
             </Button>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
-                  disabled={saving || deleting || duplicating}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Supprimer
+                <Button variant="destructive" size="sm" disabled={deleting}>
+                  <Trash2 className="w-4 h-4 mr-1" /> Supprimer
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {title.trim()
-                      ? `“${title.trim()}” sera supprimé définitivement. Cette action est irréversible.`
-                      : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
-                  </AlertDialogDescription>
+                  <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-                  <AlertDialogAction
-                    disabled={deleting}
-                    className="bg-rose-600 text-white hover:bg-rose-700"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      void onDelete();
-                    }}
-                  >
-                    {deleting ? "Suppression…" : "Supprimer"}
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Confirmer
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -460,31 +625,29 @@ export function ContentEditor({ initialItem }: Props) {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="p-4 space-y-3">
-          <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du contenu" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="post / email / blog..." />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="p-4 space-y-3 lg:col-span-2">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Titre</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Canal</Label>
-              <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="LinkedIn / Email..." />
+              <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="Ex: LinkedIn" />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-1">
+              <Label>Type</Label>
+              <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Ex: post, email, funnel…" />
+            </div>
+
+            <div className="space-y-1">
               <Label>Statut</Label>
-              <Select value={normalizeStatusValue(status)} onValueChange={(v) => setStatus(normalizeStatusValue(v))}>
+              <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choisir un statut" />
+                  <SelectValue placeholder="Sélectionne…" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Brouillon</SelectItem>
@@ -495,49 +658,278 @@ export function ContentEditor({ initialItem }: Props) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Date de planification</Label>
               <Input
                 type="date"
-                value={toYmdOrEmpty(scheduledDate)}
+                value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
+                disabled={!canSchedule}
               />
-              <p className="text-xs text-muted-foreground">Si vide : “Non planifié”.</p>
+              {!canSchedule ? <p className="text-xs text-muted-foreground">Disponible uniquement en statut “Planifié”.</p> : null}
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <Label>Tags</Label>
+              <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2, tag3" />
+              <p className="text-xs text-muted-foreground">Sépare par des virgules.</p>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <Input
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="ex: lancement, storytelling, preuve sociale"
-            />
-            <p className="text-xs text-muted-foreground">Sépare avec des virgules.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Prompt (optionnel)</Label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Contexte / prompt utilisé"
-              rows={5}
-            />
+          <div className="flex gap-2 flex-wrap pt-1">
+            <Button variant="outline" size="sm" onClick={setDraft}>
+              <CalendarX className="w-4 h-4 mr-1" /> Mettre en brouillon
+            </Button>
+            <Button variant="outline" size="sm" onClick={setScheduled}>
+              <CalendarDays className="w-4 h-4 mr-1" /> Planifier
+            </Button>
+            <Button variant="outline" size="sm" onClick={setPublished}>
+              <CheckCircle2 className="w-4 h-4 mr-1" /> Publier
+            </Button>
+            <Button variant="outline" size="sm" onClick={setArchived}>
+              <Trash2 className="w-4 h-4 mr-1" /> Archiver
+            </Button>
           </div>
         </Card>
 
         <Card className="p-4 space-y-2">
           <div>
-            <p className="font-semibold">Contenu</p>
-            <p className="text-sm text-muted-foreground">Édite librement. Cmd/Ctrl+S pour sauvegarder.</p>
+            <p className="font-semibold">Prompt</p>
+            <p className="text-sm text-muted-foreground">Optionnel. Utile pour retrouver le contexte.</p>
           </div>
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Colle ou écris ton contenu ici…"
-            rows={22}
-          />
+          <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Contexte / prompt utilisé" rows={5} />
+        </Card>
+
+        <Card className="p-4 space-y-2">
+          <div>
+            <p className="font-semibold">Contenu</p>
+            <p className="text-sm text-muted-foreground">
+              {isFunnel
+                ? "Pour les funnels, Tipote stocke un JSON (contentData) puis rend le HTML de façon déterministe."
+                : "Édite librement. Cmd/Ctrl+S pour sauvegarder."}
+            </p>
+          </div>
+
+          {isFunnel ? (
+            <Tabs defaultValue="data" className="w-full">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="data" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Données (JSON)
+                </TabsTrigger>
+                <TabsTrigger value="html" className="flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  HTML (preview + kit)
+                </TabsTrigger>
+                <TabsTrigger value="chat" className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4" />
+                  Itérations (chat)
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="data" className="mt-4 space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label>Type</Label>
+                    <Select value={funnelKind} onValueChange={(v) => setFunnelKind(v === "vente" ? "vente" : "capture")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="capture" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="capture">Capture</SelectItem>
+                        <SelectItem value="vente">Vente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Template</Label>
+                    <Input
+                      value={funnelTemplateId}
+                      onChange={(e) => setFunnelTemplateId(e.target.value)}
+                      placeholder='ex: "capture-01" / "vente-03"'
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Astuce : pour garder une compat DB maximale, le JSON est stocké dans <span className="font-medium">content</span>.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 md:col-span-3">
+                    <Label>Variant (optionnel)</Label>
+                    <Input
+                      value={funnelVariantId ?? ""}
+                      onChange={(e) => setFunnelVariantId(e.target.value ? e.target.value : null)}
+                      placeholder='ex: "left" / "centered" / "wide" (selon template)'
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>contentData (JSON)</Label>
+                  <Textarea
+                    value={JSON.stringify(funnelContentData ?? {}, null, 2)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      try {
+                        const obj = JSON.parse(v);
+                        if (obj && typeof obj === "object") setFunnelContentData(obj);
+                      } catch {
+                        // ignore while typing invalid JSON
+                      }
+                    }}
+                    rows={14}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>brandTokens (optionnel)</Label>
+                  <Textarea
+                    value={JSON.stringify(funnelBrandTokens ?? {}, null, 2)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v.trim()) {
+                        setFunnelBrandTokens(null);
+                        return;
+                      }
+                      try {
+                        const obj = JSON.parse(v);
+                        if (obj && typeof obj === "object") setFunnelBrandTokens(obj);
+                      } catch {
+                        // ignore while typing invalid JSON
+                      }
+                    }}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>JSON stocké (lecture seule)</Label>
+                  <Textarea value={funnelPayloadString} readOnly rows={6} className="font-mono text-xs" />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="html" className="mt-4 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={renderFunnelHtml}
+                    disabled={isRenderingHtml || !funnelTemplateId.trim()}
+                  >
+                    {isRenderingHtml ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        Rendu…
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Générer HTML
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadHtml(htmlPreview, `${funnelTemplateId || "funnel"}-preview.html`)}
+                    disabled={!htmlPreview}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Télécharger preview
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(htmlPreview, "Preview copiée")}
+                    disabled={!htmlPreview}
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copier preview
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadHtml(htmlKit, `${funnelTemplateId || "funnel"}-kit-systeme.html`)}
+                    disabled={!htmlKit}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Télécharger kit
+                  </Button>
+
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, "Kit copié")} disabled={!htmlKit}>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copier kit
+                  </Button>
+                </div>
+
+                {!htmlPreview && !htmlKit ? (
+                  <div className="text-sm text-muted-foreground border rounded-lg p-4 bg-muted/30">
+                    Clique sur <span className="font-medium">Générer HTML</span> pour obtenir :
+                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                      <li>
+                        Une page <span className="font-medium">Preview</span> (projection maximale)
+                      </li>
+                      <li>
+                        Un <span className="font-medium">Kit Systeme-compatible</span> (blocs + SLOTS)
+                      </li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">Preview</p>
+                        <Badge variant="secondary">HTML complet</Badge>
+                      </div>
+                      <div className="border rounded-lg overflow-hidden bg-white">
+                        <iframe title="Preview" srcDoc={htmlPreview || "<html><body></body></html>"} className="w-full h-[560px]" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">Kit Systeme</p>
+                        <Badge variant="outline">Copier/coller bloc par bloc</Badge>
+                      </div>
+                      <Textarea value={htmlKit} readOnly rows={22} className="font-mono text-xs" />
+                      <p className="text-xs text-muted-foreground">
+                        Astuce : dans Systeme.io, crée une section puis colle un bloc du kit dans “Code”. Les zones{" "}
+                        <span className="font-medium">SLOT SYSTEME</span> indiquent où placer les éléments natifs (formulaire, bouton paiement, etc.).
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="chat" className="mt-4">
+                <TemplateChatPanel
+                  kind={funnelKind}
+                  templateId={funnelTemplateId}
+                  variantId={funnelVariantId}
+                  contentData={funnelContentData ?? {}}
+                  brandTokens={funnelBrandTokens ?? null}
+                  onApplyNextState={({ contentData, brandTokens, patches }) => applyFromChat({ contentData, brandTokens, patches })}
+                  onUndo={undoChat}
+                  canUndo={history.length > 0}
+                  onRedo={redoChat}
+                  canRedo={future.length > 0}
+                  disabled={!funnelTemplateId.trim()}
+                />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Colle ou écris ton contenu ici…"
+              rows={22}
+            />
+          )}
         </Card>
       </div>
     </div>
