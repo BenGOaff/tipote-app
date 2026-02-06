@@ -11,6 +11,9 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
+// ✅ Recap modal (shadcn)
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
 type ChatRole = "assistant" | "user";
 
 type ChatMsg = {
@@ -20,14 +23,17 @@ type ChatMsg = {
 };
 
 type ApiReply = {
+  ok?: boolean;
   sessionId: string;
   message: string;
   appliedFacts?: Array<{ key: string; confidence: string }>;
   done?: boolean;
-  shouldFinish?: boolean;
-  should_finish?: boolean;
+  shouldFinish?: boolean; // ✅ une seule fois
+  should_finish?: boolean; // ✅ compat backend/legacy
   error?: string;
 };
+
+type ProfileRow = Record<string, any> | null;
 
 export type OnboardingChatV2Props = {
   firstName?: string | null;
@@ -52,6 +58,29 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
     throw new Error((json as any)?.error || `HTTP ${res.status}`);
   }
 
+  return json as T;
+}
+
+async function patchJSON<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+
+  if (!res.ok) {
+    throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  }
+
+  return json as T;
+}
+
+async function getJSON<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: "GET" });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   return json as T;
 }
 
@@ -128,37 +157,37 @@ type BootStep = {
 const BOOT_STEPS: BootStep[] = [
   {
     title: "Je prépare ton espace Tipote…",
-    lines: [
-      "Je mets en place ton profil et ton tableau de bord.",
-      "Je récupère et organise ce que tu m’as partagé.",
-      "Je prépare les bases pour ta stratégie.",
-    ],
+    lines: ["Je mets en place ton profil et ton tableau de bord.", "Je récupère et organise ce que tu m’as partagé.", "Je prépare les bases pour ta stratégie."],
   },
   {
     title: "Je construis ta stratégie…",
-    lines: [
-      "Je clarifie ton axe principal et ton positionnement.",
-      "Je structure tes objectifs et ton plan d’action.",
-      "Je prépare un résumé stratégique simple et exploitable.",
-    ],
+    lines: ["Je clarifie ton axe principal et ton positionnement.", "Je structure tes objectifs et ton plan d’action.", "Je prépare un résumé stratégique simple et exploitable."],
   },
   {
     title: "Je crée tes premières tâches…",
-    lines: [
-      "Je transforme ton plan en tâches concrètes.",
-      "Je priorise ce qui aura le plus d’impact au début.",
-      "Je prépare un calendrier de mise en action.",
-    ],
+    lines: ["Je transforme ton plan en tâches concrètes.", "Je priorise ce qui aura le plus d’impact au début.", "Je prépare un calendrier de mise en action."],
   },
   {
     title: "Je personnalise ta communication…",
-    lines: [
-      "Je repère le ton qui te correspond.",
-      "Je prépare tes premiers repères de style (simple, clair).",
-      "Je prépare les fondations pour tes contenus.",
-    ],
+    lines: ["Je repère le ton qui te correspond.", "Je prépare tes premiers repères de style (simple, clair).", "Je prépare les fondations pour tes contenus."],
   },
 ];
+
+function safeStr(v: unknown, max = 140) {
+  const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
+  if (!s) return "";
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+function RecapRow({ label, value }: { label: string; value?: string | null }) {
+  const v = (value ?? "").trim();
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl border px-3 py-2">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className={cn("text-sm font-medium text-right", v ? "text-foreground" : "text-muted-foreground")}>{v || "—"}</div>
+    </div>
+  );
+}
 
 export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const router = useRouter();
@@ -166,9 +195,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const firstName = (props.firstName ?? "").trim();
 
-  const [sessionId, setSessionId] = useState<string | null>(() =>
-    props.initialSessionId ? String(props.initialSessionId) : null,
-  );
+  const [sessionId, setSessionId] = useState<string | null>(() => (props.initialSessionId ? String(props.initialSessionId) : null));
 
   const [messages, setMessages] = useState<ChatMsg[]>(() => {
     const initial = Array.isArray(props.initialMessages) ? props.initialMessages : null;
@@ -180,29 +207,25 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
       }));
     }
 
-    return [
-      {
-        role: "assistant",
-        content: buildDefaultGreeting(firstName),
-        at: nowIso(),
-      },
-    ];
+    return [{ role: "assistant", content: buildDefaultGreeting(firstName), at: nowIso() }];
   });
 
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isDone, setIsDone] = useState(false);
-
-  // ✅ Micro-ajustement “naturel” : Tipote écrit… pendant la réponse
   const [isAssistantTyping, setIsAssistantTyping] = useState(false);
 
-  // ✅ Finalization overlay
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [bootStepIndex, setBootStepIndex] = useState(0);
   const [bootLineIndex, setBootLineIndex] = useState(0);
 
-  // ✅ Verrou UX "activité prioritaire"
   const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
+  const [primaryActivity, setPrimaryActivity] = useState<string | null>(null);
+
+  // ✅ Recap modal state
+  const [showRecap, setShowRecap] = useState(false);
+  const [recapLoading, setRecapLoading] = useState(false);
+  const [recapProfile, setRecapProfile] = useState<ProfileRow>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -210,7 +233,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isAssistantTyping, isFinalizing]);
 
-  // Re-seed boutons activités si reprise
   useEffect(() => {
     try {
       const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
@@ -227,13 +249,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     return last?.content ?? "";
   }, [messages]);
 
-  const needsPrimaryChoice = useMemo(() => {
-    return isPrimaryActivityPrompt(lastAssistantMessage);
-  }, [lastAssistantMessage]);
+  const needsPrimaryChoice = useMemo(() => isPrimaryActivityPrompt(lastAssistantMessage), [lastAssistantMessage]);
 
-  const isPrimaryChoiceLockActive = useMemo(() => {
-    return needsPrimaryChoice && activityCandidates.length >= 2;
-  }, [needsPrimaryChoice, activityCandidates.length]);
+  const isPrimaryChoiceLockActive = useMemo(() => needsPrimaryChoice && activityCandidates.length >= 2, [needsPrimaryChoice, activityCandidates.length]);
 
   const primaryChoiceMatched = useMemo(() => {
     if (!isPrimaryChoiceLockActive) return null;
@@ -243,25 +261,33 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const canSend = useMemo(() => {
     if (isSending || isDone || isFinalizing) return false;
     if (input.trim().length === 0) return false;
-
-    if (isPrimaryChoiceLockActive) {
-      return Boolean(primaryChoiceMatched);
-    }
-
+    if (isPrimaryChoiceLockActive) return Boolean(primaryChoiceMatched);
     return true;
   }, [input, isSending, isDone, isFinalizing, isPrimaryChoiceLockActive, primaryChoiceMatched]);
 
-  // Rotation des lignes pendant finalization
   useEffect(() => {
     if (!isFinalizing) return;
 
     const interval = window.setInterval(() => {
-      setBootLineIndex((prev) => (prev + 1) % Math.max(1, (BOOT_STEPS[bootStepIndex]?.lines?.length ?? 1)));
+      setBootLineIndex((prev) => (prev + 1) % Math.max(1, BOOT_STEPS[bootStepIndex]?.lines?.length ?? 1));
     }, 2400);
 
     return () => window.clearInterval(interval);
   }, [isFinalizing, bootStepIndex]);
 
+  async function loadRecapProfileBestEffort() {
+    setRecapLoading(true);
+    try {
+      const res = await getJSON<{ profile?: any }>("/api/profile");
+      setRecapProfile((res as any)?.profile ?? null);
+    } catch {
+      setRecapProfile(null);
+    } finally {
+      setRecapLoading(false);
+    }
+  }
+
+  // ✅ FINALIZE — pyramides -> selection -> full strategy -> sync tasks -> /app
   const finalize = async () => {
     if (isFinalizing) return;
 
@@ -274,15 +300,12 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
       // Step 0: complete onboarding (best-effort)
       try {
-        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
-          sessionId: sid,
-          diagnosticCompleted: true,
-        });
+        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", { sessionId: sid, diagnosticCompleted: true });
       } catch {
         // fail-open
       }
 
-      // Step 1: strategy
+      // Step 1: strategy (pyramides + starter plan) — idempotent
       setBootStepIndex(1);
       setBootLineIndex(0);
       try {
@@ -291,8 +314,24 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // Step 2: tasks sync (best-effort)
+      // auto-select pyramid (index 0)
+      try {
+        await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", { selectedIndex: 0 });
+      } catch {
+        // fail-open
+      }
+
+      // Step 2: generate full strategy (persona + plan 90j) — idempotent
       setBootStepIndex(2);
+      setBootLineIndex(0);
+      try {
+        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
+      } catch {
+        // fail-open
+      }
+
+      // Step 3: tasks sync (best-effort)
+      setBootStepIndex(3);
       setBootLineIndex(0);
       try {
         await postJSON<{ ok?: boolean; error?: string }>("/api/tasks/sync", {});
@@ -300,15 +339,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // Step 3: “personnalisation” (UI-only)
-      setBootStepIndex(3);
-      setBootLineIndex(0);
-
       ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
 
-      // mini délai pour laisser l'user lire l'étape
       await new Promise((r) => setTimeout(r, 900));
-
       router.replace("/app");
     } catch (e) {
       toast({
@@ -324,6 +357,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     const rawText = (overrideText ?? input).trim();
     if (!rawText || isSending || isDone || isFinalizing) return;
 
+    // Lock : si l'assistant demande UNE activité, on exige un match et on la capture localement
     if (!overrideText && isPrimaryChoiceLockActive) {
       const matched = matchCandidate(rawText, activityCandidates);
       if (!matched) {
@@ -334,6 +368,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         });
         return;
       }
+      setPrimaryActivity(matched);
     }
 
     const maybeList = normalizeActivities(rawText);
@@ -346,7 +381,8 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     setMessages((prev) => [...prev, { role: "user", content: rawText, at: nowIso() }]);
 
     try {
-      const reply = await postJSON<ApiReply>("/api/onboarding/chat", {
+      // ✅ Bon endpoint
+      const reply = await postJSON<ApiReply>("/api/onboarding/answers/chat", {
         message: rawText,
         sessionId: sessionId ?? undefined,
       });
@@ -366,7 +402,8 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
       if (doneFlag) {
         setIsDone(true);
-        void finalize();
+        setShowRecap(true);
+        void loadRecapProfileBestEffort();
       }
     } catch (e) {
       toast({
@@ -382,14 +419,93 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const quickPick = async (value: string) => {
     if (!value) return;
+    if (isPrimaryChoiceLockActive) setPrimaryActivity(value);
     await send(value);
   };
 
   const currentBoot = BOOT_STEPS[Math.min(BOOT_STEPS.length - 1, Math.max(0, bootStepIndex))];
 
+  // Recap values (best-effort)
+  const recapFirstName = safeStr((recapProfile as any)?.first_name ?? firstName, 60);
+  const recapCountry = safeStr((recapProfile as any)?.country, 80);
+  const recapNiche = safeStr((recapProfile as any)?.niche, 120);
+  const recapMainGoal = safeStr((recapProfile as any)?.main_goal ?? (recapProfile as any)?.main_goal_90_days, 160);
+  const recapRev = safeStr((recapProfile as any)?.revenue_goal_monthly, 60);
+  const recapTime = safeStr((recapProfile as any)?.time_available ?? (recapProfile as any)?.weekly_hours, 60);
+  const recapTone = safeStr((recapProfile as any)?.preferred_tone ?? (recapProfile as any)?.tone_preference, 80);
+  const recapContent = safeStr((recapProfile as any)?.content_preference ?? (recapProfile as any)?.preferred_content_type, 80);
+  const recapPrimary = safeStr(primaryActivity, 120);
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
-      {/* Overlay finalization */}
+      {/* ✅ Recap modal */}
+      <Dialog
+        open={showRecap}
+        onOpenChange={(v) => {
+          if (isFinalizing) return;
+          setShowRecap(v);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Résumé de ton onboarding</DialogTitle>
+            <DialogDescription>Vérifie rapidement. Ensuite je génère ton plan et je t’emmène sur ton dashboard.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {recapLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Je prépare le résumé…
+              </div>
+            ) : null}
+
+            <RecapRow label="Prénom" value={recapFirstName} />
+            <RecapRow label="Pays" value={recapCountry} />
+            <RecapRow label="Niche" value={recapNiche} />
+            <RecapRow label="Activité prioritaire" value={recapPrimary} />
+            <RecapRow label="Objectif principal (90 jours)" value={recapMainGoal} />
+            <RecapRow label="Objectif revenu mensuel" value={recapRev} />
+            <RecapRow label="Temps disponible / semaine" value={recapTime} />
+            <RecapRow label="Ton préféré" value={recapTone} />
+            <RecapRow label="Type de contenu préféré" value={recapContent} />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowRecap(false);
+                setIsDone(false);
+              }}
+              disabled={isFinalizing}
+            >
+              Modifier
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                setShowRecap(false);
+                void finalize();
+              }}
+              disabled={isFinalizing}
+            >
+              {isFinalizing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Finalisation…
+                </>
+              ) : (
+                "Continuer"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Boot overlay */}
       {isFinalizing ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-lg rounded-2xl bg-background p-6 shadow-xl">
@@ -400,8 +516,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               <div className="flex-1">
                 <div className="text-lg font-semibold">{currentBoot?.title ?? "Je prépare tout…"}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {currentBoot?.lines?.[bootLineIndex] ??
-                    "Je mets en place les prochaines étapes. Tu arrives sur ton dashboard dans un instant."}
+                  {currentBoot?.lines?.[bootLineIndex] ?? "Je mets en place les prochaines étapes. Tu arrives sur ton dashboard dans un instant."}
                 </div>
 
                 <div className="mt-4 space-y-2">
@@ -412,24 +527,16 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                         <div
                           className={cn(
                             "h-2.5 w-2.5 rounded-full",
-                            state === "done"
-                              ? "bg-primary"
-                              : state === "active"
-                                ? "bg-primary/60 animate-pulse"
-                                : "bg-muted-foreground/30",
+                            state === "done" ? "bg-primary" : state === "active" ? "bg-primary/60 animate-pulse" : "bg-muted-foreground/30",
                           )}
                         />
-                        <div className={cn(state === "todo" ? "text-muted-foreground" : "text-foreground")}>
-                          {s.title}
-                        </div>
+                        <div className={cn(state === "todo" ? "text-muted-foreground" : "text-foreground")}>{s.title}</div>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="mt-5 text-xs text-muted-foreground">
-                  Tu vas voir apparaître ton plan, tes premières tâches, et ton espace personnalisé.
-                </div>
+                <div className="mt-5 text-xs text-muted-foreground">Tu vas voir apparaître ton plan, tes premières tâches, et ton espace personnalisé.</div>
               </div>
             </div>
           </div>
@@ -461,7 +568,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
             </div>
           ))}
 
-          {/* ✅ Typing indicator (micro-ajustement UX) */}
           {isAssistantTyping && !isFinalizing ? (
             <div className="flex w-full justify-start">
               <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
@@ -480,9 +586,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         <div className="mt-6 space-y-3">
           {needsPrimaryChoice ? (
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">
-                Réponds juste avec le nom de l’activité à prioriser (une seule).
-              </div>
+              <div className="text-xs text-muted-foreground">Réponds juste avec le nom de l’activité à prioriser (une seule).</div>
 
               {activityCandidates.length >= 2 ? (
                 <div className="flex flex-wrap gap-2">
@@ -503,9 +607,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               ) : null}
 
               {activityCandidates.length >= 2 && input.trim().length > 0 && !primaryChoiceMatched ? (
-                <div className="text-xs text-destructive">
-                  Choisis une option ci-dessus (ou écris exactement l’une des activités).
-                </div>
+                <div className="text-xs text-destructive">Choisis une option ci-dessus (ou écris exactement l’une des activités).</div>
               ) : null}
             </div>
           ) : null}
@@ -514,7 +616,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
-            disabled={isSending || isDone || isFinalizing}
+            disabled={isSending || isDone || isFinalizing || showRecap}
             className="min-h-[90px]"
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -525,24 +627,17 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           />
 
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {isDone
-                ? isFinalizing
-                  ? "On finalise… tu arrives sur ton dashboard."
-                  : "Onboarding terminé ✅"
-                : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
-            </div>
+            <div className="text-xs text-muted-foreground">{isDone ? "Onboarding terminé ✅" : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}</div>
 
             {isDone ? (
-              <Button onClick={finalize} disabled={isFinalizing}>
-                {isFinalizing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Finalisation…
-                  </>
-                ) : (
-                  "Aller au dashboard"
-                )}
+              <Button
+                onClick={() => {
+                  setShowRecap(true);
+                  void loadRecapProfileBestEffort();
+                }}
+                disabled={isFinalizing}
+              >
+                Voir le récap
               </Button>
             ) : (
               <Button onClick={() => void send()} disabled={!canSend}>

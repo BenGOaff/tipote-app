@@ -208,11 +208,7 @@ function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
   return patch;
 }
 
-async function updateThenInsertBusinessProfile(
-  supabase: any,
-  userId: string,
-  patch: Record<string, any>,
-): Promise<void> {
+async function updateThenInsertBusinessProfile(supabase: any, userId: string, patch: Record<string, any>): Promise<void> {
   const row: Record<string, any> = {
     user_id: userId,
     ...patch,
@@ -226,7 +222,6 @@ async function updateThenInsertBusinessProfile(
 
   const ins = await supabase.from("business_profiles").insert(row).select("id");
   if (ins.error) {
-    // fail-open : ne pas casser l'onboarding chat
     console.warn("[OnboardingChatV2] updateThenInsertBusinessProfile failed:", ins.error);
   }
 }
@@ -263,11 +258,7 @@ export async function POST(req: NextRequest) {
       }
       sessionId = String(created.id);
     } else {
-      const { data: s, error } = await supabase
-        .from("onboarding_sessions")
-        .select("id,user_id,status")
-        .eq("id", sessionId)
-        .maybeSingle();
+      const { data: s, error } = await supabase.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId).maybeSingle();
 
       if (error || !s?.id) return NextResponse.json({ error: "Invalid session" }, { status: 400 });
       if (String(s.user_id) !== String(userId)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -287,12 +278,7 @@ export async function POST(req: NextRequest) {
     const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
       supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId),
-      supabase
-        .from("onboarding_messages")
-        .select("role,content,created_at")
-        .eq("session_id", sessionId)
-        .order("created_at", { ascending: true })
-        .limit(24),
+      supabase.from("onboarding_messages").select("role,content,created_at").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(24),
     ]);
 
     const knownFacts: Record<string, unknown> = {};
@@ -302,12 +288,7 @@ export async function POST(req: NextRequest) {
       knownFacts[k] = normalizeFactValue(k, (f as any).value);
     }
 
-    async function upsertOneFact(fact: {
-      key: string;
-      value: unknown;
-      confidence: "high" | "medium" | "low";
-      source: string;
-    }): Promise<boolean> {
+    async function upsertOneFact(fact: { key: string; value: unknown; confidence: "high" | "medium" | "low"; source: string }): Promise<boolean> {
       const key = normalizeKey(fact.key).slice(0, 80);
       const value = normalizeFactValue(key, fact.value);
 
@@ -356,8 +337,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ auto-capture activities_list (si l'utilisateur liste plusieurs activités)
-    // Objectif: garantir le stockage même si l'extraction IA rate ce tour.
-    // Confidence volontairement basse => l'IA pourra corriger/affiner ensuite.
     try {
       const existing = normalizeStringArray((knownFacts as any)["activities_list"]);
       const fromUser = normalizeStringArray(body.message)
@@ -366,12 +345,7 @@ export async function POST(req: NextRequest) {
         .slice(0, 8);
 
       if (fromUser.length >= 2 && existing.length < 2) {
-        const ok = await upsertOneFact({
-          key: "activities_list",
-          value: fromUser,
-          confidence: "low",
-          source: "user_message_list",
-        });
+        const ok = await upsertOneFact({ key: "activities_list", value: fromUser, confidence: "low", source: "user_message_list" });
         if (ok) knownFacts["activities_list"] = fromUser;
       }
     } catch {
@@ -392,20 +366,12 @@ export async function POST(req: NextRequest) {
 
         const la = String(lastAssistant ?? "").toLowerCase();
         const isPrimaryQuestion =
-          la.includes("laquelle veux-tu développer en priorité") ||
-          la.includes("laquelle veux-tu prioriser") ||
-          la.includes("which one do you want to prioritize");
+          la.includes("laquelle veux-tu développer en priorité") || la.includes("laquelle veux-tu prioriser") || la.includes("which one do you want to prioritize");
 
         const candidate = body.message.trim();
 
         if (isPrimaryQuestion && candidate.length > 0 && candidate.length <= 120 && !candidate.includes("\n")) {
-          const ok = await upsertOneFact({
-            key: "primary_activity",
-            value: candidate,
-            confidence: "high",
-            source: "user_choice",
-          });
-
+          const ok = await upsertOneFact({ key: "primary_activity", value: candidate, confidence: "high", source: "user_choice" });
           if (ok) knownFacts["primary_activity"] = candidate;
         }
       }
@@ -413,7 +379,7 @@ export async function POST(req: NextRequest) {
       // fail-open
     }
 
-    // Contexte unifié (facts + profil) pour mieux guider le clarifier (fail-open)
+    // Contexte unifié (facts + profil) (fail-open)
     let userContextText = "";
     try {
       const bundle = await getUserContextBundle(supabase, userId);
@@ -433,10 +399,7 @@ export async function POST(req: NextRequest) {
         goal: "Collect missing onboarding facts with minimal friction. Ask only one short question.",
         known_facts: knownFacts,
         business_profile_snapshot: bp ?? null,
-        conversation_history: (history ?? []).map((m: any) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        conversation_history: (history ?? []).map((m: any) => ({ role: m.role, content: m.content })),
         user_context_text: userContextText || null,
       },
       null,
@@ -481,21 +444,13 @@ export async function POST(req: NextRequest) {
           key,
           value,
           confidence: normalizeConfidence((f as any).confidence),
-          source:
-            typeof (f as any).source === "string" && (f as any).source.trim()
-              ? (f as any).source.trim().slice(0, 80)
-              : "onboarding_chat",
+          source: typeof (f as any).source === "string" && (f as any).source.trim() ? (f as any).source.trim().slice(0, 80) : "onboarding_chat",
         };
       })
       .filter((f) => isNonEmptyString(f.key));
 
     for (const f of toUpsert) {
-      const ok = await upsertOneFact({
-        key: f.key,
-        value: f.value ?? null,
-        confidence: f.confidence,
-        source: f.source,
-      });
+      const ok = await upsertOneFact({ key: f.key, value: f.value ?? null, confidence: f.confidence, source: f.source });
       if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
     }
 
@@ -541,10 +496,7 @@ export async function POST(req: NextRequest) {
         onboarding_version: "v2",
       });
 
-      await supabase
-        .from("onboarding_sessions")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", sessionId);
+      await supabase.from("onboarding_sessions").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", sessionId);
     }
 
     return NextResponse.json({
