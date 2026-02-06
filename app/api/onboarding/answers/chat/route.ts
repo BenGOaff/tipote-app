@@ -17,15 +17,12 @@
 // PATCH (A2+ lock activité prioritaire) :
 // - Normalise les keys (lowercase) + normalise les valeurs pour activities_list (array)
 // - Capture directement primary_activity quand l'assistant vient de demander de choisir UNE activité
-//   => évite la dépendance totale à l'extraction IA et garantit le stockage Supabase
+//   => évite la dépendance totale à l'extraction IA
 //
-// ✅ PATCH "100% V2" :
-// - Ne dépend plus d'une row business_profiles déjà existante.
-//   => update THEN insert (sinon completion peut ne rien marquer et reboucler /onboarding)
-//
-// ✅ PATCH (A2 suite logique — verrou activité prioritaire) :
-// - Auto-capture activities_list depuis le message user si plusieurs items détectés (confidence low)
-//   => garantit activities_list (array) même si l’IA rate ce tour
+// ✅ PATCH (A2 anti-boucle “tu m’as déjà répondu”) :
+// - Heuristique serveur: si l’assistant demande “as-tu déjà vendu / ventes / clients payants”
+//   et que l’utilisateur répond (même en long ou en mode agacé), on infère conversion_status
+//   et on l’upsert AVANT appel IA => l’agent ne repose pas la même question.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -45,29 +42,33 @@ const BodySchema = z
   })
   .strict();
 
-const AiResponseSchema = z
-  .object({
-    message: z.string().trim().min(1).max(4000),
-    facts: z
-      .array(
-        z.object({
-          key: z.string().trim().min(1).max(80),
-          value: z.any().optional(),
-          confidence: z.union([z.enum(["high", "medium", "low"]), z.number().min(0).max(1)]).optional(),
-          source: z.string().trim().min(1).max(80).optional(),
-        }),
-      )
-      .default([]),
-    should_finish: z.boolean().optional(),
-    done: z.boolean().optional(),
-  })
-  .strict();
+const AiResponseSchema = z.object({
+  message: z.string().trim().min(1).max(4000),
+  facts: z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(80),
+        value: z.any().optional(),
+        confidence: z.union([z.enum(["high", "medium", "low"]), z.number().min(0).max(1)]).optional(),
+        source: z.string().trim().max(80).optional(),
+      }),
+    )
+    .default([]),
+  done: z.boolean().optional(),
+  should_finish: z.boolean().optional(),
+});
 
-function safeJsonParse(input: string): any {
+function pickLocaleFromHeaders(req: NextRequest): "fr" | "en" {
+  const h = (req.headers.get("accept-language") || "").toLowerCase();
+  if (h.includes("fr")) return "fr";
+  return "en";
+}
+
+function safeJsonParse(s: string): any {
   try {
-    return JSON.parse(input);
+    return JSON.parse(s);
   } catch {
-    return null;
+    return {};
   }
 }
 
@@ -75,136 +76,156 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
 }
 
-function pickLocaleFromHeaders(req: NextRequest) {
-  const h = req.headers.get("accept-language") || "";
-  const fr = h.toLowerCase().includes("fr");
-  return fr ? "fr" : "en";
+function normalizeKey(key: string) {
+  return String(key || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\w]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
-function normalizeKey(k: string) {
-  return k.trim().toLowerCase();
-}
-
-function normalizeConfidence(v: unknown): "high" | "medium" | "low" {
-  if (v === "high" || v === "medium" || v === "low") return v;
-  if (typeof v === "number" && Number.isFinite(v)) {
-    if (v >= 0.8) return "high";
-    if (v >= 0.55) return "medium";
-    return "low";
+function normalizeConfidence(c: unknown): "high" | "medium" | "low" {
+  if (typeof c === "string") {
+    const v = c.trim().toLowerCase();
+    if (v === "high" || v === "medium" || v === "low") return v;
   }
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    if (s === "high" || s === "medium" || s === "low") return s as any;
-    const n = Number(s);
-    if (Number.isFinite(n)) return normalizeConfidence(n);
+  if (typeof c === "number") {
+    if (c >= 0.75) return "high";
+    if (c >= 0.4) return "medium";
+    return "low";
   }
   return "medium";
 }
 
-function factValueIsEmpty(v: unknown) {
-  if (v === null || v === undefined) return true;
-  if (typeof v === "string" && v.trim() === "") return true;
-  if (Array.isArray(v) && v.length === 0) return true;
-  if (typeof v === "object" && v && Object.keys(v as any).length === 0) return true;
-  return false;
-}
-
-function normalizeStringArray(v: unknown): string[] {
-  if (!v) return [];
-  if (Array.isArray(v)) {
-    return v
-      .map((x) => (typeof x === "string" ? x.trim() : String(x ?? "").trim()))
-      .filter((s) => s.length > 0);
-  }
-  if (typeof v === "string") {
-    return v
-      .split(/\r?\n|,|;|•|\|/g)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
-  return [];
-}
-
-function normalizeFactValue(key: string, value: unknown): unknown {
+function normalizeFactValue(key: string, value: unknown): any {
   const k = normalizeKey(key);
 
-  if (k === "activities_list" || k === "activities" || k === "activity_list") {
-    return normalizeStringArray(value);
-  }
-
-  if (k === "primary_activity" || k === "main_activity") {
-    return typeof value === "string" ? value.trim() : String(value ?? "").trim();
-  }
-
-  if (k === "has_offers") {
-    if (typeof value === "boolean") return value;
-    const s = String(value ?? "").toLowerCase().trim();
-    if (["yes", "oui", "true", "1"].includes(s)) return true;
-    if (["no", "non", "false", "0"].includes(s)) return false;
-    return value;
+  if (k === "activities_list") {
+    if (Array.isArray(value)) {
+      const arr = value
+        .map((x) => (typeof x === "string" ? x.trim() : ""))
+        .filter(Boolean)
+        .slice(0, 8);
+      return arr;
+    }
+    if (typeof value === "string") {
+      const parts = value
+        .split(/\r?\n|,|;|\||•|\u2022/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 8);
+      return parts;
+    }
   }
 
   return value;
 }
 
-function buildPrimaryActivityQuestion(locale: "fr" | "en", activities: string[]) {
-  const clean = activities.map((a) => a.trim()).filter((a) => a.length > 0);
-  const shown = clean.slice(0, 3);
-  const list = shown.map((a) => `- ${a}`).join("\n");
-  if (locale === "en") {
-    const intro = clean.length > 0 ? `You mentioned several activities:\n${list}\n\n` : "";
-    return intro + "Which ONE do you want to prioritize with Tipote for now? (just answer with the name of the activity)";
-  }
-  const intro = clean.length > 0 ? `Tu m’as parlé de plusieurs activités :\n${list}\n\n` : "";
-  return intro + "Parmi celles-ci, laquelle veux-tu développer en priorité avec Tipote pour l’instant ?";
+function isSalesQuestion(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("déjà commencé") ||
+    t.includes("as-tu déjà") ||
+    t.includes("réalisé des ventes") ||
+    t.includes("des ventes") ||
+    t.includes("clients payants") ||
+    t.includes("commencé à vendre") ||
+    t.includes("selling") ||
+    t.includes("have you sold")
+  );
 }
 
-function mergeBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
+function looksFrustrated(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("je viens de te répondre") ||
+    t.includes("tu m'as déjà") ||
+    t.includes("ça tourne") ||
+    t.includes("passe à la suite") ||
+    t.includes("mec") ||
+    t.includes("putain") ||
+    t.includes("bordel")
+  );
+}
+
+function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inconsistent" | "not_selling" | "unknown" {
+  const t = (answer || "").toLowerCase();
+
+  // not selling
+  if (
+    t.includes("pas encore") ||
+    t.includes("pas vendu") ||
+    t.includes("aucun client") ||
+    t.includes("aucune vente") ||
+    t.includes("0 vente") ||
+    t.includes("zéro") ||
+    t.includes("zero") ||
+    t.includes("je n'ai pas") && (t.includes("vendu") || t.includes("clients payants"))
+  ) {
+    return "not_selling";
+  }
+
+  // selling well signals
+  if (
+    t.includes("régulier") ||
+    t.includes("régulièrement") ||
+    t.includes("ça vend bien") ||
+    t.includes("beaucoup") ||
+    t.includes("plein de") ||
+    /(\b)([2-9]\d{3,}|\d{1,3}\s?k)(\b)/i.test(answer) || // 2000 / 50k / etc
+    /(\b)\d+\s?(€|eur|euros)(\b)/i.test(answer)
+  ) {
+    return "selling_well";
+  }
+
+  // a few / test sales => inconsistent
+  if (
+    t.includes("quelques") ||
+    t.includes("1") ||
+    t.includes("un seul") ||
+    t.includes("une vente") ||
+    t.includes("deux ventes") ||
+    t.includes("beta") ||
+    t.includes("test") ||
+    t.includes("en préparation") ||
+    t.includes("je commence") ||
+    t.includes("pas régulier")
+  ) {
+    return "inconsistent";
+  }
+
+  return "unknown";
+}
+
+function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: any }>) {
   const patch: Record<string, any> = {};
+
   for (const f of facts) {
     const k = normalizeKey(f.key);
-    const v = (f as any).value;
+    const v = f.value;
 
-    if (factValueIsEmpty(v)) continue;
+    // Champs connus pour UI dashboard / récap
+    if (k === "first_name" && typeof v === "string" && v.trim()) patch.first_name = v.trim().slice(0, 80);
+    if (k === "country" && typeof v === "string" && v.trim()) patch.country = v.trim().slice(0, 80);
+    if (k === "niche" && typeof v === "string" && v.trim()) patch.niche = v.trim().slice(0, 200);
+    if (k === "primary_activity" && typeof v === "string" && v.trim()) patch.primary_activity = v.trim().slice(0, 200);
 
-    if (k === "first_name" || k === "firstname" || k === "prenom") patch.first_name = String(v);
-    if (k === "country" || k === "pays") patch.country = String(v);
-    if (k === "niche") patch.niche = String(v);
-    if (k === "mission") patch.mission = String(v);
-
-    if (k === "business_maturity" || k === "maturity" || k === "niveau") patch.business_maturity = String(v);
-
-    if (k === "audience_social" || k === "social_audience") {
-      const n = Number(String(v).replace(",", "."));
-      if (Number.isFinite(n)) patch.audience_social = Math.max(0, Math.round(n));
+    // Align prompt key -> DB/UI
+    if (k === "revenue_goal_monthly") {
+      const num = typeof v === "number" ? v : typeof v === "string" ? Number(String(v).replace(/[^\d.]/g, "")) : NaN;
+      if (Number.isFinite(num)) patch.revenue_goal_monthly = num;
     }
 
-    if (k === "audience_email" || k === "email_list" || k === "liste_email") {
-      const n = Number(String(v).replace(",", "."));
-      if (Number.isFinite(n)) patch.audience_email = Math.max(0, Math.round(n));
-    }
-
-    if (k === "time_available" || k === "temps_dispo") patch.time_available = String(v);
-
-    if (k === "main_goal" || k === "objectif_principal") patch.main_goal = String(v);
-    if (k === "revenue_goal_monthly" || k === "objectif_revenu_mensuel") patch.revenue_goal_monthly = String(v);
-
-    if (k === "preferred_tone" || k === "tone" || k === "ton") patch.preferred_tone = String(v);
-    if (k === "content_preference" || k === "content_style") patch.content_preference = String(v);
-
-    if (k === "social_links") patch.social_links = String(v);
-
-    if (k === "has_offers") {
-      if (typeof v === "boolean") patch.has_offers = v;
-      else {
-        const s = String(v).toLowerCase().trim();
-        if (["yes", "oui", "true", "1"].includes(s)) patch.has_offers = true;
-        if (["no", "non", "false", "0"].includes(s)) patch.has_offers = false;
-      }
+    if (k === "time_available_hours_week") {
+      const num = typeof v === "number" ? v : typeof v === "string" ? Number(String(v).replace(/[^\d.]/g, "")) : NaN;
+      if (Number.isFinite(num)) patch.weekly_hours = num;
     }
 
     if (k === "offers" && v && typeof v === "object") patch.offers = v;
   }
+
   return patch;
 }
 
@@ -293,84 +314,112 @@ export async function POST(req: NextRequest) {
       const value = normalizeFactValue(key, fact.value);
 
       try {
-        const { error } = await supabase.rpc("upsert_onboarding_fact", {
+        const rpc = await supabase.rpc("upsert_onboarding_fact", {
           p_user_id: userId,
           p_key: key,
           p_value: value,
           p_confidence: fact.confidence,
           p_source: fact.source,
         });
+
+        if (!rpc.error) return true;
+      } catch {
+        // ignore
+      }
+
+      // fallback upsert direct (best-effort)
+      try {
+        const { error } = await supabase.from("onboarding_facts").upsert(
+          {
+            user_id: userId,
+            key,
+            value,
+            confidence: fact.confidence,
+            source: fact.source,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,key" },
+        );
+
         if (!error) return true;
       } catch {
-        // fallthrough
+        // ignore
       }
 
-      // fallback upsert (si RPC indispo)
-      try {
-        const row = {
-          user_id: userId,
-          key,
-          value,
-          confidence: fact.confidence,
-          source: fact.source,
-          updated_at: new Date().toISOString(),
-        };
-
-        const upd = await supabase
-          .from("onboarding_facts")
-          .update({
-            value: row.value,
-            confidence: row.confidence,
-            source: row.source,
-            updated_at: row.updated_at,
-          } as any)
-          .eq("user_id", userId)
-          .eq("key", key);
-
-        if (!upd?.error) return true;
-
-        const ins = await supabase.from("onboarding_facts").insert(row as any);
-        return !ins?.error;
-      } catch {
-        return false;
-      }
+      return false;
     }
 
-    // ✅ auto-capture activities_list (si l'utilisateur liste plusieurs activités)
+    // ---- ✅ PATCH anti-boucle ventes : inférer conversion_status si on vient de répondre à la question ventes
     try {
-      const existing = normalizeStringArray((knownFacts as any)["activities_list"]);
-      const fromUser = normalizeStringArray(body.message)
-        .map((s) => s.trim().replace(/^[-–—\s]+/, ""))
-        .filter((s) => s.length > 1 && s.length <= 80)
-        .slice(0, 8);
+      const convKey = "conversion_status";
+      const already = knownFacts[convKey];
+      const hist = Array.isArray(history) ? history : [];
 
-      if (fromUser.length >= 2 && existing.length < 2) {
-        const ok = await upsertOneFact({ key: "activities_list", value: fromUser, confidence: "low", source: "user_message_list" });
-        if (ok) knownFacts["activities_list"] = fromUser;
+      // previous assistant msg (before the one we just inserted)
+      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
+
+      if (!already && isSalesQuestion(String(prevAssistant))) {
+        // Si le user est agacé (“je t’ai répondu”), on tente aussi sur le dernier message user précédent
+        const lastUserBeforeThis = [...hist]
+          .reverse()
+          .filter((m: any) => m?.role === "user")
+          .slice(0, 3)
+          .map((m: any) => String(m?.content ?? ""))
+          .join("\n\n");
+
+        const answerToAnalyze = looksFrustrated(body.message) ? lastUserBeforeThis : body.message;
+
+        const inferred = inferConversionStatusFromAnswer(String(answerToAnalyze || ""));
+        if (inferred !== "unknown") {
+          const ok = await upsertOneFact({ key: convKey, value: inferred, confidence: "medium", source: "heuristic_sales_answer" });
+          if (ok) knownFacts[convKey] = inferred;
+        }
       }
     } catch {
       // fail-open
     }
 
-    // ✅ auto-capture du choix activité prioritaire (si l'assistant vient de demander UNE activité)
+    // ---- existing: auto-capture activities_list from last user message if multiple items (confidence low)
     try {
-      const activities = normalizeStringArray((knownFacts as any)["activities_list"]);
-      const primary = (knownFacts as any)["primary_activity"];
-      const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
+      const txt = String(body.message || "");
+      const raw = txt
+        .split(/\r?\n|,|;|\||•|\u2022/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-      if (activities.length >= 2 && !hasPrimary) {
-        const lastAssistant = [...(history ?? [])]
-          .slice(0, Math.max(0, (history ?? []).length - 1))
-          .reverse()
-          .find((m: any) => m?.role === "assistant")?.content as string | undefined;
+      const uniq: string[] = [];
+      for (const item of raw) {
+        const cleaned = item.replace(/^[-–—\s]+/, "").trim();
+        if (!cleaned) continue;
+        if (cleaned.length > 80) continue;
+        if (!uniq.some((u) => u.toLowerCase() === cleaned.toLowerCase())) uniq.push(cleaned);
+      }
 
-        const la = String(lastAssistant ?? "").toLowerCase();
-        const isPrimaryQuestion =
-          la.includes("laquelle veux-tu développer en priorité") || la.includes("laquelle veux-tu prioriser") || la.includes("which one do you want to prioritize");
+      if (uniq.length >= 2) {
+        const ok = await upsertOneFact({ key: "activities_list", value: uniq.slice(0, 6), confidence: "low", source: "user_message_parse" });
+        if (ok) knownFacts["activities_list"] = uniq.slice(0, 6);
+      }
+    } catch {
+      // fail-open
+    }
 
-        const candidate = body.message.trim();
+    // ---- existing: capture primary_activity when assistant asked to pick one (lock)
+    try {
+      const hist = Array.isArray(history) ? history : [];
+      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
+      const prevAssistantLower = String(prevAssistant || "").toLowerCase();
 
-        if (isPrimaryQuestion && candidate.length > 0 && candidate.length <= 120 && !candidate.includes("\n")) {
+      const askedPrimary =
+        prevAssistantLower.includes("laquelle veux-tu développer en priorité") ||
+        prevAssistantLower.includes("laquelle veux-tu prioriser") ||
+        prevAssistantLower.includes("parmi celles-ci") ||
+        prevAssistantLower.includes("which one do you want to prioritize");
+
+      const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
+
+      if (askedPrimary && activities.length >= 2 && !knownFacts["primary_activity"]) {
+        const candidate = String(body.message || "").trim();
+        if (candidate && candidate.length > 0 && candidate.length <= 120 && !candidate.includes("\n")) {
           const ok = await upsertOneFact({ key: "primary_activity", value: candidate, confidence: "high", source: "user_choice" });
           if (ok) knownFacts["primary_activity"] = candidate;
         }
@@ -450,64 +499,56 @@ export async function POST(req: NextRequest) {
       .filter((f) => isNonEmptyString(f.key));
 
     for (const f of toUpsert) {
-      const ok = await upsertOneFact({ key: f.key, value: f.value ?? null, confidence: f.confidence, source: f.source });
-      if (ok) appliedFacts.push({ key: f.key, confidence: f.confidence });
+      const ok = await upsertOneFact({ key: f.key, value: f.value, confidence: f.confidence, source: f.source });
+      if (ok) {
+        appliedFacts.push({ key: f.key, confidence: f.confidence });
+        knownFacts[f.key] = f.value;
+      }
     }
 
-    const patch = mergeBusinessProfilePatchFromFacts(toUpsert as any);
-    if (Object.keys(patch).length) {
-      await updateThenInsertBusinessProfile(supabase, userId, patch);
-    }
-
-    // 4.b) fail-safe : pas de finish tant que primary_activity manquante si activities_list >= 2
+    // Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
     try {
-      const mergedFacts: Record<string, unknown> = { ...knownFacts };
-      for (const f of toUpsert as any[]) mergedFacts[String(f.key)] = f.value;
+      const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
+      const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]) : "";
 
-      const activities = normalizeStringArray((mergedFacts as any)["activities_list"]);
-      const primary = (mergedFacts as any)["primary_activity"];
-      const hasPrimary = typeof primary === "string" && primary.trim().length > 0;
-
-      if (activities.length >= 2 && !hasPrimary) {
-        (out as any).message = buildPrimaryActivityQuestion(locale, activities);
+      if (activities.length >= 2 && !primary) {
         shouldFinish = false;
       }
     } catch {
-      // fail-open
+      // ignore
+    }
+
+    // Patch business_profiles (best-effort)
+    try {
+      const patch = buildBusinessProfilePatchFromFacts(
+        Object.entries(knownFacts).map(([key, value]) => ({ key, value })),
+      );
+      if (Object.keys(patch).length > 0) {
+        await updateThenInsertBusinessProfile(supabase, userId, patch);
+      }
+    } catch {
+      // ignore
     }
 
     // 5) store assistant message
-    const assistantMsg = out.message;
-    await supabase.from("onboarding_messages").insert({
+    const { error: insertAssistErr } = await supabase.from("onboarding_messages").insert({
       session_id: sessionId,
       role: "assistant",
-      content: assistantMsg,
-      extracted: {
-        facts: out.facts ?? [],
-        done: shouldFinish,
-      },
+      content: out.message,
+      extracted: { facts: toUpsert },
       created_at: new Date().toISOString(),
     });
 
-    // 6) optionally finish onboarding
-    if (shouldFinish) {
-      await updateThenInsertBusinessProfile(supabase, userId, {
-        onboarding_completed: true,
-        onboarding_version: "v2",
-      });
-
-      await supabase.from("onboarding_sessions").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", sessionId);
-    }
+    if (insertAssistErr) return NextResponse.json({ error: insertAssistErr.message }, { status: 400 });
 
     return NextResponse.json({
-      ok: true,
       sessionId,
-      message: assistantMsg,
+      message: out.message,
       appliedFacts,
       shouldFinish,
     });
   } catch (err: any) {
-    const message = err?.message ?? "Unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    console.error("[OnboardingChatV2] error:", err);
+    return NextResponse.json({ error: err?.message ?? "Bad Request" }, { status: 400 });
   }
 }
