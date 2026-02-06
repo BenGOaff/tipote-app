@@ -370,17 +370,25 @@ export default function MyContentLovableClient({
   if (error) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen w-full">
+        <div className="min-h-screen flex w-full">
           <AppSidebar />
-          <main className="flex-1">
-            <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background px-6 py-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger />
-                <h1 className="text-lg font-semibold">Mes Contenus</h1>
+
+          <main className="flex-1 overflow-auto bg-muted/30">
+            <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
+              <SidebarTrigger />
+              <div className="ml-4 flex-1">
+                <h1 className="text-xl font-display font-bold">Mes Contenus</h1>
               </div>
+
+              <Button asChild>
+                <Link href="/create">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer
+                </Link>
+              </Button>
             </header>
 
-            <div className="p-6">
+            <div className="p-6 max-w-6xl mx-auto space-y-6">
               <Card className="p-6">
                 <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
                 <p className="mt-2 text-sm text-rose-600">{error}</p>
@@ -394,30 +402,30 @@ export default function MyContentLovableClient({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1">
-          <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background px-6 py-4">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger />
-              <h1 className="text-lg font-semibold">Mes Contenus</h1>
+        <main className="flex-1 overflow-auto bg-muted/30">
+          {/* ✅ Header EXACT Lovable */}
+          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
+            <SidebarTrigger />
+            <div className="ml-4 flex-1">
+              <h1 className="text-xl font-display font-bold">Mes Contenus</h1>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button asChild className="gap-2">
-                <Link href="/create">
-                  <Plus className="w-4 h-4" />
-                  Créer
-                </Link>
-              </Button>
-            </div>
+            <Button asChild>
+              <Link href="/create">
+                <Plus className="w-4 h-4 mr-2" />
+                Créer
+              </Link>
+            </Button>
           </header>
 
-          <div className="p-6 space-y-6">
-            {/* Search + view toggle */}
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="relative w-full md:max-w-md">
+          {/* ✅ Container EXACT Lovable */}
+          <div className="p-6 max-w-6xl mx-auto space-y-6">
+            {/* Filters & Toggle (structure Lovable) */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher..."
@@ -448,7 +456,7 @@ export default function MyContentLovableClient({
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats (on garde les mêmes cartes mais dans le bon container) */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <Card className="p-4">
                 <div className="text-sm text-muted-foreground">Total</div>
@@ -471,7 +479,6 @@ export default function MyContentLovableClient({
             {/* Content */}
             <div className="space-y-6">
               {view === "calendar" ? (
-                // ✅ FIX: ContentCalendarView attend "contents", pas "items"
                 <ContentCalendarView contents={filtered} />
               ) : (
                 <div className="space-y-6">
@@ -574,7 +581,10 @@ export default function MyContentLovableClient({
                                             </DropdownMenuItem>
 
                                             {normalizeKeyStatus(item.status) === "scheduled" ? (
-                                              <DropdownMenuItem onClick={() => handleUnplan(item)} disabled={busy !== null}>
+                                              <DropdownMenuItem
+                                                onClick={() => handleUnplan(item)}
+                                                disabled={busy !== null}
+                                              >
                                                 <CalendarX className="w-4 h-4 mr-2" />
                                                 Déplanifier
                                               </DropdownMenuItem>
@@ -651,12 +661,19 @@ export default function MyContentLovableClient({
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Planifier le contenu</DialogTitle>
-                  <DialogDescription>Choisis une date de publication. Le statut passera sur “Planifié”.</DialogDescription>
+                  <DialogDescription>
+                    Choisis une date de publication. Le statut passera sur “Planifié”.
+                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-2">
                   <Label htmlFor="plan-date">Date</Label>
-                  <Input id="plan-date" type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+                  <Input
+                    id="plan-date"
+                    type="date"
+                    value={planDate}
+                    onChange={(e) => setPlanDate(e.target.value)}
+                  />
                 </div>
 
                 <DialogFooter>
