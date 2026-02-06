@@ -16,7 +16,7 @@ export type RenderMode = "preview" | "kit";
 
 export type RenderTemplateRequest = {
   kind: TemplateKind;
-  templateId: string; // ex: "capture-01", "vente-01"
+  templateId: string; // ex: "capture-01", "sale-01" (vente)
   mode: RenderMode;
 
   // optional variants (layout tweaks)
@@ -227,10 +227,15 @@ async function readFileIfExists(p: string): Promise<string> {
 
 function normalizeTemplateId(input: string, kind: TemplateKind): string {
   const raw = safeString(input).trim();
-  if (!raw) return kind === "capture" ? "capture-01" : "vente-01";
+  if (!raw) return kind === "capture" ? "capture-01" : "sale-01";
 
-  // accept "sale-01" for vente folder
-  if (kind === "vente" && raw.startsWith("sale-")) return raw.replace(/^sale-/, "vente-");
+  // IMPORTANT: "vente" templates live under /src/templates/vente/sale-xx
+  // Canonical ids for kind="vente" are "sale-xx".
+  // Accept legacy input "vente-xx" and normalize it to "sale-xx".
+  if (kind === "vente") {
+    if (raw.startsWith("vente-")) return raw.replace(/^vente-/, "sale-");
+    return raw;
+  }
 
   return raw;
 }
