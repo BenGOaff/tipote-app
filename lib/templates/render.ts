@@ -63,6 +63,7 @@ function getByPath(obj: any, p: string): any {
     .split(".")
     .map((x) => x.trim())
     .filter(Boolean);
+
   let cur: any = obj;
   for (const k of parts) {
     if (!cur || typeof cur !== "object") return undefined;
@@ -84,12 +85,6 @@ function normalizeKind(kind: string): TemplateKind {
   return "capture";
 }
 
-function normalizeMode(mode: string): RenderMode {
-  const s = safeString(mode).trim().toLowerCase();
-  if (s === "kit") return "kit";
-  return "preview";
-}
-
 function pickToken(obj: Record<string, any>, keys: string[]): string | null {
   for (const k of keys) {
     const hit = Object.keys(obj).find((x) => x.toLowerCase() === k.toLowerCase());
@@ -104,8 +99,8 @@ function pickToken(obj: Record<string, any>, keys: string[]): string | null {
 
 function mergeTokens(base: TemplateTokens, override: TemplateTokens | null | undefined): TemplateTokens {
   if (!override || !isRecord(override)) return base;
-  const out: TemplateTokens = structuredClone(base);
 
+  const out: TemplateTokens = structuredClone(base);
   for (const [k, v] of Object.entries(override)) {
     if (isRecord(v) && isRecord(out[k])) {
       out[k] = mergeTokens(out[k], v);
@@ -113,7 +108,6 @@ function mergeTokens(base: TemplateTokens, override: TemplateTokens | null | und
       out[k] = v;
     }
   }
-
   return out;
 }
 
@@ -125,26 +119,30 @@ function cssVarsFromTokens(tokens: Tokens): string {
   const shadow = tokens.shadow || {};
 
   // Colors (support both new + legacy token keys)
-  const accent = pickToken(colors, ["accent", "primary", "brand", "brandAccent", "primaryAccent"]) || "#2563eb";
+  const accent =
+    pickToken(colors, ["accent", "primary", "brand", "brandAccent", "primaryAccent"]) || "#2563eb";
 
   // Optional accents / tints used by some templates
-  const accent2 = pickToken(colors, ["accent2", "secondaryAccent", "secondary", "brandSecondary"]) || accent;
-  const soft = pickToken(colors, ["soft", "softBg", "soft_bg", "softBackground", "surfaceSoft"]) || "#f8fafc";
+  const accent2 =
+    pickToken(colors, ["accent2", "secondaryAccent", "secondary", "brandSecondary"]) || accent;
+  const soft =
+    pickToken(colors, ["soft", "softBg", "soft_bg", "softBackground", "surfaceSoft"]) || "#f8fafc";
   const dark = pickToken(colors, ["dark", "darkText", "dark_text", "ink"]) || "#0b1220";
 
   const bg = pickToken(colors, ["bg", "background", "pageBg", "page_bg"]) || "#ffffff";
 
   // Many templates use "primaryText" / "secondaryText"
   const fg =
-    pickToken(colors, ["fg", "text", "textColor", "text_color", "primaryText", "primary_text"]) || "#0f172a";
+    pickToken(colors, ["fg", "text", "textColor", "text_color", "primaryText", "primary_text"]) ||
+    "#0f172a";
 
   const muted =
-    pickToken(colors, ["muted", "mutedText", "muted_text", "subtext", "secondaryText", "secondary_text"]) || "#64748b";
+    pickToken(colors, ["muted", "mutedText", "muted_text", "subtext", "secondaryText", "secondary_text"]) ||
+    "#64748b";
 
   const border = pickToken(colors, ["border", "stroke", "line"]) || "#e2e8f0";
 
   const card = pickToken(colors, ["card", "surface", "panel", "panelBg", "panel_bg"]) || "#ffffff";
-
   const cardFg = pickToken(colors, ["cardFg", "cardText", "surfaceText", "panelText", "panel_text"]) || fg;
 
   const heroGrad1 = pickToken(colors, ["heroGrad1", "hero_grad_1", "gradient1"]) || "#eff6ff";
@@ -152,8 +150,10 @@ function cssVarsFromTokens(tokens: Tokens): string {
 
   // Typography
   const headingFont =
-    pickToken(typo, ["headingFont", "heading_font", "display", "titleFont", "fontHeading"]) || "ui-sans-serif, system-ui";
-  const bodyFont = pickToken(typo, ["bodyFont", "body_font", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
+    pickToken(typo, ["headingFont", "heading_font", "display", "titleFont", "fontHeading"]) ||
+    "ui-sans-serif, system-ui";
+  const bodyFont =
+    pickToken(typo, ["bodyFont", "body_font", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
 
   // Sizes
   const bodySize = pickToken(typo, ["bodySize", "body_size", "fontSize", "font_size", "body"]) || "16px";
@@ -170,7 +170,8 @@ function cssVarsFromTokens(tokens: Tokens): string {
   const btnRadius = pickToken(radius, ["button", "btn", "buttonRadius", "button_radius"]) || cardRadius;
 
   const cardShadow =
-    pickToken(shadow, ["card", "cardShadow", "card_shadow", "base", "shadow"]) || "0 12px 40px rgba(2, 6, 23, 0.08)";
+    pickToken(shadow, ["card", "cardShadow", "card_shadow", "base", "shadow"]) ||
+    "0 12px 40px rgba(2, 6, 23, 0.08)";
 
   const vars: Record<string, string> = {
     "--tpt-accent": accent,
@@ -240,7 +241,9 @@ function applyVariant(html: string, variantId: string | null | undefined): strin
 
   // Convention: templates may use [data-variant] hooks in CSS.
   // We inject a root attribute to enable variant-specific selectors.
-  return html.replace(/<body([^>]*)>/i, (_m: string, attrs: string) => `<body${attrs} data-variant="${escapeHtml(v)}">`);
+  return html.replace(/<body([^>]*)>/i, (_m: string, attrs: string) => {
+    return `<body${attrs} data-variant="${escapeHtml(v)}">`;
+  });
 }
 
 function renderPlaceholders(templateHtml: string, contentData: Record<string, any>): string {
@@ -256,7 +259,6 @@ function renderRepeaters(templateHtml: string, contentData: Record<string, any>)
   // Simple repeater syntax:
   // <!-- BEGIN items --> ... {{items[].field}} ... <!-- END items -->
   // Inside repeater, use {{items[].field}} placeholders.
-  // This is intentionally minimal and stable.
   const re = /<!--\s*BEGIN\s+([a-zA-Z0-9_.-]+)\s*-->([\s\S]*?)<!--\s*END\s+\1\s*-->/g;
 
   return templateHtml.replace(re, (_m: string, arrKey: string, block: string) => {
@@ -284,7 +286,12 @@ function wrapAsDocument(args: {
   cssVars: string;
   mode: RenderMode;
 }): string {
-  const base = `<!doctype html>
+  const body =
+    args.mode === "kit"
+      ? `<div class="tpt-scope">${args.htmlBody}</div>`
+      : args.htmlBody;
+
+  return `<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
@@ -296,20 +303,15 @@ ${args.styleCss || ""}
 </style>
 </head>
 <body>
-${args.htmlBody}
+${body}
 </body>
 </html>`;
-
-  if (args.mode === "preview") return base;
-
-  // For kit: scope styles under .tpt-scope to avoid colliding with Systeme theme.
-  // Template "kit" CSS files are already scoped, but we enforce wrapper anyway.
-  return base;
 }
 
-export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<string> {
+// ✅ IMPORTANT: retourne { html } (et pas une string brute)
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
   const kind = normalizeKind(req.kind);
-  const mode = req.mode === "kit" ? "kit" : "preview";
+  const mode: RenderMode = req.mode === "kit" ? "kit" : "preview";
   const templateId = normalizeTemplateId(req.templateId, kind);
 
   const root = process.cwd();
@@ -323,7 +325,7 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<st
   ]);
 
   if (!html) {
-    return wrapAsDocument({
+    const fallback = wrapAsDocument({
       htmlBody: `<div style="font-family:system-ui;padding:24px">Template introuvable: ${escapeHtml(
         `${kind}/${templateId}`,
       )}</div>`,
@@ -331,6 +333,7 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<st
       cssVars: "",
       mode,
     });
+    return { html: fallback };
   }
 
   let tokens: Tokens = {};
@@ -355,12 +358,14 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<st
   // apply variant hooks
   out = applyVariant(out, req.variantId);
 
-  const styleCss = mode === "kit" ? (kitCss || css) : css;
+  const styleCss = mode === "kit" ? kitCss || css : css;
 
-  return wrapAsDocument({
+  const doc = wrapAsDocument({
     htmlBody: out,
     styleCss,
     cssVars,
     mode,
   });
+
+  return { html: doc };
 }

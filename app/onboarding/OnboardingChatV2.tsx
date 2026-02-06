@@ -55,22 +55,6 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
-async function patchJSON<T>(url: string, body?: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-  });
-
-  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-
-  if (!res.ok) {
-    throw new Error((json as any)?.error || `HTTP ${res.status}`);
-  }
-
-  return json as T;
-}
-
 function normalizeActivities(input: string): string[] {
   const raw = input
     .split(/\r?\n|,|;|\||•|\u2022/g)
@@ -209,12 +193,15 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const [isSending, setIsSending] = useState(false);
   const [isDone, setIsDone] = useState(false);
 
+  // ✅ Micro-ajustement “naturel” : Tipote écrit… pendant la réponse
   const [isAssistantTyping, setIsAssistantTyping] = useState(false);
 
+  // ✅ Finalization overlay
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [bootStepIndex, setBootStepIndex] = useState(0);
   const [bootLineIndex, setBootLineIndex] = useState(0);
 
+  // ✅ Verrou UX "activité prioritaire"
   const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -223,6 +210,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isAssistantTyping, isFinalizing]);
 
+  // Re-seed boutons activités si reprise
   useEffect(() => {
     try {
       const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
@@ -263,6 +251,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     return true;
   }, [input, isSending, isDone, isFinalizing, isPrimaryChoiceLockActive, primaryChoiceMatched]);
 
+  // Rotation des lignes pendant finalization
   useEffect(() => {
     if (!isFinalizing) return;
 
@@ -273,7 +262,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     return () => window.clearInterval(interval);
   }, [isFinalizing, bootStepIndex]);
 
-  // ✅ FINALIZE — version correcte : pyramides -> selection -> full strategy -> sync tasks -> /app
   const finalize = async () => {
     if (isFinalizing) return;
 
@@ -294,7 +282,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // Step 1: strategy (pyramides + starter plan) — idempotent
+      // Step 1: strategy
       setBootStepIndex(1);
       setBootLineIndex(0);
       try {
@@ -303,24 +291,8 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // ✅ auto-select pyramid (index 0) — requires PATCH route to support no pyramid body
-      try {
-        await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", { selectedIndex: 0 });
-      } catch {
-        // fail-open
-      }
-
-      // Step 2: generate full strategy (persona + plan 90j) — idempotent
+      // Step 2: tasks sync (best-effort)
       setBootStepIndex(2);
-      setBootLineIndex(0);
-      try {
-        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
-      } catch {
-        // fail-open
-      }
-
-      // Step 3: tasks sync (best-effort)
-      setBootStepIndex(3);
       setBootLineIndex(0);
       try {
         await postJSON<{ ok?: boolean; error?: string }>("/api/tasks/sync", {});
@@ -328,9 +300,15 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
+      // Step 3: “personnalisation” (UI-only)
+      setBootStepIndex(3);
+      setBootLineIndex(0);
+
       ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
 
+      // mini délai pour laisser l'user lire l'étape
       await new Promise((r) => setTimeout(r, 900));
+
       router.replace("/app");
     } catch (e) {
       toast({
@@ -411,6 +389,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
+      {/* Overlay finalization */}
       {isFinalizing ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-lg rounded-2xl bg-background p-6 shadow-xl">
@@ -482,6 +461,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
             </div>
           ))}
 
+          {/* ✅ Typing indicator (micro-ajustement UX) */}
           {isAssistantTyping && !isFinalizing ? (
             <div className="flex w-full justify-start">
               <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
