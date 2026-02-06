@@ -1130,21 +1130,43 @@ async function callClaude(args: {
 }): Promise<string> {
   const model = resolveClaudeModel();
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": args.apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-      temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
-      system: args.system,
-      messages: [{ role: "user", content: args.user }],
-    }),
-  });
+  const timeoutMsRaw = process.env.TIPOTE_CLAUDE_TIMEOUT_MS ?? process.env.CLAUDE_TIMEOUT_MS ?? "";
+  const timeoutMs = (() => {
+    const n = Number(String(timeoutMsRaw).trim() || "NaN");
+    return Number.isFinite(n) ? Math.max(10_000, Math.min(240_000, Math.floor(n))) : 120_000;
+  })();
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": args.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+        system: args.system,
+        messages: [{ role: "user", content: args.user }],
+      }),
+    });
+  } catch (e: any) {
+    const name = String(e?.name ?? "");
+    const msg = String(e?.message ?? "");
+    if (name === "AbortError" || /aborted|abort/i.test(msg)) {
+      throw new Error(`Claude API timeout after ${timeoutMs}ms`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -1292,26 +1314,13 @@ export async function POST(req: Request) {
 
     if (!type) return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
 
-    // ✅ Crédit cost serveur (source de vérité)
-    // - funnel capture = 4 crédits
-    // - funnel vente (sales) = 6 crédits
-    // - autres types = 1 crédit
-    const __funnelPageForCost =
-      type === "funnel"
-        ? normalizeFunnelPage(
-            (body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null,
-          )
-        : "capture";
-    const cost = type === "funnel" ? (__funnelPageForCost === "sales" ? 6 : 4) : 1;
-
     const balance = await ensureUserCredits(userId);
-    if (balance.total_remaining < cost) {
+    if (balance.total_remaining <= 0) {
       return NextResponse.json(
         {
           ok: false,
           code: "NO_CREDITS",
           error: "Crédits insuffisants. Recharge tes crédits ou upgrade ton abonnement pour continuer.",
-          required_cost: cost,
           balance,
           upgrade_url: "/pricing",
         },
@@ -1462,9 +1471,7 @@ export async function POST(req: Request) {
     const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
     const computedEmailType =
       emailTypeRaw === "sales"
-        ? salesModeRaw === "sequence_7"
-          ? ("sales_sequence_7" as const)
-          : ("sales_single" as const)
+        ? (salesModeRaw === "sequence_7" ? ("sales_sequence_7" as const) : ("sales_single" as const))
         : emailTypeRaw === "onboarding"
           ? ("onboarding_klt_3" as const)
           : ("newsletter" as const);
@@ -1488,16 +1495,19 @@ export async function POST(req: Request) {
     }
 
     // --- Offre context posts (offerId / offerManual) ---
-    const postOfferId = safeString((body as any).offerId).trim();
-    const postOfferManual = isRecord((body as any).postOfferManual)
-      ? ((body as any).postOfferManual as any)
-      : isRecord((body as any).offerManual)
-        ? ((body as any).offerManual as any)
-        : null;
+    const postOfferId = safeString((body as any).offerId).trim(); // ✅ on réutilise offerId côté post
+    const postOfferManual =
+      isRecord((body as any).postOfferManual)
+        ? ((body as any).postOfferManual as any)
+        : isRecord((body as any).offerManual)
+          ? ((body as any).offerManual as any)
+          : null;
 
     let offerContextForPost: OfferPyramidContext | null = null;
 
     if (type === "post" && postOfferId) {
+      // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
+      // on résout via planOffers. Sinon on tente offer_pyramids puis fallback planOffers.
       if (!isUuid(postOfferId)) {
         offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
       } else {
@@ -1536,6 +1546,8 @@ export async function POST(req: Request) {
     let funnelSourceOffer: OfferPyramidContext | null = null;
 
     if (type === "funnel" && funnelMode === "from_pyramid") {
+      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
+      // puis fallback offer_pyramids (legacy).
       if (funnelOfferId) {
         if (isUuid(funnelOfferId)) {
           funnelSourceOffer =
@@ -1586,6 +1598,7 @@ export async function POST(req: Request) {
           offerLink,
         } as any);
 
+        // ✅ Ajout contexte offre (pyramide ou manual)
         const offerCtxLines: string[] = [];
 
         if (offerContextForPost) {
@@ -1766,7 +1779,9 @@ export async function POST(req: Request) {
       }
 
       if (type === "funnel") {
-        const manual = isRecord((body as any).funnelManual) ? ((body as any).funnelManual as any) : null;
+        const manual = isRecord((body as any).funnelManual)
+          ? ((body as any).funnelManual as any)
+          : null;
 
         const theme =
           safeString((body as any).theme).trim() ||
@@ -1775,8 +1790,11 @@ export async function POST(req: Request) {
           prompt ||
           (funnelPage === "sales" ? "Page de vente" : "Page de capture");
 
+        // NEW (optional): if templateId is provided, ask the model to return contentData JSON that FITS the template.
+        // Otherwise we keep the historical behavior (text only).
         const templateId = safeString((body as any).templateId).trim();
-        const templateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
+        const templateKind: "vente" | "capture" =
+          funnelPage === "sales" ? "vente" : "capture";
 
         let templateSchemaPrompt = "";
         if (templateId.length > 0) {
@@ -2001,13 +2019,13 @@ export async function POST(req: Request) {
                   system: systemPrompt,
                   baseUserPrompt,
                   maxPasses: 4,
-                  maxTokens: ARTICLE_MAX_TOKENS,
+                  maxTokens: ARTICLE_MAX_TOKENS, // ✅ injecté
                 })
               : await callClaude({
                   apiKey,
                   system: systemPrompt,
                   user: baseUserPrompt,
-                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000,
+                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000, // ✅ safe & cohérent
                   temperature: 0.7,
                 });
 
@@ -2016,7 +2034,8 @@ export async function POST(req: Request) {
 
           // ✅ FUNNEL + template => on attend du JSON contentData et on rend HTML via le template renderer
           const funnelTemplateId = safeString((body as any).templateId).trim();
-          const funnelTemplateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
+          const funnelTemplateKind: "vente" | "capture" =
+            funnelPage === "sales" ? "vente" : "capture";
 
           if (type === "funnel" && funnelTemplateId) {
             const jsonStr = extractFirstJsonObject(raw);
@@ -2025,6 +2044,7 @@ export async function POST(req: Request) {
             const parsed = safeJsonParse<any>(jsonStr);
             if (!parsed || typeof parsed !== "object") throw new Error("Invalid funnel contentData JSON");
 
+            // ✅ enforce schema (content-schema.json if present, else inferred)
             const schema = await inferTemplateSchema({
               kind: funnelTemplateKind,
               templateId: funnelTemplateId,
@@ -2042,20 +2062,19 @@ export async function POST(req: Request) {
               0,
             );
 
+            // Optionnel: titre depuis contentData (fallback simple)
             title = pickTitleFromContentData(contentData) ?? null;
-
-            title = (() => {
-              const firstLine = finalContent.split("\n").find((l) => l.trim()) ?? null;
-              if (!firstLine) return null;
-              const t = firstLine.replace(/^#+\s*/, "").trim();
-              if (!t) return null;
-              return t.slice(0, 120);
-            })();
+          } else {
+            // Default: keep existing behavior for non-funnel or funnel without template
+            const keepBold = type === "article";
+            const txt = keepBold ? toPlainTextKeepBold(raw) : toPlainText(raw);
+            finalContent = txt;
+            title = null;
           }
 
           // ✅ Consommer les crédits seulement après succès IA
           try {
-            await consumeCredits(userId, cost, {
+            await consumeCredits(userId, 1, {
               kind: "content_generate",
               type,
               job_id: jobId,

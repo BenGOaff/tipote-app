@@ -722,7 +722,7 @@ export function FunnelForm(props: FunnelFormProps) {
       setBrandTokens(last.brandTokens);
       if (result.trim()) void renderHtml();
 
-      return f.slice(0, -1);
+      return f.slice(1);
     });
   };
 
@@ -861,7 +861,7 @@ export function FunnelForm(props: FunnelFormProps) {
                       <iframe
                         title="template-preview"
                         className="w-full h-[72vh]"
-                        sandbox="allow-same-origin"
+                        sandbox="allow-same-origin allow-scripts"
                         srcDoc={
                           isPreviewLoading
                             ? "<html><body style='font-family:system-ui;padding:24px'>Chargement…</body></html>"
@@ -1076,7 +1076,7 @@ export function FunnelForm(props: FunnelFormProps) {
                       <iframe
                         title="preview"
                         className="w-full h-[560px]"
-                        sandbox="allow-same-origin"
+                        sandbox="allow-same-origin allow-scripts"
                         srcDoc={htmlPreview || "<html><body></body></html>"}
                       />
                     </div>

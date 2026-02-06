@@ -18,90 +18,102 @@ export type RenderTemplateRequest = {
   kind: TemplateKind;
   templateId: string; // ex: "capture-01", "vente-01"
   mode: RenderMode;
+
+  // optional variants (layout tweaks)
   variantId?: string | null;
-  contentData: Record<string, unknown>;
-  brandTokens?: Partial<{
-    accent: string;
-    headingFont: string;
-    bodyFont: string;
-  }> | null;
+
+  // content data for placeholders
+  contentData: Record<string, any>;
+
+  // optional runtime tokens to override template tokens
+  // (ex: user brand colors)
+  brandTokens?: Record<string, any> | null;
 };
+
+type TemplateTokens = Record<string, any>;
 
 type Tokens = {
-  colors?: Record<string, string>;
-  typography?: Record<string, string>;
-  layout?: Record<string, string>;
-  radius?: Record<string, string>;
-  shadow?: Record<string, string>;
+  colors?: Record<string, any>;
+  typography?: Record<string, any>;
+  layout?: Record<string, any>;
+  radius?: Record<string, any>;
+  shadow?: Record<string, any>;
 };
 
-function escapeHtml(input: unknown): string {
-  const s = typeof input === "string" ? input : input == null ? "" : String(input);
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function safeString(v: unknown): string {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
 }
 
-function safeId(v: string): string {
-  return (v || "").replace(/[^a-z0-9\-]/gi, "").trim();
+function isRecord(v: unknown): v is Record<string, any> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-async function readOptional(filePath: string): Promise<string | null> {
-  try {
-    return await fs.readFile(filePath, "utf-8");
-  } catch {
-    return null;
+function escapeHtml(s: string): string {
+  return (s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Allows {{a.b.c}} placeholders.
+function getByPath(obj: any, p: string): any {
+  const parts = (p || "")
+    .split(".")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  let cur: any = obj;
+  for (const k of parts) {
+    if (!cur || typeof cur !== "object") return undefined;
+    cur = cur[k];
   }
+  return cur;
 }
 
-function pickToken(obj: Record<string, string> | undefined, keys: string[]): string | undefined {
-  const o = obj || {};
+function toText(v: any): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return "";
+}
+
+function normalizeKind(kind: string): TemplateKind {
+  const s = safeString(kind).trim().toLowerCase();
+  if (s === "sale" || s === "sales" || s === "vente") return "vente";
+  return "capture";
+}
+
+function normalizeMode(mode: string): RenderMode {
+  const s = safeString(mode).trim().toLowerCase();
+  if (s === "kit") return "kit";
+  return "preview";
+}
+
+function pickToken(obj: Record<string, any>, keys: string[]): string | null {
   for (const k of keys) {
-    const v = o[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
+    const hit = Object.keys(obj).find((x) => x.toLowerCase() === k.toLowerCase());
+    if (hit) {
+      const v = obj[hit];
+      const s = safeString(v).trim();
+      if (s) return s;
+    }
   }
-  // case-insensitive fallback
-  const lowered = Object.keys(o).reduce<Record<string, string>>((acc, k) => {
-    acc[k.toLowerCase()] = k;
-    return acc;
-  }, {});
-  for (const k of keys) {
-    const real = lowered[k.toLowerCase()];
-    if (!real) continue;
-    const v = o[real];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return undefined;
+  return null;
 }
 
-function applyVariant(tokens: Tokens, variants: any, variantId?: string | null): Tokens {
-  if (!variantId) return tokens;
-  const list = Array.isArray(variants?.variants) ? variants.variants : [];
-  const v = list.find((x: any) => String(x?.id || "") === String(variantId));
-  if (!v) return tokens;
+function mergeTokens(base: TemplateTokens, override: TemplateTokens | null | undefined): TemplateTokens {
+  if (!override || !isRecord(override)) return base;
+  const out: TemplateTokens = structuredClone(base);
 
-  const out: Tokens = JSON.parse(JSON.stringify(tokens || {}));
-  if (typeof v?.sectionPadding === "string") {
-    out.layout = { ...(out.layout || {}), sectionPadding: v.sectionPadding };
+  for (const [k, v] of Object.entries(override)) {
+    if (isRecord(v) && isRecord(out[k])) {
+      out[k] = mergeTokens(out[k], v);
+    } else {
+      out[k] = v;
+    }
   }
-  if (typeof v?.heroAlign === "string") {
-    out.layout = { ...(out.layout || {}), textAlign: v.heroAlign };
-  }
-  if (typeof v?.maxWidth === "string") {
-    out.layout = { ...(out.layout || {}), maxWidth: v.maxWidth };
-  }
-  return out;
-}
 
-function applyBrand(tokens: Tokens, brandTokens?: RenderTemplateRequest["brandTokens"] | null): Tokens {
-  if (!brandTokens) return tokens;
-  const out: Tokens = JSON.parse(JSON.stringify(tokens || {}));
-  if (brandTokens.accent) out.colors = { ...(out.colors || {}), accent: brandTokens.accent };
-  if (brandTokens.headingFont) out.typography = { ...(out.typography || {}), headingFont: brandTokens.headingFont };
-  if (brandTokens.bodyFont) out.typography = { ...(out.typography || {}), bodyFont: brandTokens.bodyFont };
   return out;
 }
 
@@ -114,6 +126,11 @@ function cssVarsFromTokens(tokens: Tokens): string {
 
   // Colors (support both new + legacy token keys)
   const accent = pickToken(colors, ["accent", "primary", "brand", "brandAccent", "primaryAccent"]) || "#2563eb";
+
+  // Optional accents / tints used by some templates
+  const accent2 = pickToken(colors, ["accent2", "secondaryAccent", "secondary", "brandSecondary"]) || accent;
+  const soft = pickToken(colors, ["soft", "softBg", "soft_bg", "softBackground", "surfaceSoft"]) || "#f8fafc";
+  const dark = pickToken(colors, ["dark", "darkText", "dark_text", "ink"]) || "#0b1220";
 
   const bg = pickToken(colors, ["bg", "background", "pageBg", "page_bg"]) || "#ffffff";
 
@@ -136,11 +153,11 @@ function cssVarsFromTokens(tokens: Tokens): string {
   // Typography
   const headingFont =
     pickToken(typo, ["headingFont", "heading_font", "display", "titleFont", "fontHeading"]) || "ui-sans-serif, system-ui";
-  const bodyFont =
-    pickToken(typo, ["bodyFont", "body_font", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
+  const bodyFont = pickToken(typo, ["bodyFont", "body_font", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
 
   // Sizes
   const bodySize = pickToken(typo, ["bodySize", "body_size", "fontSize", "font_size", "body"]) || "16px";
+  const h1 = pickToken(typo, ["h1", "h1Size", "h1_size", "heroTitleSize", "display"]) || "42px";
   const lineHeight = pickToken(typo, ["lineHeight", "line_height", "leading"]) || "1.6";
 
   // Layout
@@ -157,6 +174,9 @@ function cssVarsFromTokens(tokens: Tokens): string {
 
   const vars: Record<string, string> = {
     "--tpt-accent": accent,
+    "--tpt-accent2": accent2,
+    "--tpt-soft": soft,
+    "--tpt-dark": dark,
 
     "--tpt-bg": bg,
     "--tpt-background": bg,
@@ -178,17 +198,17 @@ function cssVarsFromTokens(tokens: Tokens): string {
     "--tpt-body-size": bodySize,
     "--tpt-line-height": lineHeight,
 
+    "--tpt-h1": h1,
+
     "--tpt-maxw": maxw,
     "--tpt-pad": pad,
+    "--tpt-section-pad": pad,
     "--tpt-text-align": align,
+    "--tpt-align": align,
 
     "--tpt-card-radius": cardRadius,
     "--tpt-btn-radius": btnRadius,
     "--tpt-card-shadow": cardShadow,
-
-    // Backward compat aliases used in a few templates
-    "--tpt-radius": cardRadius,
-    "--tpt-shadow": cardShadow,
   };
 
   return Object.entries(vars)
@@ -196,148 +216,151 @@ function cssVarsFromTokens(tokens: Tokens): string {
     .join("");
 }
 
-/**
- * Minimal Mustache-like features:
- * - {{key}} replaced by escaped scalar
- * - {{#arr}}...{{/arr}} repeats inner HTML for each item, using {{.}} and (optionally) {{key}} for object items
- * - {{#str}}...{{/str}} renders once if str is truthy, using {{.}} as the str value
- */
-function renderFragment(fragment: string, data: Record<string, unknown>): string {
-  const withSections: string = fragment.replace(/\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_m, key, inner) => {
-    const v = (data as any)?.[String(key)];
-    if (Array.isArray(v)) {
-      return v
-        .map((item) => {
-          if (item && typeof item === "object" && !Array.isArray(item)) {
-            return renderFragment(inner, item as any);
-          }
-          const d = { ...data, ".": item };
-          return renderFragment(inner, d as any);
-        })
-        .join("");
-    }
-    if (typeof v === "string") {
-      const s = v.trim();
-      if (!s) return "";
-      const d = { ...data, ".": s };
-      return renderFragment(inner, d as any);
-    }
-    if (typeof v === "number" || typeof v === "boolean") {
-      const d = { ...data, ".": String(v) };
-      return renderFragment(inner, d as any);
-    }
+async function readFileIfExists(p: string): Promise<string> {
+  try {
+    return await fs.readFile(p, "utf-8");
+  } catch {
     return "";
-  });
+  }
+}
 
-  return withSections.replace(/\{\{([a-zA-Z0-9_.]+)\}\}/g, (_m, key) => {
-    const k = String(key);
-    if (k === ".") return escapeHtml((data as any)["."]);
-    const v = (data as any)?.[k];
-    return escapeHtml(v);
+function normalizeTemplateId(input: string, kind: TemplateKind): string {
+  const raw = safeString(input).trim();
+  if (!raw) return kind === "capture" ? "capture-01" : "vente-01";
+
+  // accept "sale-01" for vente folder
+  if (kind === "vente" && raw.startsWith("sale-")) return raw.replace(/^sale-/, "vente-");
+
+  return raw;
+}
+
+function applyVariant(html: string, variantId: string | null | undefined): string {
+  const v = safeString(variantId).trim();
+  if (!v) return html;
+
+  // Convention: templates may use [data-variant] hooks in CSS.
+  // We inject a root attribute to enable variant-specific selectors.
+  return html.replace(/<body([^>]*)>/i, (_m: string, attrs: string) => `<body${attrs} data-variant="${escapeHtml(v)}">`);
+}
+
+function renderPlaceholders(templateHtml: string, contentData: Record<string, any>): string {
+  // Replace {{path.to.value}} with escaped text.
+  return templateHtml.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_m: string, key: string) => {
+    const val = getByPath(contentData, String(key));
+    const s = toText(val);
+    return escapeHtml(s);
   });
 }
 
-function wrapPreviewHtml(params: { head: string; body: string; css: string }): string {
-  return `<!doctype html>
+function renderRepeaters(templateHtml: string, contentData: Record<string, any>): string {
+  // Simple repeater syntax:
+  // <!-- BEGIN items --> ... {{items[].field}} ... <!-- END items -->
+  // Inside repeater, use {{items[].field}} placeholders.
+  // This is intentionally minimal and stable.
+  const re = /<!--\s*BEGIN\s+([a-zA-Z0-9_.-]+)\s*-->([\s\S]*?)<!--\s*END\s+\1\s*-->/g;
+
+  return templateHtml.replace(re, (_m: string, arrKey: string, block: string) => {
+    const arr = getByPath(contentData, String(arrKey));
+    if (!Array.isArray(arr) || arr.length === 0) return "";
+
+    return arr
+      .map((item: any) => {
+        const local = block.replace(
+          /\{\{\s*([a-zA-Z0-9_.-]+)\[\]\.([a-zA-Z0-9_.-]+)\s*\}\}/g,
+          (_m2: string, _a: string, field: string) => {
+            const v = item?.[String(field)];
+            return escapeHtml(toText(v));
+          },
+        );
+        return local;
+      })
+      .join("");
+  });
+}
+
+function wrapAsDocument(args: {
+  htmlBody: string;
+  styleCss: string;
+  cssVars: string;
+  mode: RenderMode;
+}): string {
+  const base = `<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-${params.head || ""}
-<style>${params.css || ""}</style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tipote template</title>
+<style>
+:root{${args.cssVars}}
+${args.styleCss || ""}
+</style>
 </head>
-<body>${params.body || ""}</body>
+<body>
+${args.htmlBody}
+</body>
 </html>`;
+
+  if (args.mode === "preview") return base;
+
+  // For kit: scope styles under .tpt-scope to avoid colliding with Systeme theme.
+  // Template "kit" CSS files are already scoped, but we enforce wrapper anyway.
+  return base;
 }
 
-function wrapKitHtml(params: { head: string; body: string; css: string }): string {
-  return `<style>${params.css || ""}</style>
-<div class="tpt-scope">
-${params.body || ""}
-</div>`;
-}
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<string> {
+  const kind = normalizeKind(req.kind);
+  const mode = req.mode === "kit" ? "kit" : "preview";
+  const templateId = normalizeTemplateId(req.templateId, kind);
 
-async function readTemplateFiles(kind: TemplateKind, templateId: string) {
-  const safeKind = safeId(kind);
-  const safeTemplate = safeId(templateId);
-  const baseDir = path.join(process.cwd(), "src", "templates", safeKind, safeTemplate);
+  const root = process.cwd();
+  const tplDir = path.join(root, "src", "templates", kind, templateId);
 
-  const layoutPath = path.join(baseDir, "layout.html");
-  const fontsPath = path.join(baseDir, "fonts.html");
-  const tokensPath = path.join(baseDir, "tokens.json");
-  const variantsPath = path.join(baseDir, "variants.json");
+  const [html, css, kitCss, tokensStr] = await Promise.all([
+    readFileIfExists(path.join(tplDir, "index.html")),
+    readFileIfExists(path.join(tplDir, "styles.css")),
+    readFileIfExists(path.join(tplDir, "styles.kit.css")),
+    readFileIfExists(path.join(tplDir, "tokens.json")),
+  ]);
 
-  // ✅ Preview CSS: templates-main ships "styles.css" (not styles.preview.css)
-  const previewCssPath = path.join(baseDir, "styles.preview.css");
-  const previewCssAlt1 = path.join(baseDir, "styles.css");
-  const previewCssAlt2 = path.join(baseDir, "style.css");
-
-  // ✅ Kit CSS: keep dedicated if present, else fallback to styles.css
-  const kitCssPath = path.join(baseDir, "styles.kit.css");
-  const kitCssAlt1 = path.join(baseDir, "styles.css");
-  const kitCssAlt2 = path.join(baseDir, "style.css");
-
-  const kitSystemePath = path.join(baseDir, "kit-systeme.html");
-
-  const layout = (await readOptional(layoutPath)) || "";
-  const fonts = (await readOptional(fontsPath)) || "";
-  const previewCss = (await readOptional(previewCssPath)) || (await readOptional(previewCssAlt1)) || (await readOptional(previewCssAlt2)) || "";
-  const kitCss = (await readOptional(kitCssPath)) || (await readOptional(kitCssAlt1)) || (await readOptional(kitCssAlt2)) || "";
-  const kitSysteme = (await readOptional(kitSystemePath)) || "";
-
-  const tokensRaw = (await readOptional(tokensPath)) || "{}";
-  const variantsRaw = (await readOptional(variantsPath)) || "{}";
+  if (!html) {
+    return wrapAsDocument({
+      htmlBody: `<div style="font-family:system-ui;padding:24px">Template introuvable: ${escapeHtml(
+        `${kind}/${templateId}`,
+      )}</div>`,
+      styleCss: "",
+      cssVars: "",
+      mode,
+    });
+  }
 
   let tokens: Tokens = {};
-  let variants: any = {};
   try {
-    tokens = JSON.parse(tokensRaw) as Tokens;
+    const parsed = tokensStr ? (JSON.parse(tokensStr) as any) : {};
+    tokens = (parsed || {}) as Tokens;
   } catch {
     tokens = {};
   }
-  try {
-    variants = JSON.parse(variantsRaw) as any;
-  } catch {
-    variants = {};
-  }
 
-  return {
-    baseDir,
-    layout,
-    fonts,
-    previewCss,
-    kitCss,
-    kitSysteme,
-    tokens,
-    variants,
-  };
-}
+  const merged = mergeTokens(tokens as any, req.brandTokens || null) as Tokens;
+  const cssVars = cssVarsFromTokens(merged);
 
-export async function renderTemplateHtml(
-  req: RenderTemplateRequest,
-): Promise<{
-  html: string;
-}> {
-  const { kind, templateId, mode, variantId, contentData, brandTokens } = req;
-  if (!templateId) throw new Error("templateId required");
+  let out = html;
 
-  const files = await readTemplateFiles(kind, templateId);
+  // repeaters first so placeholders inside blocks are expanded
+  out = renderRepeaters(out, req.contentData);
 
-  const withVariant = applyVariant(files.tokens, files.variants, variantId);
-  const withBrand = applyBrand(withVariant, brandTokens);
+  // then simple placeholders
+  out = renderPlaceholders(out, req.contentData);
 
-  const cssVars = cssVarsFromTokens(withBrand);
+  // apply variant hooks
+  out = applyVariant(out, req.variantId);
 
-  // ✅ IMPORTANT: in kit mode, scope CSS vars under .tpt-scope (no :root leakage in Systeme.io)
-  const baseCss = mode === "kit" ? `.tpt-scope{${cssVars}}` : `:root{${cssVars}}`;
+  const styleCss = mode === "kit" ? (kitCss || css) : css;
 
-  const css = mode === "kit" ? `${baseCss}\n${files.kitCss || ""}` : `${baseCss}\n${files.previewCss || ""}`;
-
-  const head = `${files.fonts || ""}`.trim();
-  const bodyTemplate = mode === "kit" && files.kitSysteme?.trim() ? files.kitSysteme : files.layout;
-
-  const body = renderFragment(bodyTemplate, contentData);
-
-  const html = mode === "kit" ? wrapKitHtml({ head, body, css }) : wrapPreviewHtml({ head, body, css });
-  return { html };
+  return wrapAsDocument({
+    htmlBody: out,
+    styleCss,
+    cssVars,
+    mode,
+  });
 }
