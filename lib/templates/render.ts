@@ -100,69 +100,9 @@ function applyBrand(tokens: Tokens, brandTokens?: RenderTemplateRequest["brandTo
   if (!brandTokens) return tokens;
   const out: Tokens = JSON.parse(JSON.stringify(tokens || {}));
   if (brandTokens.accent) out.colors = { ...(out.colors || {}), accent: brandTokens.accent };
-  if (brandTokens.headingFont)
-    out.typography = { ...(out.typography || {}), headingFont: brandTokens.headingFont };
+  if (brandTokens.headingFont) out.typography = { ...(out.typography || {}), headingFont: brandTokens.headingFont };
   if (brandTokens.bodyFont) out.typography = { ...(out.typography || {}), bodyFont: brandTokens.bodyFont };
   return out;
-}
-
-/**
- * Minimal Mustache-like features:
- * - {{key}} replaced by escaped scalar
- * - {{#arr}}...{{/arr}} repeats inner HTML for each item, using {{.}} and (optionally) {{key}} for object items
- * - {{#str}}...{{/str}} renders once if str is truthy, using {{.}} as the str value
- */
-function renderFragment(fragment: string, data: Record<string, unknown>): string {
-  const withSections: string = fragment.replace(
-    /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
-    (_m: string, key: string, inner: string): string => {
-      const v = (data as any)[key];
-
-      if (Array.isArray(v)) {
-        if (v.length === 0) return "";
-        return v
-          .map((item: any): string => {
-            // Arrays of objects: merge into parent scope and recurse.
-            if (item != null && typeof item === "object" && !Array.isArray(item)) {
-              const merged = { ...(data as any), ...(item as any) } as Record<string, unknown>;
-              (merged as any)["."] = ""; // for objects, dot isn't expected
-              return renderFragment(inner, merged);
-            }
-
-            // Arrays of scalars: support {{.}}
-            const itemStr = escapeHtml(item);
-            const merged = { ...(data as any), ".": itemStr } as Record<string, unknown>;
-            return renderFragment(inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr), merged);
-          })
-          .join("");
-      }
-
-      if (typeof v === "string" && v.trim()) {
-        const itemStr = escapeHtml(v);
-        const merged = { ...(data as any), ".": itemStr } as Record<string, unknown>;
-        return renderFragment(inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr), merged);
-      }
-
-      if (typeof v === "number") {
-        const itemStr = escapeHtml(String(v));
-        const merged = { ...(data as any), ".": itemStr } as Record<string, unknown>;
-        return renderFragment(inner.replace(/\{\{\s*\.\s*\}\}/g, itemStr), merged);
-      }
-
-      return "";
-    },
-  );
-
-  const withScalars: string = withSections.replace(
-    /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
-    (_m: string, key: string): string => escapeHtml((data as any)[key]),
-  );
-
-  const withDot: string = withScalars.replace(/\{\{\s*\.\s*\}\}/g, (): string =>
-    escapeHtml((data as any)["."]),
-  );
-
-  return withDot.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function cssVarsFromTokens(tokens: Tokens): string {
@@ -172,34 +112,49 @@ function cssVarsFromTokens(tokens: Tokens): string {
   const radius = tokens.radius || {};
   const shadow = tokens.shadow || {};
 
-  const accent = pickToken(colors, ["accent", "primary", "brand", "brandAccent"]) || "#2563eb";
+  // Colors (support both new + legacy token keys)
+  const accent = pickToken(colors, ["accent", "primary", "brand", "brandAccent", "primaryAccent"]) || "#2563eb";
 
   const bg = pickToken(colors, ["bg", "background", "pageBg", "page_bg"]) || "#ffffff";
-  const fg = pickToken(colors, ["fg", "text", "textColor", "text_color"]) || "#0f172a";
 
-  const muted = pickToken(colors, ["muted", "mutedText", "muted_text", "subtext"]) || "#64748b";
+  // Many templates use "primaryText" / "secondaryText"
+  const fg =
+    pickToken(colors, ["fg", "text", "textColor", "text_color", "primaryText", "primary_text"]) || "#0f172a";
+
+  const muted =
+    pickToken(colors, ["muted", "mutedText", "muted_text", "subtext", "secondaryText", "secondary_text"]) || "#64748b";
+
   const border = pickToken(colors, ["border", "stroke", "line"]) || "#e2e8f0";
 
-  const card = pickToken(colors, ["card", "surface", "panel"]) || "#ffffff";
-  const cardFg = pickToken(colors, ["cardFg", "cardText", "surfaceText", "panelText"]) || fg;
+  const card = pickToken(colors, ["card", "surface", "panel", "panelBg", "panel_bg"]) || "#ffffff";
+
+  const cardFg = pickToken(colors, ["cardFg", "cardText", "surfaceText", "panelText", "panel_text"]) || fg;
 
   const heroGrad1 = pickToken(colors, ["heroGrad1", "hero_grad_1", "gradient1"]) || "#eff6ff";
   const heroGrad2 = pickToken(colors, ["heroGrad2", "hero_grad_2", "gradient2"]) || "#ffffff";
 
+  // Typography
   const headingFont =
-    pickToken(typo, ["headingFont", "heading_font", "display", "titleFont", "fontHeading"]) ||
-    "ui-sans-serif, system-ui";
+    pickToken(typo, ["headingFont", "heading_font", "display", "titleFont", "fontHeading"]) || "ui-sans-serif, system-ui";
   const bodyFont =
-    pickToken(typo, ["bodyFont", "body_font", "body", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
+    pickToken(typo, ["bodyFont", "body_font", "textFont", "fontBody"]) || "ui-sans-serif, system-ui";
 
+  // Sizes
+  const bodySize = pickToken(typo, ["bodySize", "body_size", "fontSize", "font_size", "body"]) || "16px";
+  const lineHeight = pickToken(typo, ["lineHeight", "line_height", "leading"]) || "1.6";
+
+  // Layout
   const maxw = pickToken(layout, ["maxWidth", "max_width", "containerWidth", "container_width"]) || "980px";
   const pad = pickToken(layout, ["sectionPadding", "section_padding", "pad", "padding"]) || "64px";
   const align = pickToken(layout, ["textAlign", "text_align", "align", "heroAlign"]) || "left";
 
-  const rad = pickToken(radius, ["base", "radius", "r"]) || "16px";
-  const sh = pickToken(shadow, ["base", "shadow"]) || "0 12px 40px rgba(2, 6, 23, 0.08)";
+  // Radius / shadows (templates-main expects card/button keys)
+  const cardRadius = pickToken(radius, ["card", "cardRadius", "card_radius", "base", "radius", "r"]) || "16px";
+  const btnRadius = pickToken(radius, ["button", "btn", "buttonRadius", "button_radius"]) || cardRadius;
 
-  // Some templates expect --tpt-background / --tpt-text (not --tpt-bg/--tpt-fg).
+  const cardShadow =
+    pickToken(shadow, ["card", "cardShadow", "card_shadow", "base", "shadow"]) || "0 12px 40px rgba(2, 6, 23, 0.08)";
+
   const vars: Record<string, string> = {
     "--tpt-accent": accent,
 
@@ -220,18 +175,66 @@ function cssVarsFromTokens(tokens: Tokens): string {
 
     "--tpt-heading-font": headingFont,
     "--tpt-body-font": bodyFont,
+    "--tpt-body-size": bodySize,
+    "--tpt-line-height": lineHeight,
 
     "--tpt-maxw": maxw,
     "--tpt-pad": pad,
     "--tpt-text-align": align,
 
-    "--tpt-radius": rad,
-    "--tpt-shadow": sh,
+    "--tpt-card-radius": cardRadius,
+    "--tpt-btn-radius": btnRadius,
+    "--tpt-card-shadow": cardShadow,
+
+    // Backward compat aliases used in a few templates
+    "--tpt-radius": cardRadius,
+    "--tpt-shadow": cardShadow,
   };
 
   return Object.entries(vars)
     .map(([k, v]) => `${k}:${v};`)
     .join("");
+}
+
+/**
+ * Minimal Mustache-like features:
+ * - {{key}} replaced by escaped scalar
+ * - {{#arr}}...{{/arr}} repeats inner HTML for each item, using {{.}} and (optionally) {{key}} for object items
+ * - {{#str}}...{{/str}} renders once if str is truthy, using {{.}} as the str value
+ */
+function renderFragment(fragment: string, data: Record<string, unknown>): string {
+  const withSections: string = fragment.replace(/\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_m, key, inner) => {
+    const v = (data as any)?.[String(key)];
+    if (Array.isArray(v)) {
+      return v
+        .map((item) => {
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            return renderFragment(inner, item as any);
+          }
+          const d = { ...data, ".": item };
+          return renderFragment(inner, d as any);
+        })
+        .join("");
+    }
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (!s) return "";
+      const d = { ...data, ".": s };
+      return renderFragment(inner, d as any);
+    }
+    if (typeof v === "number" || typeof v === "boolean") {
+      const d = { ...data, ".": String(v) };
+      return renderFragment(inner, d as any);
+    }
+    return "";
+  });
+
+  return withSections.replace(/\{\{([a-zA-Z0-9_.]+)\}\}/g, (_m, key) => {
+    const k = String(key);
+    if (k === ".") return escapeHtml((data as any)["."]);
+    const v = (data as any)?.[k];
+    return escapeHtml(v);
+  });
 }
 
 function wrapPreviewHtml(params: { head: string; body: string; css: string }): string {
@@ -272,35 +275,41 @@ async function readTemplateFiles(kind: TemplateKind, templateId: string) {
   // ✅ Kit CSS: keep dedicated if present, else fallback to styles.css
   const kitCssPath = path.join(baseDir, "styles.kit.css");
   const kitCssAlt1 = path.join(baseDir, "styles.css");
+  const kitCssAlt2 = path.join(baseDir, "style.css");
 
   const kitSystemePath = path.join(baseDir, "kit-systeme.html");
 
-  const [layout, fonts, tokensJson, variantsJson, previewCss0, previewCss1, previewCss2, kitCss0, kitCss1, kitSysteme] =
-    await Promise.all([
-      fs.readFile(layoutPath, "utf-8"),
-      readOptional(fontsPath),
-      readOptional(tokensPath),
-      readOptional(variantsPath),
-      readOptional(previewCssPath),
-      readOptional(previewCssAlt1),
-      readOptional(previewCssAlt2),
-      readOptional(kitCssPath),
-      readOptional(kitCssAlt1),
-      readOptional(kitSystemePath),
-    ]);
+  const layout = (await readOptional(layoutPath)) || "";
+  const fonts = (await readOptional(fontsPath)) || "";
+  const previewCss = (await readOptional(previewCssPath)) || (await readOptional(previewCssAlt1)) || (await readOptional(previewCssAlt2)) || "";
+  const kitCss = (await readOptional(kitCssPath)) || (await readOptional(kitCssAlt1)) || (await readOptional(kitCssAlt2)) || "";
+  const kitSysteme = (await readOptional(kitSystemePath)) || "";
 
-  const tokens: Tokens = typeof tokensJson === "string" && tokensJson.trim() ? (JSON.parse(tokensJson) as Tokens) : {};
-  const variants = typeof variantsJson === "string" && variantsJson.trim() ? JSON.parse(variantsJson) : null;
+  const tokensRaw = (await readOptional(tokensPath)) || "{}";
+  const variantsRaw = (await readOptional(variantsPath)) || "{}";
+
+  let tokens: Tokens = {};
+  let variants: any = {};
+  try {
+    tokens = JSON.parse(tokensRaw) as Tokens;
+  } catch {
+    tokens = {};
+  }
+  try {
+    variants = JSON.parse(variantsRaw) as any;
+  } catch {
+    variants = {};
+  }
 
   return {
     baseDir,
     layout,
-    fonts: fonts || "",
+    fonts,
+    previewCss,
+    kitCss,
+    kitSysteme,
     tokens,
     variants,
-    previewCss: (previewCss0 || previewCss1 || previewCss2 || "") ?? "",
-    kitCss: (kitCss0 || kitCss1 || "") ?? "",
-    kitSysteme: kitSysteme || "",
   };
 }
 
@@ -322,8 +331,7 @@ export async function renderTemplateHtml(
   // ✅ IMPORTANT: in kit mode, scope CSS vars under .tpt-scope (no :root leakage in Systeme.io)
   const baseCss = mode === "kit" ? `.tpt-scope{${cssVars}}` : `:root{${cssVars}}`;
 
-  const css =
-    mode === "kit" ? `${baseCss}\n${files.kitCss || ""}` : `${baseCss}\n${files.previewCss || ""}`;
+  const css = mode === "kit" ? `${baseCss}\n${files.kitCss || ""}` : `${baseCss}\n${files.previewCss || ""}`;
 
   const head = `${files.fonts || ""}`.trim();
   const bodyTemplate = mode === "kit" && files.kitSysteme?.trim() ? files.kitSysteme : files.layout;

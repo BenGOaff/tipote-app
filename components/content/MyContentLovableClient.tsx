@@ -50,6 +50,9 @@ import {
   Video,
   MessageSquare,
   Clock,
+  CheckCircle2,
+  Calendar,
+  CalendarX,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -91,6 +94,15 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
+function toYmdOrEmpty(v: string | null | undefined) {
+  const s = safeString(v).trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const iso = s.split("T")[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  return "";
+}
+
 function normalizeKeyType(type: string | null) {
   const t = safeString(type).toLowerCase();
   if (t.includes("email")) return "email";
@@ -103,59 +115,67 @@ function normalizeKeyType(type: string | null) {
 function normalizeKeyStatus(status: string | null) {
   const s = safeString(status).toLowerCase();
   if (s === "planned") return "scheduled";
-  return s || "draft";
+  if (s === "schedule") return "scheduled";
+  if (!s) return "draft";
+  return s;
 }
 
-function toDateSafe(v: string | null | undefined): Date | null {
-  if (!v) return null;
-
-  // If date-only (YYYY-MM-DD), parse as local date to avoid timezone shifts.
-  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(v);
-  if (m) {
-    const year = Number(m[1]);
-    const month = Number(m[2]);
-    const day = Number(m[3]);
-    const d = new Date(year, month - 1, day);
-    if (Number.isNaN(d.getTime())) return null;
-    return d;
+function formatDate(dateString: string | null) {
+  if (!dateString) return "";
+  try {
+    return format(new Date(dateString), "dd MMMM yyyy", { locale: fr });
+  } catch {
+    return dateString;
   }
-
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
 }
 
-export default function MyContentLovableClient({ initialView, items, error }: Props) {
+export default function MyContentLovableClient({
+  userEmail,
+  initialView,
+  items: initialItems,
+  error,
+}: Props) {
   const router = useRouter();
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
 
-  // dialogs
   const [editingContent, setEditingContent] = useState<ContentListItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ContentListItem | null>(null);
+
+  const [busy, setBusy] = useState<"edit" | "delete" | "plan" | "unplan" | "publish" | null>(null);
+
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [busy, setBusy] = useState<"edit" | "delete" | null>(null);
 
-  const filteredContents = useMemo(() => {
+  const [planningContent, setPlanningContent] = useState<ContentListItem | null>(null);
+  const [planDate, setPlanDate] = useState<string>("");
+
+  const openPlan = (content: ContentListItem) => {
+    setPlanningContent(content);
+    setPlanDate(toYmdOrEmpty(content.scheduled_date));
+  };
+
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return items;
+    if (!q) return initialItems;
 
-    return items.filter((c) => {
-      const title = safeString(c.title).toLowerCase();
+    return initialItems.filter((c) => {
+      const t = safeString(c.title).toLowerCase();
       const body = safeString(c.content).toLowerCase();
-      return title.includes(q) || body.includes(q);
+      const type = safeString(c.type).toLowerCase();
+      const channel = safeString(c.channel).toLowerCase();
+      return t.includes(q) || body.includes(q) || type.includes(q) || channel.includes(q);
     });
-  }, [items, search]);
+  }, [initialItems, search]);
 
   const stats = useMemo(() => {
-    const total = items.length;
-    const published = items.filter((c) => normalizeKeyStatus(c.status) === "published").length;
-    const draft = items.filter((c) => normalizeKeyStatus(c.status) === "draft").length;
-    const scheduled = items.filter((c) => normalizeKeyStatus(c.status) === "scheduled").length;
+    const total = initialItems.length;
+    const published = initialItems.filter((c) => normalizeKeyStatus(c.status) === "published").length;
+    const draft = initialItems.filter((c) => normalizeKeyStatus(c.status) === "draft").length;
+    const scheduled = initialItems.filter((c) => normalizeKeyStatus(c.status) === "scheduled").length;
     return { total, published, draft, scheduled };
-  }, [items]);
+  }, [initialItems]);
 
   const openEdit = (content: ContentListItem) => {
     setEditingContent(content);
@@ -200,11 +220,129 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
     }
   };
 
+  const handleSavePlan = async () => {
+    if (!planningContent) return;
+    if (!planDate) {
+      toast({
+        title: "Date manquante",
+        description: "Choisis une date de planification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBusy("plan");
+    try {
+      const res = await fetch(`/api/content/${planningContent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "scheduled",
+          scheduledDate: planDate,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de planifier le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Planifié ✅", description: "La date de publication a été enregistrée." });
+      setPlanningContent(null);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de planifier le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleUnplan = async (item: ContentListItem) => {
+    setBusy("unplan");
+    try {
+      const res = await fetch(`/api/content/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "draft",
+          scheduledDate: null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de déplanifier le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Déplanifié ✅", description: "Le contenu repasse en brouillon." });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de déplanifier le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleMarkPublished = async (item: ContentListItem) => {
+    setBusy("publish");
+    try {
+      const res = await fetch(`/api/content/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "published",
+          scheduledDate: null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de marquer le contenu comme publié",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Publié ✅", description: "Le statut a été mis à jour." });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de marquer le contenu comme publié",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setBusy("delete");
     try {
-      const res = await fetch(`/api/content/${deleteConfirm.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/content/${deleteConfirm.id}`, {
+        method: "DELETE",
+      });
+
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
@@ -229,239 +367,335 @@ export default function MyContentLovableClient({ initialView, items, error }: Pr
     }
   };
 
-  const groupByDate = (list: ContentListItem[]) => {
-    const groups: Record<string, ContentListItem[]> = {};
-    list.forEach((item) => {
-      const base = toDateSafe(item.created_at) ?? new Date();
-      const date = format(base, "yyyy-MM-dd");
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(item);
-    });
-    return groups;
-  };
+  if (error) {
+    return (
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <main className="flex-1">
+            <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background px-6 py-4">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger />
+                <h1 className="text-lg font-semibold">Mes Contenus</h1>
+              </div>
+            </header>
 
-  const grouped = useMemo(() => groupByDate(filteredContents), [filteredContents]);
+            <div className="p-6">
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
+                <p className="mt-2 text-sm text-rose-600">{error}</p>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Mes Contenus</h1>
+        <main className="flex-1">
+          <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background px-6 py-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger />
+              <h1 className="text-lg font-semibold">Mes Contenus</h1>
             </div>
-            <Link href="/create">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Créer
+
+            <div className="flex items-center gap-2">
+              <Button asChild className="gap-2">
+                <Link href="/create">
+                  <Plus className="w-4 h-4" />
+                  Créer
+                </Link>
               </Button>
-            </Link>
+            </div>
           </header>
 
-          <div className="p-6 max-w-6xl mx-auto space-y-6">
-            {/* Filters & Toggle (Lovable 1:1) */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="p-6 space-y-6">
+            {/* Search + view toggle */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher..."
+                  className="pl-9"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
-                  <List className="w-4 h-4 mr-2" />
+                <Button
+                  variant={view === "list" ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={() => setView("list")}
+                >
+                  <List className="w-4 h-4" />
                   Liste
                 </Button>
+
                 <Button
                   variant={view === "calendar" ? "default" : "outline"}
-                  size="sm"
+                  className="gap-2"
                   onClick={() => setView("calendar")}
                 >
-                  <CalendarDays className="w-4 h-4 mr-2" />
+                  <CalendarDays className="w-4 h-4" />
                   Calendrier
                 </Button>
               </div>
             </div>
 
-            {/* Stats (Lovable 1:1) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <div className="text-sm text-muted-foreground">Total</div>
+                <div className="mt-2 text-3xl font-semibold">{stats.total}</div>
               </Card>
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Brouillons</p>
-                <p className="text-2xl font-bold">{stats.draft}</p>
+                <div className="text-sm text-muted-foreground">Brouillons</div>
+                <div className="mt-2 text-3xl font-semibold">{stats.draft}</div>
               </Card>
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Planifiés</p>
-                <p className="text-2xl font-bold">{stats.scheduled}</p>
+                <div className="text-sm text-muted-foreground">Planifiés</div>
+                <div className="mt-2 text-3xl font-semibold">{stats.scheduled}</div>
               </Card>
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Publiés</p>
-                <p className="text-2xl font-bold">{stats.published}</p>
+                <div className="text-sm text-muted-foreground">Publiés</div>
+                <div className="mt-2 text-3xl font-semibold">{stats.published}</div>
               </Card>
             </div>
 
-            {/* Error banner (Tipote) */}
-            {error ? (
-              <Card className="p-4 border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-100">
-                <p className="text-sm">{error}</p>
-              </Card>
-            ) : null}
+            {/* Content */}
+            <div className="space-y-6">
+              {view === "calendar" ? (
+                // ✅ FIX: ContentCalendarView attend "contents", pas "items"
+                <ContentCalendarView contents={filtered} />
+              ) : (
+                <div className="space-y-6">
+                  {filtered.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground">Aucun contenu trouvé.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-8">
+                      {Object.entries(
+                        filtered.reduce<Record<string, ContentListItem[]>>((acc, item) => {
+                          const key = item.created_at ? formatDate(item.created_at) : "—";
+                          acc[key] = acc[key] || [];
+                          acc[key].push(item);
+                          return acc;
+                        }, {})
+                      )
+                        .sort((a, b) => {
+                          const da = a[0] === "—" ? 0 : new Date(a[0]).getTime();
+                          const db = b[0] === "—" ? 0 : new Date(b[0]).getTime();
+                          return db - da;
+                        })
+                        .map(([day, dayItems]) => (
+                          <div key={day} className="space-y-3">
+                            <div className="text-sm text-muted-foreground">{day}</div>
 
-            {/* Content Display */}
-            {filteredContents.length === 0 ? (
-              <Card className="p-8 text-center">
-                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-bold mb-2">Aucun contenu</h3>
-                <p className="text-muted-foreground mb-4">Commencez par créer votre premier contenu</p>
-                <Link href="/create">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Créer du contenu
-                  </Button>
-                </Link>
-              </Card>
-            ) : view === "calendar" ? (
-              <ContentCalendarView contents={filteredContents} onSelectContent={(content) => openEdit(content)} />
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(grouped)
-                  .sort(([a], [b]) => b.localeCompare(a))
-                  .map(([date, itemsForDate]) => (
-                    <div key={date}>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 capitalize">
-                        {format(toDateSafe(date) ?? new Date(date), "EEEE d MMMM yyyy", { locale: fr })}
-                      </p>
+                            <div className="space-y-3">
+                              {dayItems.map((item) => {
+                                const typeKey = normalizeKeyType(item.type);
+                                const statusKey = normalizeKeyStatus(item.status);
+                                const Icon = typeIcons[typeKey] ?? FileText;
 
-                      <div className="space-y-2">
-                        {itemsForDate.map((item) => {
-                          const Icon = typeIcons[normalizeKeyType(item.type)] || FileText;
-                          const stKey = normalizeKeyStatus(item.status);
-                          const badgeClass = statusColors[stKey] ?? statusColors.draft;
-                          const badgeLabel = statusLabels[stKey] ?? safeString(item.status) ?? "—";
-                          const scheduled = item.scheduled_date ? toDateSafe(item.scheduled_date) : null;
+                                const badgeClasses =
+                                  statusColors[statusKey] ?? "bg-muted text-muted-foreground";
+                                const badgeLabel = statusLabels[statusKey] ?? "—";
 
-                          return (
-                            <Card key={item.id} className="p-4 hover:shadow-md transition-shadow">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                                  <Icon className="w-5 h-5 text-muted-foreground" />
-                                </div>
+                                return (
+                                  <Card key={item.id} className="p-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 rounded-md bg-muted p-2">
+                                          <Icon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium truncate">{safeString(item.title) || "Sans titre"}</p>
+                                        <div className="min-w-0">
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <div className="font-medium truncate">
+                                              {safeString(item.title) || "Sans titre"}
+                                            </div>
+                                            <Badge className={badgeClasses}>{badgeLabel}</Badge>
+                                          </div>
 
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    {safeString(item.channel) ? (
-                                      <span className="capitalize">{safeString(item.channel)}</span>
-                                    ) : null}
+                                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                            {safeString(item.channel) ? (
+                                              <span className="capitalize">{safeString(item.channel)}</span>
+                                            ) : null}
 
-                                    {scheduled ? (
-                                      <>
-                                        <span>•</span>
-                                        <span className="flex items-center gap-1">
-                                          <Clock className="w-3 h-3" />
-                                          {format(scheduled, "d MMM", { locale: fr })}
-                                        </span>
-                                      </>
-                                    ) : null}
-                                  </div>
-                                </div>
+                                            {statusKey === "scheduled" && item.scheduled_date ? (
+                                              <span className="inline-flex items-center gap-1">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {formatDate(item.scheduled_date)}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      </div>
 
-                                <div className="flex items-center gap-2">
-                                  <Badge className={badgeClass}>{badgeLabel}</Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="sm" asChild>
+                                          <Link href={`/contents/${item.id}`}>Voir</Link>
+                                        </Button>
 
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon">
-                                        <MoreVertical className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => openEdit(item)}>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Modifier
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="text-rose-600 focus:text-rose-600"
-                                        onClick={() => setDeleteConfirm(item)}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Supprimer
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-                            </Card>
-                          );
-                        })}
-                      </div>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                              <MoreVertical className="w-4 h-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => openEdit(item)} disabled={busy !== null}>
+                                              <Edit className="w-4 h-4 mr-2" />
+                                              Modifier
+                                            </DropdownMenuItem>
+
+                                            {normalizeKeyStatus(item.status) !== "published" ? (
+                                              <DropdownMenuItem
+                                                onClick={() => handleMarkPublished(item)}
+                                                disabled={busy !== null}
+                                              >
+                                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                Marquer comme publié
+                                              </DropdownMenuItem>
+                                            ) : null}
+
+                                            <DropdownMenuItem onClick={() => openPlan(item)} disabled={busy !== null}>
+                                              <Calendar className="w-4 h-4 mr-2" />
+                                              {normalizeKeyStatus(item.status) === "scheduled"
+                                                ? "Modifier date"
+                                                : "Planifier"}
+                                            </DropdownMenuItem>
+
+                                            {normalizeKeyStatus(item.status) === "scheduled" ? (
+                                              <DropdownMenuItem onClick={() => handleUnplan(item)} disabled={busy !== null}>
+                                                <CalendarX className="w-4 h-4 mr-2" />
+                                                Déplanifier
+                                              </DropdownMenuItem>
+                                            ) : null}
+
+                                            <DropdownMenuItem
+                                              className="text-rose-600 focus:text-rose-600"
+                                              onClick={() => setDeleteConfirm(item)}
+                                              disabled={busy !== null}
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-2" />
+                                              Supprimer
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                  ))}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Edit Dialog (Lovable 1:1) */}
+            <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Modifier le contenu</DialogTitle>
+                  <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Titre</Label>
+                    <Input
+                      id="edit-title"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Titre..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-body">Contenu</Label>
+                    <Textarea
+                      id="edit-body"
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      rows={12}
+                      placeholder="Contenu..."
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
+                    {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Plan Dialog (Lovable-style) */}
+            <Dialog open={!!planningContent} onOpenChange={(open) => (!open ? setPlanningContent(null) : null)}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Planifier le contenu</DialogTitle>
+                  <DialogDescription>Choisis une date de publication. Le statut passera sur “Planifié”.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-2">
+                  <Label htmlFor="plan-date">Date</Label>
+                  <Input id="plan-date" type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleSavePlan} disabled={busy === "plan"}>
+                    {busy === "plan" ? "Enregistrement..." : "Enregistrer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirm Dialog (Lovable 1:1) */}
+            <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
+              <DialogContent className="sm:max-w-[520px]">
+                <DialogHeader>
+                  <DialogTitle>Supprimer le contenu</DialogTitle>
+                  <DialogDescription>
+                    Cette action est irréversible. Le contenu sera supprimé définitivement.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
+                    Annuler
+                  </Button>
+                  <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
+                    {busy === "delete" ? "Suppression..." : "Supprimer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Footer info (email) */}
+            <div className="text-xs text-muted-foreground">
+              Connecté en tant que <span className="font-medium">{userEmail}</span>
+            </div>
           </div>
-
-          {/* Edit Dialog (Lovable 1:1) */}
-          <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Modifier le contenu</DialogTitle>
-                <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Titre</Label>
-                  <Input id="title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="body">Contenu</Label>
-                  <Textarea id="body" value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={10} />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
-                  Annuler
-                </Button>
-                <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
-                  {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Confirm Dialog (Lovable 1:1) */}
-          <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
-            <DialogContent className="sm:max-w-[450px]">
-              <DialogHeader>
-                <DialogTitle>Supprimer le contenu</DialogTitle>
-                <DialogDescription>
-                  Cette action est irréversible. Voulez-vous vraiment supprimer ce contenu ?
-                </DialogDescription>
-              </DialogHeader>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
-                  Annuler
-                </Button>
-                <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
-                  {busy === "delete" ? "Suppression..." : "Supprimer"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </main>
       </div>
     </SidebarProvider>

@@ -81,13 +81,32 @@ function normalizeScheduledDate(v: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-const V2_SEL_WITH_PROMPT_UPDATED = "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at,updated_at";
-const V2_SEL_WITH_PROMPT_NO_UPDATED = "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at";
-const V2_SEL_NO_PROMPT_NO_UPDATED = "id,user_id,type,title,content,status,scheduled_date,channel,tags,meta,created_at";
+const ALLOWED_STATUS = new Set(["draft", "scheduled", "published"]);
+function normalizeStatus(v: unknown): string | null {
+  if (v === null || typeof v === "undefined") return null;
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (!s) return null;
 
-const FR_SEL_WITH_PROMPT_UPDATED = "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at,updated_at";
-const FR_SEL_WITH_PROMPT_NO_UPDATED = "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at";
-const FR_SEL_NO_PROMPT_NO_UPDATED = "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,meta,created_at";
+  // compat anciens libellés éventuels
+  if (s === "planned" || s === "planified" || s === "planifie" || s === "planifié") return "scheduled";
+  if (s === "publish") return "published";
+
+  return s;
+}
+
+const V2_SEL_WITH_PROMPT_UPDATED =
+  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at,updated_at";
+const V2_SEL_WITH_PROMPT_NO_UPDATED =
+  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at";
+const V2_SEL_NO_PROMPT_NO_UPDATED =
+  "id,user_id,type,title,content,status,scheduled_date,channel,tags,meta,created_at";
+
+const FR_SEL_WITH_PROMPT_UPDATED =
+  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at,updated_at";
+const FR_SEL_WITH_PROMPT_NO_UPDATED =
+  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at";
+const FR_SEL_NO_PROMPT_NO_UPDATED =
+  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,meta,created_at";
 
 function toDTOFromV2(row: any): ContentItemDTO {
   return {
@@ -222,6 +241,18 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     body = {};
   }
 
+  // ✅ Validation statut (évite les statuts fantômes)
+  if ("status" in body) {
+    const normalized = normalizeStatus(body.status);
+    if (normalized !== null && !ALLOWED_STATUS.has(normalized)) {
+      return NextResponse.json(
+        { error: `Invalid status. Allowed: draft | scheduled | published` },
+        { status: 400 }
+      );
+    }
+    body.status = normalized;
+  }
+
   const scheduledDate = normalizeScheduledDate(body.scheduledDate);
 
   const tagsArr = asTagsArray(body.tags);
@@ -259,7 +290,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   let v2 = await tryUpdate(baseV2, V2_SEL_WITH_PROMPT_UPDATED);
 
-  if (v2.error && isTagsTypeMismatch(v2.error.message) && ("tags" in body) && tagsCsv) {
+  if (v2.error && isTagsTypeMismatch(v2.error.message) && "tags" in body && tagsCsv) {
     const retry = { ...baseV2, tags: tagsCsv };
     v2 = await tryUpdate(retry, V2_SEL_WITH_PROMPT_UPDATED);
   }
@@ -297,7 +328,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   let fr = await tryUpdate(baseFR, FR_SEL_WITH_PROMPT_UPDATED);
 
-  if (fr.error && isTagsTypeMismatch(fr.error.message) && ("tags" in body) && tagsCsv) {
+  if (fr.error && isTagsTypeMismatch(fr.error.message) && "tags" in body && tagsCsv) {
     const retry = { ...baseFR, tags: tagsCsv };
     fr = await tryUpdate(retry, FR_SEL_WITH_PROMPT_UPDATED);
   }
@@ -337,17 +368,10 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
   }
   const userId = session.user.id;
 
-  const del = await supabase
-    .from("content_item")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
+  const del = await supabase.from("content_item").delete().eq("id", id).eq("user_id", userId);
 
   if (del.error) {
-    return NextResponse.json(
-      { error: del.error.message || "Delete failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: del.error.message || "Delete failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
