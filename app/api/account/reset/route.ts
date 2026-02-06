@@ -1,6 +1,7 @@
 // app/api/account/reset/route.ts
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function isMissingTableOrColumnError(message?: string | null) {
   const m = (message ?? "").toLowerCase();
@@ -31,59 +32,70 @@ async function bestEffortDeleteByUserId(
   }
 }
 
-async function bestEffortResetBusinessProfile(supabase: any, userId: string) {
-  // Objectif: forcer le retour onboarding, même si DELETE est bloqué par RLS.
-  // 1) On essaie de supprimer (ancien comportement)
-  try {
-    const del = await supabase.from("business_profiles").delete().eq("user_id", userId);
-    if (!del?.error) return;
-
-    // Si erreur "table/colonne" => on ne peut pas faire mieux
-    if (isMissingTableOrColumnError(del.error.message)) return;
-
-    // Si RLS interdit le DELETE, on passe en UPDATE (souvent autorisé sur sa propre ligne)
-    console.warn("reset: business_profiles delete blocked, fallback to update", del.error);
-  } catch (e) {
-    console.warn("reset: business_profiles delete threw, fallback to update", e);
-  }
-
-  // 2) Fallback UPDATE best-effort (ne casse pas si colonnes manquent)
+async function bestEffortResetBusinessProfileAdmin(userId: string) {
+  // Objectif: forcer le retour onboarding à coup sûr (bypass RLS via service_role)
+  // On ne supprime pas forcément la ligne: on remet les flags/infos onboarding à zéro.
   const payload: Record<string, any> = {
     onboarding_completed: false,
 
-    // Champs onboarding typiques (best-effort)
+    // Reset diagnostic si présent (vu dans tes rows)
+    diagnostic_completed: false,
+    diagnostic_answers: null,
+    diagnostic_profile: null,
+    diagnostic_summary: null,
+
+    // Reset champs onboarding usuels
     first_name: null,
     country: null,
     niche: null,
     mission: null,
     business_maturity: null,
-    offers_status: null,
+    offers: null,
+    main_goal: null,
     main_goals: null,
-    preferred_content_types: null,
-    tone_preference: null,
+    success_definition: null,
+    biggest_challenge: null,
+    recent_client_feedback: null,
+    biggest_blocker: null,
+    has_offers: null,
 
-    // Si tu as ce champ dans business_profiles (souvent utilisé côté onboarding)
-    primary_activity: null,
+    // Préférences contenu
+    content_preference: null,
+    preferred_tone: null,
+
+    // Persona / offre
+    persona: null,
+    offer_price: null,
+    offer_sales_count: null,
+    offer_sales_page_links: null,
+
+    // Champs onboarding “version”
+    onboarding_version: null,
+    persona_source: null,
   };
 
   try {
-    const upd = await supabase.from("business_profiles").update(payload).eq("user_id", userId);
-    if (!upd?.error) return;
+    const upd = await supabaseAdmin
+      .from("business_profiles")
+      .update(payload)
+      .eq("user_id", userId);
 
-    // Si certaines colonnes n’existent pas, on retry minimal
-    if (isMissingTableOrColumnError(upd.error.message)) {
-      const upd2 = await supabase
-        .from("business_profiles")
-        .update({ onboarding_completed: false })
-        .eq("user_id", userId);
+    if (upd?.error) {
+      // Si certaines colonnes n’existent pas (env diff), on retombe en minimal.
+      if (isMissingTableOrColumnError(upd.error.message)) {
+        const upd2 = await supabaseAdmin
+          .from("business_profiles")
+          .update({ onboarding_completed: false, diagnostic_completed: false })
+          .eq("user_id", userId);
 
-      if (upd2?.error && !isMissingTableOrColumnError(upd2.error.message)) {
-        console.error("reset: business_profiles minimal update failed", upd2.error);
+        if (upd2?.error && !isMissingTableOrColumnError(upd2.error.message)) {
+          console.error("reset: business_profiles minimal update failed", upd2.error);
+        }
+        return;
       }
-      return;
-    }
 
-    console.error("reset: business_profiles update failed", upd.error);
+      console.error("reset: business_profiles update failed", upd.error);
+    }
   } catch (e) {
     console.error("reset: business_profiles update threw", e);
   }
@@ -91,28 +103,32 @@ async function bestEffortResetBusinessProfile(supabase: any, userId: string) {
 
 export async function POST() {
   try {
+    // ✅ Auth via cookies (user session)
     const supabase = await getSupabaseServerClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData.session;
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     /**
      * IMPORTANT — RESET "SOFT" (ONBOARDING)
      * - ✅ On supprime uniquement les données générées / contenus / tâches / stratégie / onboarding
-     * - ❌ On ne touche PAS au plan, aux crédits IA, ni aux infos de compte (profiles, email, etc.)
+     * - ❌ On ne touche PAS aux crédits, abonnement, ni auth user
      *
-     * Donc : pas de RPC "reset_user" ici (trop risqué si elle évolue côté DB).
+     * ✅ On utilise supabaseAdmin (service_role) pour BYPASS RLS
+     * sinon business_profiles.onboarding_completed reste à true (ce que tu observes).
      */
 
     const deletions: Array<{ table: string; column?: string }> = [
       // Onboarding V2 (sessions/messages/facts) — regénérable
-      { table: "onboarding_messages", column: "user_id" }, // si table a user_id (best-effort)
-      { table: "onboarding_facts", column: "user_id" }, // best-effort
+      { table: "onboarding_messages", column: "user_id" }, // best-effort si colonne existe
+      { table: "onboarding_facts", column: "user_id" },
       { table: "onboarding_sessions", column: "user_id" },
 
       // Onboarding / stratégie / pyramides / persona / plan business (regénérables)
@@ -146,8 +162,9 @@ export async function POST() {
       { table: "business_blocks", column: "user_id" },
     ];
 
+    // ✅ Suppression via admin (bypass RLS)
     for (const d of deletions) {
-      await bestEffortDeleteByUserId(supabase, d.table, userId, d.column ?? "user_id");
+      await bestEffortDeleteByUserId(supabaseAdmin, d.table, userId, d.column ?? "user_id");
     }
 
     // Fallback owner_id (certaines tables historiques peuvent utiliser owner_id)
@@ -170,12 +187,11 @@ export async function POST() {
       "onboarding_messages",
     ];
     for (const t of ownerTables) {
-      await bestEffortDeleteByUserId(supabase, t, userId, "owner_id");
+      await bestEffortDeleteByUserId(supabaseAdmin, t, userId, "owner_id");
     }
 
-    // ✅ Reset onboarding : ne pas rester bloqué sur /app
-    // (DELETE si possible, sinon UPDATE onboarding_completed=false)
-    await bestEffortResetBusinessProfile(supabase, userId);
+    // ✅ Forcer le retour onboarding
+    await bestEffortResetBusinessProfileAdmin(userId);
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
