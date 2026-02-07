@@ -1,31 +1,14 @@
 // app/api/onboarding/answers/chat/route.ts
 // Onboarding conversationnel v2 (agent Clarifier)
-// - N'écrase pas l'onboarding existant (answers/complete restent en place)
-// - Stocke la conversation (onboarding_sessions/onboarding_messages)
-// - Stocke des facts propres (onboarding_facts) via RPC upsert_onboarding_fact
-// - Synchronise quelques champs clés vers business_profiles (source de vérité UI) sans écraser par des vides
+// Objectif produit : Tipote DOIT comprendre et enregistrer ce que l'user dit.
 //
-// PATCH (A2) :
-// - Compat "done" (prompt) + "should_finish" (backend) => pas de blocage finish
-// - Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
-//
-// PATCH (DB ALIGNMENT) :
-// - onboarding_sessions: onboarding_version, started_at, meta sont NOT NULL
-// - onboarding_messages: pas de user_id, extracted JSONB NOT NULL
-// - onboarding_facts: confidence TEXT (high|medium|low) + fallback upsert si RPC absente
-//
-// PATCH (A2+ lock activité prioritaire) :
-// - Normalise les keys (lowercase) + normalise les valeurs pour activities_list (array)
-// - Capture directement primary_activity quand l'assistant vient de demander de choisir UNE activité
-//   => évite la dépendance totale à l'extraction IA
-//
-// ✅ PATCH (A2 anti-boucle “tu m’as déjà répondu”) :
-// - Heuristique serveur (ventes) : si l’assistant demande “as-tu déjà vendu / ventes / clients payants”
-//   et que l’utilisateur répond, on infère conversion_status et on l’upsert AVANT appel IA => pas de question répétée.
-//
-// ✅ PATCH (A2 anti-boucle acquisition / trafic) :
-// - Heuristique serveur : si l’assistant demande “d’où vient ton trafic / comment tes clients entendent parler”
-//   et que l’utilisateur répond, on infère acquisition_channels + traffic_source_today AVANT appel IA => pas de question répétée.
+// ✅ Fix qualité (anti-boucle PRO) :
+// 1) Extraction serveur déterministe (canonical keys) sur certaines infos critiques,
+//    + upsert DB vérifié => l'info est réellement "commit" avant de continuer.
+// 2) Prompt renforcé : accusé de compréhension obligatoire + interdiction stricte de répétition.
+// 3) Anti-répétition post-modèle : si l'IA repose une question déjà répondue,
+//    on remplace par une question suivante, MAIS uniquement si le fact est bien enregistré.
+// 4) Debug de confiance : routeVersion + appliedFacts reflètent uniquement des écritures réussies.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -37,6 +20,11 @@ import { buildOnboardingClarifierSystemPrompt } from "@/lib/prompts/onboarding/s
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const ROUTE_VERSION = "onboarding_chat_v2_quality_2026-02-07";
+
+type ChatRole = "assistant" | "user";
+type QuestionCategory = "sales" | "acquisition" | "success" | "primary_activity" | "other";
 
 const BodySchema = z
   .object({
@@ -75,10 +63,6 @@ function safeJsonParse(s: string): any {
   }
 }
 
-function isNonEmptyString(v: unknown): v is string {
-  return typeof v === "string" && v.trim().length > 0;
-}
-
 function normalizeKey(key: string) {
   return String(key || "")
     .trim()
@@ -102,15 +86,80 @@ function normalizeConfidence(c: unknown): "high" | "medium" | "low" {
   return "medium";
 }
 
+function looksFrustrated(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("je viens de te répondre") ||
+    t.includes("tu m'as déjà") ||
+    t.includes("tu m’as déjà") ||
+    t.includes("ça tourne") ||
+    t.includes("passe à la suite") ||
+    t.includes("enchaîne") ||
+    t.includes("enchaine") ||
+    t.includes("putain") ||
+    t.includes("bordel") ||
+    t.includes("mec")
+  );
+}
+
+function detectCategory(text: string): QuestionCategory {
+  const t = (text || "").toLowerCase();
+
+  if (
+    t.includes("réalisé des ventes") ||
+    t.includes("des ventes") ||
+    t.includes("clients payants") ||
+    t.includes("commencé à vendre") ||
+    (t.includes("as-tu déjà") && (t.includes("vend") || t.includes("vente"))) ||
+    t.includes("have you sold") ||
+    t.includes("selling")
+  )
+    return "sales";
+
+  if (
+    t.includes("d'où vient") ||
+    t.includes("d’où vient") ||
+    t.includes("trafic") ||
+    t.includes("tes premiers clients") ||
+    t.includes("entendent parler") ||
+    t.includes("source de trafic") ||
+    t.includes("traffic source") ||
+    t.includes("where do your leads come")
+  )
+    return "acquisition";
+
+  if (
+    t.includes("quand tu sauras") ||
+    t.includes("réussi avec tipote") ||
+    t.includes("mesurer le succès") ||
+    t.includes("comptera le plus") ||
+    t.includes("chiffre d'affaires") ||
+    t.includes("chiffre d’affaires") ||
+    t.includes("nombre de clients") ||
+    t.includes("taille de ta communauté")
+  )
+    return "success";
+
+  if (
+    t.includes("laquelle veux-tu développer en priorité") ||
+    t.includes("laquelle veux-tu prioriser") ||
+    t.includes("parmi celles-ci") ||
+    t.includes("which one do you want to prioritize")
+  )
+    return "primary_activity";
+
+  return "other";
+}
+
 function normalizeFactValue(key: string, value: unknown): any {
   const k = normalizeKey(key);
 
-  if (k === "activities_list") {
+  if (k === "activities_list" || k === "content_channels_priority" || k === "acquisition_channels") {
     if (Array.isArray(value)) {
       const arr = value
         .map((x) => (typeof x === "string" ? x.trim() : ""))
         .filter(Boolean)
-        .slice(0, 8);
+        .slice(0, 10);
       return arr;
     }
     if (typeof value === "string") {
@@ -118,7 +167,7 @@ function normalizeFactValue(key: string, value: unknown): any {
         .split(/\r?\n|,|;|\||•|\u2022/g)
         .map((s) => s.trim())
         .filter(Boolean)
-        .slice(0, 8);
+        .slice(0, 10);
       return parts;
     }
   }
@@ -126,37 +175,18 @@ function normalizeFactValue(key: string, value: unknown): any {
   return value;
 }
 
-function isSalesQuestion(text: string) {
-  const t = (text || "").toLowerCase();
-  return (
-    t.includes("déjà commencé") ||
-    t.includes("as-tu déjà") ||
-    t.includes("réalisé des ventes") ||
-    t.includes("des ventes") ||
-    t.includes("clients payants") ||
-    t.includes("commencé à vendre") ||
-    t.includes("selling") ||
-    t.includes("have you sold")
-  );
-}
-
-function looksFrustrated(text: string) {
-  const t = (text || "").toLowerCase();
-  return (
-    t.includes("je viens de te répondre") ||
-    t.includes("tu m'as déjà") ||
-    t.includes("ça tourne") ||
-    t.includes("passe à la suite") ||
-    t.includes("mec") ||
-    t.includes("putain") ||
-    t.includes("bordel")
-  );
+function hasNonEmptyFact(knownFacts: Record<string, unknown>, k: string): boolean {
+  const v = knownFacts[k];
+  if (v === null || v === undefined) return false;
+  if (typeof v === "string") return v.trim().length > 0;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === "object") return Object.keys(v as any).length > 0;
+  return true;
 }
 
 function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inconsistent" | "not_selling" | "unknown" {
   const t = (answer || "").toLowerCase();
 
-  // not selling
   if (
     t.includes("pas encore") ||
     t.includes("pas vendu") ||
@@ -170,27 +200,25 @@ function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inco
     return "not_selling";
   }
 
-  // selling well signals
   if (
     t.includes("régulier") ||
     t.includes("régulièrement") ||
     t.includes("ça vend bien") ||
     t.includes("beaucoup") ||
     t.includes("plein de") ||
-    /(\b)([2-9]\d{3,}|\d{1,3}\s?k)(\b)/i.test(answer) || // 2000 / 50k / etc
-    /(\b)\d+\s?(€|eur|euros)(\b)/i.test(answer)
+    /(\b)\d+\s?(€|eur|euros)(\b)/i.test(answer) ||
+    /(\b)\d+\s?k\s*\/\s*mois(\b)/i.test(answer)
   ) {
     return "selling_well";
   }
 
-  // a few / test sales => inconsistent
   if (
     t.includes("quelques") ||
-    t.includes("1") ||
     t.includes("un seul") ||
     t.includes("une vente") ||
     t.includes("deux ventes") ||
     t.includes("beta") ||
+    t.includes("bêta") ||
     t.includes("test") ||
     t.includes("en préparation") ||
     t.includes("je commence") ||
@@ -200,23 +228,6 @@ function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inco
   }
 
   return "unknown";
-}
-
-function isAcquisitionQuestion(text: string) {
-  const t = (text || "").toLowerCase();
-  return (
-    t.includes("d'où vient") ||
-    t.includes("d’où vient") ||
-    t.includes("vient principalement ton trafic") ||
-    t.includes("tes premiers clients") ||
-    t.includes("entendent parler") ||
-    t.includes("comment tes premiers clients") ||
-    t.includes("source de trafic") ||
-    t.includes("trafic aujourd'hui") ||
-    t.includes("trafic aujourd’hui") ||
-    t.includes("traffic source") ||
-    t.includes("where do your leads come")
-  );
 }
 
 function extractAcquisitionChannels(answer: string): string[] {
@@ -237,8 +248,8 @@ function extractAcquisitionChannels(answer: string): string[] {
     t.includes("linkedin") ||
     t.includes("facebook") ||
     t.includes("threads") ||
-    t.includes("x ") ||
-    t.includes("twitter")
+    t.includes("twitter") ||
+    t.includes("x ")
   )
     push("social");
   if (t.includes("youtube")) push("youtube");
@@ -248,7 +259,7 @@ function extractAcquisitionChannels(answer: string): string[] {
   if (t.includes("pub") || t.includes("ads") || t.includes("publicit")) push("ads");
   if (t.includes("parten") || t.includes("collab") || t.includes("affiliation") || t.includes("affiliate")) push("partnerships");
 
-  return out.slice(0, 6);
+  return out.slice(0, 8);
 }
 
 function inferTrafficSourceTodayFromChannels(
@@ -258,43 +269,72 @@ function inferTrafficSourceTodayFromChannels(
   if (set.has("ads")) return "ads";
   if (set.has("seo")) return "seo";
   if (set.has("partnerships")) return "partnerships";
-  // bouche à oreille + social + youtube + blog => organic_social (au sens "organique")
-  if (set.has("social") || set.has("word_of_mouth") || set.has("youtube") || set.has("blog") || set.has("email"))
-    return "organic_social";
+  if (set.has("social") || set.has("word_of_mouth") || set.has("youtube") || set.has("blog") || set.has("email")) return "organic_social";
   return "none";
 }
 
-function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: any }>) {
+function extractSuccessMetrics(answer: string): Record<string, any> | null {
+  const t = (answer || "").toLowerCase();
+  const payload: Record<string, any> = {};
+
+  const criteria: string[] = [];
+  if (t.includes("chiffre") || t.includes("ca") || t.includes("revenu") || t.includes("mrr")) criteria.push("revenue");
+  if (t.includes("clients")) criteria.push("clients");
+  if (t.includes("communaut") || t.includes("audience")) criteria.push("audience");
+
+  if (criteria.length) payload.criteria = Array.from(new Set(criteria));
+
+  // clients_target
+  const mClients = answer.match(/(\d{1,4})\s*(clients?|abonnés?|abonnes?)/i);
+  if (mClients?.[1]) {
+    const n = Number(mClients[1]);
+    if (Number.isFinite(n)) payload.clients_target = n;
+  }
+
+  // mrr_target_monthly: 10k/mois, 10 000€/mois
+  const mK = answer.match(/(\d{1,3})\s*k\s*\/\s*mois/i) || answer.match(/(\d{1,3})\s*k\s*mois/i);
+  if (mK?.[1]) {
+    const n = Number(mK[1]);
+    if (Number.isFinite(n)) payload.mrr_target_monthly = n * 1000;
+  } else {
+    const mEuro = answer.match(/(\d[\d\s]{1,9})\s*(€|eur|euros)\s*\/\s*mois/i);
+    if (mEuro?.[1]) {
+      const n = Number(mEuro[1].replace(/\s/g, ""));
+      if (Number.isFinite(n)) payload.mrr_target_monthly = n;
+    }
+  }
+
+  return Object.keys(payload).length ? payload : null;
+}
+
+function buildBusinessProfilePatchFromFacts(knownFacts: Record<string, unknown>) {
+  // On patch uniquement les champs qui existent déjà dans la logique UI/récap.
+  // On ne doit jamais écraser avec des vides.
   const patch: Record<string, any> = {};
 
-  for (const f of facts) {
-    const k = normalizeKey(f.key);
-    const v = f.value;
+  const setIf = (k: string, v: any) => {
+    if (v === null || v === undefined) return;
+    if (typeof v === "string" && !v.trim()) return;
+    patch[k] = v;
+  };
 
-    // Champs connus pour UI dashboard / récap
-    if (k === "first_name" && typeof v === "string" && v.trim()) patch.first_name = v.trim().slice(0, 80);
-    if (k === "country" && typeof v === "string" && v.trim()) patch.country = v.trim().slice(0, 80);
-    if (k === "niche" && typeof v === "string" && v.trim()) patch.niche = v.trim().slice(0, 200);
-    if (k === "primary_activity" && typeof v === "string" && v.trim()) patch.primary_activity = v.trim().slice(0, 200);
+  setIf("primary_activity", typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]).slice(0, 200) : undefined);
 
-    // Align prompt key -> DB/UI
-    if (k === "revenue_goal_monthly") {
-      const num = typeof v === "number" ? v : typeof v === "string" ? Number(String(v).replace(/[^\d.]/g, "")) : NaN;
-      if (Number.isFinite(num)) patch.revenue_goal_monthly = num;
-    }
+  // traffic_source_today (enum)
+  setIf("traffic_source_today", typeof knownFacts["traffic_source_today"] === "string" ? knownFacts["traffic_source_today"] : undefined);
 
-    if (k === "time_available_hours_week") {
-      const num = typeof v === "number" ? v : typeof v === "string" ? Number(String(v).replace(/[^\d.]/g, "")) : NaN;
-      if (Number.isFinite(num)) patch.weekly_hours = num;
-    }
+  // has_offers / conversion status are useful for dashboard
+  setIf("has_offers", typeof knownFacts["has_offers"] === "boolean" ? knownFacts["has_offers"] : undefined);
 
-    if (k === "offers" && v && typeof v === "object") patch.offers = v;
-  }
+  // Optional: keep conversion_status in profile if column exists
+  setIf("conversion_status", typeof knownFacts["conversion_status"] === "string" ? knownFacts["conversion_status"] : undefined);
 
   return patch;
 }
 
 async function updateThenInsertBusinessProfile(supabase: any, userId: string, patch: Record<string, any>): Promise<void> {
+  if (!patch || Object.keys(patch).length === 0) return;
+
   const row: Record<string, any> = {
     user_id: userId,
     ...patch,
@@ -310,6 +350,41 @@ async function updateThenInsertBusinessProfile(supabase: any, userId: string, pa
   if (ins.error) {
     console.warn("[OnboardingChatV2] updateThenInsertBusinessProfile failed:", ins.error);
   }
+}
+
+function nextQuestionFromChecklist(knownFacts: Record<string, unknown>, locale: "fr" | "en"): string | null {
+  // On n'utilise ceci que si l'IA tente de répéter une question déjà répondue.
+  // Donc: on avance UNIQUEMENT quand le fact existe.
+  const fr = locale === "fr";
+
+  if (hasNonEmptyFact(knownFacts, "activities_list") && !hasNonEmptyFact(knownFacts, "primary_activity")) {
+    const list = (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string").slice(0, 6);
+    if (list.length >= 2) {
+      return fr
+        ? `OK, j’ai noté tes différentes idées.\n- ${list.join("\n- ")}\n\nLaquelle tu veux développer en priorité (une seule) ?`
+        : `OK, I noted your different ideas.\n- ${list.join("\n- ")}\n\nWhich one do you want to prioritize (just one)?`;
+    }
+  }
+
+  if (!hasNonEmptyFact(knownFacts, "conversion_status")) {
+    return fr
+      ? "OK. Aujourd’hui, est-ce que tu as déjà des ventes (même quelques-unes) ou c’est encore en préparation ?"
+      : "OK. Today, do you already have sales (even a few), or is it still in preparation?";
+  }
+
+  if (!hasNonEmptyFact(knownFacts, "acquisition_channels")) {
+    return fr
+      ? "OK. D’où viennent surtout tes premiers contacts aujourd’hui (réseaux sociaux, bouche à oreille, SEO, partenariats, autre) ?"
+      : "OK. Where do most of your first leads come from (social, word-of-mouth, SEO, partnerships, other)?";
+  }
+
+  if (!hasNonEmptyFact(knownFacts, "success_metrics")) {
+    return fr
+      ? "OK. Quand tu sauras que tu as réussi, ce sera plutôt grâce au chiffre d’affaires, au nombre de clients, à la communauté… ou autre ?"
+      : "OK. When you know you’ve succeeded, will it be revenue, clients, audience… or something else?";
+  }
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -334,7 +409,7 @@ export async function POST(req: NextRequest) {
           onboarding_version: "v2",
           status: "active",
           started_at: new Date().toISOString(),
-          meta: {},
+          meta: { route_version: ROUTE_VERSION },
         })
         .select("id")
         .maybeSingle();
@@ -344,10 +419,20 @@ export async function POST(req: NextRequest) {
       }
       sessionId = String(created.id);
     } else {
-      const { data: s, error } = await supabase.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId).maybeSingle();
+      const { data: s, error } = await supabase.from("onboarding_sessions").select("id,user_id,status,meta").eq("id", sessionId).maybeSingle();
 
       if (error || !s?.id) return NextResponse.json({ error: "Invalid session" }, { status: 400 });
       if (String(s.user_id) !== String(userId)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+      // best-effort: store current route version in meta
+      try {
+        const meta = (s as any)?.meta && typeof (s as any).meta === "object" ? (s as any).meta : {};
+        if (meta.route_version !== ROUTE_VERSION) {
+          await supabase.from("onboarding_sessions").update({ meta: { ...meta, route_version: ROUTE_VERSION } }).eq("id", sessionId);
+        }
+      } catch {
+        // ignore
+      }
     }
 
     // 2) store user message
@@ -364,7 +449,7 @@ export async function POST(req: NextRequest) {
     const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
       supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId),
-      supabase.from("onboarding_messages").select("role,content,created_at").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(24),
+      supabase.from("onboarding_messages").select("role,content,created_at").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(60),
     ]);
 
     const knownFacts: Record<string, unknown> = {};
@@ -374,10 +459,13 @@ export async function POST(req: NextRequest) {
       knownFacts[k] = normalizeFactValue(k, (f as any).value);
     }
 
+    const appliedFacts: Array<{ key: string; confidence: string }> = [];
+
     async function upsertOneFact(fact: { key: string; value: unknown; confidence: "high" | "medium" | "low"; source: string }): Promise<boolean> {
       const key = normalizeKey(fact.key).slice(0, 80);
       const value = normalizeFactValue(key, fact.value);
 
+      // RPC first (if exists)
       try {
         const rpc = await supabase.rpc("upsert_onboarding_fact", {
           p_user_id: userId,
@@ -386,13 +474,16 @@ export async function POST(req: NextRequest) {
           p_confidence: fact.confidence,
           p_source: fact.source,
         });
-
-        if (!rpc.error) return true;
+        if (!rpc.error) {
+          appliedFacts.push({ key, confidence: fact.confidence });
+          knownFacts[key] = value;
+          return true;
+        }
       } catch {
         // ignore
       }
 
-      // fallback upsert direct (best-effort)
+      // direct upsert fallback
       try {
         const { error } = await supabase.from("onboarding_facts").upsert(
           {
@@ -405,8 +496,11 @@ export async function POST(req: NextRequest) {
           },
           { onConflict: "user_id,key" },
         );
-
-        if (!error) return true;
+        if (!error) {
+          appliedFacts.push({ key, confidence: fact.confidence });
+          knownFacts[key] = value;
+          return true;
+        }
       } catch {
         // ignore
       }
@@ -414,77 +508,56 @@ export async function POST(req: NextRequest) {
       return false;
     }
 
-    // ---- ✅ PATCH anti-boucle ventes : inférer conversion_status si on vient de répondre à la question ventes
-    try {
-      const convKey = "conversion_status";
-      const already = knownFacts[convKey];
-      const hist = Array.isArray(history) ? history : [];
+    const hist = Array.isArray(history) ? history : [];
+    const prevAssistantText = String([...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "");
+    const prevCategory = detectCategory(prevAssistantText);
 
-      // previous assistant msg (before the one we just inserted)
-      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
-
-      if (!already && isSalesQuestion(String(prevAssistant))) {
-        // Si le user est agacé (“je t’ai répondu”), on tente aussi sur le dernier message user précédent
-        const lastUserBeforeThis = [...hist]
+    const userMsg = String(body.message || "");
+    const answerToAnalyze = looksFrustrated(userMsg)
+      ? [...hist]
           .reverse()
           .filter((m: any) => m?.role === "user")
           .slice(0, 3)
           .map((m: any) => String(m?.content ?? ""))
-          .join("\n\n");
+          .join("\n\n")
+      : userMsg;
 
-        const answerToAnalyze = looksFrustrated(body.message) ? lastUserBeforeThis : body.message;
-
-        const inferred = inferConversionStatusFromAnswer(String(answerToAnalyze || ""));
-        if (inferred !== "unknown") {
-          const ok = await upsertOneFact({ key: convKey, value: inferred, confidence: "medium", source: "heuristic_sales_answer" });
-          if (ok) knownFacts[convKey] = inferred;
-        }
+    // ✅ Extraction serveur déterministe (comprendre + enregistrer)
+    // On ne se limite pas au "prevCategory", on le fait en best-effort dès qu'on voit une info exploitable.
+    // Important: on n'avance jamais "à l'aveugle" — on n'utilise ces valeurs que si upsert réussi.
+    // Sales
+    if (!hasNonEmptyFact(knownFacts, "conversion_status")) {
+      const inferred = inferConversionStatusFromAnswer(answerToAnalyze);
+      if (inferred !== "unknown") {
+        await upsertOneFact({ key: "conversion_status", value: inferred, confidence: "high", source: "server_extract_sales" });
       }
-    } catch {
-      // fail-open
     }
 
-    // ---- ✅ PATCH anti-boucle acquisition / trafic : inférer acquisition_channels + traffic_source_today
-    try {
-      const acqKey = "acquisition_channels";
-      const trafficKey = "traffic_source_today";
-      const alreadyAcq = knownFacts[acqKey];
-      const alreadyTraffic = knownFacts[trafficKey];
-      const hist = Array.isArray(history) ? history : [];
-      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
-
-      if ((!alreadyAcq || !alreadyTraffic) && isAcquisitionQuestion(String(prevAssistant))) {
-        const lastUserBeforeThis = [...hist]
-          .reverse()
-          .filter((m: any) => m?.role === "user")
-          .slice(0, 3)
-          .map((m: any) => String(m?.content ?? ""))
-          .join("\n\n");
-
-        const answerToAnalyze = looksFrustrated(body.message) ? lastUserBeforeThis : body.message;
-        const channels = extractAcquisitionChannels(String(answerToAnalyze || ""));
-
-        if (!alreadyAcq && channels.length > 0) {
-          const ok = await upsertOneFact({ key: acqKey, value: channels, confidence: "medium", source: "heuristic_acquisition_answer" });
-          if (ok) knownFacts[acqKey] = channels;
-        }
-
-        if (!alreadyTraffic) {
+    // Acquisition
+    if (!hasNonEmptyFact(knownFacts, "acquisition_channels")) {
+      const channels = extractAcquisitionChannels(answerToAnalyze);
+      if (channels.length > 0) {
+        const ok = await upsertOneFact({ key: "acquisition_channels", value: channels, confidence: "high", source: "server_extract_acquisition" });
+        if (ok && !hasNonEmptyFact(knownFacts, "traffic_source_today")) {
           const traffic = inferTrafficSourceTodayFromChannels(channels);
-          if (traffic && traffic !== "none") {
-            const ok2 = await upsertOneFact({ key: trafficKey, value: traffic, confidence: "medium", source: "heuristic_acquisition_answer" });
-            if (ok2) knownFacts[trafficKey] = traffic;
+          if (traffic !== "none") {
+            await upsertOneFact({ key: "traffic_source_today", value: traffic, confidence: "medium", source: "server_extract_acquisition" });
           }
         }
       }
-    } catch {
-      // fail-open
     }
 
-    // ---- existing: auto-capture activities_list from last user message if multiple items (confidence low)
+    // Success metrics
+    if (!hasNonEmptyFact(knownFacts, "success_metrics")) {
+      const metrics = extractSuccessMetrics(answerToAnalyze);
+      if (metrics) {
+        await upsertOneFact({ key: "success_metrics", value: metrics, confidence: "high", source: "server_extract_success" });
+      }
+    }
+
+    // Activities list (if user lists multiple items)
     try {
-      const txt = String(body.message || "");
-      const raw = txt
+      const raw = userMsg
         .split(/\r?\n|,|;|\||•|\u2022/g)
         .map((s) => s.trim())
         .filter(Boolean);
@@ -497,37 +570,31 @@ export async function POST(req: NextRequest) {
         if (!uniq.some((u) => u.toLowerCase() === cleaned.toLowerCase())) uniq.push(cleaned);
       }
 
-      if (uniq.length >= 2) {
-        const ok = await upsertOneFact({ key: "activities_list", value: uniq.slice(0, 6), confidence: "low", source: "user_message_parse" });
-        if (ok) knownFacts["activities_list"] = uniq.slice(0, 6);
+      if (uniq.length >= 2 && !hasNonEmptyFact(knownFacts, "activities_list")) {
+        await upsertOneFact({ key: "activities_list", value: uniq.slice(0, 6), confidence: "medium", source: "server_extract_activities" });
       }
     } catch {
-      // fail-open
+      // ignore
     }
 
-    // ---- existing: capture primary_activity when assistant asked to pick one (lock)
+    // Primary activity (only if assistant asked and user answered a single choice)
     try {
-      const hist = Array.isArray(history) ? history : [];
-      const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
-      const prevAssistantLower = String(prevAssistant || "").toLowerCase();
-
-      const askedPrimary =
-        prevAssistantLower.includes("laquelle veux-tu développer en priorité") ||
-        prevAssistantLower.includes("laquelle veux-tu prioriser") ||
-        prevAssistantLower.includes("parmi celles-ci") ||
-        prevAssistantLower.includes("which one do you want to prioritize");
-
-      const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
-
-      if (askedPrimary && activities.length >= 2 && !knownFacts["primary_activity"]) {
-        const candidate = String(body.message || "").trim();
-        if (candidate && candidate.length > 0 && candidate.length <= 120 && !candidate.includes("\n")) {
-          const ok = await upsertOneFact({ key: "primary_activity", value: candidate, confidence: "high", source: "user_choice" });
-          if (ok) knownFacts["primary_activity"] = candidate;
+      if (prevCategory === "primary_activity" && !hasNonEmptyFact(knownFacts, "primary_activity")) {
+        const candidate = userMsg.trim();
+        if (candidate && candidate.length <= 120 && !candidate.includes("\n")) {
+          await upsertOneFact({ key: "primary_activity", value: candidate, confidence: "high", source: "server_extract_primary_activity" });
         }
       }
     } catch {
-      // fail-open
+      // ignore
+    }
+
+    // Patch business_profiles (best-effort, no overwrite by empty)
+    try {
+      const patch = buildBusinessProfilePatchFromFacts(knownFacts);
+      await updateThenInsertBusinessProfile(supabase, userId, patch);
+    } catch {
+      // ignore
     }
 
     // Contexte unifié (facts + profil) (fail-open)
@@ -545,13 +612,20 @@ export async function POST(req: NextRequest) {
       userCountry: typeof (bp as any)?.country === "string" ? (bp as any).country : null,
     });
 
+    // Prompt: on met explicitement l'obligation d'accusé de compréhension + anti-répétition.
     const userPrompt = JSON.stringify(
       {
-        goal: "Collect missing onboarding facts with minimal friction. Ask only one short question.",
+        goal:
+          "Understand, extract and persist facts. " +
+          "Your message MUST start with a 1-sentence acknowledgement of what the user just said, then ask 1 new question. " +
+          "NEVER repeat a question already answered in known_facts or conversation_history.",
         known_facts: knownFacts,
         business_profile_snapshot: bp ?? null,
-        conversation_history: (history ?? []).map((m: any) => ({ role: m.role, content: m.content })),
+        conversation_history: (history ?? []).map((m: any) => ({ role: m.role as ChatRole, content: m.content })),
         user_context_text: userContextText || null,
+        route_version: ROUTE_VERSION,
+        previous_question_category: prevCategory,
+        user_frustrated: looksFrustrated(userMsg),
       },
       null,
       2,
@@ -570,7 +644,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: system },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.35,
+      temperature: 0.25,
       max_tokens: 900,
     });
 
@@ -578,64 +652,54 @@ export async function POST(req: NextRequest) {
     const parsed = safeJsonParse(raw);
     const out = AiResponseSchema.parse(parsed);
 
-    let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
-
-    // 4) apply facts + patch business_profiles
-    const appliedFacts: Array<{ key: string; confidence: string }> = [];
-
+    // Appliquer facts IA (uniquement si upsert réussi)
     const toUpsert = (out.facts || [])
       .map((f) => {
         const rawKey = typeof f.key === "string" ? f.key : String((f as any).key ?? "");
         const key = normalizeKey(rawKey).slice(0, 80);
-
         const rawValue = (f as any).value ?? null;
         const value = normalizeFactValue(key, rawValue);
-
-        return {
-          key,
-          value,
-          confidence: normalizeConfidence((f as any).confidence),
-          source: typeof (f as any).source === "string" && (f as any).source.trim() ? (f as any).source.trim().slice(0, 80) : "onboarding_chat",
-        };
+        const confidence = normalizeConfidence((f as any).confidence);
+        const source =
+          typeof (f as any).source === "string" && (f as any).source.trim() ? (f as any).source.trim().slice(0, 80) : "onboarding_chat";
+        return { key, value, confidence, source };
       })
-      .filter((f) => isNonEmptyString(f.key));
+      .filter((f) => f.key && f.key.length > 0);
 
     for (const f of toUpsert) {
-      const ok = await upsertOneFact({ key: f.key, value: f.value, confidence: f.confidence, source: f.source });
-      if (ok) {
-        appliedFacts.push({ key: f.key, confidence: f.confidence });
-        knownFacts[f.key] = f.value;
-      }
+      await upsertOneFact({ key: f.key, value: f.value, confidence: f.confidence, source: f.source });
     }
 
-    // Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
-    try {
-      const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
-      const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]) : "";
+    // Anti-répétition post-modèle (PRO) :
+    // Si l'IA tente de reposer une question déjà répondue, on propose la prochaine question utile.
+    // MAIS seulement si le fact est bien enregistré (donc présent dans knownFacts).
+    let finalAssistantMessage = out.message;
+    let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
 
-      if (activities.length >= 2 && !primary) {
+    const aiCategory = detectCategory(finalAssistantMessage);
+    const answeredSales = hasNonEmptyFact(knownFacts, "conversion_status");
+    const answeredAcq = hasNonEmptyFact(knownFacts, "acquisition_channels");
+    const answeredSuccess = hasNonEmptyFact(knownFacts, "success_metrics");
+
+    if ((aiCategory === "sales" && answeredSales) || (aiCategory === "acquisition" && answeredAcq) || (aiCategory === "success" && answeredSuccess)) {
+      const next = nextQuestionFromChecklist(knownFacts, locale);
+      if (next) {
+        finalAssistantMessage = next;
         shouldFinish = false;
       }
-    } catch {
-      // ignore
     }
 
-    // Patch business_profiles (best-effort)
-    try {
-      const patch = buildBusinessProfilePatchFromFacts(Object.entries(knownFacts).map(([key, value]) => ({ key, value })));
-      if (Object.keys(patch).length > 0) {
-        await updateThenInsertBusinessProfile(supabase, userId, patch);
-      }
-    } catch {
-      // ignore
+    // Fail-safe: si activities_list existe et primary_activity manque, on ne termine jamais
+    if (hasNonEmptyFact(knownFacts, "activities_list") && !hasNonEmptyFact(knownFacts, "primary_activity")) {
+      shouldFinish = false;
     }
 
-    // 5) store assistant message
+    // store assistant message
     const { error: insertAssistErr } = await supabase.from("onboarding_messages").insert({
       session_id: sessionId,
       role: "assistant",
-      content: out.message,
-      extracted: { facts: toUpsert },
+      content: finalAssistantMessage,
+      extracted: { facts: toUpsert, category: aiCategory, route_version: ROUTE_VERSION },
       created_at: new Date().toISOString(),
     });
 
@@ -643,9 +707,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       sessionId,
-      message: out.message,
+      message: finalAssistantMessage,
       appliedFacts,
       shouldFinish,
+      routeVersion: ROUTE_VERSION,
     });
   } catch (err: any) {
     console.error("[OnboardingChatV2] error:", err);
