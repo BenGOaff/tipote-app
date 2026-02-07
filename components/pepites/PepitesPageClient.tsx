@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -29,7 +35,11 @@ type SummaryRes = {
 function formatDateFR(iso: string) {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric" });
+    return d.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
     return "";
   }
@@ -59,15 +69,68 @@ function FlipPepiteCard(props: {
   onSeen?: (userPepiteId: string) => void;
 }) {
   const { item, highlight, onSeen } = props;
+
   const [flipped, setFlipped] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+
+  const frontRef = useRef<HTMLDivElement | null>(null);
+  const backRef = useRef<HTMLDivElement | null>(null);
+
+  const title = item.pepite?.title ?? "Pépite";
+  const body = item.pepite?.body ?? "";
 
   useEffect(() => {
     // Si déjà vue, on peut démarrer “ouverte” si c’est la carte highlight
     if (highlight && item.seenAt) setFlipped(true);
   }, [highlight, item.seenAt]);
 
-  const title = item.pepite?.title ?? "Pépite";
-  const body = item.pepite?.body ?? "";
+  const recomputeHeight = () => {
+    const front = frontRef.current;
+    const back = backRef.current;
+    if (!front || !back) return;
+
+    // offsetHeight inclut padding / borders -> parfait pour fixer le container
+    const h1 = front.offsetHeight || 0;
+    const h2 = back.offsetHeight || 0;
+    const next = Math.max(h1, h2);
+
+    if (next > 0) setMeasuredHeight(next);
+  };
+
+  // Mesure initiale + à chaque flip (le contenu visible change)
+  useLayoutEffect(() => {
+    recomputeHeight();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, body, flipped]);
+
+  // Mesure live si le contenu change (font loading, resize, etc.)
+  useEffect(() => {
+    const front = frontRef.current;
+    const back = backRef.current;
+    if (!front || !back) return;
+
+    let raf: number | null = null;
+    const schedule = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => recomputeHeight());
+    };
+
+    schedule();
+
+    const ro = new ResizeObserver(() => schedule());
+    ro.observe(front);
+    ro.observe(back);
+
+    const onResize = () => schedule();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      ro.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, body]);
 
   async function handleFlip() {
     const next = !flipped;
@@ -97,10 +160,11 @@ function FlipPepiteCard(props: {
       title="Cliquer pour retourner"
     >
       <div
-        className={[
-          "relative w-full h-[180px] sm:h-[200px]",
-          "[perspective:1000px]",
-        ].join(" ")}
+        className={["relative w-full", "[perspective:1000px]"].join(" ")}
+        style={{
+          // ✅ La carte s’adapte à la plus grande face (front/back) = plus de débordement
+          height: measuredHeight ? `${measuredHeight}px` : undefined,
+        }}
       >
         <div
           className={[
@@ -110,66 +174,85 @@ function FlipPepiteCard(props: {
           ].join(" ")}
         >
           {/* Face avant */}
-          <Card
+          <div
+            ref={frontRef}
             className={[
-              "absolute inset-0 rounded-2xl border bg-card shadow-sm",
-              "p-5 flex flex-col justify-between",
+              "absolute inset-0",
               "[backface-visibility:hidden]",
-              highlight ? "border-primary/30 bg-primary/5" : "",
             ].join(" ")}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateFR(item.assignedAt)}
+            <Card
+              className={[
+                "h-full rounded-2xl border bg-card shadow-sm",
+                "p-5 flex flex-col justify-between",
+                highlight ? "border-primary/30 bg-primary/5" : "",
+              ].join(" ")}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateFR(item.assignedAt)}
+                  </p>
+
+                  {/* ✅ Titre non tronqué */}
+                  <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
+                    {title}
+                  </h3>
+                </div>
+
+                <div className="relative flex items-center shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  {!item.seenAt ? (
+                    <span className="ml-2 text-xs font-medium text-primary">✨</span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 mt-4">
+                <p className="text-sm text-muted-foreground">
+                  {item.seenAt ? "Déjà ouverte" : "Cliquer pour découvrir"}
                 </p>
-                <h3 className="mt-1 text-base font-semibold leading-snug line-clamp-2">
-                  {title}
-                </h3>
+                <span className="text-xs text-muted-foreground shrink-0">↻</span>
               </div>
-
-              <div className="relative flex items-center">
-                <Sparkles className="h-5 w-5 text-primary" />
-                {!item.seenAt ? (
-                  <span className="ml-2 text-xs font-medium text-primary">✨</span>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {item.seenAt ? "Déjà ouverte" : "Cliquer pour découvrir"}
-              </p>
-              <span className="text-xs text-muted-foreground">↻</span>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
           {/* Face arrière */}
-          <Card
+          <div
+            ref={backRef}
             className={[
-              "absolute inset-0 rounded-2xl border bg-card shadow-sm",
-              "p-5",
+              "absolute inset-0",
               "[transform:rotateY(180deg)]",
               "[backface-visibility:hidden]",
-              highlight ? "border-primary/30" : "",
             ].join(" ")}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateFR(item.assignedAt)}
-                </p>
-                <h3 className="mt-1 text-base font-semibold leading-snug line-clamp-2">
-                  {title}
-                </h3>
-              </div>
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
+            <Card
+              className={[
+                "h-full rounded-2xl border bg-card shadow-sm",
+                "p-5",
+                highlight ? "border-primary/30" : "",
+              ].join(" ")}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateFR(item.assignedAt)}
+                  </p>
 
-            <div className="mt-4 text-sm leading-relaxed text-foreground whitespace-pre-wrap space-y-1">
-              {enhanceForDisplay(body)}
-            </div>
-          </Card>
+                  {/* ✅ Titre non tronqué */}
+                  <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
+                    {title}
+                  </h3>
+                </div>
+                <Sparkles className="h-5 w-5 text-primary shrink-0" />
+              </div>
+
+              {/* ✅ Le texte dicte la hauteur de la carte */}
+              <div className="mt-4 text-sm leading-relaxed text-foreground whitespace-pre-wrap space-y-1">
+                {enhanceForDisplay(body)}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </button>
@@ -180,6 +263,9 @@ export default function PepitesPageClient() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<PepiteItem[]>([]);
   const [current, setCurrent] = useState<PepiteItem | null>(null);
+
+  // ✅ admin gate (users ne voient pas le bouton)
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Admin add
   const [adminOpen, setAdminOpen] = useState(false);
@@ -209,10 +295,9 @@ export default function PepitesPageClient() {
       ]);
 
       const sJson = (await sRes.json()) as SummaryRes;
-      const lJson = (await lRes.json()) as any;
+      const lJson = (await lRes.json().catch(() => ({}))) as any;
 
       const list: PepiteItem[] = (lJson?.ok ? lJson.items : []) ?? [];
-
       setItems(list);
 
       // current depuis summary (peut venir d’une assignation “due”)
@@ -238,15 +323,32 @@ export default function PepitesPageClient() {
 
   useEffect(() => {
     refreshAll();
+
+    // admin status (silent)
+    (async () => {
+      try {
+        const res = await fetch("/api/pepites/admin/status", { cache: "no-store" });
+        const json = (await res.json().catch(() => ({}))) as any;
+        setIsAdmin(Boolean(json?.ok && json?.isAdmin));
+      } catch {
+        setIsAdmin(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSeen(userPepiteId: string) {
     setItems((prev) =>
-      prev.map((it) => (it.userPepiteId === userPepiteId ? { ...it, seenAt: new Date().toISOString() } : it)),
+      prev.map((it) =>
+        it.userPepiteId === userPepiteId
+          ? { ...it, seenAt: new Date().toISOString() }
+          : it,
+      ),
     );
     setCurrent((prev) =>
-      prev && prev.userPepiteId === userPepiteId ? { ...prev, seenAt: new Date().toISOString() } : prev,
+      prev && prev.userPepiteId === userPepiteId
+        ? { ...prev, seenAt: new Date().toISOString() }
+        : prev,
     );
   }
 
@@ -297,65 +399,74 @@ export default function PepitesPageClient() {
             Rafraîchir
           </Button>
 
-          <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Ajouter une pépite</DialogTitle>
-              </DialogHeader>
+          {isAdmin ? (
+            <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </DialogTrigger>
 
-              <div className="space-y-3">
-                {adminError ? (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    {adminError}
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Ajouter une pépite</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-3">
+                  {adminError ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      {adminError}
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Titre (exact)</label>
+                    <Input
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      placeholder="Titre…"
+                    />
                   </div>
-                ) : null}
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Titre (exact)</label>
-                  <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Titre…" />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Texte (exact)</label>
+                    <Textarea
+                      value={newBody}
+                      onChange={(e) => setNewBody(e.target.value)}
+                      placeholder="Colle ici ton texte…"
+                      className="min-h-[200px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Rien n’est reformulé. Le fun (gras) est uniquement visuel côté UI.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" onClick={() => setAdminOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={handleCreatePepite}
+                      disabled={saving || !newTitle.trim() || !newBody.trim()}
+                    >
+                      {saving ? "Enregistrement…" : "Publier"}
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Texte (exact)</label>
-                  <Textarea
-                    value={newBody}
-                    onChange={(e) => setNewBody(e.target.value)}
-                    placeholder="Colle ici ton texte…"
-                    className="min-h-[200px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Rien n’est reformulé. Le fun (gras/emoji) est uniquement visuel côté UI.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" onClick={() => setAdminOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button onClick={handleCreatePepite} disabled={saving || !newTitle.trim() || !newBody.trim()}>
-                    {saving ? "Enregistrement…" : "Publier"}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Si tu n’es pas sur un email @tipote.com, l’API renverra “forbidden”.
-                </p>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </div>
       </div>
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="h-[200px] rounded-2xl border bg-card/50 animate-pulse" />
+            <Card
+              key={i}
+              className="h-[200px] rounded-2xl border bg-card/50 animate-pulse"
+            />
           ))}
         </div>
       ) : sorted.length === 0 ? (
@@ -365,7 +476,9 @@ export default function PepitesPageClient() {
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Aucune pépite reçue pour l’instant</h3>
+              <h3 className="text-base font-semibold">
+                Aucune pépite reçue pour l’instant
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Reviens plus tard… la première arrive automatiquement ✨
               </p>
@@ -373,7 +486,7 @@ export default function PepitesPageClient() {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
           {sorted.map((it) => (
             <FlipPepiteCard
               key={it.userPepiteId}

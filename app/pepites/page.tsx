@@ -23,7 +23,7 @@ export default async function PepitesPage() {
             <div className="flex flex-col">
               <h1 className="text-lg font-semibold">Pépites</h1>
               <p className="text-sm text-muted-foreground">
-                Tes idées “surprise” — tu ne vois que celles que tu as reçues ✨
+                Des idées et tips à tester (ou pas) ! ✨
               </p>
             </div>
           </div>
