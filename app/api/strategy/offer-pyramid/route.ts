@@ -720,6 +720,83 @@ async function persistPersonaBestEffort(params: {
 
 /**
  * -----------------------
+ * GET (for onboarding UI)
+ * -----------------------
+ * Retourne:
+ * - shouldGeneratePyramids: boolean (no offer + not affiliate)
+ * - offer_pyramids: pyramids array (if any)
+ * - selected_offer_pyramid_index: number|null
+ * - offer_mode: "affiliate" | "existing_offer" | "none"
+ */
+export async function GET(_req: Request) {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+
+    if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
+    const userId = session.user.id;
+
+    // business_profile (best-effort)
+    const { data: businessProfile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
+
+    // onboarding_facts (best-effort)
+    const onboardingFacts: Record<string, unknown> = {};
+    try {
+      const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      for (const r of rows ?? []) {
+        if (!r?.key) continue;
+        onboardingFacts[String((r as any).key)] = (r as any).value;
+      }
+    } catch {
+      // ignore
+    }
+
+    const businessModel = cleanString((onboardingFacts as any)["business_model"], 40).toLowerCase();
+    const isAffiliate =
+      businessModel === "affiliate" ||
+      businessModel === "affiliation" ||
+      businessModel === "affiliate_marketing" ||
+      businessModel === "affiliate-marketing";
+
+    const hasOffersEffective =
+      (onboardingFacts as any)["has_offers"] === true ||
+      (businessProfile as any)?.has_offers === true ||
+      (Array.isArray((businessProfile as any)?.offers) && (businessProfile as any).offers.length > 0);
+
+    const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
+    const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
+
+    const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    const planJson = (planRow?.plan_json ?? null) as AnyRecord | null;
+
+    const offer_pyramids = planJson ? asArray((planJson as any).offer_pyramids) : [];
+    const selected_offer_pyramid_index =
+      typeof (planJson as any)?.selected_offer_pyramid_index === "number"
+        ? (planJson as any).selected_offer_pyramid_index
+        : typeof (planJson as any)?.selected_pyramid_index === "number"
+          ? (planJson as any).selected_pyramid_index
+          : null;
+
+    return NextResponse.json(
+      {
+        success: true,
+        offer_mode: offerMode,
+        shouldGeneratePyramids,
+        offer_pyramids,
+        selected_offer_pyramid_index,
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error("Unhandled error in GET /api/strategy/offer-pyramid:", err);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}
+
+
+/**
+ * -----------------------
  * PATCH
  * -----------------------
  */

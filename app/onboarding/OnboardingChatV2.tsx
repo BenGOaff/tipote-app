@@ -11,8 +11,15 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
-// ✅ Recap modal (shadcn)
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+// ✅ shadcn dialogs
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type ChatRole = "assistant" | "user";
 
@@ -34,6 +41,36 @@ type ApiReply = {
 };
 
 type ProfileRow = Record<string, any> | null;
+
+/**
+ * ✅ Offer pyramids (uniquement si: user n'a pas d'offre ET n'est pas affilié)
+ * Le backend doit renvoyer un flag: shouldGeneratePyramids (ou should_generate_pyramids)
+ * sur GET /api/strategy/offer-pyramid
+ */
+type Offer = {
+  title?: string;
+  format?: string;
+  price?: number;
+  composition?: string;
+  purpose?: string;
+  insight?: string;
+};
+
+type OfferPyramid = {
+  id?: string;
+  name?: string;
+  strategy_summary?: string;
+  lead_magnet?: Offer | null;
+  low_ticket?: Offer | null;
+  high_ticket?: Offer | null;
+};
+
+type OfferPyramidState = {
+  shouldGeneratePyramids: boolean;
+  offerMode?: string | null;
+  pyramids: OfferPyramid[];
+  selectedIndex: number | null;
+};
 
 export type OnboardingChatV2Props = {
   firstName?: string | null;
@@ -157,19 +194,35 @@ type BootStep = {
 const BOOT_STEPS: BootStep[] = [
   {
     title: "Je prépare ton espace Tipote…",
-    lines: ["Je mets en place ton profil et ton tableau de bord.", "Je récupère et organise ce que tu m’as partagé.", "Je prépare les bases pour ta stratégie."],
+    lines: [
+      "Je mets en place ton profil et ton tableau de bord.",
+      "Je récupère et organise ce que tu m’as partagé.",
+      "Je prépare les bases pour ta stratégie.",
+    ],
   },
   {
     title: "Je construis ta stratégie…",
-    lines: ["Je clarifie ton axe principal et ton positionnement.", "Je structure tes objectifs et ton plan d’action.", "Je prépare un résumé stratégique simple et exploitable."],
+    lines: [
+      "Je clarifie ton axe principal et ton positionnement.",
+      "Je structure tes objectifs et ton plan d’action.",
+      "Je prépare un résumé stratégique simple et exploitable.",
+    ],
   },
   {
     title: "Je crée tes premières tâches…",
-    lines: ["Je transforme ton plan en tâches concrètes.", "Je priorise ce qui aura le plus d’impact au début.", "Je prépare un calendrier de mise en action."],
+    lines: [
+      "Je transforme ton plan en tâches concrètes.",
+      "Je priorise ce qui aura le plus d’impact au début.",
+      "Je prépare un calendrier de mise en action.",
+    ],
   },
   {
     title: "Je personnalise ta communication…",
-    lines: ["Je repère le ton qui te correspond.", "Je prépare tes premiers repères de style (simple, clair).", "Je prépare les fondations pour tes contenus."],
+    lines: [
+      "Je repère le ton qui te correspond.",
+      "Je prépare tes premiers repères de style (simple, clair).",
+      "Je prépare les fondations pour tes contenus.",
+    ],
   },
 ];
 
@@ -184,7 +237,49 @@ function RecapRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-xl border px-3 py-2">
       <div className="text-sm text-muted-foreground">{label}</div>
-      <div className={cn("text-sm font-medium text-right", v ? "text-foreground" : "text-muted-foreground")}>{v || "—"}</div>
+      <div className={cn("text-sm font-medium text-right", v ? "text-foreground" : "text-muted-foreground")}>
+        {v || "—"}
+      </div>
+    </div>
+  );
+}
+
+function formatPrice(p?: number) {
+  if (typeof p !== "number" || !Number.isFinite(p)) return "";
+  if (p === 0) return "Gratuit";
+  return `${Math.round(p)}€`;
+}
+
+function pyramidTitle(p: OfferPyramid, idx: number) {
+  const name = (p?.name ?? "").trim();
+  return name || `Pyramide ${idx + 1}`;
+}
+
+function OfferBlock({ title, offer }: { title: string; offer?: Offer | null }) {
+  if (!offer) return null;
+  const tt = safeStr(offer.title, 80);
+  const fmt = safeStr(offer.format, 80);
+  const comp = safeStr(offer.composition, 160);
+  const purp = safeStr(offer.purpose, 160);
+  const ins = safeStr(offer.insight, 200);
+  const price = formatPrice(offer.price);
+
+  const hasAny = Boolean(tt || fmt || comp || purp || ins || price);
+  if (!hasAny) return null;
+
+  return (
+    <div className="rounded-xl border p-3">
+      <div className="text-sm font-semibold">{title}</div>
+      <div className="mt-1 space-y-1 text-sm text-muted-foreground">
+        {tt ? <div className="text-foreground">{tt}</div> : null}
+        <div className="flex flex-wrap gap-2">
+          {fmt ? <span className="rounded-lg bg-muted px-2 py-0.5 text-xs text-foreground">{fmt}</span> : null}
+          {price ? <span className="rounded-lg bg-muted px-2 py-0.5 text-xs text-foreground">{price}</span> : null}
+        </div>
+        {comp ? <div>• {comp}</div> : null}
+        {purp ? <div>• {purp}</div> : null}
+        {ins ? <div className="text-foreground/90">💡 {ins}</div> : null}
+      </div>
     </div>
   );
 }
@@ -195,7 +290,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const firstName = (props.firstName ?? "").trim();
 
-  const [sessionId, setSessionId] = useState<string | null>(() => (props.initialSessionId ? String(props.initialSessionId) : null));
+  const [sessionId, setSessionId] = useState<string | null>(() =>
+    props.initialSessionId ? String(props.initialSessionId) : null,
+  );
 
   const [messages, setMessages] = useState<ChatMsg[]>(() => {
     const initial = Array.isArray(props.initialMessages) ? props.initialMessages : null;
@@ -227,6 +324,17 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const [recapLoading, setRecapLoading] = useState(false);
   const [recapProfile, setRecapProfile] = useState<ProfileRow>(null);
 
+  // ✅ Offer pyramids selection modal state
+  const [showPyramids, setShowPyramids] = useState(false);
+  const [pyramidsState, setPyramidsState] = useState<OfferPyramidState>({
+    shouldGeneratePyramids: false,
+    offerMode: null,
+    pyramids: [],
+    selectedIndex: null,
+  });
+  const [pyramidChoice, setPyramidChoice] = useState<number>(0);
+  const pyramidsResolverRef = useRef<((idx: number) => void) | null>(null);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -251,7 +359,10 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const needsPrimaryChoice = useMemo(() => isPrimaryActivityPrompt(lastAssistantMessage), [lastAssistantMessage]);
 
-  const isPrimaryChoiceLockActive = useMemo(() => needsPrimaryChoice && activityCandidates.length >= 2, [needsPrimaryChoice, activityCandidates.length]);
+  const isPrimaryChoiceLockActive = useMemo(
+    () => needsPrimaryChoice && activityCandidates.length >= 2,
+    [needsPrimaryChoice, activityCandidates.length],
+  );
 
   const primaryChoiceMatched = useMemo(() => {
     if (!isPrimaryChoiceLockActive) return null;
@@ -287,7 +398,56 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     }
   }
 
-  // ✅ FINALIZE — pyramides -> selection -> full strategy -> sync tasks -> /app
+  async function loadOfferPyramidsBestEffort(): Promise<OfferPyramidState | null> {
+    try {
+      const res = await getJSON<any>("/api/strategy/offer-pyramid");
+      const state: OfferPyramidState = {
+        shouldGeneratePyramids: Boolean(res?.shouldGeneratePyramids ?? res?.should_generate_pyramids ?? false),
+        offerMode: (res?.offerMode ?? res?.offer_mode ?? null) as any,
+        pyramids: Array.isArray(res?.offerPyramids ?? res?.offer_pyramids) ? (res?.offerPyramids ?? res?.offer_pyramids) : [],
+        selectedIndex:
+          typeof (res?.selectedIndex ?? res?.selected_offer_pyramid_index) === "number"
+            ? (res?.selectedIndex ?? res?.selected_offer_pyramid_index)
+            : null,
+      };
+      return state;
+    } catch {
+      return null;
+    }
+  }
+
+  async function ensureOfferPyramidsExist(): Promise<OfferPyramidState | null> {
+    // 1) try read
+    let st = await loadOfferPyramidsBestEffort();
+
+    // 2) if backend says "should generate", ensure we have pyramids (idempotent)
+    if (st?.shouldGeneratePyramids && (st.pyramids?.length ?? 0) < 1) {
+      try {
+        await postJSON<any>("/api/strategy/offer-pyramid", {});
+      } catch {
+        // ignore
+      }
+      st = await loadOfferPyramidsBestEffort();
+    }
+
+    return st;
+  }
+
+  function waitForPyramidChoice(): Promise<number> {
+    return new Promise((resolve) => {
+      pyramidsResolverRef.current = resolve;
+    });
+  }
+
+  function confirmPyramidChoice() {
+    const idx = pyramidChoice;
+    const resolver = pyramidsResolverRef.current;
+    pyramidsResolverRef.current = null;
+    setShowPyramids(false);
+    if (typeof resolver === "function") resolver(idx);
+  }
+
+  // ✅ FINALIZE — si nécessaire: générer + montrer 3 pyramides -> user choisit -> patch selectedIndex -> /api/strategy -> tasks -> /app
   const finalize = async () => {
     if (isFinalizing) return;
 
@@ -305,20 +465,27 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // Step 1: strategy (pyramides + starter plan) — idempotent
+      // Step 1: Offer pyramids (ONLY if backend says shouldGeneratePyramids)
       setBootStepIndex(1);
       setBootLineIndex(0);
-      try {
-        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
-      } catch {
-        // fail-open
-      }
 
-      // auto-select pyramid (index 0)
-      try {
-        await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", { selectedIndex: 0 });
-      } catch {
-        // fail-open
+      let selectedIdx: number | null = null;
+
+      const st = await ensureOfferPyramidsExist();
+      if (st?.shouldGeneratePyramids && (st.pyramids?.length ?? 0) >= 1) {
+        // Always show 3 pyramids to choose from (like before)
+        setPyramidsState(st);
+        setPyramidChoice(typeof st.selectedIndex === "number" ? st.selectedIndex : 0);
+        setShowPyramids(true);
+
+        selectedIdx = await waitForPyramidChoice();
+
+        // Persist choice
+        try {
+          await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", { selectedIndex: selectedIdx });
+        } catch {
+          // fail-open
+        }
       }
 
       // Step 2: generate full strategy (persona + plan 90j) — idempotent
@@ -339,7 +506,11 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
+      ampTrack("tipote_onboarding_completed", {
+        onboarding_version: "v2_chat",
+        pyramids_shown: Boolean(st?.shouldGeneratePyramids),
+        pyramid_selected_index: selectedIdx,
+      });
 
       await new Promise((r) => setTimeout(r, 900));
       router.replace("/app");
@@ -381,7 +552,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     setMessages((prev) => [...prev, { role: "user", content: rawText, at: nowIso() }]);
 
     try {
-      // ✅ Bon endpoint
+      // ✅ endpoint chat
       const reply = await postJSON<ApiReply>("/api/onboarding/answers/chat", {
         message: rawText,
         sessionId: sessionId ?? undefined,
@@ -438,6 +609,74 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
+      {/* ✅ Offer pyramids choice modal */}
+      <Dialog
+        open={showPyramids}
+        onOpenChange={(v) => {
+          // pendant le "waitForPyramidChoice", on évite la fermeture accidentelle
+          if (!v) return;
+          setShowPyramids(v);
+        }}
+      >
+        <DialogContent className="sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Choisis la pyramide d’offres qui te convient</DialogTitle>
+            <DialogDescription>
+              Tipote a généré 3 stratégies d’offres basées sur tes infos. Choisis celle qui te ressemble le plus : on l’intègre ensuite à ta stratégie et tes tâches.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {(pyramidsState.pyramids ?? []).slice(0, 3).map((p, idx) => {
+              const active = pyramidChoice === idx;
+              const summary = safeStr((p as any)?.strategy_summary, 380);
+              return (
+                <button
+                  key={(p as any)?.id ?? `${idx}`}
+                  type="button"
+                  onClick={() => setPyramidChoice(idx)}
+                  className={cn(
+                    "text-left rounded-2xl border p-4 transition",
+                    active ? "border-primary ring-2 ring-primary/30" : "hover:border-foreground/20",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-semibold">{pyramidTitle(p, idx)}</div>
+                      {summary ? <div className="mt-1 text-sm text-muted-foreground">{summary}</div> : null}
+                    </div>
+
+                    <div
+                      className={cn(
+                        "mt-1 h-5 w-5 rounded-full border flex items-center justify-center",
+                        active ? "border-primary" : "border-muted-foreground/30",
+                      )}
+                    >
+                      {active ? <div className="h-3 w-3 rounded-full bg-primary" /> : null}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <OfferBlock title="Lead magnet" offer={(p as any)?.lead_magnet ?? null} />
+                    <OfferBlock title="Low ticket" offer={(p as any)?.low_ticket ?? null} />
+                    <OfferBlock title="High ticket" offer={(p as any)?.high_ticket ?? null} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              onClick={() => confirmPyramidChoice()}
+            >
+              Valider ce choix
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ✅ Recap modal */}
       <Dialog
         open={showRecap}
@@ -516,7 +755,8 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               <div className="flex-1">
                 <div className="text-lg font-semibold">{currentBoot?.title ?? "Je prépare tout…"}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {currentBoot?.lines?.[bootLineIndex] ?? "Je mets en place les prochaines étapes. Tu arrives sur ton dashboard dans un instant."}
+                  {currentBoot?.lines?.[bootLineIndex] ??
+                    "Je mets en place les prochaines étapes. Tu arrives sur ton dashboard dans un instant."}
                 </div>
 
                 <div className="mt-4 space-y-2">
@@ -527,7 +767,11 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                         <div
                           className={cn(
                             "h-2.5 w-2.5 rounded-full",
-                            state === "done" ? "bg-primary" : state === "active" ? "bg-primary/60 animate-pulse" : "bg-muted-foreground/30",
+                            state === "done"
+                              ? "bg-primary"
+                              : state === "active"
+                                ? "bg-primary/60 animate-pulse"
+                                : "bg-muted-foreground/30",
                           )}
                         />
                         <div className={cn(state === "todo" ? "text-muted-foreground" : "text-foreground")}>{s.title}</div>
@@ -536,7 +780,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                   })}
                 </div>
 
-                <div className="mt-5 text-xs text-muted-foreground">Tu vas voir apparaître ton plan, tes premières tâches, et ton espace personnalisé.</div>
+                <div className="mt-5 text-xs text-muted-foreground">
+                  Tu vas voir apparaître ton plan, tes premières tâches, et ton espace personnalisé.
+                </div>
               </div>
             </div>
           </div>
@@ -586,7 +832,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         <div className="mt-6 space-y-3">
           {needsPrimaryChoice ? (
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">Réponds juste avec le nom de l’activité à prioriser (une seule).</div>
+              <div className="text-xs text-muted-foreground">
+                Réponds juste avec le nom de l’activité à prioriser (une seule).
+              </div>
 
               {activityCandidates.length >= 2 ? (
                 <div className="flex flex-wrap gap-2">
@@ -607,7 +855,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               ) : null}
 
               {activityCandidates.length >= 2 && input.trim().length > 0 && !primaryChoiceMatched ? (
-                <div className="text-xs text-destructive">Choisis une option ci-dessus (ou écris exactement l’une des activités).</div>
+                <div className="text-xs text-destructive">
+                  Choisis une option ci-dessus (ou écris exactement l’une des activités).
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -616,7 +866,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
-            disabled={isSending || isDone || isFinalizing || showRecap}
+            disabled={isSending || isDone || isFinalizing || showRecap || showPyramids}
             className="min-h-[90px]"
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -627,7 +877,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           />
 
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">{isDone ? "Onboarding terminé ✅" : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}</div>
+            <div className="text-xs text-muted-foreground">
+              {isDone ? "Onboarding terminé ✅" : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
+            </div>
 
             {isDone ? (
               <Button

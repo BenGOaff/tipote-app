@@ -1,28 +1,43 @@
 // app/api/strategy/route.ts
+// ✅ POST idempotent :
+// - Génère un "starter plan" (strategy_summary + goals) si manquant (best-effort)
+// - Si user = (non affilié) ET (pas d'offre) : génère 3 pyramides si manquantes
+// - Si pyramide choisie : génère stratégie complète (persona + plan 90j)
+// - Si affilié OU user a déjà une offre : génère une stratégie complète sans inventer d'offres
+//
+// ⚠️ IMPORTANT : l'onboarding front appelle :
+// 1) POST /api/strategy (génère pyramides + starter plan)
+// 2) PATCH /api/strategy/offer-pyramid (sélection)
+// 3) POST /api/strategy (génère full strategy)
+
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120; // mets 180 ou 300 si besoin
+export const maxDuration = 120; // monte à 180/300 si besoin
 
 type AnyRecord = Record<string, any>;
 
 function isRecord(v: unknown): v is AnyRecord {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
+
 function asRecord(v: unknown): AnyRecord | null {
   return isRecord(v) ? (v as AnyRecord) : null;
 }
+
 function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
+
 function cleanString(v: unknown, maxLen = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
   if (!s) return "";
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
+
 function toNumber(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
@@ -31,15 +46,18 @@ function toNumber(v: unknown): number | null {
   }
   return null;
 }
+
 function parseMoneyFromText(raw: unknown): number | null {
   const s = cleanString(raw, 240);
   if (!s) return null;
   const compact = s.replace(/\s+/g, "").toLowerCase();
+
   const mK = compact.match(/(\d+(?:[\.,]\d+)?)k/);
   if (mK) {
     const n = Number(mK[1].replace(",", "."));
     return Number.isFinite(n) ? Math.round(n * 1000) : null;
   }
+
   const m = compact.match(/(\d+(?:[\.,]\d+)?)/);
   if (!m) return null;
   const n = Number(m[1].replace(",", "."));
@@ -65,7 +83,11 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   return "";
 }
 
-// ✅ light retrieval / relevance scoring for resource_chunks (coach-level prompts without blowing tokens)
+/**
+ * -----------------------
+ * Light retrieval helpers (resource_chunks)
+ * -----------------------
+ */
 const STOPWORDS = new Set([
   "le",
   "la",
@@ -175,10 +197,7 @@ function normalizeTextForSearch(v: unknown): string {
 function extractKeywords(text: string, max = 28): string[] {
   const t = normalizeTextForSearch(text);
   if (!t) return [];
-  const words = t
-    .split(" ")
-    .map((w) => w.trim())
-    .filter(Boolean);
+  const words = t.split(" ").map((w) => w.trim()).filter(Boolean);
 
   const counts = new Map<string, number>();
   for (const w0 of words) {
@@ -232,10 +251,7 @@ function pickTopResourceChunks(params: {
       const text = normalizeTextForSearch(cleanString(raw, 8000));
       let score = 0;
 
-      for (const kw of kwSet) {
-        if (!kw) continue;
-        if (text.includes(kw)) score += 2;
-      }
+      for (const kw of kwSet) if (kw && text.includes(kw)) score += 2;
 
       const tags = asArray(rec.tags ?? rec.keywords ?? []).map((x) => normalizeTextForSearch(cleanString(x, 40)));
       for (const t of tags) if (kwSet.has(t)) score += 2;
@@ -250,7 +266,7 @@ function pickTopResourceChunks(params: {
     })
     .sort((a, b) => b.score - a.score);
 
-  const top = scored
+  return scored
     .filter((x) => x.score > 0)
     .slice(0, maxChunks)
     .map((x) => {
@@ -267,8 +283,6 @@ function pickTopResourceChunks(params: {
         content: cleanString(raw, 1800),
       };
     });
-
-  return top;
 }
 
 function summarizeResourcesForPrompt(resources: unknown[], max = 12): AnyRecord[] {
@@ -289,6 +303,11 @@ function summarizeResourcesForPrompt(resources: unknown[], max = 12): AnyRecord[
   });
 }
 
+/**
+ * -----------------------
+ * DB best-effort helpers
+ * -----------------------
+ */
 async function persistStrategyRow(params: {
   supabase: any;
   userId: string;
@@ -296,6 +315,7 @@ async function persistStrategyRow(params: {
   planJson: AnyRecord;
 }): Promise<void> {
   const { supabase, userId, businessProfile, planJson } = params;
+
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
     const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
@@ -334,6 +354,7 @@ async function getOrCreateStrategyIdBestEffort(params: {
   planJson: AnyRecord;
 }): Promise<string | null> {
   const { supabase, userId, businessProfile, planJson } = params;
+
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
     const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
@@ -369,6 +390,11 @@ async function getOrCreateStrategyIdBestEffort(params: {
   }
 }
 
+/**
+ * -----------------------
+ * Pyramids normalization + persistence
+ * -----------------------
+ */
 function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
   if (!offer) return null;
   const title = cleanString(offer.title ?? offer.nom ?? offer.name, 160);
@@ -388,25 +414,11 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
-    asRecord(p?.lead_magnet) ??
-    asRecord(p?.leadMagnet) ??
-    asRecord(p?.lead) ??
-    asRecord(p?.lead_offer) ??
-    null;
-
+    asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
   const low =
-    asRecord(p?.low_ticket) ??
-    asRecord(p?.lowTicket) ??
-    asRecord(p?.mid) ??
-    asRecord(p?.middle_offer) ??
-    null;
-
+    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
   const high =
-    asRecord(p?.high_ticket) ??
-    asRecord(p?.highTicket) ??
-    asRecord(p?.high) ??
-    asRecord(p?.high_offer) ??
-    null;
+    asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
   return {
     id,
@@ -461,7 +473,7 @@ async function persistOfferPyramidsBestEffort(params: {
         const main_outcome = cleanString(o.insight ?? o.main_outcome ?? "", 2000);
 
         const price = toNumber(o.price);
-        const row: AnyRecord = {
+        rows.push({
           user_id: userId,
           ...(strategyId ? { strategy_id: strategyId } : {}),
           pyramid_run_id: pyramidRunId,
@@ -479,9 +491,7 @@ async function persistOfferPyramidsBestEffort(params: {
             offer: o,
           },
           updated_at: new Date().toISOString(),
-        };
-
-        rows.push(row);
+        });
       });
     });
 
@@ -500,9 +510,15 @@ async function persistOfferPyramidsBestEffort(params: {
   }
 }
 
+/**
+ * -----------------------
+ * Tasks / Persona helpers
+ * -----------------------
+ */
 function normalizeTaskTitle(v: AnyRecord): string {
   return cleanString(v.title ?? v.task ?? v.name, 180);
 }
+
 function normalizeTaskItem(v: AnyRecord | null): AnyRecord | null {
   if (!v) return null;
   const title = normalizeTaskTitle(v);
@@ -513,6 +529,7 @@ function normalizeTaskItem(v: AnyRecord | null): AnyRecord | null {
 
   return { title, ...(due_date ? { due_date } : {}), ...(priority ? { priority } : {}) };
 }
+
 function normalizeTasksByTimeframe(raw: AnyRecord | null): AnyRecord {
   const grouped = asRecord(raw) ?? {};
   const d30 = asArray(grouped.d30).map((x) => normalizeTaskItem(asRecord(x))).filter(Boolean).slice(0, 30);
@@ -526,6 +543,7 @@ function addDaysISO(base: Date, days: number): string {
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
 function buildFallbackTasksByTimeframe(
   base: Date,
   context: { niche?: string; mainGoal?: string } = {},
@@ -769,7 +787,6 @@ ${JSON.stringify(
       .filter(Boolean);
 
     if (!strategy_summary || strategy_goals.length === 0) return null;
-
     return { strategy_summary, strategy_goals, dashboard_focus };
   } catch (e) {
     console.error("generateStarterStrategyGoals error:", e);
@@ -793,7 +810,7 @@ export async function POST(req: Request) {
     const acceptLang = (req.headers.get("accept-language") || "").toLowerCase();
     const locale: "fr" | "en" = acceptLang.includes("fr") ? "fr" : "en";
 
-    // 0) Plan existant
+    // 0) Lire plan existant (idempotence)
     const { data: existingPlan, error: existingPlanError } = await supabase
       .from("business_plan")
       .select("plan_json")
@@ -803,6 +820,19 @@ export async function POST(req: Request) {
     if (existingPlanError) console.error("Error checking existing business_plan:", existingPlanError);
 
     let existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
+
+    const existingOfferPyramids = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
+    const existingSelectedIndex =
+      typeof existingPlanJson?.selected_offer_pyramid_index === "number"
+        ? existingPlanJson.selected_offer_pyramid_index
+        : typeof existingPlanJson?.selected_pyramid_index === "number"
+          ? existingPlanJson.selected_pyramid_index
+          : null;
+
+    const hasSelected = typeof existingSelectedIndex === "number";
+    const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
+    const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
+    const hasStarter = starterPlanLooksUseful(existingPlanJson);
 
     // 1) business_profile
     const { data: businessProfile, error: profileError } = await supabase
@@ -825,15 +855,15 @@ export async function POST(req: Request) {
     // 2) onboarding_facts (best-effort)
     const onboardingFacts: Record<string, unknown> = {};
     try {
-      const { data: rows, error } = await supabase
+      const { data: onboardingFactsRows, error: onboardingFactsError } = await supabase
         .from("onboarding_facts")
         .select("key,value,confidence,updated_at")
         .eq("user_id", userId);
 
-      if (error) {
-        console.error("Error reading onboarding_facts:", error);
+      if (onboardingFactsError) {
+        console.error("Error reading onboarding_facts:", onboardingFactsError);
       } else {
-        for (const row of rows ?? []) {
+        for (const row of onboardingFactsRows ?? []) {
           if (!row?.key) continue;
           onboardingFacts[String((row as any).key)] = (row as any).value;
         }
@@ -842,7 +872,7 @@ export async function POST(req: Request) {
       console.error("onboarding_facts read failed:", e);
     }
 
-    // ✅ DERIVE MODE (pas d’erreurs TS + pas de noUnusedLocals)
+    // ✅ Derive mode (SOURCE OF TRUTH for "generate pyramids or not")
     const businessModel = cleanString((onboardingFacts as any)["business_model"], 40).toLowerCase();
     const isAffiliate =
       businessModel === "affiliate" ||
@@ -858,10 +888,10 @@ export async function POST(req: Request) {
     const offersSatisfactionRaw = cleanString((onboardingFacts as any)["offers_satisfaction"], 40).toLowerCase();
     const isSatisfiedWithOffers = ["yes", "y", "true", "satisfied", "ok", "okay", "oui"].includes(offersSatisfactionRaw);
 
-    // ✅ RÈGLE: pyramides seulement si PAS affilié ET PAS d’offre.
+    // ✅ Rule: Generate pyramids ONLY if NOT affiliate AND user has NO offer
     const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
 
-    // 3) resources + chunks (best-effort)
+    // 3) ressources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
     if (resourcesError) console.error("Error loading resources:", resourcesError);
 
@@ -880,12 +910,16 @@ export async function POST(req: Request) {
     const ai = openai;
     if (!ai) {
       return NextResponse.json(
-        { success: false, error: "OPENAI_API_KEY_OWNER is not set (strategy generation disabled)" },
+        { success: false, error: "OPENAI client not configured (strategy generation disabled)" },
         { status: 500 },
       );
     }
 
-    // 4) Nettoyage best-effort : si on ne doit PAS générer de pyramides, on supprime legacy du plan (évite “unknown offers”)
+    /**
+     * 4) Nettoyage anti-régression :
+     * Si on NE DOIT PAS générer de pyramides (affiliate OU a déjà une offre),
+     * on supprime les pyramides existantes du plan pour éviter UI “unknown offers”.
+     */
     if (!shouldGeneratePyramids) {
       try {
         const base = isRecord(existingPlanJson) ? (existingPlanJson as AnyRecord) : {};
@@ -893,8 +927,8 @@ export async function POST(req: Request) {
         const hadSelection =
           typeof base.selected_offer_pyramid_index === "number" ||
           typeof base.selected_pyramid_index === "number" ||
-          !!base.selected_offer_pyramid ||
-          !!base.selected_pyramid;
+          base.selected_offer_pyramid ||
+          base.selected_pyramid;
 
         if (hadPyramids || hadSelection) {
           const cleaned: AnyRecord = {
@@ -920,21 +954,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5) Flags (après cleanup éventuel)
-    const existingOfferPyramids = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
-    const existingSelectedIndex =
-      typeof existingPlanJson?.selected_offer_pyramid_index === "number"
-        ? existingPlanJson.selected_offer_pyramid_index
-        : typeof existingPlanJson?.selected_pyramid_index === "number"
-          ? existingPlanJson.selected_pyramid_index
-          : null;
-
-    const hasSelected = typeof existingSelectedIndex === "number";
-    const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
-    const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
-    const hasStarter = starterPlanLooksUseful(existingPlanJson);
-
-    // 6) Starter plan (best-effort, fail-open)
+    /**
+     * 5) Starter plan (best-effort) : même si pyramides déjà présentes.
+     */
     if (!hasStarter) {
       try {
         const starter = await generateStarterStrategyGoals({
@@ -962,12 +984,14 @@ export async function POST(req: Request) {
           existingPlanJson = nextPlan;
         }
       } catch (e) {
-        console.error("starter plan generation (early) failed (non-blocking):", e);
+        console.error("starter plan generation failed (non-blocking):", e);
       }
     }
 
-    // ✅ Early returns
-    if (shouldGeneratePyramids && hasSelected && !needFullStrategy && starterPlanLooksUseful(existingPlanJson)) {
+    /**
+     * 6) Early returns (après starter)
+     */
+    if (hasSelected && !needFullStrategy && starterPlanLooksUseful(existingPlanJson)) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
     }
 
@@ -975,18 +999,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
-    // 7) Génération des pyramides (SEULEMENT si shouldGeneratePyramids)
+    /**
+     * 7) Génération des pyramides (SEULEMENT si shouldGeneratePyramids)
+     */
     if (shouldGeneratePyramids && !hasUsefulPyramids) {
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
 OBJECTIF :
-Proposer 3 pyramides d'offres (lead magnet → low ticket → high ticket) parfaitement adaptées à l'utilisateur.
+Proposer 3 pyramides d'offres (lead magnet → low ticket → high ticket) parfaitement adaptées à l'utilisateur, au niveau “coach business”.
 
-EXIGENCES :
-- Zéro blabla : actionnable, spécifique, niché.
-- Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal, format).
-- Respecte contraintes & non-négociables du diagnostic_profile si présents.
-- Réponds en JSON strict uniquement.`.trim();
+SOURCE DE VÉRITÉ (ordre de priorité) :
+1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
+2) diagnostic_summary + diagnostic_answers (si présents).
+3) Champs “cases” (maturity, biggest_blocker, etc.) = fallback seulement.
+
+EXIGENCES “COACH-LEVEL” :
+- Zéro blabla : tout doit être actionnable, spécifique, niché.
+- Chaque pyramide = une stratégie distincte (angle, mécanisme, promesse, canal, format).
+- Pas de généralités : préciser le quoi / comment / pourquoi.
+- Cohérence : respecter contraintes & non-négociables (temps, énergie, budget, formats refusés).
+- Inclure un quick win 7 jours dans la logique globale.
+
+IMPORTANT :
+Tu dois répondre en JSON strict uniquement, sans texte autour.`;
 
       const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
 - diagnostic_profile :
@@ -1014,6 +1049,18 @@ ${JSON.stringify(
       (businessProfile as any).target_monthly_revenue ??
       (businessProfile as any).revenue_goal ??
       null,
+    has_offers: (businessProfile as any).has_offers ?? (businessProfile as any).hasOffers ?? null,
+    offers: (businessProfile as any).offers ?? null,
+    social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
+    email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
+    main_goal_90_days:
+      (businessProfile as any).main_goal_90_days ??
+      (businessProfile as any).main_goal ??
+      (businessProfile as any).mainGoal90Days ??
+      null,
+    main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
+    preferred_content_type:
+      (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
     tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
   },
   null,
@@ -1029,10 +1076,11 @@ ${JSON.stringify(limitedChunks ?? [], null, 2)}
 Contraintes :
 - Génère 3 pyramides complètes.
 - Chaque pyramide contient : lead_magnet, low_ticket, high_ticket.
-- Pour chaque offre : title, format, price, composition, purpose, insight.
-- strategy_summary = 1 phrase (logique globale).
+- Pour chaque offre :
+  - title, format, price (number), composition, purpose, insight
+- 1 phrase “strategy_summary” par pyramide.
 
-STRUCTURE EXACTE :
+STRUCTURE EXACTE À RENVOYER (JSON strict) :
 {
   "offer_pyramids": [
     {
@@ -1091,7 +1139,7 @@ STRUCTURE EXACTE :
         updated_at: new Date().toISOString(),
       };
 
-      // starter plan minimal si absent (best-effort)
+      // starter plan si manquant (best-effort)
       try {
         const hasGoals = Array.isArray((plan_json as any).strategy_goals) && (plan_json as any).strategy_goals.length > 0;
         const hasSummary = typeof (plan_json as any).strategy_summary === "string" && (plan_json as any).strategy_summary.trim().length > 0;
@@ -1114,7 +1162,7 @@ STRUCTURE EXACTE :
         console.error("starter plan generation failed (non-blocking):", e);
       }
 
-      // sync offer_pyramids (best-effort)
+      // best-effort persist offer_pyramids table
       try {
         const strategyId = await getOrCreateStrategyIdBestEffort({
           supabase,
@@ -1131,7 +1179,7 @@ STRUCTURE EXACTE :
           pyramidRunId: offerPyramidsRunId,
         });
       } catch (e) {
-        console.error("offer_pyramids persistence (POST /api/strategy) error:", e);
+        console.error("offer_pyramids persistence error:", e);
       }
 
       const { data: saved, error: saveErr } = await supabase
@@ -1150,9 +1198,11 @@ STRUCTURE EXACTE :
       return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
     }
 
-    // 8) Cas où on NE DOIT PAS générer de pyramides : stratégie sans inventer d’offres
+    /**
+     * 8) Cas "NE PAS générer de pyramides" (affiliate OU user a déjà une offre)
+     * -> stratégie complète sans inventer d'offres
+     */
     if (!shouldGeneratePyramids) {
-      // déjà complet
       if (fullStrategyLooksUseful(existingPlanJson) && starterPlanLooksUseful(existingPlanJson)) {
         return NextResponse.json(
           { success: true, planId: null, skipped: true, reason: "already_complete_no_pyramids" },
@@ -1165,14 +1215,41 @@ STRUCTURE EXACTE :
 MISSION
 À partir du business_profile, des onboarding_facts (source de vérité), et des ressources internes, tu produis :
 1) une stratégie claire (mission, promesse, positionnement, résumé),
-2) un persona “terrain”,
-3) un plan 90 jours exécutable.
+2) un persona “terrain” (pains, désirs, objections, déclencheurs, phrases exactes),
+3) un plan 90 jours exécutable (focus unique + milestones + tâches datées).
 
-RÈGLES CRITIQUES
+RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Tu NE CRÉES PAS de nouvelles offres si l'utilisateur a déjà une offre.
-- Si offers_satisfaction = yes : l'offre existante est la flagship.
+- Si offers_satisfaction = yes : tu considères l'offre existante comme “flagship” et tu n'y touches pas.
 - Si business_model = affiliate : tu NE PARLES PAS de créer une offre.
-- Réponds en JSON strict uniquement.`.trim();
+- Zéro blabla : tout doit être actionnable, spécifique, niché.
+- Respect strict des contraintes si elles existent.
+
+FORMAT JSON STRICT UNIQUEMENT :
+{
+  "mission": "string",
+  "promise": "string",
+  "positioning": "string",
+  "summary": "string",
+  "persona": {
+    "title": "profil en 1 phrase",
+    "pains": ["..."],
+    "desires": ["..."],
+    "channels": ["..."],
+    "objections": ["..."],
+    "triggers": ["..."],
+    "exact_phrases": ["..."]
+  },
+  "plan_90_days": {
+    "focus": "string",
+    "milestones": ["...", "...", "..."],
+    "tasks_by_timeframe": {
+      "d30": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
+      "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
+      "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
+    }
+  }
+}`.trim();
 
       const selectedChunks = pickTopResourceChunks({
         chunks: Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [],
@@ -1183,13 +1260,6 @@ RÈGLES CRITIQUES
 
       const userPrompt = `ONBOARDING FACTS (SOURCE DE VÉRITÉ)
 ${JSON.stringify(onboardingFacts ?? null, null, 2)}
-
-META
-- business_model: ${businessModel || "unknown"}
-- isAffiliate: ${String(isAffiliate)}
-- hasOffersEffective: ${String(hasOffersEffective)}
-- offers_satisfaction: ${offersSatisfactionRaw || "unknown"}
-- satisfied: ${String(isSatisfiedWithOffers)}
 
 BUSINESS PROFILE (fallback)
 ${JSON.stringify(
@@ -1206,6 +1276,7 @@ ${JSON.stringify(
       null,
     weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
     biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
+    is_satisfied_with_offers: isSatisfiedWithOffers,
   },
   null,
   2,
@@ -1217,10 +1288,11 @@ ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 CHUNKS PERTINENTS (extraits)
 ${JSON.stringify(selectedChunks ?? [], null, 2)}
 
-CONTRAINTES
+CONTRAINTES TASKS
 - Minimum 6 tâches par timeframe (d30/d60/d90).
-- due_date valides (YYYY-MM-DD).
-- Focus = levier unique et concret.`.trim();
+- due_date valides et réparties.
+- Focus = 1 levier concret.
+`.trim();
 
       const fullAiResponse = await ai.chat.completions.create({
         model: "gpt-4.1",
@@ -1241,10 +1313,12 @@ CONTRAINTES
       const summary = cleanString(fullParsed.summary ?? fullParsed.strategy_summary ?? fullParsed.strategySummary, 2000);
 
       const persona = normalizePersona(asRecord(fullParsed.persona));
+
       const plan90Raw = asRecord(fullParsed.plan_90_days) ?? asRecord(fullParsed.plan90) ?? {};
       const tasksByTf = normalizeTasksByTimeframe(asRecord(plan90Raw.tasks_by_timeframe));
 
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
+
       const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
 
       const fallbackTasksByTf = hasUsefulTasks
@@ -1265,16 +1339,12 @@ CONTRAINTES
 
       const nextPlan: AnyRecord = {
         ...basePlan,
-
         offer_mode: isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none",
         offers_satisfaction: offersSatisfactionRaw || null,
-        offers_satisfaction_bool: isSatisfiedWithOffers, // utilisé => pas de noUnusedLocals
-
         mission: cleanString(basePlan.mission, 240) || mission,
         promise: cleanString(basePlan.promise, 240) || promise,
         positioning: cleanString(basePlan.positioning, 320) || positioning,
         summary: cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
-
         persona: personaLooksUseful(asRecord(basePlan.persona)) ? basePlan.persona : safePersona,
         plan_90_days: {
           ...(asRecord(basePlan.plan_90_days) ?? {}),
@@ -1286,7 +1356,6 @@ CONTRAINTES
                 safeTasksByTf)
             : safeTasksByTf,
         },
-
         strategy_generated_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -1307,13 +1376,17 @@ CONTRAINTES
       return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
     }
 
-    // 9) Sinon : pyramide choisie -> stratégie complète
+    /**
+     * 9) Cas pyramides : si pyramide choisie -> générer full strategy
+     */
     const selectedPyramid = pickSelectedPyramidFromPlan(existingPlanJson);
+
     if (!selectedPyramid) {
       return NextResponse.json(
         {
           success: false,
-          error: "selected_offer_pyramid is missing. Choose a pyramid first (/strategy/pyramids) before generating the full strategy.",
+          error:
+            "selected_offer_pyramid is missing. Choose a pyramid first (/api/strategy/offer-pyramid PATCH) before generating the full strategy.",
         },
         { status: 400 },
       );
@@ -1322,17 +1395,45 @@ CONTRAINTES
     const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) ET un stratège opérateur.
 
 MISSION :
-À partir du business_profile + diagnostic_profile (si présent) + pyramide choisie, tu produis :
-1) stratégie (mission, promesse, positionnement, résumé),
-2) persona,
-3) plan 90 jours (d30/d60/d90).
+À partir du business_profile (onboarding), du diagnostic_profile (si présent) et de la pyramide d’offres choisie, tu produis :
+1) stratégie claire (mission, promesse, positionnement, résumé),
+2) persona “terrain” (pains, désirs, objections, déclencheurs, phrases exactes),
+3) plan 90 jours exécutable (focus unique + milestones + tâches datées).
 
-RÈGLES :
-- Zéro généralités.
-- Cohérence totale avec la pyramide.
-- JSON strict uniquement.`.trim();
+RÈGLES COACH-LEVEL :
+- ZÉRO généralités.
+- Respect strict des contraintes/non_negotiables si présentes.
+- Cohérence totale avec la pyramide choisie.
+- 1 levier principal (focus).
+- Min 6 tâches par timeframe, due_date valides.
 
-    const selectedChunks2 = pickTopResourceChunks({
+FORMAT JSON STRICT UNIQUEMENT :
+{
+  "mission": "string",
+  "promise": "string",
+  "positioning": "string",
+  "summary": "string",
+  "persona": {
+    "title": "profil en 1 phrase",
+    "pains": ["..."],
+    "desires": ["..."],
+    "channels": ["..."],
+    "objections": ["..."],
+    "triggers": ["..."],
+    "exact_phrases": ["..."]
+  },
+  "plan_90_days": {
+    "focus": "string",
+    "milestones": ["...", "...", "..."],
+    "tasks_by_timeframe": {
+      "d30": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
+      "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
+      "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
+    }
+  }
+}`.trim();
+
+    const selectedChunks = pickTopResourceChunks({
       chunks: Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [],
       businessProfile: businessProfile as AnyRecord,
       selectedPyramid,
@@ -1342,6 +1443,7 @@ RÈGLES :
     const fullUserPrompt = `Revenue goal (label) : ${cleanString(revenueGoalLabel, 240) || "N/A"}
 Target monthly revenue (guess) : ${targetMonthlyRevGuess !== null ? String(targetMonthlyRevGuess) : "N/A"}
 
+SOURCE PRIORITAIRE — Diagnostic (si présent)
 diagnostic_profile :
 ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
 
@@ -1351,20 +1453,34 @@ ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile
 diagnostic_answers :
 ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
 
-PYRAMIDE CHOISIE :
+DONNÉES FORMULAIRES (fallback)
+${JSON.stringify(
+  {
+    niche: (businessProfile as any).niche ?? null,
+    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
+    weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
+    biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
+    tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
+  },
+  null,
+  2,
+)}
+
+PYRAMIDE CHOISIE
 ${JSON.stringify(selectedPyramid, null, 2)}
 
-RESSOURCES (résumé) :
+RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 
-CHUNKS (extraits) :
-${JSON.stringify(selectedChunks2 ?? [], null, 2)}
+CHUNKS PERTINENTS (extraits)
+${JSON.stringify(selectedChunks ?? [], null, 2)}
 
-CONTRAINTES
-- d30/d60/d90 : >= 6 tâches chacun
-- due_date: YYYY-MM-DD`.trim();
+CONSINGNES
+- Min 6 tâches par timeframe.
+- due_date YYYY-MM-DD.
+- Focus = 1 levier concret (tunnel lead magnet → low-ticket → high-ticket).`.trim();
 
-    const fullAiResponse2 = await ai.chat.completions.create({
+    const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",
       response_format: { type: "json_object" },
       messages: [
@@ -1374,22 +1490,24 @@ CONTRAINTES
       temperature: 0.6,
     });
 
-    const fullRaw2 = fullAiResponse2.choices?.[0]?.message?.content ?? "{}";
-    const fullParsed2 = JSON.parse(fullRaw2) as AnyRecord;
+    const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
+    const fullParsed = JSON.parse(fullRaw) as AnyRecord;
 
-    const mission2 = cleanString(fullParsed2.mission, 240);
-    const promise2 = cleanString(fullParsed2.promise, 240);
-    const positioning2 = cleanString(fullParsed2.positioning, 320);
-    const summary2 = cleanString(fullParsed2.summary ?? fullParsed2.strategy_summary ?? fullParsed2.strategySummary, 2000);
+    const mission = cleanString(fullParsed.mission, 240);
+    const promise = cleanString(fullParsed.promise, 240);
+    const positioning = cleanString(fullParsed.positioning, 320);
+    const summary = cleanString(fullParsed.summary ?? fullParsed.strategy_summary ?? fullParsed.strategySummary, 2000);
 
-    const persona2 = normalizePersona(asRecord(fullParsed2.persona));
-    const plan90Raw2 = asRecord(fullParsed2.plan_90_days) ?? asRecord(fullParsed2.plan90) ?? {};
-    const tasksByTf2 = normalizeTasksByTimeframe(asRecord(plan90Raw2.tasks_by_timeframe));
+    const persona = normalizePersona(asRecord(fullParsed.persona));
 
-    const basePlan2: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
-    const hasUsefulTasks2 = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf2 } } as any);
+    const plan90Raw = asRecord(fullParsed.plan_90_days) ?? asRecord(fullParsed.plan90) ?? {};
+    const tasksByTf = normalizeTasksByTimeframe(asRecord(plan90Raw.tasks_by_timeframe));
 
-    const fallbackTasksByTf2 = hasUsefulTasks2
+    const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
+
+    const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
+
+    const fallbackTasksByTf = hasUsefulTasks
       ? null
       : buildFallbackTasksByTimeframe(new Date(), {
           niche:
@@ -1402,49 +1520,49 @@ CONTRAINTES
             cleanString((businessProfile as any)?.revenue_goal, 120),
         });
 
-    const safePersona2 = personaLooksUseful(persona2) ? persona2 : normalizePersona(asRecord(basePlan2.persona)) ?? persona2;
-    const safeTasksByTf2 = normalizeTasksByTimeframe((fallbackTasksByTf2 ?? tasksByTf2) as unknown as AnyRecord);
+    const safePersona = personaLooksUseful(persona) ? persona : normalizePersona(asRecord(basePlan.persona)) ?? persona;
+    const safeTasksByTf = normalizeTasksByTimeframe((fallbackTasksByTf ?? tasksByTf) as unknown as AnyRecord);
 
-    const nextPlan2: AnyRecord = {
-      ...basePlan2,
-      ...(cleanString(basePlan2.revenue_goal, 240) || revenueGoalLabel
-        ? { revenue_goal: cleanString(basePlan2.revenue_goal, 240) || revenueGoalLabel }
+    const nextPlan: AnyRecord = {
+      ...basePlan,
+      ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
+        ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
         : {}),
-      horizon_days: toNumber(basePlan2.horizon_days) ?? 90,
+      horizon_days: toNumber(basePlan.horizon_days) ?? 90,
       ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
-      mission: cleanString(basePlan2.mission, 240) || mission2,
-      promise: cleanString(basePlan2.promise, 240) || promise2,
-      positioning: cleanString(basePlan2.positioning, 320) || positioning2,
-      summary: cleanString(basePlan2.summary ?? basePlan2.strategy_summary ?? basePlan2.strategySummary, 2000) || summary2,
-      persona: personaLooksUseful(asRecord(basePlan2.persona)) ? basePlan2.persona : safePersona2,
+      mission: cleanString(basePlan.mission, 240) || mission,
+      promise: cleanString(basePlan.promise, 240) || promise,
+      positioning: cleanString(basePlan.positioning, 320) || positioning,
+      summary: cleanString(basePlan.summary ?? basePlan.strategy_summary ?? basePlan.strategySummary, 2000) || summary,
+      persona: personaLooksUseful(asRecord(basePlan.persona)) ? basePlan.persona : safePersona,
       plan_90_days: {
-        ...(asRecord(basePlan2.plan_90_days) ?? {}),
-        focus: cleanString(plan90Raw2.focus, 200),
-        milestones: asArray(plan90Raw2.milestones).map((x) => cleanString(x, 180)).filter(Boolean).slice(0, 6),
-        tasks_by_timeframe: tasksByTimeframeLooksUseful(basePlan2)
-          ? (asRecord((asRecord(basePlan2.plan_90_days) ?? {}).tasks_by_timeframe) ??
-              asRecord(basePlan2.tasks_by_timeframe) ??
-              safeTasksByTf2)
-          : safeTasksByTf2,
+        ...(asRecord(basePlan.plan_90_days) ?? {}),
+        focus: cleanString(plan90Raw.focus, 200),
+        milestones: asArray(plan90Raw.milestones).map((x) => cleanString(x, 180)).filter(Boolean).slice(0, 6),
+        tasks_by_timeframe: tasksByTimeframeLooksUseful(basePlan)
+          ? (asRecord((asRecord(basePlan.plan_90_days) ?? {}).tasks_by_timeframe) ??
+              asRecord(basePlan.tasks_by_timeframe) ??
+              safeTasksByTf)
+          : safeTasksByTf,
       },
       strategy_generated_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    const { data: savedFull2, error: fullErr2 } = await supabase
+    const { data: savedFull, error: fullErr } = await supabase
       .from("business_plan")
-      .upsert({ user_id: userId, plan_json: nextPlan2, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
       .select("id")
       .maybeSingle();
 
-    if (fullErr2) {
-      console.error("Error saving business_plan full strategy:", fullErr2);
-      return NextResponse.json({ success: false, error: fullErr2.message }, { status: 500 });
+    if (fullErr) {
+      console.error("Error saving business_plan full strategy:", fullErr);
+      return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
     }
 
-    await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan2 });
+    await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
 
-    return NextResponse.json({ success: true, planId: savedFull2?.id ?? null }, { status: 200 });
+    return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
   } catch (err) {
     console.error("Unhandled error in /api/strategy:", err);
     return NextResponse.json(
