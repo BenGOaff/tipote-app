@@ -33,6 +33,7 @@ const PROTECTED_PREFIXES = [
   "/contents",
   "/create",
   "/templates",
+  "/pepites",
   "/settings",
   "/analytics",
 ];
@@ -117,6 +118,7 @@ export const config = {
     "/contents/:path*",
     "/create/:path*",
     "/templates/:path*",
+    "/pepites/:path*",
     "/settings/:path*",
     "/analytics/:path*",
   ],

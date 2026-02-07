@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
+import { usePepitesUnread } from "@/lib/pepites/usePepitesUnread";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -153,6 +154,34 @@ function CreditsSidebarBadge() {
   );
 }
 
+function PepitesSidebarItem() {
+  const { loading, hasUnread } = usePepitesUnread();
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <NavLink
+          to="/pepites"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
+          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+        >
+          <div className="relative">
+            <Sparkles className="w-5 h-5" />
+            {!loading && hasUnread ? (
+              <span
+                className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-sidebar"
+                aria-label="Nouvelle pépite"
+                title="Nouvelle pépite ✨"
+              />
+            ) : null}
+          </div>
+          <span>Pépites</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 export function AppSidebar() {
   const { phase, nextPhase } = useTutorial();
 
@@ -251,6 +280,9 @@ export function AppSidebar() {
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          {/* ✅ Nouveau : Pépites juste au-dessus de Paramètres */}
+          <PepitesSidebarItem />
 
           <TutorialSpotlight elementId="settings" tooltipPosition="right" showNextButton>
             <SidebarMenuItem>
