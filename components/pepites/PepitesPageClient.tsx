@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +32,10 @@ type SummaryRes = {
   } | null;
 };
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 function formatDateFR(iso: string) {
   try {
     const d = new Date(iso);
@@ -46,9 +50,6 @@ function formatDateFR(iso: string) {
 }
 
 function enhanceForDisplay(text: string) {
-  // Style “fun” au rendu UNIQUEMENT (sans modifier la DB)
-  // - lignes "👉 ..." en gras
-  // - garde les sauts de ligne
   const lines = text.split("\n");
   return lines.map((line, idx) => {
     const trimmed = line.trimStart();
@@ -63,81 +64,37 @@ function enhanceForDisplay(text: string) {
   });
 }
 
-function FlipPepiteCard(props: {
+/**
+ * ✅ Invariants UI (comme demandé)
+ * 1) Le titre + teaser restent DANS la carte blanche (pas de texte qui déborde hors row)
+ * 2) Quand on ouvre une carte, elle prend sa hauteur en flow => les cartes dessous se décalent
+ * 3) Aucun tronquage de titre (wrap naturel)
+ *
+ * => On abandonne le "absolute + height hack" (qui sort du flow),
+ *    et on fait un "flip/expand" en flow (grid rows 0fr -> 1fr).
+ */
+function PepiteCard(props: {
   item: PepiteItem;
   highlight?: boolean;
   onSeen?: (userPepiteId: string) => void;
 }) {
   const { item, highlight, onSeen } = props;
-
-  const [flipped, setFlipped] = useState(false);
-  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
-
-  const frontRef = useRef<HTMLDivElement | null>(null);
-  const backRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
 
   const title = item.pepite?.title ?? "Pépite";
   const body = item.pepite?.body ?? "";
 
   useEffect(() => {
-    // Si déjà vue, on peut démarrer “ouverte” si c’est la carte highlight
-    if (highlight && item.seenAt) setFlipped(true);
+    // Si déjà vue et highlight, on peut démarrer ouverte (optionnel)
+    if (highlight && item.seenAt) setOpen(true);
   }, [highlight, item.seenAt]);
 
-  const recomputeHeight = () => {
-    const front = frontRef.current;
-    const back = backRef.current;
-    if (!front || !back) return;
+  async function handleToggle() {
+    const next = !open;
+    setOpen(next);
 
-    // offsetHeight inclut padding / borders -> parfait pour fixer le container
-    const h1 = front.offsetHeight || 0;
-    const h2 = back.offsetHeight || 0;
-    const next = Math.max(h1, h2);
-
-    if (next > 0) setMeasuredHeight(next);
-  };
-
-  // Mesure initiale + à chaque flip (le contenu visible change)
-  useLayoutEffect(() => {
-    recomputeHeight();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, body, flipped]);
-
-  // Mesure live si le contenu change (font loading, resize, etc.)
-  useEffect(() => {
-    const front = frontRef.current;
-    const back = backRef.current;
-    if (!front || !back) return;
-
-    let raf: number | null = null;
-    const schedule = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => recomputeHeight());
-    };
-
-    schedule();
-
-    const ro = new ResizeObserver(() => schedule());
-    ro.observe(front);
-    ro.observe(back);
-
-    const onResize = () => schedule();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-      ro.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, body]);
-
-  async function handleFlip() {
-    const next = !flipped;
-    setFlipped(next);
-
+    // mark seen dès la 1ère ouverture
     if (!item.seenAt && next) {
-      // mark seen dès l’ouverture (récompense)
       try {
         await fetch("/api/pepites/seen", {
           method: "POST",
@@ -146,7 +103,7 @@ function FlipPepiteCard(props: {
         });
         onSeen?.(item.userPepiteId);
       } catch {
-        // fail-open: l’UI reste ok
+        // fail-open
       }
     }
   }
@@ -154,107 +111,70 @@ function FlipPepiteCard(props: {
   return (
     <button
       type="button"
-      onClick={handleFlip}
+      onClick={handleToggle}
       className="text-left w-full focus:outline-none"
       aria-label="Ouvrir la pépite"
-      title="Cliquer pour retourner"
+      title={open ? "Cliquer pour refermer" : "Cliquer pour découvrir"}
     >
-      <div
-        className={["relative w-full", "[perspective:1000px]"].join(" ")}
-        style={{
-          // ✅ La carte s’adapte à la plus grande face (front/back) = plus de débordement
-          height: measuredHeight ? `${measuredHeight}px` : undefined,
-        }}
+      <Card
+        className={cx(
+          "rounded-2xl border bg-card shadow-sm p-5 transition-colors",
+          highlight ? "border-primary/30 bg-primary/5" : "",
+        )}
       >
-        <div
-          className={[
-            "absolute inset-0 rounded-2xl transition-transform duration-300",
-            "[transform-style:preserve-3d]",
-            flipped ? "[transform:rotateY(180deg)]" : "",
-          ].join(" ")}
-        >
-          {/* Face avant */}
-          <div
-            ref={frontRef}
-            className={[
-              "absolute inset-0",
-              "[backface-visibility:hidden]",
-            ].join(" ")}
-          >
-            <Card
-              className={[
-                "h-full rounded-2xl border bg-card shadow-sm",
-                "p-5 flex flex-col justify-between",
-                highlight ? "border-primary/30 bg-primary/5" : "",
-              ].join(" ")}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateFR(item.assignedAt)}
-                  </p>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">{formatDateFR(item.assignedAt)}</p>
 
-                  {/* ✅ Titre non tronqué */}
-                  <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
-                    {title}
-                  </h3>
-                </div>
-
-                <div className="relative flex items-center shrink-0">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  {!item.seenAt ? (
-                    <span className="ml-2 text-xs font-medium text-primary">✨</span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 mt-4">
-                <p className="text-sm text-muted-foreground">
-                  {item.seenAt ? "Déjà ouverte" : "Cliquer pour découvrir"}
-                </p>
-                <span className="text-xs text-muted-foreground shrink-0">↻</span>
-              </div>
-            </Card>
+            {/* ✅ pas de truncation */}
+            <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
+              {title}
+            </h3>
           </div>
 
-          {/* Face arrière */}
-          <div
-            ref={backRef}
-            className={[
-              "absolute inset-0",
-              "[transform:rotateY(180deg)]",
-              "[backface-visibility:hidden]",
-            ].join(" ")}
-          >
-            <Card
-              className={[
-                "h-full rounded-2xl border bg-card shadow-sm",
-                "p-5",
-                highlight ? "border-primary/30" : "",
-              ].join(" ")}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateFR(item.assignedAt)}
-                  </p>
-
-                  {/* ✅ Titre non tronqué */}
-                  <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
-                    {title}
-                  </h3>
-                </div>
-                <Sparkles className="h-5 w-5 text-primary shrink-0" />
-              </div>
-
-              {/* ✅ Le texte dicte la hauteur de la carte */}
-              <div className="mt-4 text-sm leading-relaxed text-foreground whitespace-pre-wrap space-y-1">
-                {enhanceForDisplay(body)}
-              </div>
-            </Card>
+          <div className="relative flex items-center shrink-0">
+            <Sparkles className="h-5 w-5 text-primary" />
+            {!item.seenAt ? <span className="ml-2 text-xs font-medium text-primary">✨</span> : null}
           </div>
         </div>
-      </div>
+
+        {/* Body (expand in flow => pushes cards below) */}
+        <div
+          className={cx(
+            "mt-4 grid transition-[grid-template-rows] duration-300 ease-out",
+            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <div
+              className={cx(
+                "text-sm leading-relaxed text-foreground whitespace-pre-wrap space-y-2",
+                "transition-all duration-300 ease-out",
+                open ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1",
+              )}
+            >
+              {enhanceForDisplay(body)}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer / CTA */}
+        <div className="flex items-center justify-between gap-3 mt-4">
+          <p className="text-sm text-muted-foreground">
+            {open ? "Cliquer pour refermer" : item.seenAt ? "Déjà ouverte" : "Cliquer pour découvrir"}
+          </p>
+          <span
+            className={cx(
+              "text-xs text-muted-foreground shrink-0 transition-transform duration-300",
+              open ? "rotate-180" : "rotate-0",
+            )}
+            aria-hidden="true"
+          >
+            ↻
+          </span>
+        </div>
+      </Card>
     </button>
   );
 }
@@ -264,7 +184,7 @@ export default function PepitesPageClient() {
   const [items, setItems] = useState<PepiteItem[]>([]);
   const [current, setCurrent] = useState<PepiteItem | null>(null);
 
-  // ✅ admin gate (users ne voient pas le bouton)
+  // admin gate (users ne voient pas le bouton)
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Admin add
@@ -300,7 +220,6 @@ export default function PepitesPageClient() {
       const list: PepiteItem[] = (lJson?.ok ? lJson.items : []) ?? [];
       setItems(list);
 
-      // current depuis summary (peut venir d’une assignation “due”)
       if (sJson?.ok && sJson.current?.userPepiteId && sJson.current?.pepite) {
         const cur: PepiteItem = {
           userPepiteId: sJson.current.userPepiteId,
@@ -310,7 +229,6 @@ export default function PepitesPageClient() {
         };
         setCurrent(cur);
 
-        // s’assurer qu’elle est dans la liste
         const exists = list.some((x) => x.userPepiteId === cur.userPepiteId);
         if (!exists) setItems([cur, ...list]);
       } else {
@@ -324,7 +242,6 @@ export default function PepitesPageClient() {
   useEffect(() => {
     refreshAll();
 
-    // admin status (silent)
     (async () => {
       try {
         const res = await fetch("/api/pepites/admin/status", { cache: "no-store" });
@@ -338,18 +255,11 @@ export default function PepitesPageClient() {
   }, []);
 
   function handleSeen(userPepiteId: string) {
+    const nowIso = new Date().toISOString();
     setItems((prev) =>
-      prev.map((it) =>
-        it.userPepiteId === userPepiteId
-          ? { ...it, seenAt: new Date().toISOString() }
-          : it,
-      ),
+      prev.map((it) => (it.userPepiteId === userPepiteId ? { ...it, seenAt: nowIso } : it)),
     );
-    setCurrent((prev) =>
-      prev && prev.userPepiteId === userPepiteId
-        ? { ...prev, seenAt: new Date().toISOString() }
-        : prev,
-    );
+    setCurrent((prev) => (prev && prev.userPepiteId === userPepiteId ? { ...prev, seenAt: nowIso } : prev));
   }
 
   async function handleCreatePepite() {
@@ -371,6 +281,10 @@ export default function PepitesPageClient() {
       setNewTitle("");
       setNewBody("");
       setAdminOpen(false);
+
+      // refresh list (la nouvelle pépite n'est pas assignée à un user, mais admin veut voir que ça marche)
+      // On laisse juste un refresh visuel général.
+      refreshAll();
     } catch {
       setAdminError("Erreur réseau");
     } finally {
@@ -422,11 +336,7 @@ export default function PepitesPageClient() {
 
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Titre (exact)</label>
-                    <Input
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="Titre…"
-                    />
+                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Titre…" />
                   </div>
 
                   <div className="space-y-1">
@@ -446,10 +356,7 @@ export default function PepitesPageClient() {
                     <Button variant="outline" onClick={() => setAdminOpen(false)}>
                       Annuler
                     </Button>
-                    <Button
-                      onClick={handleCreatePepite}
-                      disabled={saving || !newTitle.trim() || !newBody.trim()}
-                    >
+                    <Button onClick={handleCreatePepite} disabled={saving || !newTitle.trim() || !newBody.trim()}>
                       {saving ? "Enregistrement…" : "Publier"}
                     </Button>
                   </div>
@@ -463,10 +370,7 @@ export default function PepitesPageClient() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card
-              key={i}
-              className="h-[200px] rounded-2xl border bg-card/50 animate-pulse"
-            />
+            <Card key={i} className="h-[200px] rounded-2xl border bg-card/50 animate-pulse" />
           ))}
         </div>
       ) : sorted.length === 0 ? (
@@ -476,9 +380,7 @@ export default function PepitesPageClient() {
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">
-                Aucune pépite reçue pour l’instant
-              </h3>
+              <h3 className="text-base font-semibold">Aucune pépite reçue pour l’instant</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Reviens plus tard… la première arrive automatiquement ✨
               </p>
@@ -488,7 +390,7 @@ export default function PepitesPageClient() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
           {sorted.map((it) => (
-            <FlipPepiteCard
+            <PepiteCard
               key={it.userPepiteId}
               item={it}
               highlight={it.userPepiteId === highlightId}
