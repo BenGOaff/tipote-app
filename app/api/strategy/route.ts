@@ -52,6 +52,122 @@ function parseMoneyFromText(raw: unknown): number | null {
   return Math.round(n);
 }
 
+function normalizeYesNo(v: unknown): "yes" | "no" | "" {
+  const s = cleanString(v, 40).toLowerCase();
+  if (!s) return "";
+  if (["yes", "y", "oui", "true", "1"].includes(s)) return "yes";
+  if (["no", "n", "non", "false", "0"].includes(s)) return "no";
+  return "";
+}
+
+function getOnboardingFact(onboardingFacts: Record<string, unknown>, key: string): unknown {
+  return onboardingFacts ? (onboardingFacts as any)[key] : undefined;
+}
+
+/**
+ * OFFERS FREEZE LOGIC
+ * If the user said they are satisfied with their current offer(s),
+ * Tipote must NOT invent new offers or pyramids.
+ */
+function isOffersFrozen(params: {
+  onboardingFacts: Record<string, unknown>;
+  businessProfile: AnyRecord;
+}): boolean {
+  const { onboardingFacts, businessProfile } = params;
+  const sat = normalizeYesNo(getOnboardingFact(onboardingFacts, "offers_satisfaction"));
+  if (sat === "yes") return true;
+
+  // fallback: older columns, if ever added later
+  const legacy =
+    normalizeYesNo((businessProfile as any).offers_satisfaction) ||
+    normalizeYesNo((businessProfile as any).offersSatisfied) ||
+    "";
+  return legacy === "yes";
+}
+
+function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
+  if (!offer) return null;
+  const title = cleanString(offer.title ?? offer.nom ?? offer.name, 160);
+  const composition = cleanString(offer.composition ?? offer.contenu ?? "", 800);
+  const purpose = cleanString(offer.purpose ?? offer.objectif ?? offer.benefit ?? "", 400);
+  const format = cleanString(offer.format ?? offer.type ?? "", 120);
+  const insight = cleanString(offer.insight ?? offer.angle ?? "", 240);
+  const price = toNumber(offer.price);
+  if (!title && !composition && !purpose) return null;
+
+  return {
+    title,
+    composition,
+    purpose,
+    format,
+    insight,
+    ...(price !== null ? { price } : {}),
+  };
+}
+
+function buildExistingOfferFromContext(params: {
+  onboardingFacts: Record<string, unknown>;
+  businessProfile: AnyRecord;
+}): AnyRecord | null {
+  const { onboardingFacts, businessProfile } = params;
+
+  // best-effort: if business_profiles.offers is already structured, reuse it
+  const offers = asArray((businessProfile as any).offers);
+  const firstOffer = offers.length ? asRecord(offers[0]) : null;
+  if (firstOffer) {
+    const n = normalizeOffer(firstOffer);
+    if (n) return n;
+  }
+
+  // fallback from facts
+  const priceRange = asRecord(getOnboardingFact(onboardingFacts, "offer_price_range"));
+  const minP = toNumber(priceRange?.min);
+  const maxP = toNumber(priceRange?.max);
+  const price = maxP ?? minP ?? null;
+
+  const mainTopic = cleanString(getOnboardingFact(onboardingFacts, "main_topic"), 160);
+  const title = mainTopic ? `Offre actuelle — ${mainTopic}` : "Offre actuelle";
+
+  // delivery type is often noisy; keep it as a hint only
+  const delivery = cleanString(getOnboardingFact(onboardingFacts, "offer_delivery_type"), 40);
+  const format =
+    delivery === "subscription" ? "abonnement" : delivery === "group" ? "groupe" : delivery === "1to1" ? "1:1" : "";
+
+  // We do NOT invent composition/promise if user froze offers.
+  return {
+    title,
+    ...(format ? { format } : {}),
+    ...(price !== null ? { price } : {}),
+    composition: "",
+    purpose: "",
+    insight: "",
+    _source: "frozen_existing_offer_fallback",
+  };
+}
+
+function buildFrozenOfferPyramid(params: {
+  onboardingFacts: Record<string, unknown>;
+  businessProfile: AnyRecord;
+}): AnyRecord | null {
+  const offer = buildExistingOfferFromContext(params);
+  if (!offer) return null;
+
+  const price = toNumber(offer.price);
+  const level: "low_ticket" | "high_ticket" =
+    price !== null && price <= 200 ? "low_ticket" : "high_ticket";
+
+  return {
+    id: "EXISTING",
+    name: "Offre actuelle (gelée)",
+    strategy_summary:
+      "Stratégie centrée sur l’offre actuelle (aucune nouvelle offre inventée).",
+    lead_magnet: null,
+    low_ticket: level === "low_ticket" ? offer : null,
+    high_ticket: level === "high_ticket" ? offer : null,
+    __frozen_existing_offer: true,
+  };
+}
+
 function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
   const direct =
     cleanString(businessProfile.target_monthly_revenue, 64) ||
@@ -72,98 +188,8 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
 
 // ✅ light retrieval / relevance scoring for resource_chunks (coach-level prompts without blowing tokens)
 const STOPWORDS = new Set([
-  "le",
-  "la",
-  "les",
-  "un",
-  "une",
-  "des",
-  "du",
-  "de",
-  "d",
-  "et",
-  "ou",
-  "mais",
-  "donc",
-  "or",
-  "ni",
-  "car",
-  "à",
-  "a",
-  "au",
-  "aux",
-  "en",
-  "dans",
-  "sur",
-  "sous",
-  "pour",
-  "par",
-  "avec",
-  "sans",
-  "chez",
-  "vers",
-  "ce",
-  "cet",
-  "cette",
-  "ces",
-  "ça",
-  "cela",
-  "c",
-  "qui",
-  "que",
-  "quoi",
-  "dont",
-  "où",
-  "je",
-  "tu",
-  "il",
-  "elle",
-  "on",
-  "nous",
-  "vous",
-  "ils",
-  "elles",
-  "me",
-  "te",
-  "se",
-  "mon",
-  "ma",
-  "mes",
-  "ton",
-  "ta",
-  "tes",
-  "son",
-  "sa",
-  "ses",
-  "notre",
-  "nos",
-  "votre",
-  "vos",
-  "leur",
-  "leurs",
-  "the",
-  "a",
-  "an",
-  "and",
-  "or",
-  "but",
-  "so",
-  "because",
-  "to",
-  "of",
-  "in",
-  "on",
-  "for",
-  "with",
-  "without",
-  "at",
-  "by",
-  "from",
-  "as",
-  "is",
-  "are",
-  "was",
-  "were",
+  "le","la","les","un","une","des","du","de","d","et","ou","mais","donc","or","ni","car","à","a","au","aux","en","dans","sur","sous","pour","par","avec","sans","chez","vers","ce","cet","cette","ces","ça","cela","c","qui","que","quoi","dont","où","je","tu","il","elle","on","nous","vous","ils","elles","me","te","se","mon","ma","mes","ton","ta","tes","son","sa","ses","notre","nos","votre","vos","leur","leurs",
+  "the","a","an","and","or","but","so","because","to","of","in","on","for","with","without","at","by","from","as","is","are","was","were",
 ]);
 
 function normalizeTextForSearch(v: unknown): string {
@@ -399,26 +425,6 @@ async function getOrCreateStrategyIdBestEffort(params: {
   }
 }
 
-function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
-  if (!offer) return null;
-  const title = cleanString(offer.title ?? offer.nom ?? offer.name, 160);
-  const composition = cleanString(offer.composition ?? offer.contenu ?? "", 800);
-  const purpose = cleanString(offer.purpose ?? offer.objectif ?? offer.benefit ?? "", 400);
-  const format = cleanString(offer.format ?? offer.type ?? "", 120);
-  const insight = cleanString(offer.insight ?? offer.angle ?? "", 240);
-  const price = toNumber(offer.price);
-  if (!title && !composition && !purpose) return null;
-
-  return {
-    title,
-    composition,
-    purpose,
-    format,
-    insight,
-    ...(price !== null ? { price } : {}),
-  };
-}
-
 function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const id = String(p?.id ?? idx);
   const name = cleanString(p?.name ?? p?.nom ?? `Pyramide ${idx + 1}`, 160);
@@ -455,12 +461,29 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   };
 }
 
-function pyramidsLookUseful(pyramids: unknown[]): boolean {
+function pyramidsLookUseful(
+  pyramids: unknown[],
+  opts?: { allowPartial?: boolean },
+): boolean {
   if (!Array.isArray(pyramids) || pyramids.length < 1) return false;
-  const ok = pyramids
-    .map((p, idx) => normalizePyramid(asRecord(p), idx))
-    .filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
-  return ok.length >= 1;
+
+  const allowPartial = Boolean(opts?.allowPartial);
+
+  const normalized = pyramids.map((p, idx) => normalizePyramid(asRecord(p), idx));
+
+  // full pyramid usable (legacy)
+  const fullOk = normalized.filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
+  if (fullOk.length >= 1) return true;
+
+  if (!allowPartial) return false;
+
+  // frozen existing-offer pyramid: accept a single non-null offer level
+  const partialOk = normalized.filter((x) => {
+    const hasOne = Boolean(x.lead_magnet || x.low_ticket || x.high_ticket);
+    return !!cleanString(x.name, 2) && hasOne;
+  });
+
+  return partialOk.length >= 1;
 }
 
 /**
@@ -513,7 +536,6 @@ async function persistOfferPyramidsBestEffort(params: {
           description,
           promise,
           format,
-          // delivery non présent dans normalizeOffer -> laissé NULL
           ...(price !== null ? { price_min: price, price_max: price } : {}),
           main_outcome,
           is_flagship: level === "high_ticket",
@@ -598,29 +620,29 @@ function buildFallbackTasksByTimeframe(
 
   const d30Titles = [
     `Clarifier la promesse et le positionnement pour ${niche}`,
-    `Définir l'offre lead magnet (titre, format, bénéfice, livrables)`,
-    `Créer la page de capture + séquence email de bienvenue`,
+    `Définir le message de vente de l’offre actuelle (sans changer l’offre)`,
+    `Créer / améliorer la page de vente (structure + preuves + CTA)`,
     `Lister 30 idées de contenus alignées sur ${goal}`,
     `Mettre en place un calendrier de contenu (2-3 posts/sem)`,
     `Suivre les métriques de base (leads, trafic, conversion)`,
   ];
 
   const d60Titles = [
-    `Construire l'offre low-ticket (structure + prix + valeur)`,
-    `Rédiger la page de vente low-ticket (problème → solution → preuves)`,
+    `Optimiser le tunnel existant (page → email → conversion)`,
     `Lancer 1 campagne d'acquisition (social / email / partenariats)`,
-    `Collecter 5 retours clients et ajuster l'offre`,
+    `Collecter 5 retours clients et ajuster la communication (pas l’offre)`,
     `Mettre en place un process de production de contenu récurrent`,
-    `Optimiser le tunnel (conversion page, emails, CTA)`,
+    `Optimiser les CTA et la promesse (A/B test léger)`,
+    `Créer 1 séquence email "preuve + offre" (5 emails)`,
   ];
 
   const d90Titles = [
-    `Structurer l'offre high-ticket (programme / coaching / service)`,
-    `Créer le process de vente (script, qualification, call)`,
+    `Standardiser l'onboarding client et la delivery`,
     `Produire 3 études de cas / témoignages`,
     `Automatiser les étapes clés (CRM, email, suivi)`,
-    `Standardiser l'onboarding client et la delivery`,
+    `Créer une routine hebdo de vente (1 action commerciale/jour)`,
     `Planifier le trimestre suivant (objectifs + priorités)`,
+    `Mettre en place un tableau de bord KPI simple`,
   ];
 
   function withDueDates(titles: string[], startDay: number, span: number): AnyRecord[] {
@@ -789,6 +811,7 @@ RULES
 - dashboard_focus are short labels to drive the dashboard (ex: "Visibilité", "Ventes", "Offre").
 - If business_model is affiliate: never talk about creating an offer.
 - If user has multiple activities: focus ONLY on primary_activity.
+- If offers_satisfaction=yes: focus on improving acquisition/conversion around existing offer (do not invent new offers).
 `.trim();
 
   const userPrompt = `
@@ -906,10 +929,12 @@ export async function POST(req: Request) {
           ? existingPlanJson.selected_pyramid_index
           : null;
 
-    const hasSelected = typeof existingSelectedIndex === "number";
-    const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
-    const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
-    const hasStarter = starterPlanLooksUseful(existingPlanJson);
+    // flags computed AFTER we load business_profile + onboarding_facts (needs offersFrozen)
+    let hasSelected = typeof existingSelectedIndex === "number";
+    let needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
+    let hasStarter = starterPlanLooksUseful(existingPlanJson);
+    let offersFrozen = false;
+    let hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
 
     // 1) Lire business_profile (onboarding)
     const { data: businessProfile, error: profileError } = await supabase
@@ -949,6 +974,15 @@ export async function POST(req: Request) {
       // fail-open
       console.error("onboarding_facts read failed:", e);
     }
+
+    // ✅ offers freeze (do not invent offers if user is satisfied)
+    offersFrozen = isOffersFrozen({ onboardingFacts, businessProfile: businessProfile as AnyRecord });
+    hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids, { allowPartial: offersFrozen });
+
+    // Recompute selection / full-strategy needs after potential plan enrichment
+    hasSelected = typeof existingSelectedIndex === "number";
+    needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
+    hasStarter = starterPlanLooksUseful(existingPlanJson);
 
     // 2) Charger ressources (pour améliorer la qualité)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
@@ -1012,6 +1046,7 @@ export async function POST(req: Request) {
 
           // refresh in-memory
           existingPlanJson = nextPlan;
+          hasStarter = true;
         }
       } catch (e) {
         console.error("starter plan generation (early) failed (non-blocking):", e);
@@ -1037,6 +1072,105 @@ export async function POST(req: Request) {
 
     // 3) Si pas de pyramides utiles -> générer les 3 propositions de pyramides
     if (!hasUsefulPyramids) {
+      // ✅ If the user is satisfied with existing offers, we DO NOT generate new pyramids.
+      // We create a minimal "frozen" pyramid that references the existing offer only.
+      if (offersFrozen) {
+        const frozenPyramid = buildFrozenOfferPyramid({ onboardingFacts, businessProfile: businessProfile as AnyRecord });
+        if (frozenPyramid) {
+          const basePlan: AnyRecord = isRecord(existingPlanJson) ? (existingPlanJson as AnyRecord) : {};
+
+          const offerPyramidsRunId =
+            typeof globalThis.crypto?.randomUUID === "function"
+              ? globalThis.crypto.randomUUID()
+              : `${Date.now()}-${Math.random()}`;
+
+          const normFrozen = normalizePyramid(asRecord(frozenPyramid), 0);
+
+          const plan_json: AnyRecord = {
+            ...basePlan,
+            offer_pyramids: [normFrozen],
+            offer_pyramids_run_id: offerPyramidsRunId,
+            selected_offer_pyramid_index: 0,
+            selected_offer_pyramid: normFrozen,
+            // compat legacy
+            selected_pyramid_index: 0,
+            selected_pyramid: normFrozen,
+            ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
+              ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
+              : {}),
+            horizon_days: toNumber(basePlan.horizon_days) ?? 90,
+            ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
+            updated_at: new Date().toISOString(),
+          };
+
+          // best-effort starter plan (keeps dashboard useful)
+          try {
+            const hasGoals = Array.isArray((plan_json as any).strategy_goals) && (plan_json as any).strategy_goals.length > 0;
+            const hasSummary =
+              typeof (plan_json as any).strategy_summary === "string" && (plan_json as any).strategy_summary.trim().length > 0;
+
+            if (!hasGoals || !hasSummary) {
+              const starter = await generateStarterStrategyGoals({
+                ai,
+                locale,
+                businessProfile: businessProfile as AnyRecord,
+                onboardingFacts: onboardingFacts ?? {},
+              });
+
+              if (starter) {
+                (plan_json as any).strategy_summary = starter.strategy_summary;
+                (plan_json as any).strategy_goals = starter.strategy_goals;
+                if (starter.dashboard_focus?.length) (plan_json as any).dashboard_focus = starter.dashboard_focus;
+              }
+            }
+          } catch (e) {
+            console.error("starter plan generation failed (non-blocking):", e);
+          }
+
+          // Persist best-effort in offer_pyramids table (will create only 1 row)
+          try {
+            const strategyId = await getOrCreateStrategyIdBestEffort({
+              supabase,
+              userId,
+              businessProfile: businessProfile as AnyRecord,
+              planJson: plan_json,
+            });
+
+            await persistOfferPyramidsBestEffort({
+              supabase,
+              userId,
+              strategyId,
+              pyramids: [normFrozen],
+              pyramidRunId: offerPyramidsRunId,
+            });
+          } catch (e) {
+            console.error("offer_pyramids persistence (frozen) error:", e);
+          }
+
+          const { data: saved, error: saveErr } = await supabase
+            .from("business_plan")
+            .upsert(
+              {
+                user_id: userId,
+                plan_json,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            )
+            .select("id")
+            .maybeSingle();
+
+          if (saveErr) {
+            console.error("Error saving business_plan frozen pyramid:", saveErr);
+            return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
+          }
+
+          await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: plan_json });
+
+          return NextResponse.json({ success: true, planId: saved?.id ?? null, frozen_offers: true }, { status: 200 });
+        }
+      }
+
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
 OBJECTIF :
@@ -1258,7 +1392,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict, pas de texte autour) :
         {
           success: false,
           error:
-            "selected_offer_pyramid is missing. Choose a pyramid first (/strategy/pyramids) before generating the full strategy.",
+            "selected_offer_pyramid is missing. Choose a pyramid first (/strategy/offer-pyramid) before generating the full strategy.",
         },
         { status: 400 },
       );
@@ -1283,16 +1417,17 @@ RÈGLES COACH-LEVEL (non négociables) :
 - Respect strict des contraintes & non-négociables (temps/énergie/budget/formats refusés).
 - Cohérence totale avec la pyramide choisie : mêmes angles, mêmes mécanismes, même canal principal.
 - 1 levier principal (focus) + max 2 leviers secondaires.
-- Chaque tâche doit être faisable par une personne seule, et inclure un livrable clair (ex: “écrire la page X”, “publier 6 posts selon le plan Y”).
-- Si une info manque : FAIS UNE HYPOTHÈSE MINIMALE et indique-la implicitement dans le plan (sans ajouter un champ “assumptions”).
+- Chaque tâche doit être faisable par une personne seule, et inclure un livrable clair.
+- Si une info manque : FAIS UNE HYPOTHÈSE MINIMALE et indique-la implicitement dans le plan.
 
 UTILISATION DES RESSOURCES INTERNES :
 Tu as accès à des ressources et des extraits (chunks). Utilise-les comme “cadres / checklists / patterns”, mais adapte toujours à la niche et aux contraintes. Ne cite pas les ressources, et ne colle pas de longs extraits.
 
 GARDE-FOUS QUALITÉ (à appliquer AVANT de répondre) :
 - Spécificité : au moins 70% des tâches doivent mentionner un livrable concret + un canal/format.
-- Priorités : d30 = fondations + acquisition lead magnet, d60 = conversion + low-ticket, d90 = high-ticket + systèmes.
+- Priorités : d30 = fondations + acquisition, d60 = conversion, d90 = systèmes + scalabilité.
 - Anti-contradiction : aucune tâche ne doit contredire “formats impossibles” et “non_negotiables”.
+- Si offers_satisfaction=yes: ne propose PAS de nouvelles offres. Optimise autour de l’offre existante.
 
 FORMAT JSON STRICT À RESPECTER (réponds en JSON strict uniquement, sans texte autour) :
 {
@@ -1336,6 +1471,9 @@ CONTRAINTES TASKS :
     const fullUserPrompt = `CONTEXTE UTILISATEUR — À UTILISER EN PRIORITÉ
 Revenue goal (label) : ${cleanString(revenueGoalLabel, 240) || "N/A"}
 Target monthly revenue (guess) : ${targetMonthlyRevGuess !== null ? String(targetMonthlyRevGuess) : "N/A"}
+
+ONBOARDING FACTS (source de vérité)
+${JSON.stringify(onboardingFacts ?? {}, null, 2)}
 
 SOURCE PRIORITAIRE — Diagnostic (si présent)
 diagnostic_profile :
@@ -1394,7 +1532,7 @@ CONSINGNES IMPORTANTES
 - Le plan 90 jours DOIT contenir des tâches avec due_date au format YYYY-MM-DD.
 - Donne au moins 6 tâches par timeframe (d30, d60, d90).
 - Utilise les contraintes “non_negotiables / formats_impossible” du diagnostic_profile si présentes.
-- Le focus doit être un levier unique et concret (ex: “tunnel lead magnet → low-ticket via X canal”, pas “marketing”).`;
+- Si offers_satisfaction=yes: ne propose pas de nouvelle offre, optimise autour de l’offre existante.`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",

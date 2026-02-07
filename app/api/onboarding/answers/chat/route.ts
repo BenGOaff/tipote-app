@@ -3,12 +3,12 @@
 // - N'écrase pas l'onboarding existant (answers/complete restent en place)
 // - Stocke la conversation (onboarding_sessions/onboarding_messages)
 // - Stocke des facts propres (onboarding_facts) via RPC upsert_onboarding_fact
-// - Synchronise quelques champs clés vers business_profiles (source de vérité UI) sans écraser par des vides
+// - Synchronise les champs "récap" vers business_profiles (source de vérité UI) sans écraser par des vides
 //
 // PATCH PREMIUM (finish UX) :
 // - Si le bot dit "tu peux passer à la suite" => le serveur déclenche shouldFinish=true
 // - Si l'utilisateur répond juste "ok" après ce message => finish immédiat (pas de boucle)
-// - Ajout extracteur serveur success_metrics (sinon fin impossible)
+// - Extracteurs serveur pour alimenter le récap (revenue_goal_monthly, time_available, niche, main_goal, tone, content)
 // - Garde-fou : si activities_list>=2 et primary_activity manquante => on ne termine pas
 
 import { NextRequest, NextResponse } from "next/server";
@@ -337,14 +337,12 @@ function extractSuccessMetrics(answer: string): Record<string, any> | null {
 
   if (criteria.length) payload.criteria = Array.from(new Set(criteria));
 
-  // clients_target: "100 clients"
   const mClients = answer.match(/(\d{1,4})\s*(clients?|abonnés?|abonnes?)/i);
   if (mClients?.[1]) {
     const n = Number(mClients[1]);
     if (Number.isFinite(n)) payload.clients_target = n;
   }
 
-  // mrr_target_monthly: "10k/mois" or "10 000€/mois"
   const mK = answer.match(/(\d{1,3})\s*k\s*\/\s*mois/i) || answer.match(/(\d{1,3})\s*k\s*mois/i);
   if (mK?.[1]) {
     const n = Number(mK[1]);
@@ -360,6 +358,65 @@ function extractSuccessMetrics(answer: string): Record<string, any> | null {
   return Object.keys(payload).length ? payload : null;
 }
 
+function extractRevenueGoalMonthly(answer: string): number | null {
+  const s = String(answer || "");
+  const t = s.toLowerCase();
+
+  const mK = t.match(/(\d{1,3})\s*k\s*\/\s*mois/) || t.match(/(\d{1,3})\s*k\s*mois/);
+  if (mK?.[1]) {
+    const n = Number(mK[1]);
+    if (Number.isFinite(n)) return n * 1000;
+  }
+
+  const mEuroMonth = s.match(/(\d[\d\s]{1,9})\s*(€|eur|euros)\s*\/\s*mois/i);
+  if (mEuroMonth?.[1]) {
+    const n = Number(mEuroMonth[1].replace(/\s/g, ""));
+    if (Number.isFinite(n)) return n;
+  }
+
+  const mPlain = s.match(/\b(\d{2,6})\b/);
+  if (mPlain?.[1]) {
+    const n = Number(mPlain[1]);
+    if (Number.isFinite(n) && n >= 200 && n <= 999999) return n;
+  }
+
+  return null;
+}
+
+function extractTimeAvailableHoursWeek(answer: string): number | null {
+  const t = String(answer || "").toLowerCase();
+
+  // "2h/jour" => 14h/semaine
+  const mPerDay = t.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*h\s*\/\s*jour/);
+  if (mPerDay?.[1]) {
+    const n = Number(mPerDay[1].replace(",", "."));
+    if (Number.isFinite(n)) return Math.round(n * 7 * 10) / 10;
+  }
+
+  // "5-10h/semaine" => prendre la moyenne
+  const mRange = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*h\s*\/\s*semaine/);
+  if (mRange?.[1] && mRange?.[2]) {
+    const a = Number(mRange[1]);
+    const b = Number(mRange[2]);
+    if (Number.isFinite(a) && Number.isFinite(b)) return Math.round(((a + b) / 2) * 10) / 10;
+  }
+
+  // "5h/semaine"
+  const mWeek = t.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*h\s*\/\s*semaine/);
+  if (mWeek?.[1]) {
+    const n = Number(mWeek[1].replace(",", "."));
+    if (Number.isFinite(n)) return n;
+  }
+
+  return null;
+}
+
+function formatTimeAvailable(hoursWeek: number | null): string | null {
+  if (!hoursWeek || !Number.isFinite(hoursWeek) || hoursWeek <= 0) return null;
+  const n = Math.round(hoursWeek * 10) / 10;
+  return `${n}h/semaine`;
+}
+
 function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
   const patch: Record<string, any> = {};
 
@@ -369,14 +426,58 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     patch[k] = v;
   };
 
+  const getStr = (v: any, max = 220) => {
+    const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
+    if (!s) return "";
+    return s.length > max ? s.slice(0, max) : s;
+  };
+
   for (const f of facts) {
     const key = normalizeKey(f.key);
     const value = f.value;
 
+    // champs UI existants (déjà)
     if (key === "primary_activity" && isNonEmptyString(value)) setIf("primary_activity", String(value).slice(0, 200));
     if (key === "traffic_source_today" && isNonEmptyString(value)) setIf("traffic_source_today", String(value));
     if (key === "has_offers" && typeof value === "boolean") setIf("has_offers", value);
     if (key === "conversion_status" && isNonEmptyString(value)) setIf("conversion_status", String(value));
+
+    // ✅ champs récap (business_profiles_rows csv)
+    if ((key === "main_topic" || key === "niche") && isNonEmptyString(value)) setIf("niche", getStr(value, 140));
+    if ((key === "mission" || key === "target_audience_short") && isNonEmptyString(value)) setIf("mission", getStr(value, 260));
+    if ((key === "main_goal" || key === "main_goal_90_days" || key === "objective_90_days") && isNonEmptyString(value))
+      setIf("main_goal", getStr(value, 240));
+    if (key === "revenue_goal_monthly" && (typeof value === "number" || isNonEmptyString(value))) {
+      const n = typeof value === "number" ? value : Number(String(value).replace(/\s/g, "").replace(",", "."));
+      if (Number.isFinite(n)) setIf("revenue_goal_monthly", n);
+    }
+    if (key === "time_available_hours_week" && typeof value === "number") {
+      const s = formatTimeAvailable(value);
+      if (s) setIf("time_available", s);
+    }
+    if ((key === "time_available" || key === "weekly_hours") && isNonEmptyString(value)) {
+      setIf("time_available", getStr(value, 80));
+    }
+    if ((key === "tone_preference_hint" || key === "preferred_tone") && isNonEmptyString(value)) setIf("preferred_tone", getStr(value, 140));
+    if ((key === "content_channels_priority" || key === "content_preference" || key === "preferred_content_type") && value) {
+      if (Array.isArray(value)) {
+        const joined = value
+          .map((x) => (typeof x === "string" ? x.trim() : ""))
+          .filter(Boolean)
+          .slice(0, 8)
+          .join(", ");
+        if (joined) setIf("content_preference", joined);
+      } else if (isNonEmptyString(value)) {
+        setIf("content_preference", getStr(value, 180));
+      }
+    }
+    if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value)) setIf("success_definition", getStr(value, 240));
+    if (key === "success_metrics" && value && typeof value === "object") {
+      setIf("success_definition", JSON.stringify(value).slice(0, 240));
+    }
+
+    // auditables
+    if ((key === "business_stage" || key === "business_maturity") && isNonEmptyString(value)) setIf("business_maturity", getStr(value, 60));
   }
 
   return patch;
@@ -582,7 +683,7 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
-    // Auto-extract sales / acquisition (best-effort) depuis la réponse user
+    // Auto-extract sales
     try {
       if (!isNonEmptyString(knownFacts["conversion_status"]) && (isSalesQuestion(prevAssistant) || looksFrustrated(userMsg))) {
         const inferred = inferConversionStatusFromAnswer(userMsg);
@@ -594,6 +695,7 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
+    // Auto-extract acquisition
     try {
       if (!Array.isArray(knownFacts["acquisition_channels"]) && (isAcquisitionQuestion(prevAssistant) || looksFrustrated(userMsg))) {
         const channels = extractAcquisitionChannels(userMsg);
@@ -611,12 +713,36 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
-    // Auto-extract success_metrics (best-effort) depuis la réponse user
+    // Auto-extract success_metrics
     try {
       if (typeof knownFacts["success_metrics"] === "undefined" || knownFacts["success_metrics"] === null) {
         const metrics = extractSuccessMetrics(userMsg);
         if (metrics) {
           await upsertOneFact({ key: "success_metrics", value: metrics, confidence: "high", source: "server_extract_success" });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // ✅ Auto-extract revenue_goal_monthly (pour récap)
+    try {
+      if (typeof knownFacts["revenue_goal_monthly"] === "undefined" || knownFacts["revenue_goal_monthly"] === null) {
+        const rev = extractRevenueGoalMonthly(userMsg);
+        if (typeof rev === "number" && Number.isFinite(rev)) {
+          await upsertOneFact({ key: "revenue_goal_monthly", value: rev, confidence: "high", source: "server_extract_recap" });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // ✅ Auto-extract time_available_hours_week (pour récap)
+    try {
+      if (typeof knownFacts["time_available_hours_week"] === "undefined" || knownFacts["time_available_hours_week"] === null) {
+        const hrs = extractTimeAvailableHoursWeek(userMsg);
+        if (typeof hrs === "number" && Number.isFinite(hrs)) {
+          await upsertOneFact({ key: "time_available_hours_week", value: hrs, confidence: "high", source: "server_extract_recap" });
         }
       }
     } catch {
@@ -714,32 +840,19 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Décision finish (serveur = source de vérité)
-    // Objectif UX premium : si l'IA indique clairement qu'elle a tout, on déclenche la fin
-    // (la génération est best-effort). On garde seulement le garde-fou "activité prioritaire".
+    // - cas normal: ready => finish
+    // - cas UX premium: si message indique fin => finish
     try {
       const ready = isReadyToFinish(knownFacts);
 
-      // Cas normal : on a les 3 piliers (sales + acquisition + success) => fin
-      if (ready) {
-        shouldFinish = true;
-      }
-
-      // Cas UX : l'IA dit explicitement qu'on peut passer à la suite
-      // => on finit aussi (même si certains champs secondaires manquent),
-      // car la stratégie/tasks sont idempotentes et best-effort.
-      if (messageLooksFinished(out.message)) {
-        shouldFinish = true;
-      }
-
-      // Si le modèle a mis done/should_finish à true, on respecte.
-      if (Boolean(out.should_finish ?? out.done ?? false)) {
-        shouldFinish = true;
-      }
+      if (ready) shouldFinish = true;
+      if (messageLooksFinished(out.message)) shouldFinish = true;
+      if (Boolean(out.should_finish ?? out.done ?? false)) shouldFinish = true;
     } catch {
       // ignore
     }
 
-    // Patch business_profiles (best-effort)
+    // Patch business_profiles (best-effort) : on pousse surtout les champs récap
     try {
       const patch = buildBusinessProfilePatchFromFacts(Object.entries(knownFacts).map(([key, value]) => ({ key, value })));
       if (Object.keys(patch).length > 0) {

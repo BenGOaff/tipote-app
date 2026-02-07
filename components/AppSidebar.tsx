@@ -181,7 +181,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h2 className="text-lg font-display font-bold">Tipote™</h2>
-            <p className="text-xs text-muted-foreground">SaaS Business AI</p>
+            <p className="text-xs text-muted-foreground">Ton compagnon malin</p>
           </div>
         </div>
       </SidebarHeader>

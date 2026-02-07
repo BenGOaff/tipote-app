@@ -4,9 +4,12 @@
 // - GET: retourne le profil (ou null)
 // - PATCH: met à jour un sous-ensemble de champs safe (sans casser l’onboarding)
 
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+ import { NextRequest, NextResponse } from "next/server";
+ import { z } from "zod";
+ import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+type AnyRecord = Record<string, any>;
 
 const UpdateSchema = z
   .object({
