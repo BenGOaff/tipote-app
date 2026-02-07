@@ -21,12 +21,10 @@ function asString(v: unknown): string {
 }
 
 function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v))
-    return v.map(asString).map((s) => s.trim()).filter(Boolean);
+  if (Array.isArray(v)) return v.map(asString).map((s) => s.trim()).filter(Boolean);
   if (typeof v === "string") {
     const s = v.trim();
     if (!s) return [];
-    // support "a, b, c" ou "a|b|c"
     const parts = s.includes("|") ? s.split("|") : s.split(",");
     return parts.map((x) => x.trim()).filter(Boolean);
   }
@@ -39,7 +37,6 @@ function clamp01(n: number) {
 
 function parseDateOnly(raw: string): Date | null {
   if (!raw) return null;
-  // accepte YYYY-MM-DD ou ISO
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -52,11 +49,8 @@ function bucketKey(daysFromNow: number) {
 }
 
 function countPlanTasks(planJson: AnyRecord): number {
-  const plan90 =
-    (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
-  const grouped =
-    (plan90?.tasks_by_timeframe as AnyRecord) ||
-    (planJson.tasks_by_timeframe as AnyRecord);
+  const plan90 = (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
+  const grouped = (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
   if (!grouped) return 0;
 
   const d30 = Array.isArray(grouped.d30) ? grouped.d30.length : 0;
@@ -93,16 +87,12 @@ function hasCurrencyOrPeriodHints(s: string): boolean {
  * - supporte: "10k", "10K€/mois", "15 000", "2000-5000", "10000+"
  * - si pas de nombre exploitable => renvoie le texte clean (pour ne pas afficher "—")
  */
-function normalizeRevenueGoalText(raw: unknown): {
-  kind: "numeric" | "text";
-  value: string;
-} {
+function normalizeRevenueGoalText(raw: unknown): { kind: "numeric" | "text"; value: string } {
   const s0 = asString(raw).trim();
   if (!s0) return { kind: "text", value: "" };
 
   const s = s0.replace(/\s+/g, " ").trim();
 
-  // 1) Essayez de détecter un pattern type: 10k / 10K / 2.5k / 1,5k
   const kmMatch = s.match(/(\d+(?:[.,]\d+)?)\s*([kKmM])\b/);
   if (kmMatch) {
     const numRaw = kmMatch[1].replace(",", ".");
@@ -114,7 +104,6 @@ function normalizeRevenueGoalText(raw: unknown): {
     }
   }
 
-  // 2) Range type: "2000-5000" => on prend le haut
   const rangeMatch = s.match(/(\d[\d\s.,]*)\s*[-–]\s*(\d[\d\s.,]*)/);
   if (rangeMatch) {
     const b = rangeMatch[2].replace(/[^\d]/g, "");
@@ -124,7 +113,6 @@ function normalizeRevenueGoalText(raw: unknown): {
     }
   }
 
-  // 3) Valeur simple (digits)
   const digits = s.replace(/[^\d]/g, "");
   if (digits) {
     const n = Number(digits);
@@ -134,7 +122,6 @@ function normalizeRevenueGoalText(raw: unknown): {
     return { kind: "text", value: digits };
   }
 
-  // 4) Fallback : texte tel quel
   return { kind: "text", value: s.slice(0, 80) };
 }
 
@@ -177,6 +164,9 @@ export default async function StrategyPage() {
         "first_name",
         "content_preference",
         "revenue_goal_monthly",
+        "offers",
+        "has_offers",
+        "is_affiliate",
         "created_at",
         "updated_at",
       ].join(","),
@@ -187,6 +177,28 @@ export default async function StrategyPage() {
   const profileRow = (profileRes.data ?? null) as AnyRecord | null;
   const firstName = asString(profileRow?.first_name);
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
+
+  // ✅ Pyramides d'offres : UNIQUEMENT pour les users SANS offres et NON affiliés (sinon: jamais de /strategy/pyramids)
+  let isAffiliate = Boolean((profileRow as AnyRecord | null)?.is_affiliate);
+
+  // Aligne la détection affiliation avec l'API /api/strategy/offer-pyramid (best-effort)
+  try {
+    const { data: bmRow } = await supabase
+      .from("onboarding_facts")
+      .select("value")
+      .eq("user_id", user.id)
+      .eq("key", "business_model")
+      .maybeSingle();
+
+    const bm = asString((bmRow as AnyRecord | null)?.value).toLowerCase();
+    if (bm.includes("affiliate") || bm.includes("affilié") || bm.includes("affiliation")) isAffiliate = true;
+  } catch {
+    // fail-open
+  }
+
+  const offersArr = Array.isArray((profileRow as AnyRecord | null)?.offers) ? (((profileRow as AnyRecord | null)?.offers) as any[]) : [];
+  const hasOffersEffective = Boolean((profileRow as AnyRecord | null)?.has_offers) || offersArr.length > 0;
+  const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
 
   // Plan
   const planRes = await supabase
@@ -246,41 +258,42 @@ export default async function StrategyPage() {
     );
   }
 
-  // ✅ si pas de pyramide choisie -> flow officiel
-  const selectedIndex = (planJson as AnyRecord).selected_offer_pyramid_index;
-  if (selectedIndex === null || typeof selectedIndex === "undefined") {
-    redirect("/strategy/pyramids");
-  }
+  // ✅ Sélection pyramide :
+  // - On NE redirige JAMAIS vers /strategy/pyramids (route réservée à l'onboarding et aux users sans offres).
+  // - Si une sélection existe dans le plan -> on l'utilise.
+  // - Sinon, on fail-open en prenant la 1ère pyramide si dispo (sans bloquer l'accès à /strategy).
+  const selectedIndexRaw = (planJson as AnyRecord).selected_offer_pyramid_index;
+  const selectedIndex = typeof selectedIndexRaw === "number" ? (selectedIndexRaw as number) : null;
 
   // Persona (depuis plan_json)
   const personaRaw = ((planJson as AnyRecord).persona ?? {}) as AnyRecord;
   const persona = {
-    title:
-      asString(personaRaw.title) ||
-      asString(personaRaw.profile) ||
-      asString(personaRaw.name) ||
-      "",
+    title: asString(personaRaw.title) || asString(personaRaw.profile) || asString(personaRaw.name) || "",
     pains: asStringArray(personaRaw.pains),
     desires: asStringArray(personaRaw.desires),
-    channels: preferredContentTypes.length
-      ? preferredContentTypes
-      : asStringArray(personaRaw.channels),
+    channels: preferredContentTypes.length ? preferredContentTypes : asStringArray(personaRaw.channels),
   };
 
   // Pyramides (depuis plan_json)
   const offerPyramids = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
 
   const hasExplicitSelection =
-    typeof (planJson as AnyRecord).selected_offer_pyramid_index === "number" &&
-    !!(planJson as AnyRecord).selected_offer_pyramid;
+    typeof (planJson as AnyRecord).selected_offer_pyramid_index === "number" && !!(planJson as AnyRecord).selected_offer_pyramid;
 
-  const initialSelectedIndex = hasExplicitSelection
-    ? ((planJson as AnyRecord).selected_offer_pyramid_index as number)
-    : 0;
+  // ✅ Index sélectionné : si pas de sélection explicite, on choisit 0 si on a des pyramides (sinon 0 par défaut)
+  const initialSelectedIndex =
+    hasExplicitSelection
+      ? ((planJson as AnyRecord).selected_offer_pyramid_index as number)
+      : offerPyramids.length > 0
+        ? 0
+        : 0;
 
-  const initialSelectedPyramid = hasExplicitSelection
-    ? ((planJson as AnyRecord).selected_offer_pyramid as AnyRecord)
-    : undefined;
+  const initialSelectedPyramid =
+    hasExplicitSelection
+      ? ((planJson as AnyRecord).selected_offer_pyramid as AnyRecord)
+      : offerPyramids.length > 0
+        ? (offerPyramids[0] as AnyRecord)
+        : undefined;
 
   // ✅ IMPORTANT (prod/RLS-safe):
   // Lecture des tâches via supabaseAdmin (service_role) car les policies RLS peuvent renvoyer [] sans erreur.
@@ -300,18 +313,12 @@ export default async function StrategyPage() {
 
   const today = new Date();
 
-  const byPhase = {
-    p1: [] as TaskRow[],
-    p2: [] as TaskRow[],
-    p3: [] as TaskRow[],
-  };
+  const byPhase = { p1: [] as TaskRow[], p2: [] as TaskRow[], p3: [] as TaskRow[] };
 
   for (const t of tasks) {
     const due = t.due_date ? parseDateOnly(t.due_date) : null;
     if (!due) continue;
-    const daysFromNow = Math.ceil(
-      (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const daysFromNow = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     const key = bucketKey(daysFromNow);
     if (key === "p1") byPhase.p1.push(t);
     if (key === "p2") byPhase.p2.push(t);
@@ -343,18 +350,14 @@ export default async function StrategyPage() {
   const totalPlanTasks = totalTasks || planTasksCount || 0;
 
   const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
-  const currentPhaseLabel =
-    currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
+  const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
 
   // ✅ Jours restants : basé sur created_at du business_plan
   const createdAt = asString(planRow?.created_at);
   const createdDate = createdAt ? parseDateOnly(createdAt) : null;
 
   const daysElapsed = createdDate
-    ? Math.max(
-        0,
-        Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)),
-      )
+    ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const daysRemaining = Math.max(0, 90 - daysElapsed);

@@ -11,7 +11,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ampTrack } from "@/lib/telemetry/amplitude-client";
 
-// ✅ shadcn dialogs
+// ✅ shadcn dialog
 import {
   Dialog,
   DialogContent,
@@ -35,42 +35,12 @@ type ApiReply = {
   message: string;
   appliedFacts?: Array<{ key: string; confidence: string }>;
   done?: boolean;
-  shouldFinish?: boolean; // ✅ une seule fois
-  should_finish?: boolean; // ✅ compat backend/legacy
+  shouldFinish?: boolean;
+  should_finish?: boolean;
   error?: string;
 };
 
 type ProfileRow = Record<string, any> | null;
-
-/**
- * ✅ Offer pyramids (uniquement si: user n'a pas d'offre ET n'est pas affilié)
- * Le backend doit renvoyer un flag: shouldGeneratePyramids (ou should_generate_pyramids)
- * sur GET /api/strategy/offer-pyramid
- */
-type Offer = {
-  title?: string;
-  format?: string;
-  price?: number;
-  composition?: string;
-  purpose?: string;
-  insight?: string;
-};
-
-type OfferPyramid = {
-  id?: string;
-  name?: string;
-  strategy_summary?: string;
-  lead_magnet?: Offer | null;
-  low_ticket?: Offer | null;
-  high_ticket?: Offer | null;
-};
-
-type OfferPyramidState = {
-  shouldGeneratePyramids: boolean;
-  offerMode?: string | null;
-  pyramids: OfferPyramid[];
-  selectedIndex: number | null;
-};
 
 export type OnboardingChatV2Props = {
   firstName?: string | null;
@@ -90,11 +60,7 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   });
 
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-
-  if (!res.ok) {
-    throw new Error((json as any)?.error || `HTTP ${res.status}`);
-  }
-
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   return json as T;
 }
 
@@ -106,11 +72,7 @@ async function patchJSON<T>(url: string, body?: unknown): Promise<T> {
   });
 
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-
-  if (!res.ok) {
-    throw new Error((json as any)?.error || `HTTP ${res.status}`);
-  }
-
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   return json as T;
 }
 
@@ -134,7 +96,6 @@ function normalizeActivities(input: string): string[] {
     if (cleaned.length > 80) continue;
     if (!uniq.some((u) => u.toLowerCase() === cleaned.toLowerCase())) uniq.push(cleaned);
   }
-
   return uniq.slice(0, 6);
 }
 
@@ -162,15 +123,12 @@ function matchCandidate(input: string, candidates: string[]): string | null {
   const n = normalizeChoice(input);
   if (!n) return null;
 
-  for (const c of candidates) {
-    if (normalizeChoice(c) === n) return c;
-  }
+  for (const c of candidates) if (normalizeChoice(c) === n) return c;
 
   for (const c of candidates) {
     const cn = normalizeChoice(c);
     if (cn && (cn.includes(n) || n.includes(cn))) return c;
   }
-
   return null;
 }
 
@@ -186,10 +144,7 @@ function buildDefaultGreeting(firstName: string) {
   );
 }
 
-type BootStep = {
-  title: string;
-  lines: string[];
-};
+type BootStep = { title: string; lines: string[] };
 
 const BOOT_STEPS: BootStep[] = [
   {
@@ -244,6 +199,32 @@ function RecapRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+/** ✅ Offer pyramids (uniquement si PAS d’offre et PAS affiliation) */
+type Offer = {
+  title?: string;
+  format?: string;
+  price?: number;
+  composition?: string;
+  purpose?: string;
+  insight?: string;
+};
+
+type OfferPyramid = {
+  id?: string;
+  name?: string;
+  strategy_summary?: string;
+  lead_magnet?: Offer | null;
+  low_ticket?: Offer | null;
+  high_ticket?: Offer | null;
+};
+
+type OfferPyramidState = {
+  shouldGeneratePyramids: boolean;
+  offerMode?: string | null;
+  pyramids: OfferPyramid[];
+  selectedIndex: number | null;
+};
+
 function formatPrice(p?: number) {
   if (typeof p !== "number" || !Number.isFinite(p)) return "";
   if (p === 0) return "Gratuit";
@@ -255,35 +236,6 @@ function pyramidTitle(p: OfferPyramid, idx: number) {
   return name || `Pyramide ${idx + 1}`;
 }
 
-function OfferBlock({ title, offer }: { title: string; offer?: Offer | null }) {
-  if (!offer) return null;
-  const tt = safeStr(offer.title, 80);
-  const fmt = safeStr(offer.format, 80);
-  const comp = safeStr(offer.composition, 160);
-  const purp = safeStr(offer.purpose, 160);
-  const ins = safeStr(offer.insight, 200);
-  const price = formatPrice(offer.price);
-
-  const hasAny = Boolean(tt || fmt || comp || purp || ins || price);
-  if (!hasAny) return null;
-
-  return (
-    <div className="rounded-xl border p-3">
-      <div className="text-sm font-semibold">{title}</div>
-      <div className="mt-1 space-y-1 text-sm text-muted-foreground">
-        {tt ? <div className="text-foreground">{tt}</div> : null}
-        <div className="flex flex-wrap gap-2">
-          {fmt ? <span className="rounded-lg bg-muted px-2 py-0.5 text-xs text-foreground">{fmt}</span> : null}
-          {price ? <span className="rounded-lg bg-muted px-2 py-0.5 text-xs text-foreground">{price}</span> : null}
-        </div>
-        {comp ? <div>• {comp}</div> : null}
-        {purp ? <div>• {purp}</div> : null}
-        {ins ? <div className="text-foreground/90">💡 {ins}</div> : null}
-      </div>
-    </div>
-  );
-}
-
 export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -291,7 +243,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const firstName = (props.firstName ?? "").trim();
 
   const [sessionId, setSessionId] = useState<string | null>(() =>
-    props.initialSessionId ? String(props.initialSessionId) : null,
+    props.initialSessionId ? String(props.initialSessionId) : null
   );
 
   const [messages, setMessages] = useState<ChatMsg[]>(() => {
@@ -303,7 +255,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         at: String(m.at ?? nowIso()),
       }));
     }
-
     return [{ role: "assistant", content: buildDefaultGreeting(firstName), at: nowIso() }];
   });
 
@@ -319,12 +270,12 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
   const [primaryActivity, setPrimaryActivity] = useState<string | null>(null);
 
-  // ✅ Recap modal state
+  // ✅ recap modal
   const [showRecap, setShowRecap] = useState(false);
   const [recapLoading, setRecapLoading] = useState(false);
   const [recapProfile, setRecapProfile] = useState<ProfileRow>(null);
 
-  // ✅ Offer pyramids selection modal state
+  // ✅ pyramids modal
   const [showPyramids, setShowPyramids] = useState(false);
   const [pyramidsState, setPyramidsState] = useState<OfferPyramidState>({
     shouldGeneratePyramids: false,
@@ -339,7 +290,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, isAssistantTyping, isFinalizing]);
+  }, [messages.length, isAssistantTyping, isFinalizing, showPyramids]);
 
   useEffect(() => {
     try {
@@ -357,11 +308,14 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     return last?.content ?? "";
   }, [messages]);
 
-  const needsPrimaryChoice = useMemo(() => isPrimaryActivityPrompt(lastAssistantMessage), [lastAssistantMessage]);
+  const needsPrimaryChoice = useMemo(
+    () => isPrimaryActivityPrompt(lastAssistantMessage),
+    [lastAssistantMessage]
+  );
 
   const isPrimaryChoiceLockActive = useMemo(
     () => needsPrimaryChoice && activityCandidates.length >= 2,
-    [needsPrimaryChoice, activityCandidates.length],
+    [needsPrimaryChoice, activityCandidates.length]
   );
 
   const primaryChoiceMatched = useMemo(() => {
@@ -404,7 +358,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
       const state: OfferPyramidState = {
         shouldGeneratePyramids: Boolean(res?.shouldGeneratePyramids ?? res?.should_generate_pyramids ?? false),
         offerMode: (res?.offerMode ?? res?.offer_mode ?? null) as any,
-        pyramids: Array.isArray(res?.offerPyramids ?? res?.offer_pyramids) ? (res?.offerPyramids ?? res?.offer_pyramids) : [],
+        pyramids: Array.isArray(res?.offerPyramids ?? res?.offer_pyramids)
+          ? (res?.offerPyramids ?? res?.offer_pyramids)
+          : [],
         selectedIndex:
           typeof (res?.selectedIndex ?? res?.selected_offer_pyramid_index) === "number"
             ? (res?.selectedIndex ?? res?.selected_offer_pyramid_index)
@@ -417,10 +373,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   }
 
   async function ensureOfferPyramidsExist(): Promise<OfferPyramidState | null> {
-    // 1) try read
     let st = await loadOfferPyramidsBestEffort();
 
-    // 2) if backend says "should generate", ensure we have pyramids (idempotent)
+    // Si on DOIT générer des pyramides mais qu'il n'y en a pas => on génère (idempotent backend)
     if (st?.shouldGeneratePyramids && (st.pyramids?.length ?? 0) < 1) {
       try {
         await postJSON<any>("/api/strategy/offer-pyramid", {});
@@ -447,7 +402,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     if (typeof resolver === "function") resolver(idx);
   }
 
-  // ✅ FINALIZE — si nécessaire: générer + montrer 3 pyramides -> user choisit -> patch selectedIndex -> /api/strategy -> tasks -> /app
+  // ✅ FINALIZE — pyramides (si needed) -> selection -> full strategy -> sync tasks -> /app
   const finalize = async () => {
     if (isFinalizing) return;
 
@@ -460,31 +415,42 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
       // Step 0: complete onboarding (best-effort)
       try {
-        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", { sessionId: sid, diagnosticCompleted: true });
+        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
+          sessionId: sid,
+          diagnosticCompleted: true,
+        });
       } catch {
         // fail-open
       }
 
-      // Step 1: Offer pyramids (ONLY if backend says shouldGeneratePyramids)
+      // Step 1: créer/mettre à jour le plan (idempotent)
       setBootStepIndex(1);
       setBootLineIndex(0);
+      try {
+        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
+      } catch {
+        // fail-open
+      }
 
-      let selectedIdx: number | null = null;
-
+      // Step 1bis: pyramides uniquement si nécessaire
       const st = await ensureOfferPyramidsExist();
-      if (st?.shouldGeneratePyramids && (st.pyramids?.length ?? 0) >= 1) {
-        // Always show 3 pyramids to choose from (like before)
-        setPyramidsState(st);
-        setPyramidChoice(typeof st.selectedIndex === "number" ? st.selectedIndex : 0);
-        setShowPyramids(true);
+      if (st?.shouldGeneratePyramids) {
+        const pyramids = st?.pyramids ?? [];
+        if (pyramids.length >= 1) {
+          setPyramidsState(st);
+          setPyramidChoice(typeof st.selectedIndex === "number" ? st.selectedIndex : 0);
+          setShowPyramids(true);
 
-        selectedIdx = await waitForPyramidChoice();
+          const chosen = await waitForPyramidChoice();
 
-        // Persist choice
-        try {
-          await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", { selectedIndex: selectedIdx });
-        } catch {
-          // fail-open
+          // patch selectedIndex
+          try {
+            await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", {
+              selectedIndex: chosen,
+            });
+          } catch {
+            // fail-open
+          }
         }
       }
 
@@ -506,11 +472,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      ampTrack("tipote_onboarding_completed", {
-        onboarding_version: "v2_chat",
-        pyramids_shown: Boolean(st?.shouldGeneratePyramids),
-        pyramid_selected_index: selectedIdx,
-      });
+      ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
 
       await new Promise((r) => setTimeout(r, 900));
       router.replace("/app");
@@ -528,7 +490,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     const rawText = (overrideText ?? input).trim();
     if (!rawText || isSending || isDone || isFinalizing) return;
 
-    // Lock : si l'assistant demande UNE activité, on exige un match et on la capture localement
     if (!overrideText && isPrimaryChoiceLockActive) {
       const matched = matchCandidate(rawText, activityCandidates);
       if (!matched) {
@@ -552,7 +513,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     setMessages((prev) => [...prev, { role: "user", content: rawText, at: nowIso() }]);
 
     try {
-      // ✅ endpoint chat
       const reply = await postJSON<ApiReply>("/api/onboarding/answers/chat", {
         message: rawText,
         sessionId: sessionId ?? undefined,
@@ -607,71 +567,96 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const recapContent = safeStr((recapProfile as any)?.content_preference ?? (recapProfile as any)?.preferred_content_type, 80);
   const recapPrimary = safeStr(primaryActivity, 120);
 
+  const pyramids = pyramidsState?.pyramids ?? [];
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
-      {/* ✅ Offer pyramids choice modal */}
+      {/* ✅ Pyramids modal (UNIQUEMENT si shouldGeneratePyramids) */}
       <Dialog
         open={showPyramids}
         onOpenChange={(v) => {
-          // pendant le "waitForPyramidChoice", on évite la fermeture accidentelle
+          // pas de fermeture sauvage : on veut un choix
           if (!v) return;
           setShowPyramids(v);
         }}
       >
-        <DialogContent className="sm:max-w-5xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Choisis la pyramide d’offres qui te convient</DialogTitle>
+            <DialogTitle>Choisis ta pyramide d’offres</DialogTitle>
             <DialogDescription>
-              Tipote a généré 3 stratégies d’offres basées sur tes infos. Choisis celle qui te ressemble le plus : on l’intègre ensuite à ta stratégie et tes tâches.
+              On a généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {(pyramidsState.pyramids ?? []).slice(0, 3).map((p, idx) => {
-              const active = pyramidChoice === idx;
-              const summary = safeStr((p as any)?.strategy_summary, 380);
-              return (
-                <button
-                  key={(p as any)?.id ?? `${idx}`}
-                  type="button"
-                  onClick={() => setPyramidChoice(idx)}
-                  className={cn(
-                    "text-left rounded-2xl border p-4 transition",
-                    active ? "border-primary ring-2 ring-primary/30" : "hover:border-foreground/20",
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-base font-semibold">{pyramidTitle(p, idx)}</div>
-                      {summary ? <div className="mt-1 text-sm text-muted-foreground">{summary}</div> : null}
-                    </div>
+          {pyramids.length < 1 ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Génération des pyramides…
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {pyramids.slice(0, 3).map((p, idx) => {
+                const selected = pyramidChoice === idx;
+                const lead = p?.lead_magnet ?? null;
+                const low = p?.low_ticket ?? null;
+                const high = p?.high_ticket ?? null;
 
-                    <div
-                      className={cn(
-                        "mt-1 h-5 w-5 rounded-full border flex items-center justify-center",
-                        active ? "border-primary" : "border-muted-foreground/30",
-                      )}
-                    >
-                      {active ? <div className="h-3 w-3 rounded-full bg-primary" /> : null}
-                    </div>
-                  </div>
+                return (
+                  <button
+                    key={p?.id ?? idx}
+                    type="button"
+                    onClick={() => setPyramidChoice(idx)}
+                    className={cn(
+                      "text-left rounded-2xl border p-4 transition hover:shadow-sm",
+                      selected ? "border-primary ring-2 ring-primary/20" : "border-border"
+                    )}
+                  >
+                    <div className="text-base font-semibold">{pyramidTitle(p, idx)}</div>
+                    {p?.strategy_summary ? (
+                      <div className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap">
+                        {String(p.strategy_summary)}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-muted-foreground">—</div>
+                    )}
 
-                  <div className="mt-4 space-y-2">
-                    <OfferBlock title="Lead magnet" offer={(p as any)?.lead_magnet ?? null} />
-                    <OfferBlock title="Low ticket" offer={(p as any)?.low_ticket ?? null} />
-                    <OfferBlock title="High ticket" offer={(p as any)?.high_ticket ?? null} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-xl border px-3 py-2">
+                        <div className="text-xs text-muted-foreground">Lead magnet</div>
+                        <div className="text-sm font-medium">{lead?.title ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(lead?.format ?? "").trim() ? `${lead?.format}` : ""}
+                          {formatPrice(lead?.price) ? (lead?.format ? ` • ${formatPrice(lead?.price)}` : formatPrice(lead?.price)) : ""}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border px-3 py-2">
+                        <div className="text-xs text-muted-foreground">Low ticket</div>
+                        <div className="text-sm font-medium">{low?.title ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(low?.format ?? "").trim() ? `${low?.format}` : ""}
+                          {formatPrice(low?.price) ? (low?.format ? ` • ${formatPrice(low?.price)}` : formatPrice(low?.price)) : ""}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border px-3 py-2">
+                        <div className="text-xs text-muted-foreground">High ticket</div>
+                        <div className="text-sm font-medium">{high?.title ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(high?.format ?? "").trim() ? `${high?.format}` : ""}
+                          {formatPrice(high?.price) ? (high?.format ? ` • ${formatPrice(high?.price)}` : formatPrice(high?.price)) : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              onClick={() => confirmPyramidChoice()}
-            >
-              Valider ce choix
+            <Button type="button" onClick={confirmPyramidChoice} disabled={pyramids.length < 1}>
+              Continuer avec cette stratégie
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -688,7 +673,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Résumé de ton onboarding</DialogTitle>
-            <DialogDescription>Vérifie rapidement. Ensuite je génère ton plan et je t’emmène sur ton dashboard.</DialogDescription>
+            <DialogDescription>
+              Vérifie rapidement. Ensuite je génère ton plan et je t’emmène sur ton dashboard.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
@@ -770,11 +757,13 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                             state === "done"
                               ? "bg-primary"
                               : state === "active"
-                                ? "bg-primary/60 animate-pulse"
-                                : "bg-muted-foreground/30",
+                              ? "bg-primary/60 animate-pulse"
+                              : "bg-muted-foreground/30"
                           )}
                         />
-                        <div className={cn(state === "todo" ? "text-muted-foreground" : "text-foreground")}>{s.title}</div>
+                        <div className={cn(state === "todo" ? "text-muted-foreground" : "text-foreground")}>
+                          {s.title}
+                        </div>
                       </div>
                     );
                   })}
@@ -806,7 +795,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               <div
                 className={cn(
                   "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                 )}
               >
                 {m.content}
