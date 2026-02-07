@@ -5,22 +5,11 @@
 // - Stocke des facts propres (onboarding_facts) via RPC upsert_onboarding_fact
 // - Synchronise quelques champs clés vers business_profiles (source de vérité UI) sans écraser par des vides
 //
-// PATCH (A2) :
-// - Compat "done" (prompt) + "should_finish" (backend) => pas de blocage finish
-// - Fail-safe serveur : si activities_list >= 2 et primary_activity absent => on force la question + finish=false
-//
-// PATCH (DB ALIGNMENT) :
-// - onboarding_sessions: onboarding_version, started_at, meta sont NOT NULL
-// - onboarding_messages: pas de user_id, extracted JSONB NOT NULL
-// - onboarding_facts: confidence TEXT (high|medium|low) + fallback upsert si RPC absente
-//
-// PATCH (A2+ lock activ.) :
-// - Auto-capture activities_list (confidence low) si user liste plusieurs items
-// - Auto-capture primary_activity (confidence high) si l'assistant vient de demander une priorité
-//
-// PATCH (QUALITÉ) :
-// - Décision "finish" côté serveur : si les 3 piliers sont bien en mémoire (sales + acquisition + success)
-//   => shouldFinish=true même si le modèle bavarde encore (sinon le chat ne se termine jamais).
+// PATCH PREMIUM (finish UX) :
+// - Si le bot dit "tu peux passer à la suite" => le serveur déclenche shouldFinish=true
+// - Si l'utilisateur répond juste "ok" après ce message => finish immédiat (pas de boucle)
+// - Ajout extracteur serveur success_metrics (sinon fin impossible)
+// - Garde-fou : si activities_list>=2 et primary_activity manquante => on ne termine pas
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -167,8 +156,6 @@ function messageLooksFinished(text: string): boolean {
 }
 
 function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
-  // Minimum viable pour déclencher le récap + génération best-effort.
-  // On n'avance JAMAIS si l'utilisateur devait choisir une activité prioritaire.
   try {
     const activities = Array.isArray((knownFacts as any)["activities_list"])
       ? ((knownFacts as any)["activities_list"] as any[]).filter((x) => typeof x === "string")
@@ -181,7 +168,6 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
     const hasAcq = hasNonEmptyFact(knownFacts, "acquisition_channels");
     const hasSuccess = hasNonEmptyFact(knownFacts, "success_metrics");
 
-    // On exige les 3 piliers (sales/acquisition/success) : sinon risque de plan bancal.
     return hasSales && hasAcq && hasSuccess;
   } catch {
     return false;
@@ -213,9 +199,6 @@ function looksFrustrated(text: string) {
     t.includes("enchaine") ||
     t.includes("putain") ||
     t.includes("bordel") ||
-    t.includes("avance") ||
-    t.includes("passe à la suite") ||
-    t.includes("boucle") ||
     t.includes("mec")
   );
 }
@@ -264,6 +247,26 @@ function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inco
   }
 
   return "unknown";
+}
+
+function isUserConfirmingToFinish(text: string): boolean {
+  const t = (text || "").trim().toLowerCase();
+  if (!t) return false;
+  return (
+    t === "ok" ||
+    t === "okay" ||
+    t === "go" ||
+    t === "continuer" ||
+    t === "continue" ||
+    t === "c'est bon" ||
+    t === "cest bon" ||
+    t === "ça marche" ||
+    t === "ca marche" ||
+    t === "parfait" ||
+    t === "super" ||
+    t === "yes" ||
+    t === "oui"
+  );
 }
 
 function isAcquisitionQuestion(text: string) {
@@ -321,6 +324,40 @@ function inferTrafficSourceTodayFromChannels(
   if (set.has("partnerships")) return "partnerships";
   if (set.has("social") || set.has("word_of_mouth") || set.has("youtube") || set.has("blog") || set.has("email")) return "organic_social";
   return "none";
+}
+
+function extractSuccessMetrics(answer: string): Record<string, any> | null {
+  const t = (answer || "").toLowerCase();
+  const payload: Record<string, any> = {};
+
+  const criteria: string[] = [];
+  if (t.includes("chiffre") || t.includes("ca") || t.includes("revenu") || t.includes("mrr")) criteria.push("revenue");
+  if (t.includes("clients")) criteria.push("clients");
+  if (t.includes("communaut") || t.includes("audience")) criteria.push("audience");
+
+  if (criteria.length) payload.criteria = Array.from(new Set(criteria));
+
+  // clients_target: "100 clients"
+  const mClients = answer.match(/(\d{1,4})\s*(clients?|abonnés?|abonnes?)/i);
+  if (mClients?.[1]) {
+    const n = Number(mClients[1]);
+    if (Number.isFinite(n)) payload.clients_target = n;
+  }
+
+  // mrr_target_monthly: "10k/mois" or "10 000€/mois"
+  const mK = answer.match(/(\d{1,3})\s*k\s*\/\s*mois/i) || answer.match(/(\d{1,3})\s*k\s*mois/i);
+  if (mK?.[1]) {
+    const n = Number(mK[1]);
+    if (Number.isFinite(n)) payload.mrr_target_monthly = n * 1000;
+  } else {
+    const mEuro = answer.match(/(\d[\d\s]{1,9})\s*(€|eur|euros)\s*\/\s*mois/i);
+    if (mEuro?.[1]) {
+      const n = Number(mEuro[1].replace(/\s/g, ""));
+      if (Number.isFinite(n)) payload.mrr_target_monthly = n;
+    }
+  }
+
+  return Object.keys(payload).length ? payload : null;
 }
 
 function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
@@ -479,6 +516,37 @@ export async function POST(req: NextRequest) {
 
     const userMsg = String(body.message || "");
 
+    // EARLY_FINISH_CONFIRM: si l'assistant vient d'indiquer "tu peux passer à la suite"
+    // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin (UX premium).
+    try {
+      const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
+      if (prevWasFinished && isUserConfirmingToFinish(userMsg)) {
+        const finishMessage =
+          locale === "fr"
+            ? "Parfait ✅ Je te montre le récap et je lance la création de ta stratégie."
+            : "Perfect ✅ I’ll show you the recap and start building your strategy.";
+
+        const { error: insertAssistErr } = await supabase.from("onboarding_messages").insert({
+          session_id: sessionId,
+          role: "assistant",
+          content: finishMessage,
+          extracted: { facts: [], finish_confirm: true },
+          created_at: new Date().toISOString(),
+        });
+
+        if (insertAssistErr) return NextResponse.json({ error: insertAssistErr.message }, { status: 400 });
+
+        return NextResponse.json({
+          sessionId,
+          message: finishMessage,
+          appliedFacts,
+          shouldFinish: true,
+        });
+      }
+    } catch {
+      // ignore
+    }
+
     // Auto-capture activities_list si user liste plusieurs items
     try {
       const raw = userMsg
@@ -537,6 +605,18 @@ export async function POST(req: NextRequest) {
               await upsertOneFact({ key: "traffic_source_today", value: traffic, confidence: "medium", source: "server_extract_acquisition" });
             }
           }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Auto-extract success_metrics (best-effort) depuis la réponse user
+    try {
+      if (typeof knownFacts["success_metrics"] === "undefined" || knownFacts["success_metrics"] === null) {
+        const metrics = extractSuccessMetrics(userMsg);
+        if (metrics) {
+          await upsertOneFact({ key: "success_metrics", value: metrics, confidence: "high", source: "server_extract_success" });
         }
       }
     } catch {
@@ -621,7 +701,7 @@ export async function POST(req: NextRequest) {
       await upsertOneFact({ key: f.key, value: f.value, confidence: f.confidence, source: f.source });
     }
 
-    // Fail-safe : interdit le finish si activities_list>=2 et primary_activity manquante
+    // Garde-fou : interdit le finish si activities_list>=2 et primary_activity manquante
     try {
       const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
       const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]) : "";
@@ -634,19 +714,25 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Décision finish (serveur = source de vérité)
-    // On n'affiche le récap / finalisation QUE si on a vraiment les 3 piliers en mémoire.
+    // Objectif UX premium : si l'IA indique clairement qu'elle a tout, on déclenche la fin
+    // (la génération est best-effort). On garde seulement le garde-fou "activité prioritaire".
     try {
       const ready = isReadyToFinish(knownFacts);
 
+      // Cas normal : on a les 3 piliers (sales + acquisition + success) => fin
       if (ready) {
         shouldFinish = true;
-      } else if (shouldFinish && !ready) {
-        // Le modèle peut se tromper : on refuse de finir sans les facts requis.
-        shouldFinish = false;
       }
 
-      // Si le modèle dit explicitement qu'il a fini, on ne le croit que si ready=true.
-      if (messageLooksFinished(out.message) && ready) {
+      // Cas UX : l'IA dit explicitement qu'on peut passer à la suite
+      // => on finit aussi (même si certains champs secondaires manquent),
+      // car la stratégie/tasks sont idempotentes et best-effort.
+      if (messageLooksFinished(out.message)) {
+        shouldFinish = true;
+      }
+
+      // Si le modèle a mis done/should_finish à true, on respecte.
+      if (Boolean(out.should_finish ?? out.done ?? false)) {
         shouldFinish = true;
       }
     } catch {
