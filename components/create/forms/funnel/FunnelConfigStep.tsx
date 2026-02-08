@@ -307,7 +307,7 @@ export function FunnelConfigStep({
                 </div>
                 {funnelPageType === "sales" ? (
                   <div className="space-y-2">
-                    <Label>CGV (URL)</Label>
+                    <Label>CGV et politique (URL)</Label>
                     <Input value={legalCgvUrl} onChange={(e) => setLegalCgvUrl(e.target.value)} placeholder="https://..." />
                   </div>
                 ) : null}
