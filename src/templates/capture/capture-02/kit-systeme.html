@@ -1,44 +1,118 @@
-<section class="hero capture-02">
-  <div class="container">
-    <span class="eyebrow">{{hero_pretitle}}</span>
+<!-- =========================================================
+CAPTURE-02 — KIT-SYSTEME.IO (COMPLET / PRÊT À COPIER-COLLER)
+AUCUN TEMPLATE SUPPRIMÉ — HTML INTÉGRAL + MARQUEURS FORM
+========================================================= -->
 
-    <h1>
-      {{hero_title}}
-      {{#hero_title_accent}}<span class="accent"> {{.}}</span>{{/hero_title_accent}}
-    </h1>
+<!-- ===================== FONTS (À COLLER DANS HEADER SI BESOIN) ===================== -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 
-    <p class="subtitle">{{hero_subtitle}}</p>
+<!-- ===================== BLOC 1 ===================== -->
+<div class="tpt-scope">
 
-    <div class="tpt-grid">
-      <div class="video">
-        <div class="frame">
-          <div class="play">▶</div>
+  <section class="hero-section">
+    <div class="hero-container">
+
+      <div class="hero-content">
+        <div class="hero-tag">{{hero_tag}}</div>
+
+        <h1 class="hero-title">
+          {{hero_title}}
+        </h1>
+
+        <p class="hero-subtitle">
+          {{hero_subtitle}}
+        </p>
+
+        <div class="hero-bullets">
+          <div class="hero-bullet">{{hero_bullet_1}}</div>
+          <div class="hero-bullet">{{hero_bullet_2}}</div>
+          <div class="hero-bullet">{{hero_bullet_3}}</div>
         </div>
-        {{#video_caption}}<div class="caption">{{.}}</div>{{/video_caption}}
+
+        <!-- ===================== FORM SYSTEME.IO ===================== -->
+        <div class="tpt-slot tpt-form" style="border:2px dashed #dd0c14;padding:20px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#dd0c14;">
+          <strong>ICI TU AJOUTES TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
+          (Prénom + Email)
+        </div>
+
+        <p class="hero-note">
+          {{hero_note}}
+        </p>
       </div>
 
-      <div class="side">
-        <div class="benefits">
-          {{#bullets}}
-          <div class="benefit">
-            <div class="tick">✓</div>
-            <p>{{.}}</p>
-          </div>
-          {{/bullets}}
+      <div class="hero-visual">
+        {{hero_visual}}
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- ===================== BLOC 2 ===================== -->
+<div class="tpt-scope">
+
+  <section class="section-proof">
+    <div class="container">
+      <h2 class="section-title">
+        {{proof_title}}
+      </h2>
+
+      <div class="proof-grid">
+        <div class="proof-item">
+          <div class="proof-item-title">{{proof_item_1_title}}</div>
+          <div class="proof-item-text">{{proof_item_1_text}}</div>
         </div>
 
-        <div class="systeme-slot systeme-form">
-          <!-- SLOT SYSTEME -->
-          Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
+        <div class="proof-item">
+          <div class="proof-item-title">{{proof_item_2_title}}</div>
+          <div class="proof-item-text">{{proof_item_2_text}}</div>
+        </div>
+
+        <div class="proof-item">
+          <div class="proof-item-title">{{proof_item_3_title}}</div>
+          <div class="proof-item-text">{{proof_item_3_text}}</div>
         </div>
       </div>
     </div>
+  </section>
 
-    <p class="micro-proof">{{reassurance_text}}</p>
+  <section class="section-about">
+    <div class="container about-grid">
+      <div class="about-visual">
+        {{about_visual}}
+      </div>
 
-    <div class="tpt-section tpt-section--dark">
-      <h2>{{dark_title}}</h2>
-      <p>{{dark_text}}</p>
+      <div class="about-content">
+        <h2 class="about-title">
+          {{about_title}}
+        </h2>
+
+        <p class="about-text">
+          {{about_text}}
+        </p>
+
+        <div class="about-cta">
+          <span class="cta-secondary">
+            {{cta_text_secondary}}
+          </span>
+        </div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-text">
+        {{footer_text}}
+      </p>
+
+      <div class="footer-links">
+        <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
+        <span>|</span>
+        <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
+      </div>
+    </div>
+  </footer>
+
+</div>

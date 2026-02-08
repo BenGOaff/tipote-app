@@ -1,18 +1,12 @@
 {
   "variants": [
     {
-      "id": "classic",
-      "label": "Classic",
-      "maxWidth": "1180px",
-      "sectionPadding": "86px 24px",
+      "id": "centered",
       "heroAlign": "center"
     },
     {
       "id": "compact",
-      "label": "Compact",
-      "maxWidth": "1040px",
-      "sectionPadding": "76px 24px",
-      "heroAlign": "center"
+      "sectionPadding": "64px 24px"
     }
   ]
 }

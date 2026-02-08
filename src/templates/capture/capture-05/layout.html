@@ -1,42 +1,1131 @@
-<section class="hero capture-05">
-  <div class="container capture-05">
-    <div class="grid">
-      <div>
-        <div class="pill">{{hero_pretitle}}</div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Challenge Affiliation Up-to-Challenge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        <h1>{{hero_title}}</h1>
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            line-height: 1.6;
+            background: #fff;
+        }
 
-        <p class="subtitle">{{hero_subtitle}}</p>
+        h1, h2, h3 {
+            font-family: 'Poppins', sans-serif;
+        }
 
-        <ul class="steps">
-          {{#steps}}
-          <li>
-            <span class="check"></span>
-            <div class="step-text">{{.}}</div>
-          </li>
-          {{/steps}}
-        </ul>
-      </div>
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #003049 0%, #014d82 100%);
+            padding: 80px 20px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
 
-      <div class="card">
-        <div class="badge">{{side_badge}}</div>
-        <h2>{{side_title}}</h2>
-        <p>{{side_text}}</p>
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
 
-        <div class="cta">
-          <input type="email" placeholder="Votre email" disabled />
-          <button disabled>{{cta_text}}</button>
+        .hero-labels {
+            position: absolute;
+            width: 140px;
+            height: 100px;
+            background: #fff;
+            transform: rotate(-8deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #003049;
+            font-size: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .label-1 {
+            top: 80px;
+            left: 15%;
+        }
+
+        .label-2 {
+            top: 120px;
+            left: 20%;
+            transform: rotate(12deg);
+        }
+
+        .label-3 {
+            bottom: 150px;
+            left: 18%;
+            transform: rotate(-15deg);
+        }
+
+        .label-4 {
+            bottom: 180px;
+            left: 25%;
+            transform: rotate(8deg);
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 380px;
+            background: linear-gradient(135deg, #669bbc 0%, #b0baca 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-content {
+            text-align: right;
+        }
+
+        .hero-label {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .hero-subtitle {
+            font-size: 14px;
+            color: #c1121f;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .hero-live-badge {
+            display: inline-block;
+            background: rgba(102, 155, 188, 0.3);
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .hero-description {
+            font-size: 15px;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #c1121f 0%, #780000 100%);
+            color: #fff;
+            padding: 16px 35px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(193, 18, 31, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(193, 18, 31, 0.6);
+        }
+
+        .cta-button::before {
+            content: "✉ ";
+            margin-right: 8px;
+        }
+
+        /* Is It For Me Section */
+        .for-me-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .for-me-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: 50px;
+            text-align: center;
+        }
+
+        .section-label {
+            font-size: 14px;
+            color: #c1121f;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #003049;
+            margin-bottom: 20px;
+        }
+
+        .section-answer {
+            font-size: 16px;
+            margin-bottom: 50px;
+            color: #666;
+        }
+
+        .section-answer strong {
+            font-weight: 700;
+            color: #003049;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .benefits-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #669bbc 0%, #b0baca 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .benefits-list {
+            list-style: none;
+            text-align: left;
+        }
+
+        .benefits-list li {
+            padding: 15px 0;
+            padding-left: 30px;
+            position: relative;
+            font-size: 15px;
+            color: #333;
+            line-height: 1.7;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .benefits-list li:last-child {
+            border-bottom: none;
+        }
+
+        .benefits-list li::before {
+            content: "☑";
+            position: absolute;
+            left: 0;
+            color: #c1121f;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .benefits-list strong {
+            font-weight: 700;
+            color: #003049;
+        }
+
+        /* Proof Section */
+        .proof-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #003049 0%, #014d82 100%);
+            color: #fff;
+        }
+
+        .proof-container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .proof-card {
+            background: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            border: 3px dashed #003049;
+            margin-bottom: 40px;
+        }
+
+        .proof-image {
+            width: 100%;
+            max-width: 450px;
+            height: 250px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 13px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .proof-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #333;
+        }
+
+        .proof-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        /* Program Section */
+        .program-section {
+            padding: 80px 20px;
+            background: #fefbfb;
+        }
+
+        .program-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .program-title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: #003049;
+            margin-bottom: 15px;
+        }
+
+        .program-arrows {
+            text-align: center;
+            color: #003049;
+            font-size: 32px;
+            margin-bottom: 60px;
+        }
+
+        .day-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .day-header {
+            background: linear-gradient(135deg, #003049 0%, #014d82 100%);
+            color: #fff;
+            padding: 25px 35px;
+        }
+
+        .day-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #c1121f;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .day-title {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .day-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        .day-list {
+            list-style: none;
+        }
+
+        .day-list li {
+            padding: 12px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 15px;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        .day-list li::before {
+            content: "☑";
+            position: absolute;
+            left: 0;
+            color: #003049;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .day-visual {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: right;
+        }
+
+        .day-visual-placeholder {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .day-cta {
+            margin-top: 20px;
+        }
+
+        .day-cta-small {
+            background: linear-gradient(135deg, #c1121f 0%, #780000 100%);
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .day-cta-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(193, 18, 31, 0.4);
+        }
+
+        .day-cta-small::after {
+            content: " →";
+        }
+
+        /* Trainer Section */
+        .trainer-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .trainer-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .trainer-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #003049;
+            margin-bottom: 15px;
+        }
+
+        .trainer-subtitle {
+            font-size: 16px;
+            color: #c1121f;
+            font-style: italic;
+            margin-bottom: 50px;
+        }
+
+        .trainer-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            text-align: left;
+            align-items: center;
+        }
+
+        .trainer-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #669bbc 0%, #b0baca 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 13px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .trainer-content h3 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #003049;
+            margin-bottom: 8px;
+        }
+
+        .trainer-label {
+            font-size: 14px;
+            color: #c1121f;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .trainer-bio {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .trainer-bio strong {
+            font-weight: 700;
+            color: #003049;
+        }
+
+        /* Counter Section */
+        .counter-section {
+            padding: 60px 20px;
+            background: #fff;
+            text-align: center;
+        }
+
+        .counter-label {
+            font-size: 14px;
+            color: #c1121f;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .counter-number {
+            font-size: 72px;
+            font-weight: 900;
+            color: #003049;
+            line-height: 1;
+        }
+
+        .counter-text {
+            font-size: 16px;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        .counter-arrows {
+            font-size: 32px;
+            color: #669bbc;
+            margin-top: 20px;
+        }
+
+        /* Before After Section */
+        .before-after-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #003049 0%, #014d82 100%);
+            color: #fff;
+        }
+
+        .before-after-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .before-after-title {
+            text-align: center;
+            font-size: 14px;
+            color: #c1121f;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .before-after-subtitle {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 60px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .comparison-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            color: #333;
+        }
+
+        .comparison-label {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .comparison-label.before {
+            color: #c1121f;
+        }
+
+        .comparison-label.after {
+            color: #7ed321;
+        }
+
+        .comparison-image {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .comparison-list {
+            list-style: none;
+        }
+
+        .comparison-list li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .comparison-list.negative li::before {
+            content: "✖";
+            position: absolute;
+            left: 0;
+            color: #c1121f;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .comparison-list.positive li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #7ed321;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* Bonus Section */
+        .bonus-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .bonus-container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .bonus-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #003049;
+            margin-bottom: 15px;
+        }
+
+        .bonus-subtitle {
+            font-size: 16px;
+            color: #c1121f;
+            margin-bottom: 50px;
+        }
+
+        .bonus-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .bonus-visual {
+            width: 100%;
+            max-width: 500px;
+            height: 280px;
+            margin: 0 auto 40px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .bonus-list {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .bonus-list li {
+            padding: 15px 0;
+            padding-left: 35px;
+            position: relative;
+            font-size: 15px;
+            line-height: 1.7;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .bonus-list li:last-child {
+            border-bottom: none;
+        }
+
+        .bonus-list li::before {
+            content: "➊";
+            position: absolute;
+            left: 0;
+            color: #c1121f;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .bonus-list li:nth-child(2)::before {
+            content: "➋";
+        }
+
+        .bonus-list li:nth-child(3)::before {
+            content: "➌";
+        }
+
+        .bonus-price {
+            font-size: 16px;
+            color: #999;
+            margin-bottom: 10px;
+            text-decoration: line-through;
+        }
+
+        .bonus-offer {
+            font-size: 28px;
+            font-weight: 700;
+            color: #7ed321;
+            margin-bottom: 30px;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, #003049 0%, #014d82 100%);
+            padding: 40px 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .footer-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            line-height: 1.7;
+            max-width: 900px;
+            margin: 0 auto 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #c1121f;
+        }
+
+        .footer-links span {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .footer-copyright {
+            margin-top: 20px;
+            font-size: 11px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container,
+            .benefits-grid,
+            .day-content,
+            .trainer-card,
+            .comparison-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .hero-content {
+                text-align: center;
+            }
+
+            .hero-labels {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .section-title,
+            .program-title,
+            .trainer-title,
+            .bonus-title {
+                font-size: 26px;
+            }
+
+            .counter-number {
+                font-size: 48px;
+            }
+
+            .day-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-labels label-1">PREUVE SOCIALE</div>
+        <div class="hero-labels label-2">PREUVE SOCIALE</div>
+        <div class="hero-labels label-3">Phrase + preuve sociale</div>
+        <div class="hero-labels label-4">PREUVE SOCIALE</div>
+
+        <div class="hero-container">
+            <div class="hero-image">
+                [Photo représentant ton audience cible]
+            </div>
+
+            <div class="hero-content">
+                <p class="hero-label">Challenge [Nom du Domaine]</p>
+                <p class="hero-subtitle">Inscription OFFERTE</p>
+                <p class="hero-live-badge">📺 LIVE ! X jours, XXmin/jour - Du XX au XX [mois] 20XX</p>
+                
+                <h1 class="hero-title">
+                    PROMESSE DU CHALLENGE +<br>
+                    Bénéfices concrets
+                </h1>
+                
+                <p class="hero-description">Destiné à : cible du challenge</p>
+
+                <a href="#" class="cta-button">Rejoindre le challenge gratuitement</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Is It For Me Section -->
+    <section class="for-me-section">
+        <div class="for-me-container">
+            <p class="section-label">Est-ce que le Challenge [Nom]</p>
+            <h2 class="section-title">Est fait pour moi et mon Business...??</h2>
+            
+            <p class="section-answer">
+                <strong>OUI !</strong> Ce Challenge est fait pour toi spécialement si :
+            </p>
+
+            <div class="benefits-grid">
+                <div class="benefits-image">
+                    [Image illustrant ton audience]
+                </div>
+
+                <ul class="benefits-list">
+                    <li><strong>PUCE PROMESSE IRRÉSISTIBLE</strong> : bénéfice + conséquence du bénéfice</li>
+                    <li><strong>PUCE PROMESSE IRRÉSISTIBLE</strong> : bénéfice + conséquence du bénéfice</li>
+                    <li><strong>PUCE PROMESSE IRRÉSISTIBLE</strong> : bénéfice + conséquence du bénéfice</li>
+                    <li><strong>PUCE PROMESSE IRRÉSISTIBLE</strong> : bénéfice + conséquence du bénéfice</li>
+                    <li><strong>PUCE PROMESSE IRRÉSISTIBLE</strong> : bénéfice + conséquence du bénéfice</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Proof Section -->
+    <section class="proof-section">
+        <div class="proof-container">
+            <div class="proof-card">
+                <div class="proof-image">
+                    [Screenshot de preuve sociale / résultats]
+                </div>
+                <p class="proof-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                </p>
+            </div>
+
+            <h2 class="proof-title">C'est ce que ce Challenge va t'apporter !</h2>
+
+            <a href="#" class="cta-button">Rejoindre le challenge gratuitement</a>
+        </div>
+    </section>
+
+    <!-- Program Section -->
+    <section class="program-section">
+        <div class="program-container">
+            <h2 class="program-title">Voici ce que tu vas apprendre dans ce Challenge !</h2>
+            <div class="program-arrows">∨∨∨</div>
+
+            <!-- Day 1 -->
+            <div class="day-card">
+                <div class="day-header">
+                    <p class="day-label">JOUR #1</p>
+                    <h3 class="day-title">Le Titre Accrocheur du Jour 1</h3>
+                </div>
+                <div class="day-content">
+                    <ul class="day-list">
+                        <li>Lorem ipsum dolor sit amet et comment s'y prendre</li>
+                        <li>Les erreurs communes qui t'empêchent de générer de l'argent malgré toutes les formations</li>
+                        <li>CEO vs Entrepreneur : les "hacks" de pensées à avoir pour changer son état d'esprit</li>
+                    </ul>
+                    <div class="day-visual">
+                        <div class="day-visual-placeholder">
+                            [Illustration/photo représentant le concept du Jour 1]
+                        </div>
+                        <div class="day-cta">
+                            <a href="#" class="day-cta-small">Rejoindre maintenant</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 2 -->
+            <div class="day-card">
+                <div class="day-header">
+                    <p class="day-label">JOUR #2</p>
+                    <h3 class="day-title">[Titre du Concept du Jour 2]</h3>
+                </div>
+                <div class="day-content">
+                    <div class="day-visual">
+                        <div class="day-visual-placeholder">
+                            [Graphique/données illustrant le Jour 2]
+                        </div>
+                        <div class="day-cta">
+                            <a href="#" class="day-cta-small">Rejoindre maintenant</a>
+                        </div>
+                    </div>
+                    <ul class="day-list">
+                        <li>Le plan infaillible pour trouver les "produits pépites"</li>
+                        <li>Exercices concrets pour passer à l'action dès ce soir et générer tes premières ventes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 3 -->
+            <div class="day-card">
+                <div class="day-header">
+                    <p class="day-label">JOUR #3</p>
+                    <h3 class="day-title">La Méthode [Nom de la Méthode]</h3>
+                </div>
+                <div class="day-content">
+                    <ul class="day-list">
+                        <li>Générer XX% de ventes supplémentaires en intégrant l'IA dans ton business</li>
+                        <li>Comment passer du solopreneur à l'entrepreneur qui scale son business</li>
+                        <li>Présentation de la méthode [Nom] pour générer + de X000€/mois dans les XX prochains jours</li>
+                    </ul>
+                    <div class="day-visual">
+                        <div class="day-visual-placeholder">
+                            [Photo/illustration du formateur]
+                        </div>
+                        <div class="day-cta">
+                            <a href="#" class="day-cta-small">Rejoindre maintenant</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 4 -->
+            <div class="day-card">
+                <div class="day-header">
+                    <p class="day-label">JOUR #4</p>
+                    <h3 class="day-title">Coaching Live</h3>
+                </div>
+                <div class="day-content">
+                    <div class="day-visual">
+                        <div class="day-visual-placeholder">
+                            [Mockup de session live/visio]
+                        </div>
+                        <div class="day-cta">
+                            <a href="#" class="day-cta-small">Rejoindre maintenant</a>
+                        </div>
+                    </div>
+                    <ul class="day-list">
+                        <li>Coaching en direct avec un membre du Challenge (vous pourrez poser questions OU suivre le coaching en direct)</li>
+                        <li>NO FILTRE : Pendant ce LIVE, [Prénom] n'aura aucune limite sur les stratégies qu'il va vous partager</li>
+                        <li>F.A.Q à la fin du LIVE pour repartir avec un maximum de clarté</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trainer Section -->
+    <section class="trainer-section">
+        <div class="trainer-container">
+            <h2 class="trainer-title">VOTRE FORMATEUR</h2>
+            <p class="trainer-subtitle">pendant le Challenge [Nom]</p>
+
+            <div class="trainer-card">
+                <div class="trainer-image">
+                    [Photo professionnelle]
+                </div>
+
+                <div class="trainer-content">
+                    <h3>Prénom & Nom</h3>
+                    <p class="trainer-label">Preuve sociale</p>
+                    
+                    <p class="trainer-bio">
+                        Depuis X ans, <strong>je vis la vie de mes rêves grâce à mes business en ligne</strong>, au marketing digital et à l'infoprenariat, 
+                        et mon entreprise a <strong>généré plus de X millions d'euros</strong> à ce jour.
+                    </p>
+
+                    <p class="trainer-bio">
+                        J'aide aujourd'hui <strong>+ de XX 000 personnes qui veulent atteindre des résultats de dingues</strong> pour changer de vie et 
+                        être heureux grâce à mes contenus, formations et coaching depuis 20XX.
+                    </p>
+
+                    <p class="trainer-bio">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit... J'ai lancé une agence marketing en plus de toutes mes autres 
+                        activités sur le web.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Counter Section -->
+    <section class="counter-section">
+        <p class="counter-label">Il reste encore des places...</p>
+        <div class="counter-number">14/100</div>
+        <p class="counter-text">...places restantes</p>
+        <div class="counter-arrows">∨∨∨</div>
+        <div style="margin-top: 30px;">
+            <a href="#" class="cta-button">Rejoindre le challenge gratuitement</a>
+        </div>
+    </section>
+
+    <!-- Before After Section -->
+    <section class="before-after-section">
+        <div class="before-after-container">
+            <p class="before-after-title">Prêt à vendre des produits rares en automatique et REMPLACER TON SALAIRE ?</p>
+            <h2 class="before-after-subtitle">Voici à quoi t'attendre avec le CHALLENGE</h2>
+
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <p class="comparison-label before">AVANT le challenge :</p>
+                    <div class="comparison-image">
+                        [Image "avant" illustrant la frustration]
+                    </div>
+                    <ul class="comparison-list negative">
+                        <li>Des résultats en "dents de scie"</li>
+                        <li>Des stratégies inadaptées au marché d'aujourd'hui</li>
+                        <li>Manque de résultats dû à la vente de produits "saturés"</li>
+                        <li>Quelques ventes "par ci par là" mais qui ne remplissent pas le frigo</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-card">
+                    <p class="comparison-label after">APRÈS le challenge :</p>
+                    <div class="comparison-image">
+                        [Image "après" illustrant le succès]
+                    </div>
+                    <ul class="comparison-list positive">
+                        <li>Des résultats stables et prédictibles grâce à la vente de produits "rares et scalables"</li>
+                        <li>Des stratégies personnalisées et uniques sur le marché</li>
+                        <li>Des résultats en hausse grâce aux méthodes enseignées pendant les 4 jours</li>
+                        <li>Intégration de l'IA et effets de levier de scaling pour gagner du temps et plus d'argent !</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px;">
+                <a href="#" class="cta-button">Rejoindre le challenge gratuitement<br><span style="font-size: 12px; opacity: 0.9;">Clique ici pour décrocher la place du 10 au 14 Janvier 2025</span></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bonus Section -->
+    <section class="bonus-section">
+        <div class="bonus-container">
+            <h2 class="bonus-title">VOICI 3 BONUS EXCLUSIFS</h2>
+            <p class="bonus-subtitle">Quand tu t'inscris <strong>GRATUITEMENT</strong> au Challenge [Nom] !</p>
+            <div class="program-arrows">∨∨∨</div>
+
+            <div class="bonus-card">
+                <div class="bonus-visual">
+                    [Visuel des bonus (écrans, documents, etc.)]
+                </div>
+
+                <ul class="bonus-list">
+                    <li><strong>BONUS 1</strong> : Accès OFFERT au Groupe Privé destiné aux membres du Challenge pour échanger et évoluer avec des personnes ambitieuses (Valeur : XXX,00€)</li>
+                    <li><strong>BONUS 2</strong> : Des Workbooks OFFERTS pour appliquer les conseils qu'on va t'enseigner pendant les LIVES et obtenir des résultats (Valeur : XXX,00€)</li>
+                    <li><strong>BONUS 3</strong> : Jeu/Concours pour remporter un coaching en direct avec [Prénom] pendant le 4ème jour. (Valeur : XXX,00€)</li>
+                </ul>
+
+                <p class="bonus-price">Normalement : XXX,00€</p>
+                <p class="bonus-offer">Prix Aujourd'hui : 100% OFFERT !</p>
+
+                <a href="#" class="cta-button">Rejoindre le challenge gratuitement<br><span style="font-size: 12px; opacity: 0.9;">Clique ici pour décrocher la place du 10 au 14 Janvier 2025</span></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-title">Challenge [Nom]</p>
+        
+        <p class="footer-text">
+            Ce site n'appartient pas à Facebook ni n'est pas affilié à Facebook, Inc. De plus, ce site n'est en aucun cas approuvé par Facebook. 
+            FACEBOOK est une marque déposée de META.
+        </p>
+
+        <div class="footer-links">
+            <a href="#">Mentions légales</a>
+            <span>|</span>
+            <a href="#">Politique de confidentialité</a>
+            <span>|</span>
+            <a href="#">Conditions Générales de Vente</a>
         </div>
 
-        <p class="micro">{{reassurance_text}}</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section capture-05">
-  <div class="inner">
-    <h3>Objectif</h3>
-    <p>Une structure simple, une progression claire, et de l’action chaque jour.</p>
-  </div>
-</section>
+        <p class="footer-copyright">
+            @ Ton Nom / ton site web / ton nom - Tous Droits Réservés
+        </p>
+    </footer>
+</body>
+</html>

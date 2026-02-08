@@ -1,204 +1,1416 @@
-<div class="sale-11" id="top">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="brand">
-        <span class="mark">▶</span>
-        <span class="name">{{brand_name}}</span>
-      </div>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-11) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
 
-      <div class="links">
-        <a href="#method">{{nav_link_1}}</a>
-        <a href="#modules">{{nav_link_2}}</a>
-        <a href="#faq">{{nav_link_3}}</a>
-      </div>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #e5e7eb;
+            background: #0a0a10;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(10,10,16,0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(99,102,241,0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 35px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #d1d5db;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #6366f1;
+        }
+
+        .cta-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99,102,241,0.4);
+        }
+
+        /* Banner */
+        .top-banner {
+            background: linear-gradient(90deg, #2664bc 0%, #4a20c6 100%);
+            padding: 12px 20px;
+            text-align: center;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(180deg, #0a0a10 0%, #161722 50%, #0a0a10 100%);
+            padding: 100px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.15) 0%, transparent 60%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(99,102,241,0.15);
+            border: 1px solid rgba(99,102,241,0.3);
+            color: #a5b4fc;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background: #6366f1;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 30px;
+            line-height: 1.1;
+            letter-spacing: -2px;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: #9ca3af;
+            margin-bottom: 50px;
+            line-height: 1.6;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Tools Section */
+        .tools-section {
+            background: #0a0a10;
+            padding: 60px 20px;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tool-item {
+            text-align: center;
+        }
+
+        .tool-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6366f1;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tool-item:hover .tool-icon {
+            background: rgba(99,102,241,0.2);
+            transform: translateY(-5px);
+        }
+
+        .tool-name {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .tool-description {
+            color: #6b7280;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        /* Value Prop Section */
+        .value-section {
+            background: linear-gradient(180deg, #0a0a10 0%, #161722 100%);
+            padding: 100px 20px;
+        }
+
+        .value-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .value-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-label {
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 30px;
+            line-height: 1.2;
+            letter-spacing: -1px;
+        }
+
+        .value-text {
+            color: #9ca3af;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .testimonial-box {
+            background: rgba(99,102,241,0.05);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .author-info h4 {
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .author-info p {
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        /* Content Section */
+        .content-section {
+            background: #0a0a10;
+            padding: 100px 20px;
+        }
+
+        .content-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .content-module {
+            background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(79,70,229,0.05) 100%);
+            border: 1px solid rgba(99,102,241,0.15);
+            border-radius: 20px;
+            padding: 40px;
+        }
+
+        .module-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .module-description {
+            color: #9ca3af;
+            font-size: 1rem;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+
+        .module-features {
+            list-style: none;
+        }
+
+        .module-features li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #d1d5db;
+            font-size: 0.95rem;
+        }
+
+        .module-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #6366f1;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .module-highlight {
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+
+        .module-highlight p {
+            color: #a5b4fc;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Agency Section */
+        .agency-section {
+            background: linear-gradient(180deg, #0a0a10 0%, #161722 100%);
+            padding: 100px 20px;
+        }
+
+        .agency-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .agency-text h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 30px;
+            line-height: 1.3;
+        }
+
+        .agency-text p {
+            color: #9ca3af;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .agency-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .agency-card {
+            background: rgba(99,102,241,0.05);
+            border: 1px solid rgba(99,102,241,0.15);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .card-title {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: rgba(99,102,241,0.15);
+            color: #a5b4fc;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Team Section */
+        .team-section {
+            background: #0a0a10;
+            padding: 100px 20px;
+        }
+
+        .team-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .team-description {
+            max-width: 800px;
+            margin: 0 auto;
+            color: #9ca3af;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-top: 25px;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .team-card {
+            background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(79,70,229,0.08) 100%);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .team-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(99,102,241,0.2);
+        }
+
+        .team-photo {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: linear-gradient(135deg, #2664bc 0%, #4a20c6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.9rem;
+        }
+
+        .team-info {
+            padding: 25px;
+        }
+
+        .team-name {
+            color: white;
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .team-role {
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Social Proof Section */
+        .social-proof-section {
+            background: linear-gradient(180deg, #161722 0%, #1e1e2e 100%);
+            padding: 100px 20px;
+        }
+
+        .social-proof-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .social-proof-text {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            color: #9ca3af;
+            font-size: 1.05rem;
+            line-height: 1.8;
+        }
+
+        /* Portfolio Section */
+        .portfolio-section {
+            background: #0a0a10;
+            padding: 100px 20px;
+        }
+
+        .portfolio-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .portfolio-subtitle {
+            color: #9ca3af;
+            font-size: 1.1rem;
+            margin-top: 20px;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            max-width: 1000px;
+            aspect-ratio: 16/9;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            font-size: 1.2rem;
+            border: 1px solid rgba(99,102,241,0.2);
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: linear-gradient(180deg, #0a0a10 0%, #161722 100%);
+            padding: 100px 20px;
+        }
+
+        .faq-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .faq-subtitle {
+            color: #9ca3af;
+            font-size: 1rem;
+            margin-top: 20px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: rgba(99,102,241,0.03);
+            border: 1px solid rgba(99,102,241,0.15);
+            border-radius: 12px;
+            padding: 30px;
+        }
+
+        .faq-question {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .faq-answer {
+            color: #9ca3af;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* Final CTA Section */
+        .final-cta-section {
+            background: linear-gradient(135deg, #2664bc 0%, #4a20c6 100%);
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+
+        .final-cta-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .final-cta-left h2 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 25px;
+            line-height: 1.2;
+        }
+
+        .final-cta-left p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .final-cta-left ul {
+            list-style: none;
+        }
+
+        .final-cta-left ul li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .final-cta-left ul li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #7dd3fc;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .final-cta-right {
+            text-align: center;
+        }
+
+        .cta-screen {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.9rem;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .cta-btn-large {
+            background: white;
+            color: #4a20c6;
+            padding: 18px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .cta-btn-large:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+        }
+
+        /* Footer */
+        footer {
+            background: #0a0a10;
+            padding: 60px 20px 30px;
+            border-top: 1px solid rgba(99,102,241,0.1);
+        }
+
+        .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 60px;
+            margin-bottom: 40px;
+        }
+
+        .footer-brand h3 {
+            color: white;
+            font-weight: 800;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+
+        .footer-brand p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .footer-newsletter {
+            margin-top: 25px;
+        }
+
+        .footer-newsletter input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(99,102,241,0.05);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .footer-newsletter button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .footer-newsletter button:hover {
+            transform: translateY(-2px);
+        }
+
+        .footer-column h4 {
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .footer-column ul {
+            list-style: none;
+        }
+
+        .footer-column ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-column ul li a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-column ul li a:hover {
+            color: #6366f1;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(99,102,241,0.1);
+            padding-top: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .footer-tools {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-tool {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .content-grid,
+            .agency-content,
+            .final-cta-content,
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .team-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tools-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Top Banner -->
+    <div class="top-banner">
+        Bilan de progression totalement disponible
     </div>
-  </nav>
 
-  <header class="hero">
-    <div class="hero-bg">
-      {{#hero_bg_video_url}}
-      <video class="bg-video" autoplay muted loop playsinline>
-        <source src="{{.}}" type="video/mp4" />
-      </video>
-      {{/hero_bg_video_url}}
-      <div class="bg-overlay"></div>
-      <div class="bg-glow"></div>
-    </div>
-
-    <div class="container hero-inner">
-      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
-
-      <h1>
-        {{hero_title}}
-        {{#hero_title_accent}}<span class="accent">{{.}}</span>{{/hero_title_accent}}
-      </h1>
-
-      <p class="sub">{{hero_subtitle}}</p>
-
-      <div class="hero-grid">
-        <div class="hero-left">
-          <div class="panel">
-            <div class="panel-head">
-              <div class="pill">{{hero_pill}}</div>
-              <div class="chip">{{hero_chip}}</div>
-            </div>
-
-            {{#hero_intro}}<p class="intro">{{.}}</p>{{/hero_intro}}
-
-            <ul class="list">
-              {{#hero_bullets}}
-              <li>
-                <span class="dot"></span>
-                <span class="txt">{{.}}</span>
-              </li>
-              {{/hero_bullets}}
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">Video MASTER</div>
+            <ul class="nav-links">
+                <li><a href="#formation">La formation</a></li>
+                <li><a href="#team">L'équipe</a></li>
+                <li><a href="#contact">Contact</a></li>
             </ul>
+            <a href="#order" class="cta-btn">Se connecter</a>
+        </nav>
+    </header>
 
-            {{#hero_note}}<div class="note">{{.}}</div>{{/hero_note}}
-          </div>
-
-          <div class="clips" id="method">
-            <div class="clips-title">{{clips_title}}</div>
-            <div class="clips-grid">
-              {{#clips}}
-              <div class="clip">
-                <div class="clip-media">
-                  {{#clip_video_urls}}
-                  <video class="clip-video" autoplay muted loop playsinline>
-                    <source src="{{.}}" type="video/mp4" />
-                  </video>
-                  {{/clip_video_urls}}
-                  {{#clip_placeholder}}
-                  <div class="clip-placeholder">{{.}}</div>
-                  {{/clip_placeholder}}
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badges">
+                    <div class="badge">
+                        <span class="badge-dot"></span>
+                        Disponible à partir de <strong>date ▸</strong>
+                    </div>
+                    <div class="badge">
+                        <span class="badge-dot"></span>
+                        Disponible à partir de <strong>date ▸</strong>
+                    </div>
                 </div>
-                <div class="clip-cap">{{clip_caption}}</div>
-              </div>
-              {{/clips}}
+
+                <h1>Nom de ton programme</h1>
+
+                <p class="hero-subtitle">
+                    Pitch de ton programme : que gagne celui qui en est un utilisateur en temps, grâce à la proposition unique de valeur
+                </p>
+
+                <a href="#order" class="cta-btn" style="display: inline-block; font-size: 1.1rem; padding: 15px 35px;">
+                    Découvrir le programme →
+                </a>
             </div>
-          </div>
         </div>
+    </section>
 
-        <div class="hero-right" id="checkout">
-          <div class="checkout-card">
-            <div class="price-block">
-              <div class="price-label">{{price_label}}</div>
-              <div class="price-row">
-                <div class="price-main">{{price_main}}</div>
-                {{#price_sub}}<div class="price-sub">{{.}}</div>{{/price_sub}}
-              </div>
-              {{#price_note}}<div class="price-note">{{.}}</div>{{/price_note}}
+    <!-- Tools Section -->
+    <section class="tools-section">
+        <div class="container">
+            <div class="tools-grid">
+                <div class="tool-item">
+                    <div class="tool-icon">LOGO</div>
+                    <p class="tool-name">AEJuice</p>
+                    <p class="tool-description">Pour proposer ensemble ad combien le temps de production en travaille et les temps</p>
+                </div>
+
+                <div class="tool-item">
+                    <div class="tool-icon">LOGO</div>
+                    <p class="tool-name">ArtistCut</p>
+                    <p class="tool-description">Pour proposer ensemble ad combien le temps de montage</p>
+                </div>
+
+                <div class="tool-item">
+                    <div class="tool-icon">LOGO</div>
+                    <p class="tool-name">Epidemic Sound</p>
+                    <p class="tool-description">Pour proposer instantanée ad combien le temps de véla</p>
+                </div>
+
+                <div class="tool-item">
+                    <div class="tool-icon">LOGO</div>
+                    <p class="tool-name">Motion Hanse</p>
+                    <p class="tool-description">Pour proposer ensemble ad combien le temps de véla</p>
+                </div>
+
+                <div class="tool-item">
+                    <div class="tool-icon">LOGO</div>
+                    <p class="tool-name">Notion</p>
+                    <p class="tool-description">Pour proposer ensemble ad combien le temps de véla</p>
+                </div>
             </div>
-
-            <div class="cta-title">{{cta_title}}</div>
-
-            <!-- Preview form (disabled) -->
-            <div class="cta-row form-preview">
-              <input type="email" placeholder="{{form_email_placeholder}}" disabled />
-              <button type="button" disabled>{{cta_button}}</button>
-            </div>
-
-            <!-- Systeme.io slot -->
-            <div class="systeme-form">
-              <div class="systeme-slot" id="SLOT_CHECKOUT">
-                <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
-              </div>
-            </div>
-
-            <div class="micro">
-              {{#cta_reassurance}}<div class="reassurance">{{.}}</div>{{/cta_reassurance}}
-              {{#cta_micro}}<div class="micro2">{{.}}</div>{{/cta_micro}}
-            </div>
-
-            <div class="trust">
-              {{#trust_items}}
-              <div class="trust-item">
-                <span class="tick">✓</span>
-                <span class="t">{{.}}</span>
-              </div>
-              {{/trust_items}}
-            </div>
-          </div>
-
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <div class="side-text">{{side_text}}</div>
-            <ul class="side-list">
-              {{#side_points}}
-              <li><span class="spark">✦</span><span>{{.}}</span></li>
-              {{/side_points}}
-            </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
-          </div>
         </div>
-      </div>
+    </section>
 
-      <div class="scroll">{{scroll_hint}}</div>
-    </div>
-  </header>
+    <!-- Value Prop Section -->
+    <section class="value-section" id="formation">
+        <div class="container">
+            <div class="value-content">
+                <div class="value-header">
+                    <p class="section-label">À propos</p>
+                    <h2 class="section-title">Proposition de valeur<br>unique de ton<br>programme</h2>
+                </div>
 
-  <section class="modules" id="modules">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{modules_title}}</h2>
-        <p class="lead">{{modules_subtitle}}</p>
-      </div>
+                <p class="value-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Depuis 2018, nous collaborons avec les créateurs de contenu les plus reconnus sur les réseaux sociaux de France et représentatifs sur différentes thématiques et auprès d'un public varié, de plusieurs années différentes : jeunes pros et entrepreneurs fins.
+                </p>
 
-      <div class="module-grid">
-        {{#module_cards}}
-        <div class="module-card">
-          <div class="mc-top">
-            <div class="mc-badge">{{module_badge}}</div>
-          </div>
-          <div class="mc-title">{{module_title}}</div>
-          <div class="mc-text">{{module_text}}</div>
-          <ul class="mc-list">
-            {{#module_points}}
-            <li><span class="mini-dot"></span><span>{{.}}</span></li>
-            {{/module_points}}
-          </ul>
+                <p class="value-text">
+                    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nous mettons aujourd'hui à disposition notre expérience et notre savoir-pour constituer un programme de formation pratique et qui va à l'essentiel. Ne cherchez plus, la nouvelle génération de monteurs vidéo est là, c'est vous !
+                </p>
+
+                <p class="value-text">
+                    <strong style="color: white;">En achetant Editing 360, vous nous offrez une garantie :</strong> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Celle d'un accompagnement qui se long terme et d'un apport continu de connaissance pour vous démarquer sans cesse, sans jamais ne perdre ni partie philosophique et qui font au programme de créer votre identité à travers le montage.
+                </p>
+
+                <div class="testimonial-box">
+                    <div class="testimonial-author">
+                        <div class="author-avatar">T</div>
+                        <div class="author-info">
+                            <h4>Thibaud</h4>
+                            <p>Monteur vidéo</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        {{/module_cards}}
-      </div>
+    </section>
 
-      <div class="final-cta">
-        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
-        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
-      </div>
-    </div>
-  </section>
+    <!-- Content Section -->
+    <section class="content-section">
+        <div class="container">
+            <div class="content-header">
+                <p class="section-label">Notre programme</p>
+                <h2 class="section-title">Contenu de ton offre</h2>
+                <p style="color: #9ca3af; font-size: 1.1rem; max-width: 800px; margin: 20px auto 0;">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ces derniers ont été élaborés de manière à vous transmettre un volume de connaissances inédit, vous permettant de monter des vidéos de manière autonome tout en vous démarquant.
+                </p>
+            </div>
 
-  <section class="faq" id="faq">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{faq_title}}</h2>
-        <p class="lead">{{faq_subtitle}}</p>
-      </div>
+            <div class="content-grid">
+                <div class="content-module">
+                    <h3 class="module-title">Montage vidéo</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Des fondamentaux de vidéo à la technique legends avancées, gagnez à travers des centres de montage différents.
+                    </p>
+                    <ul class="module-features">
+                        <li>100 leçons</li>
+                        <li>De rafales de montage simples</li>
+                        <li>Outils secrets pour passer ces montages quite aAfterEffects</li>
+                        <li>100 assets offerts pour booster vos montages</li>
+                    </ul>
+                    <div class="module-highlight">
+                        <p>Lorem ipsum dolor sit amet. Révélez tout les kits des formateurs d'Editing graduellement. La programme me blowout pour perfecto un gain comme 1an d'auto.</p>
+                    </div>
+                </div>
 
-      <div class="faq-grid">
-        {{#faq_items}}
-        <div class="faq-item">
-          <div class="q">{{faq_q}}</div>
-          <div class="a">{{faq_a}}</div>
+                <div class="content-module">
+                    <h3 class="module-title">Sound design et mixage</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Le design sonore est une clé de la construction de vidéo YouTube qui ont du punch.
+                    </p>
+                    <ul class="module-features">
+                        <li>15 leçons pour apprendre le sound design avec YouTube via cours-montage</li>
+                        <li>10 détails audio simples</li>
+                        <li>Pack de 100 effets sonores et projet référence (projet offerts</li>
+                        <li>Mixage, réferences</li>
+                    </ul>
+                    <div class="module-highlight">
+                        <p>Lorem ipsum dolor sit amet. Un template Premiere Pro d'entrepot déconner une nouvelle prêtements premium gratuite.</p>
+                    </div>
+                </div>
+
+                <div class="content-module">
+                    <h3 class="module-title">Motion design</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cette méthode permet d'individualiser dans les contextes en mouvement.
+                    </p>
+                    <ul class="module-features">
+                        <li>Apprendre à maitriser After Effects no travers de 40 leçons</li>
+                        <li>Apprendre à motion designer des shapes, des assets, des duplications de logos</li>
+                        <li>Faire aller des bails : Camera 3D, transitions, textures, animations de textes</li>
+                        <li>Dei pratiques et projets avec effets</li>
+                    </ul>
+                </div>
+
+                <div class="content-module">
+                    <h3 class="module-title">Entrepreneuriat</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Devenir monteur vidéo freelance, caster avec et dépasser vos créatures et clients.
+                    </p>
+                    <ul class="module-features">
+                        <li>Recommandations juridiques pour débuter son activité</li>
+                        <li>Les meilleurs outils pour lancer et gérer son activité de freelance</li>
+                        <li>Order son branding, son portfolio et faire son prix</li>
+                        <li>Organiser client, déontologie protocol et mise en avant engagée</li>
+                    </ul>
+                    <div class="module-highlight">
+                        <p>Lorem ipsum dolor sit amet. Ce module servira également les programmes à coerr sa des 90 déroulés thèques : jupe du placement, mené les références.</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        {{/faq_items}}
-      </div>
+    </section>
 
-      <div class="final-cta-2">
-        <a class="btn-secondary" href="#checkout">{{final_cta_2}}</a>
-      </div>
-    </div>
-  </section>
+    <!-- Agency Section -->
+    <section class="agency-section">
+        <div class="container">
+            <div class="agency-content">
+                <div class="agency-text">
+                    <p class="section-label">Services</p>
+                    <h2>Notre Agence</h2>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Les apprenants les plus prometteurs qui souhaitent obtenir rapidement leurs premières missions financières pourront rejoindre les rangs de notre agence. Se positionnera à botte formation.
+                    </p>
+                    <p>
+                        Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nous mettons en place des solutions exemples qui stratégies efficientes en ligne. Nous disposons d'un méthode d'insertion permette et France des solutions de prospenspation à une échelle nationale.
+                    </p>
+                    <p>
+                        Ut enim ad minima veniam, quis nostrum exercitationem ullam. Nous nous engageons pour une meilleure reconnaissance et une diminuation plus équitable des revendus acceptées sur les réseaux sociaux.
+                    </p>
+                </div>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="left">
-        <div class="ft">{{footer_title}}</div>
-        <div class="fs">{{footer_text}}</div>
-      </div>
-      <a class="back" href="#top">{{footer_back_to_top}}</a>
-    </div>
-  </footer>
-</div>
+                <div class="agency-cards">
+                    <div class="agency-card">
+                        <div class="card-header">
+                            <div class="card-icon">M</div>
+                            <div>
+                                <h4 class="card-title">Montage Vidéo HIF</h4>
+                                <div class="card-tags">
+                                    <span class="tag">Niveau intermédiaire</span>
+                                    <span class="tag">Créatif</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agency-card">
+                        <div class="card-header">
+                            <div class="card-icon">D</div>
+                            <div>
+                                <h4 class="card-title">Déursheur HIF</h4>
+                                <div class="card-tags">
+                                    <span class="tag">Niveau intermédiaire</span>
+                                    <span class="tag">Freelance(2)</span>
+                                    <span class="tag">H/F Plein</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agency-card">
+                        <div class="card-header">
+                            <div class="card-icon">M</div>
+                            <div>
+                                <h4 class="card-title">Motion designer H/F</h4>
+                                <div class="card-tags">
+                                    <span class="tag">Niveau intermédiaire</span>
+                                    <span class="tag">Freelance(2)</span>
+                                    <span class="tag">Créatif</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section class="team-section" id="team">
+        <div class="container">
+            <div class="team-header">
+                <p class="section-label">Équipe</p>
+                <h2 class="section-title">Des formateurs, tant créatifs qu'experts dans<br>leurs domaines.</h2>
+                <p class="team-description">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. La formation est initiée par Sam, monteur vidéo le plus suivi de France sur les réseaux sociaux. Majin et Alex sont deux créatifs exceptionnels, tant inspirants que surmotivés et reconnus comme des influenceurs populaires et autrement les centaines sur lesquels ils sont millionaire.
+                </p>
+            </div>
+
+            <div class="team-grid">
+                <div class="team-card">
+                    <div class="team-photo">[Photo formateur 1]</div>
+                    <div class="team-info">
+                        <h3 class="team-name">Alex</h3>
+                        <p class="team-role">Video & Sound designer</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <div class="team-photo">[Photo formateur 2]</div>
+                    <div class="team-info">
+                        <h3 class="team-name">Sam</h3>
+                        <p class="team-role">Video & Sound designer</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <div class="team-photo">[Photo formateur 3]</div>
+                    <div class="team-info">
+                        <h3 class="team-name">Benoît</h3>
+                        <p class="team-role">Motion designer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="social-proof-section">
+        <div class="container">
+            <div class="social-proof-header">
+                <p class="section-label">Références</p>
+                <h2 class="section-title">Insère ici des preuves<br>sociales</h2>
+            </div>
+
+            <p class="social-proof-text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Notre équipe travail à améliorer toute les fédérées les jeux vidés du pays. Nous accomplissons pas millier d'utilisateur d'autre de réapproprient des regards sont vraiment une critique de live différence.
+            </p>
+
+            <p class="social-proof-text">
+                Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nous travaillons régulièrement avec de grands comptes comme Inoxtag, Youfie, LEG et d'ores instantée d'autres marques populaires. De rôle rôle, plus euros demande été grande expertise en minutes se réservant de collaborations commerciales.
+            </p>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section class="portfolio-section">
+        <div class="container">
+            <div class="portfolio-header">
+                <p class="section-label">Réalisations</p>
+                <h2 class="section-title">Jetez un coup d'oeil à nos travaux</h2>
+                <p class="portfolio-subtitle">Nous avons réalisé plus de 800 projets. Survinez quelques une de ces derniers.</p>
+            </div>
+
+            <div class="video-placeholder" style="margin-bottom: 30px;">
+                [VIDÉO SHOWREEL]<br>
+                Compilation des meilleurs projets
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <div class="faq-header">
+                <p class="section-label">Questions Fréquentes</p>
+                <h2 class="section-title">Vous avez un doute ?</h2>
+                <p class="faq-subtitle">
+                    Retrouvez ci-dessous des réponses aux questions que nous sont le plus posées. Besoin d'informations supplémentaires ? Vous pouvez nous joindre à hello@editing-360.com
+                </p>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4 class="faq-question">Tournant avoide Editing 360 et pros sont quels formation ou editing ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Quels sont les logiciels par requis pour suivre la formation ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minima veniam, quis nostrum exercitationem.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Puis-je faire du montage sur mon mini ordinateur actuel ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Si du pense del du montage ne me GA, est-ce que la formance mes aide pour moi ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Quel est le support pour monteur vidéo ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ut perspiciatis unde omnis iste natus.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Puis-le financer la formation grâce à mon CPF ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">En achetant la formation, ai-je accès graduellement aux leçons à jour ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Neque porro quisquam est qui dolorem.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h4 class="faq-question">Ai-je accès de manière illimitée de serveur communautaire discarde ?</h4>
+                    <p class="faq-answer">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quis autem vel eum iure reprehenderit.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section" id="order">
+        <div class="container">
+            <div class="final-cta-content">
+                <div class="final-cta-left">
+                    <h2>Passez à la vitesse supérieure</h2>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Développez tous via sa créativité et pleine explosion en mettant toutes les stations de fichiers de votre vidéo. Dont que soit votre niveau, vous aurez forcément deux choses à apprendre.
+                    </p>
+                    <p>
+                        <strong>Mises à jour régulières du programme et distribution mensuelle d'éléments premium gratuits pour vos travers.</strong>
+                    </p>
+                    <ul>
+                        <li>+150 leçons</li>
+                        <li>7 000 assets offerts</li>
+                        <li>Suivi et assistance par des professeurs décornées 7x7</li>
+                        <li>Ressources exclusives chez nos partenaires</li>
+                        <li>Mises à jour régulières du programme et d'ouvrant ainsi fonctions de "netlateur"</li>
+                    </ul>
+                </div>
+
+                <div class="final-cta-right">
+                    <div class="cta-screen">
+                        [Screenshot interface<br>de formation]
+                    </div>
+                    <a href="#order" class="cta-btn-large">Rejoindre la formation</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3>Video MASTER</h3>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Enseigner comment créer de nouvelles vidéo facilités que est un atelier mais avec ça finit en finale 1.5 figure Fth.
+                    </p>
+                    <div class="footer-newsletter">
+                        <p style="color: white; font-weight: 600; margin-bottom: 10px;">Suis-tiens au courant!</p>
+                        <input type="email" placeholder="Email">
+                        <button>S'inscrire</button>
+                    </div>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Formation</h4>
+                    <ul>
+                        <li><a href="#">La formation</a></li>
+                        <li><a href="#">L'équipe</a></li>
+                        <li><a href="#">Se connecter</a></li>
+                        <li><a href="#">Créer un compte</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Légal</h4>
+                    <ul>
+                        <li><a href="#">Contactez nous</a></li>
+                        <li><a href="#">Questions Fréquentes</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Autre</h4>
+                    <ul>
+                        <li><a href="#">Conditions générales de vente</a></li>
+                        <li><a href="#">Politiques de confidentialité</a></li>
+                        <li><a href="#">Mentions légales</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="footer-tools">
+                    <span class="footer-tool">AEJuice</span>
+                    <span class="footer-tool">ArtistCut</span>
+                    <span class="footer-tool">Epidemic Sound</span>
+                    <span class="footer-tool">Motion Hanse</span>
+                    <span class="footer-tool">Notion</span>
+                </div>
+                <p>© 2024 Editing 360 - All rights reserved</p>
+            </div>
+        </div>
+    </footer>
+
+<!-- ===================== BLOC 2 ===================== -->
+

@@ -1,660 +1,811 @@
 {
-  "kind": "vente",
+  "kind": "sale",
   "templateId": "sale-06",
+  "name": "Template Fresh - Moderne Énergique",
+  "description": "Template ultra moderne avec couleurs vives (violet #8012FE, lime #C0FF43, orange #FF440A), hero lime avec typographie Anton XXL, section vidéo violette, problèmes avec highlights, timing avec preuve, raisons alternées, autorité grid experts, solution dark, phases alternées, bonus détaillés, récap lime et FAQ violette",
   "fields": [
     {
-      "key": "checkout_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "situations",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "reasons",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "num",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "experts",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "steps",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "phase1_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "phase2_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "phase3_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "phase4_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "bonus_list",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "bonus1_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "bonus2_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "bonus3_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "recap_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "faq",
-      "type": "object[]",
-      "minItems": 5,
-      "maxItems": 10,
-      "fields": [
-        {
-          "key": "q",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "a",
-          "type": "string",
-          "maxLength": 160
-        }
-      ]
-    },
-    {
-      "key": "brand_name",
+      "key": "top_bar_line_1",
+      "label": "Ligne 1 top bar",
       "type": "string",
-      "maxLength": 160
+      "intention": "target_identification",
+      "description": "Première ligne de la barre violette en haut (13px, bold, letter-spacing 0.5px, background #8012FE, couleur blanche)",
+      "examples": ["OFFRE RÉSERVÉE À [ton public cible]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "nav_link_1",
+      "key": "top_bar_line_2",
+      "label": "Ligne 2 top bar",
       "type": "string",
-      "maxLength": 160
+      "intention": "qualification_criteria",
+      "description": "Deuxième ligne de la barre violette (13px, bold)",
+      "examples": ["Qui [conditions pour rejoindre OU objectif de ton public cible]"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "nav_link_2",
+      "key": "format_label",
+      "label": "Label format",
       "type": "string",
-      "maxLength": 160
+      "intention": "product_category",
+      "description": "Label au-dessus du titre principal (18px Open Sans, bold, uppercase, letter-spacing 1px, couleur #8012FE violet)",
+      "examples": ["FORMAT", "MÉTHODE", "PROGRAMME"],
+      "maxLength": 20,
+      "required": true
     },
     {
-      "key": "nav_link_3",
+      "key": "hero_title",
+      "label": "Titre hero principal",
       "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_4",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_cta",
-      "type": "string",
-      "maxLength": 32
-    },
-    {
-      "key": "hero_pill",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "hero_kicker",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "hero_title_line_1",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "hero_title_line_2",
-      "type": "string",
-      "maxLength": 90
+      "intention": "brand_identity",
+      "description": "Titre ÉNORME plein (96px Anton, line-height 0.9, uppercase, couleur #8012FE violet, text-shadow)",
+      "examples": ["SUPER NOM", "CHALLENGE MASTERY"],
+      "maxLength": 30,
+      "required": true
     },
     {
       "key": "hero_subtitle",
+      "label": "Sous-titre hero outline",
       "type": "string",
-      "maxLength": 90
+      "intention": "brand_tagline",
+      "description": "Sous-titre ÉNORME outline (72px Anton, line-height 0.9, uppercase, couleur transparente avec stroke violet 3px)",
+      "examples": ["AU TOP", "PRO"],
+      "maxLength": 20,
+      "required": true
     },
     {
-      "key": "cta_main",
+      "key": "promise_title",
+      "label": "Titre promesse",
       "type": "string",
-      "maxLength": 32
+      "intention": "promise_intro",
+      "description": "Titre au-dessus de la promesse chiffrée (28px Anton, uppercase, couleur #8012FE)",
+      "examples": ["ICI LA PROMESSE DE TON OFFRE"],
+      "maxLength": 60,
+      "required": true
     },
     {
-      "key": "cta_micro",
+      "key": "promise_value",
+      "label": "Valeur promesse chiffrée",
       "type": "string",
-      "maxLength": 32
+      "intention": "quantified_promise",
+      "description": "Chiffre/résultat GROS dans box blanche bordure orange (42px Anton, uppercase, couleur #FF440A orange, background blanc, border 4px solid #FF440A, border-radius 50px, padding 20px 50px)",
+      "examples": ["CHIFFRE ATTEIGNABLE", "10K€/MOIS", "100 CLIENTS"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "trust_1",
+      "key": "promise_subtext",
+      "label": "Sous-texte promesse",
       "type": "string",
-      "maxLength": 160
+      "intention": "promise_qualifier",
+      "description": "Texte sous la promesse chiffrée (13px, bold, uppercase, letter-spacing 0.5px, couleur #8012FE)",
+      "examples": ["EN RESPECTANT TES VALEURS PROFESSIONNELLES", "SANS SACRIFIER TA VIE"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "trust_2",
+      "key": "video_cta_intro",
+      "label": "Intro CTA vidéo",
       "type": "string",
-      "maxLength": 160
+      "intention": "bonus_tease",
+      "description": "Texte au-dessus du CTA après vidéo (16px, couleur blanche sur fond violet)",
+      "examples": ["Commande aujourd'hui et reçois [tes bonus]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "trust_3",
+      "key": "video_cta_reminder",
+      "label": "Rappel promesse vidéo",
       "type": "string",
-      "maxLength": 160
+      "intention": "promise_reinforcement",
+      "description": "Rappel de promesse en gros (18px, bold, uppercase, couleur #C0FF43 lime sur fond violet)",
+      "examples": ["RAPPEL DE LA PROMESSE DE TON OFFRE"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "media_badge",
+      "key": "cta_button_text",
+      "label": "Texte bouton CTA",
       "type": "string",
-      "maxLength": 24
+      "intention": "action_trigger",
+      "description": "Texte du bouton principal (16px, bold, gradient lime #C0FF43, couleur #8012FE violet, border-radius 50px, padding 18px 45px)",
+      "examples": ["Je me lance !", "Je commence maintenant"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "media_title",
-      "type": "string",
-      "maxLength": 90
+      "key": "trust_badges",
+      "label": "Badges de confiance",
+      "type": "string[]",
+      "intention": "trust_building",
+      "description": "3 badges de réassurance (11px, weight 600, background rgba white 0.15 sur violet, ou rgba violet 0.1 sur blanc)",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemMaxLength": 30,
+      "required": true,
+      "examples": [
+        "✓ Paiement sécurisé",
+        "✓ Satisfaction garantie",
+        "✓ Connexion chiffrée"
+      ]
     },
     {
-      "key": "media_placeholder",
+      "key": "problems_title_line_1",
+      "label": "Titre problèmes ligne 1",
       "type": "string",
-      "maxLength": 160
+      "intention": "problem_intro",
+      "description": "Première ligne titre problèmes (48px Anton, uppercase, couleur #FF440A orange)",
+      "examples": ["EST-CE QUE"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "media_note",
+      "key": "problems_title_highlight",
+      "label": "Ligne surlignée problèmes",
       "type": "string",
-      "maxLength": 160
+      "intention": "problem_emphasis",
+      "description": "Ligne avec fond violet (42px Anton, uppercase, background #8012FE, couleur blanche, padding 8px 30px, border-radius 50px)",
+      "examples": ["TU TE RECONNAIS"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "checkout_title",
+      "key": "problems_title_line_2",
+      "label": "Titre problèmes ligne 2",
       "type": "string",
-      "maxLength": 90
+      "intention": "problem_context",
+      "description": "Ligne suivante (48px Anton, uppercase, couleur #FF440A)",
+      "examples": ["DANS UNE DE CES"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "checkout_text",
+      "key": "problems_title_line_3",
+      "label": "Titre problèmes ligne 3",
       "type": "string",
-      "maxLength": 240
+      "intention": "problem_question",
+      "description": "Dernière ligne (48px Anton, uppercase, couleur #FF440A)",
+      "examples": ["SITUATIONS ?"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "price_now",
-      "type": "string",
-      "maxLength": 40
+      "key": "problem_list",
+      "label": "Liste de problèmes",
+      "type": "string[]",
+      "intention": "pain_points",
+      "description": "5-8 situations problématiques dans des cards blanches avec icône carrée violette ■ (15px, line-height 1.6, padding 20px 30px, border-radius 15px, box-shadow)",
+      "minItems": 5,
+      "maxItems": 8,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": [
+        "Situation problématique que subit ton client idéal"
+      ]
     },
     {
-      "key": "price_old",
+      "key": "problems_callout",
+      "label": "Texte de transition problèmes",
       "type": "string",
-      "maxLength": 40
-    },
-    {
-      "key": "price_note",
-      "type": "string",
-      "maxLength": 40
-    },
-    {
-      "key": "guarantee_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "guarantee_text",
-      "type": "string",
-      "maxLength": 240
-    },
-    {
-      "key": "order_pill",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "order_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "order_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "checkout_reassurance",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "order_badge_1",
-      "type": "string",
-      "maxLength": 24
-    },
-    {
-      "key": "order_badge_2",
-      "type": "string",
-      "maxLength": 24
-    },
-    {
-      "key": "order_badge_3",
-      "type": "string",
-      "maxLength": 24
-    },
-    {
-      "key": "problems_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "problems_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "problems_after",
-      "type": "string",
-      "maxLength": 160
+      "intention": "engagement_hook",
+      "description": "Texte sous la liste (15px, weight 600, couleur #8012FE, text-center)",
+      "examples": ["Si tu as répondu OUI à au moins une de ces questions, alors lis vite ce qui suit ! J'ai une bonne nouvelle pour toi."],
+      "maxLength": 200,
+      "required": true
     },
     {
       "key": "timing_title",
+      "label": "Titre timing",
       "type": "string",
-      "maxLength": 90
+      "intention": "urgency_statement",
+      "description": "Titre avec partie soulignée (42px Anton, uppercase, couleur #8012FE). Peut contenir <span class='underline'> pour soulignement violet 4px",
+      "examples": ["LE MEILLEUR MOMENT POUR [OBJECTIF DE TA CIBLE]"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "timing_big",
+      "key": "timing_title_highlight",
+      "label": "Partie soulignée timing",
       "type": "string",
-      "maxLength": 160
+      "intention": "timing_emphasis",
+      "description": "Mot à souligner dans le titre timing",
+      "examples": ["MEILLEUR"],
+      "maxLength": 20,
+      "required": false
     },
     {
-      "key": "timing_text",
+      "key": "timing_orange_title",
+      "label": "Titre orange timing",
       "type": "string",
-      "maxLength": 240
+      "intention": "urgency_cta",
+      "description": "Titre en orange sous le titre principal (52px Anton, uppercase, couleur #FF440A)",
+      "examples": ["C'EST MAINTENANT !"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "proof_box",
+      "key": "timing_subtitle",
+      "label": "Sous-titre timing",
       "type": "string",
-      "maxLength": 160
+      "intention": "urgency_justification",
+      "description": "Explication sous les titres (16px, weight 700, couleur #8012FE)",
+      "examples": ["Explique pourquoi ton offre est pertinente"],
+      "maxLength": 150,
+      "required": false
     },
     {
-      "key": "proof_caption",
+      "key": "timing_proof_caption",
+      "label": "Légende preuve timing",
       "type": "string",
-      "maxLength": 160
+      "intention": "proof_context",
+      "description": "Légende sous l'image de preuve (12px, italic, couleur #8012FE, text-center)",
+      "examples": ["💬 extrait d'une story de ChatGo spécialiste dans l'organisation de challenges pour les meilleurs marketers"],
+      "maxLength": 200,
+      "required": false
     },
     {
-      "key": "stat_1_k",
+      "key": "reasons_title_line_1",
+      "label": "Titre raisons ligne 1",
       "type": "string",
-      "maxLength": 160
+      "intention": "benefits_intro",
+      "description": "Première ligne titre raisons (52px Anton, uppercase, couleur #8012FE)",
+      "examples": ["QUELQUES"],
+      "maxLength": 30,
+      "required": true
     },
     {
-      "key": "stat_1_v",
+      "key": "reasons_title_line_2",
+      "label": "Titre raisons ligne 2 orange",
       "type": "string",
-      "maxLength": 160
+      "intention": "benefits_context",
+      "description": "Ligne orange (52px Anton, uppercase, couleur #FF440A)",
+      "examples": ["BONNES RAISONS"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "stat_2_k",
+      "key": "reasons_title_line_3",
+      "label": "Titre raisons lignes 3-5",
       "type": "string",
-      "maxLength": 160
+      "intention": "benefits_objective",
+      "description": "Fin du titre (52px Anton, uppercase, couleur #8012FE). Peut contenir des <br>",
+      "examples": ["DE [CE QUE VEUT\nFAIRE TON\nPROSPECT]"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "stat_2_v",
-      "type": "string",
-      "maxLength": 160
+      "key": "reasons",
+      "label": "Raisons / Bénéfices",
+      "type": "object[]",
+      "intention": "benefit_showcase",
+      "description": "3-6 raisons alternant fond blanc (border 4px lime) et fond violet (border 4px violet, texte blanc). Titre 20px Anton uppercase, texte 14px line-height 1.8, padding 35px, border-radius 25px",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemSchema": {
+        "reason_purple_bg": {
+          "type": "boolean",
+          "description": "true pour fond violet, false pour fond blanc"
+        },
+        "reason_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Titre en uppercase, couleur lime sur fond blanc, blanche sur fond violet"
+        },
+        "reason_text": {
+          "type": "string",
+          "maxLength": 350,
+          "description": "Texte explicatif"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "reason_purple_bg": false,
+          "reason_title": "UNE BONNE RAISON DE RÉALISER CET OBJECTIF",
+          "reason_text": "Ex : Tes participants retirent des bénéfices immédiats pendant le challenge..."
+        }
+      ]
     },
     {
-      "key": "stat_3_k",
+      "key": "authority_title",
+      "label": "Titre autorité",
       "type": "string",
-      "maxLength": 160
+      "intention": "authority_intro",
+      "description": "Titre avec partie soulignée (38px Anton, uppercase, couleur #8012FE). Peut contenir <span class='highlight-text'> pour soulignement violet 3px",
+      "examples": ["D'AILLEURS CES EXPERTS MONDIAUX DANS LEUR DOMAINE"],
+      "maxLength": 120,
+      "required": true
     },
     {
-      "key": "stat_3_v",
+      "key": "authority_title_highlight",
+      "label": "Partie soulignée autorité",
       "type": "string",
-      "maxLength": 160
+      "intention": "authority_emphasis",
+      "description": "Mots à souligner dans le titre autorité",
+      "examples": ["EXPERTS MONDIAUX"],
+      "maxLength": 40,
+      "required": false
     },
     {
-      "key": "reasons_title",
+      "key": "authority_subtitle",
+      "label": "Sous-titre autorité",
       "type": "string",
-      "maxLength": 90
+      "intention": "authority_proof",
+      "description": "Sous-titre avec partie soulignée (42px, couleur #8012FE). Peut contenir <span class='highlight-text'>",
+      "examples": ["génèrent déjà des millions avec [leur technique] !"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "reasons_subtitle",
+      "key": "authority_subtitle_highlight",
+      "label": "Partie soulignée sous-titre autorité",
       "type": "string",
-      "maxLength": 90
+      "intention": "authority_metric",
+      "description": "Mots à souligner dans le sous-titre",
+      "examples": ["des millions"],
+      "maxLength": 30,
+      "required": false
     },
     {
-      "key": "experts_title",
+      "key": "solution_question",
+      "label": "Question solution",
       "type": "string",
-      "maxLength": 90
+      "intention": "recognition_hook",
+      "description": "Question avant le titre solution (18px, weight 700, couleur #C0FF43 lime sur fond violet)",
+      "examples": ["Tu reconnais quelques têtes ?"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "experts_note",
+      "key": "solution_title_line_1",
+      "label": "Titre solution ligne 1",
       "type": "string",
-      "maxLength": 160
+      "intention": "solution_intro",
+      "description": "Première ligne titre solution (52px Anton, uppercase, couleur blanche sur fond violet)",
+      "examples": ["CE QU'ILS FONT POUR"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "method_title",
+      "key": "solution_title_highlight",
+      "label": "Ligne orange solution",
       "type": "string",
-      "maxLength": 90
+      "intention": "solution_outcome",
+      "description": "Ligne en orange (52px Anton, uppercase, couleur #FF440A sur fond violet)",
+      "examples": ["[RÉUSSITE CIBLE]"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "method_subtitle",
+      "key": "solution_title_line_2",
+      "label": "Titre solution ligne 2",
       "type": "string",
-      "maxLength": 90
+      "intention": "solution_objective",
+      "description": "Dernière ligne (52px Anton, uppercase, couleur blanche)",
+      "examples": ["OBJECTIF DE TA CIBLE"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "mid_cta",
+      "key": "method_intro",
+      "label": "Intro méthode",
       "type": "string",
-      "maxLength": 32
+      "intention": "methodology_intro",
+      "description": "Titre d'introduction à la méthode (20px, bold, couleur #C0FF43 lime)",
+      "examples": ["Ils suivent TOUTES & TOUS la même méthode :"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "mid_micro",
-      "type": "string",
-      "maxLength": 160
+      "key": "method_steps",
+      "label": "Étapes de la méthode",
+      "type": "object[]",
+      "intention": "step_by_step",
+      "description": "3-5 étapes de méthode avec titre h4 (20px bold couleur lime) commençant par → et description optionnelle (15px couleur rgba white 0.9)",
+      "minItems": 3,
+      "maxItems": 5,
+      "itemSchema": {
+        "step_title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Titre commençant par →"
+        },
+        "step_description": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Description optionnelle"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "step_title": "→ Une étape de la méthode que tu montres",
+          "step_description": "Ex : Avant même de lancer leur challenge, ils préparent une offre irrésistible à vendre"
+        }
+      ]
     },
     {
-      "key": "phases_title",
+      "key": "offer_intro_title",
+      "label": "Titre intro offre",
       "type": "string",
-      "maxLength": 90
+      "intention": "offer_reveal",
+      "description": "Titre de transition vers l'offre (42px Anton, uppercase, couleur #8012FE, text-center)",
+      "examples": ["C'EST EXACTEMENT CE QU'ON TE MONTRE DANS"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "phases_subtitle",
+      "key": "process_title",
+      "label": "Titre processus",
       "type": "string",
-      "maxLength": 90
+      "intention": "curriculum_intro",
+      "description": "Titre des phases du processus (42px Anton, uppercase, couleur #8012FE)",
+      "examples": ["LES [X] PHASES DE [TON PROCESSUS]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "phase1_title",
+      "key": "process_subtitle",
+      "label": "Sous-titre processus",
       "type": "string",
-      "maxLength": 90
+      "intention": "process_importance",
+      "description": "Sous-titre processus (18px, weight 700, couleur #8012FE). Peut contenir <span class='emoji'>",
+      "examples": ["Tu ne devrais jamais [objectif de ta cible] sans ça 👇"],
+      "maxLength": 120,
+      "required": true
     },
     {
-      "key": "phase1_text",
-      "type": "string",
-      "maxLength": 240
+      "key": "phases",
+      "label": "Phases du processus",
+      "type": "object[]",
+      "intention": "curriculum_breakdown",
+      "description": "3-6 phases alternant fond blanc et fond violet. Chaque phase : numéro dans cercle lime (60px), titre h3 (28px Anton uppercase), sous-titre italic (16px), liste 5 puces promesses, emoji illustration grand format",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemSchema": {
+        "phase_number": {
+          "type": "string",
+          "maxLength": 3,
+          "description": "Numéro de la phase (1, 2, 3...)"
+        },
+        "phase_purple_bg": {
+          "type": "boolean",
+          "description": "true pour fond violet, false pour fond blanc"
+        },
+        "phase_title": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Nom de la phase en uppercase"
+        },
+        "phase_subtitle": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Résumé en une phrase"
+        },
+        "phase_bullets": {
+          "type": "string[]",
+          "minItems": 5,
+          "maxItems": 5,
+          "itemMaxLength": 150,
+          "description": "5 puces promesses irrésistibles"
+        },
+        "phase_emoji": {
+          "type": "string",
+          "maxLength": 5,
+          "description": "Emoji d'illustration (💼, 📹, 📊, ✈️...)"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "phase_number": "1",
+          "phase_purple_bg": false,
+          "phase_title": "NOM DE LA PHASE 1",
+          "phase_subtitle": "Résumé en une phrase de l'étape",
+          "phase_bullets": [
+            "Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice"
+          ],
+          "phase_emoji": "💼"
+        }
+      ]
     },
     {
-      "key": "phase2_title",
+      "key": "bonus_intro_title",
+      "label": "Titre intro bonus",
       "type": "string",
-      "maxLength": 90
+      "intention": "bonus_reveal",
+      "description": "Titre d'introduction aux bonus (52px Anton, uppercase, couleur #8012FE). Peut contenir <br> et <span class='purple-highlight'> pour fond violet blanc et <span class='orange-text'> pour orange",
+      "examples": ["MAIS CE N'EST PAS\nTERMINÉ, VOILÀ\nLES BONUS EN +\nQUE TU VAS\nRECEVOIR"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "phase2_text",
-      "type": "string",
-      "maxLength": 240
+      "key": "bonus_list_intro",
+      "label": "Liste intro bonus",
+      "type": "string[]",
+      "intention": "bonus_quick_list",
+      "description": "5-8 bonus en liste rapide (15px). Format: <strong>🎁 Nom du bonus</strong> + utilité",
+      "minItems": 5,
+      "maxItems": 8,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": [
+        "<strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats"
+      ]
     },
     {
-      "key": "phase3_title",
+      "key": "bonus_intro_callout",
+      "label": "Texte de transition bonus",
       "type": "string",
-      "maxLength": 90
+      "intention": "bonus_detail_tease",
+      "description": "Texte avant le détail des bonus (couleur #8012FE, weight 700)",
+      "examples": ["Tu veux en savoir plus sur ces bonus ? OK, continue on va détailler tout ça !"],
+      "maxLength": 120,
+      "required": true
     },
     {
-      "key": "phase3_text",
+      "key": "bonus_teaser_title",
+      "label": "Titre détail bonus",
       "type": "string",
-      "maxLength": 240
+      "intention": "bonus_section_intro",
+      "description": "Titre de la section détail bonus (42px Anton, uppercase, couleur #8012FE). Peut contenir <br> et <span class='orange'>",
+      "examples": ["LES BONUS [NOM DE TON OFFRE] POUR ALLER\nPLUS VITE & PLUS LOIN"],
+      "maxLength": 120,
+      "required": true
     },
     {
-      "key": "phase4_title",
+      "key": "bonus_teaser_subtitle_1",
+      "label": "Sous-titre bonus 1",
       "type": "string",
-      "maxLength": 90
+      "intention": "bonus_objective",
+      "description": "Premier paragraphe sous le titre (16px, weight 700, couleur #8012FE)",
+      "examples": ["L'objectif de [ton offre] c'est de [promesse principale de ton offre]"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "phase4_text",
+      "key": "bonus_teaser_subtitle_2",
+      "label": "Sous-titre bonus 2",
       "type": "string",
-      "maxLength": 240
+      "intention": "bonus_philosophy",
+      "description": "Deuxième paragraphe (16px, weight 700, couleur #8012FE). Peut contenir <br>",
+      "examples": ["On n'a pas envie de vendre une formation pour vendre une formation.\nAlors on a inclus tous ces bonus pour t'aider à concrétiser cette formation..."],
+      "maxLength": 250,
+      "required": false
     },
     {
-      "key": "bonus_badge",
-      "type": "string",
-      "maxLength": 24
-    },
-    {
-      "key": "bonus_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus_detail_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus_detail_text",
-      "type": "string",
-      "maxLength": 240
-    },
-    {
-      "key": "bonus1_k",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "bonus1_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus1_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus2_k",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "bonus2_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus2_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus3_k",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "bonus3_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "bonus3_subtitle",
-      "type": "string",
-      "maxLength": 90
+      "key": "bonuses_detailed",
+      "label": "Bonus détaillés",
+      "type": "object[]",
+      "intention": "bonus_value_stack",
+      "description": "3-6 bonus en grille avec étoile décorative ✱, numéro (BONUS 1), nom en gros (32px Anton uppercase), sous-nom optionnel (24px Anton), et liste 3-5 features avec 🎁",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemSchema": {
+        "bonus_number": {
+          "type": "string",
+          "maxLength": 15,
+          "description": "Numéro (BONUS 1, BONUS 2...)"
+        },
+        "bonus_name": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Nom principal du bonus"
+        },
+        "bonus_subtitle": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Suite du nom si besoin (optionnel)"
+        },
+        "bonus_features": {
+          "type": "string[]",
+          "minItems": 3,
+          "maxItems": 5,
+          "itemMaxLength": 150,
+          "description": "Liste features avec 🎁"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "bonus_number": "BONUS 1",
+          "bonus_name": "NOM DU BONUS",
+          "bonus_subtitle": "SUITE DU NOM SI BESOIN",
+          "bonus_features": [
+            "🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice"
+          ]
+        }
+      ]
     },
     {
       "key": "recap_title",
+      "label": "Titre récap",
       "type": "string",
-      "maxLength": 90
+      "intention": "recap_intro",
+      "description": "Titre de la box récap lime (42px Anton, uppercase, couleur #8012FE, text-center)",
+      "examples": ["ON RÉSUME CE QUI T'ATTEND AVEC [NOM DE TON OFFRE] ?"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "recap_text",
+      "key": "recap_subtitle",
+      "label": "Sous-titre récap",
       "type": "string",
-      "maxLength": 240
+      "intention": "recap_hook",
+      "description": "Sous-titre récap (16px, bold, couleur #8012FE, text-center)",
+      "examples": ["Mets la main sur la méthode complète :"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "recap_cta",
-      "type": "string",
-      "maxLength": 32
+      "key": "recap_list",
+      "label": "Liste récap",
+      "type": "string[]",
+      "intention": "value_stack",
+      "description": "8-15 promesses dans la box récap avec ✓ violet (14px, line-height 1.8, padding-left 35px)",
+      "minItems": 8,
+      "maxItems": 15,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": [
+        "✓ Puce promesse Explication courte, simple et sexy de ta promesse"
+      ]
     },
     {
-      "key": "recap_micro",
+      "key": "recap_bonus_title",
+      "label": "Titre bonus récap",
       "type": "string",
-      "maxLength": 160
+      "intention": "bonus_recap_intro",
+      "description": "Titre de la section bonus dans le récap (15px, bold, couleur #8012FE)",
+      "examples": ["Et plus aller plus loin, les bonus :"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "recap_bonus_list",
+      "label": "Liste bonus récap",
+      "type": "string[]",
+      "intention": "bonus_summary",
+      "description": "3-6 bonus dans le récap avec 🎁 (13px)",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": [
+        "Bonus 1 : Explique comment ton bonus va aider à aller plus vite ou plus loin"
+      ]
+    },
+    {
+      "key": "recap_cta_intro",
+      "label": "Intro CTA récap",
+      "type": "string",
+      "intention": "bonus_reminder",
+      "description": "Texte avant CTA dans récap (16px, couleur blanche)",
+      "examples": ["Commande aujourd'hui et reçois [LES BONUS]"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "recap_cta_reminder",
+      "label": "Rappel promesse récap",
+      "type": "string",
+      "intention": "promise_final",
+      "description": "Rappel promesse avant CTA (18px, bold, uppercase, couleur #C0FF43 lime)",
+      "examples": ["RAPPEL DE LA PROMESSE DE TON OFFRE"],
+      "maxLength": 80,
+      "required": true
     },
     {
       "key": "faq_title",
+      "label": "Titre FAQ",
       "type": "string",
-      "maxLength": 90
+      "intention": "faq_intro",
+      "description": "Titre de la FAQ (42px Anton, uppercase, couleur #8012FE, text-center)",
+      "examples": ["QUESTIONS FRÉQUENTES"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "faq_subtitle",
-      "type": "string",
-      "maxLength": 90
+      "key": "faqs",
+      "label": "Questions fréquentes",
+      "type": "string[]",
+      "intention": "objection_handling",
+      "description": "8-12 questions FAQ dans des pills violettes avec icône + lime ronde (15px, bold, couleur blanche, background #8012FE, border-radius 50px, padding 20px 35px, hover translateX)",
+      "minItems": 8,
+      "maxItems": 12,
+      "itemMaxLength": 120,
+      "required": true,
+      "examples": [
+        "Question ou objection de ton public cible",
+        "J'ai encore une question 💬"
+      ]
     },
     {
-      "key": "contact_title",
+      "key": "faq_cta_intro",
+      "label": "Intro CTA FAQ",
       "type": "string",
-      "maxLength": 90
+      "intention": "final_bonus_reminder",
+      "description": "Texte avant CTA FAQ (16px, couleur #8012FE)",
+      "examples": ["Commande aujourd'hui et reçois [LES BONUS]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "contact_link_1_href",
+      "key": "faq_cta_reminder",
+      "label": "Rappel promesse FAQ",
       "type": "string",
-      "maxLength": 160
+      "intention": "final_promise",
+      "description": "Rappel promesse avant CTA FAQ (18px, bold, uppercase, couleur #8012FE)",
+      "examples": ["RAPPEL DE LA PROMESSE DE TON OFFRE"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "contact_link_1",
+      "key": "faq_cta_text",
+      "label": "Texte CTA FAQ",
       "type": "string",
-      "maxLength": 160
+      "intention": "final_action",
+      "description": "Texte du CTA final (peut être différent des autres CTA)",
+      "examples": ["Je crée des challenges qui cartonnent !"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "contact_link_2_href",
+      "key": "footer_format",
+      "label": "Format footer",
       "type": "string",
-      "maxLength": 160
+      "intention": "footer_brand",
+      "description": "Label format dans footer (16px Open Sans, bold, uppercase, letter-spacing 1px, couleur #8012FE)",
+      "examples": ["FORMAT"],
+      "maxLength": 20,
+      "required": true
     },
     {
-      "key": "contact_link_2",
+      "key": "footer_title",
+      "label": "Titre footer",
       "type": "string",
-      "maxLength": 160
+      "intention": "footer_brand_name",
+      "description": "Nom principal footer (64px Anton, uppercase, couleur #8012FE)",
+      "examples": ["SUPER NOM"],
+      "maxLength": 30,
+      "required": true
     },
     {
-      "key": "final_cta",
+      "key": "footer_subtitle",
+      "label": "Sous-titre footer outline",
       "type": "string",
-      "maxLength": 32
+      "intention": "footer_tagline",
+      "description": "Sous-titre outline footer (48px Anton, uppercase, stroke violet 3px)",
+      "examples": ["AU TOP"],
+      "maxLength": 20,
+      "required": true
     },
     {
-      "key": "final_micro",
-      "type": "string",
-      "maxLength": 160
+      "key": "footer_links",
+      "label": "Liens footer",
+      "type": "string[]",
+      "intention": "legal_links",
+      "description": "3-5 liens légaux (13px, weight 600, gap 40px, couleur #8012FE)",
+      "minItems": 3,
+      "maxItems": 5,
+      "itemMaxLength": 40,
+      "required": true,
+      "examples": [
+        "Conditions générales de vente",
+        "Mentions légales",
+        "Politique de confidentialité"
+      ]
     },
     {
-      "key": "footer_link_top",
+      "key": "footer_copyright",
+      "label": "Copyright footer",
       "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_1_href",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_1",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_2_href",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_2",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_3_href",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_link_3",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "footer_note",
-      "type": "string",
-      "maxLength": 160
+      "intention": "legal_copyright",
+      "description": "Ligne de copyright (12px, couleur #8012FE, opacity 0.7)",
+      "examples": ["© 2024 - Tous droits réservés"],
+      "maxLength": 60,
+      "required": true
     }
   ]
 }

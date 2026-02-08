@@ -1,14 +1,350 @@
 {
-  "hero_pretitle": { "maxLength": 34, "required": false },
-  "hero_title": { "maxLength": 110, "required": true },
-  "hero_subtitle": { "maxLength": 220, "required": true },
-
-  "steps": { "maxItems": 5, "required": false },
-
-  "cta_text": { "maxLength": 28, "required": true },
-  "reassurance_text": { "maxLength": 140, "required": false },
-
-  "side_badge": { "maxLength": 22, "required": false },
-  "side_title": { "maxLength": 46, "required": false },
-  "side_text": { "maxLength": 160, "required": false }
+  "kind": "capture",
+  "templateId": "capture-05",
+  "name": "Page de capture Challenge Affiliation Up-to-Challenge",
+  "description": "Template style affiliation/marketing digital avec labels flottants, badges live, programme détaillé et comparaison avant/après",
+  "fields": [
+    {
+      "key": "floating_labels",
+      "label": "Labels flottants",
+      "type": "string[]",
+      "intention": "attention_buzzwords",
+      "description": "4 mots-clés ou promesses courtes qui flottent sur l'image hero",
+      "examples": ["GRATUIT", "4 JOURS", "LIVE", "RÉSULTATS"],
+      "minItems": 4,
+      "maxItems": 4,
+      "itemMaxLength": 15,
+      "required": false
+    },
+    {
+      "key": "hero_label",
+      "label": "Label hero",
+      "type": "string",
+      "intention": "event_type",
+      "description": "Type d'événement",
+      "examples": ["CHALLENGE GRATUIT EN LIGNE"],
+      "maxLength": 30,
+      "required": true
+    },
+    {
+      "key": "hero_subtitle",
+      "label": "Sous-titre hero",
+      "type": "string",
+      "intention": "urgency_timing",
+      "description": "Information de timing en majuscules pour créer urgence",
+      "examples": ["DU 10 AU 14 JANVIER 2025", "DERNIERS JOURS"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "hero_live_badge",
+      "label": "Badge live",
+      "type": "string",
+      "intention": "format_emphasis",
+      "description": "Badge qui indique le format live",
+      "examples": ["4 LIVES GRATUITS • En direct + Replays"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "hero_title",
+      "label": "Titre principal",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Promesse principale forte avec métrique et résultat",
+      "examples": ["Générez vos Premières Commissions en Affiliation Sans Audience"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "hero_description",
+      "label": "Description hero",
+      "type": "string",
+      "intention": "promise_mechanism",
+      "description": "Explication courte du mécanisme ou de la méthode",
+      "examples": ["La méthode complète pour trouver les meilleurs produits et les vendre en automatique"],
+      "maxLength": 100,
+      "required": true
+    },
+    {
+      "key": "cta_text",
+      "label": "Texte bouton CTA",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Action orientée résultat",
+      "examples": ["Rejoindre le challenge gratuitement", "Je veux mes premières ventes"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "for_me_question",
+      "label": "Question 'Pour qui ?'",
+      "type": "string",
+      "intention": "audience_question",
+      "description": "Question pour qualifier l'audience",
+      "examples": ["Ce challenge est-il fait pour moi ?"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "for_me_answer",
+      "label": "Réponse 'Pour qui'",
+      "type": "string",
+      "intention": "audience_qualification",
+      "description": "Réponse affirmative avec profil cible",
+      "examples": ["OUI, si vous voulez générer des revenus en ligne sans créer de produits ni avoir d'audience massive"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "benefits",
+      "label": "Bénéfices principaux",
+      "type": "string[]",
+      "intention": "benefit_list",
+      "description": "4-6 bénéfices concrets du challenge",
+      "examples": [
+        "Découvrir les produits à forte commission que personne ne promeut",
+        "Créer votre premier tunnel de vente qui convertit en moins de 24h",
+        "Générer vos premières commissions dès la première semaine",
+        "Automatiser vos ventes sans passer 10h par jour sur les réseaux"
+      ],
+      "minItems": 4,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true
+    },
+    {
+      "key": "transformation_question",
+      "label": "Question transformation",
+      "type": "string",
+      "intention": "differentiation_setup",
+      "description": "Question qui introduit la différenciation",
+      "examples": ["En quoi ce défi est-il unique ?", "Pourquoi ce challenge est différent ?"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "transformation_headline",
+      "label": "Titre transformation",
+      "type": "string",
+      "intention": "value_proposition",
+      "description": "Affirmation forte de la valeur unique",
+      "examples": ["Vous méritez bien plus que des formations théoriques sans résultats"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "transformation_description",
+      "label": "Description transformation",
+      "type": "string",
+      "intention": "transformation_promise",
+      "description": "2-3 phrases qui expliquent la vraie transformation offerte",
+      "examples": ["Vous méritez un plan concret pour générer vos premières ventes, automatiser votre business, et gagner votre vie en ligne. Ce n'est pas qu'une formation, c'est une véritable TRANSFORMATION."],
+      "maxLength": 250,
+      "required": true
+    },
+    {
+      "key": "daily_program",
+      "label": "Programme quotidien",
+      "type": "object[]",
+      "intention": "daily_breakdown",
+      "description": "4 jours avec label, titre et points clés (2-3 puces)",
+      "minItems": 4,
+      "maxItems": 4,
+      "itemSchema": {
+        "day_label": {
+          "type": "string",
+          "maxLength": 15,
+          "description": "JOUR #X"
+        },
+        "day_title": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Titre du concept/thème du jour"
+        },
+        "day_bullets": {
+          "type": "string[]",
+          "minItems": 2,
+          "maxItems": 3,
+          "itemMaxLength": 110,
+          "description": "Points clés abordés ce jour"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "trainer_name",
+      "label": "Nom du formateur",
+      "type": "string",
+      "intention": "authority_identity",
+      "description": "Prénom & Nom du formateur",
+      "examples": ["Thomas Dupont"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "trainer_proof",
+      "label": "Preuve sociale formateur",
+      "type": "string",
+      "intention": "authority_credentials",
+      "description": "Chiffre ou preuve de crédibilité",
+      "examples": ["+ de 2M€ générés en ligne depuis 2020"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "trainer_bio",
+      "label": "Biographie formateur",
+      "type": "string",
+      "intention": "authority_story",
+      "description": "3 paragraphes : parcours, résultats chiffrés, mission actuelle",
+      "examples": ["Depuis 5 ans, je vis la vie de mes rêves grâce à mes business en ligne, et mon entreprise a généré plus de 2 millions d'euros. J'aide aujourd'hui + de 10 000 personnes qui veulent atteindre la liberté financière..."],
+      "maxLength": 500,
+      "required": true
+    },
+    {
+      "key": "counter_label",
+      "label": "Label compteur",
+      "type": "string",
+      "intention": "scarcity_setup",
+      "description": "Texte qui introduit la rareté",
+      "examples": ["Il reste encore des places..."],
+      "maxLength": 40,
+      "required": false
+    },
+    {
+      "key": "counter_number",
+      "label": "Nombre de places",
+      "type": "string",
+      "intention": "scarcity_metric",
+      "description": "X/Y places restantes",
+      "examples": ["14/100", "25/150"],
+      "maxLength": 10,
+      "required": false
+    },
+    {
+      "key": "before_after_intro",
+      "label": "Intro avant/après",
+      "type": "string",
+      "intention": "comparison_setup",
+      "description": "Question qui introduit la comparaison avant/après",
+      "examples": ["Prêt à vendre des produits rares en automatique et REMPLACER TON SALAIRE ?"],
+      "maxLength": 90,
+      "required": true
+    },
+    {
+      "key": "before_after_subtitle",
+      "label": "Sous-titre avant/après",
+      "type": "string",
+      "intention": "comparison_expectation",
+      "description": "Ce à quoi s'attendre",
+      "examples": ["Voici à quoi t'attendre avec le CHALLENGE"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "before_points",
+      "label": "Points AVANT",
+      "type": "string[]",
+      "intention": "pain_current_state",
+      "description": "4 points négatifs de la situation actuelle",
+      "examples": [
+        "Des résultats en 'dents de scie'",
+        "Des stratégies inadaptées au marché d'aujourd'hui",
+        "Quelques ventes 'par ci par là' mais qui ne remplissent pas le frigo"
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "itemMaxLength": 90,
+      "required": true
+    },
+    {
+      "key": "after_points",
+      "label": "Points APRÈS",
+      "type": "string[]",
+      "intention": "promise_future_state",
+      "description": "4 points positifs de la situation après le challenge",
+      "examples": [
+        "Des résultats stables et prévisibles grâce à la vente de produits 'rares et scalables'",
+        "Des stratégies personnalisées et uniques sur le marché",
+        "Intégration de l'IA et effets de levier pour gagner du temps et plus d'argent !"
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "itemMaxLength": 110,
+      "required": true
+    },
+    {
+      "key": "bonus_title",
+      "label": "Titre section bonus",
+      "type": "string",
+      "intention": "bonus_reveal",
+      "description": "Annonce des bonus exclusifs",
+      "examples": ["VOICI 3 BONUS EXCLUSIFS"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "bonus_subtitle",
+      "label": "Sous-titre bonus",
+      "type": "string",
+      "intention": "bonus_condition",
+      "description": "Condition pour recevoir les bonus",
+      "examples": ["Quand tu t'inscris GRATUITEMENT au Challenge !"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "bonuses",
+      "label": "Liste des bonus",
+      "type": "object[]",
+      "intention": "bonus_value_stack",
+      "description": "3 bonus avec description et valeur",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "bonus_description": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "BONUS X : Description du bonus et sa valeur"
+        },
+        "bonus_value": {
+          "type": "string",
+          "maxLength": 15,
+          "description": "Valeur : XXX,00€"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "bonus_total_value",
+      "label": "Valeur totale bonus",
+      "type": "string",
+      "intention": "value_anchor",
+      "description": "Normalement : XXX,00€",
+      "examples": ["Normalement : 497,00€"],
+      "maxLength": 30,
+      "required": true
+    },
+    {
+      "key": "bonus_offer_today",
+      "label": "Prix aujourd'hui",
+      "type": "string",
+      "intention": "offer_reveal",
+      "description": "Prix/offre du jour",
+      "examples": ["Prix Aujourd'hui : 100% OFFERT !"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "challenge_name",
+      "label": "Nom du challenge",
+      "type": "string",
+      "intention": "event_branding",
+      "description": "Nom du challenge pour footer",
+      "examples": ["Challenge Affiliation Express"],
+      "maxLength": 40,
+      "required": true
+    }
+  ]
 }

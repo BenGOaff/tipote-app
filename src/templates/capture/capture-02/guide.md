@@ -1,10 +1,11 @@
-### Capture 02 — Instructions Systeme.io
+# capture-02 — Kit Systeme.io (Tipote)
 
-1) Crée une page dans Systeme.io (tunnel → étape “Page de capture”)
-2) Ajoute un bloc “Code HTML”
-3) Colle le code “Systeme-compatible” généré par Tipote
-4) Dans le SLOT, ajoute un **Formulaire Systeme** (élément natif)
-5) Configure le formulaire :
-   - Action : ajouter tag (ex: lead_capture_02)
-   - Redirection : page suivante / page merci
-6) Optionnel : remplace le bloc “vidéo” par une vraie vidéo dans Systeme (ou garde en visuel)
+## Ce que tu as à faire
+1. Crée une nouvelle page (mode “Page” dans Systeme.io).
+2. Ajoute un bloc HTML → colle **BLOC 1** (depuis `kit-systeme.html`).
+3. À l’endroit indiqué **FORM SYSTEME.IO** : ajoute un **Formulaire natif** (Prénom + Email).
+4. Ajoute un bloc HTML → colle **BLOC 2**.
+
+## Important (police)
+- Si les polices ne se chargent pas : copie les `<link ...>` tout en haut de `kit-systeme.html` et colle-les dans :
+  **Paramètres de la page → Code de tracking → Header**.

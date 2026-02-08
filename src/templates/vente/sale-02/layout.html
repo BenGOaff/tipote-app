@@ -1,142 +1,2163 @@
-<div class="sale-02">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="pill">
-        <span>{{nav_badge}}</span>
-        {{#nav_badge_scribble}}<span class="scribble">{{.}}</span>{{/nav_badge_scribble}}
-      </div>
-      <div class="nav-links">
-        <a href="#details">{{nav_link_1}}</a>
-        <a href="#programme">{{nav_link_2}}</a>
-        <a href="#temoignages">{{nav_link_3}}</a>
-      </div>
-      <a class="nav-cta" href="#reservation">{{nav_cta}}</a>
-    </div>
-  </nav>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Challenge de Vente - Offre de Lancement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;900&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  <header class="hero" id="top">
-    <div class="container hero-grid">
-      <div>
-        <div class="pill">
-          <span>{{hero_pill}}</span>
-          {{#hero_pill_scribble}}<span class="scribble">{{.}}</span>{{/hero_pill_scribble}}
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background: #fff;
+            color: #1c1c1c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Handwriting font */
+        .handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        /* Sections */
+        .section-dark {
+            background: #1c1c1c;
+            color: #fff;
+            position: relative;
+        }
+
+        .section-dark::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23000000" width="100" height="100"/></svg>');
+            opacity: 0.03;
+            pointer-events: none;
+        }
+
+        .section-light {
+            background: #fbf9f3;
+            color: #1c1c1c;
+        }
+
+        .section-white {
+            background: #fff;
+            color: #1c1c1c;
+        }
+
+        .section-cream {
+            background: #fffef2;
+            color: #1c1c1c;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 30px;
+        }
+
+        .container-narrow {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 0 30px;
+        }
+
+        /* Header */
+        .header {
+            background: #1c1c1c;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(220, 194, 133, 0.15);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #dcc285;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 35px;
+        }
+
+        .nav a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: #dcc285;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            color: #1c1c1c;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-radius: 25px;
+            margin-bottom: 35px;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 30px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-dark .hero-title {
+            color: #fff;
+        }
+
+        .gold-text {
+            color: #dcc285;
+        }
+
+        .hero-subtitle {
+            font-size: 24px;
+            font-style: italic;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .disclaimer {
+            max-width: 700px;
+            margin: 0 auto 50px;
+            padding: 25px 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(220, 194, 133, 0.2);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .section-light .disclaimer {
+            background: rgba(220, 194, 133, 0.1);
+            border-color: rgba(220, 194, 133, 0.3);
+        }
+
+        /* Video Player */
+        .video-wrapper {
+            max-width: 800px;
+            margin: 50px auto;
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-placeholder {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(135deg, #1c1c1c 0%, #2a2a2a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dcc285;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .video-cta-banner {
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            padding: 15px;
+            text-align: center;
+            font-weight: 700;
+            color: #1c1c1c;
+            font-size: 15px;
+        }
+
+        /* Offer Box */
+        .offer-box {
+            background: #1c1c1c;
+            border: 3px solid #dcc285;
+            border-radius: 16px;
+            padding: 45px 40px;
+            text-align: center;
+            max-width: 650px;
+            margin: 60px auto;
+            position: relative;
+        }
+
+        .offer-icon {
+            width: 80px;
+            height: 80px;
+            background: #dcc285;
+            border-radius: 50%;
+            margin: -70px auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1c1c1c;
+        }
+
+        .offer-hook {
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .offer-title {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .offer-price {
+            font-size: 48px;
+            font-weight: 900;
+            color: #00eb5e;
+            margin: 20px 0;
+        }
+
+        .price-old {
+            font-size: 28px;
+            color: #888;
+            text-decoration: line-through;
+            font-weight: 400;
+        }
+
+        /* Countdown */
+        .countdown {
+            margin: 35px 0 25px;
+        }
+
+        .countdown-label {
+            font-size: 14px;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
+        .countdown-timer {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            font-size: 42px;
+            font-weight: 900;
+        }
+
+        .countdown-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .countdown-number {
+            font-size: 48px;
+        }
+
+        .countdown-text {
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* CTA Button */
+        .btn-primary {
+            display: inline-block;
+            padding: 22px 60px;
+            background: linear-gradient(135deg, #00eb5e 0%, #00d66f 100%);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 235, 94, 0.35);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 235, 94, 0.5);
+        }
+
+        .btn-secondary {
+            display: inline-block;
+            padding: 18px 45px;
+            background: transparent;
+            color: #dcc285;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #dcc285;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #dcc285;
+            color: #1c1c1c;
+        }
+
+        /* Testimonial Cards */
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 60px 0;
+        }
+
+        .testimonial-card {
+            background: #fff;
+            border: 2px solid #dcc285;
+            border-radius: 16px;
+            padding: 35px 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-dark .testimonial-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(220, 194, 133, 0.3);
+        }
+
+        .quote-icon {
+            width: 40px;
+            height: 40px;
+            background: #dcc285;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #1c1c1c;
+            font-family: Georgia, serif;
+        }
+
+        .testimonial-text {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+
+        .section-dark .testimonial-text {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .author-photo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #1c1c1c;
+        }
+
+        .author-info {
+            text-align: left;
+        }
+
+        .author-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .section-dark .author-name {
+            color: #fff;
+        }
+
+        .author-stars {
+            color: #dcc285;
+            font-size: 14px;
+        }
+
+        /* Mockup Section */
+        .mockup-visual {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
+            border-radius: 12px;
+            margin: 50px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Content Sections */
+        .content-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .section-subtitle {
+            font-size: 18px;
+            opacity: 0.85;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Program Grid */
+        .program-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 35px;
+            margin: 60px 0;
+        }
+
+        .program-day {
+            background: #fff;
+            border-radius: 12px;
+            padding: 35px 25px;
+            border: 2px solid rgba(220, 194, 133, 0.3);
+        }
+
+        .section-dark .program-day {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(220, 194, 133, 0.2);
+        }
+
+        .day-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            background: #dcc285;
+            color: #1c1c1c;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+
+        .day-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .section-dark .day-title {
+            color: #fff;
+        }
+
+        .day-date {
+            color: #dcc285;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .day-subtitle {
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .day-bullets {
+            list-style: none;
+        }
+
+        .day-bullets li {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-size: 14px;
+        }
+
+        .section-dark .day-bullets li {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .day-bullets li::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #dcc285;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .bullet-title {
+            font-weight: 700;
+            color: #dcc285;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        /* Text Content */
+        .text-content {
+            font-size: 17px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .text-content strong {
+            font-weight: 700;
+            color: #1c1c1c;
+        }
+
+        .section-dark .text-content strong {
+            color: #dcc285;
+        }
+
+        .text-highlight {
+            background: linear-gradient(180deg, transparent 60%, rgba(220, 194, 133, 0.4) 60%);
+            padding: 2px 4px;
+        }
+
+        /* About Section */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 50px;
+            align-items: start;
+            margin: 60px 0;
+        }
+
+        .about-photo {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1c1c1c;
+        }
+
+        .about-content h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .about-content p {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        /* Qualification Bullets */
+        .qualification-list {
+            list-style: none;
+            margin: 40px 0;
+        }
+
+        .qualification-list li {
+            padding: 20px;
+            margin-bottom: 20px;
+            background: rgba(0, 235, 94, 0.08);
+            border-left: 4px solid #00eb5e;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .qualification-list li::before {
+            content: '✓';
+            color: #00eb5e;
+            font-weight: 700;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        /* Method Cards */
+        .methods-grid {
+            display: grid;
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .method-card {
+            background: #1c1c1c;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid rgba(220, 194, 133, 0.2);
+        }
+
+        .method-header {
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            padding: 20px 30px;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            background: #1c1c1c;
+            color: #dcc285;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .method-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: #1c1c1c;
+        }
+
+        .method-body {
+            padding: 40px 30px;
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .method-description {
+            font-size: 16px;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .method-image {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: rgba(220, 194, 133, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #dcc285;
+        }
+
+        .method-problem {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(220, 194, 133, 0.2);
+        }
+
+        .problem-label {
+            color: #eb1c26;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .problem-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Before/After Comparison */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .comparison-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px 35px;
+            border: 2px solid #e8e8e8;
+        }
+
+        .section-dark .comparison-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-image {
+            width: 100%;
+            height: 200px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .section-dark .comparison-image {
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .comparison-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section-dark .comparison-title {
+            color: #fff;
+        }
+
+        .comparison-list {
+            list-style: none;
+        }
+
+        .comparison-list li {
+            padding: 12px 0;
+            font-size: 15px;
+            line-height: 1.6;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .comparison-list.before li::before {
+            content: '×';
+            color: #eb1c26;
+            font-weight: 700;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .comparison-list.after li::before {
+            content: '✓';
+            color: #00eb5e;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        /* Guarantee Badge */
+        .guarantee-section {
+            text-align: center;
+            padding: 60px 0;
+        }
+
+        .guarantee-badge {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 8px solid rgba(220, 194, 133, 0.3);
+            transform: rotate(-10deg);
+        }
+
+        .guarantee-text {
+            font-size: 18px;
+            font-weight: 900;
+            color: #1c1c1c;
+            text-transform: uppercase;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .guarantee-percent {
+            font-size: 48px;
+            font-weight: 900;
+            color: #1c1c1c;
+        }
+
+        /* Pricing Cards */
+        .pricing-tiers {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 60px 0;
+            align-items: start;
+        }
+
+        .pricing-card {
+            background: #fff;
+            border: 2px solid #e8e8e8;
+            border-radius: 16px;
+            padding: 30px 25px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .pricing-card.featured {
+            border-color: #00eb5e;
+            border-width: 3px;
+            transform: scale(1.05);
+        }
+
+        .pricing-label {
+            font-weight: 700;
+            font-size: 12px;
+            color: #00eb5e;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .pricing-places {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .pricing-amount {
+            font-size: 48px;
+            font-weight: 900;
+            color: #00eb5e;
+            margin: 20px 0;
+        }
+
+        .pricing-note {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+
+        /* Info Cards */
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 60px 0;
+        }
+
+        .info-card {
+            background: #fff;
+            border: 2px solid rgba(220, 194, 133, 0.3);
+            border-radius: 12px;
+            padding: 35px 25px;
+            text-align: center;
+        }
+
+        .section-dark .info-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(220, 194, 133, 0.2);
+        }
+
+        .info-title {
+            font-size: 22px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .section-dark .info-title {
+            color: #dcc285;
+        }
+
+        .info-text {
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        /* Order Form */
+        .order-form {
+            max-width: 600px;
+            margin: 60px auto;
+            background: #fff;
+            border: 3px solid #dcc285;
+            border-radius: 16px;
+            padding: 50px 40px;
+        }
+
+        .form-section {
+            margin-bottom: 35px;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #dcc285;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Work Sans', sans-serif;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #dcc285;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .payment-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .payment-option:hover {
+            border-color: #dcc285;
+        }
+
+        .payment-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .payment-logos {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .payment-logo {
+            width: 40px;
+            height: 25px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #888;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1c1c1c;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 50px 0 30px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #dcc285;
+            margin-bottom: 25px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #dcc285;
+        }
+
+        .footer-disclaimer {
+            font-size: 11px;
+            line-height: 1.7;
+            max-width: 900px;
+            margin: 0 auto;
+            opacity: 0.5;
+        }
+
+        /* Spacing Utilities */
+        .py-sm { padding: 50px 0; }
+        .py-md { padding: 70px 0; }
+        .py-lg { padding: 90px 0; }
+        .py-xl { padding: 110px 0; }
+
+        .my-sm { margin: 50px 0; }
+        .my-md { margin: 70px 0; }
+        .my-lg { margin: 90px 0; }
+
+        .text-center { text-align: center; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-title { font-size: 40px; }
+            .section-title { font-size: 36px; }
+            
+            .testimonials-grid,
+            .program-grid,
+            .pricing-tiers,
+            .info-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .method-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 0 20px; }
+            .nav { display: none; }
+            
+            .hero-title { font-size: 32px; }
+            .section-title { font-size: 28px; }
+            .offer-title { font-size: 28px; }
+            .offer-price { font-size: 36px; }
+
+            .testimonials-grid,
+            .program-grid,
+            .comparison-grid,
+            .pricing-tiers,
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .countdown-timer {
+                flex-wrap: wrap;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Nom de ton offre</div>
+                <nav class="nav">
+                    <a href="#details">Commander</a>
+                    <a href="#details">Détails</a>
+                    <a href="#faq">FAQ</a>
+                </nav>
+            </div>
         </div>
-        <h1>{{hero_title}}</h1>
-        <p class="hero-sub">{{hero_subtitle}}</p>
+    </header>
 
-        <ul class="hero-highlights">
-          {{#hero_bullets}}
-          <li><span class="dot"></span><span>{{.}}</span></li>
-          {{/hero_bullets}}
-        </ul>
-      </div>
+    <!-- Hero Section - Dark -->
+    <section class="section-dark py-lg">
+        <div class="container">
+            <div class="hero">
+                <div class="hero-badge">📆 Date de l'événement ou audience cible visée</div>
+                
+                <h1 class="hero-title">
+                    Promesse <span class="gold-text">principale</span> de ton offre :<br>
+                    qu'est ce que ton <span class="gold-text">audience cible</span> va<br>
+                    obtenir et en <span class="gold-text">combien de temps</span><br>
+                    par exemple.
+                </h1>
 
-      <aside class="order" id="reservation">
-        <div class="pill">
-          <span>{{order_pill}}</span>
-          {{#order_pill_scribble}}<span class="scribble">{{.}}</span>{{/order_pill_scribble}}
+                <p class="hero-subtitle handwriting">
+                    Sans [objection ou frein de ton audience cible]
+                </p>
+
+                <div class="disclaimer">
+                    <strong>DISCLAIMER :</strong> ce que tu ne vas pas apprendre à ton audience cible (parce que ça marche pas) et ce que tu vas lui permettre d'atteindre comme objectif grâce à ta proposition unique de valeur.
+                </div>
+
+                <div class="video-wrapper">
+                    <div class="video-placeholder">
+                        Lecteur vidéo ici
+                    </div>
+                    <div class="video-cta-banner">
+                        📺 Regarde la vidéo ci-dessous pour [objectif]
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="price">
-          <div class="now">{{price_now}}</div>
-          <div class="old">{{price_old}}</div>
+    <!-- Offer Box - Dark -->
+    <section class="section-dark py-md">
+        <div class="container">
+            <div class="offer-box">
+                <div class="offer-icon">ICÔNE</div>
+                
+                <p class="offer-hook">"Appel à l'action qui invite à commander, s'inscrire etc</p>
+                
+                <h2 class="offer-title">
+                    Offre de Lancement à <span class="gold-text">100€</span><br>
+                    au lieu de <span class="price-old">1997€</span>"
+                </h2>
+
+                <div class="countdown">
+                    <div class="countdown-label">Fin de l'offre :</div>
+                    <div class="countdown-timer">
+                        <div class="countdown-unit">
+                            <div class="countdown-number">00</div>
+                            <div class="countdown-text">Jours</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">:</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">00</div>
+                            <div class="countdown-text">Heures</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">:</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">00</div>
+                            <div class="countdown-text">Minutes</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">:</div>
+                        </div>
+                        <div class="countdown-unit">
+                            <div class="countdown-number">00</div>
+                            <div class="countdown-text">Secondes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#order" class="btn-primary">JE REJOINS [offre] AUJOURD'HUI</a>
+            </div>
+
+            <!-- Testimonials Grid -->
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="cta">
-          <a class="btn" href="#checkout">{{cta_main}}</a>
-          <p class="micro">{{cta_micro}}</p>
+    <!-- Mockup Section - White -->
+    <section class="section-white py-lg">
+        <div class="container">
+            <div class="mockup-visual">MOCKUP OU IMAGE DE TON OFFRE ICI</div>
+
+            <div class="text-center">
+                <p style="font-size: 18px; margin-bottom: 25px;">En [durée] je vais te montrer ...</p>
+                
+                <h2 class="section-title">
+                    Promesse de ton offre : ce qu'elle<br>
+                    <span class="gold-text">permet à ton audience de réaliser...</span>
+                </h2>
+
+                <p class="text-content" style="max-width: 800px; margin: 30px auto;">
+                    ... comment tu proposes à ton audience cible d'atteindre cet objectif : ta proposition de valeur unique ou comment tu le fais mieux, plus vite ou encore moins cher que tes concurrents par exemple.
+                </p>
+            </div>
+
+            <div class="content-header" style="margin-top: 80px;">
+                <div class="hero-badge">Détails de l'événement ou du contenu</div>
+                <h2 class="section-title">Nom De Ton <span class="gold-text">Offre</span></h2>
+            </div>
+
+            <!-- Program Grid -->
+            <div class="program-grid">
+                <div class="program-day">
+                    <div class="day-badge">JOUR 1</div>
+                    <div class="day-date">25 Janvier</div>
+                    <h3 class="day-title">"Nom du Contenu"</h3>
+                    
+                    <ul class="day-bullets">
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="program-day">
+                    <div class="day-badge">JOUR 2</div>
+                    <div class="day-date">26 Janvier</div>
+                    <h3 class="day-title">"Nom du Contenu"</h3>
+                    
+                    <ul class="day-bullets">
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="program-day">
+                    <div class="day-badge">JOUR 3</div>
+                    <div class="day-date">27 Janvier</div>
+                    <h3 class="day-title">"Nom du Contenu"</h3>
+                    
+                    <ul class="day-bullets">
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                        <li>
+                            <div class="bullet-title">Puce Promesse</div>
+                            <div>Bénéfice + <strong>conséquence</strong> concrète du bénéfice</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="order-form" id="checkout">
-          FORMULAIRE DE COMMANDE SÉCURISÉ<br />
-          <strong>{{checkout_title}}</strong>
+    <!-- Secret Section - Light -->
+    <section class="section-light py-lg">
+        <div class="container-narrow">
+            <div class="text-center">
+                <h2 class="section-title">IL N'Y A PAS DE SECRET...</h2>
+                
+                <p class="text-content">
+                    Si tu apprends [ce que tu enseignes] en suivant ma méthode, alors tu pourras <strong>[objectif de ton client cible]</strong>
+                </p>
+
+                <h3 class="section-title" style="font-size: 36px; margin-top: 50px;">
+                    Et tu [<span class="gold-text">objectif final</span>] de ton client idéal !
+                </h3>
+            </div>
         </div>
-      </aside>
-    </div>
-  </header>
+    </section>
 
-  <section class="section alt" id="details">
-    <div class="container">
-      <h2>{{details_title}}</h2>
-      <p class="lead">{{details_text}}</p>
+    <!-- About Section - White -->
+    <section class="section-white py-lg">
+        <div class="container-narrow">
+            <div class="about-grid">
+                <div class="about-photo">Photo de toi</div>
+                
+                <div class="about-content">
+                    <h3><strong>De :</strong> ton nom et ton prénom</h3>
+                    <h3><strong>Lieu :</strong> où tu vis/exerces</h3>
+                    
+                    <p class="text-content">
+                        Explique simplement pourquoi c'est important pour ton audience cible de résoudre son problème et d'atteindre son objectif le plus rapidement possible.
+                    </p>
 
-      {{#video_url}}
-      <div class="video">
-        <video controls playsinline preload="metadata" src="{{.}}"></video>
-      </div>
-      {{/video_url}}
-    </div>
-  </section>
+                    <p class="text-content">
+                        <strong>Est-ce que mon [offre] est faite pour toi ?</strong>
+                    </p>
 
-  <section class="section" id="programme">
-    <div class="container">
-      <h2>{{agenda_title}}</h2>
-      <p class="lead">{{agenda_subtitle}}</p>
+                    <p class="text-content">
+                        Toi et moi nous savons que le temps est précieux c'est pourquoi je vais te décrire rapidement à qui s'adresse mon offre...
+                    </p>
 
-      <div class="agenda">
-        {{#days}}
-        <div class="day">
-          <div class="top">
-            <div class="n">{{day_label}}</div>
-            <div class="date">{{day_date}}</div>
-          </div>
-          <div class="title">{{day_title}}</div>
-          <ul class="bullets">
-            {{#day_bullets}}
-            <li><span class="dot"></span><span>{{.}}</span></li>
-            {{/day_bullets}}
-          </ul>
+                    <ul class="qualification-list">
+                        <li><strong>SI TU EN VEUX PLUS !</strong> Décris ici ce que ton audience veut en plus : plus de temps, plus de ventes, plus d'argent, plus de prospects, ... Alors c'est fait pour toi !</li>
+                        
+                        <li><strong>SI TU VEUX DEVENIR [ce que ton audience veut devenir] !</strong> Aide ton prospect à se projeter dans sa nouvelle vie, quand il aura atteint ses objectifs.</li>
+                        
+                        <li><strong>SI TU ES [domaine de ton client cible : affilié, coach, ...] !</strong> Décris pourquoi c'est destiné à cette catégorie de personnes. Ex : si tu es coach et que tu as du mal à attirer des clients qui passent à l'action, alors ce programme est absolument conçu et réalisé spécialement pour toi !</li>
+                    </ul>
+
+                    <div style="background: rgba(0, 235, 94, 0.08); padding: 30px; border-radius: 12px; margin: 40px 0; border-left: 4px solid #00eb5e;">
+                        <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">
+                            Si cette courte liste ne te disqualifie pas, alors continue à lire, cela pourrait être l'événement le plus important et le plus marquant de ta vie !
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
-        {{/days}}
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section alt" id="temoignages">
-    <div class="container">
-      <h2>{{testimonials_title}}</h2>
-      <p class="lead">{{testimonials_subtitle}}</p>
+    <!-- Proof Section - Light -->
+    <section class="section-light py-lg">
+        <div class="container-narrow">
+            <div class="text-center">
+                <div class="mockup-visual" style="height: 300px; margin-bottom: 40px;">IMAGE DE PREUVE SOCIALE / ÉVÉNEMENT</div>
 
-      <div class="testimonials">
-        {{#testimonials}}
-        <div class="t-card">
-          <p class="q">“{{text}}”</p>
-          <div class="a">{{author}}</div>
-          {{#role}}<div class="r">{{.}}</div>{{/role}}
+                <p class="text-content">
+                    Je ne vais pas y aller par 4 chemins : je m'appelle [Ton Prénom], et ... décris ici ton expérience, tes réussites, ce qui fait qu'on peut te faire confiance pour atteindre les objectifs que tu promets.
+                </p>
+            </div>
+
+            <div class="mockup-visual" style="height: 350px; margin: 60px 0;">IMAGE D'UN DE TES ÉVÉNEMENTS / FORMATIONS</div>
+
+            <div class="text-content">
+                <p style="text-align: center; margin-bottom: 30px;">
+                    Insiste sur les preuves sociales, montre tes récompenses, les notes de tes clients, screenshots de tes ventes ... etc !
+                </p>
+
+                <p style="text-align: center;">
+                    Explique le changement que <strong class="gold-text">ta méthode</strong> a eu sur ta propre vie, tes revenus etc ...ou sur ceux d'un de tes clients.
+                </p>
+            </div>
         </div>
-        {{/testimonials}}
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section">
-    <div class="container">
-      <div class="grid-3">
-        {{#value_cards}}
-        <div class="card">
-          <div class="k">{{title}}</div>
-          <div class="d">{{desc}}</div>
+    <!-- Methods Section - Dark -->
+    <section class="section-dark py-lg">
+        <div class="container">
+            <div class="content-header">
+                <p class="text-content" style="text-align: center; margin-bottom: 30px;">
+                    Fais un bref storytelling : "Au début j'avais <strong>TEL problème</strong>, c'était vraiment compliqué pour moi de ... et du coup ... mais un jour j'ai mis <strong>TEL truc</strong> en place et voilà ce que ça a changé.
+                </p>
+                <p class="text-content" style="text-align: center;">
+                    Maintenant je vis TELLE vie et c'est <strong>ce que je vais te montrer</strong> ici.
+                </p>
+            </div>
+
+            <div class="text-center my-lg">
+                <h2 class="section-title">
+                    Les X méthodes pour [objectifs]<br>
+                    <span class="handwriting gold-text" style="font-size: 32px;">(Dont une qui [particularité sexy])</span>
+                </h2>
+            </div>
+
+            <div class="methods-grid">
+                <!-- Method 1 -->
+                <div class="method-card">
+                    <div class="method-header">
+                        <div class="method-badge">MÉTHODE #1</div>
+                        <h3 class="method-title">NOM DE LA MÉTHODE 1</h3>
+                    </div>
+                    <div class="method-body">
+                        <div>
+                            <p class="method-description">
+                                Vous connaissez probablement cette façon de vendre. <strong>Elle se fait généralement par téléphone ou en face à face.</strong> Cette forme de vente peut être très efficace. Je connais personnellement une poignée de personnes qui gagnent <strong>plus d'un million de dollars par an</strong> grâce à cette méthode de vente.
+                            </p>
+                            <div class="method-problem">
+                                <div class="problem-label">LE PROBLÈME</div>
+                                <p class="problem-text">
+                                    Cette méthode de vente peut souvent conduire à l'épuisement professionnel ; ou le vendeur atteint un « plafond » qu'il ne semble pas pouvoir franchir.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="method-image">Image méthode 1</div>
+                    </div>
+                </div>
+
+                <!-- Method 2 -->
+                <div class="method-card">
+                    <div class="method-header">
+                        <div class="method-badge">MÉTHODE #2</div>
+                        <h3 class="method-title">NOM DE LA MÉTHODE 2</h3>
+                    </div>
+                    <div class="method-body">
+                        <div>
+                            <p class="method-description">
+                                C'est à ce moment-là que votre « plafond de vente » est considérablement relevé, car vous pouvez désormais faire la même présentation que vous auriez faite à une seule personne... <strong>et la livrer à un public MASSIF</strong>, ce qui réduit le temps qu'il faudrait normalement pour obtenir BEAUCOUP plus de ventes. Par exemple, <strong>lorsque j'ai vendu l'offre de 2 997 $ au public de 9 000 participants de Grant Cardone avec une présentation de 90 minutes.</strong>
+                            </p>
+                            <div class="method-problem">
+                                <div class="problem-label">LE PROBLÈME</div>
+                                <p class="problem-text">
+                                    Cette méthode, bien qu'étonnante à bien des égards, peut être très limitative car 1) vous êtes redevable du nombre de fois que vous pouvez monter sur scène devant un public en direct, et 2) vous devez « supposer » que vous répondez à toutes les questions du public et que vous l'aidez à surmonter ses objections... sans leur parler individuellement.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="method-image">Image méthode 2</div>
+                    </div>
+                </div>
+
+                <!-- Method 3 -->
+                <div class="method-card">
+                    <div class="method-header">
+                        <div class="method-badge">MÉTHODE #3</div>
+                        <h3 class="method-title">NOM DE LA MÉTHODE 3</h3>
+                    </div>
+                    <div class="method-body">
+                        <div>
+                            <p class="method-description">
+                                <strong>C'EST LA CLÉ.</strong> Avec cette méthode, vous prenez vos compétences et votre public et vous éliminez le « temps » de l'équation. Vous pouvez prendre vos compétences en vente et les intégrer dans un « simple entonnoir de vente » et avoir une réserve infinie de vos <strong>CLIENTS DE RÊVE</strong> qui viendront à vous !
+                            </p>
+                            <div class="method-problem">
+                                <div class="problem-label">LE PROBLÈME</div>
+                                <p class="problem-text">
+                                    La plupart des personnes qui enseignent cette méthode sont soit des spécialistes du marketing « éphémères » qui cherchent à gagner de l'argent rapidement et dont on n'entendra plus jamais parler... soit ils ne savent tout simplement pas de quoi ils parlent, utilisant souvent des tactiques et des stratégies obsolètes qui ne fonctionnent tout simplement pas dans les méthodes modernes de vente en ligne d'aujourd'hui.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="method-image">Image méthode 3</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center my-lg">
+                <p class="text-content" style="max-width: 900px; margin: 0 auto 40px;">
+                    Or, voici le problème : ces TROIS méthodes ont toutes un point commun : augmenter vos COMPÉTENCES en matière de vente. Il faut apprendre un nouvel ensemble de compétences pour passer de la « méthode 1 » à la « méthode 2 »... et un tout nouvel ensemble de compétences pour passer de la « méthode 2 » au flux de ventes ultime, prévisible et constant, qui est la « méthode 3 ». Pour mettre en œuvre la « méthode 3 » de vente en ligne, <strong>vous aurez besoin des bons outils</strong>, le logiciel d'entonnoir de vente en ligne, pour y parvenir.
+                </p>
+            </div>
+
+            <div class="mockup-visual" style="max-width: 700px; margin: 60px auto; height: 250px;">IMAGE TON LOGICIEL / TON OUTIL</div>
+
+            <div class="text-center">
+                <p class="text-content" style="max-width: 850px; margin: 0 auto;">
+                    Maintenant, je suis partial et <strong class="gold-text">je dirai toujours que ClickFunnels est l'outil d'entonnoir de vente en ligne n°1</strong> pour les entrepreneurs et les propriétaires de petites entreprises. Nous sommes les premiers et continuons d'être les meilleurs, et c'est parce que nous travaillons et améliorons constamment le logiciel pour répondre aux besoins de nos vendeurs comme vous. Mais voici la réalité, et je ne dirais pas normalement cela - mais...
+                </p>
+
+                <p class="text-content" style="max-width: 850px; margin: 40px auto; font-size: 19px; font-weight: 600;">
+                    Le logiciel d'entonnoir en ligne n'est qu'une petite pièce du puzzle.<br>
+                    La VRAIE magie réside <strong class="gold-text">dans CE QU'IL Y A SUR CHAQUE PAGE DE L'ENTONNOIR DE VENTE.</strong>
+                </p>
+
+                <p class="text-content" style="max-width: 850px; margin: 40px auto;">
+                    Si vous dites les mauvais mots, ou les bons mots au mauvais moment, <strong>les gens vont froncer les sourcils comme s'ils avaient senti une odeur désagréable</strong> et partiront plus vite que vous ne pouvez dire : « attendez, il y a plus ! » <strong>C'est pourquoi j'ai travaillé sans relâche au cours des 3 derniers mois pour mettre en place l'ULTIME de A à Z</strong> pour apprendre à prendre vos compétences de vente et à les appliquer à la troisième méthode : vendre en ligne pour un nombre infini de ventes ! Je l'appelle la...
+                </p>
+            </div>
         </div>
-        {{/value_cards}}
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section alt">
-    <div class="container">
-      <div class="guarantee">
-        <h3>{{guarantee_title}}</h3>
-        <p>{{guarantee_text}}</p>
-      </div>
-    </div>
-  </section>
+    <!-- Offer Reveal - White -->
+    <section class="section-white py-lg">
+        <div class="container">
+            <div class="text-center">
+                <h2 class="section-title" style="font-size: 52px; margin-bottom: 60px;">
+                    Nom de ton Offre
+                </h2>
 
-  <footer class="footer">
-    <div class="container">
-      <div>
-        {{footer_links}}
-      </div>
-      <div style="margin-top: 10px">{{footer_disclaimer}}</div>
-    </div>
-  </footer>
-</div>
+                <div class="mockup-visual" style="max-width: 900px; margin: 0 auto 60px; height: 300px;">
+                    MOCKUP DE TON OFFRE AVEC LOGO + CHALLENGE / FORMATION
+                </div>
+
+                <h3 class="section-title" style="font-size: 36px; margin-bottom: 30px;">
+                    Donnez-moi juste 3 jours, je vous montrerai<br>
+                    exactement comment
+                </h3>
+
+                <p class="text-content" style="max-width: 850px; margin: 0 auto 40px; font-size: 19px;">
+                    Appliquer vos compétences de vente dans un simple entonnoir de vente... Vous donnant le pouvoir de vendre « un à plusieurs » pour <strong class="gold-text">un nombre infini de ventes !</strong>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Program Detail - Dark -->
+    <section class="section-dark py-lg">
+        <div class="container-narrow">
+            <div class="mockup-visual" style="height: 200px; margin-bottom: 50px;">IMAGE HYPNOTISANTE / MONTRE / CHRONO</div>
+
+            <p class="text-content" style="text-align: center; margin-bottom: 40px;">
+                Je vais vous révéler <strong>LES BONS MOTS</strong> à utiliser à chaque étape de l'entonnoir qui <strong>hypnotiseront pratiquement vos prospects</strong> et les feront se séparer avec enthousiasme de GROSSES sommes d'argent – même pour les packages les plus chers que vous proposez ! Tout cela sans...
+            </p>
+
+            <ul class="qualification-list" style="list-style: none;">
+                <li>✕ devoir se rencontrer en tête-à-tête et passer des heures à « ESPÉRER » obtenir ne serait-ce qu'une seule vente...</li>
+                <li>✕ avoir besoin de coordonner votre emploi du temps pour pouvoir monter sur scène devant un public (qui, vous l'espérez, est déjà prêt à entendre ce que vous allez enseigner et vendre)...</li>
+                <li>✕ embaucher et former une « équipe de vente » – ce qui, bien sûr, réduit vos propres bénéfices.</li>
+            </ul>
+
+            <p class="text-content" style="text-align: center; margin: 50px 0 40px; font-size: 19px;">
+                Le défi de 3 jours « <strong class="gold-text">Vendre en ligne</strong> » vous donnera une confiance <em>ROBUSTE</em> dans vos compétences de vente avec une colonne vertébrale en fer où les autres vous voient comme quelqu'un en qui ils ont confiance. Le meilleur dans tout ça ? <strong>Tout est automatisé.</strong> En d'autres termes, une fois que vous avez construit et affiné votre entonnoir de vente (et de la manière dont vous apprendrez pendant le défi)... ... vous pouvez littéralement le mettre en pilote automatique et commencer à faire des « ventes en dormant »... vous permettant de vous endormir pendant que votre banque fait le son « cha-ching » encore et encore. Cela dit, voici...
+            </p>
+
+            <div class="text-center">
+                <h2 class="section-title" style="margin-bottom: 40px;">
+                    Ce que vous apprendrez au cours des 3 prochains jours pendant<br>
+                    <span class="gold-text">Nom de ton Offre</span>
+                </h2>
+            </div>
+
+            <!-- Day Detail Cards -->
+            <div style="margin: 60px 0;">
+                <div class="method-card" style="margin-bottom: 40px;">
+                    <div class="method-header">
+                        <div class="method-badge">JOUR 1</div>
+                        <h3 class="method-title">NOM DU CONTENU DU JOUR 1</h3>
+                    </div>
+                    <div class="method-body">
+                        <div class="method-image">Image jour 1</div>
+                        <div>
+                            <p class="method-description">
+                                Le premier jour, nous vous montrerons <strong>le cadre de vente « un à plusieurs »</strong>, comment créer une offre parfaite qui est uniquement <strong>la VOTRE</strong> (et comment la rendre pratiquement irrésistible pour vos clients) ! Et enfin, nous vous montrerons <strong>comment créer VOTRE propre scène</strong>, où vos clients en or « idéaux vous considèrent comme <strong>la source de confiance n°1 auprès de laquelle ils veulent acheter !</strong> Vous serez choqué par la valeur que vous recevrez le premier jour... <strong class="gold-text">vous penserez que je suis fou de demander moins de 1 997 $ pour assister à cet événement.</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="method-card" style="margin-bottom: 40px;">
+                    <div class="method-header">
+                        <div class="method-badge">JOUR 2</div>
+                        <h3 class="method-title">NOM DU CONTENU DU JOUR 2</h3>
+                    </div>
+                    <div class="method-body">
+                        <div class="method-image">Image jour 2</div>
+                        <div>
+                            <p class="method-description">
+                                Si vous êtes coach ou si vous vendez un service de quelque nature que ce soit, vous allez adorer ça. Le deuxième jour, nous allons vous montrer <strong>comment arrêter de « trouver » vos clients de rêve, et à la place, comment CRÉER une foule de clients de rêve</strong> qui ont soif de vous entendre ! Je vais également lever le voile sur <strong>mon « pitch à 7 chiffres » qui a fait ses preuves</strong>, ainsi que mes meilleurs « arguments de vente à fausses croyances » que tout le monde peut utiliser pour vendre même les packages les plus chers avec une confiance à toute épreuve.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="method-card">
+                    <div class="method-header">
+                        <div class="method-badge">JOUR 3</div>
+                        <h3 class="method-title">NOM DU CONTENU DU JOUR 3</h3>
+                    </div>
+                    <div class="method-body">
+                        <div class="method-image">Image jour 3</div>
+                        <div>
+                            <p class="method-description">
+                                C'est là que tout se met en place... Le troisième jour, nous allons <strong>révéler les secrets pour créer un « mouvement »</strong> où les ventes commencent à se produire sans que vous fassiez très peu de travail... permettant à vos clients de faire tout le travail à votre place ! Ensuite, <em>cette partie suivante n'est pas pour tout le monde</em>.. <strong class="gold-text">je vais révéler mes techniques avancées de persuasion et de contrôle de l'esprit</strong> qui sont si puissantes pour influencer les prospects à agir, <strong>qu'il est absolument essentiel qu'ils ne tombent pas entre de mauvaises mains.</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Value Proposition - Light -->
+    <section class="section-light py-lg">
+        <div class="container-narrow">
+            <div class="text-center">
+                <p class="text-content" style="margin-bottom: 30px;">
+                    En bref : "Nom de ton offre" est une opportunité unique<br>
+                    dans une vie
+                </p>
+
+                <h2 class="section-title" style="font-size: 46px; margin-bottom: 50px;">
+                    <span class="gold-text">Améliorez<br>considérablement</span> vos<br>
+                    « compétences de<br>vente »
+                </h2>
+
+                <p class="handwriting" style="font-size: 20px; margin-bottom: 40px;">
+                    Au point où les clients potentiels se traînent pratiquement à genoux sur du verre brisé juste pour acheter ce que vous proposez !
+                </p>
+
+                <div style="margin: 60px 0;">
+                    <svg width="100" height="40" viewBox="0 0 100 40" style="display: block; margin: 0 auto;">
+                        <path d="M10,20 L30,10 L50,20 L70,10 L90,20" stroke="#dcc285" stroke-width="3" fill="none"/>
+                        <path d="M10,30 L30,20 L50,30 L70,20 L90,30" stroke="#dcc285" stroke-width="3" fill="none"/>
+                    </svg>
+                </div>
+
+                <a href="#order" class="btn-primary">Rejoins [offre] dès aujourd'hui</a>
+            </div>
+
+            <!-- Testimonials -->
+            <div class="testimonials-grid" style="margin-top: 80px;">
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Before/After - Dark -->
+    <section class="section-dark py-lg">
+        <div class="container">
+            <div class="text-center" style="margin-bottom: 60px;">
+                <h2 class="section-title">
+                    Prêt à devenir [ce que ton audience cible veut devenir] ?<br>
+                    Voici ce que tu peux attendre de<br>
+                    <span class="gold-text">[NOM DE TON OFFRE] !</span>
+                </h2>
+            </div>
+
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <div class="comparison-image">Image "avant"</div>
+                    <h3 class="comparison-title">Avant le challenge/la formation</h3>
+                    <ul class="comparison-list before">
+                        <li>Situation problématique de ton audience cible</li>
+                        <li>Situation problématique de ton audience cible</li>
+                        <li>Situation problématique de ton audience cible</li>
+                        <li>Situation problématique de ton audience cible</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-image">Image "après"</div>
+                    <h3 class="comparison-title">Après le challenge/la formation</h3>
+                    <ul class="comparison-list after">
+                        <li>Situation rêvée par ton audience cible, que ton offre permet d'atteindre</li>
+                        <li>Situation rêvée par ton audience cible, que ton offre permet d'atteindre</li>
+                        <li>Situation rêvée par ton audience cible, que ton offre permet d'atteindre</li>
+                        <li>Situation rêvée par ton audience cible, que ton offre permet d'atteindre</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="text-center" style="margin-top: 60px;">
+                <a href="#order" class="btn-primary">Rejoins [offre] dès aujourd'hui</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Investment Section - White -->
+    <section class="section-white py-lg">
+        <div class="container">
+            <div class="text-center">
+                <h2 class="section-title" style="margin-bottom: 50px;">
+                    Quel est ton<br>
+                    investissement ?
+                </h2>
+
+                <div class="mockup-visual" style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 40px; background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%);">
+                    ICÔNE
+                </div>
+
+                <p class="text-content" style="max-width: 800px; margin: 0 auto 40px;">
+                    L'investissement pour ce défi de 3 jours est un paiement unique et <strong>à prix réduit de seulement 100 $ !</strong> J'ai fait de nombreux « défis gratuits » au fil des ans, mais pour ce défi très spécifique, je ne recherche pas des amateurs de cadeaux. Je recherche <strong>des vendeurs dévoués, prêts à tout</strong>, qui réalisent déjà des ventes dans quelque domaine que ce soit... <strong>et qui cherchent à passer de bons à EXCELLENTS !</strong>
+                </p>
+
+                <p class="text-content" style="max-width: 750px; margin: 0 auto; font-size: 19px;">
+                    Si tu vends un service ou un produit de quelque nature que ce soit, alors ce challenge est
+                </p>
+
+                <h3 class="section-title gold-text" style="font-size: 52px; margin: 40px 0;">
+                    absolument fait pour toi.
+                </h3>
+
+                <p class="text-content" style="max-width: 900px; margin: 0 auto 40px;">
+                    Je ne vais pas vous montrer des choses que vous avez peut-être déjà apprises, que ce soit de moi-même ou d'autres coachs de vente. Je vais vous montrer, puis vous apprendre, <strong class="gold-text">comment vendre littéralement n'importe quoi</strong> (et beaucoup), <strong>quel que soit le prix</strong>, et le faire avec la plus grande confiance que vous n'ayez jamais connue auparavant. Avec les stratégies de vente « sur le terrain », les mêmes que celles que j'utilise pour mes propres entreprises, <strong class="gold-text">je pourrais facilement facturer plus de 500 $ pour une seule session de 90 minutes.</strong> Et parce que vous êtes ici et que vous faites partie de MON public, je veux bien faire pour vous, et c'est pourquoi tout ce que je demande, c'est le petit investissement unique de seulement 100 $. L'investissement de 100 $ <strong>n'est rien comparé à la formation commerciale puissante et de grande valeur que vous recevrez au cours de la période de 3 jours</strong> – cela pourrait littéralement être la meilleure formation avec le potentiel de transformer l'ensemble de votre processus de vente, et par conséquent, <strong>toute votre vie !</strong>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Guarantee Section - Cream -->
+    <section class="section-cream py-lg">
+        <div class="container-narrow">
+            <div class="guarantee-section">
+                <h2 class="section-title" style="margin-bottom: 50px;">
+                    Garantie de remboursement à 100 %
+                </h2>
+
+                <div class="guarantee-badge">
+                    <div class="guarantee-percent">100%</div>
+                    <div class="guarantee-text">Satisfait<br>ou<br>Remboursé</div>
+                </div>
+
+                <p class="text-content" style="margin-top: 40px;">
+                    Je veux que vous soyez sûr que <strong>c'est la meilleure décision pour vous et votre entreprise aujourd'hui.</strong> C'est pourquoi j'offre une garantie de satisfaction à 100 % et de remboursement ! Si vous n'êtes pas satisfait de la formation à la vente en ligne et si vous pensez que vous n'avez pas reçu la moindre information précieuse, vous pouvez immédiatement l'intégrer dans votre entonnoir en ligne pour augmenter vos ventes... Vous pouvez ensuite envoyer un e-mail à mon équipe d'assistance à l'adresse support@sellingonline.com après l'événement <strong>pour obtenir un remboursement complet sans aucun problème.</strong>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timing Section - White -->
+    <section class="section-white py-lg">
+        <div class="container-narrow">
+            <div class="text-center">
+                <h2 class="section-title" style="margin-bottom: 50px;">
+                    Pourquoi le timing est essentiel
+                </h2>
+
+                <div style="display: grid; grid-template-columns: 250px 1fr; gap: 40px; align-items: center; text-align: left; margin: 60px 0;">
+                    <div class="mockup-visual" style="height: 300px;">Photo de toi</div>
+                    <div>
+                        <p class="text-content">
+                            Écoutez, je n'ai jamais fait un événement comme celui-ci auparavant, et pour être honnête, avec tout le travail que j'ai consacré à cette formation de vente « one-to-many »... <strong>Je ne sais pas si je le referai.</strong> Cela dit, si vous ne vous inscrivez pas aujourd'hui (ou très très bientôt), vous n'aurez peut-être plus jamais l'occasion d'assister à cet événement dans un avenir proche. <strong class="gold-text">C'est peut-être votre SEULE chance d'assister à cet événement très spécial et à durée limitée</strong> où je vous montrerai la magie derrière mes campagnes de vente « one-to-many » les plus réussies, et comment vous pouvez suivre mes étapes exactes et les appliquer à vos entonnoirs de vente avec des résultats incroyables !
+                        </p>
+                    </div>
+                </div>
+
+                <p class="text-content" style="margin: 40px 0; font-size: 19px;">
+                    Maintenant, comme il s'agit d'un événement virtuel, je vous m'assurer que ma bande passante en ligne ne soit pas sollicitée et ne provoque pas d'interruptions de diffusion. Cela signifie qu'une fois que j'aurai atteint mon plafond de participants... les portes de cet événement seront fermées et personne ne pourra y participer. Donc si vous êtes ici maintenant et que vous vous demandez si cela est pour vous...
+                </p>
+
+                <h3 class="section-title gold-text" style="font-size: 42px; margin: 40px 0;">
+                    N'ATTENDS PAS <span style="color: #1c1c1c;">ET INSCRIS-TOI À</span><br>
+                    "Nom de ton offre"
+                </h3>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final Pricing - Cream -->
+    <section class="section-cream py-lg">
+        <div class="container">
+            <div class="text-center">
+                <div class="mockup-visual" style="max-width: 700px; margin: 0 auto 50px; height: 250px;">
+                    MOCKUP DE TON OFFRE
+                </div>
+
+                <p style="font-size: 18px; opacity: 0.7; margin-bottom: 15px;">Normalement : <span style="text-decoration: line-through;">2997€</span></p>
+                
+                <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 10px;">Aujourd'hui: <span class="gold-text" style="font-size: 56px; font-weight: 900;">100 €</span> !</h2>
+
+                <div style="margin: 40px 0;">
+                    <svg width="100" height="40" viewBox="0 0 100 40" style="display: block; margin: 0 auto;">
+                        <path d="M10,20 L30,10 L50,20 L70,10 L90,20" stroke="#dcc285" stroke-width="3" fill="none"/>
+                        <path d="M10,30 L30,20 L50,30 L70,20 L90,30" stroke="#dcc285" stroke-width="3" fill="none"/>
+                    </svg>
+                </div>
+
+                <a href="#order" class="btn-primary" style="margin: 30px 0;">Rejoins [offre] dès aujourd'hui</a>
+
+                <!-- Pricing Tiers -->
+                <div class="pricing-tiers" style="margin-top: 70px;">
+                    <div class="pricing-card featured">
+                        <div class="pricing-label">1000 premières places</div>
+                        <div class="pricing-places">1'000 premières places</div>
+                        <div class="pricing-amount">100€</div>
+                        <div class="pricing-note">inclus : bonus cadeaux mystères!!!</div>
+                    </div>
+
+                    <div class="pricing-card">
+                        <div class="pricing-places">Places 1001 - 2000</div>
+                        <div class="pricing-amount" style="color: #dcc285;">200€</div>
+                        <div class="pricing-note">Sans cadeaux bonus</div>
+                    </div>
+
+                    <div class="pricing-card">
+                        <div class="pricing-places">Places 2001 - 3000</div>
+                        <div class="pricing-amount" style="color: #888;">1900€</div>
+                        <div class="pricing-note">Sans cadeaux bonus</div>
+                    </div>
+                </div>
+
+                <!-- Info Cards -->
+                <div class="info-cards" style="margin-top: 70px;">
+                    <div class="info-card">
+                        <h3 class="info-title">QUOI</h3>
+                        <p class="info-text">
+                            Challenge Virtuel, formation en ligne, accompagnement, ... explique le format de ton offre.
+                        </p>
+                    </div>
+
+                    <div class="info-card">
+                        <h3 class="info-title">QUAND</h3>
+                        <p class="info-text">
+                            Si ton offre est disponible pendant des dates précises, indique-les ici (ex : challenge live ou webinaire..)
+                        </p>
+                    </div>
+
+                    <div class="info-card">
+                        <h3 class="info-title">POURQUOI</h3>
+                        <p class="info-text">
+                            Rappelle la promesse principale de ton offre : ce que tes prospects vont réussir grâce à ta promesse de valeur unique.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Final Testimonials -->
+                <div class="testimonials-grid" style="margin-top: 70px;">
+                    <div class="testimonial-card">
+                        <div class="quote-icon">"</div>
+                        <p class="testimonial-text">
+                            Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                        </p>
+                        <div class="testimonial-author">
+                            <div class="author-photo">Photo</div>
+                            <div class="author-info">
+                                <div class="author-name">Nom Prénom</div>
+                                <div class="author-stars">★★★★★</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="testimonial-card">
+                        <div class="quote-icon">"</div>
+                        <p class="testimonial-text">
+                            Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                        </p>
+                        <div class="testimonial-author">
+                            <div class="author-photo">Photo</div>
+                            <div class="author-info">
+                                <div class="author-name">Nom Prénom</div>
+                                <div class="author-stars">★★★★★</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="testimonial-card">
+                        <div class="quote-icon">"</div>
+                        <p class="testimonial-text">
+                            Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                        </p>
+                        <div class="testimonial-author">
+                            <div class="author-photo">Photo</div>
+                            <div class="author-info">
+                                <div class="author-name">Nom Prénom</div>
+                                <div class="author-stars">★★★★★</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA - Dark -->
+    <section class="section-dark py-lg">
+        <div class="container-narrow">
+            <div class="text-center">
+                <p style="font-size: 18px; margin-bottom: 30px; font-style: italic;">
+                    Imagine à quoi pourrait ressembler ta vie en seulement<br>
+                    3 jours...
+                </p>
+
+                <h2 class="section-title" style="font-size: 48px; margin-bottom: 40px;">
+                    <span class="gold-text">NE PASSE PAS À CÔTÉ DE<br>CETTE CHANCE</span><br>
+                    Rejoins "Nom de ton offre"<br>
+                    aujourd'hui pour un seul<br>
+                    paiement de <span class="gold-text">97€ seulement</span>
+                </h2>
+
+                <a href="#order" class="btn-primary">Rejoins [offre] dès aujourd'hui</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Order Form - Cream -->
+    <section id="order" class="section-cream py-xl">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 60px;">
+                <div style="display: inline-block; padding: 15px 35px; background: linear-gradient(135deg, #dcc285 0%, #c0a875 100%); color: #1c1c1c; font-weight: 700; border-radius: 30px; margin-bottom: 25px;">
+                    Rejoins « Nom de ton offre » ci-dessous<br>
+                    📋 FORMULAIRE DE COMMANDE SÉCURISÉ
+                </div>
+
+                <h2 class="handwriting" style="font-size: 42px; margin-bottom: 20px;">
+                    OUI ! Réservez ma place pour « Nom de ton Offre» !
+                </h2>
+
+                <div class="pricing-tiers" style="max-width: 700px; margin: 40px auto;">
+                    <div class="pricing-card featured">
+                        <div class="pricing-label">1000 premières places</div>
+                        <div class="pricing-places">1'000 premières places</div>
+                        <div class="pricing-amount">100€</div>
+                        <div class="pricing-note">inclus : bonus cadeaux mystères!!!</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 28px; margin: 40px 0;">
+                    Aujourd'hui: <s style="color: #888;">1990€</s> <s style="color: #888;">200€</s><br>
+                    <span class="gold-text" style="font-size: 48px; font-weight: 900;">100 €</span> !
+                </h3>
+
+                <div style="margin: 40px 0;">
+                    <svg width="100" height="40" viewBox="0 0 100 40" style="display: block; margin: 0 auto;">
+                        <path d="M10,20 L30,10 L50,20 L70,10 L90,20" stroke="#dcc285" stroke-width="3" fill="none"/>
+                        <path d="M10,30 L30,20 L50,30 L70,20 L90,30" stroke="#dcc285" stroke-width="3" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Order Form -->
+            <form class="order-form">
+                <div class="form-section">
+                    <div class="form-section-title">Informations de contact</div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Prénom" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Nom de famille" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="email" class="form-input" placeholder="Email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="text" class="form-input" placeholder="Adresse" required>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Code postal" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Ville" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Informations de paiement</div>
+                    
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="card" checked>
+                            <span>Carte de crédit</span>
+                            <div class="payment-logos">
+                                <div class="payment-logo">VISA</div>
+                                <div class="payment-logo">MC</div>
+                                <div class="payment-logo">AMEX</div>
+                                <div class="payment-logo">DISC</div>
+                            </div>
+                        </label>
+
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="ideal">
+                            <span>iDeal</span>
+                            <div class="payment-logos">
+                                <div class="payment-logo">iDEAL</div>
+                            </div>
+                        </label>
+
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="bancontact">
+                            <span>Bancontact</span>
+                            <div class="payment-logos">
+                                <div class="payment-logo">BC</div>
+                            </div>
+                        </label>
+
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="paypal">
+                            <span>PayPal</span>
+                            <div class="payment-logos">
+                                <div class="payment-logo">PayPal</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 30px;">
+                    Rejoindre "nom de ton offre"
+                </button>
+            </form>
+
+            <!-- Final Testimonials -->
+            <div class="testimonials-grid" style="margin-top: 80px;">
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">
+                        Témoignage sincère d'un client qui a <strong>déjà profité</strong> de tes offres, produits ou services
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-photo">Photo</div>
+                        <div class="author-info">
+                            <div class="author-name">Nom Prénom</div>
+                            <div class="author-stars">★★★★★</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-logo">Nom de ton offre</div>
+            
+            <div class="footer-links">
+                <a href="#">Conditions générales de vente</a>
+                <a href="#">Mentions légales</a>
+                <a href="#">Politique de confidentialité</a>
+            </div>
+
+            <div class="footer-disclaimer">
+                Chaque entreprise en ligne est différente, utilise des ressources stratégiques et des structures organisationnelles différentes. Par conséquent, les résultats varieront d'un utilisateur à l'autre. LES RÉSULTATS INDIVIDUELS DE VOTRE ENTREPRISE VARIERONT EN FONCTION D'UNE SÉRIE DE FACTEURS PROPRES À VOTRE ENTREPRISE, Y COMPRIS, MAIS SANS S'Y LIMITER, VOTRE CONTENU VOTRE MODÈLE D'ENTREPRISE ET VOS OFFRES DE PRODUITS ET DE SERVICES.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

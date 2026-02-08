@@ -1,9 +1,11 @@
-### Capture 01 — Instructions Systeme.io
+# capture-01 — Kit Systeme.io (Tipote)
 
-1. Créez une page dans Systeme
-2. Ajoutez un bloc “Code HTML”
-3. Collez le code fourni
-4. Ajoutez un formulaire Systeme dans le SLOT
-5. Configurez :
-   - Tag : lead_capture
-   - Redirection : page suivante
+## Ce que tu as à faire
+1. Crée une nouvelle page (mode “Page” dans Systeme.io).
+2. Ajoute un bloc HTML → colle **BLOC 1** (depuis `kit-systeme.html`).
+3. À l’endroit indiqué **FORM SYSTEME.IO** : ajoute un **Formulaire natif** (Prénom + Email).
+4. Ajoute un bloc HTML → colle **BLOC 2**.
+
+## Important (police)
+- Si les polices ne se chargent pas : copie les `<link ...>` tout en haut de `kit-systeme.html` et colle-les dans :
+  **Paramètres de la page → Code de tracking → Header**.

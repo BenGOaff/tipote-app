@@ -10,7 +10,7 @@
 // ✅ Articles: support 2 étapes via buildArticlePrompt.
 // ✅ Vidéos: support prompt builder via buildVideoScriptPrompt.
 // ✅ Offres: support lead magnet + offre payante via buildOfferPrompt (mode from_pyramid / from_scratch)
-// ✅ Funnels: page capture / vente via buildFunnelPrompt (mode from_pyramid / from_scratch)
+// ✅ Funnels: page capture / vente via buildFunnelPrompt (mode from_offer / from_scratch) — legacy: from_pyramid
 // ✅ Claude uniquement (owner key): jamais de clé user côté API.
 
 import { NextResponse } from "next/server";
@@ -72,11 +72,13 @@ type Body = {
 
   // funnel
   funnelPage?: "capture" | "sales";
-  funnelMode?: "from_pyramid" | "from_scratch";
+  funnelMode?: "from_offer" | "from_pyramid" | "from_scratch" | "from_existing" | "from_existing_offer";
   funnelOfferId?: string;
   urgency?: string;
   guarantee?: string;
   templateId?: string;
+  templateGlobalPrompt?: string;
+  templatePagePrompt?: string;
   funnelManual?: {
     name?: string;
     promise?: string;
@@ -972,6 +974,168 @@ function extractOffersFromPlanJson(userId: string, planJson: any): OfferPyramidC
   return out;
 }
 
+/**
+ * ✅ Offres "existantes" (hors pyramide) — stockées dans business_profiles.offers (new onboarding).
+ * - Fail-open: accepte array JSON, string JSON, ou shape legacy.
+ * - IDs: si absent, on génère un id stable basé sur l’index.
+ */
+function parseOffersFromBusinessProfile(userId: string, profile: any): OfferPyramidContext[] {
+  const raw = (profile as any)?.offers ?? (profile as any)?.offers_json ?? (profile as any)?.offer_list ?? null;
+
+  let arr: any[] = [];
+  if (Array.isArray(raw)) {
+    arr = raw;
+  } else if (typeof raw === "string") {
+    const s = raw.trim();
+    if (s) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch {
+        // ignore
+      }
+    }
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    // parfois c’est un objet avec une clé "offers"
+    const nested = (raw as any)?.offers;
+    if (Array.isArray(nested)) arr = nested;
+  }
+
+  const out: OfferPyramidContext[] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const o = arr[i];
+    if (!o || typeof o !== "object" || Array.isArray(o)) continue;
+
+    const name =
+      safeStringOrNull((o as any).name) ??
+      safeStringOrNull((o as any).title) ??
+      safeStringOrNull((o as any).offer_name) ??
+      safeStringOrNull((o as any).nom) ??
+      null;
+
+    if (!name) continue;
+
+    const idRaw = safeStringOrNull((o as any).id) ?? safeStringOrNull((o as any).uuid) ?? null;
+    const id = idRaw ? idRaw : `${userId}:profile_offer:${i}`;
+
+    const level =
+      safeStringOrNull((o as any).level) ??
+      safeStringOrNull((o as any).type) ??
+      safeStringOrNull((o as any).offer_type) ??
+      safeStringOrNull((o as any).categorie) ??
+      null;
+
+    const promise =
+      safeStringOrNull((o as any).promise) ??
+      safeStringOrNull((o as any).promesse) ??
+      safeStringOrNull((o as any).headline) ??
+      safeStringOrNull((o as any).main_promise) ??
+      null;
+
+    const description =
+      safeStringOrNull((o as any).description) ??
+      safeStringOrNull((o as any).desc) ??
+      safeStringOrNull((o as any).details) ??
+      null;
+
+    const main_outcome =
+      safeStringOrNull((o as any).main_outcome) ??
+      safeStringOrNull((o as any).mainOutcome) ??
+      safeStringOrNull((o as any).result) ??
+      safeStringOrNull((o as any).outcome) ??
+      null;
+
+    const format = safeStringOrNull((o as any).format) ?? safeStringOrNull((o as any).delivery_format) ?? null;
+    const delivery = safeStringOrNull((o as any).delivery) ?? safeStringOrNull((o as any).delivery_mode) ?? null;
+
+    const price_min =
+      toNumberOrNull((o as any).price_min) ??
+      toNumberOrNull((o as any).min_price) ??
+      toNumberOrNull((o as any).price) ??
+      null;
+
+    const price_max =
+      toNumberOrNull((o as any).price_max) ??
+      toNumberOrNull((o as any).max_price) ??
+      null;
+
+    out.push({
+      id,
+      name,
+      level,
+      description,
+      promise,
+      price_min,
+      price_max,
+      main_outcome,
+      format,
+      delivery,
+      is_flagship: (typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null) as any,
+      updated_at: safeStringOrNull((o as any).updated_at) ?? null,
+    } as any);
+  }
+
+  return out;
+}
+
+type FunnelMode = "from_offer" | "from_scratch";
+
+/**
+ * ✅ Funnel mode (nouvel onboarding)
+ * - from_pyramid (legacy) -> from_offer
+ * - from_offer / from_existing / from_existing_offer -> from_offer
+ * - from_scratch -> from_scratch
+ */
+function normalizeFunnelMode(raw: unknown): FunnelMode {
+  const s = safeString(raw).trim().toLowerCase();
+  if (s === "from_scratch") return "from_scratch";
+  if (s === "from_offer" || s === "from_existing" || s === "from_existing_offer") return "from_offer";
+  if (s === "from_pyramid") return "from_offer"; // legacy
+  return "from_scratch";
+}
+
+function findOfferByIdOrName(offers: OfferPyramidContext[], idOrName: string): OfferPyramidContext | null {
+  const s = String(idOrName ?? "").trim();
+  if (!s) return null;
+
+  const exactId = offers.find((o) => String((o as any)?.id ?? "") === s);
+  if (exactId) return exactId;
+
+  const lowered = s.toLowerCase();
+  const exactName = offers.find((o) => String((o as any)?.name ?? "").toLowerCase() === lowered);
+  if (exactName) return exactName;
+
+  // fallback contains
+  const contains = offers.find((o) => String((o as any)?.name ?? "").toLowerCase().includes(lowered));
+  return contains ?? null;
+}
+
+async function resolveOfferForFunnel(args: {
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  userId: string;
+  offerIdOrName: string;
+  profile: any;
+  planOffers: OfferPyramidContext[];
+}): Promise<OfferPyramidContext | null> {
+  const { supabase, userId, offerIdOrName, profile, planOffers } = args;
+
+  // 1) business_profiles.offers (new onboarding)
+  const profileOffers = parseOffersFromBusinessProfile(userId, profile);
+  const fromProfile = findOfferByIdOrName(profileOffers, offerIdOrName);
+  if (fromProfile) return fromProfile;
+
+  // 2) business_plan.plan_json.selected_pyramid (temps réel)
+  const fromPlan = findOfferByIdOrName(planOffers, offerIdOrName);
+  if (fromPlan) return fromPlan;
+
+  // 3) offer_pyramids (legacy table) if UUID
+  if (isUuid(offerIdOrName)) {
+    return await fetchOfferPyramidById({ supabase, userId, id: offerIdOrName });
+  }
+
+  return null;
+}
+
 function pickLeadOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidContext | null {
   const offers = planOffers ?? [];
   return offers.find((o) => isLeadMagnetLevel((o as any)?.level)) ?? null;
@@ -1408,8 +1572,7 @@ export async function POST(req: Request) {
       if (sourceOfferId) {
         if (isUuid(sourceOfferId)) {
           sourceOffer =
-            (await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId })) ??
-            findOfferByAnyId(planOffers, sourceOfferId);
+            (await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
         } else {
           sourceOffer = findOfferByAnyId(planOffers, sourceOfferId);
         }
@@ -1531,13 +1694,13 @@ export async function POST(req: Request) {
     }
 
     /** ---------------------------
-     * Funnel (pyramide) — pages capture / vente
+     * Funnel — pages capture / vente (new onboarding)
      * -------------------------- */
 
     const funnelPage = normalizeFunnelPage(
       (body as any).funnelPage ?? (body as any).pageType ?? (body as any).funnelType ?? null,
     );
-    const funnelMode = normalizeOfferMode((body as any).funnelMode ?? null);
+    const funnelMode = normalizeFunnelMode((body as any).funnelMode ?? null);
     const funnelOfferId =
       safeString((body as any).funnelOfferId).trim() ||
       safeString((body as any).offerId).trim() ||
@@ -1545,31 +1708,34 @@ export async function POST(req: Request) {
 
     let funnelSourceOffer: OfferPyramidContext | null = null;
 
-    if (type === "funnel" && funnelMode === "from_pyramid") {
-      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
-      // puis fallback offer_pyramids (legacy).
-      if (funnelOfferId) {
-        if (isUuid(funnelOfferId)) {
-          funnelSourceOffer =
-            (await fetchOfferPyramidById({ supabase, userId, id: funnelOfferId })) ??
-            findOfferByAnyId(planOffers, funnelOfferId);
-        } else {
-          funnelSourceOffer = findOfferByAnyId(planOffers, funnelOfferId);
-        }
-      } else {
-        funnelSourceOffer =
-          funnelPage === "sales"
-            ? pickPaidOfferFromPlan(planOffers) ?? (await fetchUserPaidOffer({ supabase, userId }))
-            : pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId }));
+    if (type === "funnel" && funnelMode === "from_offer") {
+      // ✅ Nouvel onboarding : l’utilisateur choisit explicitement son offre.
+      // Source possible : business_profiles.offers (prioritaire) OU business_plan.plan_json.selected_pyramid OU offer_pyramids (legacy).
+      if (!funnelOfferId) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "missing_offer",
+            error: "Choisis une offre existante (ou passe en mode \"Créer une offre\").",
+          },
+          { status: 400 },
+        );
       }
+
+      funnelSourceOffer = await resolveOfferForFunnel({
+        supabase,
+        userId,
+        offerIdOrName: funnelOfferId,
+        profile,
+        planOffers,
+      });
 
       if (!funnelSourceOffer) {
         return NextResponse.json(
           {
             ok: false,
-            code: "missing_source_offer",
-            error:
-              "Impossible de retrouver automatiquement l'offre source de la pyramide pour générer le funnel. Réessaie ou choisis explicitement l'offre.",
+            code: "offer_not_found",
+            error: "Offre introuvable. Réessaie en sélectionnant une offre existante valide.",
           },
           { status: 400 },
         );
@@ -1793,8 +1959,18 @@ export async function POST(req: Request) {
         // NEW (optional): if templateId is provided, ask the model to return contentData JSON that FITS the template.
         // Otherwise we keep the historical behavior (text only).
         const templateId = safeString((body as any).templateId).trim();
-        const templateKind: "vente" | "capture" =
-          funnelPage === "sales" ? "vente" : "capture";
+        const templateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
+
+        // ✅ Boost Tipote Knowledge matching for funnels/templates (fail-open)
+        const pushTag = (t: string) => {
+          const s = String(t || "").trim();
+          if (!s) return;
+          if (!tags.includes(s)) tags.push(s);
+        };
+        pushTag("funnel");
+        pushTag(templateKind);
+        pushTag(funnelPage === "sales" ? "sale" : "capture");
+        if (templateId) pushTag(templateId);
 
         let templateSchemaPrompt = "";
         if (templateId.length > 0) {
@@ -1811,9 +1987,9 @@ export async function POST(req: Request) {
 
         return buildFunnelPrompt({
           page: funnelPage,
-          mode: funnelMode,
+          mode: funnelMode as any,
           theme,
-          offer: funnelMode === "from_pyramid" ? funnelSourceOffer : null,
+          offer: funnelMode === "from_offer" ? funnelSourceOffer : null,
           manual:
             funnelMode === "from_scratch"
               ? {
@@ -1830,6 +2006,8 @@ export async function POST(req: Request) {
           templateKind: templateSchemaPrompt ? (templateKind as any) : undefined,
           templateId: templateSchemaPrompt ? templateId : undefined,
           templateSchemaPrompt: templateSchemaPrompt || undefined,
+          templateGlobalPrompt: safeString((body as any).templateGlobalPrompt).trim() || undefined,
+          templatePagePrompt: safeString((body as any).templatePagePrompt).trim() || undefined,
 
           language: "fr",
         } as any);
@@ -1887,7 +2065,7 @@ export async function POST(req: Request) {
       userContextLines.push(`FunnelPage: ${funnelPage}`);
       userContextLines.push(`FunnelMode: ${funnelMode}`);
 
-      if (funnelMode === "from_pyramid") {
+      if (funnelMode === "from_offer") {
         userContextLines.push("FunnelOffer (JSON):");
         userContextLines.push(JSON.stringify(funnelSourceOffer));
       } else {
@@ -2034,8 +2212,7 @@ export async function POST(req: Request) {
 
           // ✅ FUNNEL + template => on attend du JSON contentData et on rend HTML via le template renderer
           const funnelTemplateId = safeString((body as any).templateId).trim();
-          const funnelTemplateKind: "vente" | "capture" =
-            funnelPage === "sales" ? "vente" : "capture";
+          const funnelTemplateKind: "vente" | "capture" = funnelPage === "sales" ? "vente" : "capture";
 
           if (type === "funnel" && funnelTemplateId) {
             const jsonStr = extractFirstJsonObject(raw);

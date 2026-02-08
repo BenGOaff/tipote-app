@@ -1,195 +1,1629 @@
-<div class="sale-07" id="top">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="brand">
-        <span class="mark"></span>
-        <span class="name">{{brand_name}}</span>
-      </div>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-07) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
 
-      <div class="nav-links">
-        <a href="#probleme">{{nav_link_1}}</a>
-        <a href="#methode">{{nav_link_2}}</a>
-        <a href="#programme">{{nav_link_3}}</a>
-      </div>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
-    </div>
-  </nav>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  <header class="hero">
-    <div class="container hero-inner">
-      {{#hero_kicker}}
-      <div class="kicker">{{.}}</div>
-      {{/hero_kicker}}
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
 
-      <h1>{{hero_title}}</h1>
-      <p class="sub">{{hero_subtitle}}</p>
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-      <div class="cta-row">
-        <a class="btn-primary" href="#checkout">{{hero_cta}}</a>
-        {{#hero_cta_secondary}}
-        <a class="btn-ghost" href="#methode">{{.}}</a>
-        {{/hero_cta_secondary}}
-      </div>
+        /* Hero Section - Noir */
+        .hero {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            position: relative;
+        }
 
-      {{#hero_note}}
-      <p class="note">{{.}}</p>
-      {{/hero_note}}
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #0066cc 0%, #0080ff 100%);
+        }
 
-      {{#hero_bullets}}
-      <ul class="hero-bullets">
-        {{#hero_bullets}}
-        <li><span class="dot"></span><span class="t">{{.}}</span></li>
-        {{/hero_bullets}}
-      </ul>
-      {{/hero_bullets}}
-    </div>
-  </header>
+        .method-label {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
 
-  <section class="section section-soft" id="probleme">
-    <div class="container section-grid">
-      <div class="copy">
-        <h2>{{problem_title}}</h2>
-        <p class="lead">{{problem_lead}}</p>
-        {{#problem_bullets}}
-        <ul class="bullets">
-          {{#problem_bullets}}
-          <li><span class="dot"></span><span>{{.}}</span></li>
-          {{/problem_bullets}}
-        </ul>
-        {{/problem_bullets}}
-      </div>
+        .method-name {
+            font-size: 24px;
+            font-weight: 900;
+            color: #0080ff;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+        }
 
-      <aside class="card">
-        <div class="card-top">
-          <div class="badge">{{problem_card_badge}}</div>
-          <div class="card-title">{{problem_card_title}}</div>
+        .hero h1 {
+            font-size: 36px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .hero-subtitle {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-style: italic;
+            opacity: 0.9;
+        }
+
+        .hero-subtitle strong {
+            font-style: normal;
+            font-weight: 800;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #0066cc 0%, #0080ff 100%);
+            color: white;
+            padding: 18px 40px;
+            border-radius: 5px;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 128, 255, 0.4);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 128, 255, 0.5);
+        }
+
+        .cta-button::before {
+            content: '➜';
+            font-size: 18px;
+        }
+
+        .cta-note {
+            font-size: 11px;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Problem Section - Blanc */
+        .problem {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .problem-intro {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .problem-intro img {
+            max-width: 300px;
+            margin-bottom: 30px;
+        }
+
+        .problem-intro p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .problem-statement {
+            font-size: 28px;
+            font-weight: 900;
+            text-align: center;
+            margin: 50px 0 30px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .curved-arrow {
+            text-align: center;
+            font-size: 60px;
+            margin: 20px 0;
+            color: #0080ff;
+        }
+
+        .platform-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .platform-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: flex-start;
+        }
+
+        .platform-icon {
+            width: 50px;
+            height: 50px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .platform-content h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .platform-content p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .platform-note {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-top: 40px;
+            font-style: italic;
+        }
+
+        /* Story Section - Noir */
+        .story {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .story h2 {
+            color: #0080ff;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .story h3 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .story p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .story strong {
+            font-weight: 800;
+        }
+
+        .story-highlight {
+            background: rgba(0, 128, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: 800;
+        }
+
+        .social-icons {
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .social-icon-placeholder {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        /* Solution Section - Blanc */
+        .solution {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .solution-intro {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .solution-intro h2 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .solution-intro p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .solution-name {
+            font-size: 28px;
+            font-weight: 900;
+            text-align: center;
+            margin: 40px 0;
+            text-transform: uppercase;
+        }
+
+        .advantages-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            max-width: 900px;
+            margin: 60px auto;
+        }
+
+        .advantage-card {
+            background: linear-gradient(135deg, #0066cc 0%, #0080ff 100%);
+            color: white;
+            padding: 40px 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 128, 255, 0.2);
+        }
+
+        .advantage-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .advantage-card h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .advantage-card p {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* Benefits Section - Blanc */
+        .benefits {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .benefits-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .benefits-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .benefit-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            align-items: flex-start;
+        }
+
+        .benefit-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            font-size: 24px;
+        }
+
+        .benefit-item h4 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #0080ff;
+        }
+
+        .benefit-item p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .benefit-note {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-top: 30px;
+            font-style: italic;
+        }
+
+        /* Comparison Section - Blanc */
+        .comparison {
+            background: #f8f8f8;
+            padding: 80px 20px;
+        }
+
+        .comparison-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .comparison-card {
+            text-align: center;
+        }
+
+        .comparison-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .chart-placeholder {
+            width: 100%;
+            height: 250px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .comparison-note {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .comparison-note strong {
+            font-weight: 800;
+        }
+
+        .cake-comparison {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-top: 60px;
+        }
+
+        .cake-item {
+            text-align: center;
+        }
+
+        .cake-placeholder {
+            width: 200px;
+            height: 200px;
+            background: #e8e8e8;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #999;
+        }
+
+        .cake-item h4 {
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        /* Method Section - Noir */
+        .method {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .method-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .method-logo {
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .method-logo .blue {
+            color: #0080ff;
+        }
+
+        .method-header h2 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .method-mockup {
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .method-mockup-placeholder {
+            max-width: 600px;
+            height: 300px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .method-subtitle {
+            font-size: 20px;
+            font-weight: 800;
+            text-align: center;
+            margin: 40px 0 30px;
+        }
+
+        .modules-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .module-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-left: 5px solid #0080ff;
+        }
+
+        .module-item h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .module-item p {
+            font-size: 14px;
+            line-height: 1.7;
+            opacity: 0.9;
+        }
+
+        /* Bonus Section - Noir */
+        .bonus {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .bonus-intro {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .gift-icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+        }
+
+        .bonus-intro h2 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .bonus-card {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .bonus-card:nth-child(even) {
+            grid-template-columns: 1fr 300px;
+        }
+
+        .bonus-card:nth-child(even) .bonus-content {
+            order: -1;
+        }
+
+        .bonus-visual {
+            background: rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .bonus-placeholder {
+            width: 100%;
+            height: 200px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .bonus-content h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0080ff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .bonus-content h4 {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .bonus-content p {
+            font-size: 14px;
+            line-height: 1.7;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        /* FAQ Section - Blanc */
+        .faq {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .faq-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .faq-title h2 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0080ff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .faq-title h3 {
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: #f8f8f8;
+            padding: 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .faq-item:hover {
+            background: #f0f0f0;
+        }
+
+        .faq-question {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .faq-icon {
+            font-size: 20px;
+            color: #0080ff;
+            flex-shrink: 0;
+        }
+
+        /* CTA Section - Noir */
+        .cta-section {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .price-box {
+            background: white;
+            color: #000;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 50px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(255,255,255,0.1);
+        }
+
+        .price-box .method-mockup-small {
+            margin-bottom: 30px;
+        }
+
+        .price-box h3 {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .recap-list {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .recap-list li {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .recap-list li::before {
+            content: '🚀';
+            flex-shrink: 0;
+        }
+
+        .price {
+            font-size: 72px;
+            font-weight: 900;
+            margin: 30px 0;
+            color: #000;
+        }
+
+        /* Testimonials Section - Blanc */
+        .testimonials {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .testimonials-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+        }
+
+        .testimonials-grid {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: #f8f8f8;
+            padding: 35px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .quote-icon {
+            font-size: 60px;
+            color: #0080ff;
+            opacity: 0.2;
+            line-height: 1;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-text {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .testimonial-text strong {
+            font-style: normal;
+            font-weight: 800;
+        }
+
+        .testimonial-screenshots {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 40px 0;
+        }
+
+        .screenshot-placeholder {
+            aspect-ratio: 1;
+            background: #e8e8e8;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* Author Section - Noir */
+        .author {
+            background: #000;
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .author-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .author-title h2 {
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .author-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .author-content h3 {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .author-content p {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .author-quote {
+            font-style: italic;
+            font-size: 15px;
+            padding: 20px;
+            border-left: 4px solid #0080ff;
+            margin: 30px 0;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Recap Section - Gris clair */
+        .recap {
+            background: #f0f0f0;
+            padding: 80px 20px;
+        }
+
+        .recap-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .recap-title h2 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0080ff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .recap-title h3 {
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .recap-box {
+            background: white;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 50px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .recap-mockup {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .price-highlight {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .price-highlight .price {
+            color: #000;
+        }
+
+        /* Footer - Noir */
+        .footer {
+            background: #000;
+            color: white;
+            padding: 60px 20px 40px;
+            text-align: center;
+        }
+
+        .footer-contact {
+            margin-bottom: 30px;
+        }
+
+        .footer-contact p {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .footer-contact a {
+            color: #0080ff;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .footer-logo {
+            margin: 30px 0;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-legal {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .section-title {
+                font-size: 24px;
+            }
+
+            .advantages-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cake-comparison {
+                flex-direction: column;
+                gap: 40px;
+            }
+
+            .bonus-card {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-card:nth-child(even) {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-card:nth-child(even) .bonus-content {
+                order: 0;
+            }
+
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .testimonial-screenshots {
+                grid-template-columns: 1fr;
+            }
+
+            .price {
+                font-size: 48px;
+            }
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="method-label">Méthode</div>
+            <div class="method-name">[Nom de ta méthode]</div>
+            
+            <h1>Découvrez la méthode bizarre qui permet à des débutants sur internet d'avoir des centaines de clients par mois, en automatique, et sans payer de publicité</h1>
+            
+            <p class="hero-subtitle">Cette Stratégie Ultra Simple, Légale Et Méconnue Est À L'origine<br>De 87%* Des Revenus Générés Sur Le Web <strong>(Rien Que Ça...)</strong></p>
+
+            <button class="cta-button">
+                Rejoindre le programme
+            </button>
+            <p class="cta-note">Accès immédiat</p>
         </div>
-        <p class="muted">{{problem_card_text}}</p>
-      </aside>
-    </div>
-  </section>
+    </section>
 
-  <section class="section" id="methode">
-    <div class="container">
-      <h2 class="center">{{method_title}}</h2>
-      <p class="center lead">{{method_lead}}</p>
+    <!-- Problem Section -->
+    <section class="problem">
+        <div class="container">
+            <h2 class="section-title">Nous avons un problème... (et ça vous concerne)</h2>
+            
+            <div class="problem-intro">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="width: 250px; height: 250px; background: #f5f5f5; border-radius: 15px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #ccc;">[Image personne qui pointe]</div>
+                </div>
+                
+                <p>Quand on veut lancer un <strong>business en ligne</strong>, on est face à un obstacle de taille (très très énervant) :</p>
+                <p>On a trouvé un bon produit, un marché qui rapporte et beaucoup de motivation, mais....</p>
+            </div>
 
-      <div class="tri">
-        <div class="tri-card">
-          <div class="tri-n">{{method_1_title}}</div>
-          <div class="tri-d">{{method_1_text}}</div>
+            <h3 class="problem-statement">Comment attirer des clients sur ses offres pour qu'ils achètent en masse ?</h3>
+
+            <div class="curved-arrow">↓</div>
+
+            <h4 style="text-align: center; font-size: 20px; font-weight: 800; color: #0080ff; margin: 40px 0 30px;">C'est toujours la même histoire :</h4>
+
+            <div class="platform-list">
+                <div class="platform-item">
+                    <div class="platform-icon">f</div>
+                    <div class="platform-content">
+                        <h3>Facebook restreint de plus en plus les pages</h3>
+                        <p>et les groupes afin de nous obliger à payer de la publicité pour vendre</p>
+                    </div>
+                </div>
+
+                <div class="platform-item">
+                    <div class="platform-icon">G</div>
+                    <div class="platform-content">
+                        <h3>Google nous oblige à travailler sur le référencement :</h3>
+                        <p>c'est long, fastidieux et parfois coûteux. Si vous voulez aller plus vite, vous pouvez... payer de la publicité (encore et toujours payer !!)</p>
+                    </div>
+                </div>
+
+                <div class="platform-item">
+                    <div class="platform-icon">📷</div>
+                    <div class="platform-content">
+                        <h3>Instagram : ça appartient à Facebook,</h3>
+                        <p>n'en parlons même pas...</p>
+                    </div>
+                </div>
+
+                <div class="platform-item">
+                    <div class="platform-icon">▶</div>
+                    <div class="platform-content">
+                        <h3>YouTube :</h3>
+                        <p>c'est cool, c'est <strong>ma plateforme préférée</strong>, mais si YouTube disparaît un jour, ou si votre compte est supprimé du jour au lendemain, vous faites quoi ?</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="platform-note">(et c'est exactement ce qui se passe car YouTube, Google, Facebook et compagnie se prennent pour les rois du monde)</p>
         </div>
-        <div class="tri-card">
-          <div class="tri-n">{{method_2_title}}</div>
-          <div class="tri-d">{{method_2_text}}</div>
+    </section>
+
+    <!-- Story Section -->
+    <section class="story">
+        <div class="container">
+            <h2>Ça me ramène en 2017...</h2>
+            <h3>Quand j'ai lancé mon premier business en ligne</h3>
+            
+            <p>J'étais étudiant et j'avais à peine <strong class="story-highlight">100 € en poche</strong>, autant vous dire que je ne pouvais quasiment rien faire sur ces plateformes.</p>
+            
+            <p>Mais bon, <strong>fallait bien commencer</strong> alors...</p>
+            
+            <p style="margin-top: 30px;">▶ <strong>Je me suis lancé sur YouTube.</strong></p>
+            
+            <p style="margin-top: 20px;">Et plus j'avançais, <strong>plus je me disais</strong> :</p>
+            
+            <p>" Mais si YouTube supprime ma chaîne, tout mon business s'effondre en fait... ? "</p>
+            
+            <p style="margin-top: 20px;">Ce jour, c'est le jour où j'ai pris la décision de <strong>ne plus jamais dépendre des réseaux sociaux</strong>.</p>
+            
+            <p style="margin-top: 20px;">J'ai commencé à chercher, à <strong>me former sur toutes les stratégies</strong> possibles et imaginables et à faire des tests avec <strong>un seul objectif en tête</strong> :</p>
+            
+            <h3 style="margin-top: 40px;">Attirer des clients en automatique sur mes offres, sans payer, et faire des ventes tous les jours, sans dépendre de Facebook, Instagram et tralalilala...</h3>
+
+            <div class="social-icons">
+                <div class="social-icon-placeholder">[Illustration réseaux sociaux]</div>
+            </div>
         </div>
-        <div class="tri-card">
-          <div class="tri-n">{{method_3_title}}</div>
-          <div class="tri-d">{{method_3_text}}</div>
+    </section>
+
+    <!-- Solution Discovery -->
+    <section class="solution">
+        <div class="container">
+            <div class="solution-intro">
+                <p>Tous ces <strong>mois de tests</strong> m'ont amené à en déduire une chose : <strong>nous somme coincés</strong>.</p>
+                <p>Les <strong>"rois du monde"</strong> ont quasiment gagné la partie.</p>
+                <p>Pourquoi ?</p>
+                
+                <h2 style="margin-top: 40px;">Disons que 99% des stratégies dépendent d'eux.</h2>
+                <p>Mais...</p>
+            </div>
+
+            <div class="curved-arrow">↓</div>
+
+            <h2 class="section-title">...Il y en a une qui fonctionne depuis la nuit des temps, et, bonne nouvelle : ça marche toujours !</h2>
+
+            <p style="text-align: center; font-size: 16px; margin-bottom: 15px;">Cette méthode, je l'ai appelée : <strong>CAD.</strong></p>
+            <p style="text-align: center; font-size: 14px; margin-bottom: 30px;">(non, ça ne veut pas dire "c'est à dire") 😅</p>
+            <p style="text-align: center; font-size: 16px; margin-bottom: 40px;">Ça veut dire :</p>
+
+            <h2 class="solution-name">Clients à la demande</h2>
+
+            <p style="text-align: center; font-size: 15px; margin-bottom: 15px;">Et elle a 3 avantages <strong>non négligeables</strong> :</p>
+
+            <div class="advantages-grid">
+                <div class="advantage-card">
+                    <div class="advantage-icon">1</div>
+                    <h3>Elle est gratuite à utiliser</h3>
+                    <p>Pas de publicité ou de plateforme à payer</p>
+                </div>
+
+                <div class="advantage-card">
+                    <div class="advantage-icon">2</div>
+                    <h3>Elle ne dépend de rien</h3>
+                    <p>Rien ni personne (à par vous)</p>
+                </div>
+
+                <div class="advantage-card">
+                    <div class="advantage-icon">3</div>
+                    <h3>Elle est sans limite</h3>
+                    <p>Plus vous la pratiquez, plus vous pouvez gagner d'argent</p>
+                </div>
+            </div>
+
+            <p style="text-align: center; font-size: 14px; margin-top: 40px; font-style: italic;">Ah oui, j'allais oublier un <strong>point important</strong> : elle n'est pas magique, il faut travailler pour la mettre en place, mais une fois que ça tourne, <strong>ça paye</strong>.</p>
         </div>
-      </div>
+    </section>
 
-      <div class="callout">
-        <div class="callout-title">{{callout_title}}</div>
-        <p class="callout-text">{{callout_text}}</p>
-      </div>
-    </div>
-  </section>
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 50px;">
+                <div style="width: 250px; height: 250px; background: #f5f5f5; border-radius: 15px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #ccc;">[Image sac d'argent]</div>
+            </div>
 
-  <section class="section section-dark" id="programme">
-    <div class="container">
-      <div class="dark-top">
-        <h2>{{program_title}}</h2>
-        <p class="lead">{{program_lead}}</p>
-      </div>
+            <h2 class="benefits-title">Voici ce que cette méthode me permet de faire au quotidien :</h2>
 
-      <div class="modules">
-        {{#modules}}
-        <div class="module">
-          <div class="module-h">
-            <div class="chip">{{module_label}}</div>
-            <div class="module-t">{{module_title}}</div>
-          </div>
-          <p class="module-d">{{module_text}}</p>
-          {{#module_points}}
-          <ul class="module-points">
-            {{#module_points}}
-            <li>{{.}}</li>
-            {{/module_points}}
-          </ul>
-          {{/module_points}}
+            <div class="benefits-list">
+                <div class="benefit-item">
+                    <div class="benefit-icon">👥</div>
+                    <div>
+                        <h4>Avoir Des Clients En Automatique Sur Mes Offres</h4>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">💰</div>
+                    <div>
+                        <h4>Avoir Des Ventes En Automatique De Jour Comme De Nuit</h4>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">💳</div>
+                    <div>
+                        <h4>Être Assuré De Faire Un Certain Revenu Dans Le Mois</h4>
+                        <p class="benefit-note">(je sais combien je vais gagner à la fin du mois à peu près)</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🛒</div>
+                    <div>
+                        <h4>Fidéliser Mes Clients Déjà Existants En Leur Proposant D'autres Produits Dont Ils Ont Besoin</h4>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">📱</div>
+                    <div>
+                        <h4>Faire Grossir Mes Réseaux Sociaux En Pilote Automatique</h4>
+                    </div>
+                </div>
+            </div>
+
+            <p class="benefit-note">Et Plein D'autres Choses...</p>
         </div>
-        {{/modules}}
-      </div>
+    </section>
 
-      <div class="dark-cta">
-        <a class="btn-primary" href="#checkout">{{program_cta}}</a>
-        {{#program_note}}
-        <div class="note">{{.}}</div>
-        {{/program_note}}
-      </div>
-    </div>
-  </section>
+    <!-- Comparison Section -->
+    <section class="comparison">
+        <div class="container">
+            <h2 class="comparison-title">En fait, la méthode CAD...<br>C'est comme l'immobilier, mais sur internet, et en 10x plus accessible : on peut se créer des rentes, sans rien dépenser.</h2>
 
-  <section class="section section-soft" id="checkout">
-    <div class="container checkout-grid">
-      <div class="checkout-copy">
-        <h2>{{offer_title}}</h2>
-        <p class="lead">{{offer_subtitle}}</p>
-        {{#offer_bullets}}
-        <ul class="bullets">
-          {{#offer_bullets}}
-          <li><span class="dot"></span><span>{{.}}</span></li>
-          {{/offer_bullets}}
-        </ul>
-        {{/offer_bullets}}
-      </div>
+            <p style="text-align: center; font-size: 14px; margin-bottom: 40px;"><strong>Si vous lisez ce message</strong>, c'est que vous faites probablement partie de ma liste email.</p>
 
-      <div class="checkout-card">
-        <div class="price">
-          <div class="price-old">{{price_old}}</div>
-          <div class="price-now">{{price_now}}</div>
-          <div class="price-note">{{price_note}}</div>
+            <p style="text-align: center; font-size: 14px; margin-bottom: 40px;"><strong>L'email marketing</strong> fait grandement partie de la méthode CAD.</p>
+
+            <p style="text-align: center; font-size: 14px; margin-bottom: 50px;">Voici pourquoi :</p>
+
+            <h3 style="text-align: center; font-size: 24px; font-weight: 800; color: #0080ff; margin-bottom: 60px;">Voici l'évolution de mon business avec les emails</h3>
+
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h3>Chiffre d'affaires</h3>
+                    <div class="chart-placeholder">[Graphique revenus]</div>
+                </div>
+
+                <div class="comparison-card">
+                    <h3>Nombre d'emails</h3>
+                    <div class="chart-placeholder">[Graphique emails]</div>
+                </div>
+            </div>
+
+            <div class="comparison-note">
+                <p>Un email dans mon business <strong>me rapporte environs 1€</strong>.</p>
+                <p>Et pour tout vous dire, <strong>j'ai plus de 40,000 emails</strong>...</p>
+                <p>Je vous laisse <strong>faire le calcul</strong>.</p>
+            </div>
+
+            <h2 class="comparison-title" style="margin-top: 80px;">Si j'étais juste sur les réseaux sociaux, voici ce que mon business serait :</h2>
+
+            <div class="cake-comparison">
+                <div class="cake-item">
+                    <div class="cake-placeholder">[Petit gâteau]</div>
+                    <h4>Mon business sans emails :</h4>
+                </div>
+
+                <div class="cake-item">
+                    <div class="cake-placeholder">[Gros gâteau]</div>
+                    <h4>Mon business sans emails :</h4>
+                </div>
+            </div>
+
+            <p style="text-align: center; font-size: 14px; margin-top: 40px; line-height: 1.8;">Ce qui est bien dans tout ça, c'est que c'est <strong>à la portée de n'importe qui</strong>.</p>
+            <p style="text-align: center; font-size: 14px; margin-top: 10px;">Même vous. <strong>Oui vous !</strong> Ne soyez pas timide.</p>
+            <p style="text-align: center; font-size: 14px; margin-top: 10px;"><strong>Depuis chez vous</strong>, avec un ordinateur et une connexion internet, vous pouvez <strong>faire des ventes en automatique</strong> avec la <strong>méthode CAD</strong>...</p>
+            <p style="text-align: center; font-size: 14px; margin-top: 10px;">Mon objectif ? <strong>Vous montrer exactement comment faire</strong> :</p>
         </div>
+    </section>
 
-        <div class="buy">
-          <div class="systeme-slot" id="SLOT_CHECKOUT">
-          <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
-        </div>
-          <div class="micro">{{checkout_micro}}</div>
-        </div>
+    <!-- Method Section -->
+    <section class="method">
+        <div class="container">
+            <div class="method-header">
+                <div class="method-logo">
+                    Méthode <span class="blue">[CAD]</span>
+                </div>
+                <h2>Le protocole ultra rentable d'un marketeur à succès pour avoir un torrent de clients à la demande</h2>
+            </div>
 
-        {{#guarantee}}
-        <div class="guarantee">
-          <div class="g-title">{{guarantee_title}}</div>
-          <div class="g-text">{{.}}</div>
-        </div>
-        {{/guarantee}}
-      </div>
-    </div>
-  </section>
+            <div class="method-mockup">
+                <div class="method-mockup-placeholder">[Mockup produit]</div>
+            </div>
 
-  {{#faq}}
-  <section class="section" id="faq">
-    <div class="container">
-      <h2 class="center">{{faq_title}}</h2>
-      <div class="faq">
-        {{#faq}}
-        <div class="qa">
-          <div class="q">{{q}}</div>
-          <div class="a">{{a}}</div>
-        </div>
-        {{/faq}}
-      </div>
-    </div>
-  </section>
-  {{/faq}}
+            <h3 class="method-subtitle">➜ VOUS ALLEZ DÉCOUVRIR :</h3>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="muted">{{footer_text}}</div>
-      <a class="top" href="#top">{{footer_top}}</a>
-    </div>
-  </footer>
-</div>
+            <div class="modules-list">
+                <div class="module-item">
+                    <h3>Automate Flow</h3>
+                    <p>Le plan d'action ultra simple pour avoir des clients en automatique</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Day & Night</h3>
+                    <p>Ma stratégie d'envoi automatique pour avoir des ventes de jour comme de nuit</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Customer Forever</h3>
+                    <p>Comment fidéliser ses clients déjà existants en leur faisant racheter d'autres de vos produits dont ils ont besoin (sans être un vendeur relou)</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Snowball</h3>
+                    <p>Le mail tout simple à envoyer pour faire grossir vos réseaux sociaux en pilote automatique</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Spider Web</h3>
+                    <p>Comment avoir un torrent de leads dans sa liste emails sans faire de publicité ni publier de contenu</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Sans les mains</h3>
+                    <p>Comment lancer la machine à clients avec aucune connaissance technique</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Story Time</h3>
+                    <p>Comment transformer un mail banal en une histoire palpitante (et faire cliquer)</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Imitation Game</h3>
+                    <p>Comment trouver des idées de mails à envoyer sans se creuser la tête (et oui, on n'est pas tout le temps inspiré)</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Étude de cas</h3>
+                    <p>Je vous montre en détail la méthode CAD dans mon business modèle</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>La mini astuce géniale</h3>
+                    <p>Qui me permet de capturer 300 emails en une vidéo YouTube</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Étude de cas</h3>
+                    <p>Ma page de capture qui convertit à 75%* même sur du trafic froid (du jamais vu en francophonie)</p>
+                </div>
+
+                <div class="module-item">
+                    <h3>Mes outils d'envoi d'email</h3>
+                    <p>Comment ça marche et comment ne pas finir en SPAM ou autre truc saoulant du genre</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <button class="cta-button">
+                    Rejoindre le programme
+                </button>
+                <p class="cta-note">Accès immédiat</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bonus Section -->
+    <section class="bonus">
+        <div class="container">
+            <div class="bonus-intro">
+                <div class="gift-icon">🎁</div>
+                <h2>Parce que je veux vous donner le maximum pour réussir, je vous offrede nombreux bonus ...</h2>
+            </div>
+
+            <div class="bonus-grid">
+                <div class="bonus-card">
+                    <div class="bonus-visual">
+                        <div class="bonus-placeholder">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>🎁 Bonus #1 : 3 modèles</h3>
+                        <h4>D'emails cadeaux à utiliser</h4>
+                        <p>Recevez mes 3 modèles d'e-mails qui m'ont rapporté gros.</p>
+                        <p>Vous n'aurez qu'à copier coller et les adapter à votre industrie.</p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">
+                        <div class="bonus-placeholder">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>🎁 Bonus #2 : Un groupe</h3>
+                        <h4>Privé d'entrepreneurs</h4>
+                        <p>Vous accéderez à une communauté d'entrepreneurs aussi bien débutants que confirmés.</p>
+                        <p>Vous pourrez avancer ensemble, vous motiver, et bénéficier de l'expertise des personnes ayant déjà réussis sur l'Email Marketing...</p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">
+                        <div class="bonus-placeholder">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>🎁 Bonus #3 : Un module</h3>
+                        <h4>Micro entreprise</h4>
+                        <p>Ce module sert à vous accompagner sans stress dans la création de votre activité en ligne avec un spécialiste.</p>
+                        <p>Plus besoin de passer des heures à chercher, vous avez TOUT condensé dans ce module.</p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">
+                        <div class="bonus-placeholder">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>🎁 Bonus #4 : 10 titres</h3>
+                        <h4>Accrocheurs</h4>
+                        <p>Copiez mes 10 titres accrocheurs pour faire ouvrir vos emails</p>
+                        <p>+ 20 à 40% d'ouvertures chez moi avec ces titres accrocheurs !</p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">
+                        <div class="bonus-placeholder">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>🎁 Bonus #5 : Étude de</h3>
+                        <h4>Cas</h4>
+                        <p>Étude de cas de mes emails qui ont généré le plus de revenus</p>
+                        <p>Ce n'est pas forcément ce que l'on croit qui va fonctionner, qui fonctionne ( vous pourriez être étonné )</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="container">
+            <div class="faq-title">
+                <h2>Vous vous posez certaines questions ?</h2>
+                <h3>Consultez la FAQ</h3>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">Je ne maîtrise pas la technique, je débute sur internet</div>
+                    <div class="faq-icon">^</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">J'ai peur de me lancer, est-ce que c'est risqué ?</div>
+                    <div class="faq-icon">^</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Je n'ai aucun produit ni service, est-ce possible quand même ?</div>
+                    <div class="faq-icon">^</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Après avoir rejoint la méthode CAD, dois-je encore dépenser de l'argent ?</div>
+                    <div class="faq-icon">^</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Une fois que j'ai rejoint la méthode CAD, il se passe quoi ?</div>
+                    <div class="faq-icon">^</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Je ne suis pas en France, puis-je quand même me lancer ?</div>
+                    <div class="faq-icon">^</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Dès maintenant, vous pouvez obtenir le programme à 147€</h2>
+
+            <button class="cta-button">
+                Rejoindre le programme
+            </button>
+            <p class="cta-note">Accès immédiat</p>
+
+            <h2 style="margin-top: 80px;">J'ai aidé plus de 10,000 entrepreneurs et je veux que vous soyez le prochain !</h2>
+
+            <p style="margin-top: 30px; font-size: 15px;">Voici quelques retours en vidéo de mes élèves sur l'une des mes formations "Ebay Dropshipping"...</p>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <div class="container">
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">"J'ai pris la formation de Pierre-Eliott et <strong>je suis entièrement satisfait</strong>. Je sais qu'il fait souvent <strong>des mises à jours pour être toujours à la page</strong>.</p>
+                    <p class="testimonial-text"><strong>La formation est très bien faite et super bien expliquée</strong>. Il y a plus qu'une chose à faire, c'est lancez-vous et n'hésitez pas !"</p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">"J'ai connu le dropshipping sur ebay par Pierre-Eliott. <strong>Au début je n'ai pas pris de formation en essayant de me débrouiller seul</strong>. Ca a été très compliqué, <strong>je ne faisais pas beaucoup de ventes</strong>. J'ai ensuite pris <strong>la formation de Pierre-Eliott</strong> qui est une très bonne formation, <strong>c'est une pépite d'or</strong> !"</p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">"<strong>La formation est top vraiment !</strong> Le contenu est mis à jour, il est clair, complet, simple à comprendre. <strong>Les méthodes sont à appliquer tout simplement</strong>.</p>
+                    <p class="testimonial-text">Il vous donnera tout ce qu'il fait et il n'y aura plus qu'à appliquer. <strong>C'est du concret !</strong>"</p>
+                </div>
+            </div>
+
+            <div class="testimonial-screenshots">
+                <div class="screenshot-placeholder">[Capture 1]</div>
+                <div class="screenshot-placeholder">[Capture 2]</div>
+                <div class="screenshot-placeholder">[Capture 3]</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Author Section -->
+    <section class="author">
+        <div class="container">
+            <div class="author-title">
+                <h2>Qui est Pierre-Eliott ?</h2>
+            </div>
+
+            <div class="author-content">
+                <h3>Pierre-Eliott est entrepreneur depuis 2017.</h3>
+                
+                <p>Il représente la nouvelle génération d'entrepreneurs sur internet désirant plus de liberté et d'indépendance.</p>
+                
+                <p>Il a accompagné près de 20,000 personnes de tous les niveaux à créer leur première source de revenus en ligne.</p>
+                
+                <div class="author-quote">
+                    "Je suis parti de rien, je n'ai même pas fait d'études en rapport avec internet, preuve que n'importe qui peut se former, apprendre, et réussir."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recap Section -->
+    <section class="recap">
+        <div class="container">
+            <div class="recap-title">
+                <h2>Vous hésitez encore ?</h2>
+                <h3>Récapitulons</h3>
+            </div>
+
+            <div class="recap-box">
+                <div class="recap-mockup">
+                    <div style="width: 250px; height: 250px; background: #f5f5f5; border-radius: 15px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #ccc;">[Mockup produit]</div>
+                </div>
+
+                <h3 style="text-align: center; margin: 30px 0;">Voici ce vous obtiendrez en rejoignant la méthode CAD aujourd'hui !</h3>
+
+                <ul class="recap-list">
+                    <li><strong>La Méthode CAD</strong> : 12 Modules pour faire des ventes jour et nuit</li>
+                    <li><strong>Bonus #1</strong> : modèles d'emails cadeaux à utiliser</li>
+                    <li><strong>Bonus #2</strong> : un groupe privé d'entrepreneurs</li>
+                    <li><strong>Bonus #3</strong> : Un module micro entreprise avec un spécialiste</li>
+                    <li><strong>Bonus #4</strong> : 10 titres accrocheurs pour faire ouvrir vos emails</li>
+                    <li><strong>Bonus #5</strong> : Étude de cas de mes emails qui ont généré le plus de revenu</li>
+                </ul>
+
+                <div class="price-highlight">
+                    <p style="font-size: 18px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase;">Aujourd'hui pour seulement :</p>
+                    <div class="price">147€</div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="cta-button">
+                        Rejoindre le programme
+                    </button>
+                    <p class="cta-note" style="color: #666;">Accès immédiat</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-contact">
+                <p>Envie d'un site comme celui-ci ? Contactez <a href="#">NICOLAS GERMANO</a></p>
+            </div>
+
+            <div class="footer-logo">
+                <div class="method-logo">
+                    Méthode <span class="blue">[CAD]</span>
+                </div>
+            </div>
+
+            <div class="footer-links">
+                <a href="#">Mentions Légales</a>
+                <a href="#">Conditions Générales De Vente</a>
+            </div>
+
+            <div class="footer-legal">
+                <p>Business Therapy © PL MARKETING 2021 - Tous Droits Réservés</p>
+                <p style="margin-top: 10px;">NOT FACEBOOK : This site is not a part of the Facebook website or Facebook Inc. Additionally, This site is NOT endorsed by Facebook in any way. FACEBOOK is a trademark of FACEBOOK, Inc.</p>
+            </div>
+        </div>
+    </footer>
+
+<!-- ===================== BLOC 2 ===================== -->
+

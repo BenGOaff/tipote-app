@@ -1,184 +1,1556 @@
-<div class="sale-09" id="top">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="brand">
-        <span class="brand-badge">★</span>
-        <span class="brand-name">{{brand_name}}</span>
-      </div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Page de Vente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Montserrat:wght@400;600;700&family=Kanit:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-      <div class="nav-links">
-        <a href="#story">{{nav_link_1}}</a>
-        <a href="#offer">{{nav_link_2}}</a>
-        <a href="#faq">{{nav_link_3}}</a>
-      </div>
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: #2a2a2a;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
-    </div>
-  </nav>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-  <header class="hero">
-    <div class="container hero-inner">
-      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 60px 20px 80px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-      <h1>
-        {{hero_title}}
-        {{#hero_title_accent}}<span class="accent">{{.}}</span>{{/hero_title_accent}}
-      </h1>
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,42,212,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
 
-      <p class="sub">{{hero_subtitle}}</p>
+        .hero-badge {
+            background: linear-gradient(90deg, #ff2ad4 0%, #de24fd 100%);
+            color: white;
+            display: inline-block;
+            padding: 12px 35px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(255,42,212,0.3);
+            animation: pulse 2s infinite;
+        }
 
-      <div class="hero-grid">
-        <div class="hero-left">
-          <div class="comic-card">
-            <div class="comic-top">
-              <div class="comic-pill">{{comic_pill}}</div>
-              <div class="comic-emoji">{{comic_emoji}}</div>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .hero h1 {
+            font-family: 'Kanit', sans-serif;
+            font-size: 3.2rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        .hero-subtext {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-video-container {
+            position: relative;
+            max-width: 900px;
+            margin: 0 auto 40px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .video-placeholder {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .cta-button {
+            background: linear-gradient(90deg, #ff2ad4 0%, #de24fd 100%);
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            padding: 20px 50px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(255,42,212,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255,42,212,0.5);
+        }
+
+        .cta-button::after {
+            content: '→';
+            font-size: 1.5rem;
+        }
+
+        .cta-subtext {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+
+        /* Benefits Grid */
+        .benefits-section {
+            background: #f8f9fb;
+            padding: 80px 20px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .benefit-card {
+            background: white;
+            border: 2px solid #e8eef5;
+            border-radius: 15px;
+            padding: 35px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff2ad4;
+            box-shadow: 0 15px 40px rgba(255,42,212,0.15);
+        }
+
+        .benefit-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #e8eef5 0%, #f1f5f9 100%);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .benefit-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ff2ad4;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .benefit-text {
+            color: #555;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Social Proof */
+        .social-proof {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-family: 'Kanit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .section-subtitle {
+            color: #ff2ad4;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 50px;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+
+        .testimonial-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .testimonial-video {
+            width: 100%;
+            aspect-ratio: 9/16;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .testimonial-quote {
+            color: white;
+            font-size: 0.95rem;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .testimonial-author {
+            color: #ff2ad4;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Features/Promise Section */
+        .promise-section {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .promise-section .section-title {
+            color: #001f4d;
+            text-align: center;
+        }
+
+        .promise-box {
+            background: linear-gradient(135deg, #001f4d 0%, #134895 100%);
+            border-radius: 20px;
+            padding: 50px;
+            margin-top: 50px;
+            color: white;
+            box-shadow: 0 20px 60px rgba(0,31,77,0.3);
+        }
+
+        .promise-heading {
+            font-family: 'Kanit', sans-serif;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .promise-subheading {
+            color: #ff2ad4;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+
+        .promise-list {
+            list-style: none;
+        }
+
+        .promise-list li {
+            padding: 15px 0;
+            padding-left: 35px;
+            position: relative;
+            font-size: 1.05rem;
+        }
+
+        .promise-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        /* Storytelling Section */
+        .story-section {
+            background: #f8f9fb;
+            padding: 80px 20px;
+        }
+
+        .story-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .story-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .story-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #e8eef5 0%, #dfe7f1 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .story-text h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            color: #001f4d;
+            margin-bottom: 20px;
+        }
+
+        .story-text p {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        /* Client Results */
+        .results-section {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .results-video-wrapper {
+            max-width: 700px;
+            margin: 40px auto;
+        }
+
+        .engagement-proof {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .engagement-title {
+            color: #ff2ad4;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .comments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .comment-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .comment-author {
+            color: #ff2ad4;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .comment-text {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        /* Offer Section */
+        .offer-section {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .offer-section .section-title {
+            color: #001f4d;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .offer-modules {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .module-card {
+            background: white;
+            border: 2px solid #e8eef5;
+            border-radius: 15px;
+            padding: 35px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .module-card:hover {
+            border-color: #ff2ad4;
+            box-shadow: 0 10px 30px rgba(255,42,212,0.15);
+        }
+
+        .module-header {
+            background: linear-gradient(90deg, #001f4d 0%, #134895 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .module-image {
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, #e8eef5 0%, #f1f5f9 100%);
+            border-radius: 10px;
+            float: right;
+            margin-left: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .module-promise {
+            color: #ff2ad4;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .module-description {
+            color: #555;
+            line-height: 1.7;
+        }
+
+        /* Comparison Section */
+        .comparison-section {
+            background: #f8f9fb;
+            padding: 80px 20px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1000px;
+            margin: 50px auto 0;
+        }
+
+        .comparison-card {
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .comparison-bad {
+            background: white;
+            border: 3px solid #ff4444;
+        }
+
+        .comparison-good {
+            background: linear-gradient(135deg, #001f4d 0%, #134895 100%);
+            color: white;
+        }
+
+        .comparison-label {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .comparison-bad .comparison-label {
+            color: #ff4444;
+        }
+
+        .comparison-good .comparison-label {
+            color: #00ff00;
+        }
+
+        .comparison-image {
+            width: 100%;
+            height: 250px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .comparison-list {
+            list-style: none;
+            text-align: left;
+        }
+
+        .comparison-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .comparison-bad .comparison-list li::before {
+            content: '✗';
+            position: absolute;
+            left: 0;
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .comparison-good .comparison-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* Bonus Section */
+        .bonus-section {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 80px 20px;
+        }
+
+        .bonus-section .section-title {
+            text-align: center;
+        }
+
+        .bonus-intro {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 50px;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .bonus-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .bonus-badge {
+            background: linear-gradient(90deg, #ff2ad4 0%, #de24fd 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 50px;
+            display: inline-block;
+            font-weight: 700;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .bonus-name {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .bonus-image {
+            width: 100%;
+            height: 200px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .bonus-description {
+            color: rgba(255,255,255,0.85);
+            line-height: 1.6;
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            background: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .pricing-section .section-title {
+            color: #001f4d;
+        }
+
+        .pricing-card {
+            max-width: 800px;
+            margin: 50px auto;
+            border: 3px dashed #ff2ad4;
+            border-radius: 20px;
+            padding: 50px;
+            background: #fafbfc;
+        }
+
+        .package-visual {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .package-item {
+            width: 120px;
+            height: 140px;
+            background: linear-gradient(135deg, #e8eef5 0%, #f1f5f9 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .pricing-list {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .pricing-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            text-align: left;
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        .pricing-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .price-box {
+            background: linear-gradient(135deg, #001f4d 0%, #134895 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .original-price {
+            color: rgba(255,255,255,0.6);
+            font-size: 1.2rem;
+            text-decoration: line-through;
+            margin-bottom: 10px;
+        }
+
+        .current-price {
+            color: #00ff00;
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .price-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.95rem;
+            margin-top: 10px;
+        }
+
+        /* Guarantee Section */
+        .guarantee-section {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .guarantee-badge {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #ff2ad4 0%, #de24fd 100%);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 40px rgba(255,42,212,0.4);
+        }
+
+        .guarantee-badge-text {
+            color: white;
+            font-weight: 800;
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .guarantee-title {
+            font-family: 'Kanit', sans-serif;
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .guarantee-description {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        /* Author Section */
+        .author-section {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .author-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .author-image {
+            width: 300px;
+            height: 400px;
+            background: linear-gradient(135deg, #ff2ad4 0%, #de24fd 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .author-bio h2 {
+            font-family: 'Kanit', sans-serif;
+            font-size: 2.5rem;
+            color: #ff2ad4;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .author-bio p {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .trust-badges {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .trust-badge {
+            width: 80px;
+            height: 80px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.7rem;
+        }
+
+        /* Order Form Section */
+        .order-section {
+            background: linear-gradient(135deg, #001f4d 0%, #05275a 100%);
+            padding: 80px 20px;
+        }
+
+        .order-title {
+            font-family: 'Kanit', sans-serif;
+            font-size: 2rem;
+            color: #ff2ad4;
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .order-subtitle {
+            font-family: 'Kanit', sans-serif;
+            font-size: 3rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+
+        .order-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .form-step {
+            background: linear-gradient(90deg, #ff2ad4 0%, #de24fd 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e8eef5;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff2ad4;
+        }
+
+        .payment-methods {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .payment-icon {
+            width: 60px;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.7rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: #001f4d;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-family: 'Kanit', sans-serif;
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .footer-logo span {
+            color: #ff2ad4;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #ff2ad4;
+        }
+
+        .footer-copyright {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .story-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .author-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .author-image {
+                margin: 0 auto;
+            }
+
+            .trust-badges {
+                justify-content: center;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge">
+                [PUNCHLINE ACCROCHE] Même si [frein principal] SEULEMENT [durée/prix]
+            </div>
+            
+            <h1>PROMESSE PRINCIPALE<br>DE TA FORMATION/OFFRE</h1>
+            
+            <p class="hero-subtext">
+                Preuve sociale de la réussite de ta méthode unique ("avec cette méthode j'ai réussi...")
+                (Élément rassurant : toi-même tu peux le faire) ⭐️✨
+            </p>
+
+            <div class="hero-video-container">
+                <div class="video-placeholder">
+                    [VIDÉO VSL PRINCIPALE]<br>
+                    Démonstration produit/résultat
+                </div>
             </div>
 
-            <div class="comic-lines">
-              {{#comic_lines}}<div class="comic-line"><span class="spark">✦</span>{{.}}</div>{{/comic_lines}}
-            </div>
-
-            {{#hero_bullets_title}}<div class="card-title">{{.}}</div>{{/hero_bullets_title}}
-            <ul class="list">
-              {{#hero_bullets}}<li><span class="dot"></span><span class="txt">{{.}}</span></li>{{/hero_bullets}}
-            </ul>
-
-            {{#hero_note}}<p class="note">{{.}}</p>{{/hero_note}}
-          </div>
+            <a href="#order" class="cta-button">
+                OUI JE VEUX [OBJECTIF]
+            </a>
+            
+            <p class="cta-subtext">
+                Ton achat est accompagné d'une garantie + Tes publicités ne seront plus nulles. 
+                Si tu n'es pas satisfait de ton achat, envoie-moi un email et nous te rembourserons, sans poser de questions.
+            </p>
         </div>
+    </section>
 
-        <div class="hero-right">
-          <div class="checkout-card" id="checkout">
-            <div class="price-row">
-              <div class="price-label">{{price_label}}</div>
-              <div class="price">
-                <span class="price-main">{{price_main}}</span>
-                {{#price_sub}}<span class="price-sub">{{.}}</span>{{/price_sub}}
-              </div>
+    <!-- Benefits Section -->
+    <section class="benefits-section">
+        <div class="container">
+            <h2 class="section-title" style="color: #001f4d; text-align: center;">
+                EXEMPLES DE TES RÉSULTATS OU DE CEUX DE TES<br>CLIENTS, OBTENUS AVEC TA MÉTHODE
+            </h2>
+            
+            <p class="section-subtitle" style="color: #ff2ad4; text-align: center;">
+                Détails des résultats : "Ils ont réussi à [objectif] en seulement [durée]"
+            </p>
+
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-image">[Image avant/après]</div>
+                    <h3 class="benefit-title">BÉNÉFICE CONCRET</h3>
+                    <p class="benefit-text">
+                        Explique un bénéfice concret de ton programme + les conséquences de ce bénéfice pour ton audience cible.
+                    </p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-image">[Image résultat client]</div>
+                    <h3 class="benefit-title">BÉNÉFICE CONCRET</h3>
+                    <p class="benefit-text">
+                        Explique un bénéfice concret de ton programme + les conséquences de ce bénéfice pour ton audience cible.
+                    </p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-image">[Image transformation]</div>
+                    <h3 class="benefit-title">BÉNÉFICE CONCRET</h3>
+                    <p class="benefit-text">
+                        Explique un bénéfice concret de ton programme + les conséquences de ce bénéfice pour ton audience cible.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Promise/Feature Section -->
+    <section class="promise-section">
+        <div class="container">
+            <h2 class="section-title">
+                PUNCHLINE OU CITATION QUI TE REPRÉSENTE ET<br>ILLUSTRE TA MÉTHODE
+            </h2>
+            
+            <p style="text-align: center; color: #555; font-size: 1.1rem; margin-bottom: 30px; font-style: italic;">
+                "Ex : Je déteste qu'on m'adore alors qu'on ne me connaît pas encore"<br>
+                - AUTEUR DE LA CITATION/PUNCHLINE
+            </p>
+
+            <div class="promise-box">
+                <h3 class="promise-heading">Vous Pouvez [objectif]</h3>
+                <p class="promise-subheading">MÊME SI ...</p>
+                
+                <ul class="promise-list">
+                    <li>Frein de ton audience ou élément qui lui fait croire qu'elle va échouer</li>
+                    <li>Frein de ton audience ou élément qui lui fait croire qu'elle va échouer</li>
+                    <li>Frein de ton audience ou élément qui lui fait croire qu'elle va échouer</li>
+                    <li>Frein de ton audience ou élément qui lui fait croire qu'elle va échouer</li>
+                    <li>Frein de ton audience ou élément qui lui fait croire qu'elle va échouer</li>
+                </ul>
             </div>
 
-            <div class="cta-title">{{cta_title}}</div>
+            <div style="text-align: center; margin-top: 40px;">
+                <div style="display: inline-block; background: linear-gradient(90deg, #001f4d 0%, #134895 100%); color: white; padding: 15px 40px; border-radius: 50px; margin-bottom: 20px;">
+                    ⭐⭐⭐⭐⭐ RECOMMANDÉ PAR NOS ÉLÈVES
+                </div>
+            </div>
+        </div>
+    </section>
 
-            <!-- Preview form (disabled) -->
-            <div class="cta-row form-preview">
-              <input type="email" placeholder="{{form_email_placeholder}}" disabled />
-              <button type="button" disabled>{{cta_button}}</button>
+    <!-- Testimonials Section -->
+    <section class="social-proof">
+        <div class="container">
+            <h2 class="section-title">REGARDEZ LES AVIS DE MES CLIENTS ACTUELS</h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-video">[Vidéo témoignage]</div>
+                    <p class="testimonial-quote">
+                        "Are you Used to being the Sexiest and Funniest Person in the room? Me too."
+                    </p>
+                    <p class="testimonial-author">-Jason Vaughn</p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-video">[Vidéo témoignage]</div>
+                    <p class="testimonial-quote">
+                        "I Hate You Kristine Mirelle"
+                    </p>
+                    <p class="testimonial-author">-Tom Camp</p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-video">[Vidéo témoignage]</div>
+                    <p class="testimonial-quote">
+                        "I Love Working With Kristine Mirelle More than I love My Children"
+                    </p>
+                    <p class="testimonial-author">-Brooke Castillo</p>
+                </div>
             </div>
 
-            <!-- Systeme.io slot -->
-            <div class="systeme-form">
-              {{systeme_form_slot}}
+            <div style="margin-top: 60px;">
+                <a href="#order" class="cta-button">
+                    OUI JE VEUX [OBJECTIF]
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Story Section -->
+    <section class="story-section">
+        <div class="container">
+            <h2 class="section-title" style="color: #001f4d; text-align: center; margin-bottom: 60px;">
+                <span style="color: #ff2ad4;">HILARIOUS ADS CAN GET MASSIVE EXPOSURE, LEADS, AND SALES</span><br><br>
+                QUI TU ES ET COMMENT TU AS RÉUSSI À [OBJECTIF]<br>MALGRÉ [CONTRAINTE]
+            </h2>
+
+            <div class="story-content">
+                <div class="story-grid">
+                    <div class="story-image">[Image 2019]</div>
+                    <div class="story-text">
+                        <h3>Décris ton parcours, ton storytelling :</h3>
+                        <p>
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Le problème que tu rencontrais, ce que ça provoquait, puis la solution que tu as trouvée, comment tu l'as mise en place et la vie maintenant que tu as atteint ton objectif.
+                        </p>
+                        <p>
+                            Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="story-grid">
+                    <div class="story-text">
+                        <h3>Continue l'histoire...</h3>
+                        <p>
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Le problème que tu rencontrais, ce que ça provoquait, puis la solution que tu as trouvée, comment tu l'as mise en place.
+                        </p>
+                        <p>
+                            Et la vie maintenant que tu as atteint ton objectif. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        </p>
+                    </div>
+                    <div class="story-image">[Image 2021]</div>
+                </div>
+
+                <div style="text-align: center; margin-top: 60px;">
+                    <div class="video-placeholder" style="max-width: 800px; margin: 0 auto; border-radius: 15px;">
+                        [VIDÉO KRISTINE MIRELLE - FOUNDER & CEO]<br>
+                        Témoignage fondateur/expert
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Client Results with Social Proof -->
+    <section class="results-section">
+        <div class="container">
+            <h2 class="section-title">
+                ICI PLACE LES PREUVES SOCIALES<br>ISSUES DES TÉMOIGNAGES DE TES<br>
+                <span style="text-decoration: underline;">CLIENTS SATISFAITS</span>
+            </h2>
+
+            <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 30px;">
+                People Pay upwards of <span style="color: #00ff00; font-weight: 700;">25k for us to create funny ads for them</span>. But you can now learn exactly how we create funny ads for our high-paying clients in my mini-course on this page!
+            </p>
+
+            <div class="results-video-wrapper">
+                <div class="video-placeholder" style="border-radius: 15px;">
+                    [VIDÉO TÉMOIGNAGE CLIENT 1]<br>
+                    Brooke Castillo<br>
+                    FOUNDER AND CEO OF THE LIFE COACH SCHOOL
+                </div>
             </div>
 
-            <div class="micro">
-              {{#cta_reassurance}}<div class="reassurance">{{.}}</div>{{/cta_reassurance}}
-              {{#cta_micro}}<div class="micro2">{{.}}</div>{{/cta_micro}}
+            <div class="results-video-wrapper">
+                <div class="video-placeholder" style="border-radius: 15px;">
+                    [VIDÉO TÉMOIGNAGE CLIENT 2]<br>
+                    Eric Beer<br>
+                    PERFORMANCE MARKETER 100 MILLION IN SALES
+                </div>
             </div>
 
-            <div class="trust">
-              {{#trust_items}}<div class="trust-item"><span class="tick">✓</span><span>{{.}}</span></div>{{/trust_items}}
+            <h3 class="engagement-title" style="margin-top: 60px;">
+                Imagine if people Could NOT WAIT for you to post your next ad! 👇
+            </h3>
+
+            <div class="engagement-proof">
+                <div class="comments-grid">
+                    <div class="comment-box">
+                        <p class="comment-author">jacquelinevanbierk commented:</p>
+                        <p class="comment-text">Omg, this is the best as I've seen in a long time lol</p>
+                    </div>
+                    
+                    <div class="comment-box">
+                        <p class="comment-author">discowithit commented:</p>
+                        <p class="comment-text">Honestly 10/10 ad lol</p>
+                    </div>
+                    
+                    <div class="comment-box">
+                        <p class="comment-author">kineticvybez commented:</p>
+                        <p class="comment-text">Best IG ad lol</p>
+                    </div>
+                    
+                    <div class="comment-box">
+                        <p class="comment-author">iamsethdavid commented:</p>
+                        <p class="comment-text">I've never seen so many ads for the same thing! This has got to be the 15th different ad I've seen across multiple platforms.</p>
+                    </div>
+                    
+                    <div class="comment-box">
+                        <p class="comment-author">nate_thegrateful commented:</p>
+                        <p class="comment-text">Lmfaooo this add is lit</p>
+                    </div>
+                    
+                    <div class="comment-box">
+                        <p class="comment-author">mo_almasri commented:</p>
+                        <p class="comment-text">Lmaoooooo I love the video</p>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <div style="margin-top: 50px;">
+                <a href="#order" class="cta-button">
+                    OUI JE VEUX [OBJECTIF]
+                </a>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <div class="scroll-hint">{{scroll_hint}}</div>
-    </div>
-  </header>
+    <!-- Offer Details Section -->
+    <section class="offer-section">
+        <div class="container">
+            <h2 class="section-title">CE QUI EST INCLUS DANS TON OFFRE</h2>
+            
+            <p style="text-align: center; color: #ff2ad4; font-size: 1.3rem; font-weight: 700; margin-bottom: 60px;">
+                Comment réussir à [objectif] pour le prix d'un café ☕
+            </p>
 
-  <section class="story" id="story">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{story_title}}</h2>
-        <p class="lead">{{story_subtitle}}</p>
-      </div>
+            <div class="offer-modules">
+                <div class="module-card">
+                    <div class="module-image">[Image module]</div>
+                    <div class="module-header">PARTIE 1 DE TON CONTENU</div>
+                    <h3 class="module-promise">PROMESSE DE CETTE PARTIE</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Comment cette partie va aider ton audience cible à résoudre un problème spécifique, en combien de temps, quelles conséquences ça aura sur sa vie / son business.
+                    </p>
+                </div>
 
-      <div class="story-grid">
-        <div class="story-card">
-          <div class="story-tag">{{story_tag_1}}</div>
-          <div class="story-body">
-            {{#story_paragraphs}}<p>{{.}}</p>{{/story_paragraphs}}
-          </div>
+                <div class="module-card">
+                    <div class="module-image">[Image module]</div>
+                    <div class="module-header">PARTIE 2 DE TON CONTENU</div>
+                    <h3 class="module-promise">PROMESSE DE CETTE PARTIE</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Comment cette partie va aider ton audience cible à résoudre un problème spécifique, en combien de temps, quelles conséquences ça aura sur sa vie / son business.
+                    </p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-image">[Bonus AI]</div>
+                    <div class="module-header">PARTIE 3 DE TON CONTENU</div>
+                    <h3 class="module-promise">PROMESSE DE CETTE PARTIE/DE CE BONUS</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Comment cette partie ou ce bonus va aider ton audience cible à résoudre un problème spécifique, en combien de temps, quelles conséquences ça aura sur sa vie / son business.
+                    </p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-image">[Équipement]</div>
+                    <div class="module-header">PARTIE 4 DE TON CONTENU</div>
+                    <h3 class="module-promise">PROMESSE DE CETTE PARTIE/DE CE BONUS</h3>
+                    <p class="module-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Comment cette partie ou ce bonus va aider ton audience cible à résoudre un problème spécifique, en combien de temps, quelles conséquences ça aura sur sa vie / son business.
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <h3 style="font-family: 'Kanit', sans-serif; font-size: 2rem; color: #001f4d; margin-bottom: 30px;">
+                    Commence aujourd'hui à [objectif de ton audience]
+                </h3>
+                <a href="#order" class="cta-button">
+                    OUI JE VEUX [OBJECTIF]
+                </a>
+            </div>
         </div>
+    </section>
 
-        <div class="story-side">
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <ul class="side-list">
-              {{#side_points}}<li><span class="bolt">⚡</span><span>{{.}}</span></li>{{/side_points}}
-            </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
-          </div>
+    <!-- Comparison Section -->
+    <section class="comparison-section">
+        <div class="container">
+            <h2 class="section-title" style="color: #001f4d; text-align: center; margin-bottom: 60px;">
+                "LES ÉTUDES DÉMONTRENT QUE [CHIFFRE SUR TON DOMAINE]<br>
+                QUI MONTRE QUE TON OFFRE EST PERTINENTE]"<br><br>
+                -Source de ton chiffre-
+            </h2>
 
-          <div class="quote">
-            <div class="quote-mark">“</div>
-            <div class="quote-text">{{quote_text}}</div>
-            {{#quote_author}}<div class="quote-author">— {{.}}</div>{{/quote_author}}
-          </div>
+            <div class="comparison-grid">
+                <div class="comparison-card comparison-bad">
+                    <p class="comparison-label">C'est n'est PAS pour toi si<br>TU N'AIMES PAS [TRUC]</p>
+                    <div class="comparison-image">[Mème désapprobation]</div>
+                    <ul class="comparison-list">
+                        <li>Raison un peu stupide pour laquelle ce n'est pas pour ton audience cible (ex : tu veux une baguette magique pour perdre 10kg)</li>
+                        <li>Raison un peu stupide pour laquelle ce n'est pas pour ton audience cible</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-card comparison-good">
+                    <p class="comparison-label">C'est pour toi si<br>TU AIMES [TRUC]</p>
+                    <div class="comparison-image">[Mème approbation]</div>
+                    <ul class="comparison-list">
+                        <li>Raison incontournable de rejoindre ton offre dès aujourd'hui (=puce promesse)</li>
+                        <li>Raison incontournable de rejoindre ton offre dès aujourd'hui</li>
+                        <li>Raison incontournable de rejoindre ton offre dès aujourd'hui</li>
+                    </ul>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="offer" id="offer">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{offer_title}}</h2>
-        <p class="lead">{{offer_subtitle}}</p>
-      </div>
+    <!-- Bonus Section -->
+    <section class="bonus-section">
+        <div class="container">
+            <h2 class="section-title">
+                SI TU ES TOUJOURS ICI ALORS CECI EST POUR TOI :<br>
+                <span style="text-decoration: underline;">Reçois ces BONUS en plus</span>
+            </h2>
 
-      <div class="offer-grid">
-        {{#offer_blocks}}
-        <div class="offer-card">
-          <div class="offer-k">{{block_kicker}}</div>
-          <div class="offer-t">{{block_title}}</div>
-          <div class="offer-d">{{block_text}}</div>
-          {{#block_bullets}}
-          <ul class="mini">
-            {{#items}}<li><span class="dot2"></span><span>{{.}}</span></li>{{/items}}
-          </ul>
-          {{/block_bullets}}
+            <p class="bonus-intro">
+                Si tu continues à me lire, c'est que tu es encore hésitant. Alors voici quelques bonus supplémentaires pour te convaincre !
+            </p>
+
+            <div class="bonus-grid">
+                <div class="bonus-card">
+                    <span class="bonus-badge">BONUS#1</span>
+                    <h3 class="bonus-name">NOM DU BONUS</h3>
+                    <div class="bonus-image">[Image bonus AI]</div>
+                    <p class="bonus-description">
+                        Ce que le bonus va t'apporter comme aide complémentaire à ton offre principale, les résultats qu'on peut obtenir avec lui et pourquoi c'est vraiment génial d'y accéder gratuitement ici.
+                    </p>
+                </div>
+
+                <div class="bonus-card">
+                    <span class="bonus-badge">BONUS#2</span>
+                    <h3 class="bonus-name">NOM DU BONUS</h3>
+                    <div class="bonus-image">[Image bonus worksheet]</div>
+                    <p class="bonus-description">
+                        Ce que le bonus va t'apporter comme aide complémentaire à ton offre principale, les résultats qu'on peut obtenir avec lui et pourquoi c'est vraiment génial d'y accéder gratuitement ici.
+                    </p>
+                </div>
+            </div>
         </div>
-        {{/offer_blocks}}
-      </div>
+    </section>
 
-      <div class="big-cta">
-        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
-        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
-      </div>
-    </div>
-  </section>
+    <!-- Pricing Section -->
+    <section class="pricing-section">
+        <div class="container">
+            <h2 class="section-title">VOICI LE RÉSUMÉ DE TOUT CE QUE TU VAS RECEVOIR :</h2>
 
-  <section class="faq" id="faq">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{faq_title}}</h2>
-        <p class="lead">{{faq_subtitle}}</p>
-      </div>
+            <div class="pricing-card">
+                <div class="package-visual">
+                    <div class="package-item">BONUS<br>AI</div>
+                    <div class="package-item">NOM DE TON<br>PROGRAMME</div>
+                    <div class="package-item">NOM DE TON<br>SUPER COOL<br>WORKSHEET</div>
+                </div>
 
-      <div class="faq-grid">
-        {{#faq_items}}
-        <div class="faq-item">
-          <div class="q">{{q}}</div>
-          <div class="a">{{a}}</div>
+                <ul class="pricing-list">
+                    <li>Puce promesse irrésistible : bénéfice + curiosité + conséquence du bénéf</li>
+                    <li>Puce promesse irrésistible : bénéfice + curiosité + conséquence du bénéf</li>
+                    <li><strong>BONUS #2:</strong> description du bonus + bénéfices (Valeur 97€)</li>
+                    <li><strong>BONUS #3:</strong> description du bonus + bénéfices (Valeur 97€)</li>
+                </ul>
+
+                <div class="price-box">
+                    <p class="original-price">VALEUR TOTALE : 1997€</p>
+                    <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 10px;">PRIX HABITUEL 97€</p>
+                    <p class="current-price">AUJOURD'HUI 17€</p>
+                    <p class="price-label">Accès immédiat pour seulement 17€</p>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <a href="#order" class="cta-button">
+                        OUI JE VEUX [OBJECTIF]
+                    </a>
+                </div>
+            </div>
         </div>
-        {{/faq_items}}
-      </div>
+    </section>
 
-      <div class="final-cta-2">
-        <a class="btn-secondary" href="#checkout">{{final_cta_2}}</a>
-      </div>
-    </div>
-  </section>
+    <!-- Guarantee Section -->
+    <section class="guarantee-section">
+        <div class="container">
+            <h3 style="color: white; font-size: 1.5rem; margin-bottom: 30px;">
+                Ton achat est couvert par notre
+            </h3>
+            
+            <div class="guarantee-badge">
+                <span class="guarantee-badge-text">LE PROBLÈME<br>SUPPRIMÉ<br>À JAMAIS</span>
+            </div>
+            
+            <h2 class="guarantee-title">GARANTIE</h2>
+            
+            <p class="guarantee-description">
+                Explique les termes de ta garantie. Par exemple : 30 jours satisfait ou remboursé, satisfait ou remboursé deux fois, un accompagnement d'une heure offert si tu n'es pas satisfait...
+            </p>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="footer-left">
-        <div class="footer-title">{{footer_title}}</div>
-        <div class="footer-text">{{footer_text}}</div>
-      </div>
-      <a class="back" href="#top">{{footer_back_to_top}}</a>
-    </div>
-  </footer>
-</div>
+            <div style="margin-top: 40px;">
+                <a href="#order" class="cta-button">
+                    OUI JE VEUX [OBJECTIF]
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Author/Expert Section -->
+    <section class="author-section">
+        <div class="container">
+            <div class="author-content">
+                <div class="author-image">
+                    [Photo professionnelle<br>de l'expert/fondateur]
+                </div>
+                
+                <div class="author-bio">
+                    <h2>KRISTINE MIRELLE</h2>
+                    
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Décris ici ce que tu as réussi, ta liste de tes récompenses, etc... pour prouver que tu es la bonne personne pour aider ton audience à résoudre son problème et/ou à atteindre ses objectifs.
+                    </p>
+                    
+                    <p>
+                        Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+
+                    <div class="trust-badges">
+                        <div class="trust-badge">MÉDIA<br>MENTION 1</div>
+                        <div class="trust-badge">MÉDIA<br>MENTION 2</div>
+                        <div class="trust-badge">MÉDIA<br>MENTION 3</div>
+                        <div class="trust-badge">MÉDIA<br>MENTION 4</div>
+                        <div class="trust-badge">MÉDIA<br>MENTION 5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Order Form Section -->
+    <section class="order-section" id="order">
+        <div class="container">
+            <h3 class="order-title">VALIDE TA COMMANDE CI-DESSOUS</h3>
+            <h2 class="order-subtitle">ACCÈS IMMÉDIATS</h2>
+
+            <div class="order-form">
+                <div class="form-step">
+                    <span><strong>1</strong> INFORMATIONS CLIENTS</span>
+                    <span><strong>2</strong> PAIEMENT</span>
+                </div>
+
+                <form>
+                    <div class="form-group">
+                        <label for="prenom">Prénom</label>
+                        <input type="text" id="prenom" name="prenom" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nom">Nom de famille</label>
+                        <input type="text" id="nom" name="nom" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Numéro de téléphone</label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+
+                    <button type="submit" class="cta-button" style="width: 100%; margin-top: 20px;">
+                        Profiter de l'offre
+                    </button>
+
+                    <p style="text-align: center; color: #666; font-size: 0.9rem; margin-top: 15px;">
+                        We Never Share Your Information With Anyone.
+                    </p>
+
+                    <div class="payment-methods">
+                        <div class="payment-icon">VISA</div>
+                        <div class="payment-icon">MC</div>
+                        <div class="payment-icon">AMEX</div>
+                        <div class="payment-icon">PAYPAL</div>
+                        <div class="payment-icon">STRIPE</div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-logo">
+                NOM DE <span>TA</span> OFFRE
+            </div>
+
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Services</a>
+            </div>
+
+            <p class="footer-copyright">
+                Copyright © 2024 | All Rights Reserved
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>

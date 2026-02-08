@@ -1,339 +1,166 @@
 // lib/prompts/content/funnel.ts
-// Funnels: page capture / page vente (from_pyramid / from_scratch)
-// Objectif: sortir un 1er jet TRÈS QUALITATIF en s’appuyant STRICTEMENT sur les ressources Tipote
-// ⚠️ Règles globales :
-// - jamais citer "AIDA", "template", "modèle", "structure", "framework"
-// - jamais expliquer le raisonnement
-// - retourner UNIQUEMENT le texte final visible
+// Funnel prompts: capture / sales pages
+// - Legacy output: plain text
+// - Premium output: JSON contentData that must fit a template schema (slot lock)
+//
+// NOTE: The global context (persona, business profile, plan, Tipote Knowledge snippets)
+// is injected in /app/api/content/generate/route.ts
 
 export type FunnelPage = "capture" | "sales";
 export type FunnelMode = "from_pyramid" | "from_scratch";
 
-export type FunnelManual = {
+export type FunnelOfferContext = {
+  id: string;
   name: string | null;
+  level: string | null;
+  description: string | null;
   promise: string | null;
-  target: string | null;
+  price_min: any;
+  price_max: any;
+  main_outcome: string | null;
+  format: string | null;
+  delivery: string | null;
+  is_flagship?: boolean | null;
+  updated_at?: string | null;
+};
+
+export type FunnelManual = {
+  name?: string | null;
+  promise?: string | null;
+  target?: string | null;
   price?: string | null;
   urgency?: string | null;
   guarantee?: string | null;
-};
-
-export type PyramidOfferContext = {
-  id?: string;
-  name?: string | null;
-  level?: string | null;
-  description?: string | null;
-  promise?: string | null;
-  price_min?: any;
-  price_max?: any;
-  main_outcome?: string | null;
-  format?: string | null;
-  delivery?: string | null;
-  updated_at?: string | null;
 };
 
 export type FunnelPromptParams = {
   page: FunnelPage;
   mode: FunnelMode;
   theme: string;
-  offer: PyramidOfferContext | null;
-  manual: FunnelManual | null;
-  language?: "fr";
 
-  /**
-   * OPTIONNEL (premium rendering):
-   * - outputFormat = "contentData_json" => l’IA doit retourner UNIQUEMENT un JSON (contentData)
-   * - templateSchemaPrompt = texte décrivant les clés/arrays attendus pour FIT le template choisi
-   * - templateId / templateKind uniquement informatifs
-   */
+  offer: FunnelOfferContext | null;
+  manual: FunnelManual | null;
+
+  // Premium template mode
   outputFormat?: "text" | "contentData_json";
-  templateSchemaPrompt?: string;
-  templateId?: string;
   templateKind?: "capture" | "vente";
+  templateId?: string;
+  templateSchemaPrompt?: string;
+
+  language?: "fr" | "en";
 };
 
-function safeStr(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
+function safeString(v: unknown): string {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
 }
 
-function toOneLine(v: unknown): string {
-  return safeStr(v).replace(/\s+/g, " ").trim();
+function oneLine(s: string): string {
+  return safeString(s).replace(/\s+/g, " ").trim();
 }
-
-function isLikelyLeadMagnet(level: unknown) {
-  const s = toOneLine(level).toLowerCase();
-  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
-}
-
-function offerToCompactJson(offer: PyramidOfferContext | null): string {
-  if (!offer) return "null";
-  return JSON.stringify({
-    name: offer.name ?? null,
-    level: offer.level ?? null,
-    promise: offer.promise ?? null,
-    description: offer.description ?? null,
-    main_outcome: offer.main_outcome ?? null,
-    price_min: offer.price_min ?? null,
-    price_max: offer.price_max ?? null,
-    format: offer.format ?? null,
-    delivery: offer.delivery ?? null,
-  });
-}
-
-function manualToCompactJson(manual: FunnelManual | null): string {
-  if (!manual) return "null";
-  return JSON.stringify({
-    name: manual.name ?? null,
-    promise: manual.promise ?? null,
-    target: manual.target ?? null,
-    price: manual.price ?? null,
-    urgency: manual.urgency ?? null,
-    guarantee: manual.guarantee ?? null,
-  });
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                    CAPTURE                                 */
-/* -------------------------------------------------------------------------- */
-
-function buildCapturePrompt(params: FunnelPromptParams): string {
-  const { mode, theme, offer, manual } = params;
-
-  const offerName =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.name)
-      : toOneLine(manual?.name) || toOneLine(offer?.name);
-
-  const promise =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.promise)
-      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
-
-  const target = mode === "from_scratch" ? toOneLine(manual?.target) : "";
-  const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
-
-  return `
-Tu écris le TEXTE COMPLET d’une page de CAPTURE (opt-in), en français.
-
-OBJECTIF UNIQUE :
-→ Obtenir une inscription email (prénom + email). Rien d’autre.
-
-Appuye-toi sur la phrase de Blair Warren pour structurer le contenu : encourager les rêves, justifier les échecs, apaiser les peurs, confirmer les soupçons et trouver un « ennemi » à pointer pour se placer du côté du prospect.
-
-RÈGLES ABSOLUES :
-- Tu t’appuies OBLIGATOIREMENT sur les ressources Tipote présentes dans le contexte (Tipote Knowledge).
-- Tu dois choisir UN exemple de page de capture dans les ressources et t’y conformer de très près :
-  - même ordre des sections
-  - même rythme
-  - même niveau de détail
-  - même style de phrases
-  - tu adaptes uniquement au thème et à l’offre
-- Si plusieurs exemples sont disponibles, choisis celui qui colle le plus au thème.
-- Si aucun exemple n’est fourni dans les ressources, applique une version minimaliste premium (mais sans l’indiquer).
-
-INTERDICTIONS :
-- Ne jamais mentionner ressource, modèle, template, framework.
-- Ne jamais mentionner "AIDA", "template", "modèle", "structure", "framework".
-- Pas de vente, pas de paiement, pas de “commande/acheter”.
-
-FORMAT OBLIGATOIRE (sans le nommer) :
-- Accroche bénéfice immédiat + spécifique
-- Sous-accroche : pour qui + résultat + mécanisme concret
-- 3–6 puces orientées gains rapides
-- Formulaire : Prénom + Email
-- Bouton orienté “recevoir / accéder gratuitement”
-- Micro-réassurance (RGPD / pas de spam)
-- Mini “pour qui / pas pour qui”
-- Rappel CTA final
-
-CONTEXTE (ne pas recopier) :
-- Thème : ${theme || "Page de capture"}
-- Mode : ${mode}
-- Offre (pyramide) : ${offerToCompactJson(offer)}
-- Infos manuelles : ${manualToCompactJson(manual)}
-
-DONNÉES CLÉS :
-- Nom : ${offerName || "(non fourni)"}
-- Promesse : ${promise || "(non fournie)"}
-${mode === "from_scratch" ? `- Cible : ${target || "(non fourni)"}` : ""}
-
-Ton : premium, direct, concret. Zéro blabla, zéro promesse irréaliste.
-`.trim();
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                     VENTE                                  */
-/* -------------------------------------------------------------------------- */
-
-function buildSalesPrompt(params: FunnelPromptParams): string {
-  const { mode, theme, offer, manual } = params;
-
-  const offerName =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.name)
-      : toOneLine(manual?.name) || toOneLine(offer?.name);
-
-  const promise =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.promise)
-      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
-
-  const desc = safeStr(offer?.description);
-  const mainOutcome = toOneLine(offer?.main_outcome);
-
-  const priceMin = offer?.price_min;
-  const priceMax = offer?.price_max;
-
-  const priceScratch = toOneLine(manual?.price);
-  const urgency = toOneLine(manual?.urgency);
-  const guarantee = toOneLine(manual?.guarantee);
-
-  return `
-Tu écris le TEXTE COMPLET d’une PAGE DE VENTE HIGH TICKET, en français, conçue pour convertir.
-
-Appuye-toi sur la phrase de Blair Warren pour structurer le contenu : encourager les rêves, justifier les échecs, apaiser les peurs, confirmer les soupçons et trouver un « ennemi » à pointer pour se placer du côté du prospect.
-
-POINT CLÉ :
-👉 Une page de vente N’EST PAS une page de capture.
-
-INTERDICTIONS ABSOLUES (vente) :
-- AUCUN formulaire email.
-- AUCUN champ prénom/email.
-- AUCUNE phrase “inscris-toi”, “reçois gratuitement”, “télécharge”.
-- PAS de lead magnet, PAS d’opt-in.
-- Ne jamais mentionner ressource, modèle, template, framework.
-- Ne jamais écrire "AIDA", "template", "modèle", "structure", "framework".
-- Ne jamais inventer témoignages, chiffres, logos, résultats.
-
-OBLIGATION “TEMPLATE LOCK” (TRÈS IMPORTANT) :
-- Tu DOIS choisir UN template / exemple de page de vente présent dans les ressources Tipote (Tipote Knowledge).
-- Tu dois t’y conformer de très près :
-  - même ordre des sections
-  - mêmes types d’arguments
-  - même style et rythme
-  - même densité
-  - tu adaptes UNIQUEMENT au thème + à l’offre + au persona
-- Si plusieurs templates existent, choisis celui qui ressemble le plus à une page high ticket.
-- Si aucun template n’est présent dans les ressources, tu utilises une structure premium “classique” (sans l’indiquer), en restant dense et décisionnelle.
-
-TRAVAIL INTERNE (SILENCIEUX, NON AFFICHÉ) :
-Avant d’écrire, tu dois clarifier :
-- l’ANGLE principal
-- le MÉCANISME différenciant (1 seul, clair)
-- au moins 3 objections avancées
-- une preuve logique disponible (process, livrable, contraintes, méthode, périmètre)
-
-EXIGENCE DE LONGUEUR :
-- Page volontairement détaillée.
-- Chaque section doit apporter un élément NOUVEAU à la décision.
-- Aucun remplissage, aucune répétition.
-
-CTA AUTORISÉS (transactionnels) :
-- Accéder
-- Commander
-- Acheter
-- Rejoindre
-- Démarrer maintenant
-
-CONTENU À COUVRIR (sans titres techniques) :
-- Ouverture forte : promesse + cible + mécanisme
-- Problème réel + coût de l’inaction (niveau conscient)
-- Pourquoi les solutions habituelles échouent à ce stade
-- Présentation de l’approche + mécanisme (comment ça marche)
-- Ce que l’acheteur obtient exactement (livrables / accès / périmètre)
-- Ce que l’offre ne fait pas (clarification premium)
-- Pour qui / pas pour qui
-- Objections + réponses argumentées
-- Pourquoi maintenant
-- Garantie (si fournie)
-- Urgence (si fournie)
-- FAQ utile (6–10 Q/R)
-- CTA répétés (sans formulaire)
-
-DONNÉES À UTILISER :
-- Nom : ${offerName || "(non fourni)"}
-- Promesse : ${promise || "(non fournie)"}
-${desc ? `- Description : ${desc}` : ""}
-${mainOutcome ? `- Résultat principal : ${mainOutcome}` : ""}
-${
-  mode === "from_pyramid"
-    ? `- Prix indicatif : min=${String(priceMin ?? "")} max=${String(priceMax ?? "")}`
-    : `- Prix : ${priceScratch || "(non fourni)"}`
-}
-${urgency ? `- Urgence : ${urgency}` : ""}
-${guarantee ? `- Garantie : ${guarantee}` : ""}
-
-Ton : expert, posé, décisionnel. On doit sentir un moment de choix.
-`.trim();
-}
-
-/* -------------------------------------------------------------------------- */
-/*                         PREMIUM: contentData JSON FIT                        */
-/* -------------------------------------------------------------------------- */
 
 function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
-  const { mode, theme, offer, manual, page, templateSchemaPrompt } = params;
+  const lines: string[] = [];
 
-  const offerName =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.name)
-      : toOneLine(manual?.name) || toOneLine(offer?.name);
+  lines.push("OBJECTIF :");
+  lines.push("- Tu es un copywriter direct-response senior.");
+  lines.push("- Tu dois remplir un template de page (capture/vente) SANS AUCUNE dérive visuelle.");
+  lines.push("- Tu dois produire UNIQUEMENT un objet JSON (pas de texte autour).");
+  lines.push("- Le JSON doit correspondre strictement au schéma fourni (clés, types, nombres d'items, longueurs).");
+  lines.push("- Le texte DOIT être adapté à l'offre et au thème, et être lisible, concret, très premium.");
+  lines.push(
+    '- Utilise activement les extraits "Tipote Knowledge" fournis dans le contexte (si présents) pour améliorer les titres, promesses, preuves et bénéfices.',
+  );
+  lines.push("");
 
-  const promise =
-    mode === "from_pyramid"
-      ? toOneLine(offer?.promise)
-      : toOneLine(manual?.promise) || toOneLine(offer?.promise);
+  lines.push("RÈGLES CRITIQUES :");
+  lines.push("- Ne mets PAS de markdown.");
+  lines.push("- Pas d'emoji.");
+  lines.push("- Pas de retours à la ligne dans les strings (une ligne par champ).");
+  lines.push("- Ne mets pas de guillemets typographiques. Utilise \" si nécessaire.");
+  lines.push("- Si une info est inconnue, reste générique et plausible, sans inventer un prix ou une garantie.");
+  lines.push("- Chaque titre/promo doit être clair, spécifique et orienté résultat.");
+  lines.push("");
 
-  const target = mode === "from_scratch" ? toOneLine(manual?.target) : "";
-  const isLM = mode === "from_pyramid" ? isLikelyLeadMagnet(offer?.level) : true;
+  lines.push("CONTRAINTE DE SORTIE :");
+  lines.push("- Sortie = 1 seul objet JSON valide.");
+  lines.push("");
 
-  const context = {
-    page,
-    theme: toOneLine(theme),
-    offerName,
-    promise,
-    target,
-    isLeadMagnet: isLM,
-    offer: offer ? JSON.parse(offerToCompactJson(offer)) : null,
-    manual: manual ? JSON.parse(manualToCompactJson(manual)) : null,
-  };
+  if (params.page === "capture") {
+    lines.push("TYPE DE PAGE : CAPTURE");
+    lines.push("- Objectif: convertir en inscription/email.");
+    lines.push("- Promesse claire + bénéfices + preuve + CTA simple.");
+  } else {
+    lines.push("TYPE DE PAGE : VENTE");
+    lines.push("- Objectif: convertir en achat.");
+    lines.push("- Promesse + mécanisme + preuve + objections + offre + urgence/garantie + CTA.");
+  }
+  lines.push("");
 
-  return `
-Tu es un copywriter senior premium.
-Tu écris en français.
+  if (params.mode === "from_pyramid" && params.offer) {
+    lines.push("OFFRE (source) :");
+    lines.push(oneLine(JSON.stringify(params.offer)));
+    lines.push("");
+  }
 
-CONTEXTE (JSON) :
-${JSON.stringify(context, null, 2)}
+  if (params.mode === "from_scratch" && params.manual) {
+    lines.push("OFFRE (manual) :");
+    lines.push(oneLine(JSON.stringify(params.manual)));
+    lines.push("");
+  }
 
-OBJECTIF :
-- Produire le contentData (JSON) qui remplit la page ${page === "sales" ? "de vente" : "de capture"}.
-- Le texte DOIT être adapté à l'offre et au thème, et être lisible, concret, très premium.
+  lines.push("SCHÉMA TEMPLATE À RESPECTER :");
+  lines.push(params.templateSchemaPrompt || "");
+  lines.push("");
 
-INTERDICTIONS :
-- Ne jamais mentionner ressource, modèle, template, framework.
-- Pas de markdown. Pas de HTML.
-- Pas d’explications. Pas de méta.
+  lines.push("IMPORTANT :");
+  lines.push("- Respecte maxLength / minItems / maxItems / itemMaxLength.");
+  lines.push("- Remplis tous les champs requis.");
+  lines.push("- Si un champ est optionnel mais utile, remplis-le quand même.");
+  lines.push("- Ne commente pas. Ne t'excuse pas. JSON uniquement.");
 
-IMPORTANT :
-- Le rendu final doit être court, rythmé, très clair.
-- Une promesse forte, des bénéfices concrets, CTA irrésistible.
-- Si page capture: focus inscription email (gratuit). Si page vente: focus conversion.
+  return lines.join("\n");
+}
 
-SCHÉMA À RESPECTER STRICTEMENT :
-${templateSchemaPrompt || ""}
+function buildLegacyTextPrompt(params: FunnelPromptParams): string {
+  const lines: string[] = [];
 
-RENDU :
-Retourne UNIQUEMENT l'objet JSON final (sans texte autour).
-`.trim();
+  const pageName = params.page === "capture" ? "Page de capture" : "Page de vente";
+
+  lines.push(`${pageName} — Copywriting premium.`);
+  lines.push("IMPORTANT: Retourne uniquement le contenu final, sans explication, sans markdown.");
+  lines.push("");
+
+  if (params.mode === "from_pyramid" && params.offer) {
+    lines.push("Offre (source):");
+    lines.push(JSON.stringify(params.offer, null, 0));
+    lines.push("");
+  }
+
+  if (params.mode === "from_scratch" && params.manual) {
+    lines.push("Offre (manual):");
+    lines.push(JSON.stringify(params.manual, null, 0));
+    lines.push("");
+  }
+
+  lines.push("Contraintes:");
+  lines.push("- Texte concret, orienté résultat.");
+  lines.push("- Promesse claire, bénéfices, preuves, CTA.");
+  if (params.page === "sales") {
+    lines.push("- Traite objections + garantie + urgence si pertinent.");
+  }
+  lines.push("");
+  lines.push("Thème / brief:");
+  lines.push(params.theme || "Funnel");
+
+  return lines.join("\n");
 }
 
 export function buildFunnelPrompt(params: FunnelPromptParams): string {
-  const wantsJson =
-    params.outputFormat === "contentData_json" &&
-    typeof params.templateSchemaPrompt === "string" &&
-    params.templateSchemaPrompt.trim().length > 0;
+  const outputFormat = params.outputFormat || "text";
 
-  if (wantsJson) return buildPremiumJsonPrompt(params);
+  if (outputFormat === "contentData_json" && params.templateSchemaPrompt) {
+    return buildPremiumJsonPrompt(params);
+  }
 
-  return params.page === "sales" ? buildSalesPrompt(params) : buildCapturePrompt(params);
+  return buildLegacyTextPrompt(params);
 }

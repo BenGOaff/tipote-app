@@ -1,29 +1,492 @@
-<section class="hero capture-01">
-  <div class="container">
-    <span class="eyebrow">{{hero_pretitle}}</span>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Page de Capture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <h1>{{hero_title}}</h1>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+        h1, h2, h3 {
+            font-family: 'Lato', sans-serif;
+        }
 
-    <div class="benefits">
-      {{#bullets}}
-      <div class="benefit">
-        <span class="dot"></span>
-        <p>{{.}}</p>
-      </div>
-      {{/bullets}}
+        /* Header Notice */
+        .top-notice {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #353535;
+            border-bottom: 1px solid #dfe7f1;
+        }
+
+        .top-notice a {
+            color: #2a80ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #020817 0%, #1a1f31 100%);
+            padding: 60px 20px 80px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .logo {
+            margin-bottom: 40px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
+            letter-spacing: 3px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .hook {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #6297ff;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .hero-title {
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-title .highlight {
+            color: #2a80ff;
+        }
+
+        .hero-title .highlight-secondary {
+            color: #55c0fe;
+        }
+
+        /* Video Container */
+        .video-container {
+            max-width: 700px;
+            margin: 0 auto 40px;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-placeholder {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: linear-gradient(135deg, #2a3442 0%, #1e252f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-text {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .video-subtext {
+            font-size: 16px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* CTA Button */
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #55c0fe 0%, #2a80ff 100%);
+            color: #fff;
+            padding: 18px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 30px rgba(42, 128, 255, 0.4);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(42, 128, 255, 0.6);
+        }
+
+        .cta-button::before {
+            content: "▶ ";
+            margin-right: 8px;
+        }
+
+        .cta-subtitle {
+            display: block;
+            font-size: 11px;
+            margin-top: 8px;
+            opacity: 0.9;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        /* Benefits Section */
+        .benefits-section {
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #020817;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #2a80ff, #55c0fe);
+            margin: 20px auto 0;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .benefit-card {
+            background: #fff;
+            border: 2px solid #e1e7ef;
+            border-radius: 12px;
+            padding: 35px 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            border-color: #2a80ff;
+            box-shadow: 0 10px 30px rgba(42, 128, 255, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .benefit-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #2a80ff, #55c0fe);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 25px;
+        }
+
+        .benefit-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #353535;
+        }
+
+        .benefit-text .text-bold {
+            font-weight: 700;
+            color: #020817;
+        }
+
+        .benefit-text .text-highlight {
+            color: #2a80ff;
+            font-weight: 600;
+        }
+
+        .benefit-text .text-curiosity {
+            color: #55c0fe;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        /* About Section */
+        .about-section {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 80px 20px;
+            color: #fff;
+        }
+
+        .about-container {
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .about-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #6297ff;
+            margin-bottom: 15px;
+        }
+
+        .about-name {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .about-description {
+            font-size: 15px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 40px;
+        }
+
+        .about-description .highlight-text {
+            font-weight: 700;
+            color: #55c0fe;
+        }
+
+        .about-description .objective-text {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .profile-image {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.15);
+            margin: 30px auto;
+            background: linear-gradient(135deg, #2a3442 0%, #1e252f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Footer */
+        .footer {
+            background: #020817;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #2a80ff;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 28px;
+            }
+
+            .video-text {
+                font-size: 24px;
+            }
+
+            .section-title {
+                font-size: 24px;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .about-name {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Notice -->
+    <div class="top-notice">
+        Ce template de page de capture est 100% offert ! <a href="#">Cliquez ici pour le télécharger >></a>
     </div>
 
-    <div class="form-preview">
-      <input type="email" placeholder="Votre email" disabled />
-      <button>{{cta_text}}</button>
-    </div>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="logo">
+            VOTRE LOGO
+            <div class="logo-subtitle">VOTRE BASELINE ICI</div>
+        </div>
 
-    <p class="micro-proof">
-      {{reassurance_text}}
-    </p>
-  </div>
-</section>
+        <div class="hook">
+            Affirmation choc qui capte l'attention ici
+        </div>
+
+        <h1 class="hero-title">
+            Rédige ici ta <span class="highlight">promesse de valeur unique</span>, en une phrase claire qui exprime un <span class="highlight-secondary">bénéfice concret</span> pour ton <span class="highlight">audience cible</span>.
+        </h1>
+
+        <!-- Video Placeholder -->
+        <div class="video-container">
+            <div class="video-placeholder">
+                <div class="video-overlay">
+                    <div class="video-text">Télécharge</div>
+                    <div class="video-text">ce template</div>
+                    <div class="video-text">offert</div>
+                </div>
+            </div>
+        </div>
+
+        <a href="#" class="cta-button">
+            OK ! Je veux en savoir plus
+            <span class="cta-subtitle">Accès gratuit & immédiat</span>
+        </a>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits-section">
+        <h2 class="section-title">Explique ce que propose ton freebie</h2>
+
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-number">1</div>
+                <p class="benefit-text">
+                    <span class="text-bold">Puce promesse irrésistible</span> : bénéfice <span class="text-highlight">concret + conséquence</span> du bénéfice pour ton audience cible + un soupçon de <span class="text-curiosity">curiosité</span> !
+                </p>
+            </div>
+
+            <div class="benefit-card">
+                <div class="benefit-number">2</div>
+                <p class="benefit-text">
+                    <span class="text-bold">Puce promesse irrésistible</span> : bénéfice <span class="text-highlight">concret + conséquence</span> du bénéfice pour ton audience cible + un soupçon de <span class="text-curiosity">curiosité</span> !
+                </p>
+            </div>
+
+            <div class="benefit-card">
+                <div class="benefit-number">3</div>
+                <p class="benefit-text">
+                    <span class="text-bold">Puce promesse irrésistible</span> : bénéfice <span class="text-highlight">concret + conséquence</span> du bénéfice pour ton audience cible + un soupçon de <span class="text-curiosity">curiosité</span> !
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px;">
+            <a href="#" class="cta-button">
+                OK ! Je veux en savoir plus
+                <span class="cta-subtitle">Accès gratuit & immédiat</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+        <div class="about-container">
+            <div class="about-label">Présenté par :</div>
+            <h2 class="about-name">Nom Prénom</h2>
+            
+            <p class="about-description">
+                Rédige ici un <span class="highlight-text">brief storytelling</span> qui donne confiance en toi et permet à ton audience cible de s'identifier à toi et à ton parcours. Ton prospect doit se dire que tu as vécu la même chose que lui et que tu <span class="objective-text">as réussi à atteindre les objectifs</span>. Tu es donc la bonne personne pour l'accompagner.
+            </p>
+
+            <div class="profile-image">
+                [Photo profil ici]
+            </div>
+
+            <a href="#" class="cta-button">
+                OK ! Je veux en savoir plus
+                <span class="cta-subtitle">Accès gratuit & immédiat</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-logo">VOTRE LOGO</div>
+        
+        <p class="footer-text">
+            DES QUESTIONS ? Contactez-nous sur <a href="mailto:contact@votresite.com" style="color: #2a80ff;">contact@votresite.com</a>. Ce site Web ne fait pas partie du site Web de Facebook ou de Facebook, Inc. De plus, ce site n'est en aucun cas approuvé par Facebook. Facebook est une marque déposée de Meta, Inc.
+        </p>
+
+        <div class="footer-links">
+            <a href="#">CGV</a>
+            <a href="#">Mentions Légales</a>
+            <a href="#">Politique de confidentialité</a>
+        </div>
+    </footer>
+</body>
+</html>

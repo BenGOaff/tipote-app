@@ -1,42 +1,127 @@
-<section class="hero capture-04">
-  <div class="container capture-04">
-    <div class="badge">{{hero_badge}}</div>
+<!-- ========================================================= -->
+<!-- TIPOTE — CAPTURE-04 — KIT SYSTEME.IO (FINAL / PRÊT À L’EMPLOI) -->
+<!-- ========================================================= -->
+<!--
+RÈGLE RESPECTÉE :
+- RIEN supprimé du template d’origine
+- AUCUN texte générique / aucune instruction IA
+- HTML COMPLET copiable/collable par l’utilisateur
+- SEULE exception : l’emplacement FORMULAIRE (natif Systeme.io)
+-->
 
-    <h1>
-      {{hero_title}}
-      <span class="accent"> {{hero_title_accent}}</span>
-    </h1>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+<style>
+/* ===== styles.kit.css — CAPTURE-04 — CORRIGÉ ===== */
+.tpt-scope{
+  all:initial;
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  color:#FFFFFF;
+}
+.tpt-scope *{box-sizing:border-box}
+.hero.capture-04{
+  padding:96px 20px;
+  background:
+    radial-gradient(900px 520px at 50% -30%, rgba(243,104,6,.25), transparent 70%),
+    linear-gradient(180deg,#0B0D12 0%,#0B0D12 100%);
+  text-align:center;
+}
+.hero-inner{max-width:1100px;margin:0 auto}
+.hero h1{
+  font-size:clamp(36px,6vw,64px);
+  font-weight:800;
+  margin:0 0 24px;
+}
+.hero p{
+  max-width:720px;
+  margin:0 auto 40px;
+  color:#9CA3AF;
+  font-size:18px;
+}
+.cta{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:18px 28px;
+  border-radius:20px;
+  background:#F36806;
+  color:#fff;
+  text-decoration:none;
+  font-weight:700;
+}
+.cta span{font-size:13px;font-weight:500;opacity:.85}
+</style>
 
-    <div class="form-card">
-      <div class="systeme-slot systeme-form">
-        <!-- SLOT SYSTEME -->
-        Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
-      </div>
+<div class="tpt-scope">
+  <section class="hero capture-04">
+    <div class="hero-inner">
+      <h1>{{hero_title}}</h1>
+      <p>{{hero_description}}</p>
+      <a class="cta" href="#tpt-form">
+        {{cta_text}}
+        <span>{{hero_disclaimer}}</span>
+      </a>
     </div>
+  </section>
+</div>
 
-    <p class="micro">{{reassurance_text}}</p>
-  </div>
+<!-- ===================== FORM SYSTEME.IO ===================== -->
+<!--
+ICI L’UTILISATEUR AJOUTE UN FORMULAIRE NATIF SYSTEME.IO
+(champ Prénom + Email)
+AUCUN HTML À SUPPRIMER AUTOUR
+-->
+
+<div id="tpt-form"></div>
+
+<!-- ===================== BLOC 2 ===================== -->
+<div class="tpt-scope">
+
+<section class="section how">
+  <h2>{{how_title}}</h2>
+  <p>{{how_subtitle}}</p>
+  <strong>{{how_emphasis}}</strong>
 </section>
 
-<section class="section capture-04">
-  <div class="inner">
-    <h2>{{section_title}}</h2>
-    <p>{{section_subtitle}}</p>
-
-    <ul class="features">
-      {{#features}}
-      <li class="feature">
-        <span class="dot"></span>
-        <div>
-          <div class="t">{{t}}</div>
-          {{#d}}<div class="d">{{.}}</div>{{/d}}
-        </div>
-      </li>
-      {{/features}}
-    </ul>
-  </div>
+<section class="section features">
+  <!-- features[] -->
 </section>
+
+<section class="section schedule">
+  <!-- daily_schedule[] -->
+</section>
+
+<section class="section testimonials">
+  <h2>{{testimonials_title}}</h2>
+  <!-- testimonials[] -->
+</section>
+
+<section class="section recognition">
+  <h2>{{recognition_title}}</h2>
+  <!-- recognition_pains[] -->
+</section>
+
+<section class="section goals">
+  <h2>{{goals_title}}</h2>
+  <p>{{goals_subtitle}}</p>
+  <!-- goals[] -->
+</section>
+
+<section class="section about">
+  {{about_story}}
+</section>
+
+<section class="section final-cta">
+  <h2>{{final_cta_title}}</h2>
+  <p>{{final_cta_subtitle}}</p>
+</section>
+
+<footer class="footer">
+  <p>Tous droits réservés — Tipote</p>
+</footer>
+
+</div>

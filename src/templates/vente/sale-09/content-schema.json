@@ -1,284 +1,685 @@
 {
-  "kind": "vente",
+  "kind": "sale",
   "templateId": "sale-09",
+  "name": "VSL Moderne - Template Gradient",
+  "description": "Template VSL moderne avec hero dark gradient (#001f4d → #05275a), badge rose pulsant, sections alternées blanc/dark, benefits grid avec hover, testimonials vidéo 9:16, promise box gradient, story grid 2 colonnes, results avec comments, offer modules avec images flottantes, comparison avant/après, bonus cards transparentes, pricing avec package visual, garantie badge circulaire, author bio avec trust badges, order form 2 steps, footer dark",
   "fields": [
     {
-      "key": "hero_kicker",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
+      "key": "hero_badge",
+      "label": "Badge hero pulsant",
+      "type": "string",
+      "intention": "urgency_hook",
+      "description": "Badge rose pulsant en haut du hero (14px, weight 600, gradient rose #ff2ad4 → #de24fd, padding 12px 35px, border-radius 50px, animation pulse 2s infinite, box-shadow rose)",
+      "examples": ["[PUNCHLINE ACCROCHE] Même si [frein principal] SEULEMENT [durée/prix]"],
+      "maxLength": 120,
+      "required": true
     },
     {
-      "key": "hero_title_accent",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 90
+      "key": "hero_title",
+      "label": "Titre hero principal",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Titre ÉNORME hero (3.2rem Kanit, weight 800, uppercase, letter-spacing -1px, line-height 1.2, couleur blanche sur fond dark gradient). Peut contenir <br>",
+      "examples": ["PROMESSE PRINCIPALE\nDE TA FORMATION/OFFRE"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "comic_lines",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
+      "key": "hero_subtext",
+      "label": "Sous-texte hero",
+      "type": "string",
+      "intention": "social_proof_intro",
+      "description": "Sous-texte hero (1.1rem, rgba white 0.9, max-width 800px, text-center)",
+      "examples": ["Preuve sociale de la réussite de ta méthode unique (\"avec cette méthode j'ai réussi...\")\n(Élément rassurant : toi-même tu peux le faire) ⭐️✨"],
+      "maxLength": 250,
+      "required": true
     },
     {
-      "key": "hero_bullets_title",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 90
+      "key": "hero_cta_text",
+      "label": "Texte CTA hero",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Texte du CTA principal (1.3rem Montserrat, weight 700, uppercase, letter-spacing 0.5px, gradient rose, padding 20px 50px, border-radius 50px, box-shadow rose). Ajoute automatiquement → après",
+      "examples": ["OUI JE VEUX [OBJECTIF]"],
+      "maxLength": 60,
+      "required": true
     },
     {
-      "key": "hero_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
+      "key": "hero_cta_subtext",
+      "label": "Sous-texte CTA hero",
+      "type": "string",
+      "intention": "guarantee_tease",
+      "description": "Texte sous le CTA (0.9rem, rgba white 0.8, margin-top 15px, text-center)",
+      "examples": ["Ton achat est accompagné d'une garantie + Tes publicités ne seront plus nulles. Si tu n'es pas satisfait de ton achat, envoie-moi un email et nous te rembourserons, sans poser de questions."],
+      "maxLength": 300,
+      "required": true
     },
     {
-      "key": "hero_note",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
+      "key": "benefits_title",
+      "label": "Titre section bénéfices",
+      "type": "string",
+      "intention": "results_intro",
+      "description": "Titre section bénéfices (2.5rem Kanit, weight 800, uppercase, letter-spacing -0.5px, couleur #001f4d dark blue, text-center). Peut contenir <br>",
+      "examples": ["EXEMPLES DE TES RÉSULTATS OU DE CEUX DE TES\nCLIENTS, OBTENUS AVEC TA MÉTHODE"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "price_sub",
-      "type": "string[]",
-      "minItems": 2,
-      "maxItems": 4,
-      "itemMaxLength": 40
+      "key": "benefits_subtitle",
+      "label": "Sous-titre bénéfices",
+      "type": "string",
+      "intention": "results_context",
+      "description": "Sous-titre bénéfices (1.2rem, weight 600, couleur #ff2ad4 rose, text-center)",
+      "examples": ["Détails des résultats : \"Ils ont réussi à [objectif] en seulement [durée]\""],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "cta_reassurance",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 32
-    },
-    {
-      "key": "cta_micro",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 32
-    },
-    {
-      "key": "trust_items",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "story_paragraphs",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 240
-    },
-    {
-      "key": "side_points",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "quote_author",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "offer_blocks",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "final_cta_note",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 32
-    },
-    {
-      "key": "faq_items",
+      "key": "benefits",
+      "label": "Cartes bénéfices",
       "type": "object[]",
-      "minItems": 5,
-      "maxItems": 10,
-      "fields": [
-        {
-          "key": "q",
+      "intention": "benefit_showcase",
+      "description": "3-6 cartes bénéfices en grid auto-fit minmax(300px, 1fr) avec image 200px height gradient, titre (1.3rem Montserrat bold uppercase rose), texte (1rem color #555). Cards blanches border 2px #e8eef5, padding 35px, hover translateY -5px + border rose + shadow",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemSchema": {
+        "benefit_title": {
           "type": "string",
-          "maxLength": 160
+          "maxLength": 60,
+          "description": "Titre en uppercase"
         },
-        {
-          "key": "a",
+        "benefit_text": {
           "type": "string",
-          "maxLength": 160
+          "maxLength": 250,
+          "description": "Description du bénéfice"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "benefit_title": "BÉNÉFICE CONCRET",
+          "benefit_text": "Explique un bénéfice concret de ton programme + les conséquences de ce bénéfice pour ton audience cible."
         }
       ]
     },
     {
-      "key": "brand_name",
+      "key": "promise_section_title",
+      "label": "Titre section promesse",
       "type": "string",
-      "maxLength": 160
+      "intention": "quote_intro",
+      "description": "Titre section promesse (2.5rem Kanit, weight 800, uppercase, couleur #001f4d, text-center). Peut contenir <br>",
+      "examples": ["PUNCHLINE OU CITATION QUI TE REPRÉSENTE ET\nILLUSTRE TA MÉTHODE"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "nav_link_1",
+      "key": "promise_quote",
+      "label": "Citation promesse",
       "type": "string",
-      "maxLength": 160
+      "intention": "authority_quote",
+      "description": "Citation en italic (1.1rem, italic, color #555, text-center). Peut contenir <br>",
+      "examples": ["\"Ex : Je déteste qu'on m'adore alors qu'on ne me connaît pas encore\"\n- AUTEUR DE LA CITATION/PUNCHLINE"],
+      "maxLength": 250,
+      "required": false
     },
     {
-      "key": "nav_link_2",
+      "key": "promise_box_heading",
+      "label": "Titre promise box",
       "type": "string",
-      "maxLength": 160
+      "intention": "promise_statement",
+      "description": "Titre dans la box dark gradient (2rem Kanit, uppercase, couleur blanche)",
+      "examples": ["Vous Pouvez [objectif]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "nav_link_3",
+      "key": "promise_box_subheading",
+      "label": "Sous-titre promise box",
       "type": "string",
-      "maxLength": 160
+      "intention": "objection_killer_intro",
+      "description": "Sous-titre promise box (1.3rem, weight 600, couleur #ff2ad4 rose)",
+      "examples": ["MÊME SI ..."],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "nav_cta",
-      "type": "string",
-      "maxLength": 32
+      "key": "promise_list",
+      "label": "Liste freins surmontés",
+      "type": "string[]",
+      "intention": "objection_handling",
+      "description": "5-8 freins de l'audience avec ✓ vert #00ff00 (1.05rem, padding 15px 0, padding-left 35px, ::before ✓ vert bold 1.3rem)",
+      "minItems": 5,
+      "maxItems": 8,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": [
+        "Frein de ton audience ou élément qui lui fait croire qu'elle va échouer"
+      ]
     },
     {
-      "key": "hero_title",
+      "key": "promise_badge_text",
+      "label": "Texte badge recommandation",
       "type": "string",
-      "maxLength": 90
+      "intention": "social_proof_badge",
+      "description": "Texte du badge étoiles (padding 15px 40px, border-radius 50px, gradient dark blue, couleur blanche, inline-block)",
+      "examples": ["⭐⭐⭐⭐⭐ RECOMMANDÉ PAR NOS ÉLÈVES"],
+      "maxLength": 80,
+      "required": false
     },
     {
-      "key": "hero_subtitle",
+      "key": "testimonials_title",
+      "label": "Titre témoignages",
       "type": "string",
-      "maxLength": 90
+      "intention": "social_proof_intro",
+      "description": "Titre section témoignages (2.5rem Kanit, weight 800, uppercase, couleur blanche, text-center)",
+      "examples": ["REGARDEZ LES AVIS DE MES CLIENTS ACTUELS"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "comic_pill",
-      "type": "string",
-      "maxLength": 160
+      "key": "testimonials",
+      "label": "Témoignages vidéo",
+      "type": "object[]",
+      "intention": "social_proof_testimonial",
+      "description": "3-9 témoignages en grid auto-fit minmax(280px, 1fr) avec vidéo 9:16 aspect ratio, quote italic (0.95rem blanc), auteur (0.9rem rose #ff2ad4 bold). Cards background rgba white 0.05, border 1px rgba white 0.1, padding 20px, border-radius 15px, backdrop-filter blur 10px",
+      "minItems": 3,
+      "maxItems": 9,
+      "itemSchema": {
+        "testimonial_quote": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Citation du témoignage"
+        },
+        "testimonial_author": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Nom de l'auteur avec -"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "testimonial_quote": "\"Are you Used to being the Sexiest and Funniest Person in the room? Me too.\"",
+          "testimonial_author": "-Jason Vaughn"
+        }
+      ]
     },
     {
-      "key": "comic_emoji",
+      "key": "story_section_title",
+      "label": "Titre section story",
       "type": "string",
-      "maxLength": 160
+      "intention": "authority_intro",
+      "description": "Titre section story (2.5rem Kanit, uppercase, couleur #001f4d, text-center). Peut contenir <br> et <span style='color: #ff2ad4;'>",
+      "examples": ["QUI TU ES ET COMMENT TU AS RÉUSSI À [OBJECTIF]\nMALGRÉ [CONTRAINTE]"],
+      "maxLength": 250,
+      "required": true
+    },
+    {
+      "key": "story_blocks",
+      "label": "Blocs story alternés",
+      "type": "object[]",
+      "intention": "authority_journey",
+      "description": "2-4 blocs en grid 2 colonnes alternant image/texte avec image 350px height gradient, h3 (1.8rem Montserrat couleur #001f4d), paragraphes (1.05rem line-height 1.8 color #555)",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemSchema": {
+        "story_title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Titre du bloc story"
+        },
+        "story_paragraphs": {
+          "type": "string[]",
+          "minItems": 2,
+          "maxItems": 3,
+          "itemMaxLength": 400,
+          "description": "2-3 paragraphes de storytelling"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "story_title": "Décris ton parcours, ton storytelling :",
+          "story_paragraphs": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Le problème que tu rencontrais..."
+          ]
+        }
+      ]
+    },
+    {
+      "key": "results_section_title",
+      "label": "Titre section résultats",
+      "type": "string",
+      "intention": "proof_intro",
+      "description": "Titre section résultats clients (2.5rem Kanit, weight 800, uppercase, couleur blanche, text-center)",
+      "examples": ["RÉSULTATS DE MES CLIENTS"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "results_section_subtitle",
+      "label": "Sous-titre résultats",
+      "type": "string",
+      "intention": "proof_context",
+      "description": "Sous-titre résultats (1.2rem, weight 600, couleur #ff2ad4 rose, text-center)",
+      "examples": ["Des transformations réelles et mesurables"],
+      "maxLength": 100,
+      "required": false
+    },
+    {
+      "key": "engagement_proof_title",
+      "label": "Titre preuve engagement",
+      "type": "string",
+      "intention": "social_proof_scale",
+      "description": "Titre de la box engagement (1.5rem, weight 700, uppercase, couleur #ff2ad4 rose, text-center, background rgba black 0.3, padding 30px, border-radius 15px)",
+      "examples": ["PREUVE D'ENGAGEMENT COMMUNAUTÉ"],
+      "maxLength": 80,
+      "required": false
+    },
+    {
+      "key": "comments",
+      "label": "Commentaires communauté",
+      "type": "object[]",
+      "intention": "social_proof_engagement",
+      "description": "6-12 commentaires en grid auto-fit minmax(250px, 1fr) avec auteur (0.9rem rose bold), texte (0.85rem rgba white 0.9 line-height 1.4). Boxes background rgba white 0.05, border 1px rgba white 0.1, padding 15px, border-radius 10px, text-left",
+      "minItems": 6,
+      "maxItems": 12,
+      "itemSchema": {
+        "comment_author": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Nom de l'auteur"
+        },
+        "comment_text": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Texte du commentaire"
+        }
+      },
+      "required": false,
+      "examples": [
+        {
+          "comment_author": "Marie D.",
+          "comment_text": "Incroyable transformation en 3 semaines !"
+        }
+      ]
+    },
+    {
+      "key": "offer_section_title",
+      "label": "Titre section offre",
+      "type": "string",
+      "intention": "curriculum_intro",
+      "description": "Titre section offre (2.5rem Kanit, uppercase, couleur #001f4d, text-center)",
+      "examples": ["VOICI CE QUE TU VAS DÉCOUVRIR"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "modules",
+      "label": "Modules de l'offre",
+      "type": "object[]",
+      "intention": "curriculum_breakdown",
+      "description": "3-8 modules avec header pill gradient dark blue (padding 15px 30px, border-radius 50px, bold uppercase), image flottante 150px droite, promesse rose (1.3rem bold uppercase), description (color #555 line-height 1.7). Cards blanches border 2px #e8eef5, padding 35px, margin-bottom 30px, hover border rose + shadow",
+      "minItems": 3,
+      "maxItems": 8,
+      "itemSchema": {
+        "module_header": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "En-tête du module en uppercase"
+        },
+        "module_promise": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Promesse en uppercase rose"
+        },
+        "module_description": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Description détaillée"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "module_header": "MODULE 1",
+          "module_promise": "MAÎTRISE LA BASE",
+          "module_description": "Découvre les fondamentaux..."
+        }
+      ]
+    },
+    {
+      "key": "comparison_title",
+      "label": "Titre section comparaison",
+      "type": "string",
+      "intention": "comparison_intro",
+      "description": "Titre section comparaison (2.5rem Kanit, uppercase, couleur #001f4d, text-center)",
+      "examples": ["AVANT VS APRÈS"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "comparison_bad_label",
+      "label": "Label mauvaise méthode",
+      "type": "string",
+      "intention": "problem_label",
+      "description": "Label de la mauvaise méthode (1.5rem, weight 700, uppercase, couleur #ff4444 rouge)",
+      "examples": ["SANS MA MÉTHODE"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "comparison_bad_items",
+      "label": "Items mauvaise méthode",
+      "type": "string[]",
+      "intention": "pain_points",
+      "description": "3-6 points négatifs avec ✗ rouge #ff4444 (padding 10px 0, padding-left 30px)",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true,
+      "examples": ["Tu perds du temps et de l'argent"]
+    },
+    {
+      "key": "comparison_good_label",
+      "label": "Label bonne méthode",
+      "type": "string",
+      "intention": "solution_label",
+      "description": "Label de la bonne méthode (1.5rem, weight 700, uppercase, couleur #00ff00 vert)",
+      "examples": ["AVEC MA MÉTHODE"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "comparison_good_items",
+      "label": "Items bonne méthode",
+      "type": "string[]",
+      "intention": "solution_benefits",
+      "description": "3-6 points positifs avec ✓ vert #00ff00 (padding 10px 0, padding-left 30px, couleur blanche)",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true,
+      "examples": ["Résultats rapides et mesurables"]
+    },
+    {
+      "key": "bonus_section_title",
+      "label": "Titre section bonus",
+      "type": "string",
+      "intention": "bonus_intro",
+      "description": "Titre section bonus (2.5rem Kanit, weight 800, uppercase, couleur blanche, text-center)",
+      "examples": ["BONUS EXCLUSIFS OFFERTS"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "bonus_intro",
+      "label": "Intro bonus",
+      "type": "string",
+      "intention": "bonus_hook",
+      "description": "Texte intro bonus (1.1rem, rgba white 0.9, text-center)",
+      "examples": ["En plus du programme principal, tu reçois ces bonus pour maximiser tes résultats"],
+      "maxLength": 200,
+      "required": false
+    },
+    {
+      "key": "bonuses",
+      "label": "Cartes bonus",
+      "type": "object[]",
+      "intention": "bonus_value_stack",
+      "description": "2-6 bonus en grid auto-fit minmax(350px, 1fr) avec badge pill gradient rose (padding 8px 25px, border-radius 50px, bold uppercase), nom (1.5rem Kanit bold uppercase blanc), image 180px height, description (rgba white 0.9). Cards background rgba white 0.05, border 2px rgba white 0.1, padding 30px, border-radius 15px, backdrop-filter blur",
+      "minItems": 2,
+      "maxItems": 6,
+      "itemSchema": {
+        "bonus_badge": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Badge (BONUS#1, BONUS#2...)"
+        },
+        "bonus_name": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Nom du bonus en uppercase"
+        },
+        "bonus_description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Description du bonus"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "bonus_badge": "BONUS#1",
+          "bonus_name": "NOM DU BONUS",
+          "bonus_description": "Ce que le bonus va t'apporter..."
+        }
+      ]
+    },
+    {
+      "key": "pricing_section_title",
+      "label": "Titre section prix",
+      "type": "string",
+      "intention": "recap_intro",
+      "description": "Titre section pricing (2.5rem Kanit, weight 800, uppercase, couleur blanche, text-center)",
+      "examples": ["VOICI LE RÉSUMÉ DE TOUT CE QUE TU VAS RECEVOIR :"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "package_items",
+      "label": "Items du package visuel",
+      "type": "string[]",
+      "intention": "value_visualization",
+      "description": "3 items dans le package visual (fond gradient dark, border 3px rose, border-radius 15px, padding 30px, text-center, uppercase, bold, 1.2rem blanc). Peut contenir <br>",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemMaxLength": 60,
+      "required": true,
+      "examples": ["BONUS\nAI", "NOM DE TON\nPROGRAMME", "NOM DE TON\nSUPER COOL\nWORKSHEET"]
+    },
+    {
+      "key": "pricing_list",
+      "label": "Liste de valeur pricing",
+      "type": "string[]",
+      "intention": "value_stack",
+      "description": "4-8 items de valeur avec ✓ rose (1.05rem, padding 12px 0, padding-left 35px, couleur blanche). Peut contenir <strong> pour bonus",
+      "minItems": 4,
+      "maxItems": 8,
+      "itemMaxLength": 200,
+      "required": true,
+      "examples": [
+        "Puce promesse irrésistible : bénéfice + curiosité + conséquence du bénéf",
+        "<strong>BONUS #2:</strong> description du bonus + bénéfices (Valeur 97€)"
+      ]
+    },
+    {
+      "key": "price_original",
+      "label": "Valeur totale originale",
+      "type": "string",
+      "intention": "price_anchor",
+      "description": "Valeur totale barrée (1.2rem, line-through, rgba white 0.7)",
+      "examples": ["VALEUR TOTALE : 1997€"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "price_usual",
+      "label": "Prix habituel",
+      "type": "string",
+      "intention": "price_context",
+      "description": "Prix habituel (1.2rem, rgba white 0.9)",
+      "examples": ["PRIX HABITUEL 97€"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "price_current",
+      "label": "Prix actuel",
+      "type": "string",
+      "intention": "price_display",
+      "description": "Prix GROS actuel (4rem, weight 900, couleur #ff2ad4 rose)",
+      "examples": ["AUJOURD'HUI 17€"],
+      "maxLength": 30,
+      "required": true
     },
     {
       "key": "price_label",
+      "label": "Label prix",
       "type": "string",
-      "maxLength": 24
+      "intention": "price_qualifier",
+      "description": "Label sous le prix (1.1rem, rgba white 0.9)",
+      "examples": ["Accès immédiat pour seulement 17€"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "price_main",
+      "key": "guarantee_intro",
+      "label": "Intro garantie",
       "type": "string",
-      "maxLength": 40
+      "intention": "guarantee_intro",
+      "description": "Texte intro garantie (1.5rem, couleur blanche, margin-bottom 30px, text-center)",
+      "examples": ["Ton achat est couvert par notre"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "cta_title",
+      "key": "guarantee_badge_text",
+      "label": "Texte badge garantie",
       "type": "string",
-      "maxLength": 90
+      "intention": "guarantee_promise",
+      "description": "Texte dans le badge circulaire 200px (1.3rem, weight 900, uppercase, line-height 1.3, couleur #001f4d dark blue, text-center, background blanc border 5px rose). Peut contenir <br>",
+      "examples": ["LE PROBLÈME\nSUPPRIMÉ\nÀ JAMAIS"],
+      "maxLength": 60,
+      "required": true
     },
     {
-      "key": "form_email_placeholder",
+      "key": "guarantee_title",
+      "label": "Titre garantie",
       "type": "string",
-      "maxLength": 160
+      "intention": "guarantee_label",
+      "description": "Titre GARANTIE (3rem, weight 900, uppercase, couleur blanche, text-center, margin 30px 0)",
+      "examples": ["GARANTIE"],
+      "maxLength": 30,
+      "required": true
     },
     {
-      "key": "cta_button",
+      "key": "guarantee_description",
+      "label": "Description garantie",
       "type": "string",
-      "maxLength": 32
+      "intention": "guarantee_terms",
+      "description": "Description des termes (1.1rem, rgba white 0.9, text-center, max-width 700px, line-height 1.8)",
+      "examples": ["Explique les termes de ta garantie. Par exemple : 30 jours satisfait ou remboursé, satisfait ou remboursé deux fois, un accompagnement d'une heure offert si tu n'es pas satisfait..."],
+      "maxLength": 400,
+      "required": true
     },
     {
-      "key": "systeme_form_slot",
+      "key": "author_name",
+      "label": "Nom de l'auteur",
       "type": "string",
-      "maxLength": 160
+      "intention": "authority_name",
+      "description": "Nom de l'expert/fondateur (2.5rem Kanit, weight 800, uppercase, couleur #001f4d dark blue)",
+      "examples": ["KRISTINE MIRELLE"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "scroll_hint",
-      "type": "string",
-      "maxLength": 160
+      "key": "author_bio_paragraphs",
+      "label": "Paragraphes bio auteur",
+      "type": "string[]",
+      "intention": "authority_credentials",
+      "description": "2-3 paragraphes de bio (1.05rem, line-height 1.8, color #555)",
+      "minItems": 2,
+      "maxItems": 3,
+      "itemMaxLength": 400,
+      "required": true,
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Décris ici ce que tu as réussi, ta liste de tes récompenses, etc... pour prouver que tu es la bonne personne pour aider ton audience à résoudre son problème et/ou à atteindre ses objectifs."
+      ]
     },
     {
-      "key": "story_title",
-      "type": "string",
-      "maxLength": 90
+      "key": "trust_badges",
+      "label": "Badges média/trust",
+      "type": "string[]",
+      "intention": "authority_proof",
+      "description": "5 badges média (padding 15px 25px, border 2px #e8eef5, border-radius 8px, bold uppercase, 0.85rem color #001f4d, inline-block). Peut contenir <br>",
+      "minItems": 5,
+      "maxItems": 5,
+      "itemMaxLength": 40,
+      "required": false,
+      "examples": ["MÉDIA\nMENTION 1"]
     },
     {
-      "key": "story_subtitle",
+      "key": "order_title",
+      "label": "Titre ordre",
       "type": "string",
-      "maxLength": 90
+      "intention": "order_cta",
+      "description": "Titre de la section commande (1.8rem, weight 700, uppercase, couleur #ff2ad4 rose, text-center, margin-bottom 10px)",
+      "examples": ["VALIDE TA COMMANDE CI-DESSOUS"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "story_tag_1",
+      "key": "order_subtitle",
+      "label": "Sous-titre ordre",
       "type": "string",
-      "maxLength": 160
+      "intention": "order_urgency",
+      "description": "Sous-titre ordre (2.5rem Kanit, weight 900, uppercase, couleur #001f4d, text-center)",
+      "examples": ["ACCÈS IMMÉDIATS"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "side_title",
+      "key": "form_submit_text",
+      "label": "Texte bouton soumission",
       "type": "string",
-      "maxLength": 90
+      "intention": "final_action",
+      "description": "Texte du bouton de soumission du formulaire",
+      "examples": ["Profiter de l'offre"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "side_cta",
+      "key": "form_privacy_text",
+      "label": "Texte confidentialité form",
       "type": "string",
-      "maxLength": 32
+      "intention": "trust_reassurance",
+      "description": "Texte de confidentialité (0.9rem, color #666, text-center)",
+      "examples": ["We Never Share Your Information With Anyone."],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "quote_text",
+      "key": "footer_logo",
+      "label": "Logo footer",
       "type": "string",
-      "maxLength": 240
+      "intention": "footer_brand",
+      "description": "Logo dans le footer (2rem Kanit, weight 800, uppercase, couleur blanche). Peut contenir <span> pour partie rose",
+      "examples": ["NOM DE TA OFFRE"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "offer_title",
-      "type": "string",
-      "maxLength": 90
+      "key": "footer_links",
+      "label": "Liens footer",
+      "type": "string[]",
+      "intention": "legal_links",
+      "description": "2-4 liens footer (0.9rem, rgba white 0.7, gap 30px)",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 40,
+      "required": true,
+      "examples": ["Privacy Policy", "Terms of Services"]
     },
     {
-      "key": "offer_subtitle",
+      "key": "footer_copyright",
+      "label": "Copyright footer",
       "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "final_cta",
-      "type": "string",
-      "maxLength": 32
-    },
-    {
-      "key": "faq_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "faq_subtitle",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "final_cta_2",
-      "type": "string",
-      "maxLength": 32
-    },
-    {
-      "key": "footer_title",
-      "type": "string",
-      "maxLength": 90
-    },
-    {
-      "key": "footer_text",
-      "type": "string",
-      "maxLength": 240
-    },
-    {
-      "key": "footer_back_to_top",
-      "type": "string",
-      "maxLength": 160
+      "intention": "legal_copyright",
+      "description": "Copyright (0.85rem, rgba white 0.5, text-center)",
+      "examples": ["Copyright © 2024 | All Rights Reserved"],
+      "maxLength": 80,
+      "required": true
     }
   ]
 }

@@ -1,10 +1,11 @@
-### Capture 03 — Feel Good — Instructions Systeme.io
+# capture-03 — Kit Systeme.io (Tipote)
 
-1. Créez une page dans Systeme.io
-2. Ajoutez un bloc “Code HTML”
-3. Collez le code fourni (onglet **Kit Systeme.io** dans Tipote)
-4. Dans le **SLOT SYSTEME**, ajoutez un formulaire Systeme (email + tag + redirection)
-5. Recommandations :
-   - Tag : lead_capture
-   - RGPD : coche obligatoire si nécessaire
-   - Redirection : page suivante / page merci
+## Ce que tu as à faire
+1. Crée une nouvelle page (mode “Page” dans Systeme.io).
+2. Ajoute un bloc HTML → colle **BLOC 1** (depuis `kit-systeme.html`).
+3. À l’endroit indiqué **FORM SYSTEME.IO** : ajoute un **Formulaire natif** (Prénom + Email).
+4. Ajoute un bloc HTML → colle **BLOC 2**.
+
+## Important (police)
+- Si les polices ne se chargent pas : copie les `<link ...>` tout en haut de `kit-systeme.html` et colle-les dans :
+  **Paramètres de la page → Code de tracking → Header**.

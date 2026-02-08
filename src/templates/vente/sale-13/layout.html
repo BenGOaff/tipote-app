@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Banger Pack - Formation Bundle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #020817;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Top Banner */
+        .top-banner {
+            background: linear-gradient(90deg, #ecfc53 0%, #7ed321 100%);
+            padding: 12px 0;
+            text-align: center;
+        }
+
+        .top-banner-text {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 14px;
+            color: #020817;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: #020817;
+            padding: 60px 0;
+            text-align: center;
+        }
+
+        .hero-logo {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 40px;
+            color: #fff;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .hero-highlight {
+            color: #2a80ff;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .hero-bullets {
+            list-style: none;
+            max-width: 600px;
+            margin: 30px auto 40px;
+            text-align: left;
+        }
+
+        .hero-bullets li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            font-size: 16px;
+        }
+
+        .hero-bullets li::before {
+            content: '○';
+            position: absolute;
+            left: 0;
+            color: #ecfc53;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .hero-mockup {
+            max-width: 700px;
+            margin: 50px auto;
+            aspect-ratio: 16/10;
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+            border: 2px solid rgba(42, 128, 255, 0.2);
+        }
+
+        /* Price Box */
+        .price-box {
+            background: linear-gradient(135deg, #2a80ff 0%, #8e54e9 100%);
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 600px;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .price-label {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .price-old {
+            font-size: 24px;
+            text-decoration: line-through;
+            opacity: 0.7;
+            margin-right: 10px;
+        }
+
+        .price-current {
+            font-size: 72px;
+            font-weight: 900;
+            margin: 20px 0;
+            line-height: 1;
+        }
+
+        .price-note {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* CTA Button */
+        .btn-primary {
+            display: inline-block;
+            padding: 20px 50px;
+            background: linear-gradient(90deg, #ecfc53 0%, #7ed321 100%);
+            color: #020817;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(236, 252, 83, 0.4);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(236, 252, 83, 0.6);
+        }
+
+        .btn-primary small {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        /* Trust Badges */
+        .trust-badges {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .trust-badge {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+            background: #0a1628;
+            padding: 80px 0;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(42, 128, 255, 0.2);
+        }
+
+        .testimonial-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .testimonial-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #2a80ff 0%, #8e54e9 100%);
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .testimonial-text {
+            font-size: 15px;
+            line-height: 1.7;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            font-weight: 700;
+            margin-top: 15px;
+        }
+
+        .stars {
+            color: #ecfc53;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        /* Steps Section */
+        .steps-section {
+            padding: 80px 0;
+            background: #020817;
+        }
+
+        .step-card {
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.05) 0%, rgba(142, 84, 233, 0.05) 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(42, 128, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .step-card:hover {
+            border-color: #2a80ff;
+            box-shadow: 0 8px 25px rgba(42, 128, 255, 0.3);
+        }
+
+        .step-number {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(90deg, #2a80ff 0%, #8e54e9 100%);
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        .step-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .step-text {
+            font-size: 15px;
+            opacity: 0.85;
+            line-height: 1.7;
+        }
+
+        /* Formations Grid */
+        .formations-section {
+            padding: 80px 0;
+            background: #0a1628;
+        }
+
+        .formation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .formation-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid rgba(42, 128, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .formation-card:hover {
+            transform: translateY(-5px);
+            border-color: #2a80ff;
+            box-shadow: 0 15px 40px rgba(42, 128, 255, 0.3);
+        }
+
+        .formation-video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .formation-header {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%);
+        }
+
+        .formation-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(236, 252, 83, 0.2);
+            color: #ecfc53;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .formation-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .formation-body {
+            padding: 20px;
+        }
+
+        .formation-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 15px;
+        }
+
+        .formation-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Bonus Section */
+        .bonus-section {
+            padding: 80px 0;
+            background: linear-gradient(180deg, #020817 0%, #0a1628 100%);
+        }
+
+        .bonus-title {
+            font-size: 42px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+
+        .bonus-title span {
+            background: linear-gradient(90deg, #ecfc53 0%, #7ed321 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 50px;
+        }
+
+        .bonus-card {
+            background: linear-gradient(135deg, rgba(238, 228, 200, 0.05) 0%, rgba(242, 234, 221, 0.05) 100%);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid rgba(236, 252, 83, 0.2);
+            transition: all 0.3s;
+        }
+
+        .bonus-card:hover {
+            border-color: #ecfc53;
+            box-shadow: 0 8px 25px rgba(236, 252, 83, 0.2);
+        }
+
+        .bonus-number {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ecfc53;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .bonus-name {
+            font-size: 18px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        /* Guarantee Section */
+        .guarantee-section {
+            padding: 80px 0;
+            background: #020817;
+            text-align: center;
+        }
+
+        .guarantee-box {
+            max-width: 700px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%);
+            padding: 50px;
+            border-radius: 20px;
+            border: 2px solid rgba(42, 128, 255, 0.3);
+        }
+
+        .guarantee-title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .guarantee-text {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.9;
+        }
+
+        /* Situation Section */
+        .situation-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #0a1628 0%, #020817 100%);
+        }
+
+        .situation-title {
+            font-size: 36px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .situation-title span {
+            color: #2a80ff;
+        }
+
+        .situation-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .situation-btn {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.1) 0%, rgba(142, 84, 233, 0.1) 100%);
+            border: 2px solid rgba(42, 128, 255, 0.3);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: left;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .situation-btn:hover {
+            border-color: #2a80ff;
+            background: linear-gradient(135deg, rgba(42, 128, 255, 0.2) 0%, rgba(142, 84, 233, 0.2) 100%);
+        }
+
+        .situation-emoji {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        /* Benefits Section */
+        .benefits-section {
+            padding: 80px 0;
+            background: linear-gradient(180deg, #020817 0%, #0a1628 100%);
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .benefit-block {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .benefit-block.colored {
+            background: linear-gradient(135deg, #2a80ff 0%, #8e54e9 100%);
+            border-radius: 16px;
+        }
+
+        .benefit-block.light {
+            background: linear-gradient(90deg, #ecfc53 0%, #7ed321 100%);
+            color: #020817;
+            border-radius: 16px;
+        }
+
+        .benefit-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 15px;
+        }
+
+        .benefit-list {
+            list-style: none;
+            text-align: left;
+        }
+
+        .benefit-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .benefit-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            font-weight: 700;
+        }
+
+        .benefit-block.colored .benefit-list li::before {
+            color: #ecfc53;
+        }
+
+        .benefit-block.light .benefit-list li::before {
+            color: #020817;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: 80px 0;
+            background: #0a1628;
+        }
+
+        .faq-list {
+            max-width: 800px;
+            margin: 60px auto 0;
+        }
+
+        .faq-item {
+            background: linear-gradient(90deg, rgba(236, 252, 83, 0.1) 0%, rgba(126, 211, 33, 0.1) 100%);
+            padding: 25px 30px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(236, 252, 83, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .faq-item:hover {
+            border-color: #ecfc53;
+        }
+
+        .faq-question {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .faq-answer {
+            font-size: 15px;
+            opacity: 0.85;
+            line-height: 1.7;
+        }
+
+        /* Timer */
+        .timer {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timer-countdown {
+            font-size: 32px;
+            font-weight: 900;
+            color: #2a80ff;
+            margin: 10px 0;
+        }
+
+        /* Footer */
+        .footer {
+            background: #000;
+            padding: 50px 0 30px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #2a80ff;
+        }
+
+        .footer-copyright {
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .section-title {
+                font-size: 28px;
+            }
+
+            .price-current {
+                font-size: 56px;
+            }
+
+            .formation-grid,
+            .bonus-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-banner">
+        <div class="top-banner-text">TEXTE ACCROCHE URGENCE ICI</div>
+    </div>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-logo">TON <span style="font-weight: 300;">Logo</span></div>
+
+            <h1 class="hero-title">
+                PROMESSE PRINCIPALE<br>
+                DE TON <span class="hero-highlight">OFFRE</span>
+            </h1>
+
+            <p class="hero-subtitle">
+                Sous-titre expliquant le bénéfice principal ou la transformation promise
+            </p>
+
+            <ul class="hero-bullets">
+                <li>Info importante sur ton offre #1</li>
+                <li>Info importante sur ton offre #2</li>
+                <li>Info importante sur ton offre #3</li>
+            </ul>
+
+            <div class="hero-mockup">
+                Mockup de ton offre complète<br>
+                (formations + bonus)
+            </div>
+
+            <div class="price-box">
+                <div class="price-label">PRIX NORMAL : <span class="price-old">XXX€</span></div>
+                <div class="price-current">XXX€</div>
+                <div class="price-note">OU X PAIEMENTS DE XXX€</div>
+            </div>
+
+            <div class="timer">
+                <div>FIN DE L'OFFRE DE LANCEMENT :</div>
+                <div class="timer-countdown">00 : 00 : 00 : 00</div>
+                <div style="margin-top: 15px; opacity: 0.8;">À la fin du décompte, le prix double et passe à XXX€</div>
+            </div>
+
+            <button class="btn-primary">
+                🚀 Texte CTA Principal
+                <small>Sous-texte CTA</small>
+            </button>
+
+            <div class="trust-badges">
+                <div class="trust-badge">🔒 Paiement Sécurisé</div>
+                <div class="trust-badge">✓ Satisfait ou Remboursé</div>
+                <div class="trust-badge">⚡ Accès Immédiat</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials-section">
+        <div class="container">
+            <h3 style="text-align: center; margin-bottom: 50px; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">
+                Si tu ne me connais pas encore
+            </h3>
+
+            <h2 class="section-title">
+                CE QUE MES<br>
+                ÉLÈVES DISENT
+            </h2>
+
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">Photo</div>
+                    <div>
+                        <div class="stars">★★★★★</div>
+                        <div class="testimonial-author">— Nom Prénom</div>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation."
+                </p>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">Photo</div>
+                    <div>
+                        <div class="stars">★★★★★</div>
+                        <div class="testimonial-author">— Nom Prénom</div>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation."
+                </p>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">Photo</div>
+                    <div>
+                        <div class="stars">★★★★★</div>
+                        <div class="testimonial-author">— Nom Prénom</div>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation."
+                </p>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px;">
+                <button class="btn-primary">
+                    🛒 Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="steps-section">
+        <div class="container">
+            <h2 class="section-title">
+                COMMENT UTILISER LE<br>
+                <span style="color: #2a80ff;">NOM DE TON OFFRE</span>
+            </h2>
+
+            <div class="step-card">
+                <div class="step-number">ÉTAPE 1 : NOM DE L'ÉTAPE</div>
+                <div class="step-title">Titre de l'étape expliquant l'action principale</div>
+                <div class="step-text">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation.</div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">ÉTAPE 2 : NOM DE L'ÉTAPE</div>
+                <div class="step-title">Titre de l'étape expliquant l'action principale</div>
+                <div class="step-text">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation.</div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">ÉTAPE 3 : NOM DE L'ÉTAPE</div>
+                <div class="step-title">Titre de l'étape expliquant l'action principale</div>
+                <div class="step-text">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation.</div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <p style="font-size: 16px; margin-bottom: 20px;">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore.</p>
+                <button class="btn-primary">
+                    🎯 Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="formations-section">
+        <div class="container">
+            <h2 class="section-title">
+                Ce que contient le<br>
+                <span style="color: #ecfc53;">TON SUPER LOGO</span><br>
+                <span style="font-size: 24px;">(valeur XXXX€)</span>
+            </h2>
+
+            <p style="text-align: center; font-size: 18px; max-width: 800px; margin: 0 auto 60px;">
+                <strong style="color: #ecfc53;">XX FORMATIONS INCLUSES</strong><br><br>
+                Tout ce qu'il te faut pour démarrer<br>
+                ton business <span style="color: #2a80ff;">sans perdre de temps ni d'argent</span>
+            </p>
+
+            <div class="formation-grid">
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 1</div>
+                        <h3 class="formation-title">Formation Lead Automation™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">📄 Bonus</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 2</div>
+                        <h3 class="formation-title">Nom Formation #2™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">+ Analyse</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 3</div>
+                        <h3 class="formation-title">Nom Formation #3™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">+ Bonus</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 4</div>
+                        <h3 class="formation-title">Nom Formation #4™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">+ Analyse</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 5</div>
+                        <h3 class="formation-title">Nom Formation #5™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">100% IA</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formation-card">
+                    <div class="formation-video">
+                        Vidéo de présentation<br>
+                        de la formation
+                    </div>
+                    <div class="formation-header">
+                        <div class="formation-badge">FORMATION 6</div>
+                        <h3 class="formation-title">Nom Formation #6™</h3>
+                    </div>
+                    <div class="formation-body">
+                        <div class="formation-meta">
+                            <div class="formation-meta-item">📹 X vidéos</div>
+                            <div class="formation-meta-item">Challenge</div>
+                            <div class="formation-meta-item">⚡ Accès direct</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <button class="btn-primary">
+                    🔥 Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="bonus-section">
+        <div class="container">
+            <h2 class="bonus-title">
+                LES <span>9 BONUS</span> INCLUS :
+            </h2>
+
+            <div class="bonus-grid">
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 1</div>
+                    <h3 class="bonus-name">Liste des sites Shopify</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 2</div>
+                    <h3 class="bonus-name">Pack de ressources IA</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 3</div>
+                    <h3 class="bonus-name">Youtube Starter</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 4</div>
+                    <h3 class="bonus-name">Success Box</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 5</div>
+                    <h3 class="bonus-name">Pinterest Mastery</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 6</div>
+                    <h3 class="bonus-name">POD Mastery</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 7</div>
+                    <h3 class="bonus-name">Business en OR</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 8</div>
+                    <h3 class="bonus-name">Pinterest ADS</h3>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-number">BONUS 9</div>
+                    <h3 class="bonus-name">Discord Next Level</h3>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <button class="btn-primary">
+                    💎 Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="guarantee-section">
+        <div class="container">
+            <div class="guarantee-box">
+                <h2 class="guarantee-title">Garantie satisfait ou remboursé</h2>
+                <p class="guarantee-text">
+                    Lorem ipsum dolor sit amet consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Tu peux proposer un remboursement après X jours d'essai, le double du prix remboursé si ton client n'obtient pas de résultats, etc.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="situation-section">
+        <div class="container">
+            <h2 class="situation-title">
+                👉 TU TE RECONNAIS DANS<br>
+                <span>UNE DE CES SITUATIONS ?</span>
+            </h2>
+
+            <div class="situation-buttons">
+                <div class="situation-btn">
+                    <span class="situation-emoji">😤</span>
+                    Explique une situation que rencontre ton audience cible et qu'elle veut arranger
+                </div>
+
+                <div class="situation-btn">
+                    <span class="situation-emoji">😰</span>
+                    Explique une situation que rencontre ton audience cible et qu'elle veut arranger
+                </div>
+
+                <div class="situation-btn">
+                    <span class="situation-emoji">🤯</span>
+                    Explique une situation que rencontre ton audience cible et qu'elle veut arranger
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <p style="font-size: 18px; margin-bottom: 30px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                    Transforme tes idées en <strong style="color: #ecfc53;">revenus passifs</strong>, sans sacrifier ta <strong style="color: #2a80ff;">vie privée</strong>. 
+                    Accède à tous <strong style="color: #ecfc53;">les outils</strong> et à une <strong style="color: #2a80ff;">méthodologie complète</strong> pour lancer 
+                    ton <strong>business</strong> en toute <strong style="color: #ecfc53;">autonomie</strong>.
+                </p>
+
+                <div class="timer">
+                    <div>FIN DE L'OFFRE DE LANCEMENT :</div>
+                    <div class="timer-countdown">00 : 00 : 00 : 00</div>
+                    <div style="margin-top: 15px; opacity: 0.8;">À la fin du décompte, le prix double et passe à XXX€</div>
+                </div>
+
+                <button class="btn-primary" style="margin-top: 30px;">
+                    🚀 Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+
+                <div class="trust-badges" style="margin-top: 30px;">
+                    <div class="trust-badge">🔒 Paiement Sécurisé</div>
+                    <div class="trust-badge">✓ Satisfait ou Remboursé</div>
+                    <div class="trust-badge">⚡ Accès Immédiat</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="benefits-section">
+        <div class="container">
+            <h2 class="section-title" style="margin-bottom: 60px;">
+                On résume ce que tu vas recevoir avec le<br>
+                <span style="color: #ecfc53;">[Nom de ton Offre]</span> ?
+            </h2>
+
+            <div class="benefits-grid">
+                <div class="benefit-block colored">
+                    <h3 class="benefit-title">
+                        Titre catégorie bénéfice #1
+                    </h3>
+                    <ul class="benefit-list">
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                    </ul>
+                </div>
+
+                <div class="benefit-block light">
+                    <h3 class="benefit-title">
+                        Titre catégorie bénéfice #2
+                    </h3>
+                    <ul class="benefit-list">
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                    </ul>
+                </div>
+
+                <div class="benefit-block colored">
+                    <h3 class="benefit-title">
+                        Titre catégorie bénéfice #3
+                    </h3>
+                    <ul class="benefit-list">
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                    </ul>
+                </div>
+
+                <div class="benefit-block light">
+                    <h3 class="benefit-title">
+                        Titre catégorie bénéfice #4
+                    </h3>
+                    <ul class="benefit-list">
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                        <li>Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 80px;">
+                <p style="font-size: 16px; margin-bottom: 10px;">
+                    ✗ <strong style="color: #da2f35;">Option 1</strong> : Explique l'option pourrie que ton client ne veut pas
+                </p>
+                <p style="font-size: 16px; margin-bottom: 30px;">
+                    ✓ <strong style="color: #7ed321;">Option 2</strong> : Explique la meilleure option pour ton client = ton offre
+                </p>
+
+                <p style="font-size: 20px; font-weight: 700; margin-bottom: 10px;">
+                    💡 Rappelle-toi : l'offre disparaît bientôt.
+                </p>
+                <p style="font-size: 18px; margin-bottom: 30px;">
+                    Après, c'est trop tard et le prix repasse à XXX€.
+                </p>
+
+                <div class="timer">
+                    <div>FIN DE L'OFFRE DE LANCEMENT :</div>
+                    <div class="timer-countdown">00 : 00 : 00 : 00</div>
+                </div>
+
+                <button class="btn-primary" style="margin-top: 30px;">
+                    ⚡ Texte CTA Principal
+                    <small>Sous-texte CTA</small>
+                </button>
+
+                <div class="trust-badges" style="margin-top: 30px;">
+                    <div class="trust-badge">🔒 Paiement Sécurisé</div>
+                    <div class="trust-badge">✓ Satisfait ou Remboursé</div>
+                    <div class="trust-badge">⚡ Accès Immédiat</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center;">💬 FAQ</h2>
+
+            <p style="text-align: center; font-size: 16px; margin-bottom: 60px; opacity: 0.9;">
+                Découvre ici les réponses aux interrogations les plus courantes sur<br>
+                <strong>[Nom de ton offre]</strong> et vérifie si ces formations peuvent t'aider à générer<br>
+                de l'argent sur Internet selon <strong>TES</strong> attentes.
+            </p>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">Est-ce que Banger Pack™ est toujours à jour ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Est-ce que je peux revendre les formations du pack ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Puis-je promouvoir Banger Pack™ en affiliation ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Comment se passe le paiement ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Comment j'accède aux formations après ma commande ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Ce pack est-il adapté si je débute totalement ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Combien de temps faut-il pour voir des résultats ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Et si je n'ai pas d'audience ça marche aussi ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">Y a-t-il une garantie ou un remboursement possible ?</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation ullamco laboris.</div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">💡 J'ai encore une question</div>
+                    <div class="faq-answer">Lorem ipsum dolor sit amet consectetur adipiscing elit. Contact : email@exemple.com</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <div class="timer">
+                    <div>FIN DE L'OFFRE DE LANCEMENT :</div>
+                    <div class="timer-countdown">00 : 00 : 00 : 00</div>
+                    <div style="margin-top: 15px; opacity: 0.8;">À la fin du décompte, le prix double et passe à XXX€</div>
+                </div>
+
+                <button class="btn-primary" style="margin-top: 30px;">
+                    ✅ J'ai toutes mes réponses, je commande
+                    <small>Sous-texte CTA</small>
+                </button>
+
+                <div class="trust-badges" style="margin-top: 30px;">
+                    <div class="trust-badge">🔒 Paiement Sécurisé</div>
+                    <div class="trust-badge">✓ Satisfait ou Remboursé</div>
+                    <div class="trust-badge">⚡ Accès Immédiat</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-logo">TON <span style="font-weight: 300;">Logo</span></div>
+
+            <div class="footer-links">
+                <a href="#">Conditions Générales de Vente</a>
+                <a href="#">Mentions Légales</a>
+                <a href="#">Politique de confidentialité</a>
+            </div>
+
+            <p class="footer-copyright">
+                © 2025 Ton Entreprise - Tous droits réservés
+            </p>
+        </div>
+    </footer>
+
+    <div style="position: fixed; bottom: 0; left: 0; right: 0; background: #000; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); z-index: 1000;">
+        <div>
+            <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Je profite de la promo avant :</div>
+            <div style="font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 900; color: #2a80ff;">00 : 00 : 00 : 00</div>
+        </div>
+        <button class="btn-primary" style="padding: 12px 30px; font-size: 14px;">
+            Commander mon pack
+        </button>
+    </div>
+</body>
+</html>

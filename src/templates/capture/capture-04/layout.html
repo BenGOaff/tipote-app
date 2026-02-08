@@ -1,42 +1,1107 @@
-<section class="hero capture-04">
-  <div class="container capture-04">
-    <div class="badge">{{hero_badge}}</div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Challenge Simple Orange</title>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <h1>
-      {{hero_title}}
-      <span class="accent"> {{hero_title_accent}}</span>
-    </h1>
+        body {
+            font-family: 'Raleway', sans-serif;
+            color: #333;
+            line-height: 1.6;
+            background: #fff;
+        }
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+        h1, h2, h3 {
+            font-family: 'Raleway', sans-serif;
+        }
 
-    <div class="form-card">
-      <div class="cta">
-        <input type="email" placeholder="Votre email" disabled />
-        <button disabled>{{cta_text}}</button>
-      </div>
-    </div>
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #f36843 0%, #ff7a5c 100%);
+            padding: 60px 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            min-height: 400px;
+        }
 
-    <p class="micro">{{reassurance_text}}</p>
-  </div>
-</section>
+        .hero-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
 
-<section class="section capture-04">
-  <div class="inner">
-    <h2>{{section_title}}</h2>
-    <p>{{section_subtitle}}</p>
+        .hero-content {
+            padding-right: 40px;
+        }
 
-    <ul class="features">
-      {{#features}}
-      <li class="feature">
-        <span class="dot"></span>
-        <div>
-          <div class="t">{{t}}</div>
-          {{#d}}<div class="d">{{.}}</div>{{/d}}
+        .hero-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .hero-title {
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 25px;
+        }
+
+        .hero-description {
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        .hero-description strong {
+            font-weight: 700;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #fff;
+            color: #f36843;
+            padding: 16px 40px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-disclaimer {
+            font-size: 12px;
+            margin-top: 15px;
+            opacity: 0.85;
+        }
+
+        /* Hero Image */
+        .hero-image-container {
+            position: relative;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .hero-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .badge-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #f36843;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .badge-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #000b1f;
+            line-height: 1.2;
+        }
+
+        .badge-dates {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #222;
+            background: #f1f1f1;
+            padding: 8px 15px;
+            border-radius: 4px;
+        }
+
+        /* How Section */
+        .how-section {
+            padding: 80px 20px;
+            background: #fff;
+            text-align: center;
+        }
+
+        .how-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 15px;
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            color: #4a4a4a;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .section-emphasis {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f36843;
+            margin-bottom: 50px;
+        }
+
+        .accent-line {
+            width: 120px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #f36843, transparent);
+            margin: 30px auto;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+
+        .feature-card {
+            background: #fff;
+            border: 1px solid #e1e7ef;
+            border-radius: 12px;
+            padding: 40px 30px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #f36843;
+            box-shadow: 0 10px 30px rgba(243, 104, 67, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, #ffe8e2 0%, #ffd4cb 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #f36843;
+            font-weight: 600;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 15px;
+        }
+
+        .feature-description {
+            font-size: 14px;
+            color: #4a4a4a;
+            line-height: 1.7;
+        }
+
+        /* Schedule Section */
+        .schedule-section {
+            padding: 80px 20px;
+            background: #fefbfb;
+        }
+
+        .schedule-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .schedule-intro {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+        }
+
+        .day-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .day-card:nth-child(even) {
+            direction: rtl;
+        }
+
+        .day-card:nth-child(even) .day-content {
+            direction: ltr;
+        }
+
+        .day-laptop {
+            position: relative;
+        }
+
+        .laptop-screen {
+            background: #000b1f;
+            border-radius: 12px 12px 0 0;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .laptop-header {
+            background: #f36843;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            font-weight: 700;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .laptop-content {
+            background: #4a4a4a;
+            padding: 40px 20px;
+            border-radius: 0 0 8px 8px;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .laptop-base {
+            width: 110%;
+            height: 15px;
+            background: linear-gradient(135deg, #d0d0d0 0%, #b0b0b0 100%);
+            border-radius: 0 0 8px 8px;
+            margin: 0 -5%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .day-content {
+            padding: 20px 0;
+        }
+
+        .day-date {
+            font-size: 13px;
+            color: #4a4a4a;
+            margin-bottom: 10px;
+        }
+
+        .day-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 20px;
+        }
+
+        .day-title .day-number {
+            color: #f36843;
+        }
+
+        .day-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .day-list li {
+            padding-left: 25px;
+            position: relative;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #4a4a4a;
+            line-height: 1.6;
+        }
+
+        .day-list li::before {
+            content: "■";
+            position: absolute;
+            left: 0;
+            color: #f36843;
+            font-size: 10px;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+            padding: 80px 20px;
+            background: #f1f1f1;
+        }
+
+        .testimonials-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .testimonials-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 15px;
+        }
+
+        .testimonials-title .highlight {
+            color: #f36843;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 50px;
+        }
+
+        .testimonial-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f36843 0%, #ff7a5c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .testimonial-info h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f36843;
+            margin-bottom: 3px;
+        }
+
+        .testimonial-info p {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .testimonial-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #4a4a4a;
+        }
+
+        /* Recognition Section */
+        .recognition-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .recognition-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .recognition-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .recognition-title .highlight {
+            color: #f36843;
+        }
+
+        .recognition-list {
+            background: #fefbfb;
+            border: 2px solid #f1f1f1;
+            border-radius: 12px;
+            padding: 40px;
+            list-style: none;
+            margin-bottom: 40px;
+        }
+
+        .recognition-list li {
+            padding: 15px 0;
+            padding-left: 35px;
+            position: relative;
+            font-size: 15px;
+            color: #4a4a4a;
+            text-align: left;
+            line-height: 1.6;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .recognition-list li:last-child {
+            border-bottom: none;
+        }
+
+        .recognition-list li::before {
+            content: "⊗";
+            position: absolute;
+            left: 0;
+            color: #f36843;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Goals Section */
+        .goals-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #f36843 0%, #ff7a5c 100%);
+            color: #fff;
+        }
+
+        .goals-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .goals-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .goals-subtitle {
+            text-align: center;
+            font-size: 16px;
+            opacity: 0.95;
+            margin-bottom: 60px;
+        }
+
+        .goals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .goal-card {
+            background: #fff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .goal-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, #ffe8e2 0%, #ffd4cb 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #f36843;
+            font-weight: 600;
+        }
+
+        .goal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 15px;
+        }
+
+        .goal-description {
+            font-size: 14px;
+            color: #4a4a4a;
+            line-height: 1.7;
+        }
+
+        /* About Section */
+        .about-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .about-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .about-image-wrapper {
+            position: relative;
+        }
+
+        .about-image {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .about-accent {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            width: 150px;
+            height: 150px;
+            background: #f36843;
+            border-radius: 12px;
+            z-index: -1;
+        }
+
+        .about-content h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #000b1f;
+            margin-bottom: 25px;
+        }
+
+        .about-content p {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4a4a4a;
+            margin-bottom: 15px;
+        }
+
+        /* CTA Final Section */
+        .cta-final-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #f36843 0%, #ff7a5c 100%);
+            text-align: center;
+            color: #fff;
+        }
+
+        .cta-final-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-final-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .cta-final-subtitle {
+            font-size: 16px;
+            margin-bottom: 35px;
+            opacity: 0.95;
+        }
+
+        /* Footer */
+        .footer {
+            background: #000b1f;
+            padding: 30px 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .footer-text {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #f36843;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container,
+            .about-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .features-grid,
+            .goals-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .schedule-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .day-card {
+                grid-template-columns: 1fr;
+            }
+
+            .day-card:nth-child(even) {
+                direction: ltr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .section-title {
+                font-size: 26px;
+            }
+
+            .cta-final-title {
+                font-size: 28px;
+            }
+
+            .hero-badge {
+                position: static;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <p class="hero-label">NOM DE TON CHALLENGE</p>
+                
+                <h1 class="hero-title">Promesse principale de ton challenge</h1>
+                
+                <p class="hero-description">
+                    Explique brièvement comment va se passer ton challenge, les <strong>modalités</strong> et 
+                    pourquoi c'est <strong>important</strong> de le rejoindre maintenant.
+                </p>
+
+                <a href="#" class="cta-button">Je rejoins le challenge</a>
+                
+                <p class="hero-disclaimer">100% offert, du ... au ...</p>
+            </div>
+
+            <div class="hero-image-container">
+                <div class="hero-image">
+                    [Photo représentant ton audience cible]
+                </div>
+                <div class="hero-badge">
+                    <div class="badge-label">Challenge</div>
+                    <div class="badge-title">NOM DU<br>CHALLENGE</div>
+                    <div class="badge-dates">Du XX janvier<br>au XX janvier</div>
+                </div>
+            </div>
         </div>
-      </li>
-      {{/features}}
-    </ul>
-  </div>
-</section>
+    </section>
+
+    <!-- How Section -->
+    <section class="how-section">
+        <div class="how-container">
+            <h2 class="section-title">Comment ça va se passer, concrètement ?</h2>
+            
+            <p class="section-subtitle">
+                Pendant ces X jours, je vous aide à [ce que tu vas les aider à faire pour atteindre leur objectif].<br>
+                Le tout en 1h par jour !
+            </p>
+
+            <div class="accent-line"></div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">[Icône]</div>
+                    <h3 class="feature-title">X ateliers live + replay</h3>
+                    <p class="feature-description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">[Icône]</div>
+                    <h3 class="feature-title">Groupe Privé</h3>
+                    <p class="feature-description">
+                        Parce qu'il est plus facile d'avancer ensemble, partagez vos réflexions et posez vos questions.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">[Icône]</div>
+                    <h3 class="feature-title">Questions - réponses</h3>
+                    <p class="feature-description">
+                        Chaque jour nous gardons du temps pour répondre à vos questions et vous aider à avancer.
+                    </p>
+                </div>
+            </div>
+
+            <a href="#" class="cta-button">Je m'inscris gratuitement</a>
+        </div>
+    </section>
+
+    <!-- Schedule Section -->
+    <section class="schedule-section">
+        <div class="schedule-container">
+            <div class="schedule-intro">
+                <h2 class="section-title">X jours en live pour [objectif du challenge]</h2>
+                <div class="accent-line"></div>
+            </div>
+
+            <div class="schedule-grid">
+                <div class="day-card">
+                    <div class="day-laptop">
+                        <div class="laptop-screen">
+                            <div class="laptop-header">Exercice du jour 1</div>
+                            <div class="laptop-content">
+                                Screenshot photo ou illustration de l'exercice du Jour 1
+                            </div>
+                        </div>
+                        <div class="laptop-base"></div>
+                    </div>
+
+                    <div class="day-content">
+                        <p class="day-date">Lundi XX Janvier à 18h (replay dispo 24h)</p>
+                        <h3 class="day-title"><span class="day-number">JOUR 1 :</span> contenu de ce jour</h3>
+                        <ul class="day-list">
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-laptop">
+                        <div class="laptop-screen">
+                            <div class="laptop-header">Exercice du jour 2</div>
+                            <div class="laptop-content">
+                                Screenshot photo ou illustration de l'exercice du Jour 2
+                            </div>
+                        </div>
+                        <div class="laptop-base"></div>
+                    </div>
+
+                    <div class="day-content">
+                        <p class="day-date">Mardi XX Janvier à 18h (replay dispo 24h)</p>
+                        <h3 class="day-title"><span class="day-number">JOUR 2 :</span> contenu de ce jour</h3>
+                        <ul class="day-list">
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-laptop">
+                        <div class="laptop-screen">
+                            <div class="laptop-header">Exercice du jour 3</div>
+                            <div class="laptop-content">
+                                Screenshot photo ou illustration de l'exercice du Jour 3
+                            </div>
+                        </div>
+                        <div class="laptop-base"></div>
+                    </div>
+
+                    <div class="day-content">
+                        <p class="day-date">Mercredi XX Janvier à 18h (replay dispo 24h)</p>
+                        <h3 class="day-title"><span class="day-number">JOUR 3 :</span> contenu de ce jour</h3>
+                        <ul class="day-list">
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-laptop">
+                        <div class="laptop-screen">
+                            <div class="laptop-header">Exercice du jour 4</div>
+                            <div class="laptop-content">
+                                Screenshot photo ou illustration de l'exercice du Jour 4
+                            </div>
+                        </div>
+                        <div class="laptop-base"></div>
+                    </div>
+
+                    <div class="day-content">
+                        <p class="day-date">Jeudi XX Janvier à 18h (replay dispo 24h)</p>
+                        <h3 class="day-title"><span class="day-number">JOUR 4 :</span> contenu de ce jour</h3>
+                        <ul class="day-list">
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse avec bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px;">
+                <a href="#" class="cta-button">Réserver ma place pour le challenge</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section">
+        <div class="testimonials-container">
+            <h2 class="testimonials-title">
+                Plus de <span class="highlight">XXXX</span> personnes accompagnée de puis 2020
+            </h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">[Photo]</div>
+                        <div class="testimonial-info">
+                            <h4>Prénom & Nom</h4>
+                            <p>Statut/Activité</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        Témoignage honnête et sincère d'un client/élève que tu as accompagné et qui relate ce que tu lui as apporté, ce qu'il a réussi à faire grâce à toi.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recognition Section -->
+    <section class="recognition-section">
+        <div class="recognition-container">
+            <h2 class="recognition-title">
+                Vous reconnaissez-vous dans ces affirmation? Alors<br>
+                il est temps de vous inscrire <span class="highlight">au challenge !</span>
+            </h2>
+
+            <ul class="recognition-list">
+                <li>Affirmation qui met en avant une douleur, un problème de ton prospect</li>
+                <li>Affirmation qui met en avant une douleur, un problème de ton prospect</li>
+                <li>Affirmation qui met en avant une douleur, un problème de ton prospect</li>
+                <li>Affirmation qui met en avant une douleur, un problème de ton prospect</li>
+                <li>Affirmation qui met en avant une douleur, un problème de ton prospect</li>
+            </ul>
+
+            <a href="#" class="cta-button">C'est tout moi ! Je m'inscris !</a>
+        </div>
+    </section>
+
+    <!-- Goals Section -->
+    <section class="goals-section">
+        <div class="goals-container">
+            <h2 class="goals-title">Mettez la main sur [ce que ton prospect veut avoir]</h2>
+            
+            <p class="goals-subtitle">
+                Sous-titre qui renforce la promesse principale
+            </p>
+
+            <div class="accent-line" style="background: linear-gradient(90deg, transparent, #fff, transparent);"></div>
+
+            <div class="goals-grid">
+                <div class="goal-card">
+                    <div class="goal-icon">[Icône]</div>
+                    <h3 class="goal-title">Objectif du challenge</h3>
+                    <p class="goal-description">Explique un bénéfice lié à cet objectif</p>
+                </div>
+
+                <div class="goal-card">
+                    <div class="goal-icon">[Icône]</div>
+                    <h3 class="goal-title">Objectif du challenge</h3>
+                    <p class="goal-description">Explique un bénéfice lié à cet objectif</p>
+                </div>
+
+                <div class="goal-card">
+                    <div class="goal-icon">[Icône]</div>
+                    <h3 class="goal-title">Objectif du challenge</h3>
+                    <p class="goal-description">Explique un bénéfice lié à cet objectif</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+        <div class="about-container">
+            <div class="about-image-wrapper">
+                <div class="about-accent"></div>
+                <div class="about-image">
+                    [Ta photo professionnelle]
+                </div>
+            </div>
+
+            <div class="about-content">
+                <h2>Qui suis-je ?</h2>
+                
+                <p>Rédige ici une présentation de ton parcours (storytelling).</p>
+
+                <p>Explique les problèmes que tu as rencontrés, ce que ça a provoqué chez toi.</p>
+
+                <p>Puis explique quelle solution tu as mises en oeuvre et les changements que ça a opéré pour toi.</p>
+
+                <p>Explique enfin pourquoi tu as créé ce challenge et ce que tu veux apporter à ton audience grâce à l'expertise que tu as acquise.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final Section -->
+    <section class="cta-final-section">
+        <div class="cta-final-container">
+            <h2 class="cta-final-title">Promesse principale de ton challenge</h2>
+            
+            <p class="cta-final-subtitle">
+                Du XX au XX janvier je vous accompagne pour [objectif de ton prospect] !
+            </p>
+
+            <a href="#" class="cta-button">Je rejoins le challenge</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            2025 - Ton Nom
+        </p>
+        <div class="footer-links">
+            <a href="#">Mentions Légales</a>
+            <span>-</span>
+            <a href="#">Politique de confidentialité</a>
+        </div>
+    </footer>
+</body>
+</html>

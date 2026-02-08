@@ -1,212 +1,1953 @@
-<div class="sale-10" id="top">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="brand">
-        <span class="mark">✿</span>
-        <span class="name">{{brand_name}}</span>
-      </div>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-10) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
 
-      <div class="links">
-        <a href="#promise">{{nav_link_1}}</a>
-        <a href="#program">{{nav_link_2}}</a>
-        <a href="#faq">{{nav_link_3}}</a>
-      </div>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
-    </div>
-  </nav>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  <header class="hero">
-    <div class="container hero-inner">
-      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
+        body {
+            font-family: 'Nunito Sans', sans-serif;
+            color: #33334d;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
 
-      <h1>
-        {{hero_title}}
-        {{#hero_title_accent}}<span class="accent">{{.}}</span>{{/hero_title_accent}}
-      </h1>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-      <p class="sub">{{hero_subtitle}}</p>
+        /* Header */
+        header {
+            background: rgba(255,255,255,0.95);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
 
-      <div class="hero-grid">
-        <div class="hero-left">
-          <div class="glass">
-            <div class="glass-head">
-              <div class="pill">{{hero_pill}}</div>
-              <div class="seal">{{hero_seal}}</div>
-            </div>
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-            {{#hero_intro}}<p class="intro">{{.}}</p>{{/hero_intro}}
+        .logo {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.5rem;
+            color: #9f7800;
+            font-weight: 700;
+        }
 
-            {{#hero_bullets_title}}<div class="list-title">{{.}}</div>{{/hero_bullets_title}}
-            <ul class="list">
-              {{#hero_bullets}}
-              <li>
-                <span class="dot"></span>
-                <span class="txt">{{.}}</span>
-              </li>
-              {{/hero_bullets}}
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #33334d;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #9f7800;
+        }
+
+        .cta-btn {
+            background: linear-gradient(135deg, #e60023 0%, #c8002b 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(230,0,35,0.3);
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230,0,35,0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #ffd5d8 0%, #ffb5b9 50%, #ff9fa5 100%);
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(236,213,167,0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 30%, rgba(255,245,216,0.2) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-image {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .device-mockup {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        .mockup-placeholder {
+            background: linear-gradient(135deg, #ffe8d5 0%, #ffd5b9 100%);
+            height: 300px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .hero-box {
+            background: white;
+            border: 3px solid #9f7800;
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 15px 40px rgba(159,120,0,0.15);
+        }
+
+        .product-type {
+            color: #9f7800;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .hero-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.8rem;
+            color: #33334d;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero-pitch {
+            color: #555;
+            font-size: 1.05rem;
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+
+        .benefits-list {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .benefits-list li {
+            padding: 10px 0;
+            padding-left: 35px;
+            position: relative;
+            color: #33334d;
+            font-size: 1rem;
+        }
+
+        .benefits-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .price-tag {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #33334d;
+            margin-bottom: 5px;
+        }
+
+        .price-detail {
+            color: #777;
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+        }
+
+        /* Section Découverte */
+        .discover-section {
+            background: #fff5e8;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: #33334d;
+            margin-bottom: 50px;
+            letter-spacing: -0.5px;
+        }
+
+        .video-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(159,120,0,0.2);
+        }
+
+        .video-placeholder {
+            background: linear-gradient(135deg, #d4a76a 0%, #b8935c 100%);
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        /* Situations Section */
+        .situations-section {
+            background: linear-gradient(135deg, #ffcdd5 0%, #ffb5bd 100%);
+            padding: 80px 20px;
+        }
+
+        .situations-box {
+            background: white;
+            border: 3px solid #9f7800;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .situations-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2rem;
+            color: #33334d;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .situations-list {
+            list-style: none;
+        }
+
+        .situations-list li {
+            padding: 15px 0;
+            padding-left: 40px;
+            position: relative;
+            color: #33334d;
+            font-size: 1.05rem;
+        }
+
+        .situations-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+
+        .situations-cta {
+            text-align: center;
+            margin-top: 40px;
+            font-style: italic;
+            color: #555;
+            font-size: 1.1rem;
+        }
+
+        /* Quote Section */
+        .quote-section {
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .quote-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .quote-text h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.2rem;
+            color: #33334d;
+            margin-bottom: 25px;
+            line-height: 1.3;
+        }
+
+        .quote-text p {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .quote-text .highlight {
+            font-weight: 700;
+            color: #33334d;
+        }
+
+        .quote-image {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 3/4;
+            background: linear-gradient(135deg, #ffcdd5 0%, #ffa5af 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.6);
+            font-size: 1rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+
+        /* Transformation Section */
+        .transformation-section {
+            background: linear-gradient(135deg, #ffb5bd 0%, #ff9fa7 100%);
+            padding: 80px 20px;
+        }
+
+        .transformation-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .chakra-illustration {
+            width: 100%;
+            max-width: 350px;
+            aspect-ratio: 3/4;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .transformation-text h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.2rem;
+            color: white;
+            margin-bottom: 25px;
+        }
+
+        .transformation-text p {
+            color: rgba(255,255,255,0.95);
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        /* Method Section */
+        .method-section {
+            background: #fff5e8;
+            padding: 80px 20px;
+        }
+
+        .method-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .method-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .method-image {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 30px;
+            aspect-ratio: 4/3;
+            background: linear-gradient(135deg, #e5c9a0 0%, #d4b892 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            box-shadow: 0 15px 50px rgba(159,120,0,0.2);
+        }
+
+        .belief-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2rem;
+            color: #33334d;
+            margin-bottom: 30px;
+        }
+
+        .belief-subtitle {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.8rem;
+            color: #33334d;
+            margin-top: 50px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .transformation-box {
+            background: white;
+            border: 3px solid #9f7800;
+            border-radius: 20px;
+            padding: 50px;
+            margin-top: 40px;
+        }
+
+        .transformation-box h3 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2rem;
+            color: #33334d;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .transformation-box p {
+            text-align: center;
+            color: #555;
+            font-size: 1.05rem;
+            margin-bottom: 40px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            text-align: center;
+        }
+
+        .benefit-item {
+            padding: 20px;
+        }
+
+        .benefit-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #ffd5a0 0%, #e5c990 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 1.8rem;
+        }
+
+        .benefit-text {
+            color: #33334d;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Program Section */
+        .program-section {
+            background: linear-gradient(135deg, #ff9fa7 0%, #ff8892 100%);
+            padding: 80px 20px;
+        }
+
+        .program-intro {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .program-intro h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .program-intro p {
+            color: rgba(255,255,255,0.95);
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .program-offer {
+            max-width: 900px;
+            margin: 60px auto;
+        }
+
+        .program-offer h3 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .offer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .offer-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .offer-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #ffd5a0 0%, #e5c990 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 0.85rem;
+        }
+
+        .offer-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #33334d;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .offer-description {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .ready-cta {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        .ready-cta h3 {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 25px;
+        }
+
+        /* Curriculum Section */
+        .curriculum-section {
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .curriculum-header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .badge-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #9f7800 0%, #8c6a00 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            box-shadow: 0 10px 30px rgba(159,120,0,0.3);
+        }
+
+        .curriculum-modules {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .module-card {
+            background: white;
+            border: 2px solid #ffe8d5;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 30px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .module-card:hover {
+            border-color: #9f7800;
+            box-shadow: 0 10px 30px rgba(159,120,0,0.15);
+        }
+
+        .module-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .module-icon.intro {
+            background: linear-gradient(135deg, #8c6a00 0%, #9f7800 100%);
+        }
+
+        .module-icon.chakra1 {
+            background: linear-gradient(135deg, #e60023 0%, #c8002b 100%);
+        }
+
+        .module-icon.chakra2 {
+            background: linear-gradient(135deg, #ff8c42 0%, #ff7020 100%);
+        }
+
+        .module-icon.chakra3 {
+            background: linear-gradient(135deg, #ffd93d 0%, #ffc107 100%);
+        }
+
+        .module-icon.chakra4 {
+            background: linear-gradient(135deg, #6dd5b4 0%, #4caf93 100%);
+        }
+
+        .module-icon.chakra5 {
+            background: linear-gradient(135deg, #42b4e6 0%, #2196d4 100%);
+        }
+
+        .module-icon.chakra6 {
+            background: linear-gradient(135deg, #5e6dc6 0%, #4a5bb8 100%);
+        }
+
+        .module-icon.chakra7 {
+            background: linear-gradient(135deg, #9d6dc6 0%, #8557b5 100%);
+        }
+
+        .module-content h3 {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.6rem;
+            color: #33334d;
+            margin-bottom: 15px;
+        }
+
+        .module-description {
+            color: #777;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .module-promises {
+            list-style: none;
+        }
+
+        .module-promises li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .module-promises li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Bonus Section */
+        .bonus-section {
+            background: linear-gradient(135deg, #ffcdd5 0%, #ffb5bd 100%);
+            padding: 80px 20px;
+        }
+
+        .bonus-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: #33334d;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .bonus-grid {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .bonus-item {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .bonus-badge {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #9f7800 0%, #8c6a00 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            box-shadow: 0 8px 20px rgba(159,120,0,0.3);
+        }
+
+        .bonus-details h3 {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.5rem;
+            color: #33334d;
+            margin-bottom: 10px;
+        }
+
+        .bonus-subtitle {
+            color: #777;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .bonus-benefits {
+            list-style: none;
+        }
+
+        .bonus-benefits li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .bonus-benefits li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Final CTA Section */
+        .final-cta-section {
+            background: linear-gradient(135deg, #fff5e8 0%, #ffe8d5 100%);
+            padding: 80px 20px;
+        }
+
+        .final-cta-content {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .final-cta-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: #33334d;
+            margin-bottom: 50px;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 3px solid #9f7800;
+            border-radius: 25px;
+            padding: 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            box-shadow: 0 15px 50px rgba(159,120,0,0.15);
+        }
+
+        .pricing-left h3 {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #33334d;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .pricing-benefits {
+            list-style: none;
+        }
+
+        .pricing-benefits li {
+            padding: 12px 0;
+            padding-left: 35px;
+            position: relative;
+            color: #33334d;
+            font-size: 1.05rem;
+        }
+
+        .pricing-benefits li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .pricing-right {
+            text-align: center;
+        }
+
+        .package-visual {
+            margin-bottom: 30px;
+        }
+
+        .package-placeholder {
+            width: 100%;
+            max-width: 300px;
+            aspect-ratio: 4/3;
+            background: linear-gradient(135deg, #ffe8d5 0%, #ffd5b9 100%);
+            border-radius: 15px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 0.9rem;
+        }
+
+        /* About Section */
+        .about-section {
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .about-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .about-image {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #ffcdd5 0%, #ffa5af 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+
+        .about-header h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: #33334d;
+            margin-bottom: 20px;
+        }
+
+        .about-text p {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .about-text .highlight {
+            font-weight: 700;
+            color: #33334d;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+            background: linear-gradient(135deg, #ffb5bd 0%, #ff9fa7 100%);
+            padding: 80px 20px;
+        }
+
+        .testimonials-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .testimonials-subtitle {
+            color: rgba(255,255,255,0.95);
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 50px;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto 50px;
+        }
+
+        .testimonial-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .testimonial-placeholder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: linear-gradient(135deg, #ffe8d5 0%, #ffd5b9 100%);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 0.9rem;
+        }
+
+        .testimonial-text {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Guarantee Section */
+        .guarantee-section {
+            background: #fff5e8;
+            padding: 80px 20px;
+        }
+
+        .guarantee-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .guarantee-box {
+            background: white;
+            border: 3px solid #9f7800;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+        }
+
+        .guarantee-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #ffe8d5 0%, #ffd5b9 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9f7800;
+            font-size: 2.5rem;
+        }
+
+        .guarantee-box h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2rem;
+            color: #33334d;
+            margin-bottom: 25px;
+        }
+
+        .guarantee-box p {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.8;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .faq-title {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.5rem;
+            color: #33334d;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .faq-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: white;
+            border: 2px solid #ffe8d5;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            border-color: #9f7800;
+        }
+
+        .faq-question {
+            color: #33334d;
+            font-weight: 600;
+            font-size: 1.05rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-plus {
+            color: #9f7800;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        footer {
+            background: linear-gradient(135deg, #ff9fa7 0%, #ff8892 100%);
+            padding: 60px 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .footer-logo {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .footer-text {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-brand {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .brand-text {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-content,
+            .quote-content,
+            .transformation-content,
+            .pricing-card,
+            .offer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .benefits-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .module-card {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .module-icon {
+                margin: 0 auto;
+            }
+
+            .bonus-item {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .bonus-badge {
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Smooth Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">MA SUPER FORMATION<br>9 CHAKRAS</div>
+            <ul class="nav-links">
+                <li><a href="#presentation">PRÉSENTATION</a></li>
+                <li><a href="#programme">AU PROGRAMME</a></li>
+                <li><a href="#temoignages">TÉMOIGNAGES</a></li>
             </ul>
+            <a href="#order" class="cta-btn">REJOINDRE →</a>
+        </nav>
+    </header>
 
-            {{#hero_note}}<div class="note">{{.}}</div>{{/hero_note}}
-          </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-image">
+                    <div class="device-mockup">
+                        <div class="mockup-placeholder">
+                            [Mockup formation<br>multi-appareils]
+                        </div>
+                        <p style="color: #9f7800; font-weight: 700; font-size: 0.9rem;">
+                            MA SUPER FORMATION<br>9 CHAKRAS
+                        </p>
+                    </div>
+                </div>
 
-          <div class="soft-proof">
-            <div class="proof-title">{{proof_title}}</div>
-            <div class="proof-grid">
-              {{#proof_items}}
-              <div class="proof-item">
-                <div class="p-k">{{k}}</div>
-                <div class="p-v">{{v}}</div>
-              </div>
-              {{/proof_items}}
+                <div class="hero-box">
+                    <p class="product-type">TYPE DE PRODUIT</p>
+                    
+                    <h1 class="hero-title">TITRE DE MA<br>FORMATION</h1>
+                    
+                    <p class="hero-pitch">
+                        <strong>Pitch</strong> de la formation/avec: <strong>objectif concret</strong> et <strong>proposition de valeur unique.</strong>
+                    </p>
+
+                    <p style="color: #33334d; font-weight: 700; margin-bottom: 15px;">INCLUS :</p>
+
+                    <ul class="benefits-list">
+                        <li>Puce promesse irrésistible</li>
+                        <li>Puce promesse irrésistible</li>
+                        <li>Puce promesse irrésistible</li>
+                        <li>Puce promesse irrésistible</li>
+                    </ul>
+
+                    <div class="price-tag">97€</div>
+                    <p class="price-detail">(ou 2 X 50€)</p>
+
+                    <a href="#order" class="cta-btn" style="display: inline-block; text-decoration: none;">
+                        REJOINDRE LE PROGRAMME →
+                    </a>
+                </div>
             </div>
-          </div>
         </div>
+    </section>
 
-        <div class="hero-right">
-          <div class="checkout-card" id="checkout">
-            <div class="price-block">
-              <div class="price-label">{{price_label}}</div>
-              <div class="price-row">
-                <div class="price-main">{{price_main}}</div>
-                {{#price_sub}}<div class="price-sub">{{.}}</div>{{/price_sub}}
-              </div>
-              {{#price_note}}<div class="price-note">{{.}}</div>{{/price_note}}
+    <!-- Discover Section -->
+    <section class="discover-section">
+        <div class="container">
+            <h2 class="section-title">DÉCOUVREZ LA FORMATION</h2>
+
+            <div class="video-container">
+                <div class="video-placeholder">
+                    [VIDÉO DE PRÉSENTATION]<br>
+                    Présentation complète du programme
+                </div>
             </div>
-
-            <div class="cta-title">{{cta_title}}</div>
-
-            <!-- Preview form (disabled) -->
-            <div class="cta-row form-preview">
-              <input type="email" placeholder="{{form_email_placeholder}}" disabled />
-              <button type="button" disabled>{{cta_button}}</button>
-            </div>
-
-            <!-- Systeme.io slot -->
-            <div class="systeme-form">
-              <div class="systeme-slot" id="SLOT_CHECKOUT">
-                <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
-              </div>
-            </div>
-
-            <div class="micro">
-              {{#cta_reassurance}}<div class="reassurance">{{.}}</div>{{/cta_reassurance}}
-              {{#cta_micro}}<div class="micro2">{{.}}</div>{{/cta_micro}}
-            </div>
-
-            <div class="trust">
-              {{#trust_items}}
-              <div class="trust-item">
-                <span class="tick">✓</span>
-                <span class="t">{{.}}</span>
-              </div>
-              {{/trust_items}}
-            </div>
-          </div>
         </div>
-      </div>
+    </section>
 
-      <div class="scroll">{{scroll_hint}}</div>
-    </div>
-  </header>
+    <!-- Situations Section -->
+    <section class="situations-section">
+        <div class="container">
+            <div class="situations-box">
+                <h2 class="situations-title">EST-CE QUE CES SITUATIONS VOUS<br>PARLENT ?</h2>
 
-  <section class="promise" id="promise">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{promise_title}}</h2>
-        <p class="lead">{{promise_subtitle}}</p>
-      </div>
+                <ul class="situations-list">
+                    <li>Situation que vit ton client idéal</li>
+                    <li>Situation que vit ton client idéal</li>
+                    <li>Situation que vit ton client idéal</li>
+                </ul>
 
-      <div class="promise-grid">
-        {{#promise_cards}}
-        <div class="promise-card">
-          <div class="pc-title">{{title}}</div>
-          <div class="pc-text">{{text}}</div>
-        </div>
-        {{/promise_cards}}
-      </div>
-    </div>
-  </section>
-
-  <section class="program" id="program">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{program_title}}</h2>
-        <p class="lead">{{program_subtitle}}</p>
-      </div>
-
-      <div class="program-grid">
-        <div class="timeline">
-          {{#modules}}
-          <div class="module">
-            <div class="m-dot"></div>
-            <div class="m-body">
-              <div class="m-kicker">{{kicker}}</div>
-              <div class="m-title">{{title}}</div>
-              <div class="m-text">{{text}}</div>
-              {{#bullets}}
-              <ul class="m-list">
-                {{#items}}<li><span class="mini-dot"></span><span>{{.}}</span></li>{{/items}}
-              </ul>
-              {{/bullets}}
+                <p class="situations-cta">
+                    Si vous avez répondu "OUI" à une de ces questions ...<br><br>
+                    <strong>ALORS COMMENCEZ AVEC MOI LE<br>PROGRAMME POUR "PROMESSE"</strong>
+                </p>
             </div>
-          </div>
-          {{/modules}}
         </div>
+    </section>
 
-        <aside class="side">
-          <div class="side-card">
-            <div class="side-title">{{side_title}}</div>
-            <div class="side-text">{{side_text}}</div>
-            <ul class="side-list">
-              {{#side_points}}<li><span class="spark">✦</span><span>{{.}}</span></li>{{/side_points}}
-            </ul>
-            <a class="side-cta" href="#checkout">{{side_cta}}</a>
-          </div>
+    <!-- Quote Section -->
+    <section class="quote-section">
+        <div class="container">
+            <div class="quote-content">
+                <div class="quote-text">
+                    <h2>"TU DEVRAIS OUVRIR TES<br>CHAKRAS !"</h2>
 
-          <div class="guarantee">
-            <div class="g-title">{{guarantee_title}}</div>
-            <div class="g-text">{{guarantee_text}}</div>
-          </div>
-        </aside>
-      </div>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Qui n'a jamais entendu cette phrase prononcée sur un ton ironique ?
+                    </p>
 
-      <div class="final-cta">
-        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
-        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
-      </div>
-    </div>
-  </section>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Les chakras sont un merveilleux sujet dont on entend parler de plus en plus fréquemment.
+                    </p>
 
-  <section class="faq" id="faq">
-    <div class="container">
-      <div class="section-head">
-        <h2>{{faq_title}}</h2>
-        <p class="lead">{{faq_subtitle}}</p>
-      </div>
+                    <p class="highlight">
+                        Ce sont ces centres énergétiques qui régissent votre corps, les grands domaines de votre vie et de nombreuses facettes de votre être.
+                    </p>
 
-      <div class="faq-grid">
-        {{#faq_items}}
-        <div class="faq-item">
-          <div class="q">{{q}}</div>
-          <div class="a">{{a}}</div>
+                    <p>
+                        Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nous sommes actuellement en train d'apprendre à les ressentir et les utiliser, et cela va devenir la norme...
+                    </p>
+                </div>
+
+                <div class="quote-image">
+                    [Image silhouette<br>chakras dorés]
+                </div>
+            </div>
         </div>
-        {{/faq_items}}
-      </div>
+    </section>
 
-      <div class="final-cta-2">
-        <a class="btn-secondary" href="#checkout">{{final_cta_2}}</a>
-      </div>
-    </div>
-  </section>
+    <!-- Transformation Section -->
+    <section class="transformation-section">
+        <div class="container">
+            <div class="transformation-content">
+                <div class="chakra-illustration">
+                    [Illustration<br>géométrie sacrée<br>+ chakras]
+                </div>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="left">
-        <div class="ft">{{footer_title}}</div>
-        <div class="fs">{{footer_text}}</div>
-      </div>
-      <a class="back" href="#top">{{footer_back_to_top}}</a>
-    </div>
-  </footer>
-</div>
+                <div class="transformation-text">
+                    <h2>... MAIS ARRIVEZ-VOUS<br>À ANCRER CES<br>CHANGEMENTS DANS<br>VOTRE QUOTIDIEN ?</h2>
+
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous avez peut-être encore du mal à <strong>intégrer des actions dans votre quotidien</strong> pour les maintenir équilibrés et faire circuler l'énergie.
+                    </p>
+
+                    <p>
+                        C'est normal que ce ne soit pas inné, nous sommes tous en train d'apprendre en permanence !
+                    </p>
+
+                    <p>
+                        <strong>Vous sentez que vous pourriez aller plus loin que seulement "la théorie" en créant une connexion plus forte avec vos 7 chakras.</strong>
+                    </p>
+
+                    <p>
+                        Et c'est exactement ce que je vais vous proposer sur cette page grâce à un merveilleux outil...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Method Section -->
+    <section class="method-section">
+        <div class="container">
+            <div class="method-content">
+                <div class="method-header">
+                    <h2 class="section-title">MON OUTIL PRÉFÉRÉ POUR [OBJECTIF]</h2>
+
+                    <div class="method-image">
+                        [Photo méditation<br>extérieur]
+                    </div>
+
+                    <h3 class="belief-title">JE CROIS<br>PROFONDÉMENT EN<br>[MÉTHODE UNIQUE]</h3>
+
+                    <p style="text-align: center; color: #555; font-size: 1.05rem; line-height: 1.8; max-width: 800px; margin: 0 auto;">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. En méditant, vous allez "à l'intérieur" et vous concentrez votre attention dans une direction précise. Partout où vous mettez de l'attention, cela grandit.
+                    </p>
+
+                    <p style="text-align: center; color: #555; font-size: 1.05rem; line-height: 1.8; max-width: 800px; margin: 20px auto 0;">
+                        <strong style="color: #33334d;">Grâce à la méditation, vous allez vous connecter en conscience à vos chakras.</strong>
+                    </p>
+                </div>
+
+                <h3 class="belief-subtitle">CETTE RECONNEXION À NOS CHAKRAS EST UN PROCESSUS<br>PROFONDÉMENT TRANSFORMATEUR</h3>
+
+                <div class="transformation-box">
+                    <h3>VIVRE VOTRE GRANDE<br>TRANSFORMATION</h3>
+
+                    <p>Lorsque vous méditez sur vos centres énergétiques, votre énergie abonde et des libérations se produisent :</p>
+
+                    <div class="benefits-grid">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">✦</div>
+                            <p class="benefit-text">Vous vous libérez de fonctionnements qui ne vous servent plus</p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <div class="benefit-icon">☀</div>
+                            <p class="benefit-text">Vous montez en énergie et vous rayonnez</p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <div class="benefit-icon">⊕</div>
+                            <p class="benefit-text">Vous prenez conscience de parties de vous que vous ne soupçonniez pas</p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <div class="benefit-icon">✧</div>
+                            <p class="benefit-text">Vous développez vos ressentis vibratoires</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Program Section -->
+    <section class="program-section">
+        <div class="container">
+            <div class="program-intro">
+                <div class="device-mockup" style="max-width: 500px; margin: 0 auto 40px;">
+                    <div class="mockup-placeholder">
+                        [Mockup formation complète]
+                    </div>
+                </div>
+
+                <h2>DÉCOUVREZ<br>MA SUPER FORMATION<br>AUX 9 CHAKRAS</h2>
+
+                <p>
+                    <strong>7 semaines de méditations guidées pour nettoyer, guérir, libérer et harmoniser vos 7 centres énergétiques sacrés</strong>
+                </p>
+
+                <p style="margin-top: 20px;">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Plus qu'un programme, il s'agit d'un véritable voyage intérieur avec des exercices ciblés et des pratiques concrètes qui feront de ces 7 semaines, un moment d'amusement et de transformation.
+                </p>
+            </div>
+
+            <div class="program-offer">
+                <h3>VOICI CE QUE VOUS OBTENEZ :</h3>
+
+                <div class="offer-grid">
+                    <div class="offer-card">
+                        <div class="offer-icon">
+                            [Icône méditation<br>hebdomadaire]
+                        </div>
+                        <h4 class="offer-title">UNE NOUVELLE MÉDITATION GUIDÉE<br>CHAQUE SEMAINE</h4>
+                        <p class="offer-description">
+                            Lorem ipsum dolor sit amet qui vous accompagnera dans ce travail d'élévation des chakras (entre 10 et 13 minutes avec un fond de musique douce).
+                        </p>
+                    </div>
+
+                    <div class="offer-card">
+                        <div class="offer-icon">
+                            [Icône livret<br>pratique]
+                        </div>
+                        <h4 class="offer-title">UN LIVRET D'ACCOMPAGNEMENT PRATIQUE</h4>
+                        <p class="offer-description">
+                            Lorem ipsum dolor sit amet. Des exercices ciblés, rituels, pratiques concrètes et mantras pour ancrer les transformations dans votre esprit et dans la matière.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="ready-cta">
+                    <h3>PRÊT.E À VOUS RECONNECTER À VOS CHAKRAS ?</h3>
+                    <a href="#order" class="cta-btn" style="display: inline-block; text-decoration: none;">
+                        REJOINDRE LE PROGRAMME →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Curriculum Section -->
+    <section class="curriculum-section">
+        <div class="container">
+            <div class="curriculum-header">
+                <div class="badge-icon">⚛</div>
+                <h2 class="section-title">AU PROGRAMME</h2>
+            </div>
+
+            <div class="curriculum-modules">
+                <!-- Intro Module -->
+                <div class="module-card">
+                    <div class="module-icon intro">
+                        [Icône<br>introduction]
+                    </div>
+                    <div class="module-content">
+                        <h3>CHAPITRE D'INTRODUCTION</h3>
+                        <p class="module-description">Description du chapitre d'introduction</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 1 -->
+                <div class="module-card">
+                    <div class="module-icon chakra1">
+                        [Chakra<br>racine]
+                    </div>
+                    <div class="module-content">
+                        <h3>PREMIÈRE PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la première partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 2 -->
+                <div class="module-card">
+                    <div class="module-icon chakra2">
+                        [Chakra<br>sacré]
+                    </div>
+                    <div class="module-content">
+                        <h3>DEUXIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la deuxième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 3 -->
+                <div class="module-card">
+                    <div class="module-icon chakra3">
+                        [Chakra<br>solaire]
+                    </div>
+                    <div class="module-content">
+                        <h3>TROISIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la troisième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 4 -->
+                <div class="module-card">
+                    <div class="module-icon chakra4">
+                        [Chakra<br>cœur]
+                    </div>
+                    <div class="module-content">
+                        <h3>QUATRIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la quatrième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 5 -->
+                <div class="module-card">
+                    <div class="module-icon chakra5">
+                        [Chakra<br>gorge]
+                    </div>
+                    <div class="module-content">
+                        <h3>CINQUIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la cinquième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 6 -->
+                <div class="module-card">
+                    <div class="module-icon chakra6">
+                        [Chakra<br>3e œil]
+                    </div>
+                    <div class="module-content">
+                        <h3>SIXIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la sixième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chakra 7 -->
+                <div class="module-card">
+                    <div class="module-icon chakra7">
+                        [Chakra<br>couronne]
+                    </div>
+                    <div class="module-content">
+                        <h3>SEPTIÈME PARTIE DE LA FORMATION</h3>
+                        <p class="module-description">Description de la septième partie de la formation</p>
+                        <ul class="module-promises">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bonus Section -->
+    <section class="bonus-section">
+        <div class="container">
+            <h2 class="bonus-title">ET EN BONUS</h2>
+
+            <div class="bonus-grid">
+                <div class="bonus-item">
+                    <div class="bonus-badge">BONUS</div>
+                    <div class="bonus-details">
+                        <h3>NOM DU BONUS</h3>
+                        <p class="bonus-subtitle">Description du bonus</p>
+                        <ul class="bonus-benefits">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bonus-item">
+                    <div class="bonus-badge">BONUS</div>
+                    <div class="bonus-details">
+                        <h3>NOM DU BONUS</h3>
+                        <p class="bonus-subtitle">Description du bonus</p>
+                        <ul class="bonus-benefits">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bonus-item">
+                    <div class="bonus-badge">BONUS</div>
+                    <div class="bonus-details">
+                        <h3>NOM DU BONUS</h3>
+                        <p class="bonus-subtitle">Description du bonus</p>
+                        <ul class="bonus-benefits">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bonus-item">
+                    <div class="bonus-badge">BONUS</div>
+                    <div class="bonus-details">
+                        <h3>NOM DU BONUS</h3>
+                        <p class="bonus-subtitle">Description du bonus</p>
+                        <ul class="bonus-benefits">
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>Puce promesse irrésistible + curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section" id="order">
+        <div class="container">
+            <div class="final-cta-content">
+                <h2 class="final-cta-title">PRÊT.E À DÉMARRER ?</h2>
+
+                <div class="pricing-card">
+                    <div class="pricing-left">
+                        <h3>MA SUPER FORMATION</h3>
+                        <p style="color: #777; font-size: 0.95rem; margin-bottom: 25px;">INCLUS :</p>
+                        <ul class="pricing-benefits">
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                            <li>Puce promesse irrésistible</li>
+                        </ul>
+                    </div>
+
+                    <div class="pricing-right">
+                        <div class="package-visual">
+                            <div class="package-placeholder">
+                                [Visuel package complet<br>avec tous les éléments]
+                            </div>
+                        </div>
+
+                        <div class="price-tag">97€</div>
+                        <p class="price-detail">(ou 2 X 50€)</p>
+
+                        <a href="#order" class="cta-btn" style="display: inline-block; text-decoration: none;">
+                            C'EST PARTI →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-header">
+                    <div class="about-image">
+                        [Photo portrait<br>fondateur/expert]
+                    </div>
+                    <h2>QUI EST [VOTRE NOM] ?</h2>
+                </div>
+
+                <div class="about-text">
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, <span class="highlight">totam rem aperiam</span>, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                    </p>
+
+                    <p>
+                        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut <span class="highlight">odit aut fugit</span>, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+                    </p>
+
+                    <p>
+                        <span class="highlight">Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit</span>, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                    </p>
+
+                    <p>
+                        Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi <span class="highlight">ut aliquid ex ea commodi</span> consequatur?
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Created Section -->
+    <section class="quote-section">
+        <div class="container">
+            <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+                <div class="about-image" style="margin: 0 auto 40px;">
+                    [Photo ou illustration<br>fondateur]
+                </div>
+
+                <h2 class="section-title">POURQUOI J'AI CRÉÉ CE PROGRAMME ?</h2>
+
+                <p style="color: #555; font-size: 1.05rem; line-height: 1.8; margin-bottom: 20px;">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, <strong style="color: #33334d;">totam rem aperiam</strong>, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                </p>
+
+                <p style="color: #555; font-size: 1.05rem; line-height: 1.8; margin-bottom: 20px;">
+                    Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut <strong style="color: #33334d;">odit aut fugit</strong>, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+                </p>
+
+                <p style="color: #555; font-size: 1.05rem; line-height: 1.8;">
+                    <strong style="color: #33334d;">Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit</strong>, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section">
+        <div class="container">
+            <h2 class="testimonials-title">CE QU'ELLES EN PENSENT</h2>
+            <p class="testimonials-subtitle">Plus de 3000 personnes ont déjà fait ce voyage intérieur, voici ce que certaines en pensent...</p>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-placeholder">
+                        [Screenshot témoignage<br>ou vidéo témoignage]
+                    </div>
+                    <p class="testimonial-text">
+                        <strong>SCREENSHOT D'UN<br>TÉMOIGNAGE</strong>
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px;">
+                <a href="#order" class="cta-btn" style="display: inline-block; text-decoration: none;">
+                    REJOINDRE LE PROGRAMME →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Guarantee Section -->
+    <section class="guarantee-section">
+        <div class="container">
+            <div class="guarantee-content">
+                <div class="guarantee-box">
+                    <div class="guarantee-icon">♥</div>
+                    <h2>VOUS NE PRENEZ AUCUN RISQUE !</h2>
+                    <p>
+                        <strong>Explique brièvement ta garantie (ex : 14 jours satisfait ou remboursée, satisfait ou rembourse 2X, 30 jours garantie, ...)</strong>
+                    </p>
+                    <p style="margin-top: 20px;">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Détaille les conditions de ta garantie, comment elle s'applique, comment elle évite à ton prospect de prendre des risques, ce que tu fais pour prouver que tu es sûr de ton offre...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="faq-title">UNE QUESTION ?</h2>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection</span>
+                        <span class="faq-plus">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p class="footer-logo">MA SUPER<br>FORMATION<br>9 CHAKRAS</p>
+
+                <p class="footer-text">
+                    Ta marque 2024 © Tous droits réservés<br>
+                    Ce site n'appartient pas à Youtube/Facebook et n'est pas affilié à Facebook/Youtube. Le contenu de ces deux<br>
+                    sociétés est la propriété de leurs marques respectives.
+                </p>
+
+                <div class="footer-links">
+                    <a href="#">CGV</a>
+                    <a href="#">Mentions Légales</a>
+                    <a href="#">Politique de confidentialité</a>
+                </div>
+
+                <div class="footer-brand">
+                    <div>
+                        <p class="brand-text">PRÉNOM +<br>NOM FAMILLE</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+<!-- ===================== BLOC 2 ===================== -->
+

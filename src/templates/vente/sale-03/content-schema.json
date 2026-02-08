@@ -1,313 +1,719 @@
 {
-  "kind": "vente",
+  "kind": "sale",
   "templateId": "sale-03",
+  "name": "Mega Pack Programme Coaching Premium",
+  "description": "Template programme premium complet avec header gradient, hero avec formulaire de commande intégré, témoignages, planning visuel, features détaillées, méthode étape par étape, preuves de marché, niches applicables, qualification client, FAQ et garantie",
   "fields": [
     {
-      "key": "hero_title_accent",
+      "key": "logo_text",
+      "label": "Texte du logo",
+      "type": "string",
+      "intention": "brand_identity",
+      "description": "Nom de votre marque (24px Montserrat, weight 900, uppercase, letter-spacing 1px, couleur blanche). Peut contenir une partie normale et une partie en italique light (300)",
+      "examples": ["COACHING PRO", "MEGA PACK"],
+      "maxLength": 30,
+      "required": true
+    },
+    {
+      "key": "logo_text_italic",
+      "label": "Partie italique du logo",
+      "type": "string",
+      "intention": "brand_style",
+      "description": "Partie du logo en italique light (weight 300, italic)",
+      "examples": ["Pro", "Academy"],
+      "maxLength": 15,
+      "required": false
+    },
+    {
+      "key": "top_nav_links",
+      "label": "Liens navigation top",
       "type": "string[]",
+      "intention": "navigation_anchors",
+      "description": "3-5 liens de navigation (13px, weight 500, uppercase, letter-spacing 0.5px, gap 30px)",
+      "examples": ["PROGRAMME", "PLANNING", "TÉMOIGNAGES", "FAQ", "GARANTIE"],
       "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 90
+      "maxItems": 5,
+      "itemMaxLength": 20,
+      "required": true
     },
     {
-      "key": "hero_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "proof_chips",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "price_old",
-      "type": "string[]",
-      "minItems": 2,
-      "maxItems": 4,
-      "itemMaxLength": 40
-    },
-    {
-      "key": "benefit_cards",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "kicker",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "steps",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "num",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "side_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "dark_cards",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "faq_items",
-      "type": "object[]",
-      "minItems": 5,
-      "maxItems": 10,
-      "fields": [
-        {
-          "key": "q",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "a",
-          "type": "string",
-          "maxLength": 160
-        }
-      ]
-    },
-    {
-      "key": "brand_name",
+      "key": "header_cta_text",
+      "label": "CTA header",
       "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_1",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_2",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_3",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_cta",
-      "type": "string",
-      "maxLength": 32
-    },
-    {
-      "key": "hero_badge",
-      "type": "string",
-      "maxLength": 24
+      "intention": "header_action",
+      "description": "Texte du bouton rouge dans le header (13px, bold, uppercase, letter-spacing 0.5px, background #d71e46)",
+      "examples": ["COMMANDER MAINTENANT", "REJOINDRE"],
+      "maxLength": 25,
+      "required": true
     },
     {
       "key": "hero_title",
+      "label": "Titre hero principal",
       "type": "string",
-      "maxLength": 90
+      "intention": "promise_headline",
+      "description": "Promesse principale du programme (48px Montserrat, weight 900, line-height 1.2, text-shadow, couleur blanche, sur fond gradient purple-blue). Peut contenir des retours à la ligne <br>",
+      "examples": ["PROMESSE PRINCIPALE DE TON PROGRAMME\nRésultat/Transformation que ton audience va obtenir"],
+      "maxLength": 200,
+      "required": true
     },
     {
-      "key": "hero_subtitle",
+      "key": "order_section_title",
+      "label": "Titre section commande",
       "type": "string",
-      "maxLength": 90
+      "intention": "order_intro",
+      "description": "Titre au-dessus du formulaire (32px Montserrat, weight 900). Peut contenir une partie en rouge avec <span> pour le prix",
+      "examples": ["Accède Maintenant Au Prix Le Plus Bas :"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "cta_main",
+      "key": "order_section_title_highlight",
+      "label": "Partie surlignée titre commande",
       "type": "string",
-      "maxLength": 32
+      "intention": "price_emphasis",
+      "description": "Partie du titre à mettre en rouge (color #d71e46)",
+      "examples": ["Au Prix Le Plus Bas"],
+      "maxLength": 40,
+      "required": false
     },
     {
-      "key": "cta_secondary",
-      "type": "string",
-      "maxLength": 32
+      "key": "main_components",
+      "label": "Composants principaux de l'offre",
+      "type": "object[]",
+      "intention": "offer_breakdown",
+      "description": "4-6 composants principaux avec titre bold (strong) incluant valeur et description (15px, padding 15px 0, border-bottom, icône ○ en couleur purple)",
+      "minItems": 4,
+      "maxItems": 6,
+      "itemSchema": {
+        "component_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Titre du composant avec valeur (ex: Composant Principal #1 - Valeur 997€)"
+        },
+        "component_description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Description du composant et bénéfices"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "component_title": "Composant Principal #1 - Valeur 997€",
+          "component_description": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        }
+      ]
     },
     {
-      "key": "cta_micro",
+      "key": "price_label",
+      "label": "Label prix total",
       "type": "string",
-      "maxLength": 32
+      "intention": "price_context",
+      "description": "Texte avant le prix (14px, uppercase, letter-spacing 0.5px)",
+      "examples": ["TOTAL :", "VALEUR TOTALE :"],
+      "maxLength": 30,
+      "required": true
     },
     {
-      "key": "order_pill",
+      "key": "price_old",
+      "label": "Prix ancien",
       "type": "string",
-      "maxLength": 160
+      "intention": "price_anchor",
+      "description": "Prix barré (24px, color #999, text-decoration line-through)",
+      "examples": ["XX XXX€", "12 997€"],
+      "maxLength": 20,
+      "required": true
     },
     {
-      "key": "price_now",
+      "key": "price_current",
+      "label": "Prix actuel",
       "type": "string",
-      "maxLength": 40
+      "intention": "price_display",
+      "description": "Prix principal en GROS ROUGE (56px, weight 900, color #d71e46, line-height 1)",
+      "examples": ["XXX€", "2997€"],
+      "maxLength": 15,
+      "required": true
     },
     {
-      "key": "order_meta",
+      "key": "price_note",
+      "label": "Note de paiement",
       "type": "string",
-      "maxLength": 160
+      "intention": "payment_flexibility",
+      "description": "Option de paiement échelonné (13px)",
+      "examples": ["OU 3 PAIEMENTS DE 999€", "OU 6X 499€"],
+      "maxLength": 50,
+      "required": false
     },
     {
-      "key": "checkout_title",
+      "key": "cta_primary_text",
+      "label": "Texte CTA principal",
       "type": "string",
-      "maxLength": 90
+      "intention": "action_trigger",
+      "description": "Texte principal du bouton (16px, bold, uppercase, letter-spacing 0.5px, gradient rouge)",
+      "examples": ["REJOINDRE LE PROGRAMME MAINTENANT", "COMMANDER MAINTENANT"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "checkout_reassurance",
+      "key": "cta_primary_subtext",
+      "label": "Sous-texte CTA",
       "type": "string",
-      "maxLength": 160
+      "intention": "cta_reassurance",
+      "description": "Petit texte sous le CTA principal (12px, weight 500, opacity 0.95)",
+      "examples": ["Accès instantané • Garantie 60 jours", "Paiement sécurisé"],
+      "maxLength": 60,
+      "required": false
     },
     {
-      "key": "benefits_title",
+      "key": "testimonials_section_title",
+      "label": "Titre section témoignages",
       "type": "string",
-      "maxLength": 90
+      "intention": "social_proof_intro",
+      "description": "Titre de la section témoignages (42px Montserrat, weight 900, uppercase, line-height 1.3)",
+      "examples": ["CE QU'ILS EN DISENT", "ILS ONT TRANSFORMÉ LEUR VIE"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "benefits_text",
-      "type": "string",
-      "maxLength": 240
+      "key": "testimonials",
+      "label": "Témoignages",
+      "type": "object[]",
+      "intention": "social_proof_testimonial",
+      "description": "3-8 témoignages en grille 2 colonnes avec photo ronde (60px gradient purple-blue), texte (15px italic line-height 1.7) et nom auteur (16px bold)",
+      "minItems": 3,
+      "maxItems": 8,
+      "itemSchema": {
+        "testimonial_text": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Texte du témoignage en italique"
+        },
+        "author_name": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Nom complet de la personne"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "testimonial_text": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua quis nostrud exercitation.",
+          "author_name": "Nom Prénom"
+        }
+      ]
     },
     {
-      "key": "content_title",
+      "key": "video_testimonials_title",
+      "label": "Titre témoignages vidéo",
       "type": "string",
-      "maxLength": 90
+      "intention": "video_proof_intro",
+      "description": "Titre optionnel pour section vidéo (42px)",
+      "maxLength": 80,
+      "required": false
     },
     {
-      "key": "content_text",
+      "key": "schedule_section_badge",
+      "label": "Badge section planning",
       "type": "string",
-      "maxLength": 240
+      "intention": "schedule_context",
+      "description": "Badge au-dessus du titre planning (12px, bold, uppercase, letter-spacing 1px, gradient purple-blue, border-radius 25px)",
+      "examples": ["PLANNING DU PROGRAMME", "CE QUI T'ATTEND"],
+      "maxLength": 40,
+      "required": false
     },
     {
-      "key": "side_title",
+      "key": "schedule_section_title",
+      "label": "Titre section planning",
       "type": "string",
-      "maxLength": 90
+      "intention": "schedule_intro",
+      "description": "Titre de la section planning (42px, weight 900, uppercase)",
+      "examples": ["DÉCOUVRE LE PLANNING COMPLET", "TON PARCOURS DÉTAILLÉ"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "side_text",
+      "key": "features_section_title",
+      "label": "Titre section features",
       "type": "string",
-      "maxLength": 240
+      "intention": "features_intro",
+      "description": "Titre de la section qui détaille les composants (42px)",
+      "examples": ["VOICI CE QUE TU VAS OBTENIR", "LE PROGRAMME COMPLET"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "side_cta",
-      "type": "string",
-      "maxLength": 32
+      "key": "features",
+      "label": "Features détaillées",
+      "type": "object[]",
+      "intention": "feature_showcase",
+      "description": "3-6 features avec header gradient purple-blue, badge (11px uppercase), titre (32px weight 900), prix ancien/nouveau (18px), description (16px line-height 1.8), liste de modules (avec ✓) et mockup visuel",
+      "minItems": 3,
+      "maxItems": 6,
+      "itemSchema": {
+        "feature_badge": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Badge catégorie (ex: MODULE PRINCIPAL, BONUS)"
+        },
+        "feature_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Titre de la feature"
+        },
+        "feature_price_old": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Prix barré (ex: Valeur : 997€)"
+        },
+        "feature_price_new": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Prix actuel (ex: Inclus)"
+        },
+        "feature_description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Description complète de la feature"
+        },
+        "feature_modules": {
+          "type": "string[]",
+          "minItems": 3,
+          "maxItems": 12,
+          "itemMaxLength": 100,
+          "description": "Liste des modules/éléments inclus (avec ✓)"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "feature_badge": "MODULE PRINCIPAL",
+          "feature_title": "Nom du Module / Formation",
+          "feature_price_old": "Valeur : 997€",
+          "feature_price_new": "Inclus",
+          "feature_description": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+          "feature_modules": [
+            "Module 1 : Nom du module",
+            "Module 2 : Nom du module",
+            "Module 3 : Nom du module"
+          ]
+        }
+      ]
     },
     {
-      "key": "side_micro",
+      "key": "steps_section_title",
+      "label": "Titre section étapes",
       "type": "string",
-      "maxLength": 160
+      "intention": "methodology_intro",
+      "description": "Titre de la méthode étape par étape (42px)",
+      "examples": ["LA MÉTHODE EN 4 ÉTAPES", "TON PARCOURS SIMPLIFIÉ"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "dark_title",
-      "type": "string",
-      "maxLength": 90
+      "key": "steps",
+      "label": "Étapes de la méthode",
+      "type": "object[]",
+      "intention": "step_by_step",
+      "description": "4-6 étapes avec numéro (14px uppercase bold), titre court (24px bold) et description (15px line-height 1.7). Connectées visuellement par des lignes",
+      "minItems": 4,
+      "maxItems": 6,
+      "itemSchema": {
+        "step_number": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Numéro et nom (ex: ÉTAPE 1 : NOM DE L'ÉTAPE)"
+        },
+        "step_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Titre court qui explique l'objectif principal"
+        },
+        "step_description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Description de l'étape"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "step_number": "ÉTAPE 1 : NOM DE L'ÉTAPE",
+          "step_title": "Titre court de l'étape qui explique l'objectif principal",
+          "step_description": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt."
+        }
+      ]
     },
     {
-      "key": "dark_text",
+      "key": "market_section_badge",
+      "label": "Badge section marché",
       "type": "string",
-      "maxLength": 240
+      "intention": "market_context",
+      "description": "Badge contexte marché (12px uppercase)",
+      "examples": ["BADGE CONTEXTE MARCHÉ / OPPORTUNITÉ", "LE MOMENT IDÉAL"],
+      "maxLength": 50,
+      "required": false
     },
     {
-      "key": "dark_cta",
+      "key": "market_section_title",
+      "label": "Titre opportunité marché",
       "type": "string",
-      "maxLength": 32
+      "intention": "market_opportunity",
+      "description": "Titre qui positionne le marché comme opportunité (42px, uppercase, peut contenir des <br>)",
+      "examples": ["Titre Positionnant Ton Marché/Industrie\nComme Une Opportunité De Croissance"],
+      "maxLength": 150,
+      "required": false
     },
     {
-      "key": "dark_micro",
+      "key": "old_model_title",
+      "label": "Titre ancien modèle",
       "type": "string",
-      "maxLength": 160
+      "intention": "problem_identification",
+      "description": "Titre de l'ancien modèle/problème (18px, weight 900, uppercase, color #d71e46)",
+      "examples": ["L'ANCIEN MODÈLE / PROBLÈME", "CE QUI NE FONCTIONNE PLUS"],
+      "maxLength": 60,
+      "required": false
+    },
+    {
+      "key": "old_model_description",
+      "label": "Description ancien modèle",
+      "type": "string",
+      "intention": "problem_agitation",
+      "description": "Texte expliquant l'ancien modèle (15px, color #555)",
+      "maxLength": 200,
+      "required": false
+    },
+    {
+      "key": "new_model_title",
+      "label": "Titre nouveau modèle",
+      "type": "string",
+      "intention": "solution_identification",
+      "description": "Titre de ton industrie/solution (18px, weight 900, uppercase, color #1e7e34 vert)",
+      "examples": ["TON INDUSTRIE / SOLUTION", "LA NOUVELLE VOIE"],
+      "maxLength": 60,
+      "required": false
+    },
+    {
+      "key": "new_model_description",
+      "label": "Description nouveau modèle",
+      "type": "string",
+      "intention": "solution_promise",
+      "description": "Texte expliquant la croissance du marché (15px, color #555)",
+      "maxLength": 200,
+      "required": false
+    },
+    {
+      "key": "timing_badge",
+      "label": "Badge timing",
+      "type": "string",
+      "intention": "urgency_statement",
+      "description": "Badge qui crée l'urgence (12px uppercase)",
+      "examples": ["C'EST LE MOMENT IDÉAL POUR AGIR", "POURQUOI MAINTENANT"],
+      "maxLength": 50,
+      "required": false
+    },
+    {
+      "key": "timing_text",
+      "label": "Texte timing",
+      "type": "string",
+      "intention": "urgency_justification",
+      "description": "Texte qui justifie l'urgence (18px, opacity 0.95)",
+      "maxLength": 250,
+      "required": false
+    },
+    {
+      "key": "market_stat_title",
+      "label": "Titre statistique marché",
+      "type": "string",
+      "intention": "market_proof",
+      "description": "Chiffre clé ou statistique impressionnante (42px, peut contenir <br>)",
+      "examples": ["Chiffre Clé / Statistique Impressionnante\nSur La Croissance De Ton Marché"],
+      "maxLength": 120,
+      "required": false
+    },
+    {
+      "key": "authority_sources",
+      "label": "Sources d'autorité",
+      "type": "object[]",
+      "intention": "credibility_proof",
+      "description": "2-3 citations de sources d'autorité avec titre (18px bold couleur bleue) et texte optionnel (15px, color #555)",
+      "minItems": 2,
+      "maxItems": 3,
+      "itemSchema": {
+        "source_title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Nom de la source / citation"
+        },
+        "source_text": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Texte optionnel de la citation"
+        }
+      },
+      "required": false
+    },
+    {
+      "key": "niches_section_badge",
+      "label": "Badge section niches",
+      "type": "string",
+      "intention": "applicability_intro",
+      "description": "Badge diversité/applicabilité (12px uppercase)",
+      "examples": ["BADGE DIVERSITÉ / APPLICABILITÉ", "POUR QUI ?"],
+      "maxLength": 50,
+      "required": false
+    },
+    {
+      "key": "niches_section_title",
+      "label": "Titre section niches",
+      "type": "string",
+      "intention": "applicability_showcase",
+      "description": "Titre montrant la diversité des applications (42px, peut contenir <br>)",
+      "examples": ["Titre Montrant La Diversité\nDes Niches / Applications Possibles"],
+      "maxLength": 100,
+      "required": false
+    },
+    {
+      "key": "niches_list",
+      "label": "Liste de niches",
+      "type": "string[]",
+      "intention": "use_cases",
+      "description": "6-12 exemples de niches/applications en grille 3 colonnes, pills colorées alternées (bleu/rouge, padding 20px 25px, border-radius 30px, font-weight 600)",
+      "minItems": 6,
+      "maxItems": 12,
+      "itemMaxLength": 50,
+      "required": false,
+      "examples": [
+        "○ Niche exemple 1",
+        "○ Niche exemple 2",
+        "○ Coaching business"
+      ]
+    },
+    {
+      "key": "qualification_badge",
+      "label": "Badge qualification",
+      "type": "string",
+      "intention": "qualification_intro",
+      "description": "Badge qualification client (12px uppercase)",
+      "examples": ["BADGE QUALIFICATION CLIENT", "C'EST POUR TOI ?"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "qualification_title",
+      "label": "Titre qualification",
+      "type": "string",
+      "intention": "qualification_question",
+      "description": "Question de qualification (42px, peut contenir <br>)",
+      "examples": ["Est-Ce Que Ce Programme\nEst Fait Pour Toi ?"],
+      "maxLength": 100,
+      "required": true
+    },
+    {
+      "key": "not_for_you_list",
+      "label": "Ce n'est PAS pour toi si",
+      "type": "string[]",
+      "intention": "negative_qualification",
+      "description": "4-6 objections ou profils non-qualifiés (15px, avec ✗ rouge)",
+      "minItems": 4,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true,
+      "examples": [
+        "Objection ou profil non-qualifié #1",
+        "Tu cherches une solution miracle sans effort"
+      ]
+    },
+    {
+      "key": "perfect_for_you_list",
+      "label": "C'est PARFAIT pour toi si",
+      "type": "string[]",
+      "intention": "positive_qualification",
+      "description": "4-6 bénéfices ou profils qualifiés (15px, avec ✓ vert)",
+      "minItems": 4,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true,
+      "examples": [
+        "Bénéfice ou profil qualifié #1",
+        "Tu es prêt(e) à passer à l'action maintenant"
+      ]
+    },
+    {
+      "key": "qualification_final_badge",
+      "label": "Badge final qualification",
+      "type": "string",
+      "intention": "qualification_cta",
+      "description": "Badge avant le grand titre final (12px uppercase)",
+      "examples": ["SI ÇA RÉSONNE EN TOI, PASSE À L'ACTION !"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "welcome_title_1",
+      "label": "Titre bienvenue ligne 1",
+      "type": "string",
+      "intention": "welcome_statement",
+      "description": "Première ligne du titre de bienvenue (52px, weight 900)",
+      "examples": ["BIENVENUE DANS"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "welcome_title_2",
+      "label": "Titre bienvenue ligne 2",
+      "type": "string",
+      "intention": "program_name",
+      "description": "Deuxième ligne avec nom du programme (72px, weight 900). Peut contenir une partie en rouge avec <span>",
+      "examples": ["TON Programme", "LE MEGA PACK"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "welcome_title_2_highlight",
+      "label": "Partie surlignée bienvenue",
+      "type": "string",
+      "intention": "program_emphasis",
+      "description": "Partie à mettre en rouge (color #d71e46)",
+      "examples": ["Programme", "PACK"],
+      "maxLength": 20,
+      "required": false
+    },
+    {
+      "key": "faq_alert",
+      "label": "Alerte FAQ",
+      "type": "string",
+      "intention": "faq_intro",
+      "description": "Texte d'alerte au-dessus du titre FAQ (14px, background jaune, padding 12px 30px, border-radius 8px)",
+      "examples": ["⚠️ TU AS DES QUESTIONS ? VOICI LES RÉPONSES"],
+      "maxLength": 60,
+      "required": true
     },
     {
       "key": "faq_title",
+      "label": "Titre FAQ",
       "type": "string",
-      "maxLength": 90
+      "intention": "faq_header",
+      "description": "Titre de la section FAQ (42px Montserrat, weight 900)",
+      "examples": ["Foire Aux Questions", "Questions Fréquentes"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "faq_text",
-      "type": "string",
-      "maxLength": 240
+      "key": "faqs",
+      "label": "Questions fréquentes",
+      "type": "object[]",
+      "intention": "objection_handling",
+      "description": "5-10 FAQ avec question (16px, weight 700, uppercase) et réponse (15px, line-height 1.7)",
+      "minItems": 5,
+      "maxItems": 10,
+      "itemSchema": {
+        "faq_question": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Question en majuscules"
+        },
+        "faq_answer": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Réponse détaillée"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "faq_question": "QUESTION FRÉQUENTE #1",
+          "faq_answer": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        }
+      ]
     },
     {
-      "key": "final_title",
+      "key": "guarantee_intro_text",
+      "label": "Texte intro garantie",
       "type": "string",
-      "maxLength": 90
+      "intention": "guarantee_setup",
+      "description": "Texte avant le titre garantie (22px, weight 700, uppercase, letter-spacing 1px)",
+      "examples": ["ET COMME ON TE L'A DIT... ON T'OFFRE UNE"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "final_text",
+      "key": "guarantee_title",
+      "label": "Titre garantie",
       "type": "string",
-      "maxLength": 240
+      "intention": "guarantee_headline",
+      "description": "Titre de la garantie (42px Montserrat, weight 900, uppercase)",
+      "examples": ["GARANTIE SATISFAIT OU REMBOURSÉ", "GARANTIE 60 JOURS"],
+      "maxLength": 60,
+      "required": true
     },
     {
-      "key": "final_cta",
+      "key": "guarantee_text",
+      "label": "Texte garantie",
       "type": "string",
-      "maxLength": 32
+      "intention": "objection_killer",
+      "description": "Explication de la garantie (17px, line-height 1.8, opacity 0.95)",
+      "maxLength": 400,
+      "required": true
     },
     {
-      "key": "final_micro",
+      "key": "guarantee_badge_percent",
+      "label": "Pourcentage garantie",
       "type": "string",
-      "maxLength": 160
+      "intention": "guarantee_visual",
+      "description": "Pourcentage affiché dans le badge (très gros)",
+      "examples": ["100%"],
+      "maxLength": 10,
+      "required": true
     },
     {
-      "key": "footer_link_top",
+      "key": "guarantee_badge_label",
+      "label": "Label badge garantie",
       "type": "string",
-      "maxLength": 160
+      "intention": "guarantee_terms",
+      "description": "Texte sous le pourcentage (peut contenir <br>)",
+      "examples": ["Satisfait Ou\nRemboursé"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "footer_link_1",
+      "key": "footer_logo",
+      "label": "Logo footer",
       "type": "string",
-      "maxLength": 160
+      "intention": "footer_brand",
+      "description": "Nom dans le footer (32px Montserrat, weight 900). Peut contenir partie italic light",
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "footer_link_2",
+      "key": "footer_logo_italic",
+      "label": "Partie italique logo footer",
       "type": "string",
-      "maxLength": 160
+      "intention": "footer_style",
+      "description": "Partie italique du logo footer (weight 300, italic)",
+      "maxLength": 15,
+      "required": false
     },
     {
-      "key": "footer_note",
+      "key": "footer_links",
+      "label": "Liens footer",
+      "type": "string[]",
+      "intention": "legal_links",
+      "description": "3-5 liens légaux (13px)",
+      "minItems": 3,
+      "maxItems": 5,
+      "itemMaxLength": 40,
+      "required": true,
+      "examples": ["Conditions générales de vente", "Mentions légales", "Politique de confidentialité"]
+    },
+    {
+      "key": "footer_copyright",
+      "label": "Copyright",
       "type": "string",
-      "maxLength": 160
+      "intention": "legal_copyright",
+      "description": "Ligne de copyright (12px)",
+      "examples": ["© 2025 Ton Entreprise - Tous droits réservés"],
+      "maxLength": 80,
+      "required": false
     }
   ]
 }

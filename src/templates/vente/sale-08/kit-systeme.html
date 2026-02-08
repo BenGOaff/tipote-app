@@ -1,140 +1,1975 @@
-<div class="sale-08" id="top">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="brand">
-        <span class="mark"></span>
-        <span class="name">{{brand_name}}</span>
-      </div>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-08) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
 
-      <div class="nav-links">
-        <a href="#lettre">{{nav_link_1}}</a>
-        <a href="#programme">{{nav_link_2}}</a>
-        <a href="#bonus">{{nav_link_3}}</a>
-      </div>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
-    </div>
-  </nav>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  <header class="hero">
-    <div class="container hero-inner">
-      {{#hero_kicker}}<div class="kicker">{{.}}</div>{{/hero_kicker}}
-      <h1>{{hero_title}}</h1>
-      <p class="sub">{{hero_subtitle}}</p>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #2f2f2f;
+            background: #f4fbff;
+        }
 
-      <div class="hero-grid">
-        <div class="hero-left">
-          <div class="video">
-            {{#hero_video_label}}<div class="video-label">{{.}}</div>{{/hero_video_label}}
-            <div class="video-box">{{hero_video_placeholder}}</div>
-          </div>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-          {{#hero_note}}<p class="note">{{.}}</p>{{/hero_note}}
+        /* Top Bar */
+        .top-bar {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-bar-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 18px;
+            color: #014d82;
+            text-transform: uppercase;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #1cbcff 0%, #21bbff 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 13px;
+            text-transform: none;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(33, 187, 255, 0.3);
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 187, 255, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #ef412d 0%, #d03028 100%);
+            color: white;
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+
+        .hero-image {
+            max-width: 400px;
+            margin: 40px auto;
+            position: relative;
+        }
+
+        .hero-image-placeholder {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 18px;
+        }
+
+        /* Value Prop Box */
+        .value-box {
+            background: white;
+            color: #2f2f2f;
+            padding: 50px;
+            border-radius: 20px;
+            margin-top: -80px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .value-box h2 {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .value-box .highlight {
+            color: #21bbff;
+            font-size: 36px;
+            font-weight: 900;
+            display: block;
+            margin: 20px 0;
+        }
+
+        .value-box p {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .value-box .cta-section {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .bonus-note {
+            font-size: 12px;
+            margin-top: 15px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .features-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .feature-item::before {
+            content: '✓';
+            color: #21bbff;
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        /* Letter Section */
+        .letter {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .letter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .letter-content h2 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .letter-signature {
+            font-family: 'Brush Script MT', cursive;
+            font-size: 32px;
+            color: #666;
+            margin: 30px 0 20px;
+        }
+
+        .letter-content p {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .letter-content strong {
+            font-weight: 800;
+            color: #2f2f2f;
+        }
+
+        .letter-image {
+            background: #071b2d;
+            border-radius: 15px;
+            aspect-ratio: 3/4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        /* Questions Section */
+        .questions {
+            background: #f4fbff;
+            padding: 80px 20px;
+        }
+
+        .questions-title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .questions-title h2 {
+            font-size: 28px;
+            font-weight: 900;
+            color: #21bbff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .questions-title .arrow {
+            font-size: 40px;
+            color: #21bbff;
+            margin-top: 20px;
+        }
+
+        .questions-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .question-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .question-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #21bbff;
+            border-radius: 3px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .question-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .question-text strong {
+            color: #2f2f2f;
+            font-weight: 800;
+        }
+
+        .questions-cta {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        .questions-cta p {
+            font-size: 15px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .highlight-yellow {
+            background: #fefaa7;
+            padding: 3px 8px;
+            font-weight: 800;
+            border-radius: 3px;
+        }
+
+        /* Challenge Intro Section */
+        .challenge-intro {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .challenge-intro h2 {
+            font-size: 38px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #014d82;
+            line-height: 1.2;
+        }
+
+        .challenge-intro p {
+            text-align: center;
+            font-size: 15px;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .challenge-intro .emphasis {
+            font-style: italic;
+            font-weight: 700;
+        }
+
+        .challenge-intro h3 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            margin: 40px 0 30px;
+        }
+
+        .challenge-intro .emphasis-text {
+            font-style: italic;
+            text-decoration: underline;
+        }
+
+        /* Challenge Box */
+        .challenge-box {
+            background: linear-gradient(135deg, #014d82 0%, #052c54 100%);
+            color: white;
+            padding: 60px;
+            border-radius: 20px;
+            margin: 60px 0;
+            box-shadow: 0 20px 60px rgba(1, 77, 130, 0.3);
+        }
+
+        .challenge-box-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .challenge-box-header p {
+            font-size: 14px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .challenge-box-header h3 {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .challenge-box-header .subtitle {
+            font-size: 52px;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .challenge-box-content {
+            margin-top: 40px;
+        }
+
+        .challenge-box-content p {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        /* Tracks Grid */
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 60px 0;
+        }
+
+        .track-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .track-card h4 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .track-card h5 {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 25px;
+            color: #014d82;
+        }
+
+        .track-placeholder {
+            width: 100%;
+            aspect-ratio: 16/10;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+        }
+
+        .track-card p {
+            font-size: 13px;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        /* Mission Section */
+        .mission {
+            background: #f4fbff;
+            padding: 80px 20px;
+        }
+
+        .mission-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .mission-title h2 {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            color: #2f2f2f;
+        }
+
+        .mission-title p {
+            font-size: 18px;
+            color: #555;
+        }
+
+        .mission-box {
+            background: white;
+            border: 4px solid #21bbff;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(33, 187, 255, 0.15);
+        }
+
+        .mission-box h3 {
+            font-size: 28px;
+            font-weight: 900;
+            color: #21bbff;
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.3;
+        }
+
+        .mission-box .highlight-word {
+            background: #21bbff;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+        }
+
+        .mission-note {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-top: 30px;
+            color: #555;
+            font-style: italic;
+        }
+
+        .testimonial-section {
+            margin-top: 50px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+        }
+
+        .testimonial-card {
+            background: #f8f8f8;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        .testimonial-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-avatar {
+            width: 50px;
+            height: 50px;
+            background: #ddd;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .testimonial-info h4 {
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .testimonial-info p {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .testimonial-text {
+            font-size: 12px;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .testimonial-highlight {
+            background: #fefaa7;
+            padding: 2px 5px;
+            font-weight: 700;
+        }
+
+        /* Super Bonus Section */
+        .super-bonus {
+            background: linear-gradient(135deg, #014d82 0%, #052c54 100%);
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .super-bonus-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .super-bonus-header p {
+            font-size: 14px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+            text-transform: uppercase;
+        }
+
+        .super-bonus-header h2 {
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .super-bonus-header h3 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .super-bonus-note {
+            text-align: center;
+            font-size: 15px;
+            margin: 40px auto;
+            max-width: 700px;
+            line-height: 1.8;
+        }
+
+        .tracks-comparison {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .track-detail {
+            text-align: center;
+        }
+
+        .track-detail h4 {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 30px;
+        }
+
+        .track-mockup {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .mockup-placeholder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .track-features {
+            text-align: left;
+        }
+
+        .track-features h5 {
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .track-features ul {
+            list-style: none;
+        }
+
+        .track-features li {
+            padding-left: 30px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .track-features li::before {
+            content: '🛒';
+            position: absolute;
+            left: 0;
+        }
+
+        .track-detail:nth-child(2) .track-features li::before {
+            content: '✓';
+            color: #21bbff;
+            font-weight: 900;
+            font-size: 16px;
+        }
+
+        /* Bonus Details Section */
+        .bonus-details {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 60px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .bonus-item {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .bonus-item:nth-child(even) {
+            grid-template-columns: 1fr 350px;
+        }
+
+        .bonus-item:nth-child(even) .bonus-content {
+            order: -1;
+        }
+
+        .bonus-visual {
+            position: relative;
+        }
+
+        .bonus-badge {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background: #ef412d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: 24px;
+            text-transform: uppercase;
+            transform: rotate(-15deg);
+            box-shadow: 0 5px 20px rgba(239, 65, 45, 0.4);
+        }
+
+        .bonus-mockup {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .bonus-content h3 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            color: #014d82;
+        }
+
+        .bonus-content h4 {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 25px;
+        }
+
+        .bonus-content .value {
+            font-size: 16px;
+            font-weight: 800;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .bonus-content p {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .bonus-content h5 {
+            font-size: 16px;
+            font-weight: 800;
+            margin: 25px 0 15px;
+            color: #2f2f2f;
+        }
+
+        .bonus-content ul {
+            list-style: none;
+        }
+
+        .bonus-content li {
+            padding-left: 25px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            position: relative;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .bonus-content li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #21bbff;
+            font-weight: 900;
+            font-size: 16px;
+        }
+
+        /* Difference Section */
+        .difference {
+            background: #f4fbff;
+            padding: 80px 20px;
+        }
+
+        .difference-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .difference-title h2 {
+            font-size: 38px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #014d82;
+        }
+
+        .difference-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .triangle-diagram {
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .triangle-placeholder {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            border-radius: 10px;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin: 50px 0;
+        }
+
+        /* Trap Section */
+        .trap {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .trap-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .trap-title h2 {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #2f2f2f;
+        }
+
+        .trap-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .trap-content p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .trap-content strong {
+            font-weight: 800;
+            color: #2f2f2f;
+        }
+
+        /* Timing Section */
+        .timing {
+            background: #f4fbff;
+            padding: 80px 20px;
+        }
+
+        .timing-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .timing-title h2 {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #014d82;
+        }
+
+        .timing-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .timing-content p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        /* Guarantee Section */
+        .guarantee {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        .guarantee-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .guarantee-title h2 {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .guarantee-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .guarantee-content p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        /* Next Steps Section */
+        .next-steps {
+            background: #f4fbff;
+            padding: 80px 20px;
+        }
+
+        .next-steps-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .next-steps-title h2 {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: #014d82;
+        }
+
+        .steps-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .steps-list ul {
+            list-style: none;
+        }
+
+        .steps-list li {
+            padding-left: 30px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            position: relative;
+            line-height: 1.7;
+        }
+
+        .steps-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #21bbff;
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        /* Recap Section */
+        .recap {
+            background: linear-gradient(135deg, #014d82 0%, #052c54 100%);
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .recap-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .recap-title h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .recap-title h3 {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .recap-title .underline {
+            text-decoration: underline;
+        }
+
+        .recap-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .recap-mockups {
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .mockups-placeholder {
+            width: 100%;
+            max-width: 800px;
+            height: 300px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .value-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 50px 0;
+        }
+
+        .value-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        .value-item span:first-child {
+            font-size: 13px;
+        }
+
+        .value-item .price {
+            background: #21bbff;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .recap-icons {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin: 40px 0;
+        }
+
+        .recap-icons div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .recap-icons div::before {
+            content: '●';
+            color: #21bbff;
+            font-size: 20px;
+        }
+
+        .bonus-recap {
+            margin-top: 50px;
+            padding-top: 40px;
+            border-top: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .bonus-recap h4 {
+            font-size: 24px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #ef412d;
+            text-transform: uppercase;
+        }
+
+        .bonus-recap-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .bonus-recap-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .bonus-recap-item span:first-child {
+            font-size: 13px;
+        }
+
+        .bonus-recap-item .price {
+            background: #ef412d;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .recap-note {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 40px;
+            font-weight: 800;
+        }
+
+        /* Final CTA Section */
+        .final-cta {
+            background: white;
+            padding: 100px 20px;
+        }
+
+        .final-cta-content {
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 40px;
+            color: #2f2f2f;
+        }
+
+        .final-cta .underline-word {
+            text-decoration: underline;
+            text-decoration-color: #21bbff;
+            text-decoration-thickness: 4px;
+        }
+
+        .features-grid-final {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin: 50px 0;
+            flex-wrap: wrap;
+        }
+
+        .feature-final {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .feature-final::before {
+            content: '✓';
+            color: #21bbff;
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .total-value {
+            font-size: 48px;
+            font-weight: 900;
+            color: #21bbff;
+            margin: 40px 0;
+        }
+
+        /* Footer */
+        .footer {
+            background: #071b2d;
+            color: white;
+            padding: 60px 20px 40px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-legal {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 30px auto 0;
+        }
+
+        .footer-copyright {
+            margin-top: 30px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .value-box {
+                padding: 30px;
+            }
+
+            .letter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tracks-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tracks-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-item {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-item:nth-child(even) {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-item:nth-child(even) .bonus-content {
+                order: 0;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .value-list {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-recap-list {
+                grid-template-columns: 1fr;
+            }
+
+            .challenge-box {
+                padding: 40px 30px;
+            }
+
+            .super-bonus-header h2 {
+                font-size: 32px;
+            }
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="logo">[Logo Challenge]</div>
+            <a href="#" class="cta-button">Rejoindre le Challenge</a>
         </div>
+    </div>
 
-        <div class="hero-right">
-          <div class="card bullets">
-            <div class="card-title">{{hero_bullets_title}}</div>
-            <ul class="list">
-              {{#hero_bullets}}<li><span class="dot"></span><span class="txt">{{.}}</span></li>{{/hero_bullets}}
-            </ul>
-
-            <div class="cta-box" id="checkout">
-              <div class="cta-title">{{cta_title}}</div>
-
-              <!-- Preview form (disabled) -->
-              <div class="cta-row form-preview">
-                <input type="email" placeholder="{{form_email_placeholder}}" disabled />
-                <button type="button" disabled>{{cta_button}}</button>
-              </div>
-
-              <!-- Systeme.io slot -->
-              <div class="systeme-form">
-                <div class="systeme-slot" id="SLOT_CHECKOUT">
-                  <!-- SLOT : colle ici ton bouton / formulaire Systeme.io -->
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Si vous détestez les sites web qui ne font rien...</h1>
+                <div class="hero-image">
+                    <div class="hero-image-placeholder">[Image hero]</div>
                 </div>
-              </div>
-
-              {{#cta_reassurance}}<p class="reassurance">{{.}}</p>{{/cta_reassurance}}
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  </header>
+    </section>
 
-  <section class="letter" id="lettre">
-    <div class="container letter-inner">
-      <div class="letter-card">
-        <div class="letter-head">
-          <div class="letter-title">{{letter_title}}</div>
-          <div class="letter-meta">
-            <span>{{letter_from_label}}</span> <strong>{{letter_from}}</strong>
-            {{#letter_where}}<span class="sep">•</span> <span>{{.}}</span>{{/letter_where}}
-          </div>
+    <!-- Value Prop Box -->
+    <section style="background: #f4fbff; padding: 0 20px 80px;">
+        <div class="container">
+            <div class="value-box">
+                <h2>La vie que vous voulez, le mariage que vous voulez... la famille que vous voulez, c'est...</h2>
+                <span class="highlight">Un funnel à portée de main</span>
+                
+                <p>Transformez vos idées et <strong>vos passions en business</strong> ... Laissez-nous vous aider à <strong>lancer votre premier</strong> (ou prochain) <strong>funnel</strong> !</p>
+
+                <div class="cta-section">
+                    <a href="#" class="cta-button">Rejoignez le "Challenge XYZ" maintenant !</a>
+                    <p class="bonus-note">(Obtenez tout ce dont vous avez besoin pour réussir — y compris les bonus XYZ !)</p>
+                </div>
+
+                <div class="features-row">
+                    <div class="feature-item">X jours en live</div>
+                    <div class="feature-item">Communauté</div>
+                    <div class="feature-item">Exercices concrets</div>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="letter-body">
-          {{#letter_paragraphs}}<p>{{.}}</p>{{/letter_paragraphs}}
+    <!-- Letter Section -->
+    <section class="letter">
+        <div class="container">
+            <div class="letter-grid">
+                <div class="letter-content">
+                    <h2>Lettre ouverte de notre PDG : Changez votre business</h2>
+                    <div class="letter-signature">Super Fondateur</div>
+                    
+                    <p><strong>De :</strong> Robert Bernard <strong>Où :</strong> Limoges, Limousin</p>
+                    
+                    <p>Que signifie pour vous « <em>Super Phrase de Choc</em> » ... ?</p>
+                    
+                    <p><strong>Pour</strong> chacun, c'est différent. Pour certains, cela signifie occuper <strong>un emploi que vous détestez</strong> et vous cherchez une issue. D'autres sont peut-être des entrepreneurs avec leur propre entreprise... <strong>mais vous êtes coincé et ne savez pas pourquoi</strong>. Pour d'autres, vous recherchez peut-être ce funnel unique qui changera votre vie et qui vous aidera <strong>à avoir un impact sur le monde</strong> !</p>
+                    
+                    <p>Avant de partager mon OBJECTIF pour notre challenge « <strong>Nom du Challenge</strong> », laissez-moi vous poser quelques questions...</p>
+                </div>
+                
+                <div class="letter-image">
+                    [Photo PDG]
+                </div>
+            </div>
         </div>
+    </section>
 
-        {{#checklist_title}}<div class="checklist-title">{{.}}</div>{{/checklist_title}}
-        <ul class="checklist">
-          {{#checklist_items}}<li><span class="box"></span><span class="txt">{{.}}</span></li>{{/checklist_items}}
-        </ul>
-      </div>
-    </div>
-  </section>
+    <!-- Questions Section -->
+    <section class="questions">
+        <div class="container">
+            <div class="questions-title">
+                <h2>Veuillez cocher toutes les questions où votre réponse est OUI !</h2>
+                <div class="arrow">↓</div>
+            </div>
 
-  <section class="programme" id="programme">
-    <div class="container">
-      <h2>{{programme_title}}</h2>
-      <p class="lead">{{programme_subtitle}}</p>
+            <div class="questions-list">
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous souhaitez développer votre activité en ligne mais vous ne savez pas par où commencer ?</div>
+                </div>
 
-      <div class="steps">
-        {{#programme_steps}}
-        <div class="step">
-          <div class="step-k">{{step_kicker}}</div>
-          <div class="step-t">{{step_title}}</div>
-          <div class="step-d">{{step_text}}</div>
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous avez un business qui tourne bien, mais pour une raison quelconque, vous vous sentez bloqué ?</div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous avez besoin d'un accès direct à des experts qui aideront avec vos funnels, vos stratégies marketing, vos ventes et TOUTES vos questions ?</div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous essayer d'<strong>atteindre plus de personnes</strong> ou d'avoir un <strong>plus grand impact sur le monde</strong> ?</div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous êtes <strong>convaincue vous avez besoin d'un funnel</strong> mais vous ne savez pas quelles étapes suivre ?</div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-checkbox"></div>
+                    <div class="question-text">Vous êtes <strong>prêt à lancer votre prochain funnel</strong> mais vous voulez vérifier qu'il est <strong>vraiment optimisé</strong> ?</div>
+                </div>
+            </div>
+
+            <div class="questions-cta">
+                <p>Si vous avez répondu OUI à l'une des questions ci-dessus, je vous invite à rejoindre notre challenge « <strong>XYZ</strong> » et à</p>
+                <p><span class="highlight-yellow">changer votre business pour toujours !</span></p>
+            </div>
         </div>
-        {{/programme_steps}}
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="bonus" id="bonus">
-    <div class="container">
-      <h2>{{bonus_title}}</h2>
-      <p class="lead">{{bonus_subtitle}}</p>
+    <!-- Challenge Intro -->
+    <section class="challenge-intro">
+        <div class="container">
+            <h2>Alors, voici comment fonctionne le challenge...</h2>
+            
+            <p>Rejoindre le challenge <strong>GRATUIT</strong> et réussir à XYZ dans XX semaines !</p>
+            <p class="emphasis">Cela signifie que vous avez accès à <strong>TOUT le challenge</strong> PLUS 3 bonus incroyables GRATUITS !</p>
 
-      <div class="bonus-grid">
-        {{#bonus_items}}
-        <div class="bonus-card">
-          <div class="b-top">
-            <div class="b-n">{{bonus_number}}</div>
-            <div class="b-v">{{bonus_value}}</div>
-          </div>
-          <div class="b-t">{{bonus_title}}</div>
-          <div class="b-d">{{bonus_text}}</div>
+            <h3>Vous obtenez <span class="emphasis-text">TOUT</span> ceci :</h3>
         </div>
-        {{/bonus_items}}
-      </div>
+    </section>
 
-      <div class="final-cta">
-        <a class="btn-primary" href="#checkout">{{final_cta}}</a>
-        {{#final_cta_note}}<div class="final-note">{{.}}</div>{{/final_cta_note}}
-      </div>
-    </div>
-  </section>
+    <!-- Challenge Box -->
+    <section style="background: white; padding: 0 20px 80px;">
+        <div class="container">
+            <div class="challenge-box">
+                <div class="challenge-box-header">
+                    <p>La première chose à laquelle vous <strong>aurez accès</strong> est le...</p>
+                    <h3>"Nom du Challenge"</h3>
+                    <div class="subtitle">CHALLENGE ...</div>
+                </div>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="footer-left">
-        <div class="footer-title">{{footer_title}}</div>
-        <div class="footer-text">{{footer_text}}</div>
-      </div>
-      <a class="btn-secondary" href="#top">{{footer_back_to_top}}</a>
-    </div>
-  </footer>
-</div>
+                <div class="challenge-box-content">
+                    <p>Animé par les formateurs <strong>Robert Bernard</strong> (Info-produits), <strong>Thierry Lalala</strong> (E-commerce) et l'<strong>équipe de conseil « Nom du Challenge »</strong>, ce challenge est conçu pour vous aider à <strong>personnaliser</strong> et <strong>à mettre en œuvre</strong> votre premier (ou prochain) funnel, quel que soit le type de produit que vous vendez !</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tracks Grid -->
+    <section style="background: white; padding: 80px 20px;">
+        <div class="container">
+            <div class="tracks-grid">
+                <div class="track-card">
+                    <h4>X jours de formation<br>avec Robert Bernard !</h4>
+                    <h5>"L'expert XYZ"</h5>
+                    <div class="track-placeholder">[Vidéo]</div>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous souhaitez regrouper vos connaissances et votre expertise et vendre <strong>des produits d'information</strong> ? Robert vous aidera à créer, commercialiser et vendre vos produits numériques.</p>
+                </div>
+
+                <div class="track-card">
+                    <h4>X jours de formation<br>avec Thierry Lalala !</h4>
+                    <h5>"L'expert XYZ"</h5>
+                    <div class="track-placeholder">[Vidéo]</div>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous souhaitez regrouper vos connaissances et votre expertise et vendre <strong>des produits d'information</strong> ? Robert vous aidera à créer, commercialiser et vendre vos produits numériques.</p>
+                </div>
+
+                <div class="track-card">
+                    <h4>Sessions<br>hebdomadaires EN DIRECT avec l'équipe !</h4>
+                    <h5>"Pratique"</h5>
+                    <div class="track-placeholder">[Live]</div>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous souhaitez regrouper vos connaissances et votre expertise et vendre <strong>des produits d'information</strong> ? Robert vous aidera à créer, commercialiser et vendre vos produits numériques.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section class="mission">
+        <div class="container">
+            <div class="mission-title">
+                <h2>Voici votre mission,</h2>
+                <p>(Si vous choisissez de relever ce défi...)</p>
+            </div>
+
+            <div class="mission-box">
+                <h3>Votre défi est d' <span class="highlight-word">AGIR</span> et d'accomplir les tâches qui vous sont confiées chaque jour pour construire et lancer votre funnel !</h3>
+
+                <p class="mission-note"><em>Oui</em>, il y aura du travail à faire... <em>Et oui</em>, il y aura des devoirs à faire... Mais chaque jour, vous avancerez vers le développement de votre entreprise ! <strong>Notre seule question pour vous est...</strong></p>
+
+                <h3 style="margin-top: 40px;">« Avez-VOUS ce qu'il faut ? »</h3>
+
+                <p style="margin-top: 30px; text-align: center;">À la fin du défi, vous disposerez d'un funnel <strong>LIVE</strong> !</p>
+
+                <p style="text-align: center; font-size: 14px; margin-top: 20px;">Non seulement nous vous aiderons à comprendre ce qu'est ce funnel, mais nous l'aurez créé et TERMINÉ à la fin du challenge ! Et vous pourrez le lancer dans le monde entier, générer des prospects et transformer ces prospects en clients qui achèteront chez vous encore et encore.</p>
+            </div>
+
+            <div class="testimonial-section">
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>David Fee</h4>
+                            <p>Entrepreneur</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        Thanks for this - <span class="testimonial-highlight">Genius Training</span> today. Totally turned my head around about target market. Made me think about all the best products I sold could have killed it but that is the past
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>Debbie Drumm</h4>
+                            <p>Coach</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        I have a tremendous amount of experience in the selling, sales and leadership. I discovered Russell's books as soon as they arrived. However I knew I needed help. I signed up immediately, then I got some confidence, and thanks to you and Russell <span class="testimonial-highlight">it has made almost $1,000 in just a few days.</span> Thank You So Much
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Super Bonus Section -->
+    <section class="super-bonus">
+        <div class="container">
+            <div class="super-bonus-header">
+                <p>EN PLUS</p>
+                <h2>Vous obtiendrez l'intégralité</h2>
+                <h2>SUPER BONUS</h2>
+                <h3>Bénéfices + conséquence</h3>
+            </div>
+
+            <p class="super-bonus-note">Ce cadre pré-conçu fait tout le gros du travail de construction de votre funnel à votre place, vous ne partirez donc JAMAIS de zéro !</p>
+
+            <div class="tracks-comparison">
+                <div class="track-detail">
+                    <h4>Pour ceux qui suivent le parcours «<br>Expert », ça signifie...</h4>
+                    
+                    <div class="track-mockup">
+                        <div class="mockup-placeholder">[Mockup Expert]</div>
+                    </div>
+
+                    <div class="track-features">
+                        <h5>Vous recevez</h5>
+                        <ul>
+                            <li>Un site web</li>
+                            <li>Un funnel</li>
+                            <li>Un espace membre</li>
+                            <li>Un autorépondeur</li>
+                            <li>Et plus encore !</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="track-detail">
+                    <h4>Pour ceux qui suivent la filière « Ecom<br>», ça signifie...</h4>
+                    
+                    <div class="track-mockup">
+                        <div class="mockup-placeholder">[Mockup Ecom]</div>
+                    </div>
+
+                    <div class="track-features">
+                        <h5>Vous recevez</h5>
+                        <ul>
+                            <li>Une boutique en ligne</li>
+                            <li>Un funnel</li>
+                            <li>Un autorépondeur</li>
+                            <li>Un site web</li>
+                            <li>Et plus encore !</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align: center; font-size: 14px; margin-top: 40px;">Nous avons déjà créé POUR vous l'intégralité du CADRE de votre business... (Tout ce que vous avez à faire est de saisir vos propres informations !)</p>
+        </div>
+    </section>
+
+    <!-- Bonus Details -->
+    <section class="bonus-details">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 60px;">
+                <div style="background: linear-gradient(135deg, #014d82 0%, #052c54 100%); color: white; padding: 40px; border-radius: 20px;">
+                    <p style="font-size: 14px; margin-bottom: 15px; text-transform: uppercase;">Recevez aussi ces bonus INCROYABLES ...</p>
+                    <h2 style="font-size: 42px; font-weight: 900; margin: 0;">Lorsque vous rejoignez le<br>challenge « Nom Du<br>Challenge » aujourd'hui...</h2>
+                </div>
+            </div>
+
+            <div class="bonus-grid">
+                <!-- Bonus 1 -->
+                <div class="bonus-item">
+                    <div class="bonus-visual">
+                        <div class="bonus-badge">BONUS</div>
+                        <div class="bonus-mockup">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>Bonus #1</h3>
+                        <h4>Accès gratuit au Challenge<br>"XYZ"</h4>
+                        <p class="value">(Valeur de 1000€)</p>
+                        
+                        <h5>Vous voulez des tonnes ce clients rêvés sur votre funnel ?</h5>
+                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Que vous vendiez des produits physiques ou numériques, la formation des jours 1 à 10 du challenge « Nom du Challenge » est destinée à vous aider à créer vos produits et à construire votre entonnoir...</p>
+                        
+                        <h5>Voilà pourquoi c'est si PUISSANT...</h5>
+                        <p>Ces stratégies fonctionneront même si Facebook est fermé, si Google cesse de fonctionner et si le trafic tel que vous le connaissez change à jamais. Cela fonctionnera aujourd'hui, demain et pour toujours !</p>
+                    </div>
+                </div>
+
+                <!-- Bonus 2 -->
+                <div class="bonus-item">
+                    <div class="bonus-visual">
+                        <div class="bonus-badge">BONUS</div>
+                        <div class="bonus-mockup">[Bonus visuel]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>Bonus #2</h3>
+                        <h4>Super Bonus En Lien</h4>
+                        <p class="value">(Valeur de 10'000€)</p>
+                        
+                        <p>La bibliothèque FunnelHack est la RESSOURCE ULTIME pour les entrepreneurs. Certains de ces cours n'ont été disponibles que pour mes programmes de coaching où les membres ont payé plus de 25 000 $, mais vous les obtiendrez GRATUITEMENT !</p>
+                        
+                        <h5>Les bonus contiennent :</h5>
+                        <ul>
+                            <li><strong>Secrets de création de listes :</strong> cette série de formations vous emmènera dans les coulisses et vous montrera les stratégies nécessaires pour créer une énorme liste de diffusion</li>
+                            <li><strong>Secrets des billets élevés :</strong> comment ajouter instantanément des ventes à prix élevé à N'IMPORTE QUEL entonnoir</li>
+                            <li><strong>Les secrets d'un webinaire parfait :</strong> si vous savez copier et coller, vous aussi pouvez avoir un webinaire qui convertit !</li>
+                            <li><strong>Entonnoirologie :</strong> Le raccourci ULTIME pour créer et lancer votre premier entonnoir</li>
+                        </ul>
+                        
+                        <p style="margin-top: 20px;"><strong>...PLUS 15 AUTRES !</strong></p>
+                    </div>
+                </div>
+
+                <!-- Bonus 3 -->
+                <div class="bonus-item">
+                    <div class="bonus-visual">
+                        <div class="bonus-badge">BONUS</div>
+                        <div class="bonus-mockup">[Workbooks]</div>
+                    </div>
+                    <div class="bonus-content">
+                        <h3>Bonus #3</h3>
+                        <h4>Les Workbooks</h4>
+                        <p class="value">(Valeur de 97€)</p>
+                        
+                        <p>Vous aurez accès à des cahiers d'exercices numériques quotidiens pour les parcours Expert et Ecom. Ces cahiers d'exercices vous guident tout au long de la formation de Robert et Thierry et sont conçus pour vous aider à prendre des notes guidées et à mettre en œuvre ce que vous avez appris au cours de chaque mission.</p>
+                        
+                        <h5>Les workbooks contiennent :</h5>
+                        <ul>
+                            <li>Une liste de contrôle des tâches à accomplir chaque jour</li>
+                            <li>Espace pour tenir un journal, échanger des idées et répondre à des questions qui incitent à la réflexion</li>
+                            <li>Liens vers des ressources supplémentaires dont vous aurez besoin pour accomplir les tâches quotidiennes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 80px;">
+                <h2 style="font-size: 36px; font-weight: 900; margin-bottom: 30px; color: #014d82;">Ces bonus sont TOUS à l'intérieur du challenge « XYZ »...</h2>
+                <p style="font-size: 15px; margin-bottom: 40px; color: #555;">Et vous aurez un accès immédiat aux bonus dès que vous rejoindrez le défi «<br>One Funnel Away » aujourd'hui !</p>
+                
+                <a href="#" class="cta-button">Rejoignez le "Challenge XYZ" maintenant !</a>
+                <p class="bonus-note">(Obtenez tout ce dont vous avez besoin pour réussir — y compris les bonus XYZ !)</p>
+
+                <div class="features-row" style="margin-top: 30px;">
+                    <div class="feature-item">X jours en live</div>
+                    <div class="feature-item">Communauté</div>
+                    <div class="feature-item">Exercices concrets</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Difference Section -->
+    <section class="difference">
+        <div class="container">
+            <div class="difference-title">
+                <h2>Le Challenge XYZ est<br>différent !</h2>
+            </div>
+
+            <div class="difference-content">
+                <div class="triangle-diagram">
+                    <div class="triangle-placeholder">[Triangle Connaissance/Exécution/Responsabilité]</div>
+                </div>
+
+                <p style="text-align: center; font-size: 14px; line-height: 1.8; color: #555; margin-top: 30px;">Le défi One Funnel Away n'est PAS juste un « cours » que vous n'utiliserez jamais... Il combine les bonnes CONNAISSANCES en marketing ... Avec le PUSH, vous devez EXÉCUTER votre entonnoir... Et une équipe de coachs « sans excuses » RESPONSABILITÉ qui sont attentionnés et solidaires tout en s'assurant que vous accomplissez vos tâches...</p>
+
+                <div class="testimonials-grid">
+                    <div class="testimonial-card">
+                        <div class="testimonial-header">
+                            <div class="testimonial-avatar"></div>
+                            <div class="testimonial-info">
+                                <h4>Tammy Critch</h4>
+                                <p>Entrepreneur</p>
+                            </div>
+                        </div>
+                        <div class="testimonial-text">
+                            <strong>MIND BLOWN</strong><br>
+                            How am I gonna work today? Or any day now for someday else.
+                        </div>
+                    </div>
+
+                    <div class="testimonial-card">
+                        <div class="testimonial-header">
+                            <div class="testimonial-avatar"></div>
+                            <div class="testimonial-info">
+                                <h4>Shay Sparks</h4>
+                                <p>Coach</p>
+                            </div>
+                        </div>
+                        <div class="testimonial-text">
+                            <strong>#MASSIVECOMPLETE!</strong><br>
+                            <span class="testimonial-highlight">This was the MOST amazing training EVER!</span> Thanks, Russell! BRAINMAN! WOW! Thanks, Russell Brunson!!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trap Section -->
+    <section class="trap">
+        <div class="container">
+            <div class="trap-title">
+                <h2>Ce Challenge n'est PAS pour<br>tout le monde...</h2>
+            </div>
+
+            <div class="trap-content">
+                <p>Si vous voulez regarder chaque jour le défi... mais que vous ne ferez jamais rien avec vos nouvelles compétences, c'est entièrement à vous de décider. Mais il y a de fortes chances que rien n'améliore votre entreprise, donc ce défi n'est probablement pas pour vous. <strong>MAIS...</strong> Si vous êtes prêt à être formé par les experts Robert Bernard et Thierry Lalala et que vous allez les laisser vous guider dans la bonne direction... Et si vous avez besoin d'une bonne POUSSÉE de la part de notre équipe qui vous tiendra responsable et s'assurera que vous accomplissez ces tâches / pas d'excuses !!...</p>
+
+                <p style="margin-top: 30px;">Alors nous vous invitons à <strong>accepter le challenge « XYZ »</strong>, à construire votre funnel et à commencer à créer <strong>une dynamique</strong> dans votre business !</p>
+            </div>
+
+            <div class="testimonials-grid" style="margin-top: 50px;">
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>Manmohan Chaitra</h4>
+                            <p>Entrepreneur</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        The 'One Funnel Away' Challenge <span class="testimonial-highlight">is by far - challenging - look work,</span> but not all of that has to be done by you - one of the major eye openers for me. Continue to build momentum going
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>Neftis Downs</h4>
+                            <p>Coach</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        <span class="testimonial-highlight">I feel like all of the pieces are coming together</span> and I'm really #FEAR trying to sort out on my own and through MANY other programs. Thank You! #MassiveComplete
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timing Section -->
+    <section class="timing">
+        <div class="container">
+            <div class="timing-title">
+                <h2>Pourquoi le temps est essentiel...</h2>
+            </div>
+
+            <div class="timing-content">
+                <p>Si cette page est en ligne, <strong>l'inscription au défi One Funnel Away est toujours ouverte.</strong> Mais elle fermera bientôt, alors ne tardez pas... Si vous vous demandez... « Puis-je simplement relever le défi la prochaine fois qu'il s'ouvrira ? » La réponse est... PEUT-ÊTRE. C'est parce que <strong>nous ne savons pas si ou quand le prochain défi aura lieu.</strong></p>
+
+                <p style="margin-top: 20px;">Plus important encore, <strong>il n'est-il des personnes</strong> qui ne connaîtraient pas vos produits ou services lorsqu'elles en auraient besoin ? Car auraient besoin ? Car avez vous attendu pour lancer votre prochain funnel de vente. Vous voyez maintenant pourquoi l'hésitation peut être un obstacle à la réussite commerciale.</p>
+
+                <p style="margin-top: 20px;">Il existe un vieux proverbe chinois qui dit : « <strong>Le meilleur moment pour planter un arbre était il y a 20 ans... le deuxième meilleur moment est maintenant.</strong> » C'est pourquoi MAINTENANT est le meilleur moment pour vous inscrire au défi « One Funnel Away » !</p>
+            </div>
+
+            <div class="testimonials-grid" style="margin-top: 50px;">
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>Michelle Beitridge</h4>
+                            <p>Coach</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        <span class="testimonial-highlight">I don't think I have ever invested $100 more efficiently</span> and effectively in anything. I have also invested in Dotcom Secrets book. What I love about that is absolutely PRICELESS. I appreciate that you keep going to teach us and create more and the world would definitely be the richer for it!
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar"></div>
+                        <div class="testimonial-info">
+                            <h4>Ulises Rabeiro</h4>
+                            <p>Entrepreneur</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-text">
+                        <span class="testimonial-highlight">This is the stuff that no one ever caught me.</span> I am so grateful for this behind the scenes approach. It all makes sense now. AND IT ONLY DAY 03
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Guarantee Section -->
+    <section class="guarantee">
+        <div class="container">
+            <div class="guarantee-title">
+                <h2>Y a-t-il une garantie ?</h2>
+            </div>
+
+            <div class="guarantee-content">
+                <p>Bien sûr... :) Je vous garantis que si vous participez au challenge, que vous vous présentez aux lives et que vous mettez en pratique ce que vous avez appris, à la fin du challenge, <strong>vous aurez un funnel complet et une solide compréhension des principes fondamentaux du marketing et de la création de funnels.</strong></p>
+
+                <p style="margin-top: 20px;">Si, pour une raison quelconque, vous pensez que ce n'est pas le cas, vous pouvez envoyer un e-mail à notre équipe dans les 30 jours et recevoir un <strong>remboursement complet de 100€.</strong> C'est assez simple.</p>
+
+                <p style="margin-top: 20px;"><strong>Mais si vous êtes comme la plupart des gens, cette expérience changera votre business (et pour certains d'entre vous, elle changera votre vie !)</strong></p>
+            </div>
+
+            <div class="testimonial-card" style="max-width: 600px; margin: 50px auto 0;">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar"></div>
+                    <div class="testimonial-info">
+                        <h4>Mike Hodges</h4>
+                        <p>Entrepreneur</p>
+                    </div>
+                </div>
+                <div class="testimonial-text">
+                    The fact is, I DID learn a lot, and I DID make tangible improvements in my business. But having someone who is supportive, a together and turn it into REAL, tangible results. I was feeling overwhelmed, and I felt I wasn't making enough genuine progress and that was transfer it into actual money? Then I heard about the One Funnel Away training. <span class="testimonial-highlight">It's actually the best training I've ever taken.</span> I have had my mind completely blown with the training and theory with multi-IMPLEMENTATION. The pace is brisk... It pushed me but did not overwhelm me nor did it hold me captive trying to "sell" me that I can do this and be successful integrate funnels into your existing business/life, DON'T take this course when it's offered again.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="next-steps">
+        <div class="container">
+            <div class="next-steps-title">
+                <h2>Voici maintenant la marche à suivre ...</h2>
+                <p style="font-size: 15px; margin-top: 20px; color: #555;">À partir de là, il ne reste plus qu'à finaliser les détails. <strong>Cliquez sur le bouton ci-dessous pour créer votre compte et commencer !</strong> Merci d'avoir lu et regardé la vidéo. J'ai hâte d'entendre parler de vos progrès à la fin du challenge « XYZ » !</p>
+            </div>
+
+            <div class="steps-list">
+                <p style="font-size: 16px; font-weight: 800; margin-bottom: 20px; color: #014d82;">EN PLUS, vous recevez :</p>
+                <ul>
+                    <li>✓ SESSIONS LIVE pendant X jours</li>
+                    <li>✓ Les frameworks Expert & Ecom pour vous aider à construire votre tunnel de vente (et plus encore !)</li>
+                    <li>✓ Accès au défi « Remplissez votre entonnoir »</li>
+                    <li>✓ Accès à la « Bibliothèque FunnelHack »</li>
+                    <li>✓ Et les cahiers d'exercices quotidiens « XYZ » !</li>
+                </ul>
+
+                <p style="margin-top: 30px; text-align: center;">Cela vous semble intéressant ? Alors qu'attendez-vous ? <strong>Rejoignez le défi « One Funnel Away » AUJOURD'HUI !</strong></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recap Section -->
+    <section class="recap">
+        <div class="container">
+            <div class="recap-title">
+                <h2>Voici un récapitulatif de</h2>
+                <h3>TOUT ce que vous obtiendrez <span class="underline">GRATUITEMENT</span></h3>
+                <p style="margin-top: 20px; font-size: 15px;">En rejoignant notre challenge offert de X jours pour "bénéfice"</p>
+            </div>
+
+            <div class="recap-content">
+                <div class="recap-mockups">
+                    <div class="mockups-placeholder">[Mockups produits]</div>
+                </div>
+
+                <div class="value-list">
+                    <div class="value-item">
+                        <span>✓ Contenu du Challenge + bénéfice du bonus</span>
+                        <span class="price">Valeur 97€</span>
+                    </div>
+                    <div class="value-item">
+                        <span>✓ Contenu du Challenge + bénéfice du bonus</span>
+                        <span class="price">Valeur 97€</span>
+                    </div>
+                    <div class="value-item">
+                        <span>✓ Contenu du Challenge + bénéfice du bonus</span>
+                        <span class="price">Valeur 97€</span>
+                    </div>
+                    <div class="value-item">
+                        <span>✓ Contenu du Challenge + bénéfice du bonus</span>
+                        <span class="price">Valeur 97€</span>
+                    </div>
+                </div>
+
+                <div class="recap-icons">
+                    <div>Tunnel de vente</div>
+                    <div>Espace membre</div>
+                    <div>Site Web</div>
+                </div>
+
+                <div class="recap-icons">
+                    <div>Boutique</div>
+                    <div>Autorépondeur</div>
+                    <div>Et plus encore !</div>
+                </div>
+
+                <div class="bonus-recap">
+                    <h4>PLUS CES BONUS GRATUITS :</h4>
+                    
+                    <div class="bonus-recap-list">
+                        <div class="bonus-recap-item">
+                            <span>✓ Accès au « Défi Remplissez votre funnel»</span>
+                            <span class="price">Valeur 97€</span>
+                        </div>
+                        <div class="bonus-recap-item">
+                            <span>✓ Accès à la bibliothèque Funnel Hack</span>
+                            <span class="price">Valeur 97€</span>
+                        </div>
+                        <div class="bonus-recap-item">
+                            <span>✓ Workbooks du challenge</span>
+                            <span class="price">Valeur 97€</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="recap-note">Vous obtenez TOUT cela GRATUITEMENT lorsque vous vous inscrivez au Challenge XYZ ...</p>
+
+                <div style="text-align: center; margin-top: 50px;">
+                    <p style="font-size: 14px; margin-bottom: 30px;">Si vous souhaitez mettre votre funnel en ligne pour commencer à développer votre business, <em>c'est le défi que nous vous lançons !</em></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container">
+            <div class="final-cta-content">
+                <h2>Allez-<span class="underline-word">vous</span> relever le défi ?</h2>
+
+                <a href="#" class="cta-button">Rejoignez le "Challenge XYZ" maintenant !</a>
+                <p class="bonus-note">(Obtenez tout ce dont vous avez besoin pour réussir — y compris les bonus XYZ !)</p>
+
+                <div class="features-grid-final">
+                    <div class="feature-final">X jours en live</div>
+                    <div class="feature-final">Communauté</div>
+                    <div class="feature-final">Exercices concrets</div>
+                </div>
+
+                <div class="total-value">Valeur totale : 37 285 $</div>
+
+                <p style="font-size: 12px; color: #999; font-style: italic; max-width: 700px; margin: 0 auto; line-height: 1.7;">« Les témoignages présentés sont des expériences réelles d'utilisateurs payants de ClickFunnels. Leurs résultats ne sont pas typiques et votre expérience variera en fonction de vos efforts, de votre modèle commercial et des forces du marché indépendantes de notre volonté. Nous ne faisons aucune déclaration ni ne revenons ou de retour sur investissement, et vous ne pourriez peut-être pas récupérer votre argent. »</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-logo">[LOGO CHALLENGE]</div>
+
+            <div class="footer-links">
+                <a href="#">Conditions générales</a>
+                <a href="#">Confidentialité</a>
+                <a href="#">Assistance</a>
+                <a href="#">Connexion</a>
+            </div>
+
+            <div class="footer-legal">
+                <p>Ce site ne fait pas partie du site Facebook ou Facebook Inc sa. En outre, ce site n'est en aucun cas approuvé par Facebook. FACEBOOK est une marque déposée de META.</p>
+            </div>
+
+            <div class="footer-copyright">
+                Copyright © 2024 | All Rights Reserved
+            </div>
+        </div>
+    </footer>
+
+<!-- ===================== BLOC 2 ===================== -->
+

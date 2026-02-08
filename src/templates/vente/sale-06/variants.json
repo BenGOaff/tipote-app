@@ -1,7 +1,12 @@
 {
   "variants": [
-    { "id": "standard" },
-    { "id": "compact", "sectionPadding": "72px 20px" },
-    { "id": "wide", "maxWidth": "1280px" }
+    {
+      "id": "centered",
+      "heroAlign": "center"
+    },
+    {
+      "id": "compact",
+      "sectionPadding": "64px 24px"
+    }
   ]
 }

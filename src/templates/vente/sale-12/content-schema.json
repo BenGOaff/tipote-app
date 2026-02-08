@@ -1,270 +1,493 @@
 {
-  "kind": "vente",
+  "kind": "sale",
   "templateId": "sale-12",
+  "name": "Health Challenge - Template Programme Santé",
+  "description": "Template santé/wellness avec header gradient turquoise (#147182 → #0090a9), hero overlay gradient, info banner #365e85 bleu foncé, CTA sections #f5f8fb gris clair, press logos, results stats grid 4 colonnes avec people icons, testimonial box blanche shadow, program liste avec image, keys grid 3 colonnes icônes rondes gradient, included tabs système avec panels, challenge supplements grid 2 colonnes, expert grid 2 colonnes avec hand image, pricing grid 2 colonnes avec featured, disclaimer ✗ liste, footer centré. Palette turquoise #147182 + vert #05b16e + bleu #365e85",
   "fields": [
     {
-      "key": "hero_kicker",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "hero_title_accent",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 90
-    },
-    {
-      "key": "hero_intro",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "hero_bullets",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "hero_note",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "mini_cards",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "steps",
-      "type": "object[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "fields": [
-        {
-          "key": "step_number",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "step_title",
-          "type": "string",
-          "maxLength": 90
-        },
-        {
-          "key": "step_text",
-          "type": "string",
-          "maxLength": 240
-        }
-      ]
-    },
-    {
-      "key": "price_sub",
-      "type": "string[]",
-      "minItems": 2,
-      "maxItems": 4,
-      "itemMaxLength": 40
-    },
-    {
-      "key": "price_note",
-      "type": "string[]",
-      "minItems": 2,
-      "maxItems": 4,
-      "itemMaxLength": 40
-    },
-    {
-      "key": "cta_reassurance",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 32
-    },
-    {
-      "key": "cta_micro",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 32
-    },
-    {
-      "key": "trust_items",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "bonus_subtitle",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 90
-    },
-    {
-      "key": "bonus_items",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 7,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "faq_items",
-      "type": "object[]",
-      "minItems": 5,
-      "maxItems": 10,
-      "fields": [
-        {
-          "key": "faq_q",
-          "type": "string",
-          "maxLength": 160
-        },
-        {
-          "key": "faq_a",
-          "type": "string",
-          "maxLength": 160
-        }
-      ]
-    },
-    {
-      "key": "final_note",
-      "type": "string[]",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 160
-    },
-    {
-      "key": "brand_name",
+      "key": "logo_text",
+      "label": "Texte logo",
       "type": "string",
-      "maxLength": 160
+      "intention": "brand_identity",
+      "description": "Texte dans logo header (0.9rem, weight 400, couleur blanche). Icône logo 60px carrée blanche avec texte #147182 turquoise",
+      "examples": ["PROGRAMME DÉTOX"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "nav_link_1",
+      "key": "header_cta_text",
+      "label": "CTA header",
       "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_2",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_link_3",
-      "type": "string",
-      "maxLength": 160
-    },
-    {
-      "key": "nav_cta",
-      "type": "string",
-      "maxLength": 32
+      "intention": "action_trigger",
+      "description": "Texte CTA header (background rgba white 0.2, border 2px rgba white 0.3, padding 12px 30px, border-radius 8px, weight 600, hover white + #147182)",
+      "examples": ["S'inscrire"],
+      "maxLength": 30,
+      "required": true
     },
     {
       "key": "hero_title",
+      "label": "Titre hero",
       "type": "string",
-      "maxLength": 90
+      "intention": "promise_headline",
+      "description": "Titre hero (3rem, weight 700, line-height 1.2, couleur blanche, text-center, max-width 800px)",
+      "examples": ["Transformez votre santé en 30 jours"],
+      "maxLength": 150,
+      "required": true
     },
     {
-      "key": "hero_subtitle",
+      "key": "info_banner_text",
+      "label": "Texte info banner",
       "type": "string",
-      "maxLength": 90
+      "intention": "key_message",
+      "description": "Texte dans banner #365e85 (1rem, line-height 1.6, couleur blanche)",
+      "examples": ["Rejoignez des milliers de participants qui ont déjà transformé leur santé"],
+      "maxLength": 200,
+      "required": true
     },
     {
-      "key": "hero_pill",
+      "key": "info_banner_button_text",
+      "label": "Bouton info banner",
       "type": "string",
-      "maxLength": 160
+      "intention": "action_trigger",
+      "description": "Texte bouton info (background #05b16e vert, padding 15px 35px, border-radius 8px, weight 600, box-shadow vert)",
+      "examples": ["Commencer maintenant"],
+      "maxLength": 40,
+      "required": true
     },
     {
-      "key": "hero_tag",
+      "key": "cta_section_title",
+      "label": "Titre section CTA",
       "type": "string",
-      "maxLength": 160
+      "intention": "action_prompt",
+      "description": "Titre section CTA (1.3rem, weight 600, couleur #365e85, text-center)",
+      "examples": ["Prêt à transformer votre vie ?"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "section_title",
+      "key": "cta_section_subtitle",
+      "label": "Sous-titre section CTA",
       "type": "string",
-      "maxLength": 90
+      "intention": "action_context",
+      "description": "Sous-titre CTA (1rem, couleur #365e85, text-center)",
+      "examples": ["Rejoignez le programme dès aujourd'hui"],
+      "maxLength": 100,
+      "required": false
     },
     {
-      "key": "section_subtitle",
+      "key": "cta_button_text",
+      "label": "Texte bouton CTA large",
       "type": "string",
-      "maxLength": 90
+      "intention": "action_trigger",
+      "description": "Texte bouton CTA large (background #05b16e, padding 18px 50px, border-radius 50px, 1.1rem weight 600, box-shadow vert)",
+      "examples": ["Je commence maintenant"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "price_label",
+      "key": "press_title",
+      "label": "Titre section presse",
       "type": "string",
-      "maxLength": 24
+      "intention": "social_proof_intro",
+      "description": "Titre presse (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #9ca3af, text-center)",
+      "examples": ["VU DANS LES MÉDIAS"],
+      "maxLength": 60,
+      "required": false
     },
     {
-      "key": "price_main",
-      "type": "string",
-      "maxLength": 40
+      "key": "press_logos",
+      "label": "Logos presse",
+      "type": "string[]",
+      "intention": "authority_proof",
+      "description": "5-8 noms de médias (0.85rem, weight 600, couleur #9ca3af)",
+      "minItems": 5,
+      "maxItems": 8,
+      "itemMaxLength": 40,
+      "required": false,
+      "examples": ["Le Monde", "Forbes", "Elle"]
     },
     {
-      "key": "cta_title",
+      "key": "results_section_title",
+      "label": "Titre section résultats",
       "type": "string",
-      "maxLength": 90
+      "intention": "results_intro",
+      "description": "Titre section résultats (2.5rem, weight 700, couleur #365e85, text-center)",
+      "examples": ["Des résultats prouvés"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "form_email_placeholder",
+      "key": "results_section_subtitle",
+      "label": "Sous-titre résultats",
       "type": "string",
-      "maxLength": 160
+      "intention": "results_context",
+      "description": "Sous-titre résultats (1.1rem, couleur #365e85, max-width 800px, text-center)",
+      "examples": ["Plus de 10 000 participants ont déjà transformé leur santé"],
+      "maxLength": 200,
+      "required": false
     },
     {
-      "key": "cta_button",
-      "type": "string",
-      "maxLength": 32
+      "key": "stats",
+      "label": "Statistiques",
+      "type": "object[]",
+      "intention": "data_proof",
+      "description": "4 stats en grid 4 colonnes avec label (0.85rem weight 600 uppercase #365e85), description (0.9rem line-height 1.5 #6b7280), nombre (2.5rem weight 700 #05b16e vert) + unité (1.2rem weight 600 #05b16e)",
+      "minItems": 4,
+      "maxItems": 4,
+      "itemSchema": {
+        "stat_label": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Label en uppercase"
+        },
+        "stat_description": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Description courte"
+        },
+        "stat_number": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Nombre principal"
+        },
+        "stat_unit": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Unité (kg, %, jours...)"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "stat_label": "PERTE DE POIDS MOYENNE",
+          "stat_description": "En moyenne après 30 jours",
+          "stat_number": "5",
+          "stat_unit": "kg"
+        }
+      ]
     },
     {
-      "key": "systeme_form_slot",
+      "key": "testimonial_author_name",
+      "label": "Nom auteur témoignage",
       "type": "string",
-      "maxLength": 160
+      "intention": "social_proof_author",
+      "description": "Nom auteur témoignage (1.1rem weight 600 uppercase letter-spacing 1px #365e85, text-center)",
+      "examples": ["MARIE DUPONT"],
+      "maxLength": 50,
+      "required": true
     },
     {
-      "key": "bonus_title",
+      "key": "testimonial_quote",
+      "label": "Citation témoignage",
       "type": "string",
-      "maxLength": 90
+      "intention": "social_proof_testimonial",
+      "description": "Citation témoignage (1rem line-height 1.8 #6b7280 italic, text-center). Peut contenir <strong>",
+      "examples": ["\"Ce programme a complètement transformé ma vie. J'ai perdu 8 kg et je me sens <strong>incroyablement bien</strong> dans mon corps.\""],
+      "maxLength": 600,
+      "required": true
     },
     {
-      "key": "bonus_cta",
+      "key": "program_section_title",
+      "label": "Titre section programme",
       "type": "string",
-      "maxLength": 32
+      "intention": "program_intro",
+      "description": "Titre programme (1.8rem weight 700 #365e85). Peut contenir []",
+      "examples": ["[Le programme « NOM DU PROGRAMME » :]"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "faq_title",
-      "type": "string",
-      "maxLength": 90
+      "key": "program_list",
+      "label": "Liste programme",
+      "type": "string[]",
+      "intention": "curriculum_overview",
+      "description": "5-8 items avec ✓ vert #05b16e (1rem padding 12px 0 padding-left 35px, ::before ✓ bold 1.4rem)",
+      "minItems": 5,
+      "maxItems": 8,
+      "itemMaxLength": 150,
+      "required": true,
+      "examples": ["[Bénéfice/Mécanisme clé #1 de ta méthode]"]
     },
     {
-      "key": "faq_subtitle",
+      "key": "keys_section_title",
+      "label": "Titre section clés",
       "type": "string",
-      "maxLength": 90
+      "intention": "methodology_intro",
+      "description": "Titre clés succès (2.5rem weight 700 #365e85 text-center). Peut contenir []",
+      "examples": ["[NOS X CLÉS DU SUCCÈS]"],
+      "maxLength": 100,
+      "required": true
     },
     {
-      "key": "final_cta",
+      "key": "keys",
+      "label": "Clés succès",
+      "type": "object[]",
+      "intention": "methodology_breakdown",
+      "description": "3 clés en grid 3 colonnes avec icône 120px ronde gradient bleu (#a6c4d8 → #8fb0c8), titre (1.3rem weight 700 uppercase #365e85), description (0.95rem line-height 1.7 #6b7280)",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "key_title": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Titre en uppercase"
+        },
+        "key_description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Description détaillée"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "key_title": "[PILIER/CLÉ #1]",
+          "key_description": "[Description de ce pilier + pourquoi c'est essentiel pour la réussite + bénéfice concret pour l'utilisateur]"
+        }
+      ]
+    },
+    {
+      "key": "included_section_title",
+      "label": "Titre section inclus",
       "type": "string",
-      "maxLength": 32
+      "intention": "content_intro",
+      "description": "Titre ce qui est inclus (2.5rem weight 700 #365e85 text-center). Peut contenir []",
+      "examples": ["[CE QUI EST INCLUS DANS LE PROGRAMME]"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "included_tabs",
+      "label": "Onglets inclus",
+      "type": "string[]",
+      "intention": "content_navigation",
+      "description": "3 onglets (padding 15px 30px, weight 600, color #6b7280, active #365e85 avec underline vert 2px). Peut contenir []",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemMaxLength": 40,
+      "required": true,
+      "examples": ["[ONGLET #1]", "[ONGLET #2]", "[ONGLET #3]"]
+    },
+    {
+      "key": "tab_panels",
+      "label": "Contenus des onglets",
+      "type": "object[]",
+      "intention": "content_detail",
+      "description": "3 contenus d'onglets avec titre (1.5rem weight 700 #365e85), texte (1rem line-height 1.8 #6b7280). Tab 2 a resources grid 2 colonnes avec icônes colorées",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "tab_title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Titre du panel. Peut contenir []"
+        },
+        "tab_text": {
+          "type": "string",
+          "maxLength": 600,
+          "description": "Texte descriptif. Peut contenir []"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "tab_title": "[Fréquence/Rythme...]",
+          "tab_text": "[Description détaillée de ce que le participant reçoit/expérimente quotidiennement...]"
+        }
+      ]
+    },
+    {
+      "key": "challenge_plus_section_title",
+      "label": "Titre section challenge plus",
+      "type": "string",
+      "intention": "bonus_intro",
+      "description": "Titre challenge plus (2.5rem weight 700 #365e85 text-center). Peut contenir []",
+      "examples": ["[CHALLENGE PLUS : SUPPLÉMENTS RECOMMANDÉS]"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "supplements",
+      "label": "Suppléments",
+      "type": "object[]",
+      "intention": "product_showcase",
+      "description": "2-4 suppléments en grid 2 colonnes avec image 3:4 max-width 250px gradient gris, nom (1.3rem weight 700 #365e85), description (0.95rem line-height 1.7 #6b7280)",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemSchema": {
+        "supplement_name": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Nom du supplément"
+        },
+        "supplement_description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Description du supplément"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "supplement_name": "Probiotique Premium",
+          "supplement_description": "Formule avancée pour soutenir votre microbiome..."
+        }
+      ]
+    },
+    {
+      "key": "expert_section_title",
+      "label": "Titre expert",
+      "type": "string",
+      "intention": "authority_intro",
+      "description": "Titre section expert (1.8rem weight 600 #365e85). Peut contenir []",
+      "examples": ["[Témoignage d'expert]"],
+      "maxLength": 100,
+      "required": true
+    },
+    {
+      "key": "expert_name",
+      "label": "Nom expert",
+      "type": "string",
+      "intention": "authority_name",
+      "description": "Nom de l'expert (1rem weight 600 #147182 turquoise)",
+      "examples": ["Dr. Marie Laurent"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "expert_quote",
+      "label": "Citation expert",
+      "type": "string",
+      "intention": "authority_endorsement",
+      "description": "Citation de l'expert (1rem line-height 1.8 #365e85 italic)",
+      "examples": ["\"Ce programme combine les dernières avancées scientifiques avec des pratiques éprouvées...\""],
+      "maxLength": 600,
+      "required": true
+    },
+    {
+      "key": "pricing_section_title",
+      "label": "Titre section prix",
+      "type": "string",
+      "intention": "offer_intro",
+      "description": "Titre pricing (2.5rem weight 600 #365e85 italic text-center). Peut contenir []",
+      "examples": ["[Rejoignez le programme NOM DU PROGRAMME !]"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "pricing_plans",
+      "label": "Plans tarifaires",
+      "type": "object[]",
+      "intention": "pricing_options",
+      "description": "2 plans en grid 2 colonnes avec badge (background #05b16e blanc padding 8px 20px border-radius 20px uppercase 0.8rem weight 600), titre (1.5rem weight 700 #365e85), description, mockup screenshot 16:9, features sections avec h4 + listes ✓ (0.9rem padding-left 25px ::before ✓ #05b16e), CTA (background #147182 ou #05b16e padding 15px 40px border-radius 8px weight 600), note (0.85rem #6b7280 italic). Featured a border-color #05b16e + box-shadow vert",
+      "minItems": 2,
+      "maxItems": 2,
+      "itemSchema": {
+        "plan_badge": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Badge premium (optionnel). Peut contenir []"
+        },
+        "plan_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Titre du plan. Peut contenir []"
+        },
+        "plan_description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Description du plan. Peut contenir []"
+        },
+        "plan_features_sections": {
+          "type": "object[]",
+          "minItems": 3,
+          "maxItems": 5,
+          "itemSchema": {
+            "section_title": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "section_items": {
+              "type": "string[]",
+              "minItems": 1,
+              "maxItems": 10,
+              "itemMaxLength": 200
+            }
+          },
+          "description": "3-5 sections de features avec titre + items. Items avec class='excluded' pour ✗ rouge"
+        },
+        "plan_cta_text": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Texte du CTA"
+        },
+        "plan_note": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Note sous le CTA. Peut contenir <strong>"
+        }
+      },
+      "required": true,
+      "examples": [
+        {
+          "plan_badge": "",
+          "plan_title": "[OFFRE DE BASE]",
+          "plan_description": "[Description courte de l'offre + durée + promesse principale]",
+          "plan_features_sections": [
+            {
+              "section_title": "Structure",
+              "section_items": [
+                "Vidéos guidées du Dr Mark Hyman",
+                "Présentations pédagogiques"
+              ]
+            }
+          ],
+          "plan_cta_text": "Je Rejoins Défi",
+          "plan_note": "Inscription gratuite pour 5 jours de défi"
+        }
+      ]
+    },
+    {
+      "key": "disclaimer_text",
+      "label": "Texte disclaimer",
+      "type": "string",
+      "intention": "legal_warning",
+      "description": "Texte disclaimer avec ✗ (0.9rem line-height 1.8 #6b7280 text-center max-width 700px). Peut contenir <br> et ✗",
+      "examples": ["À qui ce programme n'est pas destiné :\n✗ Femmes enceintes ou allaitantes\n✗ Super athlètes..."],
+      "maxLength": 500,
+      "required": false
     },
     {
       "key": "footer_title",
+      "label": "Titre footer",
       "type": "string",
-      "maxLength": 90
+      "intention": "footer_brand",
+      "description": "Titre footer (1.5rem weight 700 #365e85 text-center). Peut contenir []",
+      "examples": ["[NOM DU PROGRAMME]"],
+      "maxLength": 80,
+      "required": true
     },
     {
-      "key": "footer_text",
-      "type": "string",
-      "maxLength": 240
+      "key": "footer_links",
+      "label": "Liens footer",
+      "type": "string[]",
+      "intention": "legal_links",
+      "description": "2-4 liens (0.9rem #6b7280 gap 20px text-center)",
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 60,
+      "required": true,
+      "examples": ["Conditions générales de vente", "Mentions Légales"]
     },
     {
-      "key": "footer_back_to_top",
+      "key": "footer_legal_text",
+      "label": "Texte légal footer",
       "type": "string",
-      "maxLength": 160
+      "intention": "legal_disclaimer",
+      "description": "Texte légal footer (0.85rem line-height 1.7 #6b7280 text-center). Peut contenir <strong> et <br>",
+      "examples": ["<strong>Droits réservés</strong>\nLorem ipsum dolor sit amet. Ce site ne fait pas partie du site Facebook..."],
+      "maxLength": 500,
+      "required": true
     }
   ]
 }

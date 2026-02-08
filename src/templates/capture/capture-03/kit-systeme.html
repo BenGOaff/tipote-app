@@ -1,50 +1,150 @@
-<section class="hero capture-03">
-  <div class="container capture-03">
-    <div class="date-pill">
-      {{hero_date}}
-    </div>
+<!-- =========================================================
+CAPTURE-03 — KIT-SYSTEME.IO (COMPLET / FINAL / PRÊT USER)
+AUCUNE PARTIE DU TEMPLATE SUPPRIMÉE
+HTML RÉEL À COPIER-COLLER DANS SYSTEME.IO
+========================================================= -->
 
-    <h1>{{hero_title}}</h1>
+<!-- ===================== FONTS (À COLLER DANS LE HEADER SYSTEME.IO) ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+<!-- ===================== BLOC 1 ===================== -->
+<div class="tpt-scope">
 
-    <div class="form-card">
-      <div class="systeme-slot systeme-form">
-        <!-- SLOT SYSTEME -->
-        Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
+  <!-- HERO -->
+  <section class="hero-section">
+    <div class="hero-container">
+
+      <div class="hero-content">
+        <h1 class="hero-title">{{hero_title}}</h1>
+
+        <p class="hero-subtitle">{{hero_subtitle}}</p>
+
+        <p class="hero-date">{{hero_date}}</p>
+
+        <p class="hero-description">{{hero_description}}</p>
+
+        <!-- ========= EMPLACEMENT FORMULAIRE SYSTEME.IO ========= -->
+        <div
+          class="tpt-slot"
+          data-tpt="systeme-form"
+          style="border:2px dashed #9f7800;padding:20px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
+        >
+          <strong>ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
+          Champs recommandés : Prénom + Email
+        </div>
+        <!-- ===================================================== -->
       </div>
+
+      <div class="hero-image">
+        {{hero_image}}
+      </div>
+
     </div>
+  </section>
 
-    <p class="micro">
-      {{reassurance_text}}
-    </p>
-  </div>
-</section>
+</div>
+<!-- =================== FIN BLOC 1 =================== -->
 
-<section class="section capture-03">
-  <div class="inner">
-    <div>
-      <h2>{{section_title}}</h2>
 
-      <ul class="list">
-        {{#bullets}}
-        <li>
-          <span class="dot"></span>
-          <span>{{.}}</span>
-        </li>
-        {{/bullets}}
+<!-- ===================== BLOC 2 ===================== -->
+<div class="tpt-scope">
+
+  <!-- BENEFITS -->
+  <section class="benefits-section">
+    <div class="benefits-container">
+      <h2 class="section-title">{{benefits_title}}</h2>
+      <p class="benefits-intro">{{benefits_intro}}</p>
+
+      <ul class="benefit-list">
+        {{benefits}}
       </ul>
     </div>
+  </section>
 
-    <aside class="aside">
-      <h3>{{aside_title}}</h3>
-      <p>{{aside_text}}</p>
+  <!-- TARGET -->
+  <section class="target-section">
+    <div class="target-container">
+      <p class="target-title">{{target_intro}}</p>
 
-      <div class="footer-cta">
-        <a class="btn" href="#">{{footer_cta_text}}</a>
+      <div class="target-grid">
+        {{target_profiles}}
       </div>
-    </aside>
-  </div>
-</section>
+
+      <p class="target-conclusion">{{target_conclusion}}</p>
+    </div>
+  </section>
+
+  <!-- PROGRAM -->
+  <section class="program-section">
+    <div class="program-container">
+      <h2 class="program-title">{{program_intro}}</h2>
+
+      <div class="program-list">
+        {{program_items}}
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="schedule-section">
+    <div class="schedule-container">
+      {{schedule_days}}
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about-section">
+    <div class="about-container">
+
+      <div class="about-image">
+        {{about_image}}
+      </div>
+
+      <div class="about-content">
+        <h2>Qui est {{about_name}} ?</h2>
+
+        {{about_story}}
+
+        <!-- ========= EMPLACEMENT BOUTON SYSTEME.IO ========= -->
+        <div
+          class="tpt-slot"
+          data-tpt="systeme-button"
+          style="border:2px dashed #9f7800;padding:16px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
+        >
+          <strong>ICI : AJOUTE TON BOUTON NATIF SYSTEME.IO</strong><br>
+          Action recommandée : ouvrir le formulaire
+        </div>
+        <!-- ================================================= -->
+
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE -->
+  <section class="quote-section">
+    <div class="quote-container">
+      <p class="quote-text">{{quote_mission}}</p>
+      <p class="quote-author">{{about_name}}</p>
+      <div class="quote-logo">
+        {{coach_title}}
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-text">
+      Tous droits réservés. Ce site n’est pas affilié à Facebook / Meta.
+    </p>
+
+    <div class="footer-links">
+      <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
+      <span>|</span>
+      <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
+    </div>
+  </footer>
+
+</div>
+<!-- =================== FIN BLOC 2 =================== -->

@@ -1,205 +1,2396 @@
-<div class="sale-01">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="nav-badge">
-        <span>{{nav_badge}}</span>
-      </div>
-      <div class="nav-links">
-        <a href="#intervenant">{{nav_link_1}}</a>
-        <a href="#programme">{{nav_link_2}}</a>
-        <a href="#temoignages">{{nav_link_3}}</a>
-      </div>
-      <a class="nav-cta" href="#reservation">{{nav_cta}}</a>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-01) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
+
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #0c0c0c;
+            color: #fff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Section Styles */
+        .section-dark {
+            background: #0c0c0c;
+            color: #fff;
+        }
+
+        .section-light {
+            background: #f1f5f9;
+            color: #111;
+        }
+
+        .section-white {
+            background: #fcfcfc;
+            color: #111;
+        }
+
+        .section-gradient-dark {
+            background: linear-gradient(180deg, #000 0%, #0f0f0f 50%, #000 100%);
+            color: #fff;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(12, 12, 12, 0.98);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0, 173, 239, 0.15);
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 18px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #00adef;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 45px;
+        }
+
+        .nav a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 400;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+            transition: color 0.3s ease;
+        }
+
+        .nav a:hover {
+            color: #00adef;
+        }
+
+        /* Banner Alert */
+        .alert-banner {
+            background: linear-gradient(135deg, #00adef 0%, #26e5f8 100%);
+            text-align: center;
+            padding: 14px 30px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #000;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 72px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 0 50px;
+        }
+
+        .container-wide {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 50px;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 100px;
+            text-align: center;
+        }
+
+        .hero-eyebrow {
+            font-size: 16px;
+            color: #00adef;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            margin-bottom: 35px;
+        }
+
+        .section-light .hero-eyebrow {
+            color: #00adef;
+        }
+
+        .hero-title {
+            font-size: 68px;
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 45px;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+
+        .section-light .hero-title {
+            color: #0c0c0c;
+        }
+
+        .hero-subtitle {
+            font-size: 28px;
+            font-weight: 300;
+            margin-bottom: 25px;
+            letter-spacing: 0.5px;
+        }
+
+        .section-light .hero-subtitle {
+            color: #353535;
+        }
+
+        .hero-meta {
+            font-size: 22px;
+            color: #00adef;
+            font-weight: 600;
+            margin-bottom: 50px;
+            letter-spacing: 0.5px;
+        }
+
+        .section-light .hero-meta {
+            color: #00adef;
+        }
+
+        /* Highlight Effect - Organic underline */
+        .text-highlight {
+            position: relative;
+            display: inline-block;
+            padding-bottom: 8px;
+        }
+
+        .text-highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -5px;
+            right: -5px;
+            height: 12px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(238, 255, 0, 0.6) 10%, 
+                rgba(238, 255, 0, 0.8) 50%, 
+                rgba(238, 255, 0, 0.6) 90%, 
+                transparent 100%);
+            border-radius: 50%;
+            transform: skewX(-5deg) scaleY(0.6);
+            z-index: -1;
+        }
+
+        .section-light .text-highlight::after {
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0, 173, 239, 0.25) 10%, 
+                rgba(0, 173, 239, 0.35) 50%, 
+                rgba(0, 173, 239, 0.25) 90%, 
+                transparent 100%);
+        }
+
+        /* Quote Section */
+        .quote-text {
+            font-size: 32px;
+            font-style: italic;
+            font-weight: 300;
+            text-align: center;
+            padding: 90px 0;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .section-light .quote-text {
+            color: #111;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 50px;
+            padding: 80px 0;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 55px 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 24px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .section-light .stat-card {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 25px 50px rgba(0, 173, 239, 0.25);
+        }
+
+        .section-light .stat-card:hover {
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 72px;
+            font-weight: 900;
+            color: #00adef;
+            margin-bottom: 18px;
+            line-height: 1;
+        }
+
+        .section-light .stat-number {
+            color: #00adef;
+        }
+
+        .stat-text {
+            font-size: 16px;
+            line-height: 1.6;
+            opacity: 0.85;
+        }
+
+        /* CTA Button */
+        .btn-primary {
+            display: inline-block;
+            padding: 22px 55px;
+            background: linear-gradient(135deg, #00adef 0%, #26e5f8 100%);
+            color: #000;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-radius: 60px;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 35px rgba(0, 173, 239, 0.4);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 45px rgba(0, 173, 239, 0.6);
+        }
+
+        .btn-primary small {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 4px;
+            opacity: 0.85;
+        }
+
+        .btn-secondary {
+            display: inline-block;
+            padding: 14px 35px;
+            background: transparent;
+            color: #00adef;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            border: 2px solid #00adef;
+            border-radius: 60px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #00adef;
+            color: #000;
+        }
+
+        /* Contact Bar */
+        .contact-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 50px;
+            padding: 25px;
+        }
+
+        .contact-text {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .contact-link {
+            color: #00adef;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .contact-link:hover {
+            border-bottom-color: #00adef;
+        }
+
+        .section-light .contact-text {
+            color: #353535;
+        }
+
+        /* Section Headers */
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-title {
+            font-size: 52px;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.25;
+            letter-spacing: -0.5px;
+            margin-bottom: 25px;
+        }
+
+        .section-light .section-title {
+            color: #0c0c0c;
+        }
+
+        .section-subtitle {
+            font-size: 20px;
+            font-weight: 300;
+            opacity: 0.85;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Speaker Cards */
+        .speakers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 70px;
+            padding: 80px 0;
+        }
+
+        .speaker-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 28px;
+            padding: 65px 50px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            transition: transform 0.4s ease;
+        }
+
+        .section-light .speaker-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .speaker-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .speaker-photo {
+            width: 220px;
+            height: 220px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin: 0 auto 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #00adef;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .speaker-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #00adef;
+        }
+
+        .section-light .speaker-name {
+            color: #00adef;
+        }
+
+        .speaker-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+
+        .speaker-bio {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.85;
+        }
+
+        /* Content Block */
+        .content-block {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 70px 0;
+        }
+
+        .content-title {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .section-light .content-title {
+            color: #0c0c0c;
+        }
+
+        .content-text {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            opacity: 0.88;
+        }
+
+        .checklist {
+            list-style: none;
+            margin: 40px 0;
+        }
+
+        .checklist li {
+            padding: 18px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .section-light .checklist li {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .checklist li::before {
+            content: '▢';
+            color: #00adef;
+            font-size: 26px;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: -2px;
+        }
+
+        /* Benefits Grid */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 45px;
+            padding: 80px 0;
+        }
+
+        .benefit-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 50px 45px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .section-light .benefit-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-6px);
+        }
+
+        .benefit-icon {
+            width: 110px;
+            height: 110px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin: 0 auto 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #00adef;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .benefit-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .section-light .benefit-title {
+            color: #0c0c0c;
+        }
+
+        .benefit-text {
+            font-size: 16px;
+            line-height: 1.7;
+            opacity: 0.85;
+        }
+
+        /* Program Days Grid */
+        .program-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+            padding: 80px 0;
+        }
+
+        .program-day {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 60px 50px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-light .program-day {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .program-day::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #00adef 0%, #26e5f8 100%);
+        }
+
+        .day-icon {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin-bottom: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .day-title {
+            font-size: 30px;
+            font-weight: 900;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .section-light .day-title {
+            color: #0c0c0c;
+        }
+
+        .day-text {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.85;
+        }
+
+        .day-image {
+            width: 100%;
+            height: 220px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 18px;
+            margin-top: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00adef;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .section-light .day-image {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        /* Fire Section */
+        .fire-section {
+            padding: 100px 0;
+        }
+
+        .fire-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin: 70px 0;
+        }
+
+        .fire-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 45px 35px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 82, 16, 0.15);
+            text-align: center;
+        }
+
+        .section-light .fire-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 82, 16, 0.12);
+        }
+
+        .fire-image {
+            width: 100%;
+            height: 220px;
+            background: rgba(255, 82, 16, 0.15);
+            border-radius: 16px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ff5210;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .section-light .fire-image {
+            background: rgba(255, 82, 16, 0.12);
+        }
+
+        /* Bonus Cards */
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+            padding: 80px 0;
+        }
+
+        .bonus-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 55px 50px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        .section-light .bonus-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .bonus-visual {
+            width: 130px;
+            height: 130px;
+            background: rgba(0, 173, 239, 0.15);
+            border-radius: 18px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .bonus-content {
+            flex: 1;
+        }
+
+        .bonus-icon {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+        }
+
+        .bonus-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+        }
+
+        .section-light .bonus-title {
+            color: #0c0c0c;
+        }
+
+        .bonus-text {
+            font-size: 16px;
+            line-height: 1.7;
+            opacity: 0.85;
+        }
+
+        /* Pricing Section */
+        .pricing-intro {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .pricing-meta {
+            font-size: 16px;
+            opacity: 0.8;
+            margin-top: 20px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 45px;
+            padding: 80px 0;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 32px;
+            padding: 55px 45px;
+            border: 2px solid rgba(0, 173, 239, 0.15);
+            transition: all 0.4s ease;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-light .pricing-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .pricing-card.featured {
+            transform: scale(1.05);
+            border-color: #00adef;
+            box-shadow: 0 30px 70px rgba(0, 173, 239, 0.35);
+        }
+
+        .section-light .pricing-card.featured {
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.12);
+        }
+
+        .pricing-card:hover {
+            transform: scale(1.08);
+            box-shadow: 0 35px 80px rgba(0, 173, 239, 0.4);
+        }
+
+        .pricing-badge {
+            display: inline-block;
+            padding: 8px 22px;
+            background: linear-gradient(135deg, #00adef 0%, #26e5f8 100%);
+            color: #000;
+            font-weight: 700;
+            font-size: 11px;
+            border-radius: 25px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pricing-tier {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .section-light .pricing-tier {
+            color: #0c0c0c;
+        }
+
+        .pricing-subtitle {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 35px;
+        }
+
+        .seating-visual {
+            width: 100%;
+            height: 130px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 16px;
+            margin: 25px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .section-light .seating-visual {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        .pricing-amount {
+            margin: 35px 0;
+        }
+
+        .price-old {
+            font-size: 26px;
+            color: #666;
+            text-decoration: line-through;
+            font-weight: 400;
+        }
+
+        .price-current {
+            font-size: 54px;
+            font-weight: 900;
+            color: #00adef;
+            margin-top: 12px;
+        }
+
+        .section-light .price-current {
+            color: #00adef;
+        }
+
+        .pricing-features {
+            list-style: none;
+            text-align: left;
+            margin: 35px 0;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .section-light .pricing-features {
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .pricing-features li {
+            padding: 13px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: #00adef;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+
+        /* Testimonials */
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 45px;
+            padding: 80px 0;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 50px 40px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            text-align: center;
+        }
+
+        .section-light .testimonial-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .testimonial-photo {
+            width: 160px;
+            height: 160px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin: 0 auto 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .testimonial-name {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        .section-light .testimonial-name {
+            color: #0c0c0c;
+        }
+
+        .testimonial-text {
+            font-size: 15px;
+            line-height: 1.7;
+            font-style: italic;
+            opacity: 0.85;
+        }
+
+        .testimonial-decoration {
+            width: 100%;
+            height: 65px;
+            background: rgba(0, 173, 239, 0.06);
+            margin-top: 25px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+        }
+
+        /* Video Testimonials */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 45px;
+            padding: 80px 0;
+        }
+
+        .video-card {
+            position: relative;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 260px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .section-light .video-placeholder {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        .video-text {
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.85;
+        }
+
+        .video-decoration {
+            width: 100%;
+            height: 85px;
+            background: rgba(0, 173, 239, 0.04);
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+        }
+
+        /* Logistics */
+        .logistics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+            padding: 80px 0;
+        }
+
+        .logistics-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 55px 50px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+        }
+
+        .section-light .logistics-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .logistics-icon {
+            width: 85px;
+            height: 85px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin-bottom: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .logistics-title {
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+        }
+
+        .section-light .logistics-title {
+            color: #0c0c0c;
+        }
+
+        .logistics-text {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.85;
+        }
+
+        .logistics-list {
+            list-style: none;
+            margin-top: 25px;
+        }
+
+        .logistics-list li {
+            padding: 12px 0;
+            font-size: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .logistics-list li::before {
+            content: '•';
+            color: #00adef;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* FAQ */
+        .faq-list {
+            max-width: 950px;
+            margin: 80px auto;
+        }
+
+        .faq-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 35px 45px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .section-light .faq-item {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .faq-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(5px);
+        }
+
+        .section-light .faq-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .faq-question {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .section-light .faq-question {
+            color: #0c0c0c;
+        }
+
+        .faq-answer {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.85;
+        }
+
+        /* Gallery */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            padding: 80px 0;
+        }
+
+        .gallery-item {
+            height: 270px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .section-light .gallery-item {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        /* Group Offers */
+        .group-offers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 45px;
+            padding: 80px 0;
+        }
+
+        .group-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 55px 45px;
+            border-radius: 28px;
+            border: 1px solid rgba(0, 173, 239, 0.12);
+            text-align: center;
+        }
+
+        .section-light .group-card {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .group-icon {
+            width: 105px;
+            height: 105px;
+            background: linear-gradient(135deg, rgba(0, 173, 239, 0.2) 0%, rgba(38, 229, 248, 0.2) 100%);
+            border-radius: 50%;
+            margin: 0 auto 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .group-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 22px;
+            text-transform: uppercase;
+        }
+
+        .section-light .group-title {
+            color: #0c0c0c;
+        }
+
+        .group-text {
+            font-size: 16px;
+            line-height: 1.7;
+            opacity: 0.85;
+        }
+
+        .large-visual {
+            width: 100%;
+            max-width: 1000px;
+            height: 350px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 22px;
+            margin: 70px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .section-light .large-visual {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        /* Signature */
+        .signature-placeholder {
+            width: 320px;
+            height: 110px;
+            background: rgba(0, 173, 239, 0.08);
+            border-radius: 12px;
+            margin: 50px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #00adef;
+            font-weight: 600;
+        }
+
+        .section-light .signature-placeholder {
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        /* Footer */
+        .footer {
+            background: #000;
+            padding: 70px 0 35px;
+            border-top: 1px solid rgba(0, 173, 239, 0.15);
+            color: #fff;
+        }
+
+        .footer-content {
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00adef;
+            margin-bottom: 25px;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-visual {
+            width: 160px;
+            height: 70px;
+            background: rgba(0, 173, 239, 0.08);
+            margin: 35px auto;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #00adef;
+        }
+
+        .footer-info {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 35px;
+            line-height: 1.8;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 35px;
+            justify-content: center;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #00adef;
+        }
+
+        .footer-copyright {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 25px;
+        }
+
+        /* Divider */
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0, 173, 239, 0.3) 50%, 
+                transparent 100%);
+            margin: 0;
+        }
+
+        .section-light .divider {
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0, 0, 0, 0.08) 50%, 
+                transparent 100%);
+        }
+
+        /* Spacing Utilities */
+        .py-xs { padding: 40px 0; }
+        .py-sm { padding: 60px 0; }
+        .py-md { padding: 80px 0; }
+        .py-lg { padding: 100px 0; }
+        .py-xl { padding: 120px 0; }
+
+        .mt-xs { margin-top: 40px; }
+        .mt-sm { margin-top: 60px; }
+        .mt-md { margin-top: 80px; }
+        .mt-lg { margin-top: 100px; }
+
+        .mb-xs { margin-bottom: 40px; }
+        .mb-sm { margin-bottom: 60px; }
+        .mb-md { margin-bottom: 80px; }
+        .mb-lg { margin-bottom: 100px; }
+
+        .text-center { text-align: center; }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .hero-title { font-size: 58px; }
+            .section-title { font-size: 46px; }
+        }
+
+        @media (max-width: 1024px) {
+            .container { padding: 0 40px; }
+            .hero-title { font-size: 50px; }
+            .section-title { font-size: 40px; }
+            
+            .stats-grid,
+            .benefits-grid,
+            .program-grid,
+            .bonus-grid,
+            .pricing-grid,
+            .testimonials-grid,
+            .video-grid,
+            .logistics-grid,
+            .group-offers-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .speakers-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 0 25px; }
+            .header-inner { padding: 15px 25px; }
+            .nav { display: none; }
+            
+            .hero-title { font-size: 38px; }
+            .hero-subtitle { font-size: 22px; }
+            .section-title { font-size: 32px; }
+            .quote-text { font-size: 24px; }
+
+            .stats-grid,
+            .benefits-grid,
+            .program-grid,
+            .bonus-grid,
+            .pricing-grid,
+            .testimonials-grid,
+            .video-grid,
+            .logistics-grid,
+            .group-offers-grid,
+            .fire-cards,
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bonus-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .contact-bar {
+                flex-direction: column;
+            }
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">Logo Événement</div>
+            <nav class="nav">
+                <a href="#intervenant">Intervenant</a>
+                <a href="#programme">Programme</a>
+                <a href="#temoignages">Témoignages</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Alert Banner -->
+    <div class="alert-banner">
+        Élément d'urgence ou information importante ici
     </div>
-  </nav>
 
-  <header class="hero" id="top">
-    <div class="container hero-grid">
-      <div>
-        <div class="pill">{{hero_pill}}</div>
-        <h1>{{hero_title}}</h1>
-        <p class="hero-sub">{{hero_subtitle}}</p>
-        {{#hero_quote}}
-        <div class="hero-quote">“{{.}}”</div>
-        {{/hero_quote}}
-
-        <div class="stats">
-          <div class="stat">
-            <div class="n">{{stat_1_number}}</div>
-            <div class="d">{{stat_1_label}}</div>
-          </div>
-          <div class="stat">
-            <div class="n">{{stat_2_number}}</div>
-            <div class="d">{{stat_2_label}}</div>
-          </div>
-          <div class="stat">
-            <div class="n">{{stat_3_number}}</div>
-            <div class="d">{{stat_3_label}}</div>
-          </div>
+    <!-- Hero Section - DARK -->
+    <section class="section-dark">
+        <div class="hero">
+            <div class="container">
+                <div class="hero-eyebrow">Tagline accrocheur en majuscules</div>
+                <h1 class="hero-title">
+                    <span class="text-highlight">Promesse principale</span><br>
+                    Suite du titre principal
+                </h1>
+                <div class="hero-subtitle">Ville | Pays | Dates de l'événement</div>
+                <div class="quote-text">
+                    "Citation inspirante ou slogan percutant qui<br>résonne avec votre audience cible"
+                </div>
+                <div class="hero-meta">Message de crédibilité ou preuve sociale</div>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <aside class="hero-card" id="reservation">
-        <div class="media">{{hero_media_label}}</div>
-        <div class="content">
-          <div class="cta-main">
-            <a class="btn-primary" href="#reservation">{{cta_primary}}</a>
-            <a class="btn-secondary" href="#contact">{{cta_secondary}}</a>
-          </div>
-          <p class="mini">{{cta_micro}}</p>
+    <!-- Stats Section - LIGHT -->
+    <section class="section-light py-lg">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">300%</div>
+                    <div class="stat-text">Description du chiffre qui prouve la légitimité ou éveille la conscience</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">159%</div>
+                    <div class="stat-text">Description du chiffre qui prouve la légitimité ou éveille la conscience</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">139%</div>
+                    <div class="stat-text">Description du chiffre qui prouve la légitimité ou éveille la conscience</div>
+                </div>
+            </div>
 
-          <div class="systeme-slot systeme-form" style="margin-top:14px">
-            <!-- SLOT SYSTEME -->
-            Ajoutez ici un BOUTON / FORMULAIRE SYSTEME (commande / réservation)
-          </div>
+            <div class="text-center mt-md">
+                <a href="#pricing" class="btn-primary">
+                    Réserver ma place
+                    <small>Nombre limité</small>
+                </a>
+            </div>
+
+            <div class="contact-bar">
+                <div class="contact-text">Des questions avant votre réservation ou discuter d'un tarif de groupe ?</div>
+                <a href="#" class="contact-link">Réserver un appel maintenant</a>
+                <a href="#" class="contact-link">Nous joindre sur WhatsApp</a>
+            </div>
         </div>
-      </aside>
-    </div>
-  </header>
+    </section>
 
-  <section class="section" id="intervenant">
-    <div class="container">
-      <h2>{{section_1_title}}</h2>
-      <p class="lead">{{section_1_text}}</p>
+    <div class="divider"></div>
 
-      <div class="grid-2">
-        <div class="card">
-          <h3>{{speaker_1_title}}</h3>
-          <p>{{speaker_1_text}}</p>
+    <!-- Speaker Section - DARK -->
+    <section id="intervenant" class="section-dark py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">L'événement mythique</span><br>
+                    que choisissent les personnalités pour changer de vie
+                </h2>
+            </div>
+
+            <div class="speakers-grid">
+                <div class="speaker-card">
+                    <div class="speaker-photo">Photo intervenant</div>
+                    <h3 class="speaker-name">Nom de l'intervenant</h3>
+                    <div class="speaker-title">Titre et crédibilité</div>
+                    <p class="speaker-bio">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                </div>
+
+                <div class="speaker-card">
+                    <div class="speaker-photo">Photo intervenant</div>
+                    <h3 class="speaker-name">Nom de l'intervenant 2</h3>
+                    <div class="speaker-title">Titre et crédibilité</div>
+                    <p class="speaker-bio">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                </div>
+            </div>
         </div>
-        <div class="card">
-          <h3>{{speaker_2_title}}</h3>
-          <p>{{speaker_2_text}}</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Content Section - LIGHT -->
+    <section class="section-light py-lg">
+        <div class="container">
+            <div class="content-block">
+                <h2 class="content-title">"Un jour"... c'est maintenant.</h2>
+                <h3 class="hero-subtitle">Accédez à la vie pour laquelle vous êtes fait.</h3>
+                
+                <p class="content-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                
+                <p class="content-text">"Un jour", nous...</p>
+                
+                <ul class="checklist">
+                    <li>Premier objectif ou rêve typique de votre audience</li>
+                    <li>Deuxième objectif ou désir profond</li>
+                    <li>Troisième aspiration commune</li>
+                    <li>Quatrième transformation souhaitée</li>
+                </ul>
+
+                <p class="content-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+                </p>
+
+                <p class="content-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.
+                </p>
+
+                <p class="content-text">
+                    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.
+                </p>
+            </div>
+
+            <div class="text-center mt-lg">
+                <div class="alert-banner" style="display: inline-block; margin-bottom: 40px;">Élément rassurant (ex: Traduction disponible)</div>
+                <h2 class="section-title">
+                    <span class="text-highlight">Libérez votre plein potentiel</span><br>
+                    dès maintenant.
+                </h2>
+                <p class="hero-subtitle">Dates de l'événement</p>
+                <a href="#pricing" class="btn-primary mt-sm">
+                    Réserver ma place
+                    <small>Nombre limité</small>
+                </a>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section alt" id="programme">
-    <div class="container">
-      <h2>{{section_2_title}}</h2>
-      <p class="lead">{{section_2_text}}</p>
+    <div class="divider"></div>
 
-      <ul class="bullets">
-        {{#program_bullets}}
-        <li>
-          <span class="dot"></span>
-          <p>{{.}}</p>
-        </li>
-        {{/program_bullets}}
-      </ul>
-    </div>
-  </section>
+    <!-- Benefits Section - DARK -->
+    <section class="section-dark py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    C'est votre destin<br>
+                    <span class="text-highlight">Pour obtenir ce que vous voulez</span>
+                </h2>
+                <p class="section-subtitle">
+                    Message de transition qui explique comment l'événement va les aider à contrôler leur avenir.
+                </p>
+            </div>
 
-  <section class="section" id="bonus">
-    <div class="container">
-      <h2>{{section_3_title}}</h2>
-      <p class="lead">{{section_3_text}}</p>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <h3>{{bonus_1_title}}</h3>
-          <p>{{bonus_1_text}}</p>
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">Icône GIF animée</div>
+                    <h3 class="benefit-title">Puce promesse irrésistible</h3>
+                    <p class="benefit-text">Bénéfice + conséquence concrète du bénéfice pour ton prospect</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-lg">
+                <p class="content-text" style="font-size: 20px;">
+                    Message de transition qui souligne l'importance de l'investissement.
+                </p>
+                <h2 class="section-title mt-md">
+                    <span class="text-highlight">Bienvenue dans le nouveau monde</span>
+                </h2>
+            </div>
         </div>
-        <div class="card">
-          <h3>{{bonus_2_title}}</h3>
-          <p>{{bonus_2_text}}</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Program Section - LIGHT -->
+    <section id="programme" class="section-light py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Transformez votre vie</span><br>
+                    en 4 jours.
+                </h2>
+                <div class="alert-banner" style="display: inline-block; max-width: 600px; margin-top: 30px;">
+                    Élément rassurant (ex: Traduction disponible)
+                </div>
+            </div>
+
+            <div class="program-grid">
+                <div class="program-day">
+                    <div class="day-icon">Icône GIF</div>
+                    <h3 class="day-title">Créez votre première impulsion</h3>
+                    <p class="day-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+                    </p>
+                    <div class="day-image">Image illustration jour 1</div>
+                </div>
+
+                <div class="program-day">
+                    <div class="day-icon">Icône GIF</div>
+                    <h3 class="day-title">Exploitez la puissance du momentum</h3>
+                    <p class="day-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                    </p>
+                    <div class="day-image">Image illustration jour 2</div>
+                </div>
+
+                <div class="program-day">
+                    <div class="day-icon">Icône GIF</div>
+                    <h3 class="day-title">Créez une transformation durable</h3>
+                    <p class="day-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                    <div class="day-image">Image illustration jour 3</div>
+                </div>
+
+                <div class="program-day">
+                    <div class="day-icon">Icône GIF</div>
+                    <h3 class="day-title">Embrassez votre nouvel avenir</h3>
+                    <p class="day-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor.
+                    </p>
+                    <div class="day-image">Image illustration jour 4</div>
+                </div>
+            </div>
         </div>
-        <div class="card">
-          <h3>{{bonus_3_title}}</h3>
-          <p>{{bonus_3_text}}</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Fire Walk Section - DARK -->
+    <section class="section-dark fire-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Expérience unique</span><br>
+                    et transformatrice
+                </h2>
+            </div>
+
+            <div class="content-block">
+                <p class="content-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
+                </p>
+            </div>
+
+            <div class="fire-cards">
+                <div class="fire-card">
+                    <div class="fire-image">Image peur/blocage 1</div>
+                    <p class="benefit-text">Description de la peur ou du blocage</p>
+                </div>
+
+                <div class="fire-card">
+                    <div class="fire-image">Image peur/blocage 2</div>
+                    <p class="benefit-text">Description de la peur ou du blocage</p>
+                </div>
+
+                <div class="fire-card">
+                    <div class="fire-image">Image peur/blocage 3</div>
+                    <p class="benefit-text">Description de la peur ou du blocage</p>
+                </div>
+            </div>
+
+            <div class="content-block text-center">
+                <p class="content-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+
+                <p class="content-text mt-sm">
+                    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </p>
+
+                <h3 class="section-title mt-lg">
+                    Il y aura un avant, et un après.<br>
+                    Vous pourrez dire. Je l'ai fait.
+                </h3>
+            </div>
         </div>
-        <div class="card">
-          <h3>{{bonus_4_title}}</h3>
-          <p>{{bonus_4_text}}</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Bonus Section - LIGHT -->
+    <section class="section-light py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    En plus de l'événement - Bonus inclus<br>
+                    <span class="text-highlight">Ce que vous obtenez</span>
+                </h2>
+            </div>
+
+            <div class="bonus-grid">
+                <div class="bonus-card">
+                    <div class="bonus-visual">Image bonus 1</div>
+                    <div class="bonus-content">
+                        <div class="bonus-icon">Icône GIF</div>
+                        <h3 class="bonus-title">Nom du bonus 1</h3>
+                        <p class="bonus-text">
+                            Avantages + conséquence des avantages du bonus 1, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">Image bonus 2</div>
+                    <div class="bonus-content">
+                        <div class="bonus-icon">Icône GIF</div>
+                        <h3 class="bonus-title">Nom du bonus 2</h3>
+                        <p class="bonus-text">
+                            Avantages + conséquence des avantages du bonus 2, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">Image bonus 3</div>
+                    <div class="bonus-content">
+                        <div class="bonus-icon">Icône GIF</div>
+                        <h3 class="bonus-title">Nom du bonus 3</h3>
+                        <p class="bonus-text">
+                            Avantages + conséquence des avantages du bonus 3, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bonus-card">
+                    <div class="bonus-visual">Image bonus 4</div>
+                    <div class="bonus-content">
+                        <div class="bonus-icon">Icône GIF</div>
+                        <h3 class="bonus-title">Nom du bonus 4</h3>
+                        <p class="bonus-text">
+                            Avantages + conséquence des avantages du bonus 4, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-xl">
+                <h2 class="section-title">
+                    <span class="text-highlight">Libérez votre plein potentiel</span><br>
+                    maintenant.
+                </h2>
+                <p class="hero-subtitle mt-sm">Dates de l'événement</p>
+                <a href="#pricing" class="btn-primary mt-sm">
+                    Réserver ma place
+                    <small>Nombre limité</small>
+                </a>
+
+                <div class="contact-bar">
+                    <div class="contact-text">Des questions avant votre réservation ou discuter d'un tarif de groupe ?</div>
+                    <a href="#" class="contact-link">Réserver un appel maintenant</a>
+                    <a href="#" class="contact-link">Nous joindre sur WhatsApp</a>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section alt" id="offres">
-    <div class="container">
-      <h2>{{pricing_title}}</h2>
-      <p class="lead">{{pricing_text}}</p>
+    <div class="divider"></div>
 
-      <div class="pricing">
-        <div class="price">
-          <span class="tag">{{price_1_tag}}</span>
-          <div class="name">{{price_1_name}}</div>
-          {{#price_1_strike}}<p class="strike">{{.}}</p>{{/price_1_strike}}
-          <div class="amount">{{price_1_amount}}</div>
-          <ul class="list">
-            {{#price_1_items}}
-            <li><span class="check"></span><span>{{.}}</span></li>
-            {{/price_1_items}}
-          </ul>
-          <div class="buy"><a href="#reservation">{{price_1_cta}}</a></div>
+    <!-- Dream Life Section - DARK -->
+    <section class="section-dark py-lg">
+        <div class="container">
+            <div class="content-block text-center">
+                <h2 class="content-title">Prenez un instant et osez imaginer la vie de vos rêves...</h2>
+                
+                <p class="content-text" style="font-size: 20px;">À quoi ressemble-t-elle ?</p>
+                
+                <p class="content-text">Avez-vous ?...</p>
+                
+                <ul class="checklist" style="max-width: 800px; margin: 40px auto;">
+                    <li>Plus de temps libre à consacrer à votre famille et à vos proches ?</li>
+                    <li>Une énergie et une confiance illimitée ?</li>
+                    <li>Le sentiment d'avoir une raison d'être et moins de stress dans votre vie quotidienne ?</li>
+                    <li>Un meilleur bien-être physique et mental ?</li>
+                    <li>La liberté financière ultime et la capacité de donner en retour ?</li>
+                </ul>
+
+                <h3 class="hero-subtitle mt-lg">
+                    Créer la vie que vous désirez et que vous méritez.
+                </h3>
+            </div>
         </div>
+    </section>
 
-        <div class="price featured">
-          <span class="tag">{{price_2_tag}}</span>
-          <div class="name">{{price_2_name}}</div>
-          {{#price_2_strike}}<p class="strike">{{.}}</p>{{/price_2_strike}}
-          <div class="amount">{{price_2_amount}}</div>
-          <ul class="list">
-            {{#price_2_items}}
-            <li><span class="check"></span><span>{{.}}</span></li>
-            {{/price_2_items}}
-          </ul>
-          <div class="buy"><a href="#reservation">{{price_2_cta}}</a></div>
+    <div class="divider"></div>
+
+    <!-- Pricing Section - LIGHT -->
+    <section id="pricing" class="section-light py-xl">
+        <div class="container">
+            <div class="pricing-intro">
+                <h2 class="section-title">
+                    <span class="text-highlight">Événement 2025</span><br>
+                    Ville (Pays) — Dates
+                </h2>
+                <p class="pricing-meta">
+                    Paiement disponible en 1x, 3x et 6x (élément rassurant)
+                </p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Silver -->
+                <div class="pricing-card">
+                    <div class="pricing-tier">Silver</div>
+                    <div class="pricing-subtitle">Niveau de placement</div>
+                    <div class="seating-visual">Visualisation Silver</div>
+                    
+                    <div class="pricing-amount">
+                        <div class="pricing-badge">Super early bird</div>
+                        <div class="price-old">1499€</div>
+                        <div class="price-current">699€</div>
+                    </div>
+
+                    <div class="pricing-subtitle">Description du placement</div>
+
+                    <ul class="pricing-features">
+                        <li>Placement spécifique</li>
+                        <li>X jours événement</li>
+                        <li>Expérience signature</li>
+                        <li>Cahier d'exercices</li>
+                        <li>Défi post-événement</li>
+                        <li>Bonus 1</li>
+                        <li>Bonus 2</li>
+                        <li>Bonus 3</li>
+                        <li>Bonus 4</li>
+                    </ul>
+
+                    <a href="#" class="btn-primary" style="margin-top: 30px; padding: 15px 40px; font-size: 14px;">Réserver</a>
+                </div>
+
+                <!-- Gold (Featured) -->
+                <div class="pricing-card featured">
+                    <div class="pricing-tier">Gold</div>
+                    <div class="pricing-subtitle">Niveau de placement</div>
+                    <div class="seating-visual">Visualisation Gold</div>
+                    
+                    <div class="pricing-amount">
+                        <div class="pricing-badge">Super early bird</div>
+                        <div class="price-old">1799€</div>
+                        <div class="price-current">999€</div>
+                    </div>
+
+                    <div class="pricing-subtitle">Description du placement</div>
+
+                    <ul class="pricing-features">
+                        <li>Placement spécifique</li>
+                        <li>X jours événement</li>
+                        <li>Expérience signature</li>
+                        <li>Cahier d'exercices</li>
+                        <li>Défi post-événement</li>
+                        <li>Bonus 1</li>
+                        <li>Bonus 2</li>
+                        <li>Bonus 3</li>
+                        <li>Bonus 4</li>
+                    </ul>
+
+                    <a href="#" class="btn-primary" style="margin-top: 30px; padding: 15px 40px; font-size: 14px;">Réserver</a>
+                </div>
+
+                <!-- Diamond -->
+                <div class="pricing-card">
+                    <div class="pricing-badge">Le + proche de l'intervenant</div>
+                    <div class="pricing-tier">Diamond</div>
+                    <div class="pricing-subtitle">Niveau de placement</div>
+                    <div class="seating-visual">Visualisation Diamond</div>
+                    
+                    <div class="pricing-amount">
+                        <div class="pricing-badge">Super early bird</div>
+                        <div class="price-old">5999€</div>
+                        <div class="price-current">3499€</div>
+                    </div>
+
+                    <div class="pricing-subtitle">Description du placement</div>
+
+                    <ul class="pricing-features">
+                        <li>Sur le devant de la scène</li>
+                        <li>X jours événement</li>
+                        <li>Expérience signature</li>
+                        <li>Cahier d'exercices</li>
+                        <li>Défi post-événement</li>
+                        <li>Boissons</li>
+                        <li>Nourriture/repas</li>
+                        <li>Sac cadeau</li>
+                        <li>Accès VIP</li>
+                        <li>Salon exclusif</li>
+                        <li>Bonus 1</li>
+                        <li>Bonus 2</li>
+                        <li>Bonus 3</li>
+                        <li>Bonus 4</li>
+                    </ul>
+
+                    <a href="#" class="btn-primary" style="margin-top: 30px; padding: 15px 40px; font-size: 14px;">Réserver</a>
+                </div>
+            </div>
+
+            <div class="text-center mt-xl">
+                <h3 class="section-title">
+                    Êtes-vous prêt pour une aventure révolutionnaire<br>
+                    aux côtés de <span class="text-highlight">Nom Intervenant</span> ?
+                </h3>
+                
+                <div class="large-visual">Image événement premium</div>
+
+                <p class="content-text" style="font-size: 14px;">
+                    En cliquant sur "réserver" je reconnais avoir lu et accepté la <a href="#" class="contact-link">politique de confidentialité</a>
+                </p>
+
+                <a href="#" class="btn-primary mt-sm">Réserver</a>
+            </div>
         </div>
+    </section>
 
-        <div class="price">
-          <span class="tag">{{price_3_tag}}</span>
-          <div class="name">{{price_3_name}}</div>
-          {{#price_3_strike}}<p class="strike">{{.}}</p>{{/price_3_strike}}
-          <div class="amount">{{price_3_amount}}</div>
-          <ul class="list">
-            {{#price_3_items}}
-            <li><span class="check"></span><span>{{.}}</span></li>
-            {{/price_3_items}}
-          </ul>
-          <div class="buy"><a href="#reservation">{{price_3_cta}}</a></div>
+    <div class="divider"></div>
+
+    <!-- Testimonials Section - DARK -->
+    <section id="temoignages" class="section-dark py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    "Il y a une différence entre<br>
+                    <span class="text-highlight">savoir les choses et les vivre</span>."
+                </h2>
+                <p class="hero-subtitle">
+                    Ils ont fait l'événement et ils témoignent
+                </p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 1</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 2</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 3</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 4</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 5</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-photo">Photo célébrité 6</div>
+                    <h3 class="testimonial-name">Nom Célébrité</h3>
+                    <p class="testimonial-text">
+                        Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats. Tu peux proposer des accès offerts à quelques personnes en échange d'un retour honnête de leur part.
+                    </p>
+                    <div class="testimonial-decoration">Élément décoratif</div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section" id="temoignages">
-    <div class="container">
-      <h2>{{testimonials_title}}</h2>
-      <p class="lead">{{testimonials_text}}</p>
+    <div class="divider"></div>
 
-      <ul class="bullets">
-        {{#testimonials}}
-        <li>
-          <span class="dot"></span>
-          <p>{{.}}</p>
-        </li>
-        {{/testimonials}}
-      </ul>
-    </div>
-  </section>
+    <!-- Video Testimonials Section - LIGHT -->
+    <section class="section-light py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Ils ont transformé</span><br>
+                    leur vie et leurs résultats
+                </h2>
+            </div>
 
-  <section class="section alt" id="faq">
-    <div class="container">
-      <h2>{{faq_title}}</h2>
-      <p class="lead">{{faq_text}}</p>
+            <div class="video-grid">
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 1</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
 
-      <div class="faq">
-        {{#faq_items}}
-        <details>
-          <summary>{{question}}</summary>
-          <p>{{answer}}</p>
-        </details>
-        {{/faq_items}}
-      </div>
-    </div>
-  </section>
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 2</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
 
-  <footer class="footer" id="contact">
-    <div class="container">
-      <p>{{footer_text}}</p>
-    </div>
-  </footer>
-</div>
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 3</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Second Video Testimonials - DARK -->
+    <section class="section-dark py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    Ils sont devenus des leaders<br>
+                    <span class="text-highlight">dans leur domaine</span>
+                </h2>
+            </div>
+
+            <div class="video-grid">
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 4</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
+
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 5</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
+
+                <div class="video-card">
+                    <div class="video-placeholder">Vidéo témoignage 6</div>
+                    <p class="video-text">Description du témoignage ou de la transformation obtenue</p>
+                    <div class="video-decoration">Décoration</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Logistics Section - LIGHT -->
+    <section class="section-light py-xl">
+        <div class="container">
+            <div class="logistics-grid">
+                <div class="logistics-card">
+                    <div class="logistics-icon">Icône lieu</div>
+                    <h3 class="logistics-title">Lieu</h3>
+                    <p class="logistics-text">
+                        <strong>Nom du lieu de l'événement</strong><br>
+                        Adresse complète de l'événement<br>
+                        Code postal - Ville
+                    </p>
+                </div>
+
+                <div class="logistics-card">
+                    <div class="logistics-icon">Icône horaire</div>
+                    <h3 class="logistics-title">Horaire</h3>
+                    <ul class="logistics-list">
+                        <li><strong>Date et heure jour 1</strong></li>
+                        <li><strong>Date et heure jour 2</strong></li>
+                        <li><strong>Date et heure jour 3</strong></li>
+                        <li><strong>Date et heure jour 4</strong></li>
+                    </ul>
+                    <p class="logistics-text" style="font-size: 14px; margin-top: 20px;">
+                        Note : Les heures indiquées sont approximatives. L'intervenant s'engage à respecter les normes les plus strictes.
+                    </p>
+                </div>
+
+                <div class="logistics-card">
+                    <div class="logistics-icon">Icône transport</div>
+                    <h3 class="logistics-title">Se rendre sur place</h3>
+                    <p class="logistics-text">
+                        Consignes claires pour se rendre sur place : transports en commun, parking, aéroports... Explique à tes participants que ce sera facile de se rendre sur place.
+                    </p>
+                </div>
+
+                <div class="logistics-card">
+                    <div class="logistics-icon">Icône hôtel</div>
+                    <h3 class="logistics-title">Réservation d'hôtel</h3>
+                    <p class="logistics-text">
+                        Il y a plusieurs hôtels à distance de marche du site. <a href="#" class="contact-link">Cliquez ici</a> pour consulter les options d'hébergement disponibles.
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-center mt-xl">
+                <h2 class="section-title">
+                    <span class="text-highlight">Libérez votre plein potentiel</span><br>
+                    maintenant.
+                </h2>
+                <p class="hero-subtitle mt-sm">Dates de l'événement</p>
+                <a href="#pricing" class="btn-primary mt-sm">
+                    Réserver ma place
+                    <small>Nombre limité</small>
+                </a>
+
+                <div class="contact-bar">
+                    <div class="contact-text">Des questions avant votre réservation ou discuter d'un tarif de groupe ?</div>
+                    <a href="#" class="contact-link">Réserver un appel maintenant</a>
+                    <a href="#" class="contact-link">Nous joindre sur WhatsApp</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Final CTA Section - DARK -->
+    <section class="section-dark py-xl">
+        <div class="container">
+            <div class="content-block text-center">
+                <h2 class="section-title">
+                    La crise n'est qu'une opportunité déguisée.<br>
+                    <span class="text-highlight">Qu'en ferez-vous ?</span>
+                </h2>
+
+                <p class="content-text mt-md">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+
+                <p class="content-text">
+                    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </p>
+
+                <p class="content-text">
+                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                </p>
+
+                <div class="signature-placeholder">Signature intervenant</div>
+
+                <h3 class="hero-subtitle mt-lg">
+                    Comment allez-vous devenir un leader<br>
+                    au moment où le monde en a le plus besoin ?
+                </h3>
+
+                <a href="#" class="contact-link" style="font-size: 18px; margin-top: 30px; display: inline-block;">Nous contacter sur WhatsApp</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Group Offers Section - LIGHT -->
+    <section class="section-light py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Offres exclusives</span><br>
+                    groupes & loges privées
+                </h2>
+                <p class="section-subtitle">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+            </div>
+
+            <div class="group-offers-grid">
+                <div class="group-card">
+                    <div class="group-icon">Icône</div>
+                    <h3 class="group-title">Expérience Premium</h3>
+                    <p class="group-text">
+                        Description de l'avantage premium : sièges privés, service de première classe, vues spectaculaires.
+                    </p>
+                </div>
+
+                <div class="group-card">
+                    <div class="group-icon">Icône</div>
+                    <h3 class="group-title">Avantages pour les groupes</h3>
+                    <p class="group-text">
+                        Description des avantages : tarifs préférentiels, service personnalisé, accès VIP pour les réservations de groupes.
+                    </p>
+                </div>
+
+                <div class="group-card">
+                    <div class="group-icon">Icône</div>
+                    <h3 class="group-title">Accompagnement personnalisé</h3>
+                    <p class="group-text">
+                        Description de l'accompagnement : équipe dédiée, expérience fluide et inoubliable du début à la fin.
+                    </p>
+                </div>
+            </div>
+
+            <div class="large-visual">Image loge privée ou groupe</div>
+
+            <div class="text-center" style="max-width: 800px; margin: 0 auto;">
+                <h3 class="content-title">Vous êtes intéressé ?</h3>
+                <p class="content-text">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.
+                </p>
+
+                <a href="#pricing" class="btn-primary mt-sm">
+                    Réserver ma place
+                    <small>Nombre limité</small>
+                </a>
+
+                <div class="contact-bar">
+                    <div class="contact-text">Des questions avant votre réservation ou discuter d'un tarif de groupe ?</div>
+                    <a href="#" class="contact-link">Réserver un appel maintenant</a>
+                    <a href="#" class="contact-link">Nous joindre sur WhatsApp</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Gallery Section - DARK -->
+    <section class="section-dark py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Votre vie ne sera plus</span><br>
+                    jamais la même
+                </h2>
+                <p class="section-subtitle">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+            </div>
+
+            <div class="gallery-grid">
+                <div class="gallery-item">Photo événement 1</div>
+                <div class="gallery-item">Photo événement 2</div>
+                <div class="gallery-item">Photo événement 3</div>
+                <div class="gallery-item">Photo événement 4</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- FAQ Section - LIGHT -->
+    <section class="section-light py-xl">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-highlight">Questions</span> - Réponses
+                </h2>
+            </div>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h3 class="faq-question">Question fréquente ou objection à contourner</h3>
+                    <p class="faq-answer">
+                        Réponse précise à la question ou à l'objection. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3 class="faq-question">Question fréquente ou objection à contourner</h3>
+                    <p class="faq-answer">
+                        Réponse précise à la question ou à l'objection. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3 class="faq-question">Question fréquente ou objection à contourner</h3>
+                    <p class="faq-answer">
+                        Réponse précise à la question ou à l'objection. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3 class="faq-question">Question fréquente ou objection à contourner</h3>
+                    <p class="faq-answer">
+                        Réponse précise à la question ou à l'objection. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+
+                <div class="faq-item">
+                    <h3 class="faq-question">Question fréquente ou objection à contourner</h3>
+                    <p class="faq-answer">
+                        Réponse précise à la question ou à l'objection. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">Partenaire francophone depuis XXXX</div>
+                
+                <div class="footer-visual">Drapeau/Logo</div>
+
+                <div class="footer-visual" style="width: 220px; height: 90px;">Logo principal</div>
+
+                <div class="footer-info">
+                    © Année - Année Nom de l'entreprise - Tous Droits Réservés<br>
+                    NOM ENTREPRISE - Adresse complète
+                </div>
+
+                <div class="footer-links">
+                    <a href="#">Nous contacter</a>
+                    <a href="#">Mentions Légales</a>
+                    <a href="#">Conditions générales de vente</a>
+                </div>
+
+                <div class="footer-copyright">
+                    Template créé pour événement premium - Tous droits réservés
+                </div>
+            </div>
+        </div>
+    </footer>
+
+<!-- ===================== BLOC 2 ===================== -->
+

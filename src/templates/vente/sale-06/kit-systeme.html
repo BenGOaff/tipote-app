@@ -1,436 +1,1893 @@
-<div class="sale-06">
-  <nav class="nav">
-    <div class="container nav-inner">
-      <a class="brand" href="#top">
-        <span class="brand-dot"></span>
-        <span class="brand-name">{{brand_name}}</span>
-      </a>
+<!-- TIPOTE — KIT SYSTEME.IO (sale-06) -->
+<!-- Colle BLOC 1 puis remplace le bloc "FORMULAIRE DE COMMANDE" par ton bouton / formulaire Systeme.io, puis colle BLOC 2. -->
 
-      <div class="nav-links">
-        <a href="#problemes">{{nav_link_1}}</a>
-        <a href="#methode">{{nav_link_2}}</a>
-        <a href="#bonus">{{nav_link_3}}</a>
-        <a href="#faq">{{nav_link_4}}</a>
-      </div>
+<!-- ===================== BLOC 1 ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 
-      <a class="nav-cta" href="#checkout">{{nav_cta}}</a>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.6;
+            color: #353535;
+            overflow-x: hidden;
+            background: #f5f5f5;
+        }
+
+        /* Header sticky */
+        .top-bar {
+            background: #8012FE;
+            color: white;
+            text-align: center;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Hero Section - Vert Citron */
+        .hero {
+            background: linear-gradient(135deg, #C0FF43 0%, #BFFE43 100%);
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '✱';
+            position: absolute;
+            font-size: 200px;
+            color: rgba(128, 18, 254, 0.08);
+            top: -50px;
+            right: 10%;
+            font-weight: 900;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-content {
+            text-align: center;
+        }
+
+        .format-label {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #8012FE;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .hero-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 96px;
+            line-height: 0.9;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 rgba(0,0,0,0.05);
+        }
+
+        .hero-subtitle {
+            font-family: 'Anton', sans-serif;
+            font-size: 72px;
+            line-height: 0.9;
+            color: transparent;
+            -webkit-text-stroke: 3px #8012FE;
+            text-stroke: 3px #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .tm-badge {
+            display: inline-block;
+            background: white;
+            color: #8012FE;
+            border: 3px solid #8012FE;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            line-height: 54px;
+            text-align: center;
+            font-weight: 900;
+            font-size: 20px;
+            margin-left: 20px;
+            vertical-align: middle;
+        }
+
+        .promise-box {
+            display: inline-block;
+            margin-top: 40px;
+        }
+
+        .promise-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 28px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .promise-value {
+            background: white;
+            border: 4px solid #FF440A;
+            border-radius: 50px;
+            padding: 20px 50px;
+            display: inline-block;
+        }
+
+        .promise-value h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #FF440A;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .subtext {
+            font-size: 13px;
+            color: #8012FE;
+            font-weight: 700;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Scroll Arrow */
+        .scroll-arrow {
+            width: 80px;
+            height: 80px;
+            background: #C0FF43;
+            border: 5px solid #8012FE;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 40px auto 0;
+            font-size: 40px;
+            color: #8012FE;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(128, 18, 254, 0.3);
+        }
+
+        /* Video Section - Violet */
+        .video-section {
+            background: linear-gradient(180deg, #8012FE 0%, #7010E8 100%);
+            padding: 80px 20px;
+            position: relative;
+        }
+
+        .video-wrapper {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .video-placeholder {
+            background: linear-gradient(135deg, #f0f0f0 0%, #e5e5e5 100%);
+            border-radius: 20px;
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .play-button {
+            width: 120px;
+            height: 120px;
+            background: #8012FE;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(128, 18, 254, 0.4);
+        }
+
+        .video-cta {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .video-cta p {
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .video-cta .reminder {
+            color: #C0FF43;
+            font-weight: 800;
+            font-size: 18px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #C0FF43 0%, #BFFE43 100%);
+            color: #8012FE;
+            padding: 18px 45px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 16px;
+            text-transform: none;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(192, 255, 67, 0.4);
+            transition: all 0.3s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(192, 255, 67, 0.5);
+        }
+
+        .trust-badges {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .badge-item {
+            background: rgba(255,255,255,0.15);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Section Problems */
+        .problems {
+            background: #efefef;
+            padding: 100px 20px;
+        }
+
+        .section-title-wrapper {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title-wrapper .accent-text {
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            color: #FF440A;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .section-title-wrapper .highlight {
+            background: #8012FE;
+            color: white;
+            padding: 8px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            text-transform: uppercase;
+            margin: 10px 0;
+        }
+
+        .section-title-wrapper .regular-text {
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            color: #FF440A;
+            text-transform: uppercase;
+        }
+
+        .decorative-icon {
+            font-size: 80px;
+            color: #8012FE;
+            margin: 20px 0;
+        }
+
+        .problem-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .problem-item {
+            background: white;
+            padding: 20px 30px;
+            margin-bottom: 15px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .problem-icon {
+            width: 30px;
+            height: 30px;
+            background: #8012FE;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .problem-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #353535;
+        }
+
+        .callout-text {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 15px;
+            color: #8012FE;
+            font-weight: 600;
+        }
+
+        /* Timing Section */
+        .timing {
+            background: #e8e8e8;
+            padding: 100px 20px;
+        }
+
+        .timing-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .timing-title h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .timing-title h2 .underline {
+            text-decoration: underline;
+            text-decoration-color: #8012FE;
+            text-decoration-thickness: 4px;
+        }
+
+        .timing-title .orange-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 52px;
+            color: #FF440A;
+            text-transform: uppercase;
+        }
+
+        .timing-subtitle {
+            color: #8012FE;
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .proof-image {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .proof-placeholder {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            height: 300px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .proof-caption {
+            text-align: center;
+            font-size: 12px;
+            color: #8012FE;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        /* Reasons Section */
+        .reasons {
+            background: #efefef;
+            padding: 100px 20px;
+        }
+
+        .reasons-header {
+            text-align: left;
+            max-width: 600px;
+            margin-bottom: 60px;
+        }
+
+        .reasons-header .decorative-star {
+            font-size: 60px;
+            color: #8012FE;
+            margin-bottom: 10px;
+        }
+
+        .reasons-header h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 52px;
+            color: #8012FE;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .reasons-header .orange-text {
+            color: #FF440A;
+        }
+
+        .arrow-decoration {
+            font-size: 80px;
+            color: #8012FE;
+            margin: 20px 0;
+        }
+
+        .reasons-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            max-width: 900px;
+        }
+
+        .reason-card {
+            border: 4px solid #C0FF43;
+            border-radius: 25px;
+            padding: 35px;
+            background: white;
+            position: relative;
+        }
+
+        .reason-card.purple-border {
+            border-color: #8012FE;
+            background: #8012FE;
+            color: white;
+        }
+
+        .reason-card h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 20px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #C0FF43;
+        }
+
+        .reason-card.purple-border h3 {
+            color: white;
+        }
+
+        .reason-card p {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #353535;
+        }
+
+        .reason-card.purple-border p {
+            color: white;
+        }
+
+        /* Authority Section */
+        .authority {
+            background: #e8e8e8;
+            padding: 100px 20px;
+        }
+
+        .authority-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .authority-title h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 38px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .authority-title .highlight-text {
+            color: #8012FE;
+            text-decoration: underline;
+            text-decoration-color: #8012FE;
+            text-decoration-thickness: 3px;
+        }
+
+        .authority-title .big-text {
+            font-size: 42px;
+            color: #8012FE;
+        }
+
+        .chevron-down {
+            font-size: 100px;
+            color: #C0FF43;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .experts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .expert-card {
+            aspect-ratio: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .expert-card:nth-child(odd) {
+            background: #8012FE;
+        }
+
+        .expert-card:nth-child(even) {
+            background: #FF9868;
+        }
+
+        .expert-card:nth-child(3n) {
+            background: #C0FF43;
+        }
+
+        .expert-card:nth-child(4n) {
+            background: #D598FB;
+        }
+
+        .expert-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 80px;
+        }
+
+        .expert-icon {
+            position: absolute;
+            font-size: 100px;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .expert-icon.top-left {
+            top: 20px;
+            left: 20px;
+        }
+
+        .expert-icon.top-right {
+            top: 20px;
+            right: 20px;
+        }
+
+        .expert-icon.bottom {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        /* Solution Section - Violet */
+        .solution {
+            background: #8012FE;
+            padding: 100px 20px;
+            position: relative;
+        }
+
+        .solution-content {
+            text-align: center;
+            color: white;
+        }
+
+        .solution-question {
+            font-size: 14px;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+
+        .solution-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            color: #C0FF43;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .solution-title .orange-highlight {
+            background: #FF440A;
+            color: white;
+            padding: 5px 25px;
+            border-radius: 50px;
+            display: inline-block;
+        }
+
+        .solution-subtitle {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #C0FF43;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .method-list {
+            max-width: 700px;
+            margin: 60px auto 0;
+            text-align: left;
+        }
+
+        .method-item {
+            margin-bottom: 30px;
+        }
+
+        .method-item h4 {
+            font-weight: 800;
+            font-size: 16px;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .method-item p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Offer Section */
+        .offer-intro {
+            background: #8012FE;
+            padding: 60px 20px 80px;
+            text-align: center;
+        }
+
+        .offer-intro .curved-arrow {
+            font-size: 120px;
+            color: #C0FF43;
+            margin-bottom: 20px;
+        }
+
+        .offer-intro h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            color: #C0FF43;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .offer-name {
+            background: linear-gradient(135deg, #C0FF43 0%, #BFFE43 100%);
+            padding: 100px 20px;
+            text-align: center;
+        }
+
+        .offer-brand {
+            margin-bottom: 60px;
+        }
+
+        .offer-brand .format-text {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #8012FE;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .offer-brand .super-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 120px;
+            line-height: 0.9;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin: 20px 0;
+        }
+
+        .offer-brand .au-top {
+            font-family: 'Anton', sans-serif;
+            font-size: 96px;
+            line-height: 0.9;
+            color: transparent;
+            -webkit-text-stroke: 4px #8012FE;
+            text-stroke: 4px #8012FE;
+            text-transform: uppercase;
+        }
+
+        /* Process Section */
+        .process {
+            background: linear-gradient(180deg, #C0FF43 0%, #e8e8e8 100%);
+            padding: 100px 20px;
+        }
+
+        .process-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .process-title h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .process-title .subtitle {
+            font-size: 18px;
+            color: #353535;
+            font-weight: 600;
+        }
+
+        .process-subtitle .emoji {
+            font-size: 24px;
+        }
+
+        .phase-card {
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 40px;
+            max-width: 800px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .phase-card.purple-bg {
+            background: #8012FE;
+            color: white;
+        }
+
+        .phase-number {
+            position: absolute;
+            top: -25px;
+            right: 40px;
+            width: 70px;
+            height: 70px;
+            background: #C0FF43;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            color: #8012FE;
+            box-shadow: 0 5px 20px rgba(192, 255, 67, 0.4);
+        }
+
+        .phase-card h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 28px;
+            color: #C0FF43;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .phase-card.purple-bg h3 {
+            color: #C0FF43;
+        }
+
+        .phase-card .phase-subtitle {
+            font-size: 14px;
+            margin-bottom: 25px;
+            color: #8012FE;
+        }
+
+        .phase-card.purple-bg .phase-subtitle {
+            color: white;
+        }
+
+        .phase-card ul {
+            list-style: none;
+        }
+
+        .phase-card ul li {
+            padding-left: 25px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.7;
+            position: relative;
+        }
+
+        .phase-card ul li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #C0FF43;
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        .phase-card.purple-bg ul li {
+            color: white;
+        }
+
+        .phase-illustration {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .phase-illustration-placeholder {
+            width: 200px;
+            height: 200px;
+            background: #f5f5f5;
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 60px;
+        }
+
+        /* Bonus Section */
+        .bonus-intro {
+            background: #efefef;
+            padding: 100px 20px;
+            text-align: center;
+        }
+
+        .bonus-intro h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 52px;
+            color: #FF440A;
+            text-transform: uppercase;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .bonus-intro .purple-highlight {
+            background: #8012FE;
+            color: white;
+            padding: 8px 35px;
+            border-radius: 50px;
+            display: inline-block;
+        }
+
+        .bonus-intro .orange-text {
+            color: #FF440A;
+        }
+
+        .bonus-list-intro {
+            margin: 40px 0;
+        }
+
+        .bonus-list-intro p {
+            font-size: 15px;
+            color: #8012FE;
+            margin-bottom: 10px;
+        }
+
+        .bonus-teaser {
+            background: #e8e8e8;
+            padding: 80px 20px;
+        }
+
+        .bonus-teaser-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .bonus-teaser-title h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 38px;
+            color: #8012FE;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .bonus-teaser-title .orange {
+            color: #FF440A;
+        }
+
+        .bonus-teaser-subtitle {
+            text-align: center;
+            color: #8012FE;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 40px;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .bonus-card {
+            position: relative;
+        }
+
+        .bonus-star {
+            font-size: 50px;
+            color: #8012FE;
+            margin-bottom: 15px;
+        }
+
+        .bonus-card h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 32px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .bonus-card .bonus-name {
+            background: #C0FF43;
+            color: #FF440A;
+            padding: 12px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            font-family: 'Anton', sans-serif;
+            font-size: 28px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .bonus-card .bonus-subtitle {
+            font-family: 'Anton', sans-serif;
+            font-size: 28px;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+        }
+
+        .bonus-features {
+            background: white;
+            border: 4px dashed #C0FF43;
+            border-radius: 20px;
+            padding: 30px;
+        }
+
+        .bonus-card:nth-child(even) .bonus-features {
+            background: #8012FE;
+            border-color: #8012FE;
+        }
+
+        .bonus-features ul {
+            list-style: none;
+        }
+
+        .bonus-features ul li {
+            padding-left: 30px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.7;
+            position: relative;
+            color: #353535;
+        }
+
+        .bonus-card:nth-child(even) .bonus-features ul li {
+            color: white;
+        }
+
+        .bonus-features ul li::before {
+            content: '🎁';
+            position: absolute;
+            left: 0;
+            font-size: 18px;
+        }
+
+        /* Recap Section - Violet */
+        .recap {
+            background: #8012FE;
+            padding: 100px 20px;
+        }
+
+        .recap-box {
+            background: rgba(192, 255, 67, 0.95);
+            border-radius: 40px;
+            padding: 60px;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .scroll-arrow-recap {
+            width: 80px;
+            height: 80px;
+            background: #C0FF43;
+            border: 5px solid #8012FE;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -120px auto 40px;
+            font-size: 40px;
+            color: #8012FE;
+            box-shadow: 0 10px 30px rgba(128, 18, 254, 0.4);
+        }
+
+        .recap-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #8012FE;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .recap-subtitle {
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #8012FE;
+            margin-bottom: 40px;
+        }
+
+        .recap-list {
+            list-style: none;
+        }
+
+        .recap-list li {
+            padding-left: 35px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+            position: relative;
+            color: #353535;
+        }
+
+        .recap-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #8012FE;
+            font-weight: 900;
+            font-size: 22px;
+        }
+
+        .bonus-recap-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 3px solid #8012FE;
+        }
+
+        .bonus-recap-section h4 {
+            font-weight: 800;
+            font-size: 15px;
+            color: #8012FE;
+            margin-bottom: 20px;
+        }
+
+        .bonus-recap-list {
+            list-style: none;
+        }
+
+        .bonus-recap-list li {
+            padding-left: 35px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            position: relative;
+            color: #353535;
+        }
+
+        .bonus-recap-list li::before {
+            content: '🎁';
+            position: absolute;
+            left: 0;
+            font-size: 18px;
+        }
+
+        /* FAQ Section */
+        .faq {
+            background: linear-gradient(180deg, #C0FF43 0%, #efefef 100%);
+            padding: 100px 20px;
+        }
+
+        .faq-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .faq-title h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            color: #8012FE;
+            text-transform: uppercase;
+        }
+
+        .faq-list {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: #8012FE;
+            border-radius: 50px;
+            padding: 20px 35px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .faq-item:hover {
+            transform: translateX(5px);
+        }
+
+        .faq-question {
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-icon {
+            width: 30px;
+            height: 30px;
+            background: #C0FF43;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8012FE;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .faq-cta {
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .faq-cta p {
+            color: #8012FE;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .faq-cta .reminder-text {
+            color: #8012FE;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        /* Footer */
+        .footer {
+            background: #C0FF43;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .footer-brand {
+            margin-bottom: 30px;
+        }
+
+        .footer-brand .format-text {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #8012FE;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .footer-brand .title {
+            font-family: 'Anton', sans-serif;
+            font-size: 64px;
+            line-height: 0.9;
+            color: #8012FE;
+            text-transform: uppercase;
+            margin: 10px 0;
+        }
+
+        .footer-brand .au-top-footer {
+            font-family: 'Anton', sans-serif;
+            font-size: 48px;
+            line-height: 0.9;
+            color: transparent;
+            -webkit-text-stroke: 3px #8012FE;
+            text-stroke: 3px #8012FE;
+            text-transform: uppercase;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
+
+        .footer-links a {
+            color: #8012FE;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .footer-links a:hover {
+            opacity: 0.7;
+        }
+
+        .footer-tm {
+            font-size: 12px;
+            color: #8012FE;
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 64px;
+            }
+
+            .hero-subtitle {
+                font-size: 48px;
+            }
+
+            .section-title-wrapper .accent-text,
+            .section-title-wrapper .regular-text {
+                font-size: 36px;
+            }
+
+            .section-title-wrapper .highlight {
+                font-size: 32px;
+            }
+
+            .reasons-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .experts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .offer-brand .super-title {
+                font-size: 72px;
+            }
+
+            .offer-brand .au-top {
+                font-size: 60px;
+            }
+
+            .bonus-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+/* TIPOTE — Systeme.io placeholders */
+.tpt-form-slot{
+  border:2px dashed rgba(215,30,70,.8);
+  border-radius:14px;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background:rgba(215,30,70,.06);
+}
+.tpt-form-slot strong{display:block;margin-top:6px;font-weight:800;}
+</style>
+
+<!-- Top Bar -->
+    <div class="top-bar">
+        OFFRE RÉSERVÉE À [ton public cible]<br>
+        Qui [conditions pour rejoindre OU objectif de ton public cible]
     </div>
-  </nav>
 
-  <header class="hero" id="top">
-    <div class="container hero-grid">
-      <div class="hero-left">
-        <div class="kicker">
-          <span class="pill">{{hero_pill}}</span>
-          <span class="kicker-text">{{hero_kicker}}</span>
-        </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="format-label">FORMAT</div>
+                <h1 class="hero-title">SUPER NOM</h1>
+                <div class="hero-subtitle">AU TOP</div>
+                <span class="tm-badge">™</span>
 
-        <h1 class="hero-title">
-          <span class="line">{{hero_title_line_1}}</span>
-          <span class="line accent">{{hero_title_line_2}}</span>
-        </h1>
+                <div class="promise-box">
+                    <div class="promise-title">ICI LA PROMESSE DE TON OFFRE</div>
+                    <div class="promise-value">
+                        <h2>CHIFFRE ATTEIGNABLE</h2>
+                    </div>
+                    <div class="subtext">EN RESPECTANT TES VALEURS PROFESSIONNELLES</div>
+                </div>
 
-        <p class="hero-subtitle">{{hero_subtitle}}</p>
-
-        <div class="hero-cta">
-          <a class="btn primary" href="#checkout">{{cta_main}}</a>
-          <div class="micro">{{cta_micro}}</div>
-        </div>
-
-        <div class="trust">
-          <div class="trust-item">
-            <div class="trust-dot"></div>
-            <div class="trust-text">{{trust_1}}</div>
-          </div>
-          <div class="trust-item">
-            <div class="trust-dot"></div>
-            <div class="trust-text">{{trust_2}}</div>
-          </div>
-          <div class="trust-item">
-            <div class="trust-dot"></div>
-            <div class="trust-text">{{trust_3}}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-right">
-        <div class="media-card">
-          <div class="media-top">
-            <div class="media-badge">{{media_badge}}</div>
-            <div class="media-title">{{media_title}}</div>
-          </div>
-
-          <div class="media">
-            <div class="media-placeholder">{{media_placeholder}}</div>
-          </div>
-
-          <div class="media-note">{{media_note}}</div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <section class="stripe" id="checkout">
-    <div class="container stripe-grid">
-      <div class="stripe-left">
-        <h2 class="stripe-title">{{checkout_title}}</h2>
-        <p class="stripe-text">{{checkout_text}}</p>
-
-        <div class="price">
-          <div class="price-now">{{price_now}}</div>
-          <div class="price-meta">
-            <div class="price-old">{{price_old}}</div>
-            <div class="price-note">{{price_note}}</div>
-          </div>
-        </div>
-
-        <ul class="checklist">
-          {{#checkout_bullets}}
-          <li>
-            <span class="check"></span>
-            <span class="txt">{{.}}</span>
-          </li>
-          {{/checkout_bullets}}
-        </ul>
-
-        <div class="guarantee">
-          <div class="g-icon"></div>
-          <div class="g-text">
-            <div class="g-title">{{guarantee_title}}</div>
-            <div class="g-sub">{{guarantee_text}}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="stripe-right">
-        <div class="order-card">
-          <div class="order-head">
-            <div class="order-pill">{{order_pill}}</div>
-            <div class="order-title">{{order_title}}</div>
-            <div class="order-sub">{{order_subtitle}}</div>
-          </div>
-
-          <div class="systeme-form">
-            <!-- SLOT SYSTEME -->
-            Ajoutez ici un BOUTON / FORMULAIRE Systeme.io (bloc “Bouton” ou “Formulaire”), puis supprimez ce texte.
-          </div>
-
-          <div class="order-reassurance">{{checkout_reassurance}}</div>
-
-          <div class="order-badges">
-            <span class="ob">{{order_badge_1}}</span>
-            <span class="ob">{{order_badge_2}}</span>
-            <span class="ob">{{order_badge_3}}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section problems" id="problemes">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="h2">{{problems_title}}</h2>
-        <p class="lead">{{problems_subtitle}}</p>
-      </div>
-
-      <div class="cards-grid">
-        {{#situations}}
-        <div class="card problem-card">
-          <div class="card-dot"></div>
-          <div class="card-text">{{text}}</div>
-        </div>
-        {{/situations}}
-      </div>
-
-      <div class="after">{{problems_after}}</div>
-    </div>
-  </section>
-
-  <section class="section timing">
-    <div class="container timing-grid">
-      <div class="timing-left">
-        <h2 class="h2">{{timing_title}}</h2>
-        <div class="big">{{timing_big}}</div>
-        <p class="lead">{{timing_text}}</p>
-
-        <div class="proof">
-          <div class="proof-box">{{proof_box}}</div>
-          <div class="proof-cap">{{proof_caption}}</div>
-        </div>
-      </div>
-
-      <div class="timing-right">
-        <div class="stat-card">
-          <div class="stat-k">{{stat_1_k}}</div>
-          <div class="stat-v">{{stat_1_v}}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-k">{{stat_2_k}}</div>
-          <div class="stat-v">{{stat_2_v}}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-k">{{stat_3_k}}</div>
-          <div class="stat-v">{{stat_3_v}}</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section reasons">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="h2">{{reasons_title}}</h2>
-        <p class="lead">{{reasons_subtitle}}</p>
-      </div>
-
-      <div class="reasons-list">
-        {{#reasons}}
-        <div class="reason">
-          <div class="reason-num">{{num}}</div>
-          <div class="reason-body">
-            <div class="reason-title">{{title}}</div>
-            <div class="reason-text">{{text}}</div>
-          </div>
-        </div>
-        {{/reasons}}
-      </div>
-
-      <div class="experts">
-        <div class="experts-title">{{experts_title}}</div>
-        <div class="experts-grid">
-          {{#experts}}
-          <div class="expert-pill">{{.}}</div>
-          {{/experts}}
-        </div>
-        <div class="experts-note">{{experts_note}}</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section method" id="methode">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="h2">{{method_title}}</h2>
-        <p class="lead">{{method_subtitle}}</p>
-      </div>
-
-      <div class="steps">
-        {{#steps}}
-        <div class="step">
-          <div class="step-top">
-            <div class="step-dot"></div>
-            <div class="step-title">{{title}}</div>
-          </div>
-          <div class="step-text">{{text}}</div>
-        </div>
-        {{/steps}}
-      </div>
-
-      <div class="mid-cta">
-        <a class="btn primary" href="#checkout">{{mid_cta}}</a>
-        <div class="micro">{{mid_micro}}</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section phases">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="h2">{{phases_title}}</h2>
-        <p class="lead">{{phases_subtitle}}</p>
-      </div>
-
-      <div class="phase-grid">
-        <div class="phase">
-          <div class="phase-head">
-            <div class="phase-chip">01</div>
-            <div>
-              <div class="phase-title">{{phase1_title}}</div>
-              <div class="phase-text">{{phase1_text}}</div>
+                <div class="scroll-arrow">↓</div>
             </div>
-          </div>
-          <ul class="phase-bullets">
-            {{#phase1_bullets}}
-            <li>{{.}}</li>
-            {{/phase1_bullets}}
-          </ul>
         </div>
+    </section>
 
-        <div class="phase">
-          <div class="phase-head">
-            <div class="phase-chip">02</div>
-            <div>
-              <div class="phase-title">{{phase2_title}}</div>
-              <div class="phase-text">{{phase2_text}}</div>
+    <!-- Video Section -->
+    <section class="video-section">
+        <div class="container">
+            <div class="video-wrapper">
+                <div class="video-placeholder">
+                    <div class="play-button">▶</div>
+                </div>
+                
+                <div class="video-cta">
+                    <p>Commande aujourd'hui et reçois [tes bonus]</p>
+                    <p class="reminder">RAPPEL DE LA PROMESSE DE TON OFFRE</p>
+                    <button class="cta-button">Je me lance !</button>
+                    
+                    <div class="trust-badges">
+                        <div class="badge-item">✓ Paiement sécurisé</div>
+                        <div class="badge-item">✓ Satisfaction garantie</div>
+                        <div class="badge-item">✓ Connexion chiffrée</div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <ul class="phase-bullets">
-            {{#phase2_bullets}}
-            <li>{{.}}</li>
-            {{/phase2_bullets}}
-          </ul>
         </div>
+    </section>
 
-        <div class="phase">
-          <div class="phase-head">
-            <div class="phase-chip">03</div>
-            <div>
-              <div class="phase-title">{{phase3_title}}</div>
-              <div class="phase-text">{{phase3_text}}</div>
+    <!-- Problems Section -->
+    <section class="problems">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <div class="accent-text">EST-CE QUE</div>
+                <div class="highlight">TU TE RECONNAIS</div>
+                <div class="regular-text">DANS UNE DE CES</div>
+                <div class="regular-text">SITUATIONS ?</div>
+                <div class="decorative-icon">✱</div>
             </div>
-          </div>
-          <ul class="phase-bullets">
-            {{#phase3_bullets}}
-            <li>{{.}}</li>
-            {{/phase3_bullets}}
-          </ul>
-        </div>
 
-        <div class="phase">
-          <div class="phase-head">
-            <div class="phase-chip">04</div>
-            <div>
-              <div class="phase-title">{{phase4_title}}</div>
-              <div class="phase-text">{{phase4_text}}</div>
+            <div class="problem-list">
+                <div class="problem-item">
+                    <div class="problem-icon">■</div>
+                    <div class="problem-text">Situation problématique que subit ton client idéal</div>
+                </div>
+                <div class="problem-item">
+                    <div class="problem-icon">■</div>
+                    <div class="problem-text">Situation problématique que subit ton client idéal</div>
+                </div>
+                <div class="problem-item">
+                    <div class="problem-icon">■</div>
+                    <div class="problem-text">Situation problématique que subit ton client idéal</div>
+                </div>
+                <div class="problem-item">
+                    <div class="problem-icon">■</div>
+                    <div class="problem-text">Situation problématique que subit ton client idéal</div>
+                </div>
+                <div class="problem-item">
+                    <div class="problem-icon">■</div>
+                    <div class="problem-text">Situation problématique que subit ton client idéal</div>
+                </div>
             </div>
-          </div>
-          <ul class="phase-bullets">
-            {{#phase4_bullets}}
-            <li>{{.}}</li>
-            {{/phase4_bullets}}
-          </ul>
+
+            <p class="callout-text">Si tu as répondu OUI à au moins une de ces questions, alors lis vite ce qui suit ! J'ai une bonne nouvelle pour toi.</p>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section bonuses" id="bonus">
-    <div class="container">
-      <div class="bonus-hero">
-        <div class="bonus-badge">{{bonus_badge}}</div>
-        <h2 class="bonus-title">{{bonus_title}}</h2>
-        <p class="lead">{{bonus_subtitle}}</p>
-      </div>
+    <!-- Timing Section -->
+    <section class="timing">
+        <div class="container">
+            <div class="timing-title">
+                <h2>LE <span class="underline">MEILLEUR</span> MOMENT POUR [OBJECTIF DE TA CIBLE]</h2>
+                <div class="orange-title">C'EST MAINTENANT !</div>
+                <p class="timing-subtitle">Explique pourquoi ton offre est pertinente</p>
+            </div>
 
-      <div class="bonus-list">
-        {{#bonus_list}}
-        <div class="bonus-li">
-          <div class="bonus-check"></div>
-          <div class="bonus-t">{{.}}</div>
+            <div class="proof-image">
+                <div class="proof-placeholder">[Capture d'écran preuve sociale / stats]</div>
+                <p class="proof-caption">💬 extrait d'une story de ChatGo spécialiste dans l'organisation de challenges pour les meilleurs marketers</p>
+            </div>
         </div>
-        {{/bonus_list}}
-      </div>
+    </section>
 
-      <div class="bonus-explain">
-        <h3 class="h3">{{bonus_detail_title}}</h3>
-        <p class="lead">{{bonus_detail_text}}</p>
-      </div>
+    <!-- Reasons Section -->
+    <section class="reasons">
+        <div class="container">
+            <div class="reasons-header">
+                <div class="decorative-star">✱</div>
+                <h2>
+                    QUELQUES<br>
+                    <span class="orange-text">BONNES RAISONS</span><br>
+                    DE [CE QUE VEUT<br>
+                    FAIRE TON<br>
+                    PROSPECT]
+                </h2>
+                <div class="arrow-decoration">↴</div>
+            </div>
 
-      <div class="bonus-cards">
-        <div class="bonus-card">
-          <div class="bc-top">
-            <div class="bc-k">{{bonus1_k}}</div>
-            <div class="bc-title">{{bonus1_title}}</div>
-            <div class="bc-sub">{{bonus1_subtitle}}</div>
-          </div>
-          <ul class="bc-bullets">
-            {{#bonus1_bullets}}
-            <li>{{.}}</li>
-            {{/bonus1_bullets}}
-          </ul>
+            <div class="reasons-grid">
+                <div class="reason-card">
+                    <h3>UNE BONNE RAISON DE RÉALISER CET OBJECTIF</h3>
+                    <p>Ex : Tes participants retirent des bénéfices immédiats pendant le challenge. Ils mesurent leur progression tous les jours et sont donc convaincus par ces méthodes.</p>
+                </div>
+
+                <div class="reason-card purple-border">
+                    <h3>UNE BONNE RAISON DE RÉALISER CET OBJECTIF</h3>
+                    <p>Ex : Grâce à la connexion émotionnelle puissante qui se crée entre toi et tes participants, tu vois leur engagement se renforcer. Une cohésion de groupe se crée et le passage à l'action est plus simple.</p>
+                </div>
+
+                <div class="reason-card">
+                    <h3>UNE BONNE RAISON DE RÉALISER CET OBJECTIF</h3>
+                    <p>Ex : Si on stimule la valeur délivrée gratuitement, les résultats visibles rapidement et la connexion émotionnelle, il ne reste plus qu'à proposer une offre irrésistible pour voir le taux de tes conversions s'envoler.</p>
+                </div>
+
+                <div class="reason-card purple-border">
+                    <h3>UNE BONNE RAISON DE RÉALISER CET OBJECTIF</h3>
+                    <p>Ex : Tu peux laisser tomber toutes ces techniques de vente sournoise ou agressives qui te mettent mal à l'aise : on te montre pas à pas comment amener ton offre payante de la manière la plus naturelle possible.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Authority Section -->
+    <section class="authority">
+        <div class="container">
+            <div class="authority-title">
+                <h2>D'AILLEURS CES <span class="highlight-text">EXPERTS MONDIAUX</span> DANS LEUR DOMAINE</h2>
+                <p class="big-text">génèrent déjà <span class="highlight-text">des millions</span> avec [leur technique] !</p>
+            </div>
+
+            <div class="chevron-down">ˇ</div>
+
+            <div class="experts-grid">
+                <div class="expert-card">
+                    <div class="expert-icon top-left">✱</div>
+                    <div class="expert-placeholder">[Photo]</div>
+                </div>
+                <div class="expert-card">
+                    <div class="expert-placeholder">[Photo]</div>
+                </div>
+                <div class="expert-card">
+                    <div class="expert-icon top-right">↑</div>
+                    <div class="expert-placeholder">[Photo]</div>
+                </div>
+                <div class="expert-card">
+                    <div class="expert-placeholder">[Photo]</div>
+                    <div class="expert-icon bottom">✱</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section class="solution">
+        <div class="container">
+            <div class="solution-content">
+                <p class="solution-question">Tu reconnais quelques têtes ?</p>
+
+                <h2 class="solution-title">
+                    CE QU'ILS FONT POUR<br>
+                    <span class="orange-highlight">[RÉUSSITE CIBLE]</span><br>
+                    OBJECTIF DE TA CIBLE
+                </h2>
+
+                <div class="method-list">
+                    <div class="method-item">
+                        <h4>Ils suivent TOUTES & TOUS la même méthode :</h4>
+                    </div>
+                    <div class="method-item">
+                        <h4>→ Une étape de la méthode que tu montres</h4>
+                        <p>Ex : Avant même de lancer leur challenge, ils préparent une offre irrésistible à vendre</p>
+                    </div>
+                    <div class="method-item">
+                        <h4>→ Une étape de la méthode que tu montres</h4>
+                        <p>Ex : Ils savent exactement quel thème aborder pour mobiliser le max de participants</p>
+                    </div>
+                    <div class="method-item">
+                        <h4>→ Une étape de la méthode que tu montres</h4>
+                        <p>Ex : Ils sélectionnent méticuleusement 3 piliers fondamentaux pour garder leurs participants actifs et engagés</p>
+                    </div>
+                    <div class="method-item">
+                        <h4>→ Une étape de la méthode que tu montres</h4>
+                        <p>Ex : En réglant en avance tous ces paramètres, ils s'assurent que leur challenge vendra avant, pendant et après les dates converties</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Offer Intro -->
+    <section class="offer-intro">
+        <div class="container">
+            <div class="curved-arrow">↺</div>
+            <h2>C'EST EXACTEMENT CE QU'ON TE MONTRE DANS</h2>
+        </div>
+    </section>
+
+    <!-- Offer Name -->
+    <section class="offer-name">
+        <div class="container">
+            <div class="offer-brand">
+                <div class="format-text">FORMAT</div>
+                <div class="super-title">SUPER NOM</div>
+                <div class="au-top">AU TOP</div>
+                <span class="tm-badge">™</span>
+            </div>
+
+            <div class="video-cta">
+                <p style="color: #8012FE;">Commande aujourd'hui et reçois [tes bonus]</p>
+                <p class="reminder" style="color: #8012FE;">RAPPEL DE LA PROMESSE DE TON OFFRE</p>
+                <button class="cta-button">Je me lance !</button>
+                
+                <div class="trust-badges">
+                    <div class="badge-item" style="background: rgba(128,18,254,0.1); color: #8012FE;">✓ Paiement sécurisé</div>
+                    <div class="badge-item" style="background: rgba(128,18,254,0.1); color: #8012FE;">✓ Satisfaction garantie</div>
+                    <div class="badge-item" style="background: rgba(128,18,254,0.1); color: #8012FE;">✓ Connexion chiffrée</div>
+                </div>
+            </div>
+
+            <div class="scroll-arrow" style="border-color: #8012FE; color: #8012FE; background: white;">↓</div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process">
+        <div class="container">
+            <div class="process-title">
+                <h2>LES [X] PHASES DE [TON PROCESSUS]</h2>
+                <p class="subtitle">Tu ne devrais jamais [objectif de ta cible] sans ça <span class="emoji">👇</span></p>
+            </div>
+
+            <div class="phase-card">
+                <div class="phase-number">1</div>
+                <h3>NOM DE LA PHASE 1</h3>
+                <p class="phase-subtitle">Résumé en une phrase de l'étape</p>
+                <ul>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                </ul>
+                <div class="phase-illustration">
+                    <div class="phase-illustration-placeholder">💼</div>
+                </div>
+            </div>
+
+            <div class="phase-card purple-bg">
+                <div class="phase-number">2</div>
+                <h3>NOM DE LA PHASE 2</h3>
+                <p class="phase-subtitle">Résumé en une phrase de l'étape</p>
+                <ul>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                </ul>
+                <div class="phase-illustration">
+                    <div class="phase-illustration-placeholder">📹</div>
+                </div>
+            </div>
+
+            <div class="phase-card">
+                <div class="phase-number">3</div>
+                <h3>NOM DE LA PHASE 3</h3>
+                <p class="phase-subtitle">résumé en une phrase de l'étape</p>
+                <ul>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                </ul>
+                <div class="phase-illustration">
+                    <div class="phase-illustration-placeholder">📊</div>
+                </div>
+            </div>
+
+            <div class="phase-card purple-bg">
+                <div class="phase-number">4</div>
+                <h3>NOM DE LA PHASE 4</h3>
+                <p class="phase-subtitle">Résumé en une phrase de l'étapes</p>
+                <ul>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                    <li>Puce promesse irrésistible qui mêle curiosité + bénéfice + conséquence du bénéfice</li>
+                </ul>
+                <div class="phase-illustration">
+                    <div class="phase-illustration-placeholder">✈️</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bonus Intro -->
+    <section class="bonus-intro">
+        <div class="container">
+            <h2>
+                MAIS CE N'EST PAS<br>
+                TERMINÉ, VOILÀ<br>
+                <span class="purple-highlight">LES BONUS EN +</span><br>
+                <span class="orange-text">QUE TU VAS</span><br>
+                <span class="orange-text">RECEVOIR</span>
+            </h2>
+            <div class="decorative-icon">✱</div>
+
+            <div class="bonus-list-intro">
+                <p><strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats</p>
+                <p><strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats</p>
+                <p><strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats</p>
+                <p><strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats</p>
+                <p><strong>🎁 Nom du bonus</strong> + en quoi il est utile pour aller plus vite ou obtenir + de résultats</p>
+            </div>
+
+            <p style="color: #8012FE; font-weight: 700;">Tu veux en savoir plus sur ces bonus ? OK, continue on va détailler tout ça !</p>
+        </div>
+    </section>
+
+    <!-- Bonus Details -->
+    <section class="bonus-teaser">
+        <div class="container">
+            <div class="bonus-teaser-title">
+                <h2>LES BONUS [NOM DE TON OFFRE] POUR ALLER<br><span class="orange">PLUS VITE & PLUS LOIN</span></h2>
+            </div>
+
+            <p class="bonus-teaser-subtitle">L'objectif de [ton offre] c'est de [promesse principale de ton offre]</p>
+
+            <p class="bonus-teaser-subtitle">On n'a pas envie de vendre une formation pour vendre une formation.<br>Alors on a inclus tous ces bonus pour t'aider à concrétiser cette formation, à te rendre plus efficace et plus rapide.</p>
+
+            <div class="bonus-grid">
+                <!-- Bonus 1 -->
+                <div class="bonus-card">
+                    <div class="bonus-star">✱</div>
+                    <h3>BONUS 1</h3>
+                    <div class="bonus-name">NOM DU BONUS</div>
+                    <div class="bonus-subtitle">SUITE DU NOM SI BESOIN</div>
+                    
+                    <div class="bonus-features">
+                        <ul>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bonus 2 -->
+                <div class="bonus-card">
+                    <div class="bonus-star">✱</div>
+                    <h3>BONUS 2</h3>
+                    <div class="bonus-name">NOM DU BONUS</div>
+                    <div class="bonus-subtitle">SUITE DU NOM</div>
+                    
+                    <div class="bonus-features">
+                        <ul>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bonus 3 -->
+                <div class="bonus-card">
+                    <div class="bonus-star">✱</div>
+                    <h3>BONUS 3</h3>
+                    <div class="bonus-name">NOM DU BONUS</div>
+                    <div class="bonus-subtitle">SUITE DU NOM</div>
+                    
+                    <div class="bonus-features">
+                        <ul>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bonus 4 -->
+                <div class="bonus-card">
+                    <div class="bonus-star">✱</div>
+                    <h3>BONUS 4</h3>
+                    <div class="bonus-name">NOM DU BONUS</div>
+                    <div class="bonus-subtitle">SUITE DU NOM</div>
+                    
+                    <div class="bonus-features">
+                        <ul>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bonus 5 -->
+                <div class="bonus-card">
+                    <div class="bonus-star">✱</div>
+                    <h3>BONUS 5</h3>
+                    <div class="bonus-name">NOM DU BONUS</div>
+                    <div class="bonus-subtitle">SUITE DU NOM</div>
+                    
+                    <div class="bonus-features">
+                        <ul>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                            <li>🎁 Puce promesse irrésistible de ton bonus = curiosité + bénéfice + conséquence du bénéfice</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recap Section -->
+    <section class="recap">
+        <div class="container">
+            <div class="scroll-arrow-recap">↓</div>
+            
+            <div class="recap-box">
+                <h2 class="recap-title">ON RÉSUME CE QUI T'ATTEND AVEC [NOM DE TON OFFRE] ?</h2>
+                <p class="recap-subtitle">Mets la main sur la méthode complète :</p>
+
+                <ul class="recap-list">
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                    <li>✓ Puce promesse Explication courte, simple et sexy de ta promesse</li>
+                </ul>
+
+                <div class="bonus-recap-section">
+                    <h4>Et plus aller plus loin, les bonus :</h4>
+                    <ul class="bonus-recap-list">
+                        <li>Bonus 1 : Explique comment ton bonus va aider à aller plus vite ou plus loin</li>
+                        <li>Bonus 2 : Explique comment ton bonus va aider à aller plus vite ou plus loin</li>
+                        <li>Bonus 3 : Explique comment ton bonus va aider à aller plus vite ou plus loin</li>
+                        <li>Bonus 4 : Explique comment ton bonus va aider à aller plus vite ou plus loin</li>
+                        <li>Bonus 5 : Explique comment ton bonus va aider à aller plus vite ou plus loin</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <p style="color: white; font-size: 16px; margin-bottom: 15px;">Commande aujourd'hui et reçois [LES BONUS]</p>
+                <p style="color: #C0FF43; font-weight: 800; font-size: 18px; text-transform: uppercase; margin-bottom: 20px;">RAPPEL DE LA PROMESSE DE TON OFFRE</p>
+                <button class="cta-button">Je me lance !</button>
+                
+                <div class="trust-badges" style="justify-content: center;">
+                    <div class="badge-item">✓ Paiement sécurisé</div>
+                    <div class="badge-item">✓ Satisfaction garantie</div>
+                    <div class="badge-item">✓ Connexion chiffrée</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="container">
+            <div class="faq-title">
+                <h2>QUESTIONS FRÉQUENTES</h2>
+            </div>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Question ou objection de ton public cible</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>J'ai encore une question 💬</span>
+                        <div class="faq-icon">+</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-cta">
+                <p>Commande aujourd'hui et reçois [LES BONUS]</p>
+                <p class="reminder-text">RAPPEL DE LA PROMESSE DE TON OFFRE</p>
+                <button class="cta-button">Je crée des challenges qui cartonnent !</button>
+                
+                <div class="trust-badges" style="justify-content: center; margin-top: 25px;">
+                    <div class="badge-item" style="background: rgba(128,18,254,0.15); color: #8012FE;">✓ Paiement sécurisé</div>
+                    <div class="badge-item" style="background: rgba(128,18,254,0.15); color: #8012FE;">✓ Satisfaction garantie</div>
+                    <div class="badge-item" style="background: rgba(128,18,254,0.15); color: #8012FE;">✓ Connexion chiffrée</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-brand">
+            <div class="format-text">FORMAT</div>
+            <div class="title">SUPER NOM</div>
+            <div class="au-top-footer">AU TOP</div>
+            <span class="tm-badge" style="margin-top: 20px;">©</span>
         </div>
 
-        <div class="bonus-card">
-          <div class="bc-top">
-            <div class="bc-k">{{bonus2_k}}</div>
-            <div class="bc-title">{{bonus2_title}}</div>
-            <div class="bc-sub">{{bonus2_subtitle}}</div>
-          </div>
-          <ul class="bc-bullets">
-            {{#bonus2_bullets}}
-            <li>{{.}}</li>
-            {{/bonus2_bullets}}
-          </ul>
+        <div class="footer-links">
+            <a href="#">Conditions générales de vente</a>
+            <a href="#">Mentions légales</a>
+            <a href="#">Politique de confidentialité</a>
         </div>
 
-        <div class="bonus-card">
-          <div class="bc-top">
-            <div class="bc-k">{{bonus3_k}}</div>
-            <div class="bc-title">{{bonus3_title}}</div>
-            <div class="bc-sub">{{bonus3_subtitle}}</div>
-          </div>
-          <ul class="bc-bullets">
-            {{#bonus3_bullets}}
-            <li>{{.}}</li>
-            {{/bonus3_bullets}}
-          </ul>
-        </div>
-      </div>
+        <p class="footer-tm">© 2024 - Tous droits réservés</p>
+    </footer>
 
-      <div class="recap">
-        <div class="recap-left">
-          <h3 class="h3">{{recap_title}}</h3>
-          <p class="lead">{{recap_text}}</p>
-        </div>
-        <div class="recap-right">
-          <ul class="recap-bullets">
-            {{#recap_bullets}}
-            <li>{{.}}</li>
-            {{/recap_bullets}}
-          </ul>
-          <div class="recap-cta">
-            <a class="btn dark" href="#checkout">{{recap_cta}}</a>
-            <div class="micro">{{recap_micro}}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<!-- ===================== BLOC 2 ===================== -->
 
-  <section class="section faq" id="faq">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="h2">{{faq_title}}</h2>
-        <p class="lead">{{faq_subtitle}}</p>
-      </div>
-
-      <div class="faq-list">
-        {{#faq}}
-        <div class="faq-item">
-          <div class="faq-q">{{q}}</div>
-          <div class="faq-a">{{a}}</div>
-        </div>
-        {{/faq}}
-      </div>
-
-      <div class="contact">
-        <div class="contact-title">{{contact_title}}</div>
-        <div class="contact-text">
-          <a href="{{contact_link_1_href}}">{{contact_link_1}}</a>
-          <span class="sep">•</span>
-          <a href="{{contact_link_2_href}}">{{contact_link_2}}</a>
-        </div>
-      </div>
-
-      <div class="final-cta">
-        <a class="btn primary xl" href="#checkout">{{final_cta}}</a>
-        <div class="micro">{{final_micro}}</div>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="container footer-inner">
-      <a class="to-top" href="#top">{{footer_link_top}}</a>
-
-      <div class="footer-links">
-        <a href="{{footer_link_1_href}}">{{footer_link_1}}</a>
-        <a href="{{footer_link_2_href}}">{{footer_link_2}}</a>
-        <a href="{{footer_link_3_href}}">{{footer_link_3}}</a>
-      </div>
-
-      <div class="footer-note">{{footer_note}}</div>
-    </div>
-  </footer>
-</div>

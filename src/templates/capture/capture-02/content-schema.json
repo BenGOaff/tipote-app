@@ -1,12 +1,144 @@
 {
-  "hero_pretitle": { "maxLength": 35, "required": true },
-  "hero_title": { "maxLength": 90, "required": true },
-  "hero_title_accent": { "maxLength": 28, "required": false },
-  "hero_subtitle": { "maxLength": 170, "required": true },
-  "video_caption": { "maxLength": 60, "required": false },
-  "bullets": { "maxItems": 5, "itemMaxLength": 95, "required": false },
-  "cta_text": { "maxLength": 28, "required": true },
-  "reassurance_text": { "maxLength": 95, "required": false },
-  "dark_title": { "maxLength": 44, "required": false },
-  "dark_text": { "maxLength": 110, "required": false }
+  "kind": "capture",
+  "templateId": "capture-02",
+  "name": "Page de capture Challenge Dream Team",
+  "description": "Template style challenge avec équipe d'experts, bannière visuelle et résultats de participants",
+  "fields": [
+    {
+      "key": "site_name",
+      "label": "Nom du site",
+      "type": "string",
+      "intention": "brand_identity",
+      "description": "Nom de votre site ou marque",
+      "examples": ["VotreSite.com", "FormationPro"],
+      "maxLength": 25,
+      "required": true
+    },
+    {
+      "key": "main_headline",
+      "label": "Titre principal",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Promesse principale avec durée + action/transformation + métrique financière + sans vous (formule challenge)",
+      "examples": ["7 jours pour transformer votre business pour qu'il dépasse les 5000€ par mois de profit... sans vous !"],
+      "maxLength": 130,
+      "required": true
+    },
+    {
+      "key": "cta_text",
+      "label": "Texte du bouton principal",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Action orientée résultat pour rejoindre le challenge",
+      "examples": ["Rejoindre le challenge (gratuit)", "Je m'inscris maintenant"],
+      "maxLength": 35,
+      "required": true
+    },
+    {
+      "key": "hero_subtitle",
+      "label": "Sous-titre ciblage",
+      "type": "string",
+      "intention": "audience_qualification",
+      "description": "Pour qui est le challenge - audience cible et sous-niche spécifique",
+      "examples": ["Pour les coachs bien-être & les thérapeutes holistiques :"],
+      "maxLength": 70,
+      "required": true
+    },
+    {
+      "key": "challenge_name",
+      "label": "Nom du challenge",
+      "type": "string",
+      "intention": "event_branding",
+      "description": "Nom accrocheur de votre challenge",
+      "examples": ["CHALLENGE BUSINESS BOOST", "DÉFI VENTE EXPRESS"],
+      "maxLength": 30,
+      "required": true
+    },
+    {
+      "key": "experts",
+      "label": "Liste des experts",
+      "type": "object[]",
+      "intention": "authority_social_proof",
+      "description": "4 experts qui animent le challenge avec leur nom et entreprise/logo",
+      "minItems": 4,
+      "maxItems": 4,
+      "itemSchema": {
+        "expert_name": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Prénom et nom de l'expert"
+        },
+        "expert_company": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Nom de l'entreprise ou domaine d'expertise"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "features",
+      "label": "Bénéfices par expert",
+      "type": "object[]",
+      "intention": "benefit_list",
+      "description": "3 bénéfices concrets, un par expert principal, avec transformation mesurable",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "benefit_text": {
+          "type": "string",
+          "maxLength": 110,
+          "description": "Bénéfice concret et transformation attendue"
+        },
+        "expert_attribution": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Avec Prénom Nom Expert"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "results_title",
+      "label": "Titre section résultats",
+      "type": "string",
+      "intention": "social_proof_intro",
+      "description": "Titre pour introduire les témoignages visuels de résultats",
+      "examples": ["Les résultats des challengers :", "Ils ont réussi avec ce challenge :"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "testimonials",
+      "label": "Témoignages de résultats",
+      "type": "object[]",
+      "intention": "social_proof_results",
+      "description": "3 témoignages avec prénom et métrique de résultat (captures d'écran à uploader séparément)",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "person_name": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Prénom du participant"
+        },
+        "result_metric": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Métrique de résultat obtenu"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "footer_disclaimer",
+      "label": "Disclaimer footer",
+      "type": "string",
+      "intention": "legal_disclaimer",
+      "description": "Mention légale standard Facebook",
+      "examples": ["Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. Facebook est une marque déposée de Meta, Inc."],
+      "maxLength": 150,
+      "required": false
+    }
+  ]
 }

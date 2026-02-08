@@ -1,27 +1,144 @@
 {
-  "hero_pretitle": {
-    "maxLength": 30,
-    "required": true
-  },
-  "hero_title": {
-    "maxLength": 65,
-    "required": true
-  },
-  "hero_subtitle": {
-    "maxLength": 140,
-    "required": true
-  },
-  "cta_text": {
-    "maxLength": 30,
-    "required": true
-  },
-  "reassurance_text": {
-    "maxLength": 90,
-    "required": false
-  },
-  "bullets": {
-    "maxItems": 6,
-    "itemMaxLength": 120,
-    "required": false
-  }
+  "kind": "capture",
+  "templateId": "capture-01",
+  "name": "Page de capture avec vidéo et puces bénéfices",
+  "description": "Template de capture simple avec hero centré, zone vidéo, 3 puces de bénéfices numérotées et section à propos",
+  "fields": [
+    {
+      "key": "top_notice_text",
+      "label": "Texte de la bannière supérieure",
+      "type": "string",
+      "intention": "hook_urgency",
+      "description": "Message court pour créer l'urgence ou annoncer une offre gratuite",
+      "examples": ["Ce template de page de capture est 100% offert !"],
+      "maxLength": 60,
+      "required": false
+    },
+    {
+      "key": "logo_text",
+      "label": "Nom du logo",
+      "type": "string",
+      "intention": "brand_identity",
+      "description": "Nom de votre marque ou entreprise en majuscules",
+      "examples": ["TIPOTE", "FORMATION PRO"],
+      "maxLength": 20,
+      "required": true
+    },
+    {
+      "key": "logo_subtitle",
+      "label": "Baseline du logo",
+      "type": "string",
+      "intention": "brand_tagline",
+      "description": "Slogan ou baseline de votre marque",
+      "examples": ["VOTRE EXPERT MARKETING", "FORMATION DIGITALE"],
+      "maxLength": 30,
+      "required": false
+    },
+    {
+      "key": "hook",
+      "label": "Hook d'accroche",
+      "type": "string",
+      "intention": "attention_grabber",
+      "description": "Affirmation choc en majuscules pour capter l'attention immédiatement",
+      "examples": ["STOP AUX FORMATIONS QUI NE MARCHENT PAS", "ENFIN LA VRAIE SOLUTION"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "hero_title",
+      "label": "Titre principal héro",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Promesse de valeur unique claire qui exprime un bénéfice concret pour l'audience cible (formule: Quoi + Pour qui + Résultat). Peut contenir des parties à mettre en couleur.",
+      "examples": ["Créez votre première page de vente en moins de 2h sans coder ni designer"],
+      "maxLength": 120,
+      "required": true
+    },
+    {
+      "key": "cta_text",
+      "label": "Texte du bouton CTA",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Action claire et orientée bénéfice, pas trop technique",
+      "examples": ["OK ! Je veux en savoir plus", "Je veux ma formation gratuite"],
+      "maxLength": 35,
+      "required": true
+    },
+    {
+      "key": "cta_subtitle",
+      "label": "Sous-texte du CTA",
+      "type": "string",
+      "intention": "reassurance",
+      "description": "Réassurance sous le bouton pour lever les objections",
+      "examples": ["Accès gratuit & immédiat", "Sans carte bancaire"],
+      "maxLength": 30,
+      "required": false
+    },
+    {
+      "key": "benefits_title",
+      "label": "Titre de la section bénéfices",
+      "type": "string",
+      "intention": "section_header",
+      "description": "Titre qui annonce ce que propose le freebie/offre",
+      "examples": ["Découvrez ce que contient cette formation", "Ce que vous allez apprendre"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "benefits",
+      "label": "Puces de bénéfices",
+      "type": "string[]",
+      "intention": "benefit_list",
+      "description": "3 promesses irrésistibles avec bénéfice concret + conséquence + curiosité. Format: Titre en gras + développement",
+      "examples": [
+        "Maîtrisez le copywriting : rédigez des textes qui convertissent et transforment vos visiteurs en clients fidèles",
+        "Créez vos pages en 30 minutes : gagnez un temps fou et concentrez-vous sur ce qui compte vraiment",
+        "Doublez vos ventes : appliquez les stratégies des meilleurs marketeurs sans formation coûteuse"
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "itemMaxLength": 150,
+      "required": true
+    },
+    {
+      "key": "about_label",
+      "label": "Label de la section à propos",
+      "type": "string",
+      "intention": "section_identifier",
+      "description": "Texte court pour introduire qui présente l'offre",
+      "examples": ["Présenté par :", "Créé par :"],
+      "maxLength": 20,
+      "required": true
+    },
+    {
+      "key": "about_name",
+      "label": "Nom du créateur",
+      "type": "string",
+      "intention": "authority_identity",
+      "description": "Prénom et nom de la personne qui présente l'offre",
+      "examples": ["Béné Blagardette", "Marie Dupont"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "about_story",
+      "label": "Storytelling à propos",
+      "type": "string",
+      "intention": "authority_trust",
+      "description": "Brief storytelling qui donne confiance, permet l'identification et montre que vous avez atteint les objectifs. Le prospect doit se dire que vous êtes la bonne personne pour l'accompagner.",
+      "examples": ["J'ai lancé mon premier business en ligne en 2018 sans aucune connaissance. Après 3 ans d'échecs, j'ai découvert LA méthode qui a tout changé. Aujourd'hui, j'accompagne +500 entrepreneurs à réussir leur transformation digitale."],
+      "maxLength": 350,
+      "required": true
+    },
+    {
+      "key": "footer_text",
+      "label": "Texte du footer",
+      "type": "string",
+      "intention": "legal_disclaimer",
+      "description": "Mention légale standard et coordonnées de contact",
+      "examples": ["DES QUESTIONS ? Contactez-nous sur contact@votresite.com. Ce site n'est pas affilié à Facebook Inc."],
+      "maxLength": 200,
+      "required": false
+    }
+  ]
 }

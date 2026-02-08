@@ -1,55 +1,1038 @@
-<section class="hero capture-03">
-  <div class="container capture-03">
-    <div class="date-pill">
-      {{hero_date}}
-    </div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Challenge Feel Good</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <h1>{{hero_title}}</h1>
+        body {
+            font-family: 'Nunito Sans', sans-serif;
+            color: #222;
+            line-height: 1.7;
+            background: #fff;
+        }
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+        h1, h2, h3 {
+            font-family: 'Noto Serif', serif;
+            font-weight: 400;
+        }
 
-    <div class="form-card">
-      <label class="consent">
-        <input type="checkbox" checked disabled />
-        <span>{{consent_text}}</span>
-      </label>
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #ecdba7 0%, #fff5d8 50%, #fefbfb 100%);
+            padding: 60px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+        }
 
-      <div class="cta">
-        <input type="email" placeholder="Votre email" disabled />
-        <button disabled>{{cta_text}}</button>
-      </div>
-    </div>
+        .hero-container {
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
 
-    <p class="micro">
-      {{reassurance_text}}
-    </p>
-  </div>
-</section>
+        .hero-content {
+            padding: 40px;
+        }
 
-<section class="section capture-03">
-  <div class="inner">
-    <div>
-      <h2>{{section_title}}</h2>
+        .hero-title {
+            font-size: 48px;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            color: #9f7800;
+            font-weight: 400;
+        }
 
-      <ul class="list">
-        {{#bullets}}
-        <li>
-          <span class="dot"></span>
-          <span>{{.}}</span>
-        </li>
-        {{/bullets}}
-      </ul>
-    </div>
+        .hero-subtitle {
+            font-size: 20px;
+            color: #222;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
 
-    <aside class="aside">
-      <h3>{{aside_title}}</h3>
-      <p>{{aside_text}}</p>
+        .hero-date {
+            font-size: 16px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 10px;
+        }
 
-      <div class="footer-cta">
-        <a class="btn" href="#">{{footer_cta_text}}</a>
-      </div>
-    </aside>
-  </div>
-</section>
+        .hero-description {
+            font-size: 14px;
+            color: #474747;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        /* Form */
+        .signup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-input {
+            padding: 14px 18px;
+            border: 1px solid rgba(159, 120, 0, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Nunito Sans', sans-serif;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #9f7800;
+            box-shadow: 0 0 0 3px rgba(159, 120, 0, 0.1);
+        }
+
+        .phone-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .country-select {
+            width: 120px;
+            padding: 14px;
+            border: 1px solid rgba(159, 120, 0, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .phone-input {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin-top: 4px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .checkbox-group label {
+            font-size: 13px;
+            color: #474747;
+        }
+
+        .cta-button {
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #9f7800 0%, #8c6700 100%);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(159, 120, 0, 0.3);
+            text-transform: none;
+            font-family: 'Nunito Sans', sans-serif;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(159, 120, 0, 0.4);
+            background: linear-gradient(135deg, #8c6700 0%, #755500 100%);
+        }
+
+        /* Hero Image */
+        .hero-image {
+            position: relative;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 450px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Benefits Section */
+        .benefits-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .benefits-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            color: #9f7800;
+            margin-bottom: 20px;
+            font-family: 'Noto Serif', serif;
+            font-weight: 400;
+        }
+
+        .benefits-intro {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #474747;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .benefit-image {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .benefit-list {
+            list-style: none;
+        }
+
+        .benefit-item {
+            margin-bottom: 25px;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .benefit-item::before {
+            content: "■";
+            position: absolute;
+            left: 0;
+            color: #8c2c69;
+            font-size: 12px;
+        }
+
+        .benefit-title {
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 5px;
+        }
+
+        .benefit-description {
+            font-size: 14px;
+            color: #474747;
+            line-height: 1.6;
+        }
+
+        /* Target Section */
+        .target-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #fff5d8 0%, #ecdba7 100%);
+        }
+
+        .target-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .target-title {
+            font-size: 18px;
+            color: #9f7800;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .target-subtitle {
+            font-size: 28px;
+            color: #222;
+            margin-bottom: 60px;
+            font-family: 'Noto Serif', serif;
+        }
+
+        .target-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .target-card {
+            text-align: center;
+        }
+
+        .target-card-image {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .target-card-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        .target-card-text strong {
+            font-weight: 700;
+        }
+
+        .target-conclusion {
+            font-size: 20px;
+            font-style: italic;
+            color: #222;
+            max-width: 900px;
+            margin: 0 auto;
+            font-family: 'Noto Serif', serif;
+        }
+
+        /* Transformation Section */
+        .transformation-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #9f7800 0%, #8c6700 100%);
+            color: #fff;
+        }
+
+        .transformation-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .transformation-content h3 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .transformation-content h2 {
+            font-size: 28px;
+            line-height: 1.4;
+            margin-bottom: 30px;
+        }
+
+        .transformation-content p {
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        .transformation-content strong {
+            font-weight: 700;
+        }
+
+        .transformation-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #149efc 0%, rgba(20, 158, 252, 0) 100%);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Program Section */
+        .program-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .program-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .program-intro {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .program-intro h2 {
+            font-size: 28px;
+            color: #9f7800;
+            margin-bottom: 20px;
+        }
+
+        .program-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .program-image {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .program-list h3 {
+            font-size: 22px;
+            color: #9f7800;
+            margin-bottom: 30px;
+        }
+
+        .program-item {
+            margin-bottom: 25px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .program-item::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            color: #9f7800;
+            font-size: 16px;
+        }
+
+        .program-item-title {
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 5px;
+        }
+
+        .program-item-text {
+            font-size: 14px;
+            color: #474747;
+            line-height: 1.6;
+        }
+
+        /* Days Schedule Section */
+        .schedule-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #fff5d8 0%, #ecdba7 100%);
+        }
+
+        .schedule-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+
+        .day-card {
+            background: rgba(255, 255, 255, 0.6);
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .day-card h3 {
+            font-size: 22px;
+            color: #9f7800;
+            margin-bottom: 20px;
+            font-family: 'Noto Serif', serif;
+        }
+
+        .day-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        .day-card ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .day-card li {
+            margin-bottom: 8px;
+            position: relative;
+            font-size: 14px;
+            color: #474747;
+            line-height: 1.6;
+        }
+
+        .day-card li::before {
+            content: "■";
+            position: absolute;
+            left: -20px;
+            color: #9f7800;
+            font-size: 10px;
+        }
+
+        /* About Section */
+        .about-section {
+            padding: 80px 20px;
+            background: #fff;
+        }
+
+        .about-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .about-image {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, #b0baca 0%, #e1e7ef 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .about-content h2 {
+            font-size: 28px;
+            color: #9f7800;
+            margin-bottom: 25px;
+            font-family: 'Noto Serif', serif;
+        }
+
+        .about-content p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #474747;
+            margin-bottom: 15px;
+        }
+
+        .about-content strong {
+            font-weight: 700;
+            color: #222;
+        }
+
+        .about-cta {
+            margin-top: 30px;
+        }
+
+        /* Quote Section */
+        .quote-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #9f7800 0%, #8c6700 100%);
+            text-align: center;
+            color: #fff;
+        }
+
+        .quote-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .quote-text {
+            font-size: 24px;
+            line-height: 1.6;
+            font-style: italic;
+            margin-bottom: 20px;
+            font-family: 'Noto Serif', serif;
+        }
+
+        .quote-author {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .quote-logo {
+            margin-top: 30px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, #8c6700 0%, #9f7800 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .footer-text {
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 15px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #fff;
+        }
+
+        .footer-links span {
+            color: rgba(255,255,255,0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .benefits-grid,
+            .transformation-container,
+            .program-grid,
+            .about-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .target-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .schedule-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .section-title {
+                font-size: 26px;
+            }
+
+            .target-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .target-card-image {
+                width: 150px;
+                height: 150px;
+            }
+
+            .transformation-content h2,
+            .program-list h3,
+            .about-content h2 {
+                font-size: 24px;
+            }
+
+            .quote-text {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    [Statut/Identité]<br>
+                    [Qualité Inspirante]<br>
+                    et [Valeur Clé]
+                </h1>
+                <p class="hero-subtitle">X jours pour [transformation désirée]</p>
+                <p class="hero-date">En direct du XX au XX [Mois] 20XX</p>
+                <p class="hero-description">
+                    En X jours seulement, apprenez à [promesse principale], libérez [bénéfice émotionnel], et [résultat inspirant] !
+                </p>
+
+                <form class="signup-form">
+                    <input type="text" class="form-input" placeholder="Entrez votre prénom">
+                    <input type="email" class="form-input" placeholder="Entrez votre adresse email">
+                    
+                    <div style="font-size: 13px; color: #474747; margin-top: 5px;">
+                        Pour accéder au groupe privé :
+                    </div>
+                    
+                    <div class="phone-input-group">
+                        <select class="country-select">
+                            <option>🇫🇷 France</option>
+                        </select>
+                        <input type="tel" class="form-input phone-input" placeholder="Numéro de téléphone">
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="consent">
+                        <label for="consent">Oui, je consens à recevoir des emails</label>
+                    </div>
+
+                    <button type="submit" class="cta-button">
+                        Oui, je veux briller et m'inscrire au défi !
+                    </button>
+                </form>
+            </div>
+
+            <div class="hero-image">
+                <div class="image-placeholder">
+                    [Photo inspirante représentant ton audience cible]
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits-section">
+        <div class="benefits-container">
+            <h2 class="section-title">Ce que vous allez recevoir pendant ces X jours</h2>
+            
+            <p class="benefits-intro">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+            </p>
+
+            <div class="benefits-grid">
+                <div class="benefit-image">
+                    [Image lifestyle inspirante]
+                </div>
+
+                <ul class="benefit-list">
+                    <li class="benefit-item">
+                        <div class="benefit-title">Bénéfice 1 avec action concrète :</div>
+                        <div class="benefit-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div>
+                    </li>
+                    <li class="benefit-item">
+                        <div class="benefit-title">Bénéfice 2 qui transforme :</div>
+                        <div class="benefit-description">Sed do eiusmod tempor incididunt ut labore et dolore magna.</div>
+                    </li>
+                    <li class="benefit-item">
+                        <div class="benefit-title">Bénéfice 3 libérateur :</div>
+                        <div class="benefit-description">Ut enim ad minim veniam, quis nostrud exercitation ullamco.</div>
+                    </li>
+                    <li class="benefit-item">
+                        <div class="benefit-title">Bénéfice 4 sans culpabilité :</div>
+                        <div class="benefit-description">Duis aute irure dolor in reprehenderit in voluptate velit.</div>
+                    </li>
+                    <li class="benefit-item">
+                        <div class="benefit-title">Bénéfice 5 avec communauté :</div>
+                        <div class="benefit-description">Excepteur sint occaecat cupidatat non proident sunt in culpa.</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Target Section -->
+    <section class="target-section">
+        <div class="target-container">
+            <p class="target-title">À qui s'adresse ce défi ?</p>
+            <h2 class="target-subtitle">Ce défi est destiné aux [audience] prêtes à franchir une nouvelle étape et...</h2>
+
+            <div class="target-grid">
+                <div class="target-card">
+                    <div class="target-card-image">[Avatar 1]</div>
+                    <p class="target-card-text">
+                        <strong>Problème/Frustration 1</strong> qui les empêchent de s'épanouir pleinement.
+                    </p>
+                </div>
+
+                <div class="target-card">
+                    <div class="target-card-image">[Avatar 2]</div>
+                    <p class="target-card-text">
+                        <strong>Libérer leur [qualité]</strong> et se sentir pleinement alignées avec elles-mêmes.
+                    </p>
+                </div>
+
+                <div class="target-card">
+                    <div class="target-card-image">[Avatar 3]</div>
+                    <p class="target-card-text">
+                        <strong>Prendre soin d'elles sans [obstacle]</strong>, sans se mettre en retrait pour les autres.
+                    </p>
+                </div>
+
+                <div class="target-card">
+                    <div class="target-card-image">[Avatar 4]</div>
+                    <p class="target-card-text">
+                        <strong>Cultiver des [résultat positif]</strong>, tant avec elles-mêmes qu'avec leur entourage.
+                    </p>
+                </div>
+            </div>
+
+            <p class="target-conclusion">
+                ... Faire rayonner leur confiance et leur épanouissement dans chaque aspect de leur vie.
+            </p>
+        </div>
+    </section>
+
+    <!-- Transformation Section -->
+    <section class="transformation-section">
+        <div class="transformation-container">
+            <div class="transformation-content">
+                <h3>En quoi ce défi est-il unique ?</h3>
+                <h2>Vous méritez bien plus que de simples affirmations et mantras.</h2>
+                <p>
+                    Vous méritez un plan concret pour <strong>reprendre les rênes de votre vie</strong>, 
+                    <strong>maîtriser vos émotions</strong>, et <strong>briller comme jamais auparavant</strong>.
+                </p>
+                <p>
+                    Ce n'est pas qu'une formation, c'est une véritable <strong>TRANSFORMATION</strong>.
+                </p>
+            </div>
+
+            <div class="transformation-image">
+                [Image transformation/avant-après symbolique]
+            </div>
+        </div>
+    </section>
+
+    <!-- Program Section -->
+    <section class="program-section">
+        <div class="program-container">
+            <div class="program-intro">
+                <h2>Ce que vous recevrez GRATUITEMENT pendant le défi :</h2>
+            </div>
+
+            <div class="program-grid">
+                <div class="program-image">
+                    [Image groupe/communauté]
+                </div>
+
+                <div class="program-list">
+                    <h3>Inclus dans le challenge :</h3>
+                    
+                    <div class="program-item">
+                        <div class="program-item-title">✦ X jours de coaching en direct</div>
+                        <div class="program-item-text">Avec [Prénom Nom], experte en [domaine] auprès de [audience cible].</div>
+                    </div>
+
+                    <div class="program-item">
+                        <div class="program-item-title">✦ Un accès à un groupe privé</div>
+                        <div class="program-item-text">Pour échanger avec d'autres [audience] qui partagent vos ambitions et vos défis.</div>
+                    </div>
+
+                    <div class="program-item">
+                        <div class="program-item-title">✦ Des exercices quotidiens</div>
+                        <div class="program-item-text">Simples et actionnables, pour vous aider à passer à l'action immédiatement.</div>
+                    </div>
+
+                    <div class="program-item">
+                        <div class="program-item-title">✦ Des bonus exclusifs</div>
+                        <div class="program-item-text">Incluant des ressources complémentaires pour prolonger votre transformation après le défi.</div>
+                    </div>
+
+                    <div class="program-item">
+                        <div class="program-item-title">✦ Des connexions enrichissantes</div>
+                        <div class="program-item-text">Avec des [audience] inspirantes, comme vous !</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Schedule Section -->
+    <section class="schedule-section">
+        <div class="schedule-container">
+            <div class="schedule-grid">
+                <div class="day-card">
+                    <h3>Jour 1 : [Titre Évocateur du Jour]</h3>
+                    
+                    <h4>Objectif :</h4>
+                    <ul>
+                        <li>Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor.</li>
+                    </ul>
+
+                    <h4>Contenu :</h4>
+                    <ul>
+                        <li>Pourquoi [problème/limitation] vous retient</li>
+                        <li>Comment [action concrète] peut transformer votre quotidien</li>
+                    </ul>
+                </div>
+
+                <div class="day-card">
+                    <h3>Jour 2 : [Titre de la Transformation]</h3>
+                    
+                    <h4>Objectif :</h4>
+                    <ul>
+                        <li>Définir ce que vous voulez vraiment dans [domaine de vie].</li>
+                    </ul>
+
+                    <h4>Contenu :</h4>
+                    <ul>
+                        <li>L'influence de [facteur émotionnel] sur votre réalité</li>
+                        <li>Se libérer des [blocages négatifs] hérités du passé</li>
+                    </ul>
+                </div>
+
+                <div class="day-card">
+                    <h3>Jour 3 : [Titre Libérateur]</h3>
+                    
+                    <h4>Objectif :</h4>
+                    <ul>
+                        <li>Identifier les [obstacles] et [programmations limitantes].</li>
+                    </ul>
+
+                    <h4>Contenu :</h4>
+                    <ul>
+                        <li>Repérer les [schémas internes] qui bloquent votre avancée</li>
+                        <li>Comprendre comment [processus mental] façonne votre réalité</li>
+                    </ul>
+                </div>
+
+                <div class="day-card">
+                    <h3>Jour 4 : [Titre d'Action Sans Remords]</h3>
+                    
+                    <h4>Objectif :</h4>
+                    <ul>
+                        <li>Apprendre à prendre soin de vous sans [culpabilité]. Lorem ipsum dolor sit amet.</li>
+                    </ul>
+
+                    <h4>Contenu :</h4>
+                    <ul>
+                        <li>Les impacts de [comportement négatif] sur votre bien-être</li>
+                        <li>Les raisons pour lesquelles [action positive] doit devenir prioritaire</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+        <div class="about-container">
+            <div class="about-image">
+                [Photo professionnelle de l'expert]
+            </div>
+
+            <div class="about-content">
+                <h2>Qui est [Prénom Nom] ?</h2>
+                
+                <p>
+                    En 20XX, après un [événement déclencheur] et un [obstacle surmonté], 
+                    mon corps et mon esprit ont crié <strong>stop</strong>.
+                </p>
+
+                <p>
+                    Je ne réalisais pas à quel point je m'étais éloignée de moi-même, mais la vie 
+                    m'a forcée à ouvrir les yeux. Seule, sans <strong>estime de moi</strong>, j'étais 
+                    noyée dans le doute.
+                </p>
+
+                <p>
+                    Les mois suivants ont été un véritable <strong>réveil</strong>. J'ai pris conscience 
+                    de tout ce que j'avais sacrifié et des rêves que j'avais laissés de côté.
+                </p>
+
+                <p>
+                    Ce fut le début d'un <strong>voyage intérieur</strong>. J'ai exploré mes peurs, 
+                    redécouvert mes aspirations, et me suis reconnectée à des passions insoupçonnées.
+                </p>
+
+                <p>
+                    Retrouver ma <strong>force intérieure</strong>, me libérer des attentes des autres, 
+                    et m'aligner avec mes choix ont été des <strong>étapes essentielles</strong>.
+                </p>
+
+                <p>
+                    Ce chemin m'a menée à cette vérité profonde : je pouvais vivre pleinement, 
+                    sans culpabilité, en suivant mon propre <strong>cap</strong>.
+                </p>
+
+                <p>
+                    C'est ainsi qu'est née ma mission : <strong>accompagner les autres</strong> dans leur propre 
+                    voyage de reconnexion à soi.
+                </p>
+
+                <div class="about-cta">
+                    <button class="cta-button">Oui, je veux briller et m'inscrire au défi !</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quote Section -->
+    <section class="quote-section">
+        <div class="quote-container">
+            <p class="quote-text">
+                "Ma mission est d'accompagner chaque [audience] à devenir <strong>[transformation]</strong>, 
+                <strong>[qualité désirée]</strong>, et à transmettre à ses enfants les <strong>clés du bonheur</strong> 
+                et de l'épanouissement."
+            </p>
+            <p class="quote-author">[Prénom Nom]</p>
+            <div class="quote-logo">
+                [VOTRE LOGO]<br>
+                <span style="font-size: 12px; opacity: 0.8; font-weight: 400;">Coach [Spécialité] | [Domaine]</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            Tous droits réservés.<br>
+            Ce site ne fait pas partie du site Facebook ou Facebook Inc ou Meta. En outre, ce site n'est en aucun cas approuvé par Facebook. 
+            FACEBOOK est une marque déposée de META.
+        </p>
+        
+        <div class="footer-links">
+            <a href="#">Conditions Générales de Vente</a>
+            <span>|</span>
+            <a href="#">Politique de Confidentialité</a>
+        </div>
+    </footer>
+</body>
+</html>

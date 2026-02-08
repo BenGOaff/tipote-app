@@ -1,18 +1,10 @@
 {
+  "templateId": "capture-05",
   "variants": [
     {
-      "id": "centered",
-      "label": "Centered",
-      "heroAlign": "left",
-      "sectionPadding": "86px 24px",
-      "maxWidth": "1100px"
-    },
-    {
-      "id": "compact",
-      "label": "Compact",
-      "heroAlign": "left",
-      "sectionPadding": "64px 18px",
-      "maxWidth": "980px"
+      "id": "default",
+      "name": "Default",
+      "description": "Hero image à gauche + texte à droite, labels visibles desktop"
     }
   ]
 }

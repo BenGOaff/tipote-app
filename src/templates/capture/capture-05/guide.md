@@ -1,11 +1,14 @@
-### Capture 05 — Navy Challenge — Instructions Systeme.io
+# Capture 05 — Installation Systeme.io
 
-1. Crée une page dans Systeme.io
-2. Ajoute un bloc “Code HTML”
-3. Colle le code fourni (onglet **Code “Systeme-compatible”** dans Tipote)
-4. Dans le **SLOT SYSTEME**, ajoute un formulaire Systeme (email + tag + redirection)
+1. Crée une nouvelle page de capture dans Systeme.io.
+2. Ajoute une section (1 colonne).
+3. Ajoute un bloc HTML → colle **BLOC 1**.
+4. À l’emplacement encadré en pointillés rouges :
+   - Ajoute un **formulaire Systeme.io** (Prénom + Email).
+5. Ajoute un nouveau bloc HTML → colle **BLOC 2**.
+6. À l’emplacement encadré en pointillés rouges :
+   - Ajoute le **bouton Systeme.io** (ouvre le formulaire).
 
-Recommandations :
-- Tag : lead_capture
-- RGPD : coche obligatoire si nécessaire
-- Redirection : page merci / page suivante
+⚠️ Ne supprime aucun HTML.
+⚠️ Ne modifie aucune classe CSS.
+⚠️ Les textes sont déjà générés automatiquement.

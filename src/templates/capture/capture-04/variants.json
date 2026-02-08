@@ -1,18 +1,17 @@
 {
-  "variants": [
-    {
-      "id": "centered",
-      "label": "Centered",
-      "heroAlign": "center",
-      "sectionPadding": "92px 24px",
-      "maxWidth": "1040px"
-    },
-    {
-      "id": "compact",
-      "label": "Compact",
-      "heroAlign": "center",
-      "sectionPadding": "64px 18px",
-      "maxWidth": "980px"
+  "centered": {
+    "layout": {
+      "align": "center"
     }
-  ]
+  },
+  "split": {
+    "layout": {
+      "align": "left"
+    }
+  },
+  "minimal": {
+    "layout": {
+      "section_pad": "72px 20px"
+    }
+  }
 }

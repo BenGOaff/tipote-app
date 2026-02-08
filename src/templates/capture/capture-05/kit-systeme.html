@@ -1,42 +1,204 @@
-<section class="hero capture-05">
-  <div class="container capture-05">
-    <div class="grid">
-      <div>
-        <div class="pill">{{hero_pretitle}}</div>
+<!-- TIPOTE — KIT SYSTEME.IO — CAPTURE 05 -->
+<!-- Copie/colle chaque BLOC dans un bloc HTML distinct dans Systeme.io -->
 
-        <h1>{{hero_title}}</h1>
+<!-- ===================== BLOC 1 ===================== -->
+<div class="tpt-scope">
+  <section class="hero-section">
+    <div class="hero-labels label-1">{{label_1}}</div>
+    <div class="hero-labels label-2">{{label_2}}</div>
+    <div class="hero-labels label-3">{{label_3}}</div>
+    <div class="hero-labels label-4">{{label_4}}</div>
 
-        <p class="subtitle">{{hero_subtitle}}</p>
+    <div class="hero-container">
+      <div class="hero-image">{{hero_visual}}</div>
 
-        <ul class="steps">
-          {{#steps}}
-          <li>
-            <span class="check"></span>
-            <div class="step-text">{{.}}</div>
-          </li>
-          {{/steps}}
-        </ul>
-      </div>
+      <div class="hero-content">
+        <div class="hero-label">{{hero_label}}</div>
+        <div class="hero-subtitle">{{hero_subtitle}}</div>
+        <div class="hero-live-badge">{{hero_live_badge}}</div>
+        <h1 class="hero-title">{{hero_title}}</h1>
+        <p class="hero-description">{{hero_description}}</p>
 
-      <div class="card">
-        <div class="badge">{{side_badge}}</div>
-        <h2>{{side_title}}</h2>
-        <p>{{side_text}}</p>
-
-        <div class="systeme-slot systeme-form">
-          <!-- SLOT SYSTEME -->
-          Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
+        <!-- ===================== FORM SYSTEME.IO ===================== -->
+        <div class="tpt-slot" data-tpt="systeme-form" style="border:2px dashed #c1121f;padding:16px;margin:20px 0;text-align:center;background:#fff;color:#c1121f;">
+          <strong>ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO</strong><br/>
+          Champs conseillés : Prénom + Email
         </div>
-
-        <p class="micro">{{reassurance_text}}</p>
+        <!-- ===================== FIN FORM ===================== -->
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</div>
 
-<section class="section capture-05">
-  <div class="inner">
-    <h3>Objectif</h3>
-    <p>Une structure simple, une progression claire, et de l’action chaque jour.</p>
-  </div>
-</section>
+<!-- ===================== BLOC 2 ===================== -->
+<div class="tpt-scope">
+  <section class="for-me-section">
+    <div class="for-me-container">
+      <div class="section-label">{{for_me_label}}</div>
+      <h2 class="section-title">{{for_me_title}}</h2>
+      <p class="section-answer">{{for_me_answer}}</p>
+
+      <div class="benefits-grid">
+        <div class="benefits-image">{{benefits_visual}}</div>
+
+        <ul class="benefits-list">
+          <!-- BEGIN benefits -->
+          <li><strong>{{benefits[].title}}</strong> — {{benefits[].text}}</li>
+          <!-- END benefits -->
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="proof-section">
+    <div class="proof-container">
+      <h2 class="proof-title">{{proof_title}}</h2>
+
+      <div class="proof-card">
+        <div class="proof-image">{{proof_visual}}</div>
+        <p class="proof-text">{{proof_text}}</p>
+      </div>
+
+      <!-- ===================== BOUTON SYSTEME.IO ===================== -->
+      <div class="tpt-slot" data-tpt="systeme-button" style="border:2px dashed #c1121f;padding:16px;margin:20px 0;text-align:center;background:#fff;color:#c1121f;">
+        <strong>ICI : AJOUTE TON BOUTON NATIF SYSTEME.IO</strong><br/>
+        Action conseillée : ouvrir un POPUP avec un formulaire
+      </div>
+      <!-- ===================== FIN BOUTON ===================== -->
+    </div>
+  </section>
+
+  <section class="program-section">
+    <div class="program-container">
+      <h2 class="program-title">{{program_title}}</h2>
+      <div class="program-arrows">{{program_arrows}}</div>
+
+      <!-- BEGIN days -->
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-label">{{days[].label}}</div>
+          <div class="day-title">{{days[].title}}</div>
+        </div>
+
+        <div class="day-content">
+          <div>
+            <ul class="day-list">
+              <!-- BEGIN days[].bullets -->
+              <li>{{days[].bullets[].text}}</li>
+              <!-- END days[].bullets -->
+            </ul>
+          </div>
+
+          <div class="day-visual">
+            <div class="day-visual-placeholder">{{days[].visual}}</div>
+
+            <div class="day-cta">
+              <a class="day-cta-small">{{days[].cta_text}}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- END days -->
+    </div>
+  </section>
+
+  <section class="trainer-section">
+    <div class="trainer-container">
+      <h2 class="trainer-title">{{trainer_title}}</h2>
+      <div class="trainer-subtitle">{{trainer_subtitle}}</div>
+
+      <div class="trainer-card">
+        <div class="trainer-image">{{trainer_visual}}</div>
+
+        <div class="trainer-content">
+          <h3>{{trainer_name}}</h3>
+          <div class="trainer-label">{{trainer_label}}</div>
+
+          <p class="trainer-bio">{{trainer_bio_1}}</p>
+          <p class="trainer-bio">{{trainer_bio_2}}</p>
+          <p class="trainer-bio">{{trainer_bio_3}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="counter-section">
+    <div class="counter-label">{{counter_label}}</div>
+    <div class="counter-number">{{counter_number}}</div>
+    <div class="counter-text">{{counter_text}}</div>
+    <div class="counter-arrows">{{counter_arrows}}</div>
+  </section>
+
+  <section class="before-after-section">
+    <div class="before-after-container">
+      <div class="before-after-title">{{before_after_title}}</div>
+      <h2 class="before-after-subtitle">{{before_after_subtitle}}</h2>
+
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <div class="comparison-label before">{{before_label}}</div>
+          <div class="comparison-image">{{before_visual}}</div>
+
+          <ul class="comparison-list negative">
+            <!-- BEGIN before_points -->
+            <li>{{before_points[].text}}</li>
+            <!-- END before_points -->
+          </ul>
+        </div>
+
+        <div class="comparison-card">
+          <div class="comparison-label after">{{after_label}}</div>
+          <div class="comparison-image">{{after_visual}}</div>
+
+          <ul class="comparison-list positive">
+            <!-- BEGIN after_points -->
+            <li>{{after_points[].text}}</li>
+            <!-- END after_points -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bonus-section">
+    <div class="bonus-container">
+      <h2 class="bonus-title">{{bonus_title}}</h2>
+      <div class="bonus-subtitle">{{bonus_subtitle}}</div>
+
+      <div class="bonus-card">
+        <div class="bonus-visual">{{bonus_visual}}</div>
+
+        <ul class="bonus-list">
+          <!-- BEGIN bonuses -->
+          <li><strong>{{bonuses[].title}}</strong> — {{bonuses[].text}}</li>
+          <!-- END bonuses -->
+        </ul>
+
+        <div class="bonus-price">{{bonus_price}}</div>
+        <div class="bonus-offer">{{bonus_offer}}</div>
+
+        <!-- ===================== BOUTON SYSTEME.IO ===================== -->
+        <div class="tpt-slot" data-tpt="systeme-button-2" style="border:2px dashed #c1121f;padding:16px;margin:20px 0;text-align:center;background:#fff;color:#c1121f;">
+          <strong>ICI : AJOUTE TON BOUTON NATIF SYSTEME.IO</strong><br/>
+          Action conseillée : inscription / redirection vers page suivante
+        </div>
+        <!-- ===================== FIN BOUTON ===================== -->
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-title">{{footer_title}}</div>
+    <div class="footer-text">{{footer_text}}</div>
+
+    <div class="footer-links">
+      <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
+      <span>|</span>
+      <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
+    </div>
+
+    <div class="footer-copyright">
+      {{footer_copyright}}
+    </div>
+  </footer>
+</div>

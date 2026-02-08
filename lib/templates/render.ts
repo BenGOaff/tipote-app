@@ -7,6 +7,10 @@
 // - Content is user-generated -> we escape HTML.
 // - "Kit" output must be safe to paste into Systeme.io without breaking the host page,
 //   so we scope styles under a wrapper (".tpt-scope") using styles.kit.css per template.
+//
+// NOTE (2026-02):
+// Some premium templates are provided as full standalone HTML documents (with <html>, <head>, <style>).
+// For those, we MUST NOT wrap again. We still apply safe text replacements.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -215,6 +219,283 @@ ${body}
 </html>`;
 }
 
+function looksLikeFullHtmlDocument(html: string): boolean {
+  const s = (html || "").trim().toLowerCase();
+  if (!s) return false;
+  return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<html");
+}
+
+/**
+ * Premium templates provided as "static HTML" (no {{placeholders}}) must be filled
+ * by deterministic replacements WITHOUT changing the template structure.
+ *
+ * IMPORTANT:
+ * - We only replace the exact default strings that exist in the template.
+ * - We keep existing spans/classes to preserve the design.
+ */
+function applyStaticTemplateReplacements(args: {
+  kind: TemplateKind;
+  templateId: string;
+  html: string;
+  contentData: Record<string, any>;
+}): string {
+  const { kind, templateId } = args;
+  if (kind !== "capture") return args.html;
+
+  if (templateId === "capture-01") {
+    return applyCapture01Replacements(args.html, args.contentData);
+  }
+
+  return args.html;
+}
+
+function pickFirstNonEmpty(...vals: Array<any>): string {
+  for (const v of vals) {
+    const s = toText(v).trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function replaceAll(h: string, from: string, to: string) {
+  if (!from) return h;
+  return h.split(from).join(to);
+}
+
+function applyCapture01Replacements(html: string, contentData: Record<string, any>): string {
+  let out = html;
+
+  // --- CTA (3 occurrences) ---
+  const ctaText = escapeHtml(
+    pickFirstNonEmpty(contentData.cta_text, contentData.cta_label, "OK ! Je veux en savoir plus")
+  );
+  const ctaSubtitle = escapeHtml(
+    pickFirstNonEmpty(contentData.cta_subtitle, contentData.reassurance, "Accès gratuit & immédiat")
+  );
+
+  out = replaceAll(out, "OK ! Je veux en savoir plus", ctaText);
+  out = replaceAll(out, "Accès gratuit & immédiat", ctaSubtitle);
+
+  // --- Top notice ---
+  const topNoticeText = escapeHtml(
+    pickFirstNonEmpty(
+      contentData.top_notice_text,
+      "Ce template de page de capture est 100% offert !"
+    )
+  );
+  const topNoticeLinkText = escapeHtml(
+    pickFirstNonEmpty(contentData.top_notice_link_text, "Cliquez ici pour le télécharger >>")
+  );
+
+  out = replaceAll(out, "Ce template de page de capture est 100% offert !", topNoticeText);
+  out = replaceAll(out, "Cliquez ici pour le télécharger >>", topNoticeLinkText);
+
+  // --- Logo ---
+  const logoText = escapeHtml(pickFirstNonEmpty(contentData.logo_text, contentData.offer_name, "VOTRE LOGO"));
+  const logoSubtitle = escapeHtml(pickFirstNonEmpty(contentData.logo_subtitle, "VOTRE BASELINE ICI"));
+
+  out = replaceAll(out, "VOTRE LOGO", logoText);
+  out = replaceAll(out, "VOTRE BASELINE ICI", logoSubtitle);
+
+  // --- Hook ---
+  const hook = escapeHtml(
+    pickFirstNonEmpty(contentData.hook, contentData.hero_kicker, "Affirmation choc qui capte l'attention ici")
+  );
+  out = replaceAll(out, "Affirmation choc qui capte l'attention ici", hook);
+
+  // --- Hero title segments (preserve spans/classes) ---
+  const heroPrefix = escapeHtml(
+    pickFirstNonEmpty(contentData.hero_title_prefix, "Rédige ici ta ")
+  );
+  const heroH1 = escapeHtml(
+    pickFirstNonEmpty(
+      contentData.hero_title_highlight1,
+      contentData.hero_highlight_1,
+      contentData.headline,
+      "promesse de valeur unique"
+    )
+  );
+  const heroBetween1 = escapeHtml(
+    pickFirstNonEmpty(contentData.hero_title_between1, ", en une phrase claire qui exprime un ")
+  );
+  const heroH2 = escapeHtml(
+    pickFirstNonEmpty(contentData.hero_title_highlight2, contentData.hero_highlight_2, "bénéfice concret")
+  );
+  const heroBetween2 = escapeHtml(
+    pickFirstNonEmpty(contentData.hero_title_between2, " pour ton ")
+  );
+  const heroH3 = escapeHtml(
+    pickFirstNonEmpty(
+      contentData.hero_title_highlight3,
+      contentData.hero_highlight_3,
+      contentData.target_highlight,
+      "audience cible"
+    )
+  );
+  const heroSuffix = escapeHtml(
+    pickFirstNonEmpty(contentData.hero_title_suffix, ".")
+  );
+
+  // Replace exact default sentence parts
+  out = replaceAll(out, "Rédige ici ta ", heroPrefix);
+  out = replaceAll(out, "promesse de valeur unique", heroH1);
+  out = replaceAll(out, ", en une phrase claire qui exprime un ", heroBetween1);
+  out = replaceAll(out, "bénéfice concret", heroH2);
+  out = replaceAll(out, " pour ton ", heroBetween2);
+  out = replaceAll(out, "audience cible", heroH3);
+
+  // Targeted suffix right after the last highlight span in the hero title.
+  out = out.replace(
+    /(<span class="highlight">\s*[^<]*\s*<\/span>)\s*\./,
+    (_m, g1) => {
+      const suffix = heroSuffix || ".";
+      const normalized = suffix.trim().startsWith(".") ? suffix.trim() : `. ${suffix.trim()}`;
+      return `${g1}${escapeHtml(normalized)}`;
+    }
+  );
+
+  // --- Video overlay lines ---
+  const v1 = escapeHtml(pickFirstNonEmpty(contentData.video_line1, "Télécharge"));
+  const v2 = escapeHtml(pickFirstNonEmpty(contentData.video_line2, "ce template"));
+  const v3 = escapeHtml(pickFirstNonEmpty(contentData.video_line3, "offert"));
+
+  out = replaceAll(out, "Télécharge", v1);
+  out = replaceAll(out, "ce template", v2);
+  out = replaceAll(out, "offert", v3);
+
+  // --- Benefits section title ---
+  const benefitsTitle = escapeHtml(
+    pickFirstNonEmpty(contentData.section_title, contentData.benefits_title, "Explique ce que propose ton freebie")
+  );
+  out = replaceAll(out, "Explique ce que propose ton freebie", benefitsTitle);
+
+  // --- Benefits (3 cards) ---
+  // We keep existing spans but replace their inner texts + key phrases.
+  const bullets = Array.isArray(contentData.bullets) ? contentData.bullets : [];
+  const benefits = Array.isArray(contentData.benefits) ? contentData.benefits : [];
+
+  const getBenefit = (i: number) => {
+    const b = benefits[i] || {};
+    const bulletFallback = typeof bullets[i] === "string" ? bullets[i] : "";
+
+    const title = pickFirstNonEmpty(b.title, b.bold, `Puce promesse irrésistible`);
+    const highlight = pickFirstNonEmpty(b.highlight, b.text_highlight, "concret + conséquence");
+    const between = pickFirstNonEmpty(
+      b.between,
+      b.text_between,
+      " du bénéfice pour ton audience cible + un soupçon de "
+    );
+    const curiosity = pickFirstNonEmpty(b.curiosity, b.text_curiosity, "curiosité");
+
+    // If user only gave a one-liner bullet, use it as title and keep rest minimal.
+    if (bulletFallback && !b.title && !b.bold && !b.highlight && !b.curiosity) {
+      return {
+        title: bulletFallback,
+        highlight: "",
+        between: "",
+        curiosity: "",
+      };
+    }
+
+    return { title, highlight, between, curiosity };
+  };
+
+  const b1 = getBenefit(0);
+  const b2 = getBenefit(1);
+  const b3 = getBenefit(2);
+
+  const replaceNth = (source: string, needle: string, replacement: string, n: number) => {
+    let idx = -1;
+    let cur = 0;
+    let out2 = source;
+    while (cur < n) {
+      idx = out2.indexOf(needle, idx + 1);
+      if (idx === -1) return out2;
+      cur++;
+    }
+    return out2.slice(0, idx) + replacement + out2.slice(idx + needle.length);
+  };
+
+  // Replace occurrences in order (3 cards)
+  out = replaceNth(out, "Puce promesse irrésistible", escapeHtml(b1.title), 1);
+  out = replaceNth(out, "Puce promesse irrésistible", escapeHtml(b2.title), 2);
+  out = replaceNth(out, "Puce promesse irrésistible", escapeHtml(b3.title), 3);
+
+  out = replaceNth(out, "concret + conséquence", escapeHtml(b1.highlight), 1);
+  out = replaceNth(out, "concret + conséquence", escapeHtml(b2.highlight), 2);
+  out = replaceNth(out, "concret + conséquence", escapeHtml(b3.highlight), 3);
+
+  out = replaceNth(out, "curiosité", escapeHtml(b1.curiosity), 1);
+  out = replaceNth(out, "curiosité", escapeHtml(b2.curiosity), 2);
+  out = replaceNth(out, "curiosité", escapeHtml(b3.curiosity), 3);
+
+  out = replaceNth(
+    out,
+    " du bénéfice pour ton audience cible + un soupçon de ",
+    escapeHtml(b1.between),
+    1
+  );
+  out = replaceNth(
+    out,
+    " du bénéfice pour ton audience cible + un soupçon de ",
+    escapeHtml(b2.between),
+    2
+  );
+  out = replaceNth(
+    out,
+    " du bénéfice pour ton audience cible + un soupçon de ",
+    escapeHtml(b3.between),
+    3
+  );
+
+  // --- About section ---
+  const presenterName = escapeHtml(
+    pickFirstNonEmpty(contentData.presenter_name, contentData.about_name, "Nom Prénom")
+  );
+  out = replaceAll(out, "Nom Prénom", presenterName);
+
+  const aboutHighlight = escapeHtml(
+    pickFirstNonEmpty(contentData.about_highlight, "brief storytelling")
+  );
+  const aboutObjective = escapeHtml(
+    pickFirstNonEmpty(contentData.about_objective, "as réussi à atteindre les objectifs")
+  );
+
+  const aboutPrefix = escapeHtml(
+    pickFirstNonEmpty(contentData.about_prefix, "Rédige ici un ")
+  );
+  const aboutBetween = escapeHtml(
+    pickFirstNonEmpty(
+      contentData.about_between,
+      " qui donne confiance en toi et permet à ton audience cible de s'identifier à toi et à ton parcours. Ton prospect doit se dire que tu as vécu la même chose que lui et que tu "
+    )
+  );
+  const aboutSuffix = escapeHtml(
+    pickFirstNonEmpty(
+      contentData.about_suffix,
+      ". Tu es donc la bonne personne pour l'accompagner."
+    )
+  );
+
+  out = replaceAll(out, "Rédige ici un ", aboutPrefix);
+  out = replaceAll(out, "brief storytelling", aboutHighlight);
+  out = replaceAll(
+    out,
+    " qui donne confiance en toi et permet à ton audience cible de s'identifier à toi et à ton parcours. Ton prospect doit se dire que tu as vécu la même chose que lui et que tu ",
+    aboutBetween
+  );
+  out = replaceAll(out, "as réussi à atteindre les objectifs", aboutObjective);
+  out = replaceAll(out, ". Tu es donc la bonne personne pour l'accompagner.", aboutSuffix);
+
+  // --- Footer contact email (optional) ---
+  const contactEmail = escapeHtml(
+    pickFirstNonEmpty(contentData.contact_email, "contact@votresite.com")
+  );
+  out = replaceAll(out, "contact@votresite.com", contactEmail);
+
+  return out;
+}
+
 export async function renderTemplateHtml(
   req: RenderTemplateRequest
 ): Promise<{ html: string }> {
@@ -266,6 +547,22 @@ export async function renderTemplateHtml(
 
   // apply variant hooks
   out = applyVariant(out, req.variantId);
+
+  // apply static replacements (premium raw HTML templates)
+  out = applyStaticTemplateReplacements({
+    kind,
+    templateId,
+    html: out,
+    contentData: req.contentData || {},
+  });
+
+  const isFullDoc = looksLikeFullHtmlDocument(out);
+
+  // If it's a full standalone HTML doc, do NOT wrap it again.
+  // We still keep token/CSS logic for non-full docs.
+  if (isFullDoc) {
+    return { html: out };
+  }
 
   const styleCss = mode === "kit" ? kitCss || css : css;
 

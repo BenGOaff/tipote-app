@@ -1,29 +1,120 @@
-<section class="hero capture-01">
-  <div class="container">
-    <span class="eyebrow">{{hero_pretitle}}</span>
+<!-- capture-01 / kit-systeme.html -->
+<!-- TIPOTE — KIT SYSTEME.IO -->
+<!-- À COPIER / COLLER TEL QUEL DANS DES BLOCS HTML SYSTEME.IO -->
+<!-- NE RIEN SUPPRIMER SAUF LES BLOCS EN POINTILLÉS APRÈS INSTALLATION -->
 
-    <h1>{{hero_title}}</h1>
+<!-- ===================== BLOC 1 ===================== -->
+<div class="tpt-scope">
 
-    <p class="subtitle">
-      {{hero_subtitle}}
-    </p>
+  <section class="hero-section">
+    <div class="hero-container">
 
-    <div class="benefits">
-      {{#bullets}}
-      <div class="benefit">
-        <span class="dot"></span>
-        <p>{{.}}</p>
+      <div class="hero-content">
+        <h1 class="hero-title">
+          {{hero_title}}
+        </h1>
+
+        <p class="hero-subtitle">
+          {{hero_subtitle}}
+        </p>
+
+        <p class="hero-description">
+          {{hero_description}}
+        </p>
+
+        <!-- ===== EMPLACEMENT FORMULAIRE SYSTEME.IO ===== -->
+        <div
+          class="tpt-slot"
+          data-tpt="systeme-form"
+          style="border:2px dashed #9f7800;padding:20px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
+        >
+          <strong>ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
+          Champs conseillés : Prénom + Email (+ Téléphone si besoin)
+        </div>
+        <!-- ============================================= -->
+
       </div>
-      {{/bullets}}
-    </div>
 
-    <div class="systeme-slot systeme-form">
-      <!-- SLOT SYSTEME -->
-      Ajoutez ici un FORMULAIRE SYSTEME (capture email + tag + redirection)
-    </div>
+      <div class="hero-image">
+        {{hero_image}}
+      </div>
 
-    <p class="micro-proof">
-      {{reassurance_text}}
+    </div>
+  </section>
+
+</div>
+<!-- =================== FIN BLOC 1 =================== -->
+
+
+<!-- ===================== BLOC 2 ===================== -->
+<div class="tpt-scope">
+
+  <section class="benefits-section">
+    <div class="benefits-container">
+      <h2 class="section-title">{{benefits_title}}</h2>
+      <p class="benefits-intro">{{benefits_intro}}</p>
+
+      <div class="benefits-grid">
+        <div class="benefit-image">
+          {{benefits_image}}
+        </div>
+
+        <ul class="benefit-list">
+          {{benefits_list}}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="target-section">
+    <div class="target-container">
+      <p class="target-title">{{target_label}}</p>
+      <h2 class="target-subtitle">{{target_title}}</h2>
+
+      <div class="target-grid">
+        {{target_cards}}
+      </div>
+
+      <p class="target-conclusion">{{target_conclusion}}</p>
+    </div>
+  </section>
+
+  <section class="about-section">
+    <div class="about-container">
+      <div class="about-image">
+        {{about_image}}
+      </div>
+
+      <div class="about-content">
+        <h2>{{about_title}}</h2>
+        {{about_text}}
+
+        <!-- ===== EMPLACEMENT BOUTON SYSTEME.IO ===== -->
+        <div
+          class="tpt-slot"
+          data-tpt="systeme-button"
+          style="border:2px dashed #9f7800;padding:16px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
+        >
+          <strong>ICI : AJOUTE TON BOUTON NATIF SYSTEME.IO</strong><br>
+          Action conseillée : ouvrir le formulaire
+        </div>
+        <!-- ======================================== -->
+
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p class="footer-text">
+      {{footer_text}}
     </p>
-  </div>
-</section>
+
+    <div class="footer-links">
+      <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
+      <span>|</span>
+      <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
+    </div>
+  </footer>
+
+</div>
+<!-- =================== FIN BLOC 2 =================== -->

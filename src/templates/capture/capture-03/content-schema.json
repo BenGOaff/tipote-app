@@ -1,47 +1,233 @@
 {
-  "hero_date": {
-    "maxLength": 48,
-    "required": false
-  },
-  "hero_title": {
-    "maxLength": 90,
-    "required": true
-  },
-  "hero_subtitle": {
-    "maxLength": 210,
-    "required": true
-  },
-  "consent_text": {
-    "maxLength": 80,
-    "required": false
-  },
-  "cta_text": {
-    "maxLength": 28,
-    "required": true
-  },
-  "reassurance_text": {
-    "maxLength": 140,
-    "required": false
-  },
-  "section_title": {
-    "maxLength": 70,
-    "required": false
-  },
-  "bullets": {
-    "maxItems": 6,
-    "itemMaxLength": 110,
-    "required": false
-  },
-  "aside_title": {
-    "maxLength": 44,
-    "required": false
-  },
-  "aside_text": {
-    "maxLength": 170,
-    "required": false
-  },
-  "footer_cta_text": {
-    "maxLength": 28,
-    "required": false
-  }
+  "kind": "capture",
+  "templateId": "capture-03",
+  "name": "Page de capture Challenge Feel Good",
+  "description": "Template feel-good avec design doux, formulaire d'inscription, programme jour par jour et storytelling personnel profond",
+  "fields": [
+    {
+      "key": "hero_title",
+      "label": "Titre principal héro",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Promesse émotionnelle et transformation personnelle",
+      "examples": ["Retrouvez Confiance en Vous", "Rayonnez de l'Intérieur"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "hero_subtitle",
+      "label": "Sous-titre héro",
+      "type": "string",
+      "intention": "promise_detail",
+      "description": "Développement de la promesse avec bénéfice émotionnel",
+      "examples": ["Un défi de 4 jours pour vous reconnecter à votre essence et briller"],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "hero_date",
+      "label": "Dates du challenge",
+      "type": "string",
+      "intention": "event_timing",
+      "description": "Dates précises du challenge pour créer l'urgence",
+      "examples": ["Du 15 au 18 janvier 2025", "4 jours • 18h-19h30"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "hero_description",
+      "label": "Description courte héro",
+      "type": "string",
+      "intention": "event_context",
+      "description": "Description concise de ce qui attend le participant",
+      "examples": ["4 soirées en direct pour transformer votre relation à vous-même"],
+      "maxLength": 90,
+      "required": true
+    },
+    {
+      "key": "cta_button_text",
+      "label": "Texte du bouton CTA",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Appel à l'action orienté transformation personnelle",
+      "examples": ["Je m'inscris au défi", "Je veux rayonner"],
+      "maxLength": 35,
+      "required": true
+    },
+    {
+      "key": "benefits_title",
+      "label": "Titre section bénéfices",
+      "type": "string",
+      "intention": "section_header",
+      "description": "Question ou affirmation sur ce que le défi apporte",
+      "examples": ["Pourquoi participer à ce défi ?", "Ce que vous allez découvrir"],
+      "maxLength": 50,
+      "required": true
+    },
+    {
+      "key": "benefits_intro",
+      "label": "Introduction des bénéfices",
+      "type": "string",
+      "intention": "benefit_context",
+      "description": "Paragraphe court qui contextualise les bénéfices",
+      "examples": ["Ce défi est conçu pour les femmes qui veulent se reconnecter à elles-mêmes et rayonner au quotidien."],
+      "maxLength": 120,
+      "required": false
+    },
+    {
+      "key": "benefits",
+      "label": "Puces de bénéfices",
+      "type": "string[]",
+      "intention": "benefit_list",
+      "description": "5-6 bénéfices émotionnels et transformationnels, orientés résultat intérieur",
+      "examples": [
+        "Reconnectez-vous à votre essence profonde et libérez-vous des attentes extérieures",
+        "Développez une confiance inébranlable qui rayonne dans toutes vos relations",
+        "Apprenez à vous prioriser sans culpabilité et cultivez votre bien-être",
+        "Transformez votre dialogue intérieur et devenez votre meilleure alliée"
+      ],
+      "minItems": 4,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": true
+    },
+    {
+      "key": "target_intro",
+      "label": "Introduction cible",
+      "type": "string",
+      "intention": "audience_qualification",
+      "description": "Phrase qui introduit pour qui est fait le défi",
+      "examples": ["Ce défi est conçu pour les femmes qui veulent..."],
+      "maxLength": 80,
+      "required": true
+    },
+    {
+      "key": "target_profiles",
+      "label": "Profils cibles",
+      "type": "string[]",
+      "intention": "audience_identification",
+      "description": "4 profils de femmes cibles avec leur aspiration",
+      "examples": [
+        "Se libérer du poids des jugements pour vivre pleinement",
+        "Développer une confiance profonde en elles-mêmes",
+        "Oser s'affirmer sans crainte ni culpabilité",
+        "Cultiver des relations authentiques avec leur entourage"
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "itemMaxLength": 80,
+      "required": true
+    },
+    {
+      "key": "target_conclusion",
+      "label": "Conclusion cible",
+      "type": "string",
+      "intention": "aspiration_statement",
+      "description": "Phrase finale qui résume l'aspiration globale",
+      "examples": ["... Faire rayonner leur confiance et leur épanouissement dans chaque aspect de leur vie."],
+      "maxLength": 100,
+      "required": true
+    },
+    {
+      "key": "program_intro",
+      "label": "Titre programme",
+      "type": "string",
+      "intention": "program_reveal",
+      "description": "Ce que le participant recevra dans le défi",
+      "examples": ["Ce que vous recevrez GRATUITEMENT pendant le défi :"],
+      "maxLength": 60,
+      "required": true
+    },
+    {
+      "key": "program_items",
+      "label": "Éléments du programme",
+      "type": "object[]",
+      "intention": "program_features",
+      "description": "5 éléments inclus dans le challenge avec titre et détail",
+      "minItems": 5,
+      "maxItems": 5,
+      "itemSchema": {
+        "item_title": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Titre de l'élément (ex: X jours de coaching en direct)"
+        },
+        "item_detail": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Détail de la valeur apportée"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "schedule_days",
+      "label": "Programme jour par jour",
+      "type": "object[]",
+      "intention": "daily_breakdown",
+      "description": "4 jours avec titre, objectif et contenu détaillé",
+      "minItems": 4,
+      "maxItems": 4,
+      "itemSchema": {
+        "day_title": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Jour X : Titre Évocateur"
+        },
+        "day_objective": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Objectif principal du jour"
+        },
+        "day_content": {
+          "type": "string[]",
+          "minItems": 2,
+          "maxItems": 3,
+          "itemMaxLength": 90,
+          "description": "2-3 points de contenu abordés ce jour-là"
+        }
+      },
+      "required": true
+    },
+    {
+      "key": "about_name",
+      "label": "Nom du coach",
+      "type": "string",
+      "intention": "authority_identity",
+      "description": "Prénom et Nom du coach qui anime le défi",
+      "examples": ["Sophie Martin"],
+      "maxLength": 40,
+      "required": true
+    },
+    {
+      "key": "about_story",
+      "label": "Storytelling personnel",
+      "type": "string",
+      "intention": "authority_vulnerability",
+      "description": "Histoire personnelle profonde et vulnérable : événement déclencheur, obstacles, réveil, voyage intérieur, mission. Minimum 5 paragraphes pour créer une vraie connexion émotionnelle.",
+      "examples": ["En 2020, après un burn-out et une rupture douloureuse, mon corps et mon esprit ont crié stop. Je ne réalisais pas à quel point je m'étais éloignée de moi-même..."],
+      "maxLength": 800,
+      "required": true
+    },
+    {
+      "key": "quote_mission",
+      "label": "Citation mission",
+      "type": "string",
+      "intention": "mission_statement",
+      "description": "Citation qui résume la mission du coach avec transformation et valeurs",
+      "examples": ["Ma mission est d'accompagner chaque femme à devenir la meilleure version d'elle-même, rayonnante et épanouie."],
+      "maxLength": 150,
+      "required": true
+    },
+    {
+      "key": "coach_title",
+      "label": "Titre du coach",
+      "type": "string",
+      "intention": "authority_credentials",
+      "description": "Spécialité et domaine d'expertise",
+      "examples": ["Coach Confiance en Soi | Développement Personnel"],
+      "maxLength": 60,
+      "required": true
+    }
+  ]
 }
