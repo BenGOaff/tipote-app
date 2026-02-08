@@ -671,14 +671,8 @@ export default function CreateLovableClient() {
       case "offer":
         return <OfferForm {...common} pyramidLeadMagnet={pyramidLeadMagnet} pyramidPaidOffer={pyramidPaidOffer} />;
       case "funnel":
-        return (
-          <FunnelForm
-            {...common}
-            pyramidOffers={pyramidOffers}
-            pyramidLeadMagnet={pyramidLeadMagnet}
-            pyramidPaidOffer={pyramidPaidOffer}
-          />
-        );
+        // ✅ FunnelForm n'accepte que pyramidOffers (dropdown offres existantes)
+        return <FunnelForm {...common} pyramidOffers={pyramidOffers} />;
       default:
         return null;
     }
