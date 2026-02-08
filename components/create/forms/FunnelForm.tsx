@@ -2,158 +2,31 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Loader2,
-  Wand2,
-  Save,
-  Send,
-  X,
-  Route,
-  LayoutTemplate,
-  Copy,
-  Download,
-  Coins,
-  Eye,
-  RotateCcw,
-  FileText,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AIContent } from "@/components/ui/ai-content";
-import { TemplateChatPanel } from "@/components/templates/TemplateChatPanel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import type { SystemeTemplate } from "@/data/systemeTemplates";
+import { FunnelModeStep } from "@/components/create/forms/funnel/FunnelModeStep";
+import { FunnelTemplateStep } from "@/components/create/forms/funnel/FunnelTemplateStep";
+import { FunnelConfigStep, type FunnelOfferOption } from "@/components/create/forms/funnel/FunnelConfigStep";
+import { FunnelPreviewStep } from "@/components/create/forms/funnel/FunnelPreviewStep";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
-import { isLeadMagnetLevel } from "@/components/create/forms/_shared";
-
-/* ============================================================
-   TYPES
-============================================================ */
 
 type FunnelPageType = "capture" | "sales";
-type FunnelMode = "from_pyramid" | "from_scratch";
-type OutputTab = "text" | "html";
-type Step = 1 | 2 | 3;
+type Mode = "visual" | "text_only";
+type OfferChoice = "existing" | "scratch";
 
-type CreationMode = "template" | "text_only";
+type Step = "mode" | "template" | "config" | "preview";
 
-type CaptureTemplateId =
-  | "capture-01"
-  | "capture-02"
-  | "capture-03"
-  | "capture-04"
-  | "capture-05";
-
-type SaleTemplateId =
-  | "sale-01"
-  | "sale-02"
-  | "sale-03"
-  | "sale-04"
-  | "sale-05"
-  | "sale-06"
-  | "sale-07"
-  | "sale-08"
-  | "sale-09"
-  | "sale-10"
-  | "sale-11"
-  | "sale-12";
-
-type TemplateId = CaptureTemplateId | SaleTemplateId;
-
-export type FunnelFormProps = {
-  onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
-  onClose: () => void;
-  isGenerating: boolean;
-  isSaving: boolean;
-  pyramidOffers?: PyramidOfferLite[];
-  pyramidLeadMagnet?: PyramidOfferLite | null;
-  pyramidPaidOffer?: PyramidOfferLite | null;
-};
-
-/* ============================================================
-   TEXT HELPERS
-============================================================ */
-
-function cleanLine(s: string) {
-  return (s || "")
-    .replace(/^#+\s*/g, "")
-    .replace(/^\*+\s*/g, "")
-    .replace(/^[-•–]+\s*/g, "")
-    .trim();
-}
-
-function pickFirstMeaningfulLine(text: string): string {
-  return (
-    (text || "")
-      .split(/\r?\n/)
-      .map(cleanLine)
-      .filter(Boolean)[0] || ""
-  );
-}
-
-function pickSubtitle(text: string): string {
-  const lines = (text || "").split(/\r?\n/).map(cleanLine).filter(Boolean);
-  return lines[1] || "";
-}
-
-function pickReassurance(text: string): string {
-  const hit = (text || "")
-    .split(/\r?\n/)
-    .find((l) => /rgpd|spam|désinscrire|confidenti/i.test(l));
-  return (
-    cleanLine(hit || "") ||
-    "Tes données sont protégées. Zéro spam, juste du concret."
-  );
-}
-
-function softenClamp(s: string, maxLen: number) {
-  const t = cleanLine(s);
-  if (!t) return "";
-  return t.length <= maxLen ? t : t.slice(0, maxLen - 1).trim() + "…";
-}
-
-function extractBullets(text: string, max: number) {
-  const bullets =
-    (text || "")
-      .split(/\r?\n/)
-      .map((l) => l.match(/^\s*(?:[-•–]|\d+[\.\)])\s+(.*)$/)?.[1])
-      .filter(Boolean)
-      .map((s) => softenClamp(s as string, 90)) as string[];
-
-  if (bullets.length) return bullets.slice(0, max);
-
-  // fallback: take meaningful lines after first 2
-  const lines = (text || "")
-    .split(/\r?\n/)
-    .map(cleanLine)
-    .filter(Boolean)
-    .slice(2, 2 + max);
-
-  return lines.map((s) => softenClamp(s, 90));
-}
+type ChatMessage = { role: "user" | "assistant"; content: string };
 
 function safeJsonParse<T = any>(raw: string): T | null {
   try {
-    const v = raw ? JSON.parse(raw) : null;
-    return v as T;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
@@ -178,1190 +51,579 @@ function extractTemplateContentData(raw: string): Record<string, any> | null {
   return null;
 }
 
-/* ============================================================
-   TEMPLATE DERIVATION
-============================================================ */
-
-function deriveCaptureContentData(args: {
-  templateId: CaptureTemplateId;
-  rawText: string;
-  offerName: string;
-  promise: string;
-}) {
-  const headline = softenClamp(
-    pickFirstMeaningfulLine(args.rawText) || args.promise,
-    72
-  );
-  const subtitle = softenClamp(
-    pickSubtitle(args.rawText) || "En quelques minutes par jour.",
-    110
-  );
-  const bullets = extractBullets(args.rawText, 5);
-
-  return {
-    offer_name: args.offerName,
-    hero_pretitle: "Ressource gratuite",
-    hero_title: headline,
-    hero_subtitle: subtitle,
-    bullets,
-    reassurance_text: pickReassurance(args.rawText),
-    cta_text: "OK JE VEUX ÇA",
-    variant: "centered",
-  };
+function guessTitleFromOfferOrTemplate(opts: {
+  mode: Mode;
+  funnelPageType: FunnelPageType;
+  selectedTemplate: SystemeTemplate | null;
+  offerName?: string;
+}): string {
+  const pageLabel = opts.funnelPageType === "sales" ? "Page de vente" : "Page de capture";
+  if (opts.mode === "visual" && opts.selectedTemplate?.name) return `${pageLabel} — ${opts.selectedTemplate.name}`;
+  if (opts.offerName?.trim()) return `${pageLabel} — ${opts.offerName.trim()}`;
+  return pageLabel;
 }
 
-function deriveSaleContentData(args: {
-  templateId: SaleTemplateId;
-  rawText: string;
-  offerName: string;
-  promise: string;
-}) {
-  const headline = softenClamp(
-    pickFirstMeaningfulLine(args.rawText) || args.promise,
-    86
-  );
-  const subtitle = softenClamp(
-    pickSubtitle(args.rawText) || "Découvre la structure qui convertit.",
-    120
-  );
-  const bullets = extractBullets(args.rawText, 6);
+export type FunnelFormProps = {
+  onGenerate: (params: any) => Promise<string>;
+  onSave: (payload: any) => Promise<void>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+  pyramidOffers?: PyramidOfferLite[];
+};
 
-  return {
-    offer_name: args.offerName,
-    hero_title: headline,
-    hero_subtitle: subtitle,
-    hero_bullets: bullets,
-    cta_main: "JE PASSE À L'ACTION",
-    variant: "centered",
-  };
-}
-
-/* ============================================================
-   TEMPLATE LISTS
-============================================================ */
-
-const captureTemplates: Array<{ id: CaptureTemplateId; label: string }> = [
-  { id: "capture-01", label: "Capture Ads" },
-  { id: "capture-02", label: "Capture Minimal" },
-  { id: "capture-03", label: "Capture Story" },
-  { id: "capture-04", label: "Capture Bold" },
-  { id: "capture-05", label: "Capture Dark" },
-];
-
-const saleTemplates: Array<{ id: SaleTemplateId; label: string }> = [
-  { id: "sale-01", label: "Vente Classic" },
-  { id: "sale-02", label: "Vente Minimal" },
-  { id: "sale-03", label: "Vente Bold" },
-  { id: "sale-04", label: "Vente Dark" },
-  { id: "sale-05", label: "Vente Long" },
-  { id: "sale-06", label: "Vente Story" },
-  { id: "sale-07", label: "Vente Authority" },
-  { id: "sale-08", label: "Vente Proof" },
-  { id: "sale-09", label: "Vente Scarcity" },
-  { id: "sale-10", label: "Vente Premium" },
-  { id: "sale-11", label: "Vente Conversion" },
-  { id: "sale-12", label: "Vente Direct" },
-];
-
-/* ============================================================
-   COMPONENT
-============================================================ */
-
-export function FunnelForm(props: FunnelFormProps) {
+export function FunnelForm({
+  onGenerate,
+  onSave,
+  onClose,
+  isGenerating,
+  isSaving,
+  pyramidOffers = [],
+}: FunnelFormProps) {
   const { toast } = useToast();
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>("mode");
+  const [mode, setMode] = useState<Mode>("visual");
 
-  const [pageType, setPageType] = useState<FunnelPageType>("capture");
-  const [mode, setMode] = useState<FunnelMode>("from_pyramid");
-  const [creationMode, setCreationMode] = useState<CreationMode>("template");
+  const [selectedTemplate, setSelectedTemplate] = useState<SystemeTemplate | null>(null);
 
-  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
-  const [manualName, setManualName] = useState("");
-  const [manualPromise, setManualPromise] = useState("");
-  const [manualTarget, setManualTarget] = useState("");
+  const [funnelPageType, setFunnelPageType] = useState<FunnelPageType>("capture");
 
-  const [title, setTitle] = useState("");
-  const [result, setResult] = useState("");
+  // Offer linking
+  const offers: FunnelOfferOption[] = useMemo(() => {
+    return (pyramidOffers || [])
+      .filter((o) => !!o?.id)
+      .map((o) => ({
+        id: String(o.id),
+        name: String(o.name ?? "Offre").trim() || "Offre",
+      }));
+  }, [pyramidOffers]);
 
-  const [activeOutput, setActiveOutput] = useState<OutputTab>("text");
+  const [offerChoice, setOfferChoice] = useState<OfferChoice>(offers.length ? "existing" : "scratch");
+  const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?.id ?? "");
 
-  const [htmlPreview, setHtmlPreview] = useState("");
-  const [htmlKit, setHtmlKit] = useState("");
-  const [htmlPreviewTemplate, setHtmlPreviewTemplate] = useState("");
-  const [htmlPreviewCopy, setHtmlPreviewCopy] = useState("");
-  const [activePreviewVariant, setActivePreviewVariant] = useState<
-    "template" | "copy"
-  >("template");
-  const [templateContentData, setTemplateContentData] = useState<
-    Record<string, any> | null
-  >(null);
-  const [isRendering, setIsRendering] = useState(false);
+  // Manual offer fields
+  const [offerName, setOfferName] = useState("");
+  const [offerPromise, setOfferPromise] = useState("");
+  const [offerTarget, setOfferTarget] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
 
-  // brand tokens edited by chat (template mode)
-  const [brandTokens, setBrandTokens] = useState<Record<string, any>>({});
+  const [urgency, setUrgency] = useState("");
+  const [guarantee, setGuarantee] = useState("");
 
-  // undo/redo for chat iterations (template mode)
-  const [history, setHistory] = useState<Array<{ brandTokens: Record<string, any> }>>(
-    []
-  );
-  const [future, setFuture] = useState<Array<{ brandTokens: Record<string, any> }>>(
-    []
-  );
+  // Visual extras
+  const [authorName, setAuthorName] = useState("");
+  const [authorPhotoUrl, setAuthorPhotoUrl] = useState("");
+  const [offerMockupUrl, setOfferMockupUrl] = useState("");
+  const [testimonials, setTestimonials] = useState("");
 
-  // template preview modal
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [legalMentionsUrl, setLegalMentionsUrl] = useState("");
+  const [legalPrivacyUrl, setLegalPrivacyUrl] = useState("");
+  const [legalCgvUrl, setLegalCgvUrl] = useState("");
 
-  const generationCost = pageType === "capture" ? 4 : 6;
-  const iterationCost = 0.5;
+  // Output states
+  const [title, setTitle] = useState<string>("");
 
-  const offers = useMemo(() => {
-    const list = Array.isArray(props.pyramidOffers) ? props.pyramidOffers : [];
-    return list.filter((o) => !!o?.id);
-  }, [props.pyramidOffers]);
+  const [markdownText, setMarkdownText] = useState<string>("");
+  const [contentData, setContentData] = useState<Record<string, any> | null>(null);
+  const [brandTokens, setBrandTokens] = useState<Record<string, any> | null>(null);
 
-  const selectedOffer = useMemo(() => {
-    return offers.find((o) => o.id === selectedOfferId) || null;
-  }, [offers, selectedOfferId]);
+  const [renderedHtml, setRenderedHtml] = useState<string>("");
 
-  const [templateId, setTemplateId] = useState<TemplateId>("capture-01");
-  const [variantId, setVariantId] = useState<string>("centered");
+  // Iteration
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isIterating, setIsIterating] = useState(false);
+  const [pendingContentData, setPendingContentData] = useState<Record<string, any> | null>(null);
+  const [pendingBrandTokens, setPendingBrandTokens] = useState<Record<string, any> | null>(null);
 
-  const canGenerate =
-    mode === "from_pyramid"
-      ? !!selectedOfferId
-      : manualName.trim().length >= 2 && manualPromise.trim().length >= 5;
+  const hasPendingChanges = !!pendingContentData || !!pendingBrandTokens;
 
-  const templateList =
-    pageType === "capture" ? captureTemplates : saleTemplates;
-
-  // Keep templateId coherent with pageType (template mode only)
   useEffect(() => {
-    if (creationMode !== "template") return;
-
-    const isCapture = pageType === "capture";
-    const ok =
-      (isCapture && String(templateId).startsWith("capture-")) ||
-      (!isCapture && String(templateId).startsWith("sale-"));
-
-    if (!ok) {
-      setTemplateId(isCapture ? "capture-01" : "sale-01");
-      setVariantId("centered");
+    // keep default title up to date before generation
+    if (!title.trim()) {
+      const fallback = guessTitleFromOfferOrTemplate({
+        mode,
+        funnelPageType,
+        selectedTemplate,
+        offerName: offerChoice === "scratch" ? offerName : offers.find((o) => o.id === selectedOfferId)?.name,
+      });
+      setTitle(fallback);
     }
-  }, [creationMode, pageType, templateId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, funnelPageType, selectedTemplate, offerChoice, offerName, selectedOfferId]);
 
-  // Default offer when available (legacy props): only if user chose "offre existante"
   useEffect(() => {
-    if (mode !== "from_pyramid") return;
-    const list = Array.isArray(props.pyramidOffers) ? props.pyramidOffers : [];
-    if (selectedOfferId) return;
-
-    const pick =
-      pageType === "capture"
-        ? props.pyramidLeadMagnet?.id ||
-          list.find((o) => isLeadMagnetLevel(o.level || null))?.id
-        : props.pyramidPaidOffer?.id ||
-          list.find((o) => !isLeadMagnetLevel(o.level || null))?.id;
-
-    if (pick) setSelectedOfferId(pick);
-  }, [
-    mode,
-    pageType,
-    props.pyramidLeadMagnet,
-    props.pyramidPaidOffer,
-    props.pyramidOffers,
-    selectedOfferId,
-  ]);
-
-  /* ============================================================
-     DERIVED contentData
-  ============================================================ */
-
-  const getDerivedContentData = () => {
-    const derived =
-      pageType === "capture"
-        ? deriveCaptureContentData({
-            templateId: templateId as CaptureTemplateId,
-            rawText: result,
-            offerName:
-              mode === "from_pyramid"
-                ? selectedOffer?.name || "Offre"
-                : manualName.trim() || "Offre",
-            promise:
-              mode === "from_pyramid"
-                ? selectedOffer?.promise ||
-                  manualPromise.trim() ||
-                  "Résultat concret"
-                : manualPromise.trim() || "Résultat concret",
-          })
-        : deriveSaleContentData({
-            templateId: templateId as SaleTemplateId,
-            rawText: result,
-            offerName:
-              mode === "from_pyramid"
-                ? selectedOffer?.name || "Offre"
-                : manualName.trim() || "Offre",
-            promise:
-              mode === "from_pyramid"
-                ? selectedOffer?.promise ||
-                  manualPromise.trim() ||
-                  "Résultat concret"
-                : manualPromise.trim() || "Résultat concret",
-          });
-
-    derived.variant = variantId;
-
-    return derived;
-  };
-
-  const buildLoremRawText = () => {
-    if (pageType === "capture") {
-      return [
-        "Le guide qui te fait gagner 5h par semaine (sans ajouter d’outils).",
-        "Méthode simple, actionnable, adaptée aux débutants.",
-        "- Étape 1 : clarifie ton objectif",
-        "- Étape 2 : applique une méthode en 15 minutes",
-        "- Étape 3 : répète sur 7 jours",
-        "- Bonus : un template prêt à copier-coller",
-        "RGPD : Zéro spam. Désinscription en 1 clic.",
-      ].join("\n");
+    // If user switches to sales, keep template consistent
+    if (mode === "visual" && selectedTemplate) {
+      const expected = funnelPageType === "sales" ? "sales" : "capture";
+      if (selectedTemplate.type !== expected) {
+        setSelectedTemplate(null);
+      }
     }
-    return [
-      "La méthode pour transformer tes idées en ventes en 30 jours.",
-      "Une structure claire, des exemples, et un plan d’action simple.",
-      "- Comprends pourquoi ça ne convertit pas",
-      "- Corrige les 3 blocs majeurs",
-      "- Écris des CTA qui déclenchent",
-      "- Ajoute des preuves sans mentir",
-      "Garantie 7 jours : satisfait ou remboursé.",
-    ].join("\n");
-  };
+  }, [funnelPageType, mode, selectedTemplate]);
 
-  const getPreviewContentData = () => {
-    const rawText = buildLoremRawText();
-    if (pageType === "capture") {
-      return deriveCaptureContentData({
-        templateId: templateId as CaptureTemplateId,
-        rawText,
-        offerName: "Ressource gratuite",
-        promise: "Obtenir un résultat en 7 jours",
-      });
-    }
-    return deriveSaleContentData({
-      templateId: templateId as SaleTemplateId,
-      rawText,
-      offerName: "Offre premium",
-      promise: "Passer au niveau supérieur",
-    });
-  };
+  const creditCost = useMemo(() => {
+    // MVP: funnel generation cost (align with previous defaults)
+    return mode === "visual" ? 3 : 2;
+  }, [mode]);
 
-  /* ============================================================
-     TEMPLATE RENDER
-  ============================================================ */
+  const kitFileName = useMemo(() => {
+    const base = (title || "tipote-funnel").trim().replace(/[^\w\-]+/g, "_").slice(0, 80) || "tipote-funnel";
+    return `${base}.html`;
+  }, [title]);
 
-  const renderHtml = async (
-    which: "template" | "copy" = activePreviewVariant
-  ) => {
-    if (creationMode !== "template") return;
+  const applyUserOverridesToContentData = (cd: Record<string, any>): Record<string, any> => {
+    const next = { ...(cd || {}) };
 
-    if (which === "copy" && !result.trim() && !templateContentData) {
-      toast({
-        title: "Génère d'abord le copywriting",
-        description: "Il faut une génération pour produire le rendu copywrité.",
-        variant: "destructive",
-      });
-      return;
+    // Visual assets (best-effort; templates vary)
+    if (authorPhotoUrl.trim()) next.about_image = authorPhotoUrl.trim();
+    if (offerMockupUrl.trim()) next.benefits_image = offerMockupUrl.trim();
+    if (authorName.trim()) next.target_label = authorName.trim();
+
+    // Testimonials: if template has an array slot, we fill it
+    const t = testimonials
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (t.length) {
+      // Common slot name in capture kits:
+      if (Array.isArray(next.benefits_list)) {
+        next.benefits_list = t.slice(0, 6);
+      }
+      // Keep also a generic slot, in case template uses it:
+      next.testimonials = t.slice(0, 6);
     }
 
-    const kind = pageType === "capture" ? "capture" : "vente";
-    const contentData =
-      which === "template"
-        ? getPreviewContentData()
-        : templateContentData || getDerivedContentData();
+    // Legal links (we map to footer link slots used by capture-01 kit)
+    const links: Array<{ label: string; url: string }> = [];
+    if (legalMentionsUrl.trim()) links.push({ label: "Mentions légales", url: legalMentionsUrl.trim() });
+    if (legalPrivacyUrl.trim()) links.push({ label: "Politique de confidentialité", url: legalPrivacyUrl.trim() });
+    if (funnelPageType === "sales" && legalCgvUrl.trim()) links.push({ label: "CGV", url: legalCgvUrl.trim() });
 
-    setIsRendering(true);
+    if (links[0]) {
+      next.footer_link_1_label = links[0].label;
+      next.footer_link_1_url = links[0].url;
+    }
+    if (links[1]) {
+      next.footer_link_2_label = links[1].label;
+      next.footer_link_2_url = links[1].url;
+    }
+
+    return next;
+  };
+
+  const renderHtmlFromContentData = async (cd: Record<string, any>, bt?: Record<string, any> | null) => {
     try {
-      const resPrev = await fetch("/api/templates/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          templateId,
-          mode: "preview",
-          variantId,
-          contentData,
-          brandTokens,
-        }),
-      });
+      if (!selectedTemplate?.id) return;
 
-      const htmlPrev = await resPrev.text();
-
-      if (which === "template") setHtmlPreviewTemplate(htmlPrev);
-      else setHtmlPreviewCopy(htmlPrev);
-
-      if (which === activePreviewVariant) setHtmlPreview(htmlPrev);
-    } catch (e: any) {
-      toast({
-        title: "Erreur rendu",
-        description: e?.message || "Impossible de rendre le HTML",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRendering(false);
-    }
-  };
-
-  const renderKit = async () => {
-    if (creationMode !== "template") return;
-
-    if (!result.trim()) {
-      toast({
-        title: "Génère d'abord le copywriting",
-        description: "Il faut un texte pour produire le kit Systeme.io.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const contentData = templateContentData || getDerivedContentData();
-
-    setIsRendering(true);
-    try {
-      const kind = pageType === "capture" ? "capture" : "vente";
-      const resKit = await fetch("/api/templates/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          templateId,
-          mode: "kit",
-          variantId,
-          contentData,
-          brandTokens,
-        }),
-      });
-
-      const kit = await resKit.text();
-      setHtmlKit(kit);
-    } catch (e: any) {
-      toast({
-        title: "Erreur kit",
-        description: e?.message || "Impossible de rendre le kit",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRendering(false);
-    }
-  };
-
-  const openTemplatePreview = async (
-    which: "template" | "copy" = activePreviewVariant
-  ) => {
-    if (creationMode !== "template") return;
-
-    setPreviewOpen(true);
-    setIsPreviewLoading(true);
-    setPreviewHtml("");
-
-    const cached = which === "template" ? htmlPreviewTemplate : htmlPreviewCopy;
-    if (cached) {
-      setPreviewHtml(cached);
-      setIsPreviewLoading(false);
-      return;
-    }
-
-    try {
-      const kind = pageType === "capture" ? "capture" : "vente";
-      const contentData =
-        which === "template"
-          ? getPreviewContentData()
-          : templateContentData || getDerivedContentData();
-
+      const kind = funnelPageType === "sales" ? "vente" : "capture";
       const res = await fetch("/api/templates/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind,
-          templateId,
-          mode: "preview",
-          variantId,
-          contentData,
-          brandTokens,
+          templateId: selectedTemplate.id,
+          mode: "preview_kit",
+          contentData: cd,
+          brandTokens: bt ?? brandTokens ?? null,
         }),
       });
-      const html = await res.text();
 
-      if (which === "template") setHtmlPreviewTemplate(html);
-      else setHtmlPreviewCopy(html);
+      const raw = await res.text();
+      const data = safeJsonParse<any>(raw);
 
-      setPreviewHtml(html);
+      if (!res.ok) {
+        const msg = (data && (data.error || data.message)) || raw || "Impossible de rendre le template";
+        throw new Error(msg);
+      }
+
+      const html = typeof data?.html === "string" ? data.html : typeof data === "string" ? data : "";
+      setRenderedHtml(html || "");
     } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e?.message || "Impossible d'ouvrir la prévisualisation",
-        variant: "destructive",
-      });
-      setPreviewHtml("");
-    } finally {
-      setIsPreviewLoading(false);
+      toast({ title: "Erreur preview", description: e?.message || "Impossible de prévisualiser", variant: "destructive" });
+      setRenderedHtml("");
     }
   };
 
-  const handleCopyHtml = async (which: "preview" | "kit") => {
-    const txt = which === "kit" ? htmlKit : htmlPreview;
-    if (!txt) return;
+  const handleSelectMode = (m: Mode) => {
+    setMode(m);
+    setSelectedTemplate(null);
+    setContentData(null);
+    setBrandTokens(null);
+    setRenderedHtml("");
+    setMarkdownText("");
+    setMessages([]);
+    setPendingBrandTokens(null);
+    setPendingContentData(null);
+
+    if (m === "visual") {
+      setStep("template");
+    } else {
+      setStep("config");
+    }
+  };
+
+  const handlePreviewTemplate = async (t: SystemeTemplate) => {
+    // Preview with a minimal dummy contentData so user "voit avant de choisir"
+    // We only show the base look: render with lightweight placeholder data.
     try {
-      await navigator.clipboard.writeText(txt);
-      toast({
-        title: "Copié",
-        description:
-          which === "kit" ? "Kit copié." : "HTML de prévisualisation copié.",
+      const kind = t.type === "sales" ? "vente" : "capture";
+      const dummy: Record<string, any> = {
+        hero_title: "Ressource gratuite",
+        hero_subtitle: "VOTRE BASELINE ICI",
+        hero_description: "Aperçu du template (contenu exemple).",
+        benefits_title: "Bénéfices",
+        benefits_list: ["Bénéfice 1", "Bénéfice 2", "Bénéfice 3"],
+        footer_text: "Tipote © 2026",
+        footer_link_1_label: "Mentions légales",
+        footer_link_1_url: "#",
+        footer_link_2_label: "Confidentialité",
+        footer_link_2_url: "#",
+      };
+
+      const res = await fetch("/api/templates/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, templateId: t.id, mode: "preview_kit", contentData: dummy, brandTokens: null }),
       });
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Impossible de copier.",
-        variant: "destructive",
-      });
+
+      const raw = await res.text();
+      const data = safeJsonParse<any>(raw);
+
+      if (!res.ok) throw new Error((data && (data.error || data.message)) || raw || "Preview impossible");
+
+      const html = typeof data?.html === "string" ? data.html : "";
+      const blob = new Blob([html || "<div style='padding:24px'>Aucun aperçu</div>"], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      toast({ title: "Preview indisponible", description: e?.message || "Impossible d’ouvrir l’aperçu", variant: "destructive" });
     }
   };
 
-  const handleDownloadHtml = (which: "preview" | "kit") => {
-    const txt = which === "kit" ? htmlKit : htmlPreview;
-    if (!txt) return;
-    const blob = new Blob([txt], { type: "text/html;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${(title || "funnel")
-      .replace(/\s+/g, "-")
-      .toLowerCase()}-${which}.html`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  const handleSelectTemplate = (t: SystemeTemplate) => {
+    setSelectedTemplate(t);
+    setFunnelPageType(t.type === "sales" ? "sales" : "capture");
+    setStep("config");
   };
-
-  /* ============================================================
-     ACTIONS
-  ============================================================ */
 
   const handleGenerate = async () => {
-    toast({
-      title: "Info crédits",
-      description:
-        pageType === "capture"
-          ? "Cette génération coûte 4 crédits."
-          : "Cette génération coûte 6 crédits.",
-    });
+    try {
+      // Build payload for API /api/content/generate (via parent onGenerate)
+      const isExisting = offerChoice === "existing" && !!selectedOfferId;
+      const funnelMode = isExisting ? "from_offer" : "from_scratch";
 
-    const offerPayload =
-      mode === "from_pyramid"
-        ? selectedOffer
-        : {
-            name: manualName.trim() || null,
-            promise: manualPromise.trim() || null,
-            target: manualTarget.trim() || null,
-          };
+      const payload: any = {
+        type: "funnel",
+        funnelPage: funnelPageType,
+        funnelMode,
+        funnelOfferId: isExisting ? selectedOfferId : undefined,
+        funnelManual: !isExisting
+          ? {
+              name: offerName || undefined,
+              promise: offerPromise || undefined,
+              target: offerTarget || undefined,
+              price: offerPrice || undefined,
+              urgency: urgency || undefined,
+              guarantee: guarantee || undefined,
+            }
+          : undefined,
+        urgency: urgency || undefined,
+        guarantee: guarantee || undefined,
+      };
 
-    const gen = await props.onGenerate({
-      type: "funnel",
-      page: pageType === "capture" ? "capture" : "sales",
-      mode,
-      theme: pageType === "capture" ? "lead_magnet" : "sell",
-      offer: mode === "from_pyramid" ? offerPayload : null,
-      manual: mode === "from_scratch" ? offerPayload : null,
-      language: "fr",
+      if (mode === "visual") {
+        if (!selectedTemplate?.id) {
+          toast({ title: "Choisis un template", variant: "destructive" });
+          return;
+        }
+        payload.templateId = selectedTemplate.id;
+        // route.ts décidera outputFormat=contentData_json via template schema auto
+      }
 
-      // hint for backend: user wants text only vs template
-      output: creationMode === "text_only" ? "text" : "template",
+      const out = await onGenerate(payload);
 
-      // If template mode, pass template metadata so backend can return contentData_json
-      ...(creationMode === "template"
-        ? {
-            templateId,
-            templateKind: pageType === "capture" ? "capture" : "vente",
-          }
-        : {}),
-    });
+      if (mode === "text_only") {
+        setMarkdownText(out || "");
+        const offerLabel = isExisting
+          ? offers.find((o) => o.id === selectedOfferId)?.name
+          : offerName;
+        setTitle((t) => (t.trim() ? t : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate: null, offerName: offerLabel })));
+        setStep("preview");
+        return;
+      }
 
-    if (!gen) return;
+      // Visual: parse contentData JSON
+      const extracted = extractTemplateContentData(out || "");
+      if (!extracted) {
+        toast({
+          title: "Réponse IA invalide",
+          description: "Impossible de lire le contentData du template.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    setResult(gen);
-    setActiveOutput("text");
+      const merged = applyUserOverridesToContentData(extracted);
+      setContentData(merged);
+      setBrandTokens(null);
+      setPendingContentData(null);
+      setPendingBrandTokens(null);
 
-    // ✅ If generation returned a template payload JSON, extract contentData for "copywrité" rendering.
-    if (creationMode === "template") {
-      const extracted = extractTemplateContentData(gen);
-      setTemplateContentData(extracted);
-      if (extracted) setActivePreviewVariant("copy");
-      else setActivePreviewVariant("template");
-    }
+      const offerLabel = isExisting ? offers.find((o) => o.id === selectedOfferId)?.name : offerName;
+      setTitle((t) => (t.trim() ? t : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate, offerName: offerLabel })));
 
-    if (!title.trim()) {
-      const t =
-        mode === "from_pyramid"
-          ? `Funnel: ${
-              selectedOffer?.name ||
-              (pageType === "capture" ? "Capture" : "Vente")
-            }`
-          : `Funnel: ${
-              manualName.trim() ||
-              (pageType === "capture" ? "Capture" : "Vente")
-            }`;
-      setTitle(t);
-    }
-
-    // Reset template-related state (keep templateContentData from this generation)
-    setHtmlPreview("");
-    setHtmlKit("");
-    setHtmlPreviewTemplate("");
-    setHtmlPreviewCopy("");
-    setBrandTokens({});
-    setHistory([]);
-    setFuture([]);
-
-    setStep(3);
-
-    if (creationMode === "template") {
-      setTimeout(() => {
-        void renderHtml("template");
-        void renderHtml("copy");
-      }, 0);
+      await renderHtmlFromContentData(merged, null);
+      setStep("preview");
+    } catch (e: any) {
+      toast({ title: "Erreur génération", description: e?.message || "Impossible de générer", variant: "destructive" });
     }
   };
 
   const handleSave = async () => {
-    await props.onSave({
-      title: title.trim() || "Funnel",
-      content: result || "",
-      status: "draft",
-      tags: ["funnel"],
-    });
-
-    toast({
-      title: "Sauvegardé",
-      description: "Brouillon sauvegardé",
-    });
-  };
-
-  const handlePublish = async () => {
-    await props.onSave({
-      title: title.trim() || "Funnel",
-      content: result || "",
-      status: "published",
-      tags: ["funnel"],
-    });
-
-    toast({
-      title: "Publié",
-      description: "Contenu publié",
-    });
-  };
-
-  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(result || "");
-      toast({
-        title: "Copié",
-        description: "Contenu copié dans le presse-papier.",
-      });
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Impossible de copier.",
-        variant: "destructive",
-      });
+      // Save through parent handler (keeps existing content_item patterns)
+      const payload: any = {
+        title: title || "Funnel",
+        type: "funnel",
+        funnelPage: funnelPageType,
+        funnelMode: offerChoice === "existing" ? "from_offer" : "from_scratch",
+        templateId: mode === "visual" ? selectedTemplate?.id ?? null : null,
+        outputMode: mode,
+        markdownText: mode === "text_only" ? (markdownText || "") : null,
+        contentData: mode === "visual" ? (contentData || null) : null,
+        brandTokens: mode === "visual" ? (brandTokens || null) : null,
+        renderedHtml: mode === "visual" ? (renderedHtml || null) : null,
+        meta: {
+          offerChoice,
+          selectedOfferId: selectedOfferId || null,
+          manual: offerChoice === "scratch" ? { offerName, offerPromise, offerTarget, offerPrice } : null,
+          urgency: urgency || null,
+          guarantee: guarantee || null,
+          authorName: authorName || null,
+          authorPhotoUrl: authorPhotoUrl || null,
+          offerMockupUrl: offerMockupUrl || null,
+          testimonials: testimonials || null,
+          legalMentionsUrl: legalMentionsUrl || null,
+          legalPrivacyUrl: legalPrivacyUrl || null,
+          legalCgvUrl: legalCgvUrl || null,
+        },
+      };
+
+      await onSave(payload);
+      toast({ title: "Sauvegardé" });
+    } catch (e: any) {
+      toast({ title: "Erreur sauvegarde", description: e?.message || "Impossible de sauvegarder", variant: "destructive" });
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([result || ""], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${(title || "funnel").replace(/\s+/g, "-").toLowerCase()}.txt`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const handleSendIteration = async (message: string): Promise<string> => {
+    if (mode !== "visual") {
+      // Text-only iteration: not wired yet; keep UX but no changes.
+      setMessages((prev) => [...prev, { role: "user", content: message }, { role: "assistant", content: "Pour l’instant, les itérations s’appliquent aux templates (mode page prête à l’emploi)." }]);
+      return "OK";
+    }
 
-  const applyFromChat = (next: {
-    contentData: Record<string, any>;
-    brandTokens: Record<string, any>;
-    patches: Array<{ op: "set" | "unset"; path: string; value?: any }>;
-  }) => {
-    setHistory((h) => [
-      ...h,
-      { brandTokens: structuredClone(brandTokens || {}) },
-    ]);
-    setFuture([]);
+    if (!contentData || !selectedTemplate?.id) return "No content";
 
-    setBrandTokens(next.brandTokens);
+    setIsIterating(true);
+    setMessages((prev) => [...prev, { role: "user", content: message }]);
 
-    if (result.trim()) {
-      void renderHtml(activePreviewVariant);
+    try {
+      const kind = funnelPageType === "sales" ? "vente" : "capture";
+
+      const res = await fetch("/api/templates/iterate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          templateId: selectedTemplate.id,
+          instruction: message,
+          contentData,
+          brandTokens,
+        }),
+      });
+
+      const raw = await res.text();
+      const data = safeJsonParse<any>(raw);
+
+      if (!res.ok) {
+        const msg = (data && (data.error || data.message)) || raw || "Impossible d’itérer";
+        throw new Error(msg);
+      }
+
+      const nextContentData = (data?.nextContentData && typeof data.nextContentData === "object") ? data.nextContentData : null;
+      const nextBrandTokens = (data?.nextBrandTokens && typeof data.nextBrandTokens === "object") ? data.nextBrandTokens : null;
+
+      if (!nextContentData) throw new Error("Réponse itération invalide");
+
+      // Keep as pending until user accepts
+      setPendingContentData(nextContentData);
+      setPendingBrandTokens(nextBrandTokens);
+
+      // Render preview with pending changes (so user sees before accept)
+      await renderHtmlFromContentData(nextContentData, nextBrandTokens);
+
+      const explanation = typeof data?.explanation === "string" ? data.explanation : "Modification proposée. Vérifie l’aperçu, puis accepte ou refuse.";
+      setMessages((prev) => [...prev, { role: "assistant", content: explanation }]);
+
+      return explanation;
+    } catch (e: any) {
+      const msg = e?.message || "Erreur itération";
+      setMessages((prev) => [...prev, { role: "assistant", content: `❌ ${msg}` }]);
+      toast({ title: "Erreur itération", description: msg, variant: "destructive" });
+      return msg;
+    } finally {
+      setIsIterating(false);
     }
   };
 
-  const undo = () => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      const last = h[h.length - 1];
-      setFuture((f) => [
-        { brandTokens: structuredClone(brandTokens || {}) },
-        ...f,
-      ]);
-      setBrandTokens(last.brandTokens || {});
-      void renderHtml(activePreviewVariant);
-      toast({
-        title: "Annulé",
-        description: `Crédits consommés : ${iterationCost}`,
-      });
-      return h.slice(0, -1);
-    });
+  const handleAcceptIteration = () => {
+    if (!pendingContentData && !pendingBrandTokens) return;
+
+    const nextCd = pendingContentData ?? contentData ?? null;
+    const nextBt = pendingBrandTokens ?? brandTokens ?? null;
+
+    if (nextCd) setContentData(nextCd);
+    setBrandTokens(nextBt);
+
+    setPendingContentData(null);
+    setPendingBrandTokens(null);
+
+    toast({ title: "Modifications appliquées" });
   };
 
-  const redo = () => {
-    setFuture((f) => {
-      if (!f.length) return f;
-      const next = f[0];
-      setHistory((h) => [
-        ...h,
-        { brandTokens: structuredClone(brandTokens || {}) },
-      ]);
-      setBrandTokens(next.brandTokens || {});
-      void renderHtml(activePreviewVariant);
-      toast({
-        title: "Refait",
-        description: `Crédits consommés : ${iterationCost}`,
-      });
-      return f.slice(1);
-    });
-  };
+  const handleRejectIteration = async () => {
+    setPendingContentData(null);
+    setPendingBrandTokens(null);
 
-  /* ============================================================
-     UI
-  ============================================================ */
+    // Re-render current committed state
+    if (mode === "visual" && contentData) {
+      await renderHtmlFromContentData(contentData, brandTokens);
+    }
+
+    toast({ title: "Modifications refusées" });
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Route className="w-5 h-5" />
-            Funnel (Capture / Vente)
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Génère une page de capture ou de vente (texte ou template).
-          </p>
+    <div className="w-full">
+      <Card className="p-4 md:p-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="text-base font-semibold">Funnel (Capture / Vente)</div>
+            <div className="text-sm text-muted-foreground">
+              Génère une page de capture ou de vente (texte ou template).
+            </div>
+          </div>
+
+          <Button variant="ghost" onClick={onClose} className="gap-2">
+            <X className="h-4 w-4" />
+            Fermer
+          </Button>
         </div>
 
-        <Button variant="ghost" size="sm" onClick={props.onClose}>
-          <X className="w-4 h-4 mr-1" />
-          Fermer
-        </Button>
+        {step === "mode" ? (
+          <FunnelModeStep onSelectMode={handleSelectMode} />
+        ) : null}
+
+        {step === "template" ? (
+          <FunnelTemplateStep
+            onBack={() => setStep("mode")}
+            onSelectTemplate={handleSelectTemplate}
+            onPreviewTemplate={handlePreviewTemplate}
+            preselected={selectedTemplate}
+          />
+        ) : null}
+
+        {step === "config" ? (
+          <FunnelConfigStep
+            mode={mode}
+            selectedTemplate={selectedTemplate}
+            funnelPageType={funnelPageType}
+            setFunnelPageType={setFunnelPageType}
+            offers={offers}
+            offerChoice={offerChoice}
+            setOfferChoice={setOfferChoice}
+            selectedOfferId={selectedOfferId}
+            setSelectedOfferId={setSelectedOfferId}
+            offerName={offerName}
+            setOfferName={setOfferName}
+            offerPromise={offerPromise}
+            setOfferPromise={setOfferPromise}
+            offerTarget={offerTarget}
+            setOfferTarget={setOfferTarget}
+            offerPrice={offerPrice}
+            setOfferPrice={setOfferPrice}
+            urgency={urgency}
+            setUrgency={setUrgency}
+            guarantee={guarantee}
+            setGuarantee={setGuarantee}
+            authorName={authorName}
+            setAuthorName={setAuthorName}
+            authorPhotoUrl={authorPhotoUrl}
+            setAuthorPhotoUrl={setAuthorPhotoUrl}
+            offerMockupUrl={offerMockupUrl}
+            setOfferMockupUrl={setOfferMockupUrl}
+            testimonials={testimonials}
+            setTestimonials={setTestimonials}
+            legalMentionsUrl={legalMentionsUrl}
+            setLegalMentionsUrl={setLegalMentionsUrl}
+            legalPrivacyUrl={legalPrivacyUrl}
+            setLegalPrivacyUrl={setLegalPrivacyUrl}
+            legalCgvUrl={legalCgvUrl}
+            setLegalCgvUrl={setLegalCgvUrl}
+            isGenerating={isGenerating}
+            onGenerate={handleGenerate}
+            onBack={() => {
+              if (mode === "visual") setStep("template");
+              else setStep("mode");
+            }}
+            creditCost={creditCost}
+          />
+        ) : null}
+
+        {step === "preview" ? (
+          <FunnelPreviewStep
+            mode={mode}
+            title={title}
+            setTitle={setTitle}
+            markdownText={markdownText}
+            renderedHtml={renderedHtml}
+            onSave={handleSave}
+            kitFileName={kitFileName}
+            messages={messages}
+            isIterating={isIterating}
+            hasPendingChanges={hasPendingChanges}
+            onSendIteration={handleSendIteration}
+            onAcceptIteration={handleAcceptIteration}
+            onRejectIteration={handleRejectIteration}
+            iterationCost={0.5}
+            disabledChat={mode !== "visual" || !contentData}
+          />
+        ) : null}
+
+        {/* Small helper modal / guidance: keep it simple for now */}
+        <Dialog open={false} onOpenChange={() => null}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Aide</DialogTitle>
+            </DialogHeader>
+            <div className="text-sm text-muted-foreground">—</div>
+          </DialogContent>
+        </Dialog>
+      </Card>
+
+      <div className="mt-3 flex items-center justify-between">
+        <Badge variant="secondary">
+          {step === "mode" ? "Écran 1" : step === "template" ? "Écran 2" : step === "config" ? "Écran 3" : "Résultat"}
+        </Badge>
+        <div className="text-xs text-muted-foreground">
+          {mode === "visual"
+            ? "Mode: page prête à l’emploi"
+            : "Mode: copywriting uniquement"}
+        </div>
       </div>
-
-      {/* Step 1: Setup */}
-      {step === 1 && (
-        <Card className="p-4 space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <div className="space-y-2">
-              <Label>Type de page</Label>
-              <Select
-                value={pageType}
-                onValueChange={(v) => setPageType(v as FunnelPageType)}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Choisir..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="capture">Page de capture</SelectItem>
-                  <SelectItem value="sales">Page de vente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Mode</Label>
-              <Select value={mode} onValueChange={(v) => setMode(v as FunnelMode)}>
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Choisir..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="from_pyramid">Offre existante</SelectItem>
-                  <SelectItem value="from_scratch">Créer une offre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Sortie</Label>
-              <Select
-                value={creationMode}
-                onValueChange={(v) => setCreationMode(v as CreationMode)}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Choisir..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="template">Template Systeme.io</SelectItem>
-                  <SelectItem value="text_only">Texte uniquement</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1" />
-            <div className="flex items-end">
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Coins className="w-3.5 h-3.5" />
-                {generationCost} crédits
-              </Badge>
-            </div>
-          </div>
-
-          {mode === "from_pyramid" ? (
-            <div className="space-y-2">
-              <Label>Choisir une offre</Label>
-              <Select
-                value={selectedOfferId}
-                onValueChange={(v) => setSelectedOfferId(v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {offers.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      Aucune offre disponible
-                    </SelectItem>
-                  ) : (
-                    offers.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.name || "Offre"} {o.level ? `— ${o.level}` : ""}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-
-              {selectedOffer ? (
-                <div className="text-xs text-muted-foreground">
-                  {selectedOffer.promise ? (
-                    <span>Promesse : {selectedOffer.promise}</span>
-                  ) : (
-                    <span>
-                      Astuce : ajoute une promesse dans l’offre pour de meilleurs
-                      résultats.
-                    </span>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label>Nom de l’offre</Label>
-                <Input
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  placeholder="Ex: Mini-guide X"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Promesse</Label>
-                <Input
-                  value={manualPromise}
-                  onChange={(e) => setManualPromise(e.target.value)}
-                  placeholder="Ex: Obtenir X en Y jours"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cible</Label>
-                <Input
-                  value={manualTarget}
-                  onChange={(e) => setManualTarget(e.target.value)}
-                  placeholder="Ex: Coachs, freelances, entrepreneurs..."
-                />
-              </div>
-            </div>
-          )}
-
-          {creationMode === "template" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label>Template</Label>
-                <Select
-                  value={templateId}
-                  onValueChange={(v) => setTemplateId(v as TemplateId)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templateList.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.label} ({t.id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Variant</Label>
-                <Select value={variantId} onValueChange={(v) => setVariantId(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="centered">Centered</SelectItem>
-                    <SelectItem value="split">Split</SelectItem>
-                    <SelectItem value="minimal">Minimal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end justify-end">
-                <Button onClick={() => setStep(2)} disabled={!canGenerate}>
-                  Continuer
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {creationMode === "text_only" && (
-            <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!canGenerate}>
-                Continuer
-              </Button>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Step 2: Generate */}
-      {step === 2 && (
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold flex items-center gap-2">
-                <Wand2 className="w-4 h-4" />
-                Génération
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Génère le texte puis (optionnel) le rendu template.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-                Retour
-              </Button>
-              <Button
-                onClick={handleGenerate}
-                disabled={!canGenerate || props.isGenerating}
-              >
-                {props.isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Générer
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="text-xs text-muted-foreground flex items-center gap-2">
-            <Coins className="w-3.5 h-3.5" />
-            Coût estimé : {generationCost} crédits
-          </div>
-        </Card>
-      )}
-
-      {/* Step 3: Result + template */}
-      {step === 3 && (
-        <Card className="p-4 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-semibold flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Résultat
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Copie, télécharge, sauvegarde ou publie.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={handleCopy}>
-                <Copy className="w-4 h-4 mr-1" />
-                Copier
-              </Button>
-              <Button variant="secondary" size="sm" onClick={handleDownload}>
-                <Download className="w-4 h-4 mr-1" />
-                Télécharger
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={!title || props.isSaving}
-              >
-                <Save className="w-4 h-4 mr-1" />
-                Sauvegarder
-              </Button>
-              <Button
-                size="sm"
-                onClick={handlePublish}
-                disabled={!title || props.isSaving}
-              >
-                <Send className="w-4 h-4 mr-1" />
-                Publier
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card className="overflow-hidden">
-              <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-                <span className="text-sm font-medium">Texte brut (modifiable)</span>
-              </div>
-              <div className="p-4">
-                <Textarea
-                  value={result}
-                  onChange={(e) => setResult(e.target.value)}
-                  rows={14}
-                  className="resize-none"
-                />
-              </div>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-                <span className="text-sm font-medium">Aperçu “beau”</span>
-              </div>
-              <div className="p-4 max-h-[520px] overflow-auto">
-                <AIContent content={result} />
-              </div>
-            </Card>
-          </div>
-
-          {creationMode === "template" && (
-            <div className="grid md:grid-cols-2 gap-4">
-              <Card className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold flex items-center gap-2">
-                      <LayoutTemplate className="w-4 h-4" />
-                      Personnaliser avec l’IA
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Itère le template sans toucher au HTML (0,5 crédit / itération).
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5" />
-                    {iterationCost} / itération
-                  </Badge>
-                </div>
-
-                <TemplateChatPanel
-                  kind={pageType === "capture" ? "capture" : "vente"}
-                  templateId={templateId}
-                  variantId={variantId}
-                  contentData={templateContentData || getDerivedContentData()}
-                  brandTokens={brandTokens}
-                  onApplyNextState={({ contentData, brandTokens: bt, patches }) =>
-                    applyFromChat({ contentData, brandTokens: bt, patches })
-                  }
-                  onUndo={undo}
-                  canUndo={history.length > 0}
-                  onRedo={redo}
-                  canRedo={future.length > 0}
-                />
-              </Card>
-
-              <Card className="overflow-hidden">
-                <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    Aperçu template</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={activePreviewVariant === "template" ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => {
-                          setActivePreviewVariant("template");
-                          const cached = htmlPreviewTemplate || htmlPreview;
-                          if (cached) setHtmlPreview(cached);
-                          else void renderHtml("template");
-                        }}
-                      >
-                        Template
-                      </Button>
-
-                      <Button
-                        variant={activePreviewVariant === "copy" ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => {
-                          setActivePreviewVariant("copy");
-                          const cached = htmlPreviewCopy;
-                          if (cached) setHtmlPreview(cached);
-                          else void renderHtml("copy");
-                        }}
-                        disabled={!result.trim() && !templateContentData}
-                        title={!result.trim() && !templateContentData ? "Génère le copywriting pour activer ce rendu" : "Rendu copywrité"}
-                      >
-                        Copywrité
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void openTemplatePreview(activePreviewVariant)}
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        Preview
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void renderHtml(activePreviewVariant)}
-                        disabled={isRendering}
-                      >
-                        <RotateCcw
-                          className={`w-3.5 h-3.5 mr-1 ${
-                            isRendering ? "animate-spin" : ""
-                          }`}
-                        />
-                        HTML
-                      </Button>
-                    </div>
-                  </div>
-
-                <div className="p-0 h-[420px] bg-muted/10">
-                  {htmlPreview ? (
-                    <iframe title="preview" className="w-full h-full" srcDoc={htmlPreview} />
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                      {isRendering ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Chargement…
-                        </span>
-                      ) : (
-                        <span>Aucun aperçu. Clique “HTML”.</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3 border-t flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={renderKit}
-                    disabled={isRendering}
-                  >
-                    <LayoutTemplate className="w-4 h-4 mr-1" />
-                    Kit Systeme
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyHtml("preview")}
-                    disabled={!htmlPreview}
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copier HTML
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadHtml("preview")}
-                    disabled={!htmlPreview}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Télécharger HTML
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyHtml("kit")}
-                    disabled={!htmlKit}
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copier Kit
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadHtml("kit")}
-                    disabled={!htmlKit}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Télécharger Kit
-                  </Button>
-                </div>
-
-                {htmlKit ? (
-                  <div className="p-3 border-t bg-muted/20">
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Kit prêt à coller dans Systeme.io (scopé).
-                    </div>
-                    <pre className="text-[11px] leading-relaxed whitespace-pre-wrap break-words max-h-[220px] overflow-auto rounded-md border bg-background p-3">
-                      {htmlKit}
-                    </pre>
-                  </div>
-                ) : null}
-              </Card>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-              Nouveau funnel
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Preview modal (template mode only) */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogTrigger asChild>
-          <span className="hidden" />
-        </DialogTrigger>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>Preview template — {templateId}</DialogTitle>
-          </DialogHeader>
-          <div className="rounded-lg border overflow-hidden">
-            {isPreviewLoading ? (
-              <div className="p-6 text-sm text-muted-foreground flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Chargement…
-              </div>
-            ) : (
-              <iframe
-                title="template-preview"
-                className="w-full h-[70vh]"
-                srcDoc={previewHtml}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
