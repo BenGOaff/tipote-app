@@ -199,7 +199,7 @@ export const salesTemplates: SystemeTemplate[] = [
     id: "sale-13",
     name: "Vente 13",
     type: "sales",
-    category: ["Business"],
+    category: ["Divers"],
     description: "Variante 13 pour page de vente.",
     imageUrl: "/window.svg",
     shareLink: null,
