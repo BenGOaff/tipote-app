@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Save, Send, Download, Copy, ExternalLink, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Save, Copy } from "lucide-react";
-import { FunnelChatBar } from "@/components/create/forms/FunnelChatBar";
+import FunnelChatBar from "@/components/create/forms/FunnelChatBar";
+import { AIContent } from "@/components/ui/ai-content";
+import type { Dispatch, SetStateAction } from "react";
 
 type Mode = "visual" | "text_only";
 
@@ -16,7 +16,7 @@ type ChatMessage = {
   content: string;
 };
 
-export interface FunnelPreviewStepProps {
+interface FunnelPreviewStepProps {
   mode: Mode;
 
   title: string;
@@ -25,17 +25,19 @@ export interface FunnelPreviewStepProps {
   markdownText: string;
   renderedHtml: string;
 
-  onSave: () => Promise<void> | void;
-
-  kitFileName: string;
-
+  // Chat
   messages: ChatMessage[];
-  isIterating: boolean;
-  hasPendingChanges: boolean;
-
   onSendIteration: (message: string) => Promise<string>;
   onAcceptIteration: () => void;
   onRejectIteration: () => void;
+  isIterating: boolean;
+  hasPendingChanges: boolean;
+
+  // Save
+  onSave: (status: "draft" | "published") => Promise<void> | void;
+
+  // Download name
+  kitFileName: string;
 
   iterationCost?: number;
   disabledChat?: boolean;
@@ -47,100 +49,145 @@ export function FunnelPreviewStep({
   setTitle,
   markdownText,
   renderedHtml,
-  onSave,
-  kitFileName,
   messages,
-  isIterating,
-  hasPendingChanges,
   onSendIteration,
   onAcceptIteration,
   onRejectIteration,
+  isIterating,
+  hasPendingChanges,
+  onSave,
+  kitFileName,
   iterationCost = 0.5,
   disabledChat,
 }: FunnelPreviewStepProps) {
   const { toast } = useToast();
 
-  const canDownload = useMemo(() => {
-    return mode === "visual" && !!renderedHtml?.trim();
-  }, [mode, renderedHtml]);
-
-  const handleDownload = () => {
-    if (!canDownload) return;
-
-    try {
-      const blob = new Blob([renderedHtml], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = kitFileName || "tipote-funnel.html";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-
-      toast({ title: "Téléchargement prêt", description: "Le fichier HTML a été généré." });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de télécharger le fichier.", variant: "destructive" });
+  const handleCopyText = () => {
+    const toCopy = (mode === "text_only" ? markdownText : markdownText) || "";
+    if (!toCopy.trim()) {
+      navigator.clipboard.writeText(renderedHtml || "");
+      toast({ title: "HTML copié !" });
+      return;
     }
+    navigator.clipboard.writeText(toCopy);
+    toast({ title: "Texte copié !" });
   };
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText((mode === "text_only" ? markdownText : renderedHtml) || "");
-      toast({ title: "Copié", description: "Le contenu a été copié dans le presse-papiers." });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de copier.", variant: "destructive" });
+  const handleDownloadHtml = () => {
+    let htmlContent: string;
+
+    if (mode === "visual" && renderedHtml) {
+      htmlContent = renderedHtml;
+    } else {
+      htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title || "funnel"}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:2rem;line-height:1.6;color:#1a1a1a}
+h1{font-size:2rem;margin-bottom:1rem}h2{font-size:1.5rem;margin-top:2rem}
+ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
+.cta{display:inline-block;background:#2563eb;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:1rem}
+</style></head>
+<body>${(markdownText || "").replace(/\n/g, "<br/>")}</body></html>`;
     }
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = kitFileName || `${title || "funnel"}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "HTML téléchargé !" });
+  };
+
+  const handlePreviewNewTab = () => {
+    if (!renderedHtml) return;
+    const blob = new Blob([renderedHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
   };
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3 p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <div className="text-sm font-medium">Titre</div>
-            <div className="text-xs text-muted-foreground">
-              Visible dans “Mes contenus”. Modifie-le avant de sauvegarder.
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Titre du funnel"
+            className="font-semibold text-base"
+          />
+        </div>
+      </div>
+
+      {mode === "visual" && renderedHtml ? (
+        <div className="space-y-4">
+          <Card className="overflow-hidden">
+            <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+              <span className="text-sm font-medium flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                Aperçu de ta page
+              </span>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={handlePreviewNewTab}>
+                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                  Nouvel onglet
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDownloadHtml}>
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Télécharger HTML
+                </Button>
+              </div>
+            </div>
+            <div className="h-[500px]">
+              <iframe
+                srcDoc={renderedHtml}
+                title="Aperçu funnel"
+                className="w-full h-full border-0"
+                sandbox="allow-scripts"
+              />
+            </div>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+              <span className="text-sm font-medium">Copywriting</span>
+              <Button variant="ghost" size="sm" onClick={handleCopyText}>
+                <Copy className="w-3.5 h-3.5 mr-1" />
+                Copier le texte
+              </Button>
+            </div>
+            <div className="p-4 max-h-[300px] overflow-auto prose prose-sm max-w-none">
+              {markdownText?.trim() ? (
+                <AIContent content={markdownText} mode="auto" />
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Le template est rendu depuis <code>src/templates</code>. Si tu veux ajuster le copywriting, utilise le
+                  chat d’itération ci-dessous.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+            <span className="text-sm font-medium">Copywriting généré</span>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={handleCopyText}>
+                <Copy className="w-3.5 h-3.5 mr-1" />
+                Copier
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDownloadHtml}>
+                <Download className="w-3.5 h-3.5 mr-1" />
+                HTML
+              </Button>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleCopy} className="gap-2">
-              <Copy className="h-4 w-4" />
-              Copier
-            </Button>
-
-            {mode === "visual" ? (
-              <Button variant="outline" onClick={handleDownload} disabled={!canDownload} className="gap-2">
-                <Download className="h-4 w-4" />
-                Télécharger HTML
-              </Button>
-            ) : null}
-
-            <Button onClick={() => void onSave()} className="gap-2">
-              <Save className="h-4 w-4" />
-              Sauvegarder
-            </Button>
+          <div className="p-4 max-h-[500px] overflow-auto prose prose-sm max-w-none">
+            <AIContent content={markdownText || ""} mode="auto" />
           </div>
-        </div>
-
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du funnel" />
-      </Card>
-
-      {mode === "text_only" ? (
-        <Card className="space-y-3 p-4">
-          <div className="text-sm font-medium">Texte généré</div>
-          <Textarea value={markdownText || ""} readOnly className="min-h-[360px] font-mono text-sm" />
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          <iframe
-            title="Aperçu du funnel"
-            className="h-[72vh] w-full border-0"
-            srcDoc={renderedHtml || "<div style='padding:24px;font-family:system-ui'>Aucun aperçu</div>"}
-          />
         </Card>
       )}
 
@@ -154,6 +201,17 @@ export function FunnelPreviewStep({
         iterationCost={iterationCost}
         disabled={disabledChat}
       />
+
+      <div className="flex gap-2 flex-wrap justify-end">
+        <Button variant="outline" size="sm" onClick={() => onSave("draft")} disabled={!title}>
+          <Save className="w-4 h-4 mr-1" />
+          Enregistrer en brouillon
+        </Button>
+        <Button size="sm" onClick={() => onSave("published")} disabled={!title}>
+          <Send className="w-4 h-4 mr-1" />
+          Publier
+        </Button>
+      </div>
     </div>
   );
 }

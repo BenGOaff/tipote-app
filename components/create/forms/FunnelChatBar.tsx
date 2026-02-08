@@ -50,9 +50,7 @@ export function FunnelChatBar({
     <Card className="p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="space-y-1">
-          <p className="text-sm font-medium">
-            Demander une modification du texte ou du visuel…
-          </p>
+          <p className="text-sm font-medium">Demander une modification du texte ou du visuel…</p>
           <p className="text-xs text-muted-foreground">
             Chaque changement via chat coûte {iterationCost} crédit.
           </p>
@@ -114,3 +112,9 @@ export function FunnelChatBar({
     </Card>
   );
 }
+
+/**
+ * Compat: certains imports (ou versions précédentes) utilisent un default export.
+ * On garde les 2 pour éviter toute régression.
+ */
+export default FunnelChatBar;
