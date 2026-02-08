@@ -32,6 +32,21 @@ function safeJsonParse<T = any>(raw: string): T | null {
   }
 }
 
+function extractHtmlFromRenderResponse(raw: string, data: any): string {
+  // /api/templates/render returns text/html on success.
+  // On error, it returns JSON { ok:false, error }.
+  const r = (raw ?? "").trim();
+  if (r.startsWith("<")) return raw;
+
+  const html = typeof data?.html === "string" ? data.html : "";
+  if (html && html.trim()) return html;
+
+  // Some callers might receive a JSON string that itself contains HTML
+  if (typeof data === "string" && data.trim().startsWith("<")) return data;
+
+  return "";
+}
+
 function extractTemplateContentData(raw: string): Record<string, any> | null {
   const parsed = safeJsonParse<any>(raw);
   if (!parsed || typeof parsed !== "object") return null;
@@ -237,10 +252,14 @@ export function FunnelForm({
         throw new Error(msg);
       }
 
-      const html = typeof data?.html === "string" ? data.html : typeof data === "string" ? data : "";
+      const html = extractHtmlFromRenderResponse(raw, data);
       setRenderedHtml(html || "");
     } catch (e: any) {
-      toast({ title: "Erreur preview", description: e?.message || "Impossible de prévisualiser", variant: "destructive" });
+      toast({
+        title: "Erreur preview",
+        description: e?.message || "Impossible de prévisualiser",
+        variant: "destructive",
+      });
       setRenderedHtml("");
     }
   };
@@ -264,41 +283,44 @@ export function FunnelForm({
   };
 
   const handlePreviewTemplate = async (t: SystemeTemplate) => {
-    // Preview with a minimal dummy contentData so user "voit avant de choisir"
-    // We only show the base look: render with lightweight placeholder data.
+    // ✅ Lovable-like: "Voir" affiche le VRAI template (layout.html) depuis /src/templates
+    // sans inventer de contenu. (Les textes du template restent ceux du layout.)
     try {
       const kind = t.type === "sales" ? "vente" : "capture";
-      const dummy: Record<string, any> = {
-        hero_title: "Ressource gratuite",
-        hero_subtitle: "VOTRE BASELINE ICI",
-        hero_description: "Aperçu du template (contenu exemple).",
-        benefits_title: "Bénéfices",
-        benefits_list: ["Bénéfice 1", "Bénéfice 2", "Bénéfice 3"],
-        footer_text: "Tipote © 2026",
-        footer_link_1_label: "Mentions légales",
-        footer_link_1_url: "#",
-        footer_link_2_label: "Confidentialité",
-        footer_link_2_url: "#",
-      };
 
       const res = await fetch("/api/templates/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, templateId: t.id, mode: "preview_kit", contentData: dummy, brandTokens: null }),
+        body: JSON.stringify({
+          kind,
+          templateId: t.id,
+          mode: "preview",
+          contentData: {},
+          brandTokens: null,
+        }),
       });
 
       const raw = await res.text();
       const data = safeJsonParse<any>(raw);
 
-      if (!res.ok) throw new Error((data && (data.error || data.message)) || raw || "Preview impossible");
+      if (!res.ok) {
+        const msg = (data && (data.error || data.message)) || raw || "Preview impossible";
+        throw new Error(msg);
+      }
 
-      const html = typeof data?.html === "string" ? data.html : "";
-      const blob = new Blob([html || "<div style='padding:24px'>Aucun aperçu</div>"], { type: "text/html;charset=utf-8" });
+      const html = extractHtmlFromRenderResponse(raw, data);
+      const blob = new Blob([html || "<div style='padding:24px'>Aucun aperçu</div>"], {
+        type: "text/html;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e: any) {
-      toast({ title: "Preview indisponible", description: e?.message || "Impossible d’ouvrir l’aperçu", variant: "destructive" });
+      toast({
+        title: "Preview indisponible",
+        description: e?.message || "Impossible d’ouvrir l’aperçu",
+        variant: "destructive",
+      });
     }
   };
 
@@ -346,10 +368,12 @@ export function FunnelForm({
 
       if (mode === "text_only") {
         setMarkdownText(out || "");
-        const offerLabel = isExisting
-          ? offers.find((o) => o.id === selectedOfferId)?.name
-          : offerName;
-        setTitle((t) => (t.trim() ? t : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate: null, offerName: offerLabel })));
+        const offerLabel = isExisting ? offers.find((o) => o.id === selectedOfferId)?.name : offerName;
+        setTitle((t) =>
+          t.trim()
+            ? t
+            : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate: null, offerName: offerLabel })
+        );
         setStep("preview");
         return;
       }
@@ -372,7 +396,11 @@ export function FunnelForm({
       setPendingBrandTokens(null);
 
       const offerLabel = isExisting ? offers.find((o) => o.id === selectedOfferId)?.name : offerName;
-      setTitle((t) => (t.trim() ? t : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate, offerName: offerLabel })));
+      setTitle((t) =>
+        t.trim()
+          ? t
+          : guessTitleFromOfferOrTemplate({ mode, funnelPageType, selectedTemplate, offerName: offerLabel })
+      );
 
       await renderHtmlFromContentData(merged, null);
       setStep("preview");
@@ -391,10 +419,10 @@ export function FunnelForm({
         funnelMode: offerChoice === "existing" ? "from_offer" : "from_scratch",
         templateId: mode === "visual" ? selectedTemplate?.id ?? null : null,
         outputMode: mode,
-        markdownText: mode === "text_only" ? (markdownText || "") : null,
-        contentData: mode === "visual" ? (contentData || null) : null,
-        brandTokens: mode === "visual" ? (brandTokens || null) : null,
-        renderedHtml: mode === "visual" ? (renderedHtml || null) : null,
+        markdownText: mode === "text_only" ? markdownText || "" : null,
+        contentData: mode === "visual" ? contentData || null : null,
+        brandTokens: mode === "visual" ? brandTokens || null : null,
+        renderedHtml: mode === "visual" ? renderedHtml || null : null,
         meta: {
           offerChoice,
           selectedOfferId: selectedOfferId || null,
@@ -421,7 +449,14 @@ export function FunnelForm({
   const handleSendIteration = async (message: string): Promise<string> => {
     if (mode !== "visual") {
       // Text-only iteration: not wired yet; keep UX but no changes.
-      setMessages((prev) => [...prev, { role: "user", content: message }, { role: "assistant", content: "Pour l’instant, les itérations s’appliquent aux templates (mode page prête à l’emploi)." }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: message },
+        {
+          role: "assistant",
+          content: "Pour l’instant, les itérations s’appliquent aux templates (mode page prête à l’emploi).",
+        },
+      ]);
       return "OK";
     }
 
@@ -453,8 +488,8 @@ export function FunnelForm({
         throw new Error(msg);
       }
 
-      const nextContentData = (data?.nextContentData && typeof data.nextContentData === "object") ? data.nextContentData : null;
-      const nextBrandTokens = (data?.nextBrandTokens && typeof data.nextBrandTokens === "object") ? data.nextBrandTokens : null;
+      const nextContentData = data?.nextContentData && typeof data.nextContentData === "object" ? data.nextContentData : null;
+      const nextBrandTokens = data?.nextBrandTokens && typeof data.nextBrandTokens === "object" ? data.nextBrandTokens : null;
 
       if (!nextContentData) throw new Error("Réponse itération invalide");
 
@@ -465,7 +500,10 @@ export function FunnelForm({
       // Render preview with pending changes (so user sees before accept)
       await renderHtmlFromContentData(nextContentData, nextBrandTokens);
 
-      const explanation = typeof data?.explanation === "string" ? data.explanation : "Modification proposée. Vérifie l’aperçu, puis accepte ou refuse.";
+      const explanation =
+        typeof data?.explanation === "string"
+          ? data.explanation
+          : "Modification proposée. Vérifie l’aperçu, puis accepte ou refuse.";
       setMessages((prev) => [...prev, { role: "assistant", content: explanation }]);
 
       return explanation;
@@ -512,9 +550,7 @@ export function FunnelForm({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="text-base font-semibold">Funnel (Capture / Vente)</div>
-            <div className="text-sm text-muted-foreground">
-              Génère une page de capture ou de vente (texte ou template).
-            </div>
+            <div className="text-sm text-muted-foreground">Génère une page de capture ou de vente (texte ou template).</div>
           </div>
 
           <Button variant="ghost" onClick={onClose} className="gap-2">
@@ -523,9 +559,7 @@ export function FunnelForm({
           </Button>
         </div>
 
-        {step === "mode" ? (
-          <FunnelModeStep onSelectMode={handleSelectMode} />
-        ) : null}
+        {step === "mode" ? <FunnelModeStep onSelectMode={handleSelectMode} /> : null}
 
         {step === "template" ? (
           <FunnelTemplateStep
@@ -619,9 +653,7 @@ export function FunnelForm({
           {step === "mode" ? "Écran 1" : step === "template" ? "Écran 2" : step === "config" ? "Écran 3" : "Résultat"}
         </Badge>
         <div className="text-xs text-muted-foreground">
-          {mode === "visual"
-            ? "Mode: page prête à l’emploi"
-            : "Mode: copywriting uniquement"}
+          {mode === "visual" ? "Mode: page prête à l’emploi" : "Mode: copywriting uniquement"}
         </div>
       </div>
     </div>
