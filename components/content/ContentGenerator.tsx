@@ -11,12 +11,10 @@ type Props = {
   type: string
   /**
    * Pré-remplissage (server) basé sur profil business + plan.
-   * Ne remplace jamais un texte déjà saisi par l’utilisateur.
+   * Ne remplace jamais un texte déjà saisi par l'utilisateur.
    */
   defaultPrompt?: string
 }
-
-type Provider = 'openai' | 'claude' | 'gemini'
 
 type GenerateResponse = {
   ok: boolean
@@ -27,14 +25,7 @@ type GenerateResponse = {
   code?: string
   warning?: string
   saveError?: string
-  usedUserKey?: boolean
 }
-
-const PROVIDERS: Array<{ key: Provider; label: string; badge: string }> = [
-  { key: 'openai', label: 'OpenAI', badge: 'Recommandé' },
-  { key: 'claude', label: 'Claude', badge: 'Bientôt' },
-  { key: 'gemini', label: 'Gemini', badge: 'Bientôt' },
-]
 
 function normalizeType(t: string) {
   const s = (t ?? '').trim().toLowerCase()
@@ -61,7 +52,7 @@ function metaForType(type: string) {
       title: 'Article de blog',
       subtitle: 'Structuré, lisible, SEO-friendly',
       placeholder:
-        'Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: “Comment trouver ses 10 premiers clients en B2B”, ton pédagogique, plan H2/H3.',
+        'Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: "Comment trouver ses 10 premiers clients en B2B", ton pédagogique, plan H2/H3.',
       defaultChannel: 'Blog',
       defaultTags: ['blog', 'seo'],
     }
@@ -94,8 +85,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
   const meta = useMemo(() => metaForType(type), [type])
 
-  const [provider, setProvider] = useState<Provider>('openai')
-
   const [channel, setChannel] = useState<string>(meta.defaultChannel)
   const [tags, setTags] = useState<string>(() => (meta.defaultTags ?? []).join(', '))
 
@@ -111,7 +100,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     setChannel(meta.defaultChannel)
   }, [meta.defaultChannel])
 
-  // ✅ Pré-remplissage safe : uniquement si l’utilisateur n’a rien saisi
+  // Pré-remplissage safe : uniquement si l'utilisateur n'a rien saisi
   useEffect(() => {
     const p = (defaultPrompt ?? '').trim()
     if (!p) return
@@ -141,10 +130,8 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     setLoading(true)
     setResult(null)
 
-    // ✅ event: tentative de génération (utile pour mesurer l’usage même si ça échoue)
     ampTrack('tipote_content_generate_clicked', {
       type: safeType,
-      provider,
       channel: (channel ?? '').trim() || null,
       tags_count: (tags ?? '')
         .split(',')
@@ -166,9 +153,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             .filter(Boolean)
             .slice(0, 50),
           prompt: safePrompt,
-          // ✅ On garde le champ pour compat backend / futur multi-modèles
-          // mais on ne dépend plus de clés API user : tout passe via la clé owner + crédits.
-          provider,
         }),
       })
 
@@ -178,14 +162,13 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         setResult({ ok: false, error: 'Réponse invalide.' })
         ampTrack('tipote_content_generate_failed', {
           type: safeType,
-          provider,
           code: 'invalid_response',
         })
         return
       }
 
       if (!res.ok || !data.ok) {
-        const code = data?.code ?? (res.status === 402 ? 'subscription_required' : undefined)
+        const code = data?.code ?? (res.status === 402 ? 'NO_CREDITS' : undefined)
 
         setResult({
           ok: false,
@@ -195,27 +178,22 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
         ampTrack('tipote_content_generate_failed', {
           type: safeType,
-          provider,
           code: code ?? `http_${res.status}`,
-          usedUserKey: Boolean(data?.usedUserKey),
         })
         return
       }
 
       setResult(data)
 
-      // ✅ event: contenu généré (ton KPI “premiers contenus générés”)
       ampTrack('tipote_content_generated', {
         type: safeType,
-        provider,
         content_id: data.id ?? null,
         title_present: Boolean(data.title),
         warning_present: Boolean(data.warning),
         save_error_present: Boolean(data.saveError),
-        usedUserKey: Boolean(data.usedUserKey),
       })
 
-      // ✅ Refresh crédits partout (sidebar/billing/settings) après une génération réussie
+      // Refresh crédits partout (sidebar/billing/settings) après une génération réussie
       emitCreditsUpdated()
       try {
         await refreshCredits()
@@ -230,7 +208,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
       ampTrack('tipote_content_generate_failed', {
         type: normalizeType(type),
-        provider,
         code: 'exception',
       })
     } finally {
@@ -246,14 +223,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
       const json = (await res.json().catch(() => null)) as any
 
       if (!res.ok || !json?.ok) {
-        setBillingSyncMsg(json?.error ? String(json.error) : "Impossible de vérifier l’abonnement.")
+        setBillingSyncMsg(json?.error ? String(json.error) : "Impossible de vérifier l'abonnement.")
         return
       }
 
-      setBillingSyncMsg('Abonnement mis à jour ✅ Tu peux réessayer.')
+      setBillingSyncMsg('Abonnement mis à jour. Tu peux réessayer.')
       router.refresh()
     } catch (e) {
-      setBillingSyncMsg(e instanceof Error ? e.message : "Impossible de vérifier l’abonnement.")
+      setBillingSyncMsg(e instanceof Error ? e.message : "Impossible de vérifier l'abonnement.")
     } finally {
       setBillingSyncing(false)
     }
@@ -261,54 +238,17 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Provider */}
+      {/* Crédits */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-slate-900">Modèle IA</h3>
-            <p className="text-xs text-slate-600">Choisis le modèle qui génère ton contenu.</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {PROVIDERS.map((p) => {
-              const active = p.key === provider
-              const disabled = p.key !== 'openai'
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => setProvider(p.key)}
-                  disabled={disabled}
-                  className={[
-                    'rounded-xl border px-3 py-2 text-left text-xs font-semibold',
-                    active
-                      ? 'border-[#b042b4] bg-[#b042b4]/5 text-[#7a2d7e]'
-                      : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50',
-                    disabled ? 'opacity-60 cursor-not-allowed' : '',
-                  ].join(' ')}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span>{p.label}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                      {p.badge}
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* ✅ Fin des clés API user : le système repose sur les crédits Tipote */}
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold text-slate-900">Crédits IA Tipote</p>
+            <p className="text-xs font-semibold text-slate-900">Crédits IA</p>
             <Link href="/settings?tab=billing" className="text-xs font-semibold text-[#b042b4] hover:underline">
               Gérer mes crédits
             </Link>
           </div>
           <p className="mt-1 text-xs text-slate-600">
-            La génération utilise les crédits Tipote (plus de clé API personnelle requise).
+            1 génération = 1 crédit
           </p>
         </div>
       </section>
@@ -381,7 +321,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-900">Contenu généré ✅</p>
+                  <p className="text-sm font-semibold text-slate-900">Contenu généré</p>
                   {result.title ? <p className="text-xs text-slate-600">{result.title}</p> : null}
                   {result.warning ? <p className="text-xs font-semibold text-amber-700">{result.warning}</p> : null}
                   {result.saveError ? <p className="text-xs font-semibold text-rose-700">{result.saveError}</p> : null}
@@ -413,14 +353,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               <p className="text-sm font-semibold text-rose-800">Erreur</p>
               <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
 
-              {result.code === 'subscription_required' ? (
+              {result.code === 'NO_CREDITS' ? (
                 <div className="mt-3">
                   <div className="flex flex-wrap gap-2">
                     <Link
                       href="/settings?tab=billing"
-                      className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-800"
+                      className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
                     >
-                      Voir les offres
+                      Recharger mes crédits
                     </Link>
                     <button
                       type="button"
@@ -428,7 +368,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                       disabled={billingSyncing}
                       className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-60"
                     >
-                      {billingSyncing ? 'Vérification…' : 'J’ai déjà payé'}
+                      {billingSyncing ? 'Vérification…' : "J'ai déjà payé"}
                     </button>
                   </div>
 
