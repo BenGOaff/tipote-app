@@ -19,6 +19,7 @@
       "label": "Nom du logo",
       "type": "string",
       "source": "user",
+      "fallback": "placeholder",
       "intention": "brand_identity",
       "description": "Nom de votre marque ou entreprise en majuscules",
       "examples": ["TIPOTE", "FORMATION PRO"],
@@ -29,7 +30,8 @@
       "key": "logo_subtitle",
       "label": "Baseline du logo",
       "type": "string",
-      "source": "user",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_tagline",
       "description": "Slogan ou baseline de votre marque",
       "maxLength": 30,
@@ -40,7 +42,7 @@
       "label": "Logo (image)",
       "type": "string",
       "source": "user",
-      "fallback": "placeholder",
+      "fallback": "empty",
       "inputType": "image_url",
       "description": "URL de votre logo (PNG/SVG transparent recommandé, min 200px de large)",
       "required": false
@@ -112,6 +114,7 @@
       "label": "Label de la section à propos",
       "type": "string",
       "source": "ai",
+      "intention": "section_identifier",
       "description": "Texte court pour introduire qui présente l'offre",
       "maxLength": 20,
       "required": true
@@ -121,6 +124,7 @@
       "label": "Nom du créateur",
       "type": "string",
       "source": "user",
+      "fallback": "placeholder",
       "description": "Prénom et nom de la personne qui présente l'offre",
       "maxLength": 40,
       "required": true
@@ -150,8 +154,8 @@
       "label": "Email de contact",
       "type": "string",
       "source": "user",
-      "fallback": "placeholder",
-      "inputType": "text",
+      "fallback": "empty",
+      "inputType": "email",
       "description": "Adresse email de contact affichée dans le footer",
       "maxLength": 60,
       "required": false
@@ -161,7 +165,7 @@
       "label": "URL CGV",
       "type": "string",
       "source": "user",
-      "fallback": "placeholder",
+      "fallback": "empty",
       "inputType": "url",
       "maxLength": 200,
       "required": false
@@ -171,7 +175,7 @@
       "label": "URL Mentions légales",
       "type": "string",
       "source": "user",
-      "fallback": "placeholder",
+      "fallback": "empty",
       "inputType": "url",
       "maxLength": 200,
       "required": false
@@ -181,7 +185,7 @@
       "label": "URL Politique de confidentialité",
       "type": "string",
       "source": "user",
-      "fallback": "placeholder",
+      "fallback": "empty",
       "inputType": "url",
       "maxLength": 200,
       "required": false

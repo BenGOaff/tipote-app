@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { SystemeTemplate } from "@/data/systemeTemplates";
 import { FunnelModeStep } from "@/components/create/forms/funnel/FunnelModeStep";
 import { FunnelTemplateStep } from "@/components/create/forms/funnel/FunnelTemplateStep";
-import { FunnelConfigStep, type FunnelOfferOption } from "@/components/create/forms/funnel/FunnelConfigStep";
+import { FunnelConfigStep, type FunnelOfferOption, type UserField } from "@/components/create/forms/funnel/FunnelConfigStep";
 import { FunnelPreviewStep } from "@/components/create/forms/funnel/FunnelPreviewStep";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
@@ -126,15 +126,11 @@ export function FunnelForm({
   const [urgency, setUrgency] = useState("");
   const [guarantee, setGuarantee] = useState("");
 
-  // Visual extras
-  const [authorName, setAuthorName] = useState("");
-  const [authorPhotoUrl, setAuthorPhotoUrl] = useState("");
-  const [offerMockupUrl, setOfferMockupUrl] = useState("");
-  const [testimonials, setTestimonials] = useState("");
-
-  const [legalMentionsUrl, setLegalMentionsUrl] = useState("");
-  const [legalPrivacyUrl, setLegalPrivacyUrl] = useState("");
-  const [legalCgvUrl, setLegalCgvUrl] = useState("");
+  // Schema-driven template fields
+  const [templateUserFields, setTemplateUserFields] = useState<UserField[]>([]);
+  const [templateFieldValues, setTemplateFieldValues] = useState<Record<string, string>>({});
+  const [templateFieldChoices, setTemplateFieldChoices] = useState<Record<string, "user" | "generate" | "remove">>({});
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
 
   // Output states
   const [title, setTitle] = useState<string>("");
@@ -152,6 +148,47 @@ export function FunnelForm({
   const [pendingBrandTokens, setPendingBrandTokens] = useState<Record<string, any> | null>(null);
 
   const hasPendingChanges = !!pendingContentData || !!pendingBrandTokens;
+
+  // --- Load template schema when template changes ---
+  const loadTemplateSchema = useCallback(async (template: SystemeTemplate) => {
+    setIsLoadingSchema(true);
+    setTemplateUserFields([]);
+    setTemplateFieldValues({});
+    setTemplateFieldChoices({});
+
+    try {
+      const kind = template.type === "sales" ? "vente" : "capture";
+      const res = await fetch("/api/templates/schema", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, templateId: template.id }),
+      });
+
+      const data = await res.json();
+      if (!data?.ok || !Array.isArray(data.userFields)) {
+        return;
+      }
+
+      const fields: UserField[] = data.userFields;
+      setTemplateUserFields(fields);
+
+      // Initialize default choices based on source/fallback
+      const choices: Record<string, "user" | "generate" | "remove"> = {};
+      for (const f of fields) {
+        if (f.source === "user") {
+          choices[f.key] = "user";
+        } else {
+          // user_or_ai: default to "generate" unless fallback is "remove" and field is not required
+          choices[f.key] = "generate";
+        }
+      }
+      setTemplateFieldChoices(choices);
+    } catch {
+      // fail-open: template will still work, just without adaptive UI
+    } finally {
+      setIsLoadingSchema(false);
+    }
+  }, []);
 
   useEffect(() => {
     // keep default title up to date before generation
@@ -187,41 +224,38 @@ export function FunnelForm({
     return `${base}.html`;
   }, [title]);
 
+  const setTemplateFieldValue = useCallback((key: string, value: string) => {
+    setTemplateFieldValues((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const setTemplateFieldChoice = useCallback((key: string, choice: "user" | "generate" | "remove") => {
+    setTemplateFieldChoices((prev) => ({ ...prev, [key]: choice }));
+  }, []);
+
+  /**
+   * Apply user-provided template field values to contentData.
+   * This replaces the old hardcoded applyUserOverridesToContentData.
+   */
   const applyUserOverridesToContentData = (cd: Record<string, any>): Record<string, any> => {
     const next = { ...(cd || {}) };
 
-    // Visual assets (best-effort; templates vary)
-    if (authorPhotoUrl.trim()) next.about_image = authorPhotoUrl.trim();
-    if (offerMockupUrl.trim()) next.benefits_image = offerMockupUrl.trim();
-    if (authorName.trim()) next.target_label = authorName.trim();
+    for (const field of templateUserFields) {
+      const choice = templateFieldChoices[field.key] || "generate";
+      const value = (templateFieldValues[field.key] || "").trim();
 
-    // Testimonials: if template has an array slot, we fill it
-    const t = testimonials
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (t.length) {
-      // Common slot name in capture kits:
-      if (Array.isArray(next.benefits_list)) {
-        next.benefits_list = t.slice(0, 6);
+      if (choice === "remove") {
+        // Remove the field so <!-- IF key --> conditionals strip the section
+        delete next[field.key];
+        continue;
       }
-      // Keep also a generic slot, in case template uses it:
-      next.testimonials = t.slice(0, 6);
-    }
 
-    // Legal links (we map to footer link slots used by capture-01 kit)
-    const links: Array<{ label: string; url: string }> = [];
-    if (legalMentionsUrl.trim()) links.push({ label: "Mentions légales", url: legalMentionsUrl.trim() });
-    if (legalPrivacyUrl.trim()) links.push({ label: "Politique de confidentialité", url: legalPrivacyUrl.trim() });
-    if (funnelPageType === "sales" && legalCgvUrl.trim()) links.push({ label: "CGV", url: legalCgvUrl.trim() });
+      if (choice === "user" && value) {
+        // User provided a value — inject it
+        next[field.key] = value;
+        continue;
+      }
 
-    if (links[0]) {
-      next.footer_link_1_label = links[0].label;
-      next.footer_link_1_url = links[0].url;
-    }
-    if (links[1]) {
-      next.footer_link_2_label = links[1].label;
-      next.footer_link_2_url = links[1].url;
+      // choice === "generate" → leave AI-generated value as-is (already in cd)
     }
 
     return next;
@@ -274,6 +308,9 @@ export function FunnelForm({
     setMessages([]);
     setPendingBrandTokens(null);
     setPendingContentData(null);
+    setTemplateUserFields([]);
+    setTemplateFieldValues({});
+    setTemplateFieldChoices({});
 
     if (m === "visual") {
       setStep("template");
@@ -283,8 +320,6 @@ export function FunnelForm({
   };
 
   const handlePreviewTemplate = async (t: SystemeTemplate) => {
-    // ✅ Lovable-like: "Voir" affiche le VRAI template (layout.html) depuis /src/templates
-    // sans inventer de contenu. (Les textes du template restent ceux du layout.)
     try {
       const kind = t.type === "sales" ? "vente" : "capture";
 
@@ -318,7 +353,7 @@ export function FunnelForm({
     } catch (e: any) {
       toast({
         title: "Preview indisponible",
-        description: e?.message || "Impossible d’ouvrir l’aperçu",
+        description: e?.message || "Impossible d'ouvrir l'aperçu",
         variant: "destructive",
       });
     }
@@ -327,6 +362,7 @@ export function FunnelForm({
   const handleSelectTemplate = (t: SystemeTemplate) => {
     setSelectedTemplate(t);
     setFunnelPageType(t.type === "sales" ? "sales" : "capture");
+    loadTemplateSchema(t);
     setStep("config");
   };
 
@@ -361,7 +397,19 @@ export function FunnelForm({
           return;
         }
         payload.templateId = selectedTemplate.id;
-        // route.ts décidera outputFormat=contentData_json via template schema auto
+
+        // Pass user-provided field values to the API so the AI can use them
+        const userOverrides: Record<string, any> = {};
+        for (const field of templateUserFields) {
+          const choice = templateFieldChoices[field.key] || "generate";
+          const value = (templateFieldValues[field.key] || "").trim();
+          if (choice === "user" && value) {
+            userOverrides[field.key] = value;
+          }
+        }
+        if (Object.keys(userOverrides).length > 0) {
+          payload.templateUserOverrides = userOverrides;
+        }
       }
 
       const out = await onGenerate(payload);
@@ -429,13 +477,8 @@ export function FunnelForm({
           manual: offerChoice === "scratch" ? { offerName, offerPromise, offerTarget, offerPrice } : null,
           urgency: urgency || null,
           guarantee: guarantee || null,
-          authorName: authorName || null,
-          authorPhotoUrl: authorPhotoUrl || null,
-          offerMockupUrl: offerMockupUrl || null,
-          testimonials: testimonials || null,
-          legalMentionsUrl: legalMentionsUrl || null,
-          legalPrivacyUrl: legalPrivacyUrl || null,
-          legalCgvUrl: legalCgvUrl || null,
+          templateFieldValues: Object.keys(templateFieldValues).length > 0 ? templateFieldValues : null,
+          templateFieldChoices: Object.keys(templateFieldChoices).length > 0 ? templateFieldChoices : null,
         },
       };
 
@@ -454,7 +497,7 @@ export function FunnelForm({
         { role: "user", content: message },
         {
           role: "assistant",
-          content: "Pour l’instant, les itérations s’appliquent aux templates (mode page prête à l’emploi).",
+          content: "Pour l'instant, les itérations s'appliquent aux templates (mode page prête à l'emploi).",
         },
       ]);
       return "OK";
@@ -484,7 +527,7 @@ export function FunnelForm({
       const data = safeJsonParse<any>(raw);
 
       if (!res.ok) {
-        const msg = (data && (data.error || data.message)) || raw || "Impossible d’itérer";
+        const msg = (data && (data.error || data.message)) || raw || "Impossible d'itérer";
         throw new Error(msg);
       }
 
@@ -503,13 +546,13 @@ export function FunnelForm({
       const explanation =
         typeof data?.explanation === "string"
           ? data.explanation
-          : "Modification proposée. Vérifie l’aperçu, puis accepte ou refuse.";
+          : "Modification proposée. Vérifie l'aperçu, puis accepte ou refuse.";
       setMessages((prev) => [...prev, { role: "assistant", content: explanation }]);
 
       return explanation;
     } catch (e: any) {
       const msg = e?.message || "Erreur itération";
-      setMessages((prev) => [...prev, { role: "assistant", content: `❌ ${msg}` }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: `Erreur: ${msg}` }]);
       toast({ title: "Erreur itération", description: msg, variant: "destructive" });
       return msg;
     } finally {
@@ -593,20 +636,12 @@ export function FunnelForm({
             setUrgency={setUrgency}
             guarantee={guarantee}
             setGuarantee={setGuarantee}
-            authorName={authorName}
-            setAuthorName={setAuthorName}
-            authorPhotoUrl={authorPhotoUrl}
-            setAuthorPhotoUrl={setAuthorPhotoUrl}
-            offerMockupUrl={offerMockupUrl}
-            setOfferMockupUrl={setOfferMockupUrl}
-            testimonials={testimonials}
-            setTestimonials={setTestimonials}
-            legalMentionsUrl={legalMentionsUrl}
-            setLegalMentionsUrl={setLegalMentionsUrl}
-            legalPrivacyUrl={legalPrivacyUrl}
-            setLegalPrivacyUrl={setLegalPrivacyUrl}
-            legalCgvUrl={legalCgvUrl}
-            setLegalCgvUrl={setLegalCgvUrl}
+            templateUserFields={templateUserFields}
+            templateFieldValues={templateFieldValues}
+            setTemplateFieldValue={setTemplateFieldValue}
+            templateFieldChoices={templateFieldChoices}
+            setTemplateFieldChoice={setTemplateFieldChoice}
+            isLoadingSchema={isLoadingSchema}
             isGenerating={isGenerating}
             onGenerate={handleGenerate}
             onBack={() => {
@@ -653,7 +688,7 @@ export function FunnelForm({
           {step === "mode" ? "Écran 1" : step === "template" ? "Écran 2" : step === "config" ? "Écran 3" : "Résultat"}
         </Badge>
         <div className="text-xs text-muted-foreground">
-          {mode === "visual" ? "Mode: page prête à l’emploi" : "Mode: copywriting uniquement"}
+          {mode === "visual" ? "Mode: page prête à l'emploi" : "Mode: copywriting uniquement"}
         </div>
       </div>
     </div>

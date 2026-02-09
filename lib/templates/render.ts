@@ -11,6 +11,9 @@
 // NOTE (2026-02):
 // Some premium templates are provided as full standalone HTML documents (with <html>, <head>, <style>).
 // For those, we MUST NOT wrap again. We still apply safe text replacements.
+//
+// 2026-02: Added renderConditionals (<!-- IF key -->...<!-- ENDIF key -->)
+//          + escapeHtml encodes non-ASCII chars as &#xxx; for Systeme.io compat.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -52,6 +55,11 @@ function isRecord(v: unknown): v is Record<string, any> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
+/**
+ * Escape HTML special chars + encode non-ASCII to &#xxx; HTML entities.
+ * This ensures accents (é, è, ê, à…) render correctly in Systeme.io
+ * which may re-encode the page with a different charset.
+ */
 function escapeHtml(s: string): string {
   let out = (s ?? "")
     .replace(/&/g, "&amp;")
@@ -59,16 +67,12 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-
-  // Encode non-ASCII characters as numeric HTML entities (&#xxx;)
-  // so accented text renders correctly even without a charset declaration
-  // (e.g. when kit HTML fragments are pasted into Systeme.io).
-  out = out.replace(/[^\x00-\x7F]/g, (ch) => `&#${ch.codePointAt(0)};`);
-
+  // Encode any non-ASCII character as &#codepoint;
+  out = out.replace(/[^\x00-\x7F]/g, (ch) => "&#" + ch.codePointAt(0) + ";");
   return out;
 }
 
-// Allows {{a.b.c}} placeholders.
+// Allows {{a.b.c}} and {{arr.0.field}} placeholders.
 function getByPath(obj: any, p: string): any {
   const parts = String(p || "")
     .split(".")
@@ -161,15 +165,11 @@ function applyVariant(html: string, variantId?: string | null): string {
   return html.replace(/\{\{\s*variant\s*\}\}/g, escapeHtml(v));
 }
 
-function renderPlaceholders(templateHtml: string, contentData: Record<string, any>): string {
-  // {{some.path}} placeholder syntax
-  return templateHtml.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_m: string, key: string) => {
-    const val = getByPath(contentData, String(key));
-    const s = toText(val);
-    return escapeHtml(s);
-  });
-}
-
+/**
+ * Conditional blocks: <!-- IF key -->...<!-- ENDIF key -->
+ * If contentData[key] is truthy (non-empty string, non-empty array), keep the block.
+ * Otherwise, remove it entirely.
+ */
 function renderConditionals(html: string, contentData: Record<string, any>): string {
   return html.replace(
     /<!--\s*IF\s+([a-zA-Z0-9_.]+)\s*-->([\s\S]*?)<!--\s*ENDIF\s+\1\s*-->/g,
@@ -179,6 +179,15 @@ function renderConditionals(html: string, contentData: Record<string, any>): str
       return hasValue ? block : "";
     }
   );
+}
+
+function renderPlaceholders(templateHtml: string, contentData: Record<string, any>): string {
+  // {{some.path}} placeholder syntax
+  return templateHtml.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_m: string, key: string) => {
+    const val = getByPath(contentData, String(key));
+    const s = toText(val);
+    return escapeHtml(s);
+  });
 }
 
 function renderRepeaters(templateHtml: string, contentData: Record<string, any>): string {
@@ -396,6 +405,9 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
   return out;
 }
 
+/**
+ * Export attendu par les routes API : renderTemplateHtml
+ */
 export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
   const kind = normalizeKind(req.kind);
   const mode: RenderMode = req.mode === "kit" ? "kit" : "preview";
@@ -437,21 +449,19 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   let out = html;
 
-    // conditionals first (remove absent optional sections)
+  // 1) conditionals first (remove absent sections before expanding)
   out = renderConditionals(out, req.contentData);
 
-  // repeaters so placeholders inside blocks are expanded
-  out = renderRepeaters(out, req.contentData);
-  // repeaters first so placeholders inside blocks are expanded
+  // 2) repeaters (so placeholders inside blocks are expanded)
   out = renderRepeaters(out, req.contentData);
 
-  // then simple placeholders
+  // 3) simple placeholders
   out = renderPlaceholders(out, req.contentData);
 
-  // apply variant hooks
+  // 4) apply variant hooks
   out = applyVariant(out, req.variantId);
 
-  // apply static replacements (premium raw HTML templates)
+  // 5) apply static replacements (premium raw HTML templates like capture-01)
   out = applyStaticTemplateReplacements({
     kind,
     templateId,
