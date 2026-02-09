@@ -1,18 +1,19 @@
 // app/api/strategy/route.ts
 // ✅ POST idempotent :
 // - Génère un "starter plan" (strategy_summary + goals) si manquant (best-effort)
-// - Si user = (non affilié) ET (pas d'offre) : génère 3 pyramides si manquantes
+// - Si user = (non affilié) ET (pas d'offre OU pas satisfait) : génère 3 pyramides si manquantes
 // - Si pyramide choisie : génère stratégie complète (persona + plan 90j)
-// - Si affilié OU user a déjà une offre : génère une stratégie complète sans inventer d'offres
+// - Si affilié OU (user a déjà une offre ET satisfait) : génère une stratégie complète sans inventer d'offres
 //
 // ⚠️ IMPORTANT : l'onboarding front appelle :
-// 1) POST /api/strategy (génère pyramides + starter plan)
-// 2) PATCH /api/strategy/offer-pyramid (sélection)
+// 1) POST /api/strategy (génère pyramides + starter plan) [si applicable]
+// 2) PATCH /api/strategy/offer-pyramid (sélection) [si pyramides]
 // 3) POST /api/strategy (génère full strategy)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,102 +86,42 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
 
 /**
  * -----------------------
+ * Credits helpers
+ * -----------------------
+ */
+function isNoCreditsError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+  // RPC retourne souvent "NO_CREDITS" ou message contenant "no credits"
+  return msg.includes("no_credits") || msg.includes("no credits") || msg.includes("insufficient credits");
+}
+
+async function chargeCreditOrThrow(params: { userId: string; feature: string; meta?: AnyRecord }) {
+  const { userId, feature, meta } = params;
+  await ensureUserCredits(userId);
+  const res = await consumeCredits(userId, 1, { feature, ...(meta ?? {}) });
+  // selon ton impl, res peut être { success:false, error:"NO_CREDITS" } ou throw
+  if (res && typeof res === "object") {
+    const ok = (res as any).success;
+    const err = cleanString((res as any).error, 120).toUpperCase();
+    if (ok === false && err.includes("NO_CREDITS")) {
+      const e = new Error("NO_CREDITS");
+      throw e;
+    }
+  }
+}
+
+/**
+ * -----------------------
  * Light retrieval helpers (resource_chunks)
  * -----------------------
  */
 const STOPWORDS = new Set([
-  "le",
-  "la",
-  "les",
-  "un",
-  "une",
-  "des",
-  "du",
-  "de",
-  "d",
-  "et",
-  "ou",
-  "mais",
-  "donc",
-  "or",
-  "ni",
-  "car",
-  "à",
-  "a",
-  "au",
-  "aux",
-  "en",
-  "dans",
-  "sur",
-  "sous",
-  "pour",
-  "par",
-  "avec",
-  "sans",
-  "chez",
-  "vers",
-  "ce",
-  "cet",
-  "cette",
-  "ces",
-  "ça",
-  "cela",
-  "c",
-  "qui",
-  "que",
-  "quoi",
-  "dont",
-  "où",
-  "je",
-  "tu",
-  "il",
-  "elle",
-  "on",
-  "nous",
-  "vous",
-  "ils",
-  "elles",
-  "me",
-  "te",
-  "se",
-  "mon",
-  "ma",
-  "mes",
-  "ton",
-  "ta",
-  "tes",
-  "son",
-  "sa",
-  "ses",
-  "notre",
-  "nos",
-  "votre",
-  "vos",
-  "leur",
-  "leurs",
-  "the",
-  "a",
-  "an",
-  "and",
-  "or",
-  "but",
-  "so",
-  "because",
-  "to",
-  "of",
-  "in",
-  "on",
-  "for",
-  "with",
-  "without",
-  "at",
-  "by",
-  "from",
-  "as",
-  "is",
-  "are",
-  "was",
-  "were",
+  "le","la","les","un","une","des","du","de","d","et","ou","mais","donc","or","ni","car",
+  "à","a","au","aux","en","dans","sur","sous","pour","par","avec","sans","chez","vers",
+  "ce","cet","cette","ces","ça","cela","c","qui","que","quoi","dont","où","je","tu","il","elle","on",
+  "nous","vous","ils","elles","me","te","se","mon","ma","mes","ton","ta","tes","son","sa","ses",
+  "notre","nos","votre","vos","leur","leurs",
+  "the","a","an","and","or","but","so","because","to","of","in","on","for","with","without","at","by","from","as","is","are","was","were",
 ]);
 
 function normalizeTextForSearch(v: unknown): string {
@@ -326,7 +267,8 @@ async function persistStrategyRow(params: {
       parseMoneyFromText(planJson.goal_revenue) ??
       parseMoneyFromText(planJson.main_goal);
 
-    const title = cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+    const title =
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -366,7 +308,8 @@ async function getOrCreateStrategyIdBestEffort(params: {
       parseMoneyFromText(planJson.goal_revenue) ??
       parseMoneyFromText(planJson.main_goal);
 
-    const title = cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+    const title =
+      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -394,9 +337,6 @@ async function getOrCreateStrategyIdBestEffort(params: {
  * -----------------------
  * Persona persistence (best-effort, RLS-safe via service role)
  * -----------------------
- * IMPORTANT:
- * - We use a dynamic import to avoid crashing if env vars are missing.
- * - If admin client is unavailable, we silently skip (fail-open).
  */
 async function getSupabaseAdminSafe(): Promise<any | null> {
   try {
@@ -963,8 +903,10 @@ export async function POST(req: Request) {
     const offersSatisfactionRaw = cleanString((onboardingFacts as any)["offers_satisfaction"], 40).toLowerCase();
     const isSatisfiedWithOffers = ["yes", "y", "true", "satisfied", "ok", "okay", "oui"].includes(offersSatisfactionRaw);
 
-    // ✅ Rule: Generate pyramids ONLY if NOT affiliate AND user has NO offer
-    const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
+    // ✅ FIX demandé :
+    // - On génère des pyramides si NON affiliate ET (pas d'offre OU pas satisfait)
+    // - Si l'utilisateur a une offre ET satisfait => pas de pyramides (stratégie autour de l'existant)
+    const shouldGeneratePyramids = !isAffiliate && (!hasOffersEffective || !isSatisfiedWithOffers);
 
     // 3) ressources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
@@ -991,7 +933,7 @@ export async function POST(req: Request) {
 
     /**
      * 4) Nettoyage anti-régression :
-     * Si on NE DOIT PAS générer de pyramides (affiliate OU a déjà une offre),
+     * Si on NE DOIT PAS générer de pyramides (affiliate OU a déjà une offre ET satisfait),
      * on supprime les pyramides existantes du plan pour éviter UI “unknown offers”.
      */
     if (!shouldGeneratePyramids) {
@@ -1033,6 +975,9 @@ export async function POST(req: Request) {
      */
     if (!hasStarter) {
       try {
+        // ✅ crédits : 1 génération = 1 crédit
+        await chargeCreditOrThrow({ userId, feature: "strategy_starter" });
+
         const starter = await generateStarterStrategyGoals({
           ai,
           locale,
@@ -1058,6 +1003,9 @@ export async function POST(req: Request) {
           existingPlanJson = nextPlan;
         }
       } catch (e) {
+        if (isNoCreditsError(e)) {
+          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+        }
         console.error("starter plan generation failed (non-blocking):", e);
       }
     }
@@ -1075,12 +1023,32 @@ export async function POST(req: Request) {
 
     /**
      * 7) Génération des pyramides (SEULEMENT si shouldGeneratePyramids)
+     * - cas A: user n'a pas d'offre
+     * - cas B: user a une offre MAIS pas satisfait => proposer alternatives (sans être “générique”)
      */
     if (shouldGeneratePyramids && !hasUsefulPyramids) {
+      // ✅ crédits : 1 génération = 1 crédit
+      try {
+        await chargeCreditOrThrow({
+          userId,
+          feature: "offer_pyramids",
+          meta: { hasOffersEffective, isSatisfiedWithOffers, businessModel },
+        });
+      } catch (e) {
+        if (isNoCreditsError(e)) {
+          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+        }
+        throw e;
+      }
+
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
 OBJECTIF :
-Proposer 3 pyramides d'offres (lead magnet → low ticket → high ticket) parfaitement adaptées à l'utilisateur, au niveau “coach business”.
+Proposer 3 pyramides d'offres (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
+
+CONTEXTE IMPORTANT :
+- Si l'utilisateur a déjà des offres ET qu'il n'est PAS satisfait : propose 3 alternatives de pyramides (angles/mécanismes) en réutilisant ou améliorant ses offres existantes quand c'est pertinent.
+- Si l'utilisateur n'a pas d'offre : propose 3 pyramides complètes from scratch.
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
@@ -1095,9 +1063,13 @@ EXIGENCES “COACH-LEVEL” :
 - Inclure un quick win 7 jours dans la logique globale.
 
 IMPORTANT :
-Tu dois répondre en JSON strict uniquement, sans texte autour.`;
+Tu dois répondre en JSON strict uniquement, sans texte autour.`.trim();
 
-      const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
+      const userPrompt = `META
+- has_offers_effective: ${String(hasOffersEffective)}
+- offers_satisfaction: ${offersSatisfactionRaw || "unknown"}
+
+SOURCE PRIORITAIRE — Diagnostic (si présent) :
 - diagnostic_profile :
 ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
 
@@ -1219,6 +1191,8 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
         const hasSummary = typeof (plan_json as any).strategy_summary === "string" && (plan_json as any).strategy_summary.trim().length > 0;
 
         if (!hasGoals || !hasSummary) {
+          // ✅ crédits : on a déjà consommé 1 crédit pour les pyramides ci-dessus,
+          // on ne re-consomme pas ici (starter best-effort). Si tu veux facturer aussi, fais-le explicitement.
           const starter = await generateStarterStrategyGoals({
             ai,
             locale,
@@ -1273,7 +1247,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
     }
 
     /**
-     * 8) Cas "NE PAS générer de pyramides" (affiliate OU user a déjà une offre)
+     * 8) Cas "NE PAS générer de pyramides" (affiliate OU user a déjà une offre ET satisfait)
      * -> stratégie complète sans inventer d'offres
      */
     if (!shouldGeneratePyramids) {
@@ -1282,6 +1256,20 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
           { success: true, planId: null, skipped: true, reason: "already_complete_no_pyramids" },
           { status: 200 },
         );
+      }
+
+      // ✅ crédits : 1 génération = 1 crédit
+      try {
+        await chargeCreditOrThrow({
+          userId,
+          feature: "strategy_full_no_pyramids",
+          meta: { offer_mode: isAffiliate ? "affiliate" : "existing_offer", businessModel },
+        });
+      } catch (e) {
+        if (isNoCreditsError(e)) {
+          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+        }
+        throw e;
       }
 
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) ET un stratège opérateur.
@@ -1483,6 +1471,20 @@ CONTRAINTES TASKS
       );
     }
 
+    // ✅ crédits : 1 génération = 1 crédit
+    try {
+      await chargeCreditOrThrow({
+        userId,
+        feature: "strategy_full_from_pyramid",
+        meta: { businessModel },
+      });
+    } catch (e) {
+      if (isNoCreditsError(e)) {
+        return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+      }
+      throw e;
+    }
+
     const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) ET un stratège opérateur.
 
 MISSION :
@@ -1672,6 +1674,10 @@ CONSINGNES
 
     return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
   } catch (err) {
+    if (isNoCreditsError(err)) {
+      return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+    }
+
     console.error("Unhandled error in /api/strategy:", err);
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : "Internal server error" },
