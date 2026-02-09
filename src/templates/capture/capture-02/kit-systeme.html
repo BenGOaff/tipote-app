@@ -1,118 +1,599 @@
-<!-- =========================================================
-CAPTURE-02 — KIT-SYSTEME.IO (COMPLET / PRÊT À COPIER-COLLER)
-AUCUN TEMPLATE SUPPRIMÉ — HTML INTÉGRAL + MARQUEURS FORM
-========================================================= -->
+<!-- capture-02 / kit-systeme.html -->
+<!-- TIPOTE — KIT SYSTEME.IO -->
+<!-- Copie fidèle du layout.html + placeholders {{...}} + slot FORM Systeme.io -->
+<!-- À coller dans SYSTEME.IO en 2 blocs "Code HTML" : BLOC 1 puis BLOC 2 -->
 
-<!-- ===================== FONTS (À COLLER DANS HEADER SI BESOIN) ===================== -->
+<!-- ===================== BLOC 1 (FONTS + CSS + HERO + FORM SLOT) ===================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 
-<!-- ===================== BLOC 1 ===================== -->
+<style>
+.tpt-scope, .tpt-scope *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .tpt-scope{
+            font-family: 'Poppins', sans-serif;
+            color: #353535;
+            line-height: 1.6;
+            background: #fff;
+        }
+
+        .tpt-scope h1, .tpt-scope h2, .tpt-scope h3{
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Header Section */
+        .tpt-scope .header-section{
+            background: #ffffff;
+            padding: 60px 20px 50px;
+            text-align: center;
+        }
+
+        .tpt-scope .site-name{
+            font-size: 18px;
+            font-weight: 600;
+            color: #353535;
+            margin-bottom: 40px;
+            letter-spacing: 0.5px;
+        }
+
+        .tpt-scope .site-name-light{
+            font-weight: 400;
+            color: #4b5563;
+        }
+
+        .tpt-scope .main-headline{
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #353535;
+            max-width: 900px;
+            margin: 0 auto 30px;
+        }
+
+        .tpt-scope .headline-highlight{
+            color: #dd0c14;
+            font-weight: 800;
+        }
+
+        .tpt-scope .headline-underline{
+            text-decoration: underline;
+            text-decoration-color: #dd0c14;
+            text-decoration-thickness: 2px;
+        }
+
+        .tpt-scope .headline-accent{
+            font-size: 32px;
+        }
+
+        /* CTA Button Primary */
+        .tpt-scope .cta-primary{
+            display: inline-block;
+            background: linear-gradient(135deg, #eb2028 0%, #dd0c14 100%);
+            color: #fff;
+            padding: 18px 45px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 10px 30px rgba(221, 12, 20, 0.4);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .tpt-scope .cta-primary:hover{
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(221, 12, 20, 0.6);
+            background: linear-gradient(135deg, #dd0c14 0%, #a50309 100%);
+        }
+
+        .tpt-scope .cta-primary::after{
+            content: " ➔";
+            margin-left: 8px;
+        }
+
+        /* Hero Section Dark */
+        .tpt-scope .hero-dark{
+            background: linear-gradient(135deg, #151619 0%, #1f2937 100%);
+            padding: 70px 20px;
+            color: #fff;
+        }
+
+        .tpt-scope .hero-title{
+            text-align: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 50px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Team Banner */
+        .tpt-scope .team-banner{
+            max-width: 1100px;
+            margin: 0 auto 50px;
+            position: relative;
+            background: linear-gradient(135deg, #151619 0%, #dd0c14 50%, #151619 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .tpt-scope .team-image-placeholder{
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .tpt-scope .team-members{
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 100%;
+            padding: 40px 20px;
+        }
+
+        .tpt-scope .team-member{
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 20px;
+            width: 25%;
+        }
+
+        .tpt-scope .member-placeholder{
+            width: 120px;
+            height: 200px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .tpt-scope .challenge-badge{
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(90deg, #dd0c14 0%, rgba(221, 12, 20, 0.95) 60%, transparent 100%);
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .tpt-scope .challenge-logo{
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        /* Features Grid */
+        .tpt-scope .features-grid{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .tpt-scope .feature-card{
+            text-align: center;
+        }
+
+        .tpt-scope .feature-title{
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .tpt-scope .feature-author{
+            font-size: 14px;
+            color: #dd0c14;
+            font-weight: 700;
+            font-style: italic;
+        }
+
+        /* Results Section */
+        .tpt-scope .results-section{
+            background: #ffffff;
+            padding: 80px 20px;
+        }
+
+        .tpt-scope .results-title{
+            text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: #353535;
+            margin-bottom: 60px;
+        }
+
+        .tpt-scope .results-grid{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto 50px;
+        }
+
+        .tpt-scope .result-card{
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .tpt-scope .result-card:hover{
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .tpt-scope .result-header{
+            background: linear-gradient(135deg, #151619 0%, #2d3748 100%);
+            padding: 20px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .tpt-scope .result-name{
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .tpt-scope .result-metric{
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .tpt-scope .result-image{
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4b5563;
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .tpt-scope .result-cta-container{
+            position: absolute;
+            top: 50%;
+            right: -180px;
+            transform: translateY(-50%);
+        }
+
+        @media (min-width: 1400px){.tpt-scope .results-section{
+                position: relative;
+            }}
+
+        .tpt-scope .result-badge{
+            background: #dd0c14;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        /* Bottom CTA Section */
+        .tpt-scope .bottom-cta{
+            background: #ffffff;
+            padding: 0 20px 60px;
+            text-align: center;
+        }
+
+        /* Footer */
+        .tpt-scope .footer{
+            background: linear-gradient(135deg, #151619 0%, #1f2937 100%);
+            padding: 50px 20px;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .tpt-scope .footer-logo{
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 25px;
+            letter-spacing: 0.5px;
+        }
+
+        .tpt-scope .footer-text{
+            font-size: 12px;
+            line-height: 1.8;
+            max-width: 900px;
+            margin: 0 auto 20px;
+        }
+
+        .tpt-scope .footer-links{
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .tpt-scope .footer-links a{
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .tpt-scope .footer-links a:hover{
+            color: #dd0c14;
+        }
+
+        .tpt-scope .footer-links span{
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px){.tpt-scope .main-headline{
+                font-size: 26px;
+            }
+
+            .tpt-scope .headline-accent{
+                font-size: 24px;
+            }
+
+            .tpt-scope .team-image-placeholder{
+                height: 300px;
+            }
+
+            .tpt-scope .team-members{
+                flex-wrap: wrap;
+            }
+
+            .tpt-scope .team-member{
+                width: 50%;
+                margin-bottom: 20px;
+            }
+
+            .tpt-scope .member-placeholder{
+                width: 100px;
+                height: 160px;
+            }
+
+            .tpt-scope .challenge-badge{
+                font-size: 16px;
+                padding: 10px 15px;
+            }
+
+            .tpt-scope .hero-title{
+                font-size: 20px;
+            }
+
+            .tpt-scope .results-title{
+                font-size: 22px;
+            }
+
+            .tpt-scope .result-image{
+                height: 280px;
+            }
+
+            .tpt-scope .features-grid{
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .tpt-scope .results-grid{
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }}
+
+        /* Visual accent bars */
+        .tpt-scope .accent-bar{
+            height: 4px;
+            background: linear-gradient(90deg, transparent 0%, #dd0c14 50%, transparent 100%);
+            margin: 60px auto;
+            max-width: 400px;
+        }
+
+        /* Kit helpers (images) */
+        .tpt-scope .result-image.tpt-has-bg{
+          background-size: cover !important;
+          background-position: center !important;
+          color: rgba(0,0,0,0) !important;
+        }
+</style>
+
 <div class="tpt-scope">
-
-  <section class="hero-section">
-    <div class="hero-container">
-
-      <div class="hero-content">
-        <div class="hero-tag">{{hero_tag}}</div>
-
-        <h1 class="hero-title">
-          {{hero_title}}
-        </h1>
-
-        <p class="hero-subtitle">
-          {{hero_subtitle}}
-        </p>
-
-        <div class="hero-bullets">
-          <div class="hero-bullet">{{hero_bullet_1}}</div>
-          <div class="hero-bullet">{{hero_bullet_2}}</div>
-          <div class="hero-bullet">{{hero_bullet_3}}</div>
-        </div>
-
-        <!-- ===================== FORM SYSTEME.IO ===================== -->
-        <div class="tpt-slot tpt-form" style="border:2px dashed #dd0c14;padding:20px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#dd0c14;">
-          <strong>ICI TU AJOUTES TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
-          (Prénom + Email)
-        </div>
-
-        <p class="hero-note">
-          {{hero_note}}
-        </p>
-      </div>
-
-      <div class="hero-visual">
-        {{hero_visual}}
-      </div>
-
+  <!-- Header Section -->
+  <section class="header-section">
+    <div class="site-name">
+      {{site_name_root}}<span class="site-name-light">{{site_name_tld}}</span>
     </div>
+
+    <h1 class="main-headline">
+      <span class="headline-accent">{{main_headline_line1}}</span><br>
+      <span class="headline-highlight">{{main_headline_line2}}</span> {{main_headline_line2_suffix}}<br>
+      <span class="headline-highlight">{{main_headline_line3}}</span> {{main_headline_line3_suffix}} <span class="headline-underline">{{main_headline_underline}}</span> {{main_headline_end}}
+    </h1>
+
+    <a href="#tpt-form" class="cta-primary">{{cta_text}}</a>
+
+    <!-- ===================== FORM SYSTEME.IO (À REMPLACER) ===================== -->
+    <div
+      id="tpt-form"
+      class="tpt-slot tpt-form"
+      style="border:2px dashed #dd0c14;padding:20px;margin:30px auto 0;max-width:520px;text-align:center;font-family:system-ui;background:#fff;color:#dd0c14;border-radius:10px;"
+    >
+      <strong>ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
+      Champs conseillés : Prénom + Email
+    </div>
+    <!-- =============================================================== -->
   </section>
 
+  <!-- Hero Dark Section -->
+  <section class="hero-dark">
+    <h2 class="hero-title">
+      {{hero_subtitle}}
+    </h2>
+
+    <!-- Team Banner -->
+    <div class="team-banner">
+      <div class="team-image-placeholder">
+        <div class="team-members">
+          <div class="team-member">
+            <div class="member-placeholder">{{experts.0.expert_name}}</div>
+            {{experts.0.expert_company}}
+          </div>
+          <div class="team-member">
+            <div class="member-placeholder">{{experts.1.expert_name}}</div>
+            {{experts.1.expert_company}}
+          </div>
+          <div class="team-member">
+            <div class="member-placeholder">{{experts.2.expert_name}}</div>
+            {{experts.2.expert_company}}
+          </div>
+          <div class="team-member">
+            <div class="member-placeholder">{{experts.3.expert_name}}</div>
+            {{experts.3.expert_company}}
+          </div>
+        </div>
+        <div class="challenge-badge">
+          {{challenge_name}} <span class="challenge-logo">{{site_name_full}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="features-grid">
+      <div class="feature-card">
+        <p class="feature-title">
+          {{features.0.benefit_text}}
+        </p>
+        <p class="feature-author">{{features.0.expert_attribution}}</p>
+      </div>
+
+      <div class="feature-card">
+        <p class="feature-title">
+          {{features.1.benefit_text}}
+        </p>
+        <p class="feature-author">{{features.1.expert_attribution}}</p>
+      </div>
+
+      <div class="feature-card">
+        <p class="feature-title">
+          {{features.2.benefit_text}}
+        </p>
+        <p class="feature-author">{{features.2.expert_attribution}}</p>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 50px;">
+      <a href="#tpt-form" class="cta-primary">{{cta_text}}</a>
+    </div>
+  </section>
 </div>
+<!-- =================== FIN BLOC 1 =================== -->
 
-<!-- ===================== BLOC 2 ===================== -->
+
+<!-- ===================== BLOC 2 (RESULTS + FOOTER + IMG SCRIPT) ===================== -->
 <div class="tpt-scope">
+  <div class="accent-bar"></div>
 
-  <section class="section-proof">
-    <div class="container">
-      <h2 class="section-title">
-        {{proof_title}}
-      </h2>
+  <!-- Results Section -->
+  <section class="results-section">
+    <h2 class="results-title">{{results_title}}</h2>
 
-      <div class="proof-grid">
-        <div class="proof-item">
-          <div class="proof-item-title">{{proof_item_1_title}}</div>
-          <div class="proof-item-text">{{proof_item_1_text}}</div>
+    <div class="results-grid">
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-name">{{testimonials.0.person_name}}</div>
+          <div class="result-metric">{{testimonials.0.result_metric}}</div>
         </div>
-
-        <div class="proof-item">
-          <div class="proof-item-title">{{proof_item_2_title}}</div>
-          <div class="proof-item-text">{{proof_item_2_text}}</div>
+        <div class="result-image" data-tpt-img="{{testimonials.0.image_url}}">
+          {{testimonials.0.image_alt}}
         </div>
+      </div>
 
-        <div class="proof-item">
-          <div class="proof-item-title">{{proof_item_3_title}}</div>
-          <div class="proof-item-text">{{proof_item_3_text}}</div>
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-name">{{testimonials.1.person_name}}</div>
+          <div class="result-metric">{{testimonials.1.result_metric}}</div>
+        </div>
+        <div class="result-image" data-tpt-img="{{testimonials.1.image_url}}">
+          {{testimonials.1.image_alt}}
+          <div class="result-badge">{{testimonials.1.badge_text}}</div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-name">{{testimonials.2.person_name}}</div>
+          <div class="result-metric">{{testimonials.2.result_metric}}</div>
+        </div>
+        <div class="result-image" data-tpt-img="{{testimonials.2.image_url}}">
+          {{testimonials.2.image_alt}}
         </div>
       </div>
     </div>
-  </section>
 
-  <section class="section-about">
-    <div class="container about-grid">
-      <div class="about-visual">
-        {{about_visual}}
-      </div>
-
-      <div class="about-content">
-        <h2 class="about-title">
-          {{about_title}}
-        </h2>
-
-        <p class="about-text">
-          {{about_text}}
-        </p>
-
-        <div class="about-cta">
-          <span class="cta-secondary">
-            {{cta_text_secondary}}
-          </span>
-        </div>
-      </div>
+    <div class="bottom-cta">
+      <a href="#tpt-form" class="cta-primary">{{cta_text}}</a>
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="footer">
-    <div class="footer-inner">
-      <p class="footer-text">
-        {{footer_text}}
-      </p>
+    <div class="footer-logo">{{site_name_full}}</div>
 
-      <div class="footer-links">
-        <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
-        <span>|</span>
-        <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
-      </div>
+    <div class="footer-links">
+      <a href="{{legal_privacy_url}}">{{legal_privacy_text}}</a>
+      <span>|</span>
+      <a href="{{legal_mentions_url}}">{{legal_mentions_text}}</a>
+      <span>|</span>
+      <a href="{{legal_cgv_url}}">{{legal_cgv_text}}</a>
     </div>
-  </footer>
 
+    <p class="footer-text">
+      {{footer_disclaimer}}
+    </p>
+  </footer>
 </div>
+
+<script>
+(function(){
+  try{
+    var imgs = document.querySelectorAll('.tpt-scope .result-image[data-tpt-img]');
+    imgs.forEach(function(el){
+      var u = (el.getAttribute('data-tpt-img')||'').trim();
+      if(!u) return;
+      el.style.backgroundImage = 'url("'+u.replace(/"/g,'%22')+'")';
+      el.classList.add('tpt-has-bg');
+    });
+  }catch(e){}
+})();
+</script>
+<!-- =================== FIN BLOC 2 =================== -->
