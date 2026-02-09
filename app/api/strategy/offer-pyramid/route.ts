@@ -11,11 +11,12 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
 type AnyRecord = Record<string, any>;
 
 function isRecord(v: unknown): v is AnyRecord {
@@ -57,25 +58,11 @@ function parseMoneyFromText(raw: unknown): number | null {
   return Math.round(n);
 }
 
-// gardé (utile si tu veux faire des fallbacks DB), même si pas utilisé partout
-function isMissingColumnError(message: string | null | undefined) {
-  const m = (message ?? "").toLowerCase();
-  return (
-    m.includes("does not exist") ||
-    m.includes("could not find the '") ||
-    m.includes("schema cache") ||
-    m.includes("pgrst") ||
-    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
-  );
-}
-
 function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
-  // Priorité: revenue_goal_monthly (onboarding) > legacy
   const monthly = cleanString(businessProfile.revenue_goal_monthly, 64);
   if (monthly) return monthly;
 
-  const direct =
-    cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
+  const direct = cleanString(businessProfile.target_monthly_revenue, 64) || cleanString(businessProfile.revenue_goal, 240);
   if (direct) return direct;
 
   const mg = cleanString(businessProfile.main_goal, 240) || cleanString(businessProfile.mainGoal90Days, 240);
@@ -91,11 +78,9 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
  * -----------------------
  * Retrieval (best-effort)
  * -----------------------
- * Objectif: piocher les meilleurs extraits de resources/resource_chunks sans casser si les champs diffèrent.
  */
 function extractAnyText(obj: AnyRecord | null, maxLen = 2200): string {
   if (!obj) return "";
-  // champs fréquents (resources + chunks)
   const candidates = [
     obj.content,
     obj.text,
@@ -112,7 +97,6 @@ function extractAnyText(obj: AnyRecord | null, maxLen = 2200): string {
     .map((x) => cleanString(x, maxLen))
     .filter(Boolean);
 
-  // fallback: stringify petit
   if (!candidates.length) {
     try {
       const s = JSON.stringify(obj);
@@ -121,10 +105,7 @@ function extractAnyText(obj: AnyRecord | null, maxLen = 2200): string {
       return "";
     }
   }
-
-  // concat sans exploser le prompt
-  const joined = candidates.join("\n");
-  return cleanString(joined, maxLen);
+  return cleanString(candidates.join("\n"), maxLen);
 }
 
 function tokenize(s: string): string[] {
@@ -135,7 +116,6 @@ function tokenize(s: string): string[] {
     .trim();
   if (!base) return [];
   const parts = base.split(/\s+/g).filter(Boolean);
-  // tokens utiles seulement
   return parts.filter((t) => t.length >= 3 && t.length <= 32);
 }
 
@@ -176,13 +156,7 @@ function buildRetrievalQuery(params: { businessProfile: AnyRecord; selectedPyram
     cleanString(pyr?.high_ticket?.title, 160),
   ].filter(Boolean);
 
-  return [
-    niche && `niche ${niche}`,
-    goal && `objectif ${goal}`,
-    blocker && `blocage ${blocker}`,
-    maturity && `maturité ${maturity}`,
-    ...pyramidBits,
-  ]
+  return [niche && `niche ${niche}`, goal && `objectif ${goal}`, blocker && `blocage ${blocker}`, maturity && `maturité ${maturity}`, ...pyramidBits]
     .filter(Boolean)
     .join(" | ");
 }
@@ -201,22 +175,22 @@ function selectRelevantContext(params: {
   const qTokens = tokenize(query);
 
   const scoredResources = (Array.isArray(resources) ? resources : [])
-    .map((r, idx) => {
+    .map((r) => {
       const rec = asRecord(r) ?? {};
       const txt = extractAnyText(rec, 2200);
       const score = scoreTextByQuery(txt, qTokens);
-      return { rec, score, idx };
+      return { rec, score };
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResources)
     .filter((x) => x.score > 0);
 
   const scoredChunks = (Array.isArray(resourceChunks) ? resourceChunks : [])
-    .map((c, idx) => {
+    .map((c) => {
       const rec = asRecord(c) ?? {};
       const txt = extractAnyText(rec, 2200);
       const score = scoreTextByQuery(txt, qTokens);
-      return { rec, score, idx };
+      return { rec, score };
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, maxChunks)
@@ -262,7 +236,6 @@ function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
   const insight = cleanString(offer.insight ?? offer.angle ?? "", 800);
   const price = toNumber(offer.price);
   if (!title && !composition && !purpose) return null;
-
   return { title, composition, purpose, format, insight, ...(price !== null ? { price } : {}) };
 }
 
@@ -272,23 +245,11 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
-    asRecord(p?.lead_magnet) ??
-    asRecord(p?.leadMagnet) ??
-    asRecord(p?.lead) ??
-    asRecord(p?.lead_offer) ??
-    null;
+    asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
   const low =
-    asRecord(p?.low_ticket) ??
-    asRecord(p?.lowTicket) ??
-    asRecord(p?.mid) ??
-    asRecord(p?.middle_offer) ??
-    null;
+    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
   const high =
-    asRecord(p?.high_ticket) ??
-    asRecord(p?.highTicket) ??
-    asRecord(p?.high) ??
-    asRecord(p?.high_offer) ??
-    null;
+    asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
   return {
     id,
@@ -527,17 +488,9 @@ function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | nu
  * -----------------------
  * ✅ BEST-EFFORT SYNC (ADMIN)
  * -----------------------
- * CRITIQUE : ces écritures doivent bypass RLS -> supabaseAdmin
- * sinon tu te retrouves avec 0 lignes dans offer_pyramids => UI "aucune offre détectée".
  */
-
-async function persistStrategyRowBestEffort(params: {
-  userId: string;
-  businessProfile: AnyRecord;
-  planJson: AnyRecord;
-}): Promise<string | null> {
+async function persistStrategyRowBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord }): Promise<string | null> {
   const { userId, businessProfile, planJson } = params;
-
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
     const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
@@ -554,8 +507,7 @@ async function persistStrategyRowBestEffort(params: {
       parseMoneyFromText(businessProfile.target_monthly_revenue) ??
       parseMoneyFromText(businessProfile.revenue_goal);
 
-    const title =
-      cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
+    const title = cleanString(planJson.title ?? planJson.summary ?? planJson.strategy_summary ?? "Ma stratégie", 180) || "Ma stratégie";
 
     const payload: AnyRecord = {
       user_id: userId,
@@ -566,12 +518,7 @@ async function persistStrategyRowBestEffort(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabaseAdmin
-      .from("strategies")
-      .upsert(payload, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
-
+    const upsertRes = await supabaseAdmin.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
     if (upsertRes?.error) {
       console.error("persistStrategyRowBestEffort upsert error:", upsertRes.error);
       return null;
@@ -583,15 +530,10 @@ async function persistStrategyRowBestEffort(params: {
   }
 }
 
-async function getOrCreateStrategyIdBestEffort(params: {
-  userId: string;
-  businessProfile: AnyRecord;
-  planJson: AnyRecord;
-}): Promise<string | null> {
+async function getOrCreateStrategyIdBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord }): Promise<string | null> {
   const { userId, businessProfile, planJson } = params;
 
   try {
-    // read via admin (RLS safe)
     const readRes = await supabaseAdmin.from("strategies").select("id").eq("user_id", userId).maybeSingle();
     if (readRes?.data?.id) return String(readRes.data.id);
 
@@ -666,8 +608,6 @@ async function persistOfferPyramidsBestEffort(params: {
   if (!rows.length) return;
 
   try {
-    // ✅ éviter doublons / "mauvaise offre détectée" : on remplace le set
-    // (si tu veux historique, enlève ce delete)
     const del = await supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
     if (del?.error) console.error("persistOfferPyramidsBestEffort delete error:", del.error);
 
@@ -678,11 +618,7 @@ async function persistOfferPyramidsBestEffort(params: {
   }
 }
 
-async function persistPersonaBestEffort(params: {
-  userId: string;
-  strategyId: string | null;
-  persona: AnyRecord | null;
-}): Promise<void> {
+async function persistPersonaBestEffort(params: { userId: string; strategyId: string | null; persona: AnyRecord | null }): Promise<void> {
   const { userId, strategyId, persona } = params;
   if (!persona || !personaLooksUseful(persona)) return;
 
@@ -693,7 +629,6 @@ async function persistPersonaBestEffort(params: {
     ...(strategyId ? { strategy_id: strategyId } : {}),
     name: cleanString(persona.title, 240) || null,
     role: "client_ideal",
-
     description: cleanString(persona.current_situation ?? persona.description ?? "", 4000) || null,
     pains: cleanString(JSON.stringify(persona.pains ?? [], null, 2), 4000),
     desires: cleanString(JSON.stringify(persona.desires ?? [], null, 2), 4000),
@@ -702,7 +637,6 @@ async function persistPersonaBestEffort(params: {
     desired_situation: cleanString(persona.desired_situation ?? "", 6000) || null,
     awareness_level: cleanString(persona.awareness_level ?? "", 120) || null,
     budget_level: cleanString(persona.budget_level ?? "", 120) || null,
-
     persona_json: persona,
     updated_at: now,
   };
@@ -722,11 +656,6 @@ async function persistPersonaBestEffort(params: {
  * -----------------------
  * GET (for onboarding UI)
  * -----------------------
- * Retourne:
- * - shouldGeneratePyramids: boolean (no offer + not affiliate)
- * - offer_pyramids: pyramids array (if any)
- * - selected_offer_pyramid_index: number|null
- * - offer_mode: "affiliate" | "existing_offer" | "none"
  */
 export async function GET(_req: Request) {
   try {
@@ -737,10 +666,8 @@ export async function GET(_req: Request) {
     if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     const userId = session.user.id;
 
-    // business_profile (best-effort)
     const { data: businessProfile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
 
-    // onboarding_facts (best-effort)
     const onboardingFacts: Record<string, unknown> = {};
     try {
       const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
@@ -794,7 +721,6 @@ export async function GET(_req: Request) {
   }
 }
 
-
 /**
  * -----------------------
  * PATCH
@@ -814,28 +740,17 @@ export async function PATCH(req: Request) {
     const pyramidRaw = body?.pyramid;
 
     const selectedIndex =
-      typeof selectedIndexRaw === "number"
-        ? selectedIndexRaw
-        : typeof selectedIndexRaw === "string"
-          ? Number(selectedIndexRaw)
-          : null;
+      typeof selectedIndexRaw === "number" ? selectedIndexRaw : typeof selectedIndexRaw === "string" ? Number(selectedIndexRaw) : null;
 
     if (selectedIndex === null || !Number.isFinite(selectedIndex) || selectedIndex < 0) {
       return NextResponse.json({ success: false, error: "Invalid selectedIndex" }, { status: 400 });
     }
 
-    const { data: planRow, error: planErr } = await supabase
-      .from("business_plan")
-      .select("plan_json")
-      .eq("user_id", userId)
-      .maybeSingle();
-
+    const { data: planRow, error: planErr } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     if (planErr) console.error("Error reading business_plan for PATCH:", planErr);
 
     const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
 
-    // ✅ 1) Si pyramid est fournie, on l’utilise (backward compatible)
-    // ✅ 2) Sinon, on la récupère depuis offer_pyramids[selectedIndex]
     let pyramid: AnyRecord | null = asRecord(pyramidRaw);
 
     if (!pyramid) {
@@ -874,7 +789,6 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
     }
 
-    // ✅ Best-effort sync offer_pyramids (ADMIN)
     try {
       const { data: businessProfile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
       if (businessProfile) {
@@ -906,7 +820,6 @@ export async function PATCH(req: Request) {
   }
 }
 
-
 /**
  * -----------------------
  * POST
@@ -921,11 +834,7 @@ export async function POST(req: Request) {
     if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     const userId = session.user.id;
 
-    const { data: existingPlan, error: existingPlanError } = await supabase
-      .from("business_plan")
-      .select("plan_json")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: existingPlan, error: existingPlanError } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     if (existingPlanError) console.error("Error checking existing business_plan:", existingPlanError);
 
     const existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
@@ -942,33 +851,57 @@ export async function POST(req: Request) {
     const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
     const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
 
-    // Déjà complet
     if (hasSelected && !needFullStrategy) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
     }
-    // Déjà généré (pyramides) mais pas choisi
     if (!hasSelected && hasUsefulPyramids) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
-    const { data: businessProfile, error: profileError } = await supabase
-      .from("business_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
+    const { data: businessProfile, error: profileError } = await supabase.from("business_profiles").select("*").eq("user_id", userId).single();
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
-      return NextResponse.json(
-        { success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` }, { status: 400 });
+    }
+
+    // -----------------------
+    // Offer mode (new onboarding)
+    // -----------------------
+    // Pyramides ONLY si: user sans offre ET pas affilié
+    const onboardingFacts: Record<string, unknown> = {};
+    try {
+      const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      for (const r of rows ?? []) {
+        if (!r?.key) continue;
+        onboardingFacts[String((r as any).key)] = (r as any).value;
+      }
+    } catch {
+      // ignore
+    }
+
+    const businessModel = cleanString((onboardingFacts as any)["business_model"], 40).toLowerCase();
+    const isAffiliate =
+      businessModel === "affiliate" ||
+      businessModel === "affiliation" ||
+      businessModel === "affiliate_marketing" ||
+      businessModel === "affiliate-marketing";
+
+    const hasOffersEffective =
+      (onboardingFacts as any)["has_offers"] === true ||
+      (businessProfile as any)?.has_offers === true ||
+      (Array.isArray((businessProfile as any)?.offers) && (businessProfile as any).offers.length > 0);
+
+    const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
+    const shouldGeneratePyramids = offerMode === "none";
+
+    // ✅ Si l'onboarding dit "affiliate" ou "existing_offer", ce endpoint ne doit PAS générer de pyramides.
+    if (!shouldGeneratePyramids) {
+      return NextResponse.json({ success: true, skipped: true, reason: "offer_mode_no_pyramids", offer_mode: offerMode }, { status: 200 });
     }
 
     const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
     const targetMonthlyRevGuess = parseMoneyFromText(revenueGoalLabel);
 
-    // Load resources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
     if (resourcesError) console.error("Error loading resources:", resourcesError);
 
@@ -977,10 +910,7 @@ export async function POST(req: Request) {
 
     const ai = openai;
     if (!ai) {
-      return NextResponse.json(
-        { success: false, error: "OPENAI_API_KEY / OPENAI client not configured (strategy disabled)" },
-        { status: 500 },
-      );
+      return NextResponse.json({ success: false, error: "AI client not configured (strategy disabled)" }, { status: 500 });
     }
 
     /**
@@ -1000,8 +930,7 @@ export async function POST(req: Request) {
 
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
-OBJECTIF :
-Proposer ${PYRAMIDS_COUNT} pyramides d'offres (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
+OBJECTIF : Proposer ${PYRAMIDS_COUNT} pyramides d'offres (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain.
@@ -1014,18 +943,12 @@ EXIGENCES “ANTI-GÉNÉRALITÉS” :
 - Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
 - Intègre un quick win 7 jours cohérent avec la pyramide.
 
-IMPORTANT :
-Réponds en JSON strict uniquement, sans texte autour.`;
+IMPORTANT : Réponds en JSON strict uniquement, sans texte autour.`;
 
       const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
-- diagnostic_profile :
-${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
-
-- diagnostic_summary :
-${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
-
-- diagnostic_answers :
-${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
+- diagnostic_profile : ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
+- diagnostic_summary : ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+- diagnostic_answers : ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
 
 DONNÉES FORMULAIRES (fallback) :
 ${JSON.stringify(
@@ -1080,10 +1003,13 @@ STRUCTURE EXACTE À RENVOYER :
       "strategy_summary": "1 phrase",
       "lead_magnet": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
       "low_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-            "high_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
+      "high_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
     }
   ]
 }`.trim();
+
+      // 🪙 Credits: 1 génération = 1 crédit
+      await ensureUserCredits(userId);
 
       const aiResponse = await ai.chat.completions.create({
         model: "gpt-4.1",
@@ -1097,6 +1023,7 @@ STRUCTURE EXACTE À RENVOYER :
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
       const parsed = JSON.parse(raw) as AnyRecord;
+      await consumeCredits(userId, 1, { feature: "offer_pyramid" });
 
       const pyramidsRaw = asArray(parsed.offer_pyramids);
       const normalizedOfferPyramids = pyramidsRaw.map((p, idx) => normalizePyramid(asRecord(p), idx));
@@ -1111,15 +1038,12 @@ STRUCTURE EXACTE À RENVOYER :
         ...basePlan,
         offer_pyramids: normalizedOfferPyramids,
 
-        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
-          ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
-          : {}),
+        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel } : {}),
 
         horizon_days: toNumber(basePlan.horizon_days) ?? 90,
         ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
 
-        selected_offer_pyramid_index:
-          typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
+        selected_offer_pyramid_index: typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
         selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
 
         // legacy compat
@@ -1140,7 +1064,6 @@ STRUCTURE EXACTE À RENVOYER :
         return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
       }
 
-      // ✅ best-effort sync (ADMIN) : strategies + offer_pyramids
       try {
         const strategyId = await getOrCreateStrategyIdBestEffort({
           userId,
@@ -1190,7 +1113,7 @@ RÈGLES “COACH-LEVEL” :
 - Chaque recommandation doit préciser: QUOI / COMMENT / LIVRABLE / MÉTRIQUE.
 - Cohérence totale avec la pyramide (angle, canal principal, offre, promesse).
 - Interdit: “crée du contenu” sans (thèmes, formats, fréquence, CTA, distribution).
-- Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé (pains, désirs, objections, déclencheurs, dialogue interne…).
+- Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé.
 - Plan 90 jours: tâches “solo-exécutables”, avec due_date valides, et priorité.
 
 FORMAT JSON STRICT :
@@ -1199,70 +1122,14 @@ FORMAT JSON STRICT :
   "promise": "string",
   "positioning": "string",
   "summary": "string",
-
-  "persona": {
-    "title": "segment en 1 phrase",
-
-    "results_short_term": ["...","...","..."],
-    "results_mid_term": ["...","...","..."],
-    "results_long_term": ["...","...","..."],
-
-    "current_situation": "texte",
-    "daily_exasperations": ["...","...","..."],
-    "emotions_wanted": ["...","...","..."],
-    "first_action_if_fixed": "1 phrase",
-    "true_motivation": "texte",
-    "day_with_problem": "texte",
-    "ideal_life_5_10y": "texte",
-    "tried_solutions": ["...","...","..."],
-    "limiting_beliefs": ["...","...","..."],
-    "internal_dialogue": "texte",
-    "values": ["...","...","..."],
-    "worst_nightmare": "texte",
-    "purchase_triggers": ["...","...","..."],
-
-    "pains": ["...","...","...","...","..."],
-    "desires": ["...","...","..."],
-    "objections": ["...","...","..."],
-
-    "channels": ["...","..."],
-    "exact_phrases": ["...","...","...","...","..."],
-
-    "competitor_analysis": {
-      "what_competitors_do": ["...","...","..."],
-      "what_competitors_do_wrong": ["...","...","..."],
-      "what_market_really_wants": ["...","...","..."],
-      "how_to_win_differently": ["...","...","..."]
-    },
-
-    "summary_block": {
-      "current_sentence": "1 phrase",
-      "wants_sentence": "1 phrase",
-      "pains_5": ["...","...","...","...","..."],
-      "desires_3": ["...","...","..."],
-      "objections_3": ["...","...","..."],
-      "exact_phrases_5": ["...","...","...","...","..."]
-    }
-  },
-
-  "plan_90_days": {
-    "tasks_by_timeframe": {
-      "d30": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
-      "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
-      "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
-    }
-  }
+  "persona": { ... },
+  "plan_90_days": { "tasks_by_timeframe": { "d30": [...], "d60": [...], "d90": [...] } }
 }`.trim();
 
     const fullUserPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
-- diagnostic_profile :
-${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
-
-- diagnostic_summary :
-${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
-
-- diagnostic_answers :
-${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
+- diagnostic_profile : ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
+- diagnostic_summary : ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+- diagnostic_answers : ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
 
 DONNÉES FORMULAIRES (fallback) :
 ${JSON.stringify(
@@ -1303,6 +1170,9 @@ Contraintes :
 - due_date en YYYY-MM-DD (dates réelles et réparties)
 - chaque tâche doit être spécifique (livrable concret)`.trim();
 
+    // 🪙 Credits: 1 génération = 1 crédit
+    await ensureUserCredits(userId);
+
     const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",
       response_format: { type: "json_object" },
@@ -1315,6 +1185,7 @@ Contraintes :
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
     const fullParsed = JSON.parse(fullRaw) as AnyRecord;
+    await consumeCredits(userId, 1, { feature: "strategy_full" });
 
     const mission = cleanString(fullParsed.mission, 240);
     const promise = cleanString(fullParsed.promise, 240);
@@ -1385,7 +1256,6 @@ Contraintes :
       return NextResponse.json({ success: false, error: saveErr2.message }, { status: 500 });
     }
 
-    // ✅ best-effort sync (ADMIN) : strategies + offer_pyramids + personas
     try {
       const strategyId = await getOrCreateStrategyIdBestEffort({
         userId,
@@ -1393,7 +1263,6 @@ Contraintes :
         planJson: nextPlan,
       });
 
-      // offer_pyramids : on resync le set complet (et on marque la sélection)
       try {
         const pyramids = asArray(nextPlan.offer_pyramids)
           .map((p, idx) => normalizePyramid(asRecord(p), idx))
@@ -1435,4 +1304,3 @@ Contraintes :
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : "Internal server error" }, { status: 500 });
   }
 }
-

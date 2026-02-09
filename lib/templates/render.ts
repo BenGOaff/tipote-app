@@ -341,15 +341,12 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
   out = replaceAll(out, "Explique ce que propose ton freebie", benefitsTitle);
 
   // --- Benefits (3 cards) ---
-  // Current schema provides `benefits: string[]` (3 items).
   const benefitsArr = Array.isArray(contentData.benefits) ? contentData.benefits : [];
   if (benefitsArr.length >= 3) {
-    // Replace each benefit-card paragraph inner HTML, in order.
     let idx = 0;
     out = out.replace(/<p class="benefit-text">([\s\S]*?)<\/p>/g, (m0) => {
       const val = benefitsArr[idx++];
       if (typeof val !== "string" || !val.trim()) return m0;
-      // Keep the same <p class="benefit-text"> wrapper, but replace content.
       return `<p class="benefit-text">\n${escapeHtml(val.trim())}\n                </p>`;
     });
   }
@@ -381,7 +378,11 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
   return out;
 }
 
-export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html: string }> {
+/**
+ * ✅ Export attendu par les routes API : renderTemplateHtml
+ * (c’était la cause de ton erreur "Export renderTemplateHtml doesn't exist")
+ */
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
   const kind = normalizeKind(req.kind);
   const mode: RenderMode = req.mode === "kit" ? "kit" : "preview";
   const templateId = normalizeTemplateId(req.templateId, kind);
@@ -442,35 +443,15 @@ export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html
   const isFullDoc = looksLikeFullHtmlDocument(out);
 
   // If it's a full standalone HTML doc, do NOT wrap it again.
-  // We still keep token/CSS logic for non-full docs.
   if (isFullDoc) {
     return { html: out };
   }
 
-  // KIT MODE: return a single paste-ready HTML block for Systeme.io.
-  // - If the kit file already contains its own <link>/<style>/<script>, we return it as-is.
-  // - Otherwise we inline fonts + CSS into the returned HTML block (no <html>/<head>/<body> wrapper).
-  if (mode === "kit") {
-    const hasInlineAssets =
-      /<style[\s>]/i.test(out) || /<link[\s>]/i.test(out) || /<script[\s>]/i.test(out);
-
-    if (hasInlineAssets) {
-      return { html: out };
-    }
-
-    const styleCss = kitCss || css || "";
-    const vars = cssVars ? `:root{${cssVars}}\n` : "";
-    const styleBlock = `<style>\n${vars}${styleCss}\n</style>`;
-
-    const body = out.includes('class="tpt-scope"') ? out : `<div class="tpt-scope">${out}</div>`;
-    const head = (fontsHtml || "").trim();
-
-    return { html: `${head ? head + "\n\n" : ""}${styleBlock}\n\n${body}` };
-  }
+  const styleCss = mode === "kit" ? kitCss || css : css;
 
   const doc = wrapAsDocument({
     htmlBody: out,
-    styleCss: css,
+    styleCss,
     cssVars,
     mode,
     headHtml: fontsHtml || "",
@@ -478,3 +459,9 @@ export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html
 
   return { html: doc };
 }
+
+/**
+ * Backward-compat : certains endroits appellent déjà renderTemplate(...)
+ * → on garde un alias sans casser l’existant.
+ */
+export const renderTemplate = renderTemplateHtml;
