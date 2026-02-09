@@ -8,9 +8,14 @@
       "key": "logo_text",
       "label": "Texte du logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Nom de votre marque/offre en majuscules pour le header (20px, bold, uppercase, letter-spacing 1px, couleur doré #dcc285)",
-      "examples": ["FORMATION PRO", "CHALLENGE MASTER"],
+      "examples": [
+        "FORMATION PRO",
+        "CHALLENGE MASTER"
+      ],
       "maxLength": 25,
       "required": true
     },
@@ -18,9 +23,15 @@
       "key": "nav_links",
       "label": "Liens de navigation",
       "type": "string[]",
+      "source": "ai",
       "intention": "navigation_anchors",
       "description": "3-5 ancres de navigation (14px, gap 35px)",
-      "examples": ["Programme", "Garantie", "Témoignages", "Tarifs"],
+      "examples": [
+        "Programme",
+        "Garantie",
+        "Témoignages",
+        "Tarifs"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 20,
@@ -30,9 +41,14 @@
       "key": "hero_badge",
       "label": "Badge hero",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_label",
       "description": "Badge en haut du hero avec fond doré gradient (12px, bold, uppercase, letter-spacing 1.5px, border-radius 25px)",
-      "examples": ["OFFRE DE LANCEMENT", "ACCÈS LIMITÉ", "PLACES LIMITÉES"],
+      "examples": [
+        "OFFRE DE LANCEMENT",
+        "ACCÈS LIMITÉ",
+        "PLACES LIMITÉES"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -40,9 +56,13 @@
       "key": "hero_title",
       "label": "Titre principal hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Titre principal impactant (48px, bold, line-height 1.3, max-width 900px). Possibilité de mettre des mots en couleur dorée avec .gold-text",
-      "examples": ["Découvre la méthode pour GÉNÉRER 10K par mois", "Transforme ta passion en BUSINESS RENTABLE"],
+      "examples": [
+        "Découvre la méthode pour GÉNÉRER 10K par mois",
+        "Transforme ta passion en BUSINESS RENTABLE"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -50,9 +70,12 @@
       "key": "hero_subtitle",
       "label": "Sous-titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_detail",
       "description": "Sous-titre en italique qui complète la promesse (24px, italic, opacity 0.9)",
-      "examples": ["Sans avoir besoin d'une grosse audience ou de compétences techniques"],
+      "examples": [
+        "Sans avoir besoin d'une grosse audience ou de compétences techniques"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -60,9 +83,12 @@
       "key": "disclaimer_text",
       "label": "Disclaimer hero",
       "type": "string",
+      "source": "ai",
       "intention": "legal_transparency",
       "description": "Texte de disclaimer/avertissement sous le hero (max-width 700px, 14px, line-height 1.7, border-radius 12px, background semi-transparent)",
-      "examples": ["Les résultats peuvent varier selon votre engagement et votre situation. Ceci n'est pas une promesse de gains."],
+      "examples": [
+        "Les résultats peuvent varier selon votre engagement et votre situation. Ceci n'est pas une promesse de gains."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -70,6 +96,7 @@
       "key": "video_url",
       "label": "URL de la vidéo",
       "type": "string",
+      "source": "ai",
       "intention": "video_content",
       "description": "URL de la vidéo VSL (placeholder 16:9, max-width 800px, border-radius 12px)",
       "maxLength": 300,
@@ -79,9 +106,13 @@
       "key": "video_cta_banner",
       "label": "Bannière CTA sous vidéo",
       "type": "string",
+      "source": "ai",
       "intention": "video_engagement",
       "description": "Texte en bannière dorée sous la vidéo (15px, bold, fond gradient doré)",
-      "examples": ["Clique ci-dessous pour commander maintenant", "Rejoins la formation dès aujourd'hui"],
+      "examples": [
+        "Clique ci-dessous pour commander maintenant",
+        "Rejoins la formation dès aujourd'hui"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -89,9 +120,12 @@
       "key": "offer_hook",
       "label": "Hook de l'offre",
       "type": "string",
+      "source": "ai",
       "intention": "offer_intro",
       "description": "Phrase d'accroche en italique qui introduit l'offre box (18px, italic, margin-bottom 20px)",
-      "examples": ["Une opportunité unique qui ne se représentera peut-être jamais"],
+      "examples": [
+        "Une opportunité unique qui ne se représentera peut-être jamais"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -99,9 +133,13 @@
       "key": "offer_title",
       "label": "Titre de l'offre",
       "type": "string",
+      "source": "ai",
       "intention": "offer_headline",
       "description": "Nom de l'offre/produit dans la box centrée (36px, weight 900, line-height 1.2)",
-      "examples": ["FORMATION COMPLÈTE MARKETING DIGITAL", "CHALLENGE 30 JOURS"],
+      "examples": [
+        "FORMATION COMPLÈTE MARKETING DIGITAL",
+        "CHALLENGE 30 JOURS"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -109,9 +147,15 @@
       "key": "offer_price",
       "label": "Prix de l'offre",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix principal en GROS et VERT (48px, weight 900, color #00eb5e)",
-      "examples": ["97€", "497€", "1997€"],
+      "examples": [
+        "97€",
+        "497€",
+        "1997€"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -119,9 +163,14 @@
       "key": "offer_price_old",
       "label": "Ancien prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_anchor",
       "description": "Prix barré pour créer effet de réduction (28px, color #888, text-decoration line-through)",
-      "examples": ["2997€", "997€"],
+      "examples": [
+        "2997€",
+        "997€"
+      ],
       "maxLength": 15,
       "required": false
     },
@@ -129,9 +178,13 @@
       "key": "countdown_label",
       "label": "Label countdown",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_timer",
       "description": "Texte au-dessus du timer countdown (14px, opacity 0.8)",
-      "examples": ["L'offre expire dans :", "Plus que :"],
+      "examples": [
+        "L'offre expire dans :",
+        "Plus que :"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -139,9 +192,14 @@
       "key": "cta_primary_text",
       "label": "CTA principal",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton principal vert gradient (18px, bold, uppercase, letter-spacing 0.5px, border-radius 8px)",
-      "examples": ["COMMANDER MAINTENANT", "OUI JE VEUX ACCÉDER", "REJOINDRE LA FORMATION"],
+      "examples": [
+        "COMMANDER MAINTENANT",
+        "OUI JE VEUX ACCÉDER",
+        "REJOINDRE LA FORMATION"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -149,9 +207,13 @@
       "key": "cta_secondary_text",
       "label": "CTA secondaire",
       "type": "string",
+      "source": "ai",
       "intention": "alternative_action",
       "description": "Texte du bouton secondaire transparent avec bordure dorée (16px, weight 600, border 2px solid #dcc285)",
-      "examples": ["En savoir plus", "Voir la garantie"],
+      "examples": [
+        "En savoir plus",
+        "Voir la garantie"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -159,9 +221,14 @@
       "key": "testimonials_intro_title",
       "label": "Titre intro témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre de section pour les premiers témoignages (42px, weight 900, margin-bottom 20px)",
-      "examples": ["Ils ont obtenu des résultats incroyables", "Ce qu'en disent les participants"],
+      "examples": [
+        "Ils ont obtenu des résultats incroyables",
+        "Ce qu'en disent les participants"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -169,9 +236,13 @@
       "key": "testimonials_intro_subtitle",
       "label": "Sous-titre intro témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_context",
       "description": "Sous-titre explicatif (18px, opacity 0.85, max-width 700px, line-height 1.7)",
-      "examples": ["Découvre comment ils ont transformé leur business en quelques semaines"],
+      "examples": [
+        "Découvre comment ils ont transformé leur business en quelques semaines"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -179,8 +250,17 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "3-9 témoignages dans une grille 3 colonnes avec icône quote (40px rond doré), texte (15px italic) et auteur (16px bold + étoiles 14px)",
+      "examples": [
+        {
+          "testimonial_text": "Témoignage sincère d'un client qui a déjà profité de tes offres, produits ou services",
+          "author_name": "Nom Prénom",
+          "author_rating": "★★★★★"
+        }
+      ],
       "minItems": 3,
       "maxItems": 9,
       "itemSchema": {
@@ -200,22 +280,19 @@
           "description": "Note en étoiles (ex: ★★★★★)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_text": "Témoignage sincère d'un client qui a déjà profité de tes offres, produits ou services",
-          "author_name": "Nom Prénom",
-          "author_rating": "★★★★★"
-        }
-      ]
+      "required": true
     },
     {
       "key": "program_section_title",
       "label": "Titre section programme",
       "type": "string",
+      "source": "ai",
       "intention": "program_intro",
       "description": "Titre de la section programme (42px, weight 900, line-height 1.3)",
-      "examples": ["Ce que tu vas découvrir", "Le programme complet en 3 jours"],
+      "examples": [
+        "Ce que tu vas découvrir",
+        "Le programme complet en 3 jours"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -223,9 +300,12 @@
       "key": "program_section_subtitle",
       "label": "Sous-titre section programme",
       "type": "string",
+      "source": "ai",
       "intention": "program_context",
       "description": "Sous-titre programme (18px, opacity 0.85, max-width 700px)",
-      "examples": ["Un parcours étape par étape pour transformer ton business"],
+      "examples": [
+        "Un parcours étape par étape pour transformer ton business"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -233,8 +313,23 @@
       "key": "program_days",
       "label": "Jours du programme",
       "type": "object[]",
+      "source": "ai",
       "intention": "daily_curriculum",
       "description": "3 jours dans une grille (grid 3 colonnes, gap 35px). Chaque jour a: badge (11px uppercase), date (13px uppercase doré), titre (24px bold), sous-titre optionnel (14px italic), et liste de 3-5 puces avec titre (12px uppercase doré) + description",
+      "examples": [
+        {
+          "day_badge": "JOUR 1",
+          "day_date": "25 Janvier",
+          "day_title": "Nom du Contenu",
+          "day_subtitle": "",
+          "day_bullets": [
+            {
+              "bullet_title": "PUCE PROMESSE",
+              "bullet_text": "Bénéfice + conséquence concrète du bénéfice"
+            }
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -277,29 +372,19 @@
           "description": "Liste de promesses pour ce jour"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "day_badge": "JOUR 1",
-          "day_date": "25 Janvier",
-          "day_title": "Nom du Contenu",
-          "day_subtitle": "",
-          "day_bullets": [
-            {
-              "bullet_title": "PUCE PROMESSE",
-              "bullet_text": "Bénéfice + conséquence concrète du bénéfice"
-            }
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "secret_section_title",
       "label": "Titre section secret",
       "type": "string",
+      "source": "ai",
       "intention": "truth_reveal",
       "description": "Titre qui révèle la vérité ou le secret (42px, weight 900)",
-      "examples": ["IL N'Y A PAS DE SECRET...", "LA VÉRITÉ SUR..."],
+      "examples": [
+        "IL N'Y A PAS DE SECRET...",
+        "LA VÉRITÉ SUR..."
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -307,9 +392,12 @@
       "key": "secret_section_text",
       "label": "Texte section secret",
       "type": "string",
+      "source": "ai",
       "intention": "promise_mechanism",
       "description": "Texte qui explique le mécanisme de réussite (17px, line-height 1.8, possibilité de mettre des mots en gras)",
-      "examples": ["Si tu apprends [ce que tu enseignes] en suivant ma méthode, alors tu pourras [objectif de ton client cible]"],
+      "examples": [
+        "Si tu apprends [ce que tu enseignes] en suivant ma méthode, alors tu pourras [objectif de ton client cible]"
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -317,9 +405,12 @@
       "key": "secret_section_final_goal",
       "label": "Objectif final section secret",
       "type": "string",
+      "source": "ai",
       "intention": "ultimate_outcome",
       "description": "Objectif final en gros (36px, margin-top 50px), avec possibilité de mettre un mot en couleur dorée",
-      "examples": ["Et tu [objectif final] de ton client idéal !"],
+      "examples": [
+        "Et tu [objectif final] de ton client idéal !"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -327,9 +418,13 @@
       "key": "about_name",
       "label": "Nom auteur",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "authority_identity",
       "description": "Ton nom et prénom (16px, bold)",
-      "examples": ["Béné de Blagardette"],
+      "examples": [
+        "Béné de Blagardette"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -337,9 +432,12 @@
       "key": "about_location",
       "label": "Lieu auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_location",
       "description": "Où tu vis/exerces (16px)",
-      "examples": ["Marseille, France"],
+      "examples": [
+        "Marseille, France"
+      ],
       "maxLength": 50,
       "required": false
     },
@@ -347,9 +445,12 @@
       "key": "about_intro",
       "label": "Introduction auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_why",
       "description": "Explication de pourquoi c'est important de résoudre le problème (16px, line-height 1.8, plusieurs paragraphes possibles, max 350 caractères)",
-      "examples": ["Explique simplement pourquoi c'est important pour ton audience cible de résoudre son problème et d'atteindre son objectif le plus rapidement possible."],
+      "examples": [
+        "Explique simplement pourquoi c'est important pour ton audience cible de résoudre son problème et d'atteindre son objectif le plus rapidement possible."
+      ],
       "maxLength": 350,
       "required": true
     },
@@ -357,9 +458,12 @@
       "key": "about_offer_question",
       "label": "Question qualification",
       "type": "string",
+      "source": "ai",
       "intention": "audience_qualification",
       "description": "Question qui introduit la qualification (16px, bold)",
-      "examples": ["Est-ce que mon offre est faite pour toi ?"],
+      "examples": [
+        "Est-ce que mon offre est faite pour toi ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -367,9 +471,12 @@
       "key": "about_offer_intro_text",
       "label": "Texte intro qualification",
       "type": "string",
+      "source": "ai",
       "intention": "qualification_intro",
       "description": "Texte avant la liste de qualification (16px, line-height 1.8)",
-      "examples": ["Toi et moi nous savons que le temps est précieux c'est pourquoi je vais te décrire rapidement à qui s'adresse mon offre..."],
+      "examples": [
+        "Toi et moi nous savons que le temps est précieux c'est pourquoi je vais te décrire rapidement à qui s'adresse mon offre..."
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -377,8 +484,15 @@
       "key": "qualification_list",
       "label": "Liste de qualification",
       "type": "object[]",
+      "source": "ai",
       "intention": "audience_identification",
       "description": "3 critères de qualification avec titre bold et description. Format: SI TU... + explication",
+      "examples": [
+        {
+          "qualification_title": "SI TU EN VEUX PLUS !",
+          "qualification_text": "Décris ici ce que ton audience veut en plus : plus de temps, plus de ventes, plus d'argent... Alors c'est fait pour toi !"
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -393,21 +507,18 @@
           "description": "Explication détaillée de ce critère"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "qualification_title": "SI TU EN VEUX PLUS !",
-          "qualification_text": "Décris ici ce que ton audience veut en plus : plus de temps, plus de ventes, plus d'argent... Alors c'est fait pour toi !"
-        }
-      ]
+      "required": true
     },
     {
       "key": "qualification_final_statement",
       "label": "Déclaration finale qualification",
       "type": "string",
+      "source": "ai",
       "intention": "qualification_conclusion",
       "description": "Texte de conclusion de la qualification dans une box verte avec bordure gauche (18px, weight 600, background rgba green, border-left 4px solid green)",
-      "examples": ["Si cette courte liste ne te disqualifie pas, alors continue à lire, cela pourrait être l'événement le plus important et le plus marquant de ta vie !"],
+      "examples": [
+        "Si cette courte liste ne te disqualifie pas, alors continue à lire, cela pourrait être l'événement le plus important et le plus marquant de ta vie !"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -415,9 +526,12 @@
       "key": "proof_intro_text",
       "label": "Texte intro preuves",
       "type": "string",
+      "source": "ai",
       "intention": "authority_credentials",
       "description": "Texte qui présente ton expérience et crédibilité (17px, line-height 1.8, text-center)",
-      "examples": ["Je ne vais pas y aller par 4 chemins : je m'appelle [Ton Prénom], et ... décris ici ton expérience, tes réussites, ce qui fait qu'on peut te faire confiance..."],
+      "examples": [
+        "Je ne vais pas y aller par 4 chemins : je m'appelle [Ton Prénom], et ... décris ici ton expérience, tes réussites, ce qui fait qu'on peut te faire confiance..."
+      ],
       "maxLength": 400,
       "required": true
     },
@@ -425,9 +539,12 @@
       "key": "proof_evidence_text",
       "label": "Texte preuves sociales",
       "type": "string",
+      "source": "ai",
       "intention": "social_proof_metrics",
       "description": "Texte qui insiste sur les preuves sociales (17px, plusieurs paragraphes possibles, max 300 caractères)",
-      "examples": ["Insiste sur les preuves sociales, montre tes récompenses, les notes de tes clients, screenshots de tes ventes... etc !"],
+      "examples": [
+        "Insiste sur les preuves sociales, montre tes récompenses, les notes de tes clients, screenshots de tes ventes... etc !"
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -435,9 +552,12 @@
       "key": "proof_transformation_text",
       "label": "Texte transformation personnelle",
       "type": "string",
+      "source": "ai",
       "intention": "authority_journey",
       "description": "Explication du changement apporté par ta méthode (17px, text-center, possibilité de mettre ta méthode en doré)",
-      "examples": ["Explique le changement que ta méthode a eu sur ta propre vie, tes revenus etc... ou sur ceux d'un de tes clients."],
+      "examples": [
+        "Explique le changement que ta méthode a eu sur ta propre vie, tes revenus etc... ou sur ceux d'un de tes clients."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -445,9 +565,12 @@
       "key": "methods_storytelling_intro",
       "label": "Storytelling intro méthodes",
       "type": "string",
+      "source": "ai",
       "intention": "authority_vulnerability",
       "description": "Storytelling personnel avant/après (17px, text-center, possibilité de mettre des mots en gras, max 300 caractères)",
-      "examples": ["Au début j'avais TEL problème, c'était vraiment compliqué pour moi de... mais un jour j'ai mis TEL truc en place et voilà ce que ça a changé."],
+      "examples": [
+        "Au début j'avais TEL problème, c'était vraiment compliqué pour moi de... mais un jour j'ai mis TEL truc en place et voilà ce que ça a changé."
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -455,9 +578,12 @@
       "key": "methods_storytelling_conclusion",
       "label": "Conclusion storytelling",
       "type": "string",
+      "source": "ai",
       "intention": "authority_transformation",
       "description": "État actuel après transformation (17px, text-center, avec bold)",
-      "examples": ["Maintenant je vis TELLE vie et c'est ce que je vais te montrer ici."],
+      "examples": [
+        "Maintenant je vis TELLE vie et c'est ce que je vais te montrer ici."
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -465,9 +591,12 @@
       "key": "methods_section_title",
       "label": "Titre section méthodes",
       "type": "string",
+      "source": "ai",
       "intention": "methods_intro",
       "description": "Titre de la section méthodes (42px, weight 900). Peut inclure un sous-titre manuscrit (font Caveat, 32px, couleur dorée)",
-      "examples": ["Les 3 méthodes pour [objectifs]"],
+      "examples": [
+        "Les 3 méthodes pour [objectifs]"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -475,9 +604,12 @@
       "key": "methods_section_subtitle_handwriting",
       "label": "Sous-titre manuscrit méthodes",
       "type": "string",
+      "source": "ai",
       "intention": "methods_hook",
       "description": "Sous-titre en police manuscrite Caveat (32px, couleur dorée) entre parenthèses",
-      "examples": ["(Dont une qui va te choquer)"],
+      "examples": [
+        "(Dont une qui va te choquer)"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -485,8 +617,17 @@
       "key": "methods",
       "label": "Méthodes comparatives",
       "type": "object[]",
+      "source": "ai",
       "intention": "comparison_framework",
       "description": "2-4 méthodes avec badge numéroté (11px uppercase fond doré), titre (28px bold), description (16px), et section PROBLÈME avec label (12px uppercase) + texte problème (15px)",
+      "examples": [
+        {
+          "method_badge": "MÉTHODE #1",
+          "method_title": "NOM DE LA MÉTHODE 1",
+          "method_description": "Vous connaissez probablement cette façon de vendre. Elle se fait généralement par téléphone ou en face à face...",
+          "method_problem": "Cette méthode de vente peut souvent conduire à l'épuisement professionnel..."
+        }
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemSchema": {
@@ -511,23 +652,18 @@
           "description": "Explication du problème de cette méthode"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "method_badge": "MÉTHODE #1",
-          "method_title": "NOM DE LA MÉTHODE 1",
-          "method_description": "Vous connaissez probablement cette façon de vendre. Elle se fait généralement par téléphone ou en face à face...",
-          "method_problem": "Cette méthode de vente peut souvent conduire à l'épuisement professionnel..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "comparison_intro_text",
       "label": "Texte intro comparaison",
       "type": "string",
+      "source": "ai",
       "intention": "comparison_context",
       "description": "Texte qui introduit le tableau comparatif (17px, text-center)",
-      "examples": ["Voici un récapitulatif rapide des 3 méthodes que nous venons de voir..."],
+      "examples": [
+        "Voici un récapitulatif rapide des 3 méthodes que nous venons de voir..."
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -535,18 +671,24 @@
       "key": "comparison_table_headers",
       "label": "En-têtes tableau comparaison",
       "type": "string[]",
+      "source": "ai",
       "intention": "comparison_headers",
       "description": "3-4 en-têtes pour le tableau de comparaison",
+      "examples": [
+        "1-À-1",
+        "1-À-PLUSIEURS",
+        "1-À-INFINIMENT"
+      ],
       "minItems": 3,
       "maxItems": 4,
       "itemMaxLength": 40,
-      "required": false,
-      "examples": ["1-À-1", "1-À-PLUSIEURS", "1-À-INFINIMENT"]
+      "required": false
     },
     {
       "key": "comparison_rows",
       "label": "Lignes tableau comparaison",
       "type": "object[]",
+      "source": "ai",
       "intention": "feature_comparison",
       "description": "4-8 lignes de comparaison avec critère et valeurs (✓ ou ✗)",
       "minItems": 4,
@@ -571,9 +713,13 @@
       "key": "bonus_section_title",
       "label": "Titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_intro",
       "description": "Titre de la section bonus (42px, weight 900)",
-      "examples": ["BONUS INCLUS DANS L'OFFRE", "CE QUE TU OBTIENS EN PLUS"],
+      "examples": [
+        "BONUS INCLUS DANS L'OFFRE",
+        "CE QUE TU OBTIENS EN PLUS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -581,6 +727,7 @@
       "key": "bonus_section_subtitle",
       "label": "Sous-titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_context",
       "description": "Sous-titre bonus (18px, opacity 0.85, max-width 700px)",
       "maxLength": 150,
@@ -590,8 +737,16 @@
       "key": "bonuses",
       "label": "Bonus",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "2-6 bonus avec titre (24px bold) et description (16px line-height 1.7). Grid 2 colonnes, gap 35px",
+      "examples": [
+        {
+          "bonus_title": "BONUS #1 : Nom du Bonus",
+          "bonus_description": "Description complète du bonus et pourquoi c'est précieux",
+          "bonus_value": "297€"
+        }
+      ],
       "minItems": 2,
       "maxItems": 6,
       "itemSchema": {
@@ -611,22 +766,19 @@
           "description": "Valeur du bonus (optionnel, ex: 297€)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_title": "BONUS #1 : Nom du Bonus",
-          "bonus_description": "Description complète du bonus et pourquoi c'est précieux",
-          "bonus_value": "297€"
-        }
-      ]
+      "required": true
     },
     {
       "key": "guarantee_title",
       "label": "Titre garantie",
       "type": "string",
+      "source": "ai",
       "intention": "guarantee_headline",
       "description": "Titre de la garantie (42px, weight 900)",
-      "examples": ["Garantie de remboursement à 100 %", "Satisfait ou remboursé 60 jours"],
+      "examples": [
+        "Garantie de remboursement à 100 %",
+        "Satisfait ou remboursé 60 jours"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -634,9 +786,12 @@
       "key": "guarantee_text",
       "label": "Texte garantie",
       "type": "string",
+      "source": "ai",
       "intention": "objection_killer",
       "description": "Explication détaillée de la garantie avec bold sur les parties importantes (17px, line-height 1.8, max 500 caractères)",
-      "examples": ["Je veux que vous soyez sûr que c'est la meilleure décision pour vous et votre entreprise aujourd'hui. C'est pourquoi j'offre une garantie de satisfaction à 100 % et de remboursement !..."],
+      "examples": [
+        "Je veux que vous soyez sûr que c'est la meilleure décision pour vous et votre entreprise aujourd'hui. C'est pourquoi j'offre une garantie de satisfaction à 100 % et de remboursement !..."
+      ],
       "maxLength": 500,
       "required": true
     },
@@ -644,9 +799,13 @@
       "key": "timing_section_title",
       "label": "Titre section timing",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_reasoning",
       "description": "Titre qui explique l'urgence (42px, weight 900)",
-      "examples": ["Pourquoi le timing est essentiel", "Pourquoi tu dois agir MAINTENANT"],
+      "examples": [
+        "Pourquoi le timing est essentiel",
+        "Pourquoi tu dois agir MAINTENANT"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -654,9 +813,12 @@
       "key": "timing_text_1",
       "label": "Texte timing 1",
       "type": "string",
+      "source": "ai",
       "intention": "scarcity_justification",
       "description": "Premier paragraphe qui explique la rareté de l'événement (17px, line-height 1.8, possibilité de bold et couleur dorée, max 400 caractères)",
-      "examples": ["Écoutez, je n'ai jamais fait un événement comme celui-ci auparavant... Je ne sais pas si je le referai. C'est peut-être votre SEULE chance..."],
+      "examples": [
+        "Écoutez, je n'ai jamais fait un événement comme celui-ci auparavant... Je ne sais pas si je le referai. C'est peut-être votre SEULE chance..."
+      ],
       "maxLength": 400,
       "required": false
     },
@@ -664,9 +826,12 @@
       "key": "timing_text_2",
       "label": "Texte timing 2",
       "type": "string",
+      "source": "ai",
       "intention": "capacity_limit",
       "description": "Texte qui explique les limitations techniques (19px, margin 40px)",
-      "examples": ["Maintenant, comme il s'agit d'un événement virtuel, je dois m'assurer que ma bande passante ne soit pas sollicitée... une fois que j'aurai atteint mon plafond de participants... les portes seront fermées"],
+      "examples": [
+        "Maintenant, comme il s'agit d'un événement virtuel, je dois m'assurer que ma bande passante ne soit pas sollicitée... une fois que j'aurai atteint mon plafond de participants... les portes seront fermées"
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -674,9 +839,12 @@
       "key": "timing_final_cta_text",
       "label": "CTA final timing",
       "type": "string",
+      "source": "ai",
       "intention": "final_push",
       "description": "Dernier appel à l'action en gros (42px, avec possibilité couleur dorée sur certains mots)",
-      "examples": ["N'ATTENDS PAS ET INSCRIS-TOI À 'Nom de ton offre'"],
+      "examples": [
+        "N'ATTENDS PAS ET INSCRIS-TOI À 'Nom de ton offre'"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -684,9 +852,14 @@
       "key": "pricing_normal_price",
       "label": "Prix normal",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_anchor",
       "description": "Prix normal barré (18px, opacity 0.7, text-decoration line-through)",
-      "examples": ["2997€", "997€"],
+      "examples": [
+        "2997€",
+        "997€"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -694,9 +867,14 @@
       "key": "pricing_current_price",
       "label": "Prix actuel",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix actuel en TRÈS GROS (56px, weight 900, couleur dorée)",
-      "examples": ["100 €", "497 €"],
+      "examples": [
+        "100 €",
+        "497 €"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -704,8 +882,19 @@
       "key": "pricing_tiers",
       "label": "Paliers de prix",
       "type": "object[]",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "tiered_pricing",
       "description": "3 paliers de prix progressifs. Le premier est featured (border 3px, scale 1.05). Chaque palier a: label optionnel, nombre de places, prix, note optionnelle",
+      "examples": [
+        {
+          "tier_label": "1000 premières places",
+          "tier_places": "1'000 premières places",
+          "tier_price": "100€",
+          "tier_note": "inclus : bonus cadeaux mystères!!!",
+          "tier_featured": true
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -734,23 +923,29 @@
           "description": "True pour le premier palier mis en avant"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "tier_label": "1000 premières places",
-          "tier_places": "1'000 premières places",
-          "tier_price": "100€",
-          "tier_note": "inclus : bonus cadeaux mystères!!!",
-          "tier_featured": true
-        }
-      ]
+      "required": true
     },
     {
       "key": "info_cards",
       "label": "Cartes d'info pratiques",
       "type": "object[]",
+      "source": "ai",
       "intention": "practical_info",
       "description": "3 cartes d'info avec titre (18px bold uppercase doré) et texte (15px line-height 1.7). Grid 3 colonnes",
+      "examples": [
+        {
+          "info_title": "QUOI",
+          "info_text": "Challenge Virtuel, formation en ligne, accompagnement... explique le format de ton offre."
+        },
+        {
+          "info_title": "QUAND",
+          "info_text": "Si ton offre est disponible pendant des dates précises, indique-les ici"
+        },
+        {
+          "info_title": "POURQUOI",
+          "info_text": "Rappelle la promesse principale de ton offre"
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -765,26 +960,14 @@
           "description": "Explication pratique"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "info_title": "QUOI",
-          "info_text": "Challenge Virtuel, formation en ligne, accompagnement... explique le format de ton offre."
-        },
-        {
-          "info_title": "QUAND",
-          "info_text": "Si ton offre est disponible pendant des dates précises, indique-les ici"
-        },
-        {
-          "info_title": "POURQUOI",
-          "info_text": "Rappelle la promesse principale de ton offre"
-        }
-      ]
+      "required": true
     },
     {
       "key": "final_testimonials_title",
       "label": "Titre témoignages finaux",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "final_social_proof",
       "description": "Titre optionnel pour la section de témoignages finaux (42px)",
       "maxLength": 80,
@@ -794,9 +977,13 @@
       "key": "form_cta_text",
       "label": "CTA bouton formulaire",
       "type": "string",
+      "source": "ai",
       "intention": "order_action",
       "description": "Texte du bouton de commande dans le formulaire (18px, uppercase, width 100%)",
-      "examples": ["Rejoindre 'nom de ton offre'", "Commander maintenant"],
+      "examples": [
+        "Rejoindre 'nom de ton offre'",
+        "Commander maintenant"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -804,6 +991,8 @@
       "key": "footer_logo",
       "label": "Logo footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_brand",
       "description": "Nom de l'offre/marque dans le footer (18px, bold, couleur dorée)",
       "maxLength": 40,
@@ -813,21 +1002,30 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "3-5 liens légaux (13px, gap 25px, color rgba white 0.7)",
+      "examples": [
+        "Conditions générales de vente",
+        "Mentions légales",
+        "Politique de confidentialité"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["Conditions générales de vente", "Mentions légales", "Politique de confidentialité"]
+      "required": true
     },
     {
       "key": "footer_disclaimer",
       "label": "Disclaimer footer",
       "type": "string",
+      "source": "ai",
       "intention": "legal_disclaimer",
       "description": "Texte légal de disclaimer (11px, line-height 1.7, max-width 900px, opacity 0.5)",
-      "examples": ["Chaque entreprise en ligne est différente... LES RÉSULTATS INDIVIDUELS DE VOTRE ENTREPRISE VARIERONT..."],
+      "examples": [
+        "Chaque entreprise en ligne est différente... LES RÉSULTATS INDIVIDUELS DE VOTRE ENTREPRISE VARIERONT..."
+      ],
       "maxLength": 500,
       "required": false
     }

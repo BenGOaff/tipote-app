@@ -8,9 +8,13 @@
       "key": "header_countdown_text",
       "label": "Texte header countdown",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_announcement",
       "description": "Texte avant le countdown dans le header dark (14px, weight 600, letter-spacing 0.5px, couleur blanche, background gradient dark blue #1a2c4f)",
-      "examples": ["OFFRE DE LANCEMENT À DURÉE LIMITÉE | LE PRIX AUGMENTE DANS :", "PROMOTION LIMITÉE - FIN DANS :"],
+      "examples": [
+        "OFFRE DE LANCEMENT À DURÉE LIMITÉE | LE PRIX AUGMENTE DANS :",
+        "PROMOTION LIMITÉE - FIN DANS :"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -18,9 +22,13 @@
       "key": "logo_text",
       "label": "Texte du logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Nom de la formation (24px Anton, weight 900, couleur #1b2b4d dark blue)",
-      "examples": ["LE NOM DE TA FORMATION"],
+      "examples": [
+        "LE NOM DE TA FORMATION"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -28,9 +36,13 @@
       "key": "logo_accent",
       "label": "Partie accentuée logo",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "brand_highlight",
       "description": "Partie du logo en couleur verte (color #82ca80)",
-      "examples": ["DE TA FORMATION"],
+      "examples": [
+        "DE TA FORMATION"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -38,21 +50,29 @@
       "key": "nav_links",
       "label": "Liens navigation",
       "type": "string[]",
+      "source": "ai",
       "intention": "navigation_anchors",
       "description": "3-4 liens de navigation sticky (14px, weight 600, gap 30px)",
+      "examples": [
+        "CONTENU",
+        "TARIF",
+        "DES QUESTIONS?"
+      ],
       "minItems": 3,
       "maxItems": 4,
       "itemMaxLength": 25,
-      "required": true,
-      "examples": ["CONTENU", "TARIF", "DES QUESTIONS?"]
+      "required": true
     },
     {
       "key": "attention_box_text",
       "label": "Texte attention box",
       "type": "string",
+      "source": "ai",
       "intention": "target_identification",
       "description": "Interpellation directe du public cible dans box rouge gradient (13px, weight 600, background gradient rouge #d02f35, couleur blanche, border-radius 6px)",
-      "examples": ["Attention : ici cite directement le public cible auquel tu t'adresses (ex : infopreneurs, coachs,...)"],
+      "examples": [
+        "Attention : ici cite directement le public cible auquel tu t'adresses (ex : infopreneurs, coachs,...)"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -60,9 +80,12 @@
       "key": "hero_title",
       "label": "Titre hero principal",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Promesse principale (48px, weight 800, line-height 1.2, couleur #1b2b4d). Peut contenir des <br> et des balises <span class='highlight'> pour texte vert et <span class='strikethrough'> pour texte barré réduit",
-      "examples": ["Rédige ici la promesse\nprincipale de ton\noffre qui va attirer\nimmédiatement\nl'attention de tes clients cibles"],
+      "examples": [
+        "Rédige ici la promesse\nprincipale de ton\noffre qui va attirer\nimmédiatement\nl'attention de tes clients cibles"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -70,9 +93,12 @@
       "key": "hero_title_highlight",
       "label": "Partie surlignée hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_emphasis",
       "description": "Partie du titre à mettre en vert avec <span class='highlight'>",
-      "examples": ["principale de ton\noffre qui va attirer\nimmédiatement"],
+      "examples": [
+        "principale de ton\noffre qui va attirer\nimmédiatement"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -80,9 +106,12 @@
       "key": "hero_title_strikethrough",
       "label": "Punchline barrée hero",
       "type": "string",
+      "source": "ai",
       "intention": "benefit_tease",
       "description": "Punchline barrée en petit (0.6em du titre principal, opacity 0.5)",
-      "examples": ["ici une punchline 'bénéfice concret'"],
+      "examples": [
+        "ici une punchline 'bénéfice concret'"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -90,9 +119,13 @@
       "key": "cta_primary_text",
       "label": "Texte CTA principal",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton principal (14px, bold, uppercase, letter-spacing 0.5px, gradient vert #45da43 → #82ca80, border-radius 8px). Peut contenir emoji",
-      "examples": ["👉 JE DÉBLOQUE MES ACCÈS AUJOURD'HUI", "COMMANDER MAINTENANT"],
+      "examples": [
+        "👉 JE DÉBLOQUE MES ACCÈS AUJOURD'HUI",
+        "COMMANDER MAINTENANT"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -100,8 +133,16 @@
       "key": "trust_badges",
       "label": "Badges de confiance",
       "type": "object[]",
+      "source": "ai",
       "intention": "trust_building",
       "description": "3 badges de réassurance avec icône carrée dark (40px, background #1b2b4d, border-radius 8px), titre bold et sous-texte (12px)",
+      "examples": [
+        {
+          "badge_icon": "✓",
+          "badge_title": "Paiement",
+          "badge_subtitle": "sécurisé"
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -121,22 +162,18 @@
           "description": "Sous-titre"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "badge_icon": "✓",
-          "badge_title": "Paiement",
-          "badge_subtitle": "sécurisé"
-        }
-      ]
+      "required": true
     },
     {
       "key": "problems_title",
       "label": "Titre section problèmes",
       "type": "string",
+      "source": "ai",
       "intention": "problem_identification",
       "description": "Titre qui énonce le contexte (42px, weight 800, couleur #1b2b4d dark blue)",
-      "examples": ["Tu cherches à développer"],
+      "examples": [
+        "Tu cherches à développer"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -144,9 +181,12 @@
       "key": "problems_subtitle",
       "label": "Sous-titre problèmes",
       "type": "string",
+      "source": "ai",
       "intention": "problem_context",
       "description": "Sous-titre en uppercase (24px, weight 700, couleur #1b2b4d)",
-      "examples": ["TON ACTIVITÉ EN LIGNE"],
+      "examples": [
+        "TON ACTIVITÉ EN LIGNE"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -154,9 +194,12 @@
       "key": "problems_title_2",
       "label": "Titre problèmes partie 2",
       "type": "string",
+      "source": "ai",
       "intention": "problem_agitation",
       "description": "Deuxième titre qui agite (42px, weight 800)",
-      "examples": ["Mais rien ne se passe comme prévu ??!!"],
+      "examples": [
+        "Mais rien ne se passe comme prévu ??!!"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -164,24 +207,28 @@
       "key": "problem_list",
       "label": "Liste de problèmes",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "4-8 problèmes spécifiques avec icône → rouge (16px, line-height 1.8, color #4a4a4a). Peut contenir des <strong>",
-      "minItems": 4,
-      "maxItems": 8,
-      "itemMaxLength": 150,
-      "required": true,
       "examples": [
         "Tu n'arrives pas à comprendre <strong>comment marche Système.io</strong>",
         "Les <strong>tunnels de vente</strong> sont encore mystérieux pour toi"
-      ]
+      ],
+      "minItems": 4,
+      "maxItems": 8,
+      "itemMaxLength": 150,
+      "required": true
     },
     {
       "key": "empathy_title",
       "label": "Titre empathy box",
       "type": "string",
+      "source": "ai",
       "intention": "empathy_statement",
       "description": "Titre de la box empathie sur fond gradient light (32px, weight 700, couleur #1b2b4d)",
-      "examples": ["Je comprends ce que tu vis, parce que je suis passée par-là moi aussi..."],
+      "examples": [
+        "Je comprends ce que tu vis, parce que je suis passée par-là moi aussi..."
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -189,24 +236,28 @@
       "key": "story_paragraphs",
       "label": "Paragraphes storytelling",
       "type": "string[]",
+      "source": "ai",
       "intention": "authority_journey",
       "description": "4-6 paragraphes de storytelling personnel (15px, line-height 1.8, color #4a4a4a). Peut contenir des <strong>",
-      "minItems": 4,
-      "maxItems": 6,
-      "itemMaxLength": 300,
-      "required": true,
       "examples": [
         "Je m'appelle Béné, et il n'y a pas si longtemps, j'étais bloquée comme toi.",
         "Alors je me suis retroussé les manches et après 4 ans de travail, de tests et d'apprentissages : j'ai construit <strong>une méthode qui fonctionne vraiment</strong>."
-      ]
+      ],
+      "minItems": 4,
+      "maxItems": 6,
+      "itemMaxLength": 300,
+      "required": true
     },
     {
       "key": "solution_section_title",
       "label": "Titre section solution",
       "type": "string",
+      "source": "ai",
       "intention": "solution_intro",
       "description": "Titre de la section solution sur fond dark (42px, weight 800, couleur blanche)",
-      "examples": ["Tu veux savoir comment j'ai fait ?"],
+      "examples": [
+        "Tu veux savoir comment j'ai fait ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -214,9 +265,12 @@
       "key": "solution_section_subtitle",
       "label": "Sous-titre solution",
       "type": "string",
+      "source": "ai",
       "intention": "solution_tease",
       "description": "Sous-titre solution (24px, weight 700, couleur blanche, uppercase)",
-      "examples": ["LA RÉPONSE EST SIMPLE"],
+      "examples": [
+        "LA RÉPONSE EST SIMPLE"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -224,9 +278,14 @@
       "key": "bundle_logo",
       "label": "Nom du bundle",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "product_identity",
       "description": "Nom du bundle/produit en TRÈS GROS (72px Anton, weight 900, couleur #82ca80 vert)",
-      "examples": ["BUNDLE SIO", "MEGA PACK"],
+      "examples": [
+        "BUNDLE SIO",
+        "MEGA PACK"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -234,9 +293,12 @@
       "key": "bundle_tagline",
       "label": "Tagline du bundle",
       "type": "string",
+      "source": "ai",
       "intention": "product_promise",
       "description": "Tagline sous le nom (20px, opacity 0.9, couleur blanche)",
-      "examples": ["Le pack ultime pour maîtriser Systeme.io"],
+      "examples": [
+        "Le pack ultime pour maîtriser Systeme.io"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -244,9 +306,12 @@
       "key": "content_section_title",
       "label": "Titre section contenu",
       "type": "string",
+      "source": "ai",
       "intention": "content_overview_intro",
       "description": "Titre de la section aperçu du contenu (42px, weight 800, couleur #1b2b4d)",
-      "examples": ["Voici tout ce que tu vas recevoir"],
+      "examples": [
+        "Voici tout ce que tu vas recevoir"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -254,6 +319,7 @@
       "key": "content_section_subtitle",
       "label": "Sous-titre section contenu",
       "type": "string",
+      "source": "ai",
       "intention": "content_context",
       "description": "Sous-titre aperçu contenu (24px, weight 700, uppercase)",
       "maxLength": 80,
@@ -263,8 +329,19 @@
       "key": "modules",
       "label": "Modules de formation",
       "type": "object[]",
+      "source": "ai",
       "intention": "curriculum_showcase",
       "description": "3-10 modules avec header dark gradient uppercase (18px bold), description (14px line-height 1.8) et features liste avec ✓ vert (14px). Cards blanches avec shadow, hover effet",
+      "examples": [
+        {
+          "module_header": "MODULE 1 : FORMATION SYSTEME.IO",
+          "module_description": "Une formation vidéo complète qui te guide étape par étape pour <strong>maîtriser Systeme.io</strong>...",
+          "module_features": [
+            "<strong>Formation vidéo complète</strong> avec tous les modules essentiels",
+            "<strong>Guide pratique</strong> pour créer ton premier tunnel de vente"
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 10,
       "itemSchema": {
@@ -286,25 +363,19 @@
           "description": "Liste de features avec ✓ vert"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "module_header": "MODULE 1 : FORMATION SYSTEME.IO",
-          "module_description": "Une formation vidéo complète qui te guide étape par étape pour <strong>maîtriser Systeme.io</strong>...",
-          "module_features": [
-            "<strong>Formation vidéo complète</strong> avec tous les modules essentiels",
-            "<strong>Guide pratique</strong> pour créer ton premier tunnel de vente"
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "bonus_section_title",
       "label": "Titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_intro",
       "description": "Titre de la section bonus (42px, weight 800, couleur #1b2b4d)",
-      "examples": ["Et ce n'est pas tout...", "BONUS INCLUS"],
+      "examples": [
+        "Et ce n'est pas tout...",
+        "BONUS INCLUS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -312,8 +383,18 @@
       "key": "bonuses",
       "label": "Bonus",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "2-4 bonus avec header vert gradient (20px bold), description avec liste ✓ (14px) et placeholder image (250px height). Grid 2 colonnes",
+      "examples": [
+        {
+          "bonus_header": "BONUS 1 : PROMPTS IA",
+          "bonus_description": "Profite de ces <strong>4 prompts IA exclusifs</strong> inclus en bonus...",
+          "bonus_features": [
+            "<strong>Créer un persona</strong> : définis facilement le profil détaillé de ton audience cible"
+          ]
+        }
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemSchema": {
@@ -335,24 +416,20 @@
           "description": "Liste features bonus avec ✓"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_header": "BONUS 1 : PROMPTS IA",
-          "bonus_description": "Profite de ces <strong>4 prompts IA exclusifs</strong> inclus en bonus...",
-          "bonus_features": [
-            "<strong>Créer un persona</strong> : définis facilement le profil détaillé de ton audience cible"
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "price_amount",
       "label": "Prix principal",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix en ÉNORME (96px, weight 900, couleur #da2f35 rouge, line-height 1)",
-      "examples": ["47€", "97€"],
+      "examples": [
+        "47€",
+        "97€"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -360,9 +437,14 @@
       "key": "price_strike",
       "label": "Prix barré",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_anchor",
       "description": "Prix barré entre parenthèses (24px, text-decoration line-through, color #9ca3af gris)",
-      "examples": ["(au lieu de 497 euros)", "(valeur 997€)"],
+      "examples": [
+        "(au lieu de 497 euros)",
+        "(valeur 997€)"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -370,9 +452,13 @@
       "key": "price_label",
       "label": "Label prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "urgency_context",
       "description": "Texte avant le countdown de prix (14px, color #4a4a4a)",
-      "examples": ["FIN DE L'OFFRE DE LANCEMENT DANS :"],
+      "examples": [
+        "FIN DE L'OFFRE DE LANCEMENT DANS :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -380,9 +466,12 @@
       "key": "benefits_section_title",
       "label": "Titre section bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "benefits_intro",
       "description": "Titre de la section bénéfices futurs (42px, weight 800, couleur #1b2b4d)",
-      "examples": ["Dans les prochaines semaines"],
+      "examples": [
+        "Dans les prochaines semaines"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -390,9 +479,12 @@
       "key": "benefits_section_subtitle",
       "label": "Sous-titre bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "benefits_context",
       "description": "Sous-titre bénéfices (24px, weight 700, uppercase)",
-      "examples": ["IMAGINE QUE..."],
+      "examples": [
+        "IMAGINE QUE..."
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -400,8 +492,16 @@
       "key": "benefits",
       "label": "Bénéfices futurs",
       "type": "object[]",
+      "source": "ai",
       "intention": "outcome_visualization",
       "description": "4 bénéfices avec icône emoji dans cercle dark (80px, background gradient dark, couleur icône #82ca80), titre (24px bold) et texte (15px line-height 1.8). Grid 2 colonnes, cards blanches centrées",
+      "examples": [
+        {
+          "benefit_icon": "📝",
+          "benefit_title": "Tu produis du contenu",
+          "benefit_text": "<strong>de qualité</strong>, sans y passer des heures. Tes prospects arrivent naturellement..."
+        }
+      ],
       "minItems": 4,
       "maxItems": 4,
       "itemSchema": {
@@ -421,22 +521,18 @@
           "description": "Description du bénéfice avec <strong>"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "benefit_icon": "📝",
-          "benefit_title": "Tu produis du contenu",
-          "benefit_text": "<strong>de qualité</strong>, sans y passer des heures. Tes prospects arrivent naturellement..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "recap_section_title",
       "label": "Titre section récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_intro",
       "description": "Titre intro récap sur fond dark (42px, weight 800, couleur blanche)",
-      "examples": ["C'est exactement pour ça"],
+      "examples": [
+        "C'est exactement pour ça"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -444,9 +540,12 @@
       "key": "recap_section_subtitle",
       "label": "Sous-titre récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_bridge",
       "description": "Sous-titre récap (24px, weight 700, uppercase, couleur blanche)",
-      "examples": ["que j'ai créé le"],
+      "examples": [
+        "que j'ai créé le"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -454,9 +553,13 @@
       "key": "recap_bundle_name_intro",
       "label": "Intro nom bundle récap",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "product_reveal",
       "description": "Texte avant nom bundle (24px, weight 700, uppercase, couleur blanche)",
-      "examples": ["que tu peux"],
+      "examples": [
+        "que tu peux"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -464,9 +567,13 @@
       "key": "recap_bundle_name_outro",
       "label": "Outro nom bundle récap",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "call_to_action_setup",
       "description": "Texte après nom bundle avec possibilité de mettre partie en vert (24px, weight 700, uppercase). Peut contenir <span style='color: #82ca80;'>",
-      "examples": ["que tu peux rejoindre aujourd'hui et appliquer dès ce soir !"],
+      "examples": [
+        "que tu peux rejoindre aujourd'hui et appliquer dès ce soir !"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -474,9 +581,12 @@
       "key": "recap_content_title",
       "label": "Titre contenu récap",
       "type": "string",
+      "source": "ai",
       "intention": "delivery_promise",
       "description": "Titre de ce qui est reçu (en uppercase, weight 700, couleur blanche)",
-      "examples": ["DÈS QUE TU VALIDES TA COMMANDE TU REÇOIS"],
+      "examples": [
+        "DÈS QUE TU VALIDES TA COMMANDE TU REÇOIS"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -484,9 +594,12 @@
       "key": "recap_content_subtitle",
       "label": "Sous-titre contenu récap",
       "type": "string",
+      "source": "ai",
       "intention": "value_summary",
       "description": "Résumé de la valeur (opacity 0.9, couleur blanche)",
-      "examples": ["Tout ce qu'il faut pour générer de l'argent avec Systeme.io"],
+      "examples": [
+        "Tout ce qu'il faut pour générer de l'argent avec Systeme.io"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -494,24 +607,29 @@
       "key": "recap_list",
       "label": "Liste récapitulative",
       "type": "string[]",
+      "source": "ai",
       "intention": "value_stack",
       "description": "8-15 points récapitulatifs avec ✓ vert (15px, line-height 1.8). Peut contenir <strong>",
-      "minItems": 8,
-      "maxItems": 15,
-      "itemMaxLength": 350,
-      "required": true,
       "examples": [
         "Apprends à utiliser Systeme.io comme un pro, même si tu pars de zéro, avec une méthode claire et simple... et épargne-toi des mois de galères.",
         "<strong>BONUS : crée des contenus percutants</strong> grâce aux prompts IA inclus..."
-      ]
+      ],
+      "minItems": 8,
+      "maxItems": 15,
+      "itemMaxLength": 350,
+      "required": true
     },
     {
       "key": "testimonials_section_title",
       "label": "Titre section témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre de la section témoignages (42px, weight 800, couleur #1b2b4d)",
-      "examples": ["L'avis des membres de mes formations :"],
+      "examples": [
+        "L'avis des membres de mes formations :"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -519,8 +637,19 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "4-12 témoignages style Trustpilot avec avatar initiales (50px rond gradient), nom (18px bold), rating étoiles + timing (13px opacity 0.7), texte avec titre bold (15px), et date expérience (12px opacity 0.6). Grid 3 colonnes",
+      "examples": [
+        {
+          "testimonial_avatar": "LY",
+          "testimonial_name": "Lydie",
+          "testimonial_rating": "★★★★★ il y a 8 heures",
+          "testimonial_text": "<strong>Retour après une semaine de formation. MERCI Béné</strong><br>Une semaine que je suis la formation...",
+          "testimonial_date": "Date de l'expérience: 08 septembre 2024"
+        }
+      ],
       "minItems": 4,
       "maxItems": 12,
       "itemSchema": {
@@ -550,24 +679,19 @@
           "description": "Date de l'expérience (ex: Date de l'expérience: 08 septembre 2024)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_avatar": "LY",
-          "testimonial_name": "Lydie",
-          "testimonial_rating": "★★★★★ il y a 8 heures",
-          "testimonial_text": "<strong>Retour après une semaine de formation. MERCI Béné</strong><br>Une semaine que je suis la formation...",
-          "testimonial_date": "Date de l'expérience: 08 septembre 2024"
-        }
-      ]
+      "required": true
     },
     {
       "key": "testimonials_footer_text",
       "label": "Texte footer témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_scale",
       "description": "Texte sous le CTA des témoignages (13px, color #9ca3af gris)",
-      "examples": ["Et je rejoins 4200+ élèves satisfaits"],
+      "examples": [
+        "Et je rejoins 4200+ élèves satisfaits"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -575,9 +699,12 @@
       "key": "faq_section_title",
       "label": "Titre section FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre de la FAQ (42px, weight 800, couleur #1b2b4d)",
-      "examples": ["Foire aux questions :"],
+      "examples": [
+        "Foire aux questions :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -585,24 +712,28 @@
       "key": "faqs",
       "label": "Questions fréquentes",
       "type": "string[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "8-15 questions FAQ avec flèche ▼ (16px, weight 600, padding 25px, border-bottom, hover background light)",
-      "minItems": 8,
-      "maxItems": 15,
-      "itemMaxLength": 150,
-      "required": true,
       "examples": [
         "Je suis débutant, est-ce que le Bundle SIO™ est fait pour moi ?",
         "Puis-je revendre les templates inclus dans le Bundle ?"
-      ]
+      ],
+      "minItems": 8,
+      "maxItems": 15,
+      "itemMaxLength": 150,
+      "required": true
     },
     {
       "key": "faq_cta_text",
       "label": "CTA final FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "final_action",
       "description": "Texte du CTA après FAQ (14px, uppercase)",
-      "examples": ["JE ME LANCE"],
+      "examples": [
+        "JE ME LANCE"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -610,9 +741,13 @@
       "key": "footer_logo",
       "label": "Logo footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_brand",
       "description": "Texte du logo dans le footer dark (20px, weight 700, couleur blanche)",
-      "examples": ["LA FORMATION"],
+      "examples": [
+        "LA FORMATION"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -620,9 +755,13 @@
       "key": "footer_logo_accent",
       "label": "Partie accentuée logo footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_highlight",
       "description": "Partie du logo footer en vert (color #82ca80)",
-      "examples": ["BETA"],
+      "examples": [
+        "BETA"
+      ],
       "maxLength": 20,
       "required": false
     },
@@ -630,21 +769,30 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "3-5 liens légaux (13px, gap 20px, couleur rgba white 0.7)",
+      "examples": [
+        "Conditions Générales de Vente",
+        "Mentions Légales",
+        "Politique de confidentialité"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["Conditions Générales de Vente", "Mentions Légales", "Politique de confidentialité"]
+      "required": true
     },
     {
       "key": "footer_copyright",
       "label": "Copyright",
       "type": "string",
+      "source": "ai",
       "intention": "legal_copyright",
       "description": "Ligne de copyright (13px, color rgba white 0.5)",
-      "examples": ["© 2024 - Tous droits réservés"],
+      "examples": [
+        "© 2024 - Tous droits réservés"
+      ],
       "maxLength": 60,
       "required": true
     }

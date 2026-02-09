@@ -8,9 +8,14 @@
       "key": "logo_text",
       "label": "Texte du logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Logo dans la top bar sticky (18px, weight 900, uppercase, couleur #014d82 bleu foncé)",
-      "examples": ["[LOGO CHALLENGE]", "ONE FUNNEL AWAY"],
+      "examples": [
+        "[LOGO CHALLENGE]",
+        "ONE FUNNEL AWAY"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -18,9 +23,13 @@
       "key": "top_cta_text",
       "label": "Texte CTA top bar",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton dans la top bar (13px, bold, gradient bleu #1cbcff → #21bbff, border-radius 50px, padding 12px 30px)",
-      "examples": ["Rejoindre maintenant", "S'inscrire"],
+      "examples": [
+        "Rejoindre maintenant",
+        "S'inscrire"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -28,9 +37,12 @@
       "key": "hero_title",
       "label": "Titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Titre ÉNORME hero (56px, weight 900, line-height 1.1, uppercase, letter-spacing -1px, couleur blanche sur fond gradient rouge #ef412d → #d03028)",
-      "examples": ["Démarrez votre business en ligne en 30 jours"],
+      "examples": [
+        "Démarrez votre business en ligne en 30 jours"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -38,9 +50,12 @@
       "key": "value_box_title",
       "label": "Titre value box",
       "type": "string",
+      "source": "ai",
       "intention": "promise_setup",
       "description": "Titre de la box blanche avec margin -80px (28px, weight 800, line-height 1.4, couleur #2f2f2f)",
-      "examples": ["La vie que vous voulez, le mariage que vous voulez... la famille que vous voulez, c'est..."],
+      "examples": [
+        "La vie que vous voulez, le mariage que vous voulez... la famille que vous voulez, c'est..."
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -48,9 +63,12 @@
       "key": "value_box_highlight",
       "label": "Highlight value box",
       "type": "string",
+      "source": "ai",
       "intention": "promise_crystallization",
       "description": "Texte mis en évidence dans value box (36px, weight 900, couleur #21bbff bleu, display block, margin 20px 0)",
-      "examples": ["Un funnel à portée de main"],
+      "examples": [
+        "Un funnel à portée de main"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -58,9 +76,12 @@
       "key": "value_box_description",
       "label": "Description value box",
       "type": "string",
+      "source": "ai",
       "intention": "promise_explanation",
       "description": "Texte descriptif value box (16px, line-height 1.8, color #555). Peut contenir <strong>",
-      "examples": ["Transformez vos idées et <strong>vos passions en business</strong> ... Laissez-nous vous aider à <strong>lancer votre premier</strong> (ou prochain) <strong>funnel</strong> !"],
+      "examples": [
+        "Transformez vos idées et <strong>vos passions en business</strong> ... Laissez-nous vous aider à <strong>lancer votre premier</strong> (ou prochain) <strong>funnel</strong> !"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -68,9 +89,12 @@
       "key": "value_box_cta_text",
       "label": "CTA value box",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du CTA dans value box",
-      "examples": ["Rejoignez le \"Challenge XYZ\" maintenant !"],
+      "examples": [
+        "Rejoignez le \"Challenge XYZ\" maintenant !"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -78,9 +102,12 @@
       "key": "value_box_bonus_note",
       "label": "Note bonus value box",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_tease",
       "description": "Note sous le CTA (12px, italic, color #666)",
-      "examples": ["(Obtenez tout ce dont vous avez besoin pour réussir — y compris les bonus XYZ !)"],
+      "examples": [
+        "(Obtenez tout ce dont vous avez besoin pour réussir — y compris les bonus XYZ !)"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -88,21 +115,29 @@
       "key": "value_box_features",
       "label": "Features value box",
       "type": "string[]",
+      "source": "ai",
       "intention": "key_features",
       "description": "3-5 features avec ✓ bleu (14px, color #666, flex gap 40px)",
+      "examples": [
+        "X jours en live",
+        "Communauté",
+        "Exercices concrets"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["X jours en live", "Communauté", "Exercices concrets"]
+      "required": true
     },
     {
       "key": "letter_title",
       "label": "Titre lettre ouverte",
       "type": "string",
+      "source": "ai",
       "intention": "authority_intro",
       "description": "Titre de la lettre ouverte (32px, weight 900, line-height 1.2, couleur #2f2f2f)",
-      "examples": ["Lettre ouverte de notre PDG : Changez votre business"],
+      "examples": [
+        "Lettre ouverte de notre PDG : Changez votre business"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -110,9 +145,13 @@
       "key": "letter_signature",
       "label": "Signature lettre",
       "type": "string",
+      "source": "ai",
       "intention": "authority_name",
       "description": "Signature cursive (32px, font 'Brush Script MT', color #666, margin 30px 0 20px)",
-      "examples": ["Super Fondateur", "Russell Brunson"],
+      "examples": [
+        "Super Fondateur",
+        "Russell Brunson"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -120,9 +159,12 @@
       "key": "letter_author_info",
       "label": "Info auteur lettre",
       "type": "string",
+      "source": "ai",
       "intention": "authority_credentials",
       "description": "Ligne avec <strong>De :</strong> et <strong>Où :</strong> (14px)",
-      "examples": ["<strong>De :</strong> Robert Bernard <strong>Où :</strong> Limoges, Limousin"],
+      "examples": [
+        "<strong>De :</strong> Robert Bernard <strong>Où :</strong> Limoges, Limousin"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -130,23 +172,27 @@
       "key": "letter_paragraphs",
       "label": "Paragraphes lettre",
       "type": "string[]",
+      "source": "ai",
       "intention": "authority_message",
       "description": "3-6 paragraphes de lettre ouverte (14px, line-height 1.8, color #555). Peut contenir <strong> et <em>",
+      "examples": [
+        "Que signifie pour vous « <em>Super Phrase de Choc</em> » ... ?"
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Que signifie pour vous « <em>Super Phrase de Choc</em> » ... ?"
-      ]
+      "required": true
     },
     {
       "key": "questions_title",
       "label": "Titre section questions",
       "type": "string",
+      "source": "ai",
       "intention": "engagement_hook",
       "description": "Titre section questions (28px, weight 900, uppercase, couleur #21bbff bleu, text-center)",
-      "examples": ["Veuillez cocher toutes les questions où votre réponse est OUI !"],
+      "examples": [
+        "Veuillez cocher toutes les questions où votre réponse est OUI !"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -154,23 +200,27 @@
       "key": "questions_list",
       "label": "Liste de questions",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "6-10 questions avec checkbox bleue (14px, line-height 1.6, color #555, padding 20px, background blanc, border-radius 10px, box-shadow). Peut contenir <strong>",
+      "examples": [
+        "Vous souhaitez développer votre activité en ligne mais vous ne savez pas par où commencer ?"
+      ],
       "minItems": 6,
       "maxItems": 10,
       "itemMaxLength": 200,
-      "required": true,
-      "examples": [
-        "Vous souhaitez développer votre activité en ligne mais vous ne savez pas par où commencer ?"
-      ]
+      "required": true
     },
     {
       "key": "questions_cta_paragraph_1",
       "label": "Paragraphe 1 CTA questions",
       "type": "string",
+      "source": "ai",
       "intention": "transition_hook",
       "description": "Premier paragraphe sous les questions (15px, color #555, text-center). Peut contenir <strong>",
-      "examples": ["Si vous avez répondu OUI à l'une des questions ci-dessus, je vous invite à rejoindre notre challenge « <strong>XYZ</strong> » et à"],
+      "examples": [
+        "Si vous avez répondu OUI à l'une des questions ci-dessus, je vous invite à rejoindre notre challenge « <strong>XYZ</strong> » et à"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -178,9 +228,12 @@
       "key": "questions_cta_paragraph_2",
       "label": "Paragraphe 2 CTA questions",
       "type": "string",
+      "source": "ai",
       "intention": "outcome_promise",
       "description": "Deuxième paragraphe avec highlight jaune (background #fefaa7, padding 3px 8px, bold, border-radius 3px)",
-      "examples": ["changer votre business pour toujours !"],
+      "examples": [
+        "changer votre business pour toujours !"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -188,9 +241,12 @@
       "key": "challenge_intro_title",
       "label": "Titre intro challenge",
       "type": "string",
+      "source": "ai",
       "intention": "process_intro",
       "description": "Titre de la section intro challenge (38px, weight 900, text-center, couleur #014d82 bleu foncé, line-height 1.2)",
-      "examples": ["Alors, voici comment fonctionne le challenge..."],
+      "examples": [
+        "Alors, voici comment fonctionne le challenge..."
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -198,23 +254,27 @@
       "key": "challenge_intro_paragraphs",
       "label": "Paragraphes intro challenge",
       "type": "string[]",
+      "source": "ai",
       "intention": "process_overview",
       "description": "2-3 paragraphes d'introduction (15px, text-center, color #555). Peut contenir <strong>. Un paragraphe peut être italic avec class='emphasis' (italic, weight 700)",
+      "examples": [
+        "Rejoindre le challenge <strong>GRATUIT</strong> et réussir à XYZ dans XX semaines !"
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 250,
-      "required": true,
-      "examples": [
-        "Rejoindre le challenge <strong>GRATUIT</strong> et réussir à XYZ dans XX semaines !"
-      ]
+      "required": true
     },
     {
       "key": "challenge_intro_subtitle",
       "label": "Sous-titre intro challenge",
       "type": "string",
+      "source": "ai",
       "intention": "content_tease",
       "description": "H3 avant challenge box (32px, weight 900, text-center). Peut contenir <span class='emphasis-text'> pour italic underline",
-      "examples": ["Vous obtenez TOUT ceci :"],
+      "examples": [
+        "Vous obtenez TOUT ceci :"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -222,9 +282,12 @@
       "key": "challenge_box_intro",
       "label": "Intro challenge box",
       "type": "string",
+      "source": "ai",
       "intention": "content_reveal",
       "description": "Texte d'introduction dans la box dark gradient (14px, opacity 0.9, text-center). Peut contenir <strong>",
-      "examples": ["La première chose à laquelle vous <strong>aurez accès</strong> est le..."],
+      "examples": [
+        "La première chose à laquelle vous <strong>aurez accès</strong> est le..."
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -232,9 +295,13 @@
       "key": "challenge_box_name",
       "label": "Nom du challenge",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "product_identity",
       "description": "Nom du challenge dans la box (42px, weight 900, uppercase, couleur blanche, text-center)",
-      "examples": ["\"Nom du Challenge\""],
+      "examples": [
+        "\"Nom du Challenge\""
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -242,9 +309,13 @@
       "key": "challenge_box_subtitle",
       "label": "Sous-titre challenge box",
       "type": "string",
+      "source": "ai",
       "intention": "product_category",
       "description": "Sous-titre ÉNORME (52px, weight 900, uppercase, line-height 1, couleur blanche, text-center)",
-      "examples": ["CHALLENGE ...", "30 JOURS"],
+      "examples": [
+        "CHALLENGE ...",
+        "30 JOURS"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -252,9 +323,12 @@
       "key": "challenge_box_description",
       "label": "Description challenge box",
       "type": "string",
+      "source": "ai",
       "intention": "product_promise",
       "description": "Description du challenge (14px, line-height 1.8, couleur blanche). Peut contenir <strong>",
-      "examples": ["Animé par les formateurs <strong>Robert Bernard</strong> (Info-produits), <strong>Thierry Lalala</strong> (E-commerce) et l'<strong>équipe de conseil « Nom du Challenge »</strong>, ce challenge est conçu pour vous aider à <strong>personnaliser</strong> et <strong>à mettre en œuvre</strong> votre premier (ou prochain) funnel, quel que soit le type de produit que vous vendez !"],
+      "examples": [
+        "Animé par les formateurs <strong>Robert Bernard</strong> (Info-produits), <strong>Thierry Lalala</strong> (E-commerce) et l'<strong>équipe de conseil « Nom du Challenge »</strong>, ce challenge est conçu pour vous aider à <strong>personnaliser</strong> et <strong>à mettre en œuvre</strong> votre premier (ou prochain) funnel, quel que soit le type de produit que vous vendez !"
+      ],
       "maxLength": 600,
       "required": true
     },
@@ -262,8 +336,16 @@
       "key": "tracks",
       "label": "Pistes/Tracks du challenge",
       "type": "object[]",
+      "source": "ai",
       "intention": "curriculum_breakdown",
       "description": "3 tracks en grid avec h4 (16px bold uppercase), h5 (20px weight 900 couleur #014d82 bleu foncé), placeholder vidéo 16:10, et description p (13px line-height 1.7 color #555). Cards blanches padding 40px 30px, border-radius 15px, box-shadow",
+      "examples": [
+        {
+          "track_title": "X jours de formation\navec Robert Bernard !",
+          "track_subtitle": "\"L'expert XYZ\"",
+          "track_description": "Lorem ipsum dolor sit amet..."
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -283,22 +365,18 @@
           "description": "Description avec <strong>"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "track_title": "X jours de formation\navec Robert Bernard !",
-          "track_subtitle": "\"L'expert XYZ\"",
-          "track_description": "Lorem ipsum dolor sit amet..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "mission_title",
       "label": "Titre mission",
       "type": "string",
+      "source": "ai",
       "intention": "challenge_intro",
       "description": "Titre de la section mission (36px, weight 900, text-center, couleur #2f2f2f)",
-      "examples": ["Voici votre mission,"],
+      "examples": [
+        "Voici votre mission,"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -306,9 +384,12 @@
       "key": "mission_subtitle",
       "label": "Sous-titre mission",
       "type": "string",
+      "source": "ai",
       "intention": "challenge_hook",
       "description": "Sous-titre mission (18px, color #555, text-center)",
-      "examples": ["(Si vous choisissez de relever ce défi...)"],
+      "examples": [
+        "(Si vous choisissez de relever ce défi...)"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -316,9 +397,12 @@
       "key": "mission_box_title",
       "label": "Titre mission box",
       "type": "string",
+      "source": "ai",
       "intention": "challenge_statement",
       "description": "Titre H3 dans la box bordure bleue 4px (28px, weight 900, couleur #21bbff bleu, text-center, line-height 1.3). Peut contenir <span class='highlight-word'> pour background bleu + texte blanc padding 5px 15px border-radius 5px",
-      "examples": ["Votre défi est d' AGIR et d'accomplir les tâches qui vous sont confiées chaque jour pour construire et lancer votre funnel !"],
+      "examples": [
+        "Votre défi est d' AGIR et d'accomplir les tâches qui vous sont confiées chaque jour pour construire et lancer votre funnel !"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -326,23 +410,27 @@
       "key": "mission_box_paragraphs",
       "label": "Paragraphes mission box",
       "type": "string[]",
+      "source": "ai",
       "intention": "challenge_details",
       "description": "2-4 paragraphes dans la mission box (14px pour note italic, autres paragraphes variables). Peut contenir <strong> et <em>",
+      "examples": [
+        "<em>Oui</em>, il y aura du travail à faire... <em>Et oui</em>, il y aura des devoirs à faire..."
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "<em>Oui</em>, il y aura du travail à faire... <em>Et oui</em>, il y aura des devoirs à faire..."
-      ]
+      "required": true
     },
     {
       "key": "mission_second_title",
       "label": "Deuxième titre mission",
       "type": "string",
+      "source": "ai",
       "intention": "challenge_question",
       "description": "Deuxième H3 dans la mission box (28px, weight 900, couleur #21bbff, text-center)",
-      "examples": ["« Avez-VOUS ce qu'il faut ? »"],
+      "examples": [
+        "« Avez-VOUS ce qu'il faut ? »"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -350,8 +438,17 @@
       "key": "mission_testimonials",
       "label": "Témoignages mission",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "2 témoignages en grid sous mission avec avatar 50px rond, nom h4 (13px bold), rôle p (11px color #666), et texte (12px line-height 1.7 color #555). Peut contenir <span class='testimonial-highlight'> pour background jaune #fefaa7 padding 2px 5px bold. Cards background #f8f8f8, padding 25px, border-radius 12px",
+      "examples": [
+        {
+          "testimonial_name": "David Fee",
+          "testimonial_role": "Entrepreneur",
+          "testimonial_text": "Thanks for this - <span class='testimonial-highlight'>Genius Training</span> today..."
+        }
+      ],
       "minItems": 2,
       "maxItems": 2,
       "itemSchema": {
@@ -371,22 +468,18 @@
           "description": "Texte du témoignage avec highlight"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_name": "David Fee",
-          "testimonial_role": "Entrepreneur",
-          "testimonial_text": "Thanks for this - <span class='testimonial-highlight'>Genius Training</span> today..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "super_bonus_intro",
       "label": "Intro super bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_category",
       "description": "Texte intro super bonus (14px, opacity 0.9, uppercase, text-center, couleur blanche sur fond dark gradient)",
-      "examples": ["MAIS ATTENDEZ... IL Y A PLUS !"],
+      "examples": [
+        "MAIS ATTENDEZ... IL Y A PLUS !"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -394,9 +487,12 @@
       "key": "super_bonus_title",
       "label": "Titre super bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_reveal",
       "description": "Titre super bonus (48px, weight 900, uppercase, text-center, couleur blanche)",
-      "examples": ["3 BONUS EXCLUSIFS"],
+      "examples": [
+        "3 BONUS EXCLUSIFS"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -404,9 +500,12 @@
       "key": "super_bonus_subtitle",
       "label": "Sous-titre super bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_hook",
       "description": "Sous-titre super bonus (28px, weight 700, text-center, couleur blanche)",
-      "examples": ["Lorsque vous rejoignez aujourd'hui"],
+      "examples": [
+        "Lorsque vous rejoignez aujourd'hui"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -414,9 +513,12 @@
       "key": "super_bonus_note",
       "label": "Note super bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_context",
       "description": "Note explicative (15px, line-height 1.8, text-center, max-width 700px, couleur blanche)",
-      "examples": ["Ces bonus sont normalement vendus séparément, mais vous les obtenez GRATUITEMENT..."],
+      "examples": [
+        "Ces bonus sont normalement vendus séparément, mais vous les obtenez GRATUITEMENT..."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -424,8 +526,16 @@
       "key": "bonuses",
       "label": "Bonus détaillés",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "3-6 bonus avec icône emoji (60px, margin-bottom 20px), titre h4 (24px weight 900 uppercase couleur #21bbff bleu), et description p (14px line-height 1.8). Cards blanches padding 40px, border-radius 15px, text-center",
+      "examples": [
+        {
+          "bonus_icon": "📚",
+          "bonus_title": "BIBLIOTHÈQUE DE FUNNELS",
+          "bonus_description": "Accédez à des centaines de funnels..."
+        }
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemSchema": {
@@ -445,22 +555,18 @@
           "description": "Description du bonus"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_icon": "📚",
-          "bonus_title": "BIBLIOTHÈQUE DE FUNNELS",
-          "bonus_description": "Accédez à des centaines de funnels..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "trap_title",
       "label": "Titre section trap",
       "type": "string",
+      "source": "ai",
       "intention": "qualification_warning",
       "description": "Titre de la section 'trap' (36px, weight 900, text-center, couleur #2f2f2f). Peut contenir <br>",
-      "examples": ["Ce Challenge n'est PAS pour\ntout le monde..."],
+      "examples": [
+        "Ce Challenge n'est PAS pour\ntout le monde..."
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -468,20 +574,23 @@
       "key": "trap_paragraphs",
       "label": "Paragraphes trap",
       "type": "string[]",
+      "source": "ai",
       "intention": "qualification_criteria",
       "description": "2-3 paragraphes de qualification (15px, line-height 1.8, color #555, text-center, max-width 800px). Peut contenir <strong>",
+      "examples": [
+        "Si vous voulez regarder chaque jour le défi... mais que vous ne ferez jamais rien avec vos nouvelles compétences..."
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 600,
-      "required": true,
-      "examples": [
-        "Si vous voulez regarder chaque jour le défi... mais que vous ne ferez jamais rien avec vos nouvelles compétences..."
-      ]
+      "required": true
     },
     {
       "key": "trap_testimonials",
       "label": "Témoignages trap",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_reinforcement",
       "description": "2 témoignages identiques au format mission_testimonials",
       "minItems": 2,
@@ -506,9 +615,12 @@
       "key": "timing_title",
       "label": "Titre section timing",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_intro",
       "description": "Titre de la section timing (36px, weight 900, text-center, couleur #2f2f2f)",
-      "examples": ["Pourquoi le temps est essentiel..."],
+      "examples": [
+        "Pourquoi le temps est essentiel..."
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -516,20 +628,23 @@
       "key": "timing_paragraphs",
       "label": "Paragraphes timing",
       "type": "string[]",
+      "source": "ai",
       "intention": "urgency_justification",
       "description": "3-5 paragraphes timing (15px, line-height 1.8, color #555, max-width 800px). Peut contenir <strong> et <em>",
+      "examples": [
+        "Si cette page est en ligne, <strong>l'inscription au défi One Funnel Away est toujours ouverte.</strong> Mais elle fermera bientôt..."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Si cette page est en ligne, <strong>l'inscription au défi One Funnel Away est toujours ouverte.</strong> Mais elle fermera bientôt..."
-      ]
+      "required": true
     },
     {
       "key": "timing_testimonials",
       "label": "Témoignages timing",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_urgency",
       "description": "2 témoignages identiques au format précédent",
       "minItems": 2,
@@ -554,9 +669,12 @@
       "key": "guarantee_title",
       "label": "Titre garantie",
       "type": "string",
+      "source": "ai",
       "intention": "objection_killer",
       "description": "Titre de la section garantie (36px, weight 900, text-center, couleur #2f2f2f)",
-      "examples": ["Y a-t-il une garantie ?"],
+      "examples": [
+        "Y a-t-il une garantie ?"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -564,20 +682,23 @@
       "key": "guarantee_paragraphs",
       "label": "Paragraphes garantie",
       "type": "string[]",
+      "source": "ai",
       "intention": "risk_reversal",
       "description": "3-4 paragraphes garantie (15px, line-height 1.8, color #555, max-width 800px). Peut contenir <strong>",
+      "examples": [
+        "Bien sûr... :) Je vous garantis que si vous participez au challenge..."
+      ],
       "minItems": 3,
       "maxItems": 4,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Bien sûr... :) Je vous garantis que si vous participez au challenge..."
-      ]
+      "required": true
     },
     {
       "key": "guarantee_testimonial",
       "label": "Témoignage garantie",
       "type": "object",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_long",
       "description": "1 témoignage LONG après garantie (max-width 600px, format identique)",
       "itemSchema": {
@@ -601,9 +722,12 @@
       "key": "next_steps_title",
       "label": "Titre next steps",
       "type": "string",
+      "source": "ai",
       "intention": "action_steps_intro",
       "description": "Titre de la section next steps (36px, weight 900, text-center, couleur #014d82 bleu foncé)",
-      "examples": ["Voici maintenant la marche à suivre ..."],
+      "examples": [
+        "Voici maintenant la marche à suivre ..."
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -611,9 +735,12 @@
       "key": "next_steps_intro",
       "label": "Intro next steps",
       "type": "string",
+      "source": "ai",
       "intention": "action_steps_context",
       "description": "Paragraphe intro (15px, color #555, text-center). Peut contenir <strong>",
-      "examples": ["À partir de là, il ne reste plus qu'à finaliser les détails. <strong>Cliquez sur le bouton ci-dessous pour créer votre compte et commencer !</strong>"],
+      "examples": [
+        "À partir de là, il ne reste plus qu'à finaliser les détails. <strong>Cliquez sur le bouton ci-dessous pour créer votre compte et commencer !</strong>"
+      ],
       "maxLength": 300,
       "required": true
     },
@@ -621,9 +748,12 @@
       "key": "next_steps_list_title",
       "label": "Titre liste next steps",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_reminder",
       "description": "Titre avant la liste (16px, weight 800, couleur #014d82)",
-      "examples": ["EN PLUS, vous recevez :"],
+      "examples": [
+        "EN PLUS, vous recevez :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -631,23 +761,27 @@
       "key": "next_steps_list",
       "label": "Liste next steps",
       "type": "string[]",
+      "source": "ai",
       "intention": "value_recap",
       "description": "5-8 items de liste avec ✓ (15px, line-height 1.8)",
+      "examples": [
+        "✓ SESSIONS LIVE pendant X jours"
+      ],
       "minItems": 5,
       "maxItems": 8,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": [
-        "✓ SESSIONS LIVE pendant X jours"
-      ]
+      "required": true
     },
     {
       "key": "next_steps_conclusion",
       "label": "Conclusion next steps",
       "type": "string",
+      "source": "ai",
       "intention": "final_push",
       "description": "Paragraphe de conclusion (text-center). Peut contenir <strong>",
-      "examples": ["Cela vous semble intéressant ? Alors qu'attendez-vous ? <strong>Rejoignez le défi « One Funnel Away » AUJOURD'HUI !</strong>"],
+      "examples": [
+        "Cela vous semble intéressant ? Alors qu'attendez-vous ? <strong>Rejoignez le défi « One Funnel Away » AUJOURD'HUI !</strong>"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -655,9 +789,12 @@
       "key": "recap_title_line_1",
       "label": "Titre récap ligne 1",
       "type": "string",
+      "source": "ai",
       "intention": "recap_intro",
       "description": "Première ligne titre récap (36px, weight 900, text-center, couleur blanche sur fond dark gradient)",
-      "examples": ["Voici un récapitulatif de"],
+      "examples": [
+        "Voici un récapitulatif de"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -665,9 +802,12 @@
       "key": "recap_title_line_2",
       "label": "Titre récap ligne 2",
       "type": "string",
+      "source": "ai",
       "intention": "recap_emphasis",
       "description": "Deuxième ligne titre (42px, weight 900, text-center, couleur blanche). Peut contenir <span class='underline'> pour underline",
-      "examples": ["TOUT ce que vous obtiendrez GRATUITEMENT"],
+      "examples": [
+        "TOUT ce que vous obtiendrez GRATUITEMENT"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -675,9 +815,12 @@
       "key": "recap_subtitle",
       "label": "Sous-titre récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_context",
       "description": "Sous-titre récap (15px, text-center, couleur blanche)",
-      "examples": ["En rejoignant notre challenge offert de X jours pour \"bénéfice\""],
+      "examples": [
+        "En rejoignant notre challenge offert de X jours pour \"bénéfice\""
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -685,8 +828,15 @@
       "key": "recap_value_items",
       "label": "Items de valeur récap",
       "type": "object[]",
+      "source": "ai",
       "intention": "value_itemization",
       "description": "4-8 items en grid 2 colonnes avec texte ✓ (13px) et prix dans pill bleu #21bbff (14px bold padding 8px 20px border-radius 50px). Items background rgba blanc 0.1, padding 15px 20px, border-radius 10px",
+      "examples": [
+        {
+          "item_text": "✓ Contenu du Challenge + bénéfice du bonus",
+          "item_price": "Valeur 97€"
+        }
+      ],
       "minItems": 4,
       "maxItems": 8,
       "itemSchema": {
@@ -701,33 +851,38 @@
           "description": "Valeur (ex: Valeur 97€)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "item_text": "✓ Contenu du Challenge + bénéfice du bonus",
-          "item_price": "Valeur 97€"
-        }
-      ]
+      "required": true
     },
     {
       "key": "recap_icons",
       "label": "Icônes récap",
       "type": "string[]",
+      "source": "ai",
       "intention": "feature_summary",
       "description": "6 icônes avec ● bleu (14px, flex gap 60px, 2 lignes de 3). Items display flex avec ::before '●' bleu 20px",
+      "examples": [
+        "Tunnel de vente",
+        "Espace membre",
+        "Site Web",
+        "Boutique",
+        "Autorépondeur",
+        "Et plus encore !"
+      ],
       "minItems": 6,
       "maxItems": 6,
       "itemMaxLength": 30,
-      "required": true,
-      "examples": ["Tunnel de vente", "Espace membre", "Site Web", "Boutique", "Autorépondeur", "Et plus encore !"]
+      "required": true
     },
     {
       "key": "recap_bonus_title",
       "label": "Titre bonus récap",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_section_intro",
       "description": "Titre section bonus dans récap (24px, weight 900, uppercase, text-center, couleur #ef412d rouge, border-top 2px rgba blanc 0.2)",
-      "examples": ["PLUS CES BONUS GRATUITS :"],
+      "examples": [
+        "PLUS CES BONUS GRATUITS :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -735,8 +890,15 @@
       "key": "recap_bonus_items",
       "label": "Items bonus récap",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_itemization",
       "description": "3-5 items bonus en grid 2 colonnes, format identique aux value items mais prix en pill rouge #ef412d. Background rgba blanc 0.05",
+      "examples": [
+        {
+          "bonus_text": "✓ Accès au « Défi Remplissez votre funnel»",
+          "bonus_price": "Valeur 97€"
+        }
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemSchema": {
@@ -749,21 +911,18 @@
           "maxLength": 20
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_text": "✓ Accès au « Défi Remplissez votre funnel»",
-          "bonus_price": "Valeur 97€"
-        }
-      ]
+      "required": true
     },
     {
       "key": "recap_note",
       "label": "Note finale récap",
       "type": "string",
+      "source": "ai",
       "intention": "value_summary",
       "description": "Note finale récap (14px, weight 800, text-center, couleur blanche)",
-      "examples": ["Vous obtenez TOUT cela GRATUITEMENT lorsque vous vous inscrivez au Challenge XYZ ..."],
+      "examples": [
+        "Vous obtenez TOUT cela GRATUITEMENT lorsque vous vous inscrivez au Challenge XYZ ..."
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -771,9 +930,12 @@
       "key": "recap_final_paragraph",
       "label": "Paragraphe final récap",
       "type": "string",
+      "source": "ai",
       "intention": "final_encouragement",
       "description": "Paragraphe final (14px, text-center). Peut contenir <em>",
-      "examples": ["Si vous souhaitez mettre votre funnel en ligne pour commencer à développer votre business, <em>c'est le défi que nous vous lançons !</em>"],
+      "examples": [
+        "Si vous souhaitez mettre votre funnel en ligne pour commencer à développer votre business, <em>c'est le défi que nous vous lançons !</em>"
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -781,9 +943,12 @@
       "key": "final_cta_title",
       "label": "Titre CTA final",
       "type": "string",
+      "source": "ai",
       "intention": "final_question",
       "description": "Titre du CTA final (42px, weight 900, text-center, couleur #2f2f2f). Peut contenir <span class='underline-word'> pour underline bleu #21bbff 4px",
-      "examples": ["Allez-vous relever le défi ?"],
+      "examples": [
+        "Allez-vous relever le défi ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -791,9 +956,12 @@
       "key": "total_value",
       "label": "Valeur totale",
       "type": "string",
+      "source": "ai",
       "intention": "value_anchor",
       "description": "Valeur totale affichée (48px, weight 900, couleur #21bbff bleu, text-center)",
-      "examples": ["Valeur totale : 37 285 $"],
+      "examples": [
+        "Valeur totale : 37 285 $"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -801,9 +969,12 @@
       "key": "disclaimer",
       "label": "Disclaimer légal",
       "type": "string",
+      "source": "ai",
       "intention": "legal_disclaimer",
       "description": "Disclaimer en petits caractères (12px, color #999, italic, line-height 1.7, max-width 700px, text-center)",
-      "examples": ["« Les témoignages présentés sont des expériences réelles d'utilisateurs payants..."],
+      "examples": [
+        "« Les témoignages présentés sont des expériences réelles d'utilisateurs payants..."
+      ],
       "maxLength": 600,
       "required": true
     },
@@ -811,21 +982,31 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "4-6 liens footer (13px, color rgba white 0.6, gap 30px)",
+      "examples": [
+        "Conditions générales",
+        "Confidentialité",
+        "Assistance",
+        "Connexion"
+      ],
       "minItems": 4,
       "maxItems": 6,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["Conditions générales", "Confidentialité", "Assistance", "Connexion"]
+      "required": true
     },
     {
       "key": "footer_legal",
       "label": "Texte légal footer",
       "type": "string",
+      "source": "ai",
       "intention": "legal_statement",
       "description": "Texte légal Facebook (12px, color rgba white 0.5, line-height 1.7, max-width 800px)",
-      "examples": ["Ce site ne fait pas partie du site Facebook ou Facebook Inc sa. En outre, ce site n'est en aucun cas approuvé par Facebook. FACEBOOK est une marque déposée de META."],
+      "examples": [
+        "Ce site ne fait pas partie du site Facebook ou Facebook Inc sa. En outre, ce site n'est en aucun cas approuvé par Facebook. FACEBOOK est une marque déposée de META."
+      ],
       "maxLength": 300,
       "required": true
     },
@@ -833,9 +1014,12 @@
       "key": "footer_copyright",
       "label": "Copyright footer",
       "type": "string",
+      "source": "ai",
       "intention": "legal_copyright",
       "description": "Copyright (11px, color rgba white 0.6, text-center)",
-      "examples": ["Copyright © 2024 | All Rights Reserved"],
+      "examples": [
+        "Copyright © 2024 | All Rights Reserved"
+      ],
       "maxLength": 80,
       "required": true
     }

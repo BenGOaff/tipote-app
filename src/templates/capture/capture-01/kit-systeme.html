@@ -485,11 +485,17 @@
 
     <p class="footer-text">{{footer_text_prefix}} <a href="mailto:{{contact_email}}" style="color: #2a80ff;">{{contact_email}}</a>. {{footer_text_suffix}}</p>
 
+    <!-- IF legal_privacy_url -->
     <div class="footer-links">
-      <a href="{{legal_cgv_url}}">{{legal_cgv_text}}</a>
-      <a href="{{legal_mentions_url}}">{{legal_mentions_text}}</a>
-      <a href="{{legal_privacy_url}}">{{legal_privacy_text}}</a>
+      <!-- IF legal_cgv_url -->
+      <a href="{{legal_cgv_url}}">{{legal_cgv_text}}</a><!-- ENDIF legal_cgv_url -->
+      <!-- IF legal_mentions_url -->
+      <a href="{{legal_mentions_url}}">{{legal_mentions_text}}</a><!-- ENDIF legal_mentions_url -->
+      <!-- IF legal_privacy_url -->
+      <a href="{{legal_privacy_url}}">{{legal_privacy_text}}</a><!-- ENDIF legal_privacy_url -->
+    
     </div>
+    <!-- ENDIF legal_privacy_url -->
   </footer>
 </div>
 

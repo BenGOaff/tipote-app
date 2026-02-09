@@ -8,9 +8,14 @@
       "key": "top_banner_text",
       "label": "Texte bannière top",
       "type": "string",
+      "source": "ai",
       "intention": "attention_hook",
       "description": "Texte d'interpellation en haut de page (13px Montserrat, bold, uppercase, letter-spacing 0.5px, background lime #ecfc53, couleur noire)",
-      "examples": ["INTERPELLE TA CIBLE ICI", "🔥 OFFRE LIMITÉE JUSQU'À MINUIT", "⚡ DERNIÈRES PLACES DISPONIBLES"],
+      "examples": [
+        "INTERPELLE TA CIBLE ICI",
+        "🔥 OFFRE LIMITÉE JUSQU'À MINUIT",
+        "⚡ DERNIÈRES PLACES DISPONIBLES"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -18,9 +23,14 @@
       "key": "hero_logo",
       "label": "Logo hero",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "brand_identity",
       "description": "Texte du logo (26px, bold, couleur #202021). Peut contenir un emoji",
-      "examples": ["ton super 🔧 logo", "BANGER 💎 PACK"],
+      "examples": [
+        "ton super 🔧 logo",
+        "BANGER 💎 PACK"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -28,9 +38,12 @@
       "key": "hero_title",
       "label": "Titre hero principal",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Promesse de valeur unique en GROS et UPPERCASE (42px Montserrat, weight 900, line-height 1.2, uppercase, couleur noire). Peut contenir des <br> et des emojis",
-      "examples": ["ICI ÉCRIS LA PROMESSE DE\nVALEUR UNIQUE DE TON OFFRE\n🚀"],
+      "examples": [
+        "ICI ÉCRIS LA PROMESSE DE\nVALEUR UNIQUE DE TON OFFRE\n🚀"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -38,25 +51,31 @@
       "key": "hero_bullets",
       "label": "Puces hero",
       "type": "string[]",
+      "source": "ai",
       "intention": "key_features",
       "description": "3-5 infos importantes sur l'offre (15px, max-width 600px, aligné à gauche, icône ○ noire)",
-      "minItems": 3,
-      "maxItems": 5,
-      "itemMaxLength": 80,
-      "required": true,
       "examples": [
         "Info important sur ton offre",
         "Accès à vie à toutes les formations",
         "Mises à jour gratuites incluses"
-      ]
+      ],
+      "minItems": 3,
+      "maxItems": 5,
+      "itemMaxLength": 80,
+      "required": true
     },
     {
       "key": "price_old",
       "label": "Prix normal",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_anchor",
       "description": "Prix normal barré (18px, color #999, text-decoration line-through)",
-      "examples": ["PRIX NORMAL : 997€", "PRIX NORMAL : XXX€"],
+      "examples": [
+        "PRIX NORMAL : 997€",
+        "PRIX NORMAL : XXX€"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -64,9 +83,14 @@
       "key": "price_main",
       "label": "Prix principal",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix en TRÈS GROS VIOLET (56px, weight 900, color #6866e7)",
-      "examples": ["97€", "197€"],
+      "examples": [
+        "97€",
+        "197€"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -74,9 +98,13 @@
       "key": "price_note",
       "label": "Note de prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "offer_clarification",
       "description": "Explication de ce que contient l'offre (14px, color #666)",
-      "examples": ["Explique ce que ton offre contient : un pack de formations, une seule formation, une offre d'accompagnement..."],
+      "examples": [
+        "Explique ce que ton offre contient : un pack de formations, une seule formation, une offre d'accompagnement..."
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -84,9 +112,13 @@
       "key": "timer_label",
       "label": "Label timer",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_context",
       "description": "Texte au-dessus du countdown (13px, color #6866e7 violet, uppercase, letter-spacing 0.5px, weight 600)",
-      "examples": ["FIN DE L'OFFRE DE LANCEMENT :", "PLUS QUE :"],
+      "examples": [
+        "FIN DE L'OFFRE DE LANCEMENT :",
+        "PLUS QUE :"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -94,9 +126,12 @@
       "key": "timer_note",
       "label": "Note timer",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_consequence",
       "description": "Texte sous le countdown qui explique ce qui se passe après (13px, color #666)",
-      "examples": ["À la fin de ce décompte, le prix double et passe à 197€ — ce qui reste un super plan 😊"],
+      "examples": [
+        "À la fin de ce décompte, le prix double et passe à 197€ — ce qui reste un super plan 😊"
+      ],
       "maxLength": 120,
       "required": false
     },
@@ -104,9 +139,13 @@
       "key": "cta_primary_text",
       "label": "Texte CTA principal",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton principal (16px Montserrat, bold, gradient blue/purple, border-radius 50px). Peut contenir un emoji",
-      "examples": ["🚀 Je valide ma commande", "🔥 Je profite de l'offre"],
+      "examples": [
+        "🚀 Je valide ma commande",
+        "🔥 Je profite de l'offre"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -114,25 +153,31 @@
       "key": "trust_badges",
       "label": "Badges de confiance",
       "type": "string[]",
+      "source": "ai",
       "intention": "trust_building",
       "description": "3 badges de réassurance (11px, weight 600, background #f1f5f9, border-radius 5px). Peut contenir des emojis",
-      "minItems": 3,
-      "maxItems": 3,
-      "itemMaxLength": 30,
-      "required": true,
       "examples": [
         "🔒 Paiement Sécurisé",
         "✓ Satisfaction Garantie",
         "⚡ Données Protégées"
-      ]
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "itemMaxLength": 30,
+      "required": true
     },
     {
       "key": "testimonials_pretitle",
       "label": "Pré-titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "testimonial_context",
       "description": "Texte d'introduction aux témoignages (15px, uppercase, letter-spacing 0.5px, weight 600, couleur blanche)",
-      "examples": ["Si tu ne me connais pas encore", "CE QU'ILS EN PENSENT"],
+      "examples": [
+        "Si tu ne me connais pas encore",
+        "CE QU'ILS EN PENSENT"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -140,9 +185,13 @@
       "key": "testimonials_title",
       "label": "Titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre de section témoignages (32px Montserrat, weight 900, couleur blanche, peut contenir <br> et <span> pour mettre une partie en violet #6866e7)",
-      "examples": ["📝 CE QUE MES\nÉLÈVES\nDISENT DE MOI"],
+      "examples": [
+        "📝 CE QUE MES\nÉLÈVES\nDISENT DE MOI"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -150,9 +199,13 @@
       "key": "testimonials_title_highlight",
       "label": "Partie surlignée titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "title_emphasis",
       "description": "Partie du titre à mettre en violet avec <span>",
-      "examples": ["DISENT DE MOI"],
+      "examples": [
+        "DISENT DE MOI"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -160,8 +213,17 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "3-9 témoignages sur fond dark #2a2a2c avec avatar (45px rond gris), étoiles vertes (14px, color #7ed321), texte (14px, line-height 1.6, color #d1d1d1) et nom (14px bold, couleur blanche)",
+      "examples": [
+        {
+          "testimonial_rating": "★★★★★",
+          "testimonial_text": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+          "author_name": "— Prénom NomDeFamille"
+        }
+      ],
       "minItems": 3,
       "maxItems": 9,
       "itemSchema": {
@@ -181,22 +243,18 @@
           "description": "Nom avec tiret devant (— Prénom NomDeFamille)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_rating": "★★★★★",
-          "testimonial_text": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-          "author_name": "— Prénom NomDeFamille"
-        }
-      ]
+      "required": true
     },
     {
       "key": "strategy_title",
       "label": "Titre stratégie",
       "type": "string",
+      "source": "ai",
       "intention": "strategy_comparison_intro",
       "description": "Titre de la section comparaison confuse/claire (28px Montserrat, weight 900, peut contenir <br> et <span> violet)",
-      "examples": ["COMMENT UTILISER LE\nNOM DE TON OFFRE"],
+      "examples": [
+        "COMMENT UTILISER LE\nNOM DE TON OFFRE"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -204,9 +262,12 @@
       "key": "strategy_title_highlight",
       "label": "Partie surlignée titre stratégie",
       "type": "string",
+      "source": "ai",
       "intention": "title_emphasis",
       "description": "Partie à mettre en violet avec <span>",
-      "examples": ["NOM DE TON OFFRE"],
+      "examples": [
+        "NOM DE TON OFFRE"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -214,9 +275,13 @@
       "key": "strategy_messy_label",
       "label": "Label stratégie confuse",
       "type": "string",
+      "source": "ai",
       "intention": "negative_state",
       "description": "Mot qui décrit l'état négatif (18px, weight 900, uppercase)",
-      "examples": ["CONFUSE", "DÉSORDRE"],
+      "examples": [
+        "CONFUSE",
+        "DÉSORDRE"
+      ],
       "maxLength": 20,
       "required": true
     },
@@ -224,21 +289,30 @@
       "key": "strategy_messy_pills",
       "label": "Pills stratégie confuse",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "3 conséquences négatives (11px, uppercase, letter-spacing 0.3px, pills blanches avec bordure)",
+      "examples": [
+        "CONFUSION",
+        "ÉPARPILLEMENT",
+        "PERTE DE TEMPS"
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemMaxLength": 30,
-      "required": true,
-      "examples": ["CONFUSION", "ÉPARPILLEMENT", "PERTE DE TEMPS"]
+      "required": true
     },
     {
       "key": "strategy_clear_label",
       "label": "Label stratégie claire",
       "type": "string",
+      "source": "ai",
       "intention": "positive_state",
       "description": "Mot qui décrit l'état positif (18px, weight 900, uppercase)",
-      "examples": ["CLAIRE", "ORGANISÉE"],
+      "examples": [
+        "CLAIRE",
+        "ORGANISÉE"
+      ],
       "maxLength": 20,
       "required": true
     },
@@ -246,20 +320,34 @@
       "key": "strategy_clear_pills",
       "label": "Pills stratégie claire",
       "type": "string[]",
+      "source": "ai",
       "intention": "benefits",
       "description": "3 bénéfices positifs (11px, uppercase, pills blanches)",
+      "examples": [
+        "ACTIONNABLE",
+        "ÉCONOMIES",
+        "GAIN DE TEMPS"
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemMaxLength": 30,
-      "required": true,
-      "examples": ["ACTIONNABLE", "ÉCONOMIES", "GAIN DE TEMPS"]
+      "required": true
     },
     {
       "key": "steps",
       "label": "Étapes du processus",
       "type": "object[]",
+      "source": "ai",
       "intention": "step_by_step",
       "description": "3-5 étapes avec fond gradient blue/purple, numéro (32px weight 900), titre (20px weight 900 uppercase), texte (15px opacity 0.95) et icône emoji en haut à droite (50px rond, background rgba blanc 0.2)",
+      "examples": [
+        {
+          "step_number": "01",
+          "step_icon": "🔍",
+          "step_title": "ÉTAPE 1 DE TON OFFRE",
+          "step_text": "● Explique en un ou deux points en quoi consiste cette étape"
+        }
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemSchema": {
@@ -284,20 +372,13 @@
           "description": "Explication de l'étape, peut commencer par ●"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "step_number": "01",
-          "step_icon": "🔍",
-          "step_title": "ÉTAPE 1 DE TON OFFRE",
-          "step_text": "● Explique en un ou deux points en quoi consiste cette étape"
-        }
-      ]
+      "required": true
     },
     {
       "key": "steps_conclusion_text",
       "label": "Texte conclusion étapes",
       "type": "string",
+      "source": "ai",
       "intention": "steps_benefits",
       "description": "Paragraphe qui explique les bénéfices de suivre ces étapes (15px, text-center)",
       "maxLength": 200,
@@ -307,9 +388,12 @@
       "key": "content_intro_title",
       "label": "Titre intro contenu",
       "type": "string",
+      "source": "ai",
       "intention": "content_reveal_intro",
       "description": "Titre d'introduction sur fond dark (32px, couleur blanche)",
-      "examples": ["Ce que contient le"],
+      "examples": [
+        "Ce que contient le"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -317,9 +401,12 @@
       "key": "content_brand_highlight",
       "label": "Nom marque surligné",
       "type": "string",
+      "source": "ai",
       "intention": "brand_emphasis",
       "description": "Nom de la marque en couleur lime #ecfc53 (32px, weight 900). Peut contenir emoji",
-      "examples": ["ton super 🔧 logo"],
+      "examples": [
+        "ton super 🔧 logo"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -327,9 +414,13 @@
       "key": "content_total_value",
       "label": "Valeur totale contenu",
       "type": "string",
+      "source": "ai",
       "intention": "value_anchor",
       "description": "Valeur totale entre parenthèses (18px, couleur blanche)",
-      "examples": ["(valeur 5798,00€)", "(valeur totale : 12 997€)"],
+      "examples": [
+        "(valeur 5798,00€)",
+        "(valeur totale : 12 997€)"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -337,9 +428,13 @@
       "key": "content_count",
       "label": "Nombre d'éléments",
       "type": "string",
+      "source": "ai",
       "intention": "quantity_emphasis",
       "description": "Nombre de formations/modules inclus (14px, text-decoration line-through, color #666)",
-      "examples": ["34 FORMATIONS INCLUSES", "12 MODULES COMPLETS"],
+      "examples": [
+        "34 FORMATIONS INCLUSES",
+        "12 MODULES COMPLETS"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -347,9 +442,12 @@
       "key": "content_main_promise",
       "label": "Promesse principale contenu",
       "type": "string",
+      "source": "ai",
       "intention": "outcome_promise",
       "description": "Promesse principale sur fond dark (24px, weight 900, couleur blanche, peut contenir <br> et <span> pour partie en bleu #6866e7). Peut contenir emojis",
-      "examples": ["🚀 TOUT CE QU'IL TE\nFAUT POUR DÉMARRER\n🎯 TON BUSINESS\n🚀 SANS PERDRE DE\nTEMPS NI D'ARGENT"],
+      "examples": [
+        "🚀 TOUT CE QU'IL TE\nFAUT POUR DÉMARRER\n🎯 TON BUSINESS\n🚀 SANS PERDRE DE\nTEMPS NI D'ARGENT"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -357,9 +455,12 @@
       "key": "content_main_promise_highlight",
       "label": "Partie surlignée promesse",
       "type": "string",
+      "source": "ai",
       "intention": "promise_emphasis",
       "description": "Partie à mettre en bleu avec <span>",
-      "examples": ["SANS PERDRE DE\nTEMPS NI D'ARGENT"],
+      "examples": [
+        "SANS PERDRE DE\nTEMPS NI D'ARGENT"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -367,8 +468,20 @@
       "key": "formations",
       "label": "Formations incluses",
       "type": "object[]",
+      "source": "ai",
       "intention": "product_showcase",
       "description": "3-20 formations en grille avec placeholder vidéo/image (16:9), badge (9px uppercase, weight 700), titre (18px weight 900) et 3 meta items (11px, color #666, avec emojis)",
+      "examples": [
+        {
+          "formation_badge": "FORMATION 1",
+          "formation_title": "Formation Lead Automation™",
+          "formation_meta": [
+            "📹 7 vidéos",
+            "📄 Bonus",
+            "⚡ Accès direct"
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 20,
       "itemSchema": {
@@ -390,22 +503,19 @@
           "description": "3 infos meta (vidéos, bonus, accès) avec emojis"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "formation_badge": "FORMATION 1",
-          "formation_title": "Formation Lead Automation™",
-          "formation_meta": ["📹 7 vidéos", "📄 Bonus", "⚡ Accès direct"]
-        }
-      ]
+      "required": true
     },
     {
       "key": "bonus_title",
       "label": "Titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_intro",
       "description": "Titre de la section bonus sur fond beige (36px Montserrat, weight 900, couleur noire)",
-      "examples": ["LES 9 BONUS INCLUS :", "BONUS EXCLUSIFS :"],
+      "examples": [
+        "LES 9 BONUS INCLUS :",
+        "BONUS EXCLUSIFS :"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -413,8 +523,15 @@
       "key": "bonuses",
       "label": "Bonus",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "3-12 bonus en grille sur fond beige #eee2d4, avec numéro (11px bold uppercase barré, color #666) et nom (18px bold)",
+      "examples": [
+        {
+          "bonus_number": "BONUS 1",
+          "bonus_name": "Liste des sites Shopify"
+        }
+      ],
       "minItems": 3,
       "maxItems": 12,
       "itemSchema": {
@@ -429,21 +546,19 @@
           "description": "Nom du bonus"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_number": "BONUS 1",
-          "bonus_name": "Liste des sites Shopify"
-        }
-      ]
+      "required": true
     },
     {
       "key": "guarantee_title",
       "label": "Titre garantie",
       "type": "string",
+      "source": "ai",
       "intention": "guarantee_headline",
       "description": "Titre de la garantie (32px, weight 900)",
-      "examples": ["Garantie satisfait ou remboursé", "Garantie 30 jours"],
+      "examples": [
+        "Garantie satisfait ou remboursé",
+        "Garantie 30 jours"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -451,9 +566,12 @@
       "key": "guarantee_text",
       "label": "Texte garantie",
       "type": "string",
+      "source": "ai",
       "intention": "objection_killer",
       "description": "Explication de la garantie (16px, line-height 1.7). Peut contenir des <br>",
-      "examples": ["Explique en quoi consiste ta garantie.\nTu peux proposer un remboursement après 15 jours d'essai, le double du prix remboursé si ton client n'obtient pas de résultats, etc..."],
+      "examples": [
+        "Explique en quoi consiste ta garantie.\nTu peux proposer un remboursement après 15 jours d'essai, le double du prix remboursé si ton client n'obtient pas de résultats, etc..."
+      ],
       "maxLength": 350,
       "required": true
     },
@@ -461,9 +579,12 @@
       "key": "situation_title",
       "label": "Titre situations",
       "type": "string",
+      "source": "ai",
       "intention": "pain_identification",
       "description": "Titre qui interpelle sur les situations (32px, weight 900, peut contenir <br> et <span> pour mettre partie en violet)",
-      "examples": ["👉 TU TE RECONNAIS DANS\nUNE DE CES SITUATIONS ?"],
+      "examples": [
+        "👉 TU TE RECONNAIS DANS\nUNE DE CES SITUATIONS ?"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -471,9 +592,12 @@
       "key": "situation_title_highlight",
       "label": "Partie surlignée titre situations",
       "type": "string",
+      "source": "ai",
       "intention": "title_emphasis",
       "description": "Partie à mettre en violet avec <span>",
-      "examples": ["UNE DE CES SITUATIONS ?"],
+      "examples": [
+        "UNE DE CES SITUATIONS ?"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -481,8 +605,15 @@
       "key": "situations",
       "label": "Situations problématiques",
       "type": "object[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "3 situations que rencontre l'audience, en boutons cliquables avec emoji (28px) et texte (15px, line-height 1.6)",
+      "examples": [
+        {
+          "situation_emoji": "🤬",
+          "situation_text": "Explique une situation que rencontre ton audience cible et qu'elle veut arranger"
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -497,21 +628,18 @@
           "description": "Description de la situation problématique"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "situation_emoji": "🤬",
-          "situation_text": "Explique une situation que rencontre ton audience cible et qu'elle veut arranger"
-        }
-      ]
+      "required": true
     },
     {
       "key": "situation_conclusion_text",
       "label": "Texte conclusion situations",
       "type": "string",
+      "source": "ai",
       "intention": "solution_bridge",
       "description": "Texte de transition vers la solution (16px, line-height 1.8, peut contenir des <strong>)",
-      "examples": ["Transforme tes idées en revenus passifs, sans sacrifier ta vie privée. Accède à tous les outils et à une méthodologie complète..."],
+      "examples": [
+        "Transforme tes idées en revenus passifs, sans sacrifier ta vie privée. Accède à tous les outils et à une méthodologie complète..."
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -519,9 +647,12 @@
       "key": "benefits_section_title",
       "label": "Titre section bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "benefits_intro",
       "description": "Titre de résumé des bénéfices (32px Montserrat, weight 900, peut contenir <br> et <span> violet)",
-      "examples": ["On résume ce que tu vas recevoir avec le\n[Nom de ton Offre] ?"],
+      "examples": [
+        "On résume ce que tu vas recevoir avec le\n[Nom de ton Offre] ?"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -529,9 +660,12 @@
       "key": "benefits_section_title_highlight",
       "label": "Partie surlignée titre bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "title_emphasis",
       "description": "Partie à mettre en violet avec <span>",
-      "examples": ["[Nom de ton Offre]"],
+      "examples": [
+        "[Nom de ton Offre]"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -539,8 +673,18 @@
       "key": "benefit_blocks",
       "label": "Blocs de bénéfices",
       "type": "object[]",
+      "source": "ai",
       "intention": "categorized_benefits",
       "description": "4 blocs de bénéfices alternant couleurs purple et lime, avec titre (24px bold) et 5 puces (15px, padding 18px, border-radius 15px)",
+      "examples": [
+        {
+          "block_color": "purple",
+          "block_title": "Titre catégorie bénéfice #1",
+          "block_bullets": [
+            "Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité"
+          ]
+        }
+      ],
       "minItems": 4,
       "maxItems": 4,
       "itemSchema": {
@@ -562,24 +706,18 @@
           "description": "5 puces promesses irrésistibles"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "block_color": "purple",
-          "block_title": "Titre catégorie bénéfice #1",
-          "block_bullets": [
-            "Puce promesse irrésistible : bénéfice + conséquence du bénéfice + curiosité"
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "option_bad",
       "label": "Mauvaise option",
       "type": "string",
+      "source": "ai",
       "intention": "negative_alternative",
       "description": "Option pourrie que le client ne veut pas (15px, avec ✗ et strong rouge #d01b1b)",
-      "examples": ["Explique l'option pourrie que ton client ne veut pas"],
+      "examples": [
+        "Explique l'option pourrie que ton client ne veut pas"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -587,9 +725,12 @@
       "key": "option_good",
       "label": "Bonne option",
       "type": "string",
+      "source": "ai",
       "intention": "positive_alternative",
       "description": "Meilleure option = ton offre (15px, avec ✓ et strong vert #7ed321)",
-      "examples": ["Explique la meilleure option pour ton client = ton offre"],
+      "examples": [
+        "Explique la meilleure option pour ton client = ton offre"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -597,9 +738,12 @@
       "key": "reminder_text",
       "label": "Texte rappel urgence",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_reminder",
       "description": "Rappel de l'urgence (18px, weight 700)",
-      "examples": ["💡 Rappelle-toi : l'offre disparaît bientôt."],
+      "examples": [
+        "💡 Rappelle-toi : l'offre disparaît bientôt."
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -607,9 +751,12 @@
       "key": "reminder_consequence",
       "label": "Conséquence rappel",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_consequence",
       "description": "Conséquence de ne pas agir (16px)",
-      "examples": ["Après, c'est trop tard et le prix repasse à 197€."],
+      "examples": [
+        "Après, c'est trop tard et le prix repasse à 197€."
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -617,9 +764,13 @@
       "key": "faq_title",
       "label": "Titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre section FAQ (32px Montserrat, weight 900). Peut contenir emoji",
-      "examples": ["💬 FAQ", "QUESTIONS FRÉQUENTES"],
+      "examples": [
+        "💬 FAQ",
+        "QUESTIONS FRÉQUENTES"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -627,9 +778,12 @@
       "key": "faq_intro_text",
       "label": "Texte intro FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_context",
       "description": "Texte d'introduction aux FAQ (14px, color #666, text-center, peut contenir <br> et <strong>)",
-      "examples": ["Découvre ici les réponses aux interrogations les plus courantes sur\n[Nom de ton offre] et vérifie si ces formations peuvent t'aider..."],
+      "examples": [
+        "Découvre ici les réponses aux interrogations les plus courantes sur\n[Nom de ton offre] et vérifie si ces formations peuvent t'aider..."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -637,25 +791,30 @@
       "key": "faqs",
       "label": "Questions fréquentes",
       "type": "string[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "5-15 questions FAQ (16px, weight 700, padding 20px, border-radius 8px, background #f8f8f8)",
-      "minItems": 5,
-      "maxItems": 15,
-      "itemMaxLength": 120,
-      "required": true,
       "examples": [
         "Est-ce que Banger Pack™ est toujours à jour ?",
         "Comment se passe le paiement ?",
         "💡 J'ai encore une question"
-      ]
+      ],
+      "minItems": 5,
+      "maxItems": 15,
+      "itemMaxLength": 120,
+      "required": true
     },
     {
       "key": "footer_logo",
       "label": "Logo footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_brand",
       "description": "Logo dans le footer (20px, weight 700). Peut contenir emoji",
-      "examples": ["ton super 🔧 logo"],
+      "examples": [
+        "ton super 🔧 logo"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -663,21 +822,30 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "3-5 liens légaux (13px, color #999)",
+      "examples": [
+        "Conditions Générales de Vente",
+        "Mentions Légales",
+        "Politique de confidentialité"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["Conditions Générales de Vente", "Mentions Légales", "Politique de confidentialité"]
+      "required": true
     },
     {
       "key": "footer_copyright",
       "label": "Copyright",
       "type": "string",
+      "source": "ai",
       "intention": "legal_copyright",
       "description": "Ligne de copyright (11px, opacity 0.6)",
-      "examples": ["© 2025 Ton Entreprise - Tous droits réservés"],
+      "examples": [
+        "© 2025 Ton Entreprise - Tous droits réservés"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -685,9 +853,12 @@
       "key": "sticky_timer_label",
       "label": "Label timer sticky",
       "type": "string",
+      "source": "ai",
       "intention": "sticky_urgency",
       "description": "Texte au-dessus du timer dans la barre sticky bottom (11px, color #666)",
-      "examples": ["Je profite de la promo avant :"],
+      "examples": [
+        "Je profite de la promo avant :"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -695,9 +866,13 @@
       "key": "sticky_btn_text",
       "label": "Texte bouton sticky",
       "type": "string",
+      "source": "ai",
       "intention": "sticky_action",
       "description": "Texte du bouton dans la barre sticky (13px, bold, gradient blue/purple, border-radius 25px)",
-      "examples": ["Commander mon pack", "Profiter de l'offre"],
+      "examples": [
+        "Commander mon pack",
+        "Profiter de l'offre"
+      ],
       "maxLength": 30,
       "required": true
     }

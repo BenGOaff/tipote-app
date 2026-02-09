@@ -8,9 +8,13 @@
       "key": "hero_label",
       "label": "Label hero",
       "type": "string",
+      "source": "ai",
       "intention": "event_type",
       "description": "Type d'événement en majuscules",
-      "examples": ["CHALLENGE GRATUIT", "FORMATION LIVE"],
+      "examples": [
+        "CHALLENGE GRATUIT",
+        "FORMATION LIVE"
+      ],
       "maxLength": 25,
       "required": true
     },
@@ -18,9 +22,12 @@
       "key": "hero_title",
       "label": "Titre principal",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Promesse principale du challenge avec durée + action + résultat mesurable",
-      "examples": ["5 jours pour créer votre tunnel de vente qui génère 3000€ par mois"],
+      "examples": [
+        "5 jours pour créer votre tunnel de vente qui génère 3000€ par mois"
+      ],
       "maxLength": 90,
       "required": true
     },
@@ -28,9 +35,12 @@
       "key": "hero_description",
       "label": "Description hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_detail",
       "description": "Développement de la promesse avec bénéfice et méthode",
-      "examples": ["Découvrez la méthode pas-à-pas pour automatiser vos ventes et générer des revenus récurrents"],
+      "examples": [
+        "Découvrez la méthode pas-à-pas pour automatiser vos ventes et générer des revenus récurrents"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -38,9 +48,13 @@
       "key": "cta_text",
       "label": "Texte du bouton",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Action claire pour s'inscrire au challenge",
-      "examples": ["Réserver ma place pour le challenge", "Je m'inscris gratuitement"],
+      "examples": [
+        "Réserver ma place pour le challenge",
+        "Je m'inscris gratuitement"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -48,9 +62,12 @@
       "key": "hero_disclaimer",
       "label": "Disclaimer CTA",
       "type": "string",
+      "source": "ai",
       "intention": "reassurance",
       "description": "Réassurance sous le bouton",
-      "examples": ["100% gratuit • Sans engagement"],
+      "examples": [
+        "100% gratuit • Sans engagement"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -58,9 +75,13 @@
       "key": "badge_label",
       "label": "Label du badge",
       "type": "string",
+      "source": "ai",
       "intention": "event_identifier",
       "description": "Nom court de l'événement pour le badge",
-      "examples": ["CHALLENGE", "DÉFI GRATUIT"],
+      "examples": [
+        "CHALLENGE",
+        "DÉFI GRATUIT"
+      ],
       "maxLength": 20,
       "required": true
     },
@@ -68,9 +89,13 @@
       "key": "badge_title",
       "label": "Titre du badge",
       "type": "string",
+      "source": "ai",
       "intention": "event_branding",
       "description": "Nom complet du challenge en 2-3 mots",
-      "examples": ["VENTE EXPRESS", "BUSINESS BOOST"],
+      "examples": [
+        "VENTE EXPRESS",
+        "BUSINESS BOOST"
+      ],
       "maxLength": 25,
       "required": true
     },
@@ -78,9 +103,14 @@
       "key": "badge_dates",
       "label": "Dates du badge",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "event_timing",
       "description": "Dates précises du challenge",
-      "examples": ["Du 15 au 19 janvier", "5 jours • 18h-20h"],
+      "examples": [
+        "Du 15 au 19 janvier",
+        "5 jours • 18h-20h"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -88,9 +118,13 @@
       "key": "how_title",
       "label": "Titre section 'Comment'",
       "type": "string",
+      "source": "ai",
       "intention": "mechanism_intro",
       "description": "Question qui introduit le mécanisme du challenge",
-      "examples": ["Comment ça marche ?", "Qu'allez-vous apprendre ?"],
+      "examples": [
+        "Comment ça marche ?",
+        "Qu'allez-vous apprendre ?"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -98,9 +132,12 @@
       "key": "how_subtitle",
       "label": "Sous-titre section",
       "type": "string",
+      "source": "ai",
       "intention": "mechanism_detail",
       "description": "Explication courte du format",
-      "examples": ["5 soirées de formation en direct avec replay 24h"],
+      "examples": [
+        "5 soirées de formation en direct avec replay 24h"
+      ],
       "maxLength": 70,
       "required": false
     },
@@ -108,9 +145,13 @@
       "key": "how_emphasis",
       "label": "Emphasis section",
       "type": "string",
+      "source": "ai",
       "intention": "unique_value",
       "description": "Point de différenciation en gras",
-      "examples": ["100% actionnable dès ce soir", "Résultats garantis en 5 jours"],
+      "examples": [
+        "100% actionnable dès ce soir",
+        "Résultats garantis en 5 jours"
+      ],
       "maxLength": 50,
       "required": false
     },
@@ -118,6 +159,7 @@
       "key": "features",
       "label": "Fonctionnalités principales",
       "type": "object[]",
+      "source": "ai",
       "intention": "feature_highlights",
       "description": "3 fonctionnalités/bénéfices clés avec icône et texte",
       "minItems": 3,
@@ -140,6 +182,7 @@
       "key": "daily_schedule",
       "label": "Programme jour par jour",
       "type": "object[]",
+      "source": "ai",
       "intention": "daily_breakdown",
       "description": "4 jours avec date, titre et puces promesses",
       "minItems": 4,
@@ -169,9 +212,13 @@
       "key": "testimonials_title",
       "label": "Titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre avec nombre de personnes accompagnées et date",
-      "examples": ["Plus de 2000 personnes accompagnées depuis 2020"],
+      "examples": [
+        "Plus de 2000 personnes accompagnées depuis 2020"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -179,6 +226,8 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "6 témoignages clients avec nom, statut et texte",
       "minItems": 3,
@@ -206,9 +255,12 @@
       "key": "recognition_title",
       "label": "Titre section reconnaissance",
       "type": "string",
+      "source": "ai",
       "intention": "pain_identification",
       "description": "Titre qui invite à s'identifier aux douleurs listées",
-      "examples": ["Vous reconnaissez-vous dans ces affirmations ? Alors il est temps de vous inscrire au challenge !"],
+      "examples": [
+        "Vous reconnaissez-vous dans ces affirmations ? Alors il est temps de vous inscrire au challenge !"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -216,6 +268,7 @@
       "key": "recognition_pains",
       "label": "Liste des douleurs",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "5 affirmations de douleurs/problèmes du prospect",
       "examples": [
@@ -233,9 +286,12 @@
       "key": "goals_title",
       "label": "Titre section objectifs",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_headline",
       "description": "Ce que le prospect veut obtenir",
-      "examples": ["Mettez la main sur un business rentable et automatisé"],
+      "examples": [
+        "Mettez la main sur un business rentable et automatisé"
+      ],
       "maxLength": 70,
       "required": true
     },
@@ -243,9 +299,12 @@
       "key": "goals_subtitle",
       "label": "Sous-titre objectifs",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_reinforcement",
       "description": "Renforcement de la promesse principale",
-      "examples": ["Sans perdre de temps ni d'argent dans des formations inutiles"],
+      "examples": [
+        "Sans perdre de temps ni d'argent dans des formations inutiles"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -253,6 +312,7 @@
       "key": "goals",
       "label": "Objectifs du challenge",
       "type": "object[]",
+      "source": "ai",
       "intention": "goal_benefits",
       "description": "3 objectifs avec titre et bénéfice",
       "minItems": 3,
@@ -275,9 +335,12 @@
       "key": "about_story",
       "label": "À propos - Storytelling",
       "type": "string",
+      "source": "ai",
       "intention": "authority_journey",
       "description": "Présentation du parcours en 4 paragraphes : problèmes rencontrés → effets → solution mise en œuvre → pourquoi ce challenge",
-      "examples": ["J'ai lancé mon premier business en 2018 sans aucune formation. Les 2 premières années ont été un échec total..."],
+      "examples": [
+        "J'ai lancé mon premier business en 2018 sans aucune formation. Les 2 premières années ont été un échec total..."
+      ],
       "maxLength": 600,
       "required": true
     },
@@ -285,9 +348,12 @@
       "key": "final_cta_title",
       "label": "Titre CTA final",
       "type": "string",
+      "source": "ai",
       "intention": "final_promise",
       "description": "Promesse principale répétée",
-      "examples": ["Créez votre tunnel de vente rentable en 5 jours"],
+      "examples": [
+        "Créez votre tunnel de vente rentable en 5 jours"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -295,9 +361,12 @@
       "key": "final_cta_subtitle",
       "label": "Sous-titre CTA final",
       "type": "string",
+      "source": "ai",
       "intention": "final_timing",
       "description": "Dates et accompagnement",
-      "examples": ["Du 15 au 19 janvier je vous accompagne pour créer votre premier business automatisé !"],
+      "examples": [
+        "Du 15 au 19 janvier je vous accompagne pour créer votre premier business automatisé !"
+      ],
       "maxLength": 100,
       "required": true
     }

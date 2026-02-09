@@ -8,9 +8,12 @@
       "key": "top_banner_text",
       "label": "Texte banner top",
       "type": "string",
+      "source": "ai",
       "intention": "announcement",
       "description": "Texte du banner top (0.9rem, weight 600, couleur blanche sur gradient bleu #2664bc → #4a20c6, padding 12px, text-center)",
-      "examples": ["Bilan de progression totalement disponible"],
+      "examples": [
+        "Bilan de progression totalement disponible"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -18,9 +21,13 @@
       "key": "logo_text",
       "label": "Texte logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Logo dans header et footer (1.3rem, weight 800, couleur blanche, letter-spacing 0.5px)",
-      "examples": ["Video MASTER"],
+      "examples": [
+        "Video MASTER"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -28,21 +35,29 @@
       "key": "nav_links",
       "label": "Liens navigation",
       "type": "string[]",
+      "source": "ai",
       "intention": "navigation",
       "description": "3-5 liens navigation (0.95rem, weight 500, couleur #d1d5db, hover #6366f1)",
+      "examples": [
+        "La formation",
+        "L'équipe",
+        "Contact"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 30,
-      "required": true,
-      "examples": ["La formation", "L'équipe", "Contact"]
+      "required": true
     },
     {
       "key": "nav_cta_text",
       "label": "CTA navigation",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte CTA header (gradient indigo #6366f1 → #4f46e5, padding 12px 28px, border-radius 8px, weight 600, box-shadow indigo)",
-      "examples": ["Se connecter"],
+      "examples": [
+        "Se connecter"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -50,21 +65,27 @@
       "key": "hero_badges",
       "label": "Badges hero",
       "type": "string[]",
+      "source": "ai",
       "intention": "urgency_teaser",
       "description": "2-3 badges avec dot pulsant (0.85rem, weight 600, background rgba indigo 0.15, border 1px rgba indigo 0.3, couleur #a5b4fc, padding 8px 20px, border-radius 20px). Peut contenir <strong>. Dot 8px background #6366f1 animation pulse 2s",
+      "examples": [
+        "Disponible à partir de <strong>date ▸</strong>"
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 100,
-      "required": true,
-      "examples": ["Disponible à partir de <strong>date ▸</strong>"]
+      "required": true
     },
     {
       "key": "hero_title",
       "label": "Titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "product_name",
       "description": "Titre ÉNORME hero (4rem, weight 900, couleur blanche, line-height 1.1, letter-spacing -2px, text-center)",
-      "examples": ["Nom de ton programme"],
+      "examples": [
+        "Nom de ton programme"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -72,9 +93,12 @@
       "key": "hero_subtitle",
       "label": "Sous-titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "value_proposition",
       "description": "Sous-titre hero (1.3rem, couleur #9ca3af, line-height 1.6, max-width 700px, text-center)",
-      "examples": ["Pitch de ton programme : que gagne celui qui en est un utilisateur en temps, grâce à la proposition unique de valeur"],
+      "examples": [
+        "Pitch de ton programme : que gagne celui qui en est un utilisateur en temps, grâce à la proposition unique de valeur"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -82,9 +106,12 @@
       "key": "hero_cta_text",
       "label": "CTA hero",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du CTA hero (1.1rem, padding 15px 35px)",
-      "examples": ["Découvrir le programme →"],
+      "examples": [
+        "Découvrir le programme →"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -92,8 +119,15 @@
       "key": "tools",
       "label": "Outils/partenaires",
       "type": "object[]",
+      "source": "ai",
       "intention": "tools_showcase",
       "description": "5 outils en grid 5 colonnes avec icône 80px carrée gradient indigo (0.75rem weight 600 couleur #6366f1), nom (0.9rem weight 500 couleur #9ca3af), description (0.8rem line-height 1.4 couleur #6b7280). Hover icône transform translateY -5px",
+      "examples": [
+        {
+          "tool_name": "AEJuice",
+          "tool_description": "Pour proposer ensemble ad combien le temps de production en travaille et les temps"
+        }
+      ],
       "minItems": 5,
       "maxItems": 5,
       "itemSchema": {
@@ -108,21 +142,18 @@
           "description": "Description courte de l'outil"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "tool_name": "AEJuice",
-          "tool_description": "Pour proposer ensemble ad combien le temps de production en travaille et les temps"
-        }
-      ]
+      "required": true
     },
     {
       "key": "value_section_label",
       "label": "Label section valeur",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label au-dessus du titre (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["À propos"],
+      "examples": [
+        "À propos"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -130,9 +161,12 @@
       "key": "value_section_title",
       "label": "Titre section valeur",
       "type": "string",
+      "source": "ai",
       "intention": "value_headline",
       "description": "Titre section valeur (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center). Peut contenir <br>",
-      "examples": ["Proposition de valeur\nunique de ton\nprogramme"],
+      "examples": [
+        "Proposition de valeur\nunique de ton\nprogramme"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -140,23 +174,28 @@
       "key": "value_paragraphs",
       "label": "Paragraphes valeur",
       "type": "string[]",
+      "source": "ai",
       "intention": "value_explanation",
       "description": "3-5 paragraphes (1.1rem, line-height 1.8, couleur #9ca3af). Peut contenir <strong style='color: white;'>",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Depuis 2018, nous collaborons avec les créateurs de contenu..."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 600,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Depuis 2018, nous collaborons avec les créateurs de contenu..."
-      ]
+      "required": true
     },
     {
       "key": "testimonial_author_initial",
       "label": "Initiale auteur témoignage",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_author",
       "description": "Initiale de l'auteur dans avatar circulaire 50px gradient indigo (0.9rem weight 700 blanc)",
-      "examples": ["T"],
+      "examples": [
+        "T"
+      ],
       "maxLength": 2,
       "required": false
     },
@@ -164,9 +203,13 @@
       "key": "testimonial_author_name",
       "label": "Nom auteur témoignage",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "social_proof_author",
       "description": "Nom de l'auteur (1rem weight 600 blanc)",
-      "examples": ["Thibaud"],
+      "examples": [
+        "Thibaud"
+      ],
       "maxLength": 50,
       "required": false
     },
@@ -174,9 +217,13 @@
       "key": "testimonial_author_role",
       "label": "Rôle auteur témoignage",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_context",
       "description": "Rôle de l'auteur (0.85rem couleur #9ca3af)",
-      "examples": ["Monteur vidéo"],
+      "examples": [
+        "Monteur vidéo"
+      ],
       "maxLength": 50,
       "required": false
     },
@@ -184,9 +231,12 @@
       "key": "content_section_label",
       "label": "Label section contenu",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label section contenu (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["Notre programme"],
+      "examples": [
+        "Notre programme"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -194,9 +244,12 @@
       "key": "content_section_title",
       "label": "Titre section contenu",
       "type": "string",
+      "source": "ai",
       "intention": "curriculum_intro",
       "description": "Titre section contenu (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center)",
-      "examples": ["Contenu de ton offre"],
+      "examples": [
+        "Contenu de ton offre"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -204,9 +257,12 @@
       "key": "content_section_subtitle",
       "label": "Sous-titre section contenu",
       "type": "string",
+      "source": "ai",
       "intention": "curriculum_overview",
       "description": "Sous-titre section contenu (1.1rem, couleur #9ca3af, max-width 800px, text-center)",
-      "examples": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ces derniers ont été élaborés de manière à vous transmettre un volume de connaissances inédit..."],
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ces derniers ont été élaborés de manière à vous transmettre un volume de connaissances inédit..."
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -214,8 +270,20 @@
       "key": "content_modules",
       "label": "Modules de contenu",
       "type": "object[]",
+      "source": "ai",
       "intention": "curriculum_breakdown",
       "description": "3 modules en grid 3 colonnes avec titre (1.5rem weight 700 blanc), description (0.95rem line-height 1.7 #9ca3af), liste features ✓ (0.9rem padding-left 25px ::before ✓ #6366f1 bold), highlight box rgba indigo 0.1 border indigo 0.2 (0.9rem line-height 1.6 #d1d5db italic). Module background gradient rgba indigo 0.05, border 1px rgba indigo 0.15, padding 35px, border-radius 20px",
+      "examples": [
+        {
+          "module_title": "Montage vidéo",
+          "module_description": "Lorem ipsum dolor sit amet...",
+          "module_features": [
+            "100 leçons",
+            "De rafales de montage simples"
+          ],
+          "module_highlight": "Lorem ipsum dolor sit amet. Révélez tout les kits..."
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -242,26 +310,18 @@
           "description": "Texte de highlight en italic"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "module_title": "Montage vidéo",
-          "module_description": "Lorem ipsum dolor sit amet...",
-          "module_features": [
-            "100 leçons",
-            "De rafales de montage simples"
-          ],
-          "module_highlight": "Lorem ipsum dolor sit amet. Révélez tout les kits..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "agency_section_title",
       "label": "Titre section agence",
       "type": "string",
+      "source": "ai",
       "intention": "service_intro",
       "description": "Titre section agence (2.5rem, weight 800, couleur blanche, line-height 1.3). Peut contenir <br>",
-      "examples": ["Nous créons aussi des contenus vidéos pour les entreprises"],
+      "examples": [
+        "Nous créons aussi des contenus vidéos pour les entreprises"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -269,22 +329,34 @@
       "key": "agency_paragraphs",
       "label": "Paragraphes agence",
       "type": "string[]",
+      "source": "ai",
       "intention": "service_description",
       "description": "2-4 paragraphes (1.05rem, line-height 1.8, couleur #9ca3af)",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nous accompagnons nos clients..."
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nous accompagnons nos clients..."
-      ]
+      "required": true
     },
     {
       "key": "agency_cards",
       "label": "Cartes services agence",
       "type": "object[]",
+      "source": "ai",
       "intention": "service_offering",
       "description": "3-5 cartes avec icône 40px carrée gradient indigo (0.8rem weight 700 blanc), titre (1.1rem weight 600 blanc), tags pills (0.8rem weight 500 background rgba indigo 0.15 couleur #a5b4fc padding 5px 12px border-radius 20px). Card background rgba indigo 0.05, border 1px rgba indigo 0.15, padding 25px, border-radius 12px",
+      "examples": [
+        {
+          "card_title": "Contenu publicitaire",
+          "card_tags": [
+            "Facebook Ads",
+            "YouTube Ads",
+            "TikTok Ads"
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemSchema": {
@@ -301,21 +373,18 @@
           "description": "2-6 tags"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "card_title": "Contenu publicitaire",
-          "card_tags": ["Facebook Ads", "YouTube Ads", "TikTok Ads"]
-        }
-      ]
+      "required": true
     },
     {
       "key": "team_section_label",
       "label": "Label section équipe",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label section équipe (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["L'équipe"],
+      "examples": [
+        "L'équipe"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -323,9 +392,12 @@
       "key": "team_section_title",
       "label": "Titre section équipe",
       "type": "string",
+      "source": "ai",
       "intention": "authority_intro",
       "description": "Titre section équipe (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center)",
-      "examples": ["Rencontrez les formateurs"],
+      "examples": [
+        "Rencontrez les formateurs"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -333,9 +405,12 @@
       "key": "team_description",
       "label": "Description équipe",
       "type": "string",
+      "source": "ai",
       "intention": "authority_context",
       "description": "Description équipe (1.1rem, line-height 1.8, couleur #9ca3af, max-width 800px, text-center)",
-      "examples": ["Notre équipe de formateurs est composée de professionnels reconnus..."],
+      "examples": [
+        "Notre équipe de formateurs est composée de professionnels reconnus..."
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -343,8 +418,15 @@
       "key": "team_members",
       "label": "Membres équipe",
       "type": "object[]",
+      "source": "ai",
       "intention": "authority_showcase",
       "description": "3-6 membres en grid 3 colonnes avec photo 3:4 aspect gradient bleu, nom (1.3rem weight 700 blanc), rôle (0.95rem weight 600 couleur #6366f1). Card background gradient rgba indigo 0.08, border 1px rgba indigo 0.2, border-radius 20px, hover transform translateY -10px + box-shadow indigo",
+      "examples": [
+        {
+          "member_name": "John Doe",
+          "member_role": "Expert montage"
+        }
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemSchema": {
@@ -359,21 +441,18 @@
           "description": "Rôle du membre"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "member_name": "John Doe",
-          "member_role": "Expert montage"
-        }
-      ]
+      "required": true
     },
     {
       "key": "social_proof_section_label",
       "label": "Label social proof",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label section social proof (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["Témoignages"],
+      "examples": [
+        "Témoignages"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -381,9 +460,12 @@
       "key": "social_proof_section_title",
       "label": "Titre social proof",
       "type": "string",
+      "source": "ai",
       "intention": "social_proof_intro",
       "description": "Titre section social proof (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center)",
-      "examples": ["Ce qu'ils en disent"],
+      "examples": [
+        "Ce qu'ils en disent"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -391,9 +473,12 @@
       "key": "social_proof_text",
       "label": "Texte social proof",
       "type": "string",
+      "source": "ai",
       "intention": "social_proof_context",
       "description": "Texte intro social proof (1.05rem, line-height 1.8, couleur #9ca3af, max-width 800px, text-center)",
-      "examples": ["Des centaines d'élèves ont déjà transformé leur carrière..."],
+      "examples": [
+        "Des centaines d'élèves ont déjà transformé leur carrière..."
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -401,9 +486,12 @@
       "key": "portfolio_section_label",
       "label": "Label portfolio",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label section portfolio (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["Réalisations"],
+      "examples": [
+        "Réalisations"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -411,9 +499,12 @@
       "key": "portfolio_section_title",
       "label": "Titre portfolio",
       "type": "string",
+      "source": "ai",
       "intention": "portfolio_intro",
       "description": "Titre section portfolio (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center)",
-      "examples": ["Jetez un coup d'oeil à nos travaux"],
+      "examples": [
+        "Jetez un coup d'oeil à nos travaux"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -421,9 +512,12 @@
       "key": "portfolio_subtitle",
       "label": "Sous-titre portfolio",
       "type": "string",
+      "source": "ai",
       "intention": "portfolio_context",
       "description": "Sous-titre portfolio (1.1rem, couleur #9ca3af, text-center)",
-      "examples": ["Nous avons réalisé plus de 800 projets. Survinez quelques une de ces derniers."],
+      "examples": [
+        "Nous avons réalisé plus de 800 projets. Survinez quelques une de ces derniers."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -431,9 +525,12 @@
       "key": "faq_section_label",
       "label": "Label FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "section_category",
       "description": "Label section FAQ (0.9rem, weight 600, uppercase, letter-spacing 1px, couleur #6366f1)",
-      "examples": ["Questions Fréquentes"],
+      "examples": [
+        "Questions Fréquentes"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -441,9 +538,12 @@
       "key": "faq_section_title",
       "label": "Titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre section FAQ (3rem, weight 900, couleur blanche, line-height 1.2, letter-spacing -1px, text-center)",
-      "examples": ["Vous avez un doute ?"],
+      "examples": [
+        "Vous avez un doute ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -451,9 +551,12 @@
       "key": "faq_subtitle",
       "label": "Sous-titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_context",
       "description": "Sous-titre FAQ (1rem, couleur #9ca3af, max-width 700px, text-center). Peut contenir <a>",
-      "examples": ["Retrouvez ci-dessous des réponses aux questions que nous sont le plus posées. Besoin d'informations supplémentaires ? Vous pouvez nous joindre à contact@example.com"],
+      "examples": [
+        "Retrouvez ci-dessous des réponses aux questions que nous sont le plus posées. Besoin d'informations supplémentaires ? Vous pouvez nous joindre à contact@example.com"
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -461,8 +564,15 @@
       "key": "faqs",
       "label": "Questions FAQ",
       "type": "object[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "8-12 FAQ en grid 2 colonnes avec question (1.1rem weight 600 blanc) et réponse (0.95rem line-height 1.7 #9ca3af). Items background rgba indigo 0.03, border 1px rgba indigo 0.15, padding 30px, border-radius 12px",
+      "examples": [
+        {
+          "faq_question": "Tournant avoide Editing 360 et pros sont quels formation ou editing ?",
+          "faq_answer": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        }
+      ],
       "minItems": 8,
       "maxItems": 12,
       "itemSchema": {
@@ -477,21 +587,18 @@
           "description": "Réponse"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "faq_question": "Tournant avoide Editing 360 et pros sont quels formation ou editing ?",
-          "faq_answer": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        }
-      ]
+      "required": true
     },
     {
       "key": "final_cta_title",
       "label": "Titre CTA final",
       "type": "string",
+      "source": "ai",
       "intention": "final_push",
       "description": "Titre CTA final (2.5rem, weight 900, couleur blanche, line-height 1.2)",
-      "examples": ["Passez à la vitesse supérieure"],
+      "examples": [
+        "Passez à la vitesse supérieure"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -499,35 +606,43 @@
       "key": "final_cta_paragraphs",
       "label": "Paragraphes CTA final",
       "type": "string[]",
+      "source": "ai",
       "intention": "final_persuasion",
       "description": "2-3 paragraphes (1.1rem, line-height 1.7, rgba white 0.9). Peut contenir <strong>",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Développez tous via sa créativité..."
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Développez tous via sa créativité..."
-      ]
+      "required": true
     },
     {
       "key": "final_cta_features",
       "label": "Features CTA final",
       "type": "string[]",
+      "source": "ai",
       "intention": "value_recap",
       "description": "5-8 features avec ✓ cyan #7dd3fc (1rem, padding 10px 0, padding-left 30px, couleur blanche, ::before ✓ bold 1.2rem)",
+      "examples": [
+        "+150 leçons",
+        "7 000 assets offerts"
+      ],
       "minItems": 5,
       "maxItems": 8,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": ["+150 leçons", "7 000 assets offerts"]
+      "required": true
     },
     {
       "key": "final_cta_button_text",
       "label": "Texte bouton CTA final",
       "type": "string",
+      "source": "ai",
       "intention": "final_action",
       "description": "Texte du bouton CTA final (gradient indigo, padding 18px 40px, border-radius 10px, weight 700, 1.1rem, box-shadow indigo, hover transform translateY -2px)",
-      "examples": ["Rejoindre la formation"],
+      "examples": [
+        "Rejoindre la formation"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -535,9 +650,13 @@
       "key": "footer_brand_description",
       "label": "Description marque footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_about",
       "description": "Description de la marque dans footer (0.9rem, line-height 1.7, couleur #9ca3af)",
-      "examples": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Enseigner comment créer de nouvelles vidéo..."],
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Enseigner comment créer de nouvelles vidéo..."
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -545,9 +664,12 @@
       "key": "footer_newsletter_title",
       "label": "Titre newsletter footer",
       "type": "string",
+      "source": "ai",
       "intention": "newsletter_cta",
       "description": "Titre newsletter (couleur blanche, weight 600)",
-      "examples": ["Suis-tiens au courant!"],
+      "examples": [
+        "Suis-tiens au courant!"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -555,8 +677,19 @@
       "key": "footer_columns",
       "label": "Colonnes footer",
       "type": "object[]",
+      "source": "ai",
       "intention": "footer_navigation",
       "description": "3 colonnes footer avec titre (1.1rem weight 700 blanc) et liens (0.9rem couleur #9ca3af hover #6366f1)",
+      "examples": [
+        {
+          "column_title": "Formation",
+          "column_links": [
+            "La formation",
+            "L'équipe",
+            "Se connecter"
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -573,25 +706,26 @@
           "description": "3-6 liens"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "column_title": "Formation",
-          "column_links": ["La formation", "L'équipe", "Se connecter"]
-        }
-      ]
+      "required": true
     },
     {
       "key": "footer_tools",
       "label": "Outils footer",
       "type": "string[]",
+      "source": "ai",
       "intention": "partner_list",
       "description": "5 noms d'outils en pills (0.85rem, background rgba indigo 0.1, border 1px rgba indigo 0.2, couleur #a5b4fc, padding 8px 15px, border-radius 20px)",
+      "examples": [
+        "AEJuice",
+        "ArtistCut",
+        "Epidemic Sound",
+        "Motion Hanse",
+        "Notion"
+      ],
       "minItems": 5,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": false,
-      "examples": ["AEJuice", "ArtistCut", "Epidemic Sound", "Motion Hanse", "Notion"]
+      "required": false
     }
   ]
 }

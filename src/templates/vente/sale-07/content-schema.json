@@ -8,9 +8,14 @@
       "key": "method_label",
       "label": "Label méthode",
       "type": "string",
+      "source": "ai",
       "intention": "product_category",
       "description": "Label au-dessus du nom de méthode (16px, bold, uppercase, letter-spacing 1px, couleur blanche sur fond noir)",
-      "examples": ["Méthode", "Programme", "Système"],
+      "examples": [
+        "Méthode",
+        "Programme",
+        "Système"
+      ],
       "maxLength": 20,
       "required": true
     },
@@ -18,9 +23,15 @@
       "key": "method_name",
       "label": "Nom de la méthode",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "brand_identity",
       "description": "Nom de la méthode/produit (24px, weight 900, uppercase, couleur #0080ff bleu)",
-      "examples": ["[Nom de ta méthode]", "CAD", "SYSTÈME X"],
+      "examples": [
+        "[Nom de ta méthode]",
+        "CAD",
+        "SYSTÈME X"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -28,9 +39,12 @@
       "key": "hero_title",
       "label": "Titre hero principal",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Grande promesse principale (36px, weight 900, line-height 1.2, uppercase, couleur blanche sur fond noir)",
-      "examples": ["Découvrez la méthode bizarre qui permet à des débutants sur internet d'avoir des centaines de clients par mois, en automatique, et sans payer de publicité"],
+      "examples": [
+        "Découvrez la méthode bizarre qui permet à des débutants sur internet d'avoir des centaines de clients par mois, en automatique, et sans payer de publicité"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -38,9 +52,12 @@
       "key": "hero_subtitle",
       "label": "Sous-titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_amplification",
       "description": "Sous-titre en italic (16px, line-height 1.6, italic, opacity 0.9, couleur blanche). Peut contenir <br> et <strong> pour partie non-italic",
-      "examples": ["Cette Stratégie Ultra Simple, Légale Et Méconnue Est À L'origine\nDe 87%* Des Revenus Générés Sur Le Web (Rien Que Ça...)"],
+      "examples": [
+        "Cette Stratégie Ultra Simple, Légale Et Méconnue Est À L'origine\nDe 87%* Des Revenus Générés Sur Le Web (Rien Que Ça...)"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -48,9 +65,13 @@
       "key": "cta_button_text",
       "label": "Texte bouton CTA",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton principal (14px, bold, uppercase, gradient bleu #0066cc → #0080ff, border-radius 5px, padding 18px 40px). Ajoute automatiquement ➜ avant",
-      "examples": ["Rejoindre le programme", "Commencer maintenant"],
+      "examples": [
+        "Rejoindre le programme",
+        "Commencer maintenant"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -58,9 +79,13 @@
       "key": "cta_note",
       "label": "Note sous CTA",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_reassurance",
       "description": "Petite note sous le bouton (11px, uppercase, letter-spacing 0.5px, couleur blanche ou #666 selon fond)",
-      "examples": ["Accès immédiat", "Sans engagement"],
+      "examples": [
+        "Accès immédiat",
+        "Sans engagement"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -68,9 +93,12 @@
       "key": "problem_section_title",
       "label": "Titre section problème",
       "type": "string",
+      "source": "ai",
       "intention": "problem_intro",
       "description": "Titre de la section problème (32px, weight 900, uppercase, line-height 1.2, text-center, couleur noire sur fond blanc)",
-      "examples": ["Nous avons un problème... (et ça vous concerne)"],
+      "examples": [
+        "Nous avons un problème... (et ça vous concerne)"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -78,24 +106,28 @@
       "key": "problem_intro_paragraphs",
       "label": "Paragraphes intro problème",
       "type": "string[]",
+      "source": "ai",
       "intention": "problem_setup",
       "description": "2-3 paragraphes d'introduction au problème (15px, line-height 1.8, text-center). Peut contenir <strong>",
-      "minItems": 2,
-      "maxItems": 3,
-      "itemMaxLength": 200,
-      "required": true,
       "examples": [
         "Quand on veut lancer un <strong>business en ligne</strong>, on est face à un obstacle de taille (très très énervant) :",
         "On a trouvé un bon produit, un marché qui rapporte et beaucoup de motivation, mais...."
-      ]
+      ],
+      "minItems": 2,
+      "maxItems": 3,
+      "itemMaxLength": 200,
+      "required": true
     },
     {
       "key": "problem_statement",
       "label": "Énoncé du problème",
       "type": "string",
+      "source": "ai",
       "intention": "problem_crystallization",
       "description": "Question problème principale (28px, weight 900, uppercase, line-height 1.3, text-center, couleur noire)",
-      "examples": ["Comment attirer des clients sur ses offres pour qu'ils achètent en masse ?"],
+      "examples": [
+        "Comment attirer des clients sur ses offres pour qu'ils achètent en masse ?"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -103,9 +135,12 @@
       "key": "platform_intro",
       "label": "Intro liste plateformes",
       "type": "string",
+      "source": "ai",
       "intention": "problem_context",
       "description": "Texte avant la liste des plateformes (20px, weight 800, couleur #0080ff bleu, text-center)",
-      "examples": ["C'est toujours la même histoire :"],
+      "examples": [
+        "C'est toujours la même histoire :"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -113,8 +148,16 @@
       "key": "platforms",
       "label": "Plateformes problématiques",
       "type": "object[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "3-5 plateformes avec icône (50px carré #f5f5f5 border-radius 10px, emoji ou lettre 24px), titre h3 (16px bold) et description p (14px line-height 1.7 color #555)",
+      "examples": [
+        {
+          "platform_icon": "f",
+          "platform_title": "Facebook restreint de plus en plus les pages",
+          "platform_description": "et les groupes afin de nous obliger à payer de la publicité pour vendre"
+        }
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemSchema": {
@@ -134,22 +177,18 @@
           "description": "Description du problème avec <strong>"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "platform_icon": "f",
-          "platform_title": "Facebook restreint de plus en plus les pages",
-          "platform_description": "et les groupes afin de nous obliger à payer de la publicité pour vendre"
-        }
-      ]
+      "required": true
     },
     {
       "key": "platform_note",
       "label": "Note plateformes",
       "type": "string",
+      "source": "ai",
       "intention": "problem_emphasis",
       "description": "Note ironique sous la liste (13px, italic, color #666, text-center)",
-      "examples": ["(et c'est exactement ce qui se passe car YouTube, Google, Facebook et compagnie se prennent pour les rois du monde)"],
+      "examples": [
+        "(et c'est exactement ce qui se passe car YouTube, Google, Facebook et compagnie se prennent pour les rois du monde)"
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -157,9 +196,13 @@
       "key": "story_pretitle",
       "label": "Pré-titre story",
       "type": "string",
+      "source": "ai",
       "intention": "story_intro",
       "description": "Pré-titre de la story (18px, bold, uppercase, couleur #0080ff bleu sur fond noir)",
-      "examples": ["MON HISTOIRE", "COMMENT J'AI DÉCOUVERT"],
+      "examples": [
+        "MON HISTOIRE",
+        "COMMENT J'AI DÉCOUVERT"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -167,9 +210,12 @@
       "key": "story_title",
       "label": "Titre story",
       "type": "string",
+      "source": "ai",
       "intention": "story_hook",
       "description": "Titre de la story (32px, weight 900, uppercase, line-height 1.2, couleur blanche sur fond noir)",
-      "examples": ["Comment j'ai découvert cette méthode"],
+      "examples": [
+        "Comment j'ai découvert cette méthode"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -177,23 +223,27 @@
       "key": "story_paragraphs",
       "label": "Paragraphes story",
       "type": "string[]",
+      "source": "ai",
       "intention": "authority_journey",
       "description": "4-8 paragraphes de storytelling (15px, line-height 1.8, couleur blanche). Peut contenir <strong> et <span class='story-highlight'> pour surlignage bleu",
+      "examples": [
+        "Il y a quelques années, j'étais dans la même situation que vous..."
+      ],
       "minItems": 4,
       "maxItems": 8,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Il y a quelques années, j'étais dans la même situation que vous..."
-      ]
+      "required": true
     },
     {
       "key": "solution_title",
       "label": "Titre solution",
       "type": "string",
+      "source": "ai",
       "intention": "solution_intro",
       "description": "Titre de la solution (32px, weight 900, uppercase, line-height 1.3, text-center, couleur noire sur fond blanc)",
-      "examples": ["La solution que j'ai trouvée"],
+      "examples": [
+        "La solution que j'ai trouvée"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -201,23 +251,28 @@
       "key": "solution_paragraphs",
       "label": "Paragraphes solution",
       "type": "string[]",
+      "source": "ai",
       "intention": "solution_explanation",
       "description": "2-4 paragraphes expliquant la solution (15px, line-height 1.8, text-center)",
+      "examples": [
+        "J'ai découvert une méthode simple..."
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemMaxLength": 300,
-      "required": true,
-      "examples": [
-        "J'ai découvert une méthode simple..."
-      ]
+      "required": true
     },
     {
       "key": "solution_name",
       "label": "Nom de la solution",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "product_reveal",
       "description": "Nom de la solution mise en avant (28px, weight 900, uppercase, text-center, couleur noire)",
-      "examples": ["LA MÉTHODE CAD"],
+      "examples": [
+        "LA MÉTHODE CAD"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -225,8 +280,16 @@
       "key": "advantages",
       "label": "Avantages de la méthode",
       "type": "object[]",
+      "source": "ai",
       "intention": "benefit_showcase",
       "description": "3-6 avantages en grille avec fond gradient bleu, icône emoji (48px), titre h3 (16px bold uppercase) et description p (13px line-height 1.6). Cards padding 40px 25px, border-radius 10px, box-shadow bleu",
+      "examples": [
+        {
+          "advantage_icon": "🎯",
+          "advantage_title": "CIBLAGE PRÉCIS",
+          "advantage_description": "Atteins exactement les bonnes personnes"
+        }
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemSchema": {
@@ -246,22 +309,18 @@
           "description": "Description de l'avantage"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "advantage_icon": "🎯",
-          "advantage_title": "CIBLAGE PRÉCIS",
-          "advantage_description": "Atteins exactement les bonnes personnes"
-        }
-      ]
+      "required": true
     },
     {
       "key": "benefits_title",
       "label": "Titre bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "benefits_intro",
       "description": "Titre de la section bénéfices (32px, weight 900, uppercase, line-height 1.3, text-center, couleur noire)",
-      "examples": ["Ce que cette méthode vous permet de faire"],
+      "examples": [
+        "Ce que cette méthode vous permet de faire"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -269,8 +328,16 @@
       "key": "benefits",
       "label": "Liste de bénéfices",
       "type": "object[]",
+      "source": "ai",
       "intention": "outcome_visualization",
       "description": "5-10 bénéfices avec icône emoji (40px × 40px, 24px), titre h4 (16px bold couleur #0080ff bleu) et description optionnelle p (14px line-height 1.7 color #555)",
+      "examples": [
+        {
+          "benefit_icon": "⏰",
+          "benefit_title": "Avoir Des Ventes En Automatique De Jour Comme De Nuit",
+          "benefit_description": ""
+        }
+      ],
       "minItems": 5,
       "maxItems": 10,
       "itemSchema": {
@@ -290,22 +357,18 @@
           "description": "Description optionnelle entre parenthèses"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "benefit_icon": "⏰",
-          "benefit_title": "Avoir Des Ventes En Automatique De Jour Comme De Nuit",
-          "benefit_description": ""
-        }
-      ]
+      "required": true
     },
     {
       "key": "benefit_note",
       "label": "Note finale bénéfices",
       "type": "string",
+      "source": "ai",
       "intention": "benefits_closure",
       "description": "Note sous la liste (13px, italic, color #666, text-center)",
-      "examples": ["Et Plein D'autres Choses..."],
+      "examples": [
+        "Et Plein D'autres Choses..."
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -313,9 +376,12 @@
       "key": "comparison_title",
       "label": "Titre comparaison",
       "type": "string",
+      "source": "ai",
       "intention": "analogy_intro",
       "description": "Titre de la section comparaison (32px, weight 900, uppercase, line-height 1.3, text-center). Peut contenir <br>",
-      "examples": ["En fait, la méthode CAD...\nC'est comme l'immobilier, mais sur internet, et en 10x plus accessible : on peut se créer des rentes, sans rien dépenser."],
+      "examples": [
+        "En fait, la méthode CAD...\nC'est comme l'immobilier, mais sur internet, et en 10x plus accessible : on peut se créer des rentes, sans rien dépenser."
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -323,23 +389,27 @@
       "key": "comparison_intro_paragraphs",
       "label": "Paragraphes intro comparaison",
       "type": "string[]",
+      "source": "ai",
       "intention": "comparison_context",
       "description": "3-5 paragraphes d'introduction à la comparaison (14px, text-center). Peut contenir <strong>",
+      "examples": [
+        "<strong>Si vous lisez ce message</strong>, c'est que vous faites probablement partie de ma liste email."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": [
-        "<strong>Si vous lisez ce message</strong>, c'est que vous faites probablement partie de ma liste email."
-      ]
+      "required": true
     },
     {
       "key": "comparison_chart_title",
       "label": "Titre graphiques",
       "type": "string",
+      "source": "ai",
       "intention": "proof_intro",
       "description": "Titre au-dessus des graphiques (24px, weight 800, color #0080ff bleu, text-center)",
-      "examples": ["Voici l'évolution de mon business avec les emails"],
+      "examples": [
+        "Voici l'évolution de mon business avec les emails"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -347,35 +417,43 @@
       "key": "comparison_charts",
       "label": "Titres graphiques",
       "type": "string[]",
+      "source": "ai",
       "intention": "data_visualization",
       "description": "2 titres de graphiques en grid 2 colonnes (18px, weight 800, uppercase, text-center). Placeholders 250px height",
+      "examples": [
+        "Chiffre d'affaires",
+        "Nombre d'emails"
+      ],
       "minItems": 2,
       "maxItems": 2,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["Chiffre d'affaires", "Nombre d'emails"]
+      "required": true
     },
     {
       "key": "comparison_note_paragraphs",
       "label": "Paragraphes note comparaison",
       "type": "string[]",
+      "source": "ai",
       "intention": "proof_emphasis",
       "description": "3-5 paragraphes après graphiques (14px, line-height 1.8, text-center). Peut contenir <strong>",
+      "examples": [
+        "Un email dans mon business <strong>me rapporte environs 1€</strong>."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": [
-        "Un email dans mon business <strong>me rapporte environs 1€</strong>."
-      ]
+      "required": true
     },
     {
       "key": "cake_comparison_title",
       "label": "Titre comparaison gâteaux",
       "type": "string",
+      "source": "ai",
       "intention": "visual_comparison",
       "description": "Titre de la comparaison visuelle (32px, weight 900, uppercase, text-center). Peut contenir <br>",
-      "examples": ["Si j'étais juste sur les réseaux sociaux, voici ce que mon business serait :"],
+      "examples": [
+        "Si j'étais juste sur les réseaux sociaux, voici ce que mon business serait :"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -383,35 +461,44 @@
       "key": "cake_labels",
       "label": "Labels comparaison",
       "type": "string[]",
+      "source": "ai",
       "intention": "comparison_contrast",
       "description": "2 labels sous les placeholders gâteaux (14px, bold, uppercase, text-center)",
+      "examples": [
+        "Mon business sans emails :",
+        "Mon business avec emails :"
+      ],
       "minItems": 2,
       "maxItems": 2,
       "itemMaxLength": 60,
-      "required": true,
-      "examples": ["Mon business sans emails :", "Mon business avec emails :"]
+      "required": true
     },
     {
       "key": "comparison_conclusion_paragraphs",
       "label": "Paragraphes conclusion comparaison",
       "type": "string[]",
+      "source": "ai",
       "intention": "accessibility_statement",
       "description": "3-5 paragraphes de conclusion (14px, line-height 1.8, text-center). Peut contenir <strong>",
+      "examples": [
+        "Ce qui est bien dans tout ça, c'est que c'est <strong>à la portée de n'importe qui</strong>."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 200,
-      "required": true,
-      "examples": [
-        "Ce qui est bien dans tout ça, c'est que c'est <strong>à la portée de n'importe qui</strong>."
-      ]
+      "required": true
     },
     {
       "key": "method_section_logo",
       "label": "Logo section méthode",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "product_identity",
       "description": "Logo répété dans section méthode noire (18px, weight 900, uppercase). Peut contenir <span class='blue'> pour partie bleue",
-      "examples": ["Méthode [CAD]"],
+      "examples": [
+        "Méthode [CAD]"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -419,9 +506,12 @@
       "key": "method_section_title",
       "label": "Titre section méthode",
       "type": "string",
+      "source": "ai",
       "intention": "product_promise",
       "description": "Titre de la section méthode (32px, weight 900, uppercase, line-height 1.3, text-center, couleur blanche sur fond noir)",
-      "examples": ["Le protocole ultra rentable d'un marketeur à succès pour avoir un torrent de clients à la demande"],
+      "examples": [
+        "Le protocole ultra rentable d'un marketeur à succès pour avoir un torrent de clients à la demande"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -429,9 +519,12 @@
       "key": "method_subtitle",
       "label": "Sous-titre modules",
       "type": "string",
+      "source": "ai",
       "intention": "curriculum_intro",
       "description": "Sous-titre avant la liste modules (20px, bold, text-center, couleur blanche)",
-      "examples": ["➜ VOUS ALLEZ DÉCOUVRIR :"],
+      "examples": [
+        "➜ VOUS ALLEZ DÉCOUVRIR :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -439,8 +532,15 @@
       "key": "modules",
       "label": "Modules de la méthode",
       "type": "object[]",
+      "source": "ai",
       "intention": "curriculum_breakdown",
       "description": "8-15 modules avec fond rgba blanc 0.05, border-left 5px bleu, padding 30px, border-radius 10px. Titre h3 (18px bold couleur blanche) et description p (14px line-height 1.7 opacity 0.9)",
+      "examples": [
+        {
+          "module_title": "Automate Flow",
+          "module_description": "Le plan d'action ultra simple pour avoir des clients en automatique"
+        }
+      ],
       "minItems": 8,
       "maxItems": 15,
       "itemSchema": {
@@ -455,21 +555,18 @@
           "description": "Description du module"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "module_title": "Automate Flow",
-          "module_description": "Le plan d'action ultra simple pour avoir des clients en automatique"
-        }
-      ]
+      "required": true
     },
     {
       "key": "bonus_intro_title",
       "label": "Titre intro bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_intro",
       "description": "Titre de la section bonus (32px, weight 900, uppercase, line-height 1.3, text-center, couleur blanche sur fond noir)",
-      "examples": ["Parce que je veux vous donner le maximum pour réussir, je vous offre de nombreux bonus ..."],
+      "examples": [
+        "Parce que je veux vous donner le maximum pour réussir, je vous offre de nombreux bonus ..."
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -477,8 +574,20 @@
       "key": "bonuses",
       "label": "Bonus détaillés",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "3-6 bonus en grid alternant gauche/droite (300px placeholder + contenu). Titre h3 avec emoji 🎁 (24px bold couleur blanche), sous-titre h4 (20px bold couleur #0080ff bleu) et 2 paragraphes p (15px line-height 1.7)",
+      "examples": [
+        {
+          "bonus_number": "Bonus #1",
+          "bonus_title": "🎁 Bonus #1 : 3 modèles",
+          "bonus_subtitle": "D'emails cadeaux à utiliser",
+          "bonus_paragraphs": [
+            "Recevez mes 3 modèles d'e-mails qui m'ont rapporté gros.",
+            "Vous n'aurez qu'à copier coller et les adapter à votre industrie."
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemSchema": {
@@ -505,26 +614,18 @@
           "description": "2 paragraphes de description"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_number": "Bonus #1",
-          "bonus_title": "🎁 Bonus #1 : 3 modèles",
-          "bonus_subtitle": "D'emails cadeaux à utiliser",
-          "bonus_paragraphs": [
-            "Recevez mes 3 modèles d'e-mails qui m'ont rapporté gros.",
-            "Vous n'aurez qu'à copier coller et les adapter à votre industrie."
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "faq_title",
       "label": "Titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre de la FAQ (32px, weight 900, text-center, couleur noire sur fond blanc)",
-      "examples": ["Vous vous posez certaines questions ?"],
+      "examples": [
+        "Vous vous posez certaines questions ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -532,9 +633,12 @@
       "key": "faq_subtitle",
       "label": "Sous-titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_cta",
       "description": "Sous-titre FAQ (24px, weight 800, text-center, couleur noire)",
-      "examples": ["Consultez la FAQ"],
+      "examples": [
+        "Consultez la FAQ"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -542,24 +646,29 @@
       "key": "faqs",
       "label": "Questions fréquentes",
       "type": "string[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "6-12 questions FAQ en grid 2 colonnes, avec icône ^ (15px, line-height 1.6, padding 25px, background blanc, border-radius 8px)",
-      "minItems": 6,
-      "maxItems": 12,
-      "itemMaxLength": 150,
-      "required": true,
       "examples": [
         "Je ne maîtrise pas la technique, je débute sur internet",
         "J'ai peur de me lancer, est-ce que c'est risqué ?"
-      ]
+      ],
+      "minItems": 6,
+      "maxItems": 12,
+      "itemMaxLength": 150,
+      "required": true
     },
     {
       "key": "cta_section_price_title",
       "label": "Titre prix CTA section",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_reveal",
       "description": "Titre avec prix (32px, weight 900, text-center, couleur noire sur fond blanc)",
-      "examples": ["Dès maintenant, vous pouvez obtenir le programme à 147€"],
+      "examples": [
+        "Dès maintenant, vous pouvez obtenir le programme à 147€"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -567,9 +676,12 @@
       "key": "cta_section_social_proof_title",
       "label": "Titre social proof CTA",
       "type": "string",
+      "source": "ai",
       "intention": "social_proof_intro",
       "description": "Titre social proof (32px, weight 900, text-center)",
-      "examples": ["J'ai aidé plus de 10,000 entrepreneurs et je veux que vous soyez le prochain !"],
+      "examples": [
+        "J'ai aidé plus de 10,000 entrepreneurs et je veux que vous soyez le prochain !"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -577,9 +689,12 @@
       "key": "cta_section_intro_text",
       "label": "Intro témoignages",
       "type": "string",
+      "source": "ai",
       "intention": "testimonial_context",
       "description": "Texte avant les témoignages (15px, text-center)",
-      "examples": ["Voici quelques retours en vidéo de mes élèves sur l'une des mes formations \"Ebay Dropshipping\"..."],
+      "examples": [
+        "Voici quelques retours en vidéo de mes élèves sur l'une des mes formations \"Ebay Dropshipping\"..."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -587,8 +702,17 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "3-6 témoignages en grid 3 colonnes avec icône quote \" (60px), texte avec <strong> (14px line-height 1.8). Cards padding 30px, background blanc, border-radius 12px",
+      "examples": [
+        {
+          "testimonial_paragraphs": [
+            "\"J'ai pris la formation de Pierre-Eliott et <strong>je suis entièrement satisfait</strong>. Je sais qu'il fait souvent <strong>des mises à jours pour être toujours à la page</strong>."
+          ]
+        }
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemSchema": {
@@ -600,22 +724,18 @@
           "description": "1-3 paragraphes de témoignage avec <strong>"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_paragraphs": [
-            "\"J'ai pris la formation de Pierre-Eliott et <strong>je suis entièrement satisfait</strong>. Je sais qu'il fait souvent <strong>des mises à jours pour être toujours à la page</strong>."
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "author_section_title",
       "label": "Titre section auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_intro",
       "description": "Titre de la section auteur (32px, weight 900, uppercase, text-center, couleur noire)",
-      "examples": ["Qui est Pierre-Eliott ?"],
+      "examples": [
+        "Qui est Pierre-Eliott ?"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -623,9 +743,12 @@
       "key": "author_intro",
       "label": "Intro auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_credentials",
       "description": "Première phrase auteur en h3 (24px, weight 800, text-center, couleur noire)",
-      "examples": ["Pierre-Eliott est entrepreneur depuis 2017."],
+      "examples": [
+        "Pierre-Eliott est entrepreneur depuis 2017."
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -633,23 +756,27 @@
       "key": "author_paragraphs",
       "label": "Paragraphes auteur",
       "type": "string[]",
+      "source": "ai",
       "intention": "authority_bio",
       "description": "2-3 paragraphes de bio (15px, line-height 1.8, text-center)",
+      "examples": [
+        "Il représente la nouvelle génération d'entrepreneurs sur internet désirant plus de liberté et d'indépendance."
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 250,
-      "required": true,
-      "examples": [
-        "Il représente la nouvelle génération d'entrepreneurs sur internet désirant plus de liberté et d'indépendance."
-      ]
+      "required": true
     },
     {
       "key": "author_quote",
       "label": "Citation auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_statement",
       "description": "Citation de l'auteur (18px, italic, padding 30px, background #f5f5f5, border-left 5px bleu, border-radius 8px)",
-      "examples": ["\"Je suis parti de rien, je n'ai même pas fait d'études en rapport avec internet, preuve que n'importe qui peut se former, apprendre, et réussir.\""],
+      "examples": [
+        "\"Je suis parti de rien, je n'ai même pas fait d'études en rapport avec internet, preuve que n'importe qui peut se former, apprendre, et réussir.\""
+      ],
       "maxLength": 300,
       "required": false
     },
@@ -657,9 +784,12 @@
       "key": "recap_title",
       "label": "Titre récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_intro",
       "description": "Titre de la section récap (32px, weight 900, text-center, couleur noire)",
-      "examples": ["Vous hésitez encore ?"],
+      "examples": [
+        "Vous hésitez encore ?"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -667,9 +797,12 @@
       "key": "recap_subtitle",
       "label": "Sous-titre récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_cta",
       "description": "Sous-titre récap (24px, weight 800, text-center, couleur noire)",
-      "examples": ["Récapitulons"],
+      "examples": [
+        "Récapitulons"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -677,9 +810,12 @@
       "key": "recap_intro_text",
       "label": "Texte intro récap",
       "type": "string",
+      "source": "ai",
       "intention": "recap_hook",
       "description": "Texte avant la liste dans la box blanche (text-center)",
-      "examples": ["Voici ce vous obtiendrez en rejoignant la méthode CAD aujourd'hui !"],
+      "examples": [
+        "Voici ce vous obtiendrez en rejoignant la méthode CAD aujourd'hui !"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -687,24 +823,29 @@
       "key": "recap_list",
       "label": "Liste récap",
       "type": "string[]",
+      "source": "ai",
       "intention": "value_stack",
       "description": "6-12 items de récap avec ✓ bleu (15px, padding-left 30px). Peut contenir <strong>",
-      "minItems": 6,
-      "maxItems": 12,
-      "itemMaxLength": 150,
-      "required": true,
       "examples": [
         "<strong>La Méthode CAD</strong> : 12 Modules pour faire des ventes jour et nuit",
         "<strong>Bonus #1</strong> : modèles d'emails cadeaux à utiliser"
-      ]
+      ],
+      "minItems": 6,
+      "maxItems": 12,
+      "itemMaxLength": 150,
+      "required": true
     },
     {
       "key": "price_intro_text",
       "label": "Texte intro prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_setup",
       "description": "Texte avant le prix (18px, bold, uppercase, text-center, couleur noire)",
-      "examples": ["Aujourd'hui pour seulement :"],
+      "examples": [
+        "Aujourd'hui pour seulement :"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -712,9 +853,14 @@
       "key": "price",
       "label": "Prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix en GROS (64px, weight 900, couleur #0080ff bleu ou noir selon fond, text-center)",
-      "examples": ["147€", "97€"],
+      "examples": [
+        "147€",
+        "97€"
+      ],
       "maxLength": 15,
       "required": true
     },
@@ -722,9 +868,12 @@
       "key": "footer_contact_text",
       "label": "Texte contact footer",
       "type": "string",
+      "source": "ai",
       "intention": "footer_cta",
       "description": "Texte de contact (14px, couleur blanche). Peut contenir <a> pour lien bleu",
-      "examples": ["Envie d'un site comme celui-ci ? Contactez NICOLAS GERMANO"],
+      "examples": [
+        "Envie d'un site comme celui-ci ? Contactez NICOLAS GERMANO"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -732,21 +881,29 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "2-4 liens légaux (12px, color rgba white 0.7, gap 30px)",
+      "examples": [
+        "Mentions Légales",
+        "Conditions Générales De Vente"
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemMaxLength": 50,
-      "required": true,
-      "examples": ["Mentions Légales", "Conditions Générales De Vente"]
+      "required": true
     },
     {
       "key": "footer_legal_line_1",
       "label": "Ligne légale 1",
       "type": "string",
+      "source": "ai",
       "intention": "legal_copyright",
       "description": "Première ligne légale (11px, color rgba white 0.5)",
-      "examples": ["Business Therapy © PL MARKETING 2021 - Tous Droits Réservés"],
+      "examples": [
+        "Business Therapy © PL MARKETING 2021 - Tous Droits Réservés"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -754,9 +911,12 @@
       "key": "footer_legal_line_2",
       "label": "Ligne légale 2",
       "type": "string",
+      "source": "ai",
       "intention": "legal_disclaimer",
       "description": "Deuxième ligne légale disclaimer Facebook (11px, color rgba white 0.5, line-height 1.6)",
-      "examples": ["NOT FACEBOOK : This site is not a part of the Facebook website or Facebook Inc. Additionally, This site is NOT endorsed by Facebook in any way. FACEBOOK is a trademark of FACEBOOK, Inc."],
+      "examples": [
+        "NOT FACEBOOK : This site is not a part of the Facebook website or Facebook Inc. Additionally, This site is NOT endorsed by Facebook in any way. FACEBOOK is a trademark of FACEBOOK, Inc."
+      ],
       "maxLength": 300,
       "required": false
     }

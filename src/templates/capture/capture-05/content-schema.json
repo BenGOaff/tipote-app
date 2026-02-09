@@ -8,9 +8,15 @@
       "key": "floating_labels",
       "label": "Labels flottants",
       "type": "string[]",
+      "source": "ai",
       "intention": "attention_buzzwords",
       "description": "4 mots-clés ou promesses courtes qui flottent sur l'image hero",
-      "examples": ["GRATUIT", "4 JOURS", "LIVE", "RÉSULTATS"],
+      "examples": [
+        "GRATUIT",
+        "4 JOURS",
+        "LIVE",
+        "RÉSULTATS"
+      ],
       "minItems": 4,
       "maxItems": 4,
       "itemMaxLength": 15,
@@ -20,9 +26,12 @@
       "key": "hero_label",
       "label": "Label hero",
       "type": "string",
+      "source": "ai",
       "intention": "event_type",
       "description": "Type d'événement",
-      "examples": ["CHALLENGE GRATUIT EN LIGNE"],
+      "examples": [
+        "CHALLENGE GRATUIT EN LIGNE"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -30,9 +39,13 @@
       "key": "hero_subtitle",
       "label": "Sous-titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_timing",
       "description": "Information de timing en majuscules pour créer urgence",
-      "examples": ["DU 10 AU 14 JANVIER 2025", "DERNIERS JOURS"],
+      "examples": [
+        "DU 10 AU 14 JANVIER 2025",
+        "DERNIERS JOURS"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -40,9 +53,12 @@
       "key": "hero_live_badge",
       "label": "Badge live",
       "type": "string",
+      "source": "ai",
       "intention": "format_emphasis",
       "description": "Badge qui indique le format live",
-      "examples": ["4 LIVES GRATUITS • En direct + Replays"],
+      "examples": [
+        "4 LIVES GRATUITS • En direct + Replays"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -50,9 +66,12 @@
       "key": "hero_title",
       "label": "Titre principal",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Promesse principale forte avec métrique et résultat",
-      "examples": ["Générez vos Premières Commissions en Affiliation Sans Audience"],
+      "examples": [
+        "Générez vos Premières Commissions en Affiliation Sans Audience"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -60,9 +79,12 @@
       "key": "hero_description",
       "label": "Description hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_mechanism",
       "description": "Explication courte du mécanisme ou de la méthode",
-      "examples": ["La méthode complète pour trouver les meilleurs produits et les vendre en automatique"],
+      "examples": [
+        "La méthode complète pour trouver les meilleurs produits et les vendre en automatique"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -70,9 +92,13 @@
       "key": "cta_text",
       "label": "Texte bouton CTA",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Action orientée résultat",
-      "examples": ["Rejoindre le challenge gratuitement", "Je veux mes premières ventes"],
+      "examples": [
+        "Rejoindre le challenge gratuitement",
+        "Je veux mes premières ventes"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -80,9 +106,12 @@
       "key": "for_me_question",
       "label": "Question 'Pour qui ?'",
       "type": "string",
+      "source": "ai",
       "intention": "audience_question",
       "description": "Question pour qualifier l'audience",
-      "examples": ["Ce challenge est-il fait pour moi ?"],
+      "examples": [
+        "Ce challenge est-il fait pour moi ?"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -90,9 +119,12 @@
       "key": "for_me_answer",
       "label": "Réponse 'Pour qui'",
       "type": "string",
+      "source": "ai",
       "intention": "audience_qualification",
       "description": "Réponse affirmative avec profil cible",
-      "examples": ["OUI, si vous voulez générer des revenus en ligne sans créer de produits ni avoir d'audience massive"],
+      "examples": [
+        "OUI, si vous voulez générer des revenus en ligne sans créer de produits ni avoir d'audience massive"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -100,6 +132,7 @@
       "key": "benefits",
       "label": "Bénéfices principaux",
       "type": "string[]",
+      "source": "ai",
       "intention": "benefit_list",
       "description": "4-6 bénéfices concrets du challenge",
       "examples": [
@@ -117,9 +150,13 @@
       "key": "transformation_question",
       "label": "Question transformation",
       "type": "string",
+      "source": "ai",
       "intention": "differentiation_setup",
       "description": "Question qui introduit la différenciation",
-      "examples": ["En quoi ce défi est-il unique ?", "Pourquoi ce challenge est différent ?"],
+      "examples": [
+        "En quoi ce défi est-il unique ?",
+        "Pourquoi ce challenge est différent ?"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -127,9 +164,12 @@
       "key": "transformation_headline",
       "label": "Titre transformation",
       "type": "string",
+      "source": "ai",
       "intention": "value_proposition",
       "description": "Affirmation forte de la valeur unique",
-      "examples": ["Vous méritez bien plus que des formations théoriques sans résultats"],
+      "examples": [
+        "Vous méritez bien plus que des formations théoriques sans résultats"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -137,9 +177,12 @@
       "key": "transformation_description",
       "label": "Description transformation",
       "type": "string",
+      "source": "ai",
       "intention": "transformation_promise",
       "description": "2-3 phrases qui expliquent la vraie transformation offerte",
-      "examples": ["Vous méritez un plan concret pour générer vos premières ventes, automatiser votre business, et gagner votre vie en ligne. Ce n'est pas qu'une formation, c'est une véritable TRANSFORMATION."],
+      "examples": [
+        "Vous méritez un plan concret pour générer vos premières ventes, automatiser votre business, et gagner votre vie en ligne. Ce n'est pas qu'une formation, c'est une véritable TRANSFORMATION."
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -147,6 +190,7 @@
       "key": "daily_program",
       "label": "Programme quotidien",
       "type": "object[]",
+      "source": "ai",
       "intention": "daily_breakdown",
       "description": "4 jours avec label, titre et points clés (2-3 puces)",
       "minItems": 4,
@@ -176,9 +220,13 @@
       "key": "trainer_name",
       "label": "Nom du formateur",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "authority_identity",
       "description": "Prénom & Nom du formateur",
-      "examples": ["Thomas Dupont"],
+      "examples": [
+        "Thomas Dupont"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -186,9 +234,12 @@
       "key": "trainer_proof",
       "label": "Preuve sociale formateur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_credentials",
       "description": "Chiffre ou preuve de crédibilité",
-      "examples": ["+ de 2M€ générés en ligne depuis 2020"],
+      "examples": [
+        "+ de 2M€ générés en ligne depuis 2020"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -196,9 +247,12 @@
       "key": "trainer_bio",
       "label": "Biographie formateur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_story",
       "description": "3 paragraphes : parcours, résultats chiffrés, mission actuelle",
-      "examples": ["Depuis 5 ans, je vis la vie de mes rêves grâce à mes business en ligne, et mon entreprise a généré plus de 2 millions d'euros. J'aide aujourd'hui + de 10 000 personnes qui veulent atteindre la liberté financière..."],
+      "examples": [
+        "Depuis 5 ans, je vis la vie de mes rêves grâce à mes business en ligne, et mon entreprise a généré plus de 2 millions d'euros. J'aide aujourd'hui + de 10 000 personnes qui veulent atteindre la liberté financière..."
+      ],
       "maxLength": 500,
       "required": true
     },
@@ -206,9 +260,12 @@
       "key": "counter_label",
       "label": "Label compteur",
       "type": "string",
+      "source": "ai",
       "intention": "scarcity_setup",
       "description": "Texte qui introduit la rareté",
-      "examples": ["Il reste encore des places..."],
+      "examples": [
+        "Il reste encore des places..."
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -216,9 +273,13 @@
       "key": "counter_number",
       "label": "Nombre de places",
       "type": "string",
+      "source": "ai",
       "intention": "scarcity_metric",
       "description": "X/Y places restantes",
-      "examples": ["14/100", "25/150"],
+      "examples": [
+        "14/100",
+        "25/150"
+      ],
       "maxLength": 10,
       "required": false
     },
@@ -226,9 +287,12 @@
       "key": "before_after_intro",
       "label": "Intro avant/après",
       "type": "string",
+      "source": "ai",
       "intention": "comparison_setup",
       "description": "Question qui introduit la comparaison avant/après",
-      "examples": ["Prêt à vendre des produits rares en automatique et REMPLACER TON SALAIRE ?"],
+      "examples": [
+        "Prêt à vendre des produits rares en automatique et REMPLACER TON SALAIRE ?"
+      ],
       "maxLength": 90,
       "required": true
     },
@@ -236,9 +300,12 @@
       "key": "before_after_subtitle",
       "label": "Sous-titre avant/après",
       "type": "string",
+      "source": "ai",
       "intention": "comparison_expectation",
       "description": "Ce à quoi s'attendre",
-      "examples": ["Voici à quoi t'attendre avec le CHALLENGE"],
+      "examples": [
+        "Voici à quoi t'attendre avec le CHALLENGE"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -246,6 +313,7 @@
       "key": "before_points",
       "label": "Points AVANT",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_current_state",
       "description": "4 points négatifs de la situation actuelle",
       "examples": [
@@ -262,6 +330,7 @@
       "key": "after_points",
       "label": "Points APRÈS",
       "type": "string[]",
+      "source": "ai",
       "intention": "promise_future_state",
       "description": "4 points positifs de la situation après le challenge",
       "examples": [
@@ -278,9 +347,12 @@
       "key": "bonus_title",
       "label": "Titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_reveal",
       "description": "Annonce des bonus exclusifs",
-      "examples": ["VOICI 3 BONUS EXCLUSIFS"],
+      "examples": [
+        "VOICI 3 BONUS EXCLUSIFS"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -288,9 +360,12 @@
       "key": "bonus_subtitle",
       "label": "Sous-titre bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_condition",
       "description": "Condition pour recevoir les bonus",
-      "examples": ["Quand tu t'inscris GRATUITEMENT au Challenge !"],
+      "examples": [
+        "Quand tu t'inscris GRATUITEMENT au Challenge !"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -298,6 +373,7 @@
       "key": "bonuses",
       "label": "Liste des bonus",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "3 bonus avec description et valeur",
       "minItems": 3,
@@ -320,9 +396,12 @@
       "key": "bonus_total_value",
       "label": "Valeur totale bonus",
       "type": "string",
+      "source": "ai",
       "intention": "value_anchor",
       "description": "Normalement : XXX,00€",
-      "examples": ["Normalement : 497,00€"],
+      "examples": [
+        "Normalement : 497,00€"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -330,9 +409,12 @@
       "key": "bonus_offer_today",
       "label": "Prix aujourd'hui",
       "type": "string",
+      "source": "ai",
       "intention": "offer_reveal",
       "description": "Prix/offre du jour",
-      "examples": ["Prix Aujourd'hui : 100% OFFERT !"],
+      "examples": [
+        "Prix Aujourd'hui : 100% OFFERT !"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -340,9 +422,13 @@
       "key": "challenge_name",
       "label": "Nom du challenge",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "event_branding",
       "description": "Nom du challenge pour footer",
-      "examples": ["Challenge Affiliation Express"],
+      "examples": [
+        "Challenge Affiliation Express"
+      ],
       "maxLength": 40,
       "required": true
     }

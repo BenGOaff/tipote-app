@@ -8,9 +8,13 @@
       "key": "logo_text",
       "label": "Texte logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Logo dans header et mockup (1.5rem Noto Serif, weight 700, couleur #9f7800 doré). Peut contenir <br>",
-      "examples": ["MA SUPER FORMATION\n9 CHAKRAS"],
+      "examples": [
+        "MA SUPER FORMATION\n9 CHAKRAS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -18,21 +22,29 @@
       "key": "nav_links",
       "label": "Liens navigation",
       "type": "string[]",
+      "source": "ai",
       "intention": "navigation",
       "description": "3-5 liens navigation (0.95rem, weight 600, couleur #33334d, uppercase, hover #9f7800)",
+      "examples": [
+        "PRÉSENTATION",
+        "AU PROGRAMME",
+        "TÉMOIGNAGES"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 30,
-      "required": true,
-      "examples": ["PRÉSENTATION", "AU PROGRAMME", "TÉMOIGNAGES"]
+      "required": true
     },
     {
       "key": "nav_cta_text",
       "label": "CTA navigation",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte CTA header (gradient rouge #e60023 → #c8002b, padding 12px 30px, border-radius 30px, weight 700, box-shadow rouge)",
-      "examples": ["REJOINDRE →"],
+      "examples": [
+        "REJOINDRE →"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -40,9 +52,14 @@
       "key": "product_type",
       "label": "Type de produit",
       "type": "string",
+      "source": "ai",
       "intention": "product_category",
       "description": "Label type de produit (0.9rem, weight 700, uppercase, letter-spacing 1px, couleur #9f7800 doré)",
-      "examples": ["TYPE DE PRODUIT", "FORMATION EN LIGNE", "MASTERCLASS"],
+      "examples": [
+        "TYPE DE PRODUIT",
+        "FORMATION EN LIGNE",
+        "MASTERCLASS"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -50,9 +67,12 @@
       "key": "hero_title",
       "label": "Titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "product_name",
       "description": "Titre principal hero (2.8rem Noto Serif, couleur #33334d, line-height 1.2). Peut contenir <br>",
-      "examples": ["TITRE DE MA\nFORMATION"],
+      "examples": [
+        "TITRE DE MA\nFORMATION"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -60,9 +80,12 @@
       "key": "hero_pitch",
       "label": "Pitch hero",
       "type": "string",
+      "source": "ai",
       "intention": "value_proposition",
       "description": "Pitch de la formation (1.05rem, color #555, line-height 1.7). Peut contenir <strong>",
-      "examples": ["<strong>Pitch</strong> de la formation/avec: <strong>objectif concret</strong> et <strong>proposition de valeur unique.</strong>"],
+      "examples": [
+        "<strong>Pitch</strong> de la formation/avec: <strong>objectif concret</strong> et <strong>proposition de valeur unique.</strong>"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -70,21 +93,29 @@
       "key": "hero_benefits",
       "label": "Bénéfices inclus hero",
       "type": "string[]",
+      "source": "ai",
       "intention": "key_features",
       "description": "4-6 bénéfices avec ✓ doré #9f7800 (1rem, padding 10px 0, padding-left 35px, ::before ✓ bold 1.3rem)",
+      "examples": [
+        "Puce promesse irrésistible"
+      ],
       "minItems": 4,
       "maxItems": 6,
       "itemMaxLength": 100,
-      "required": true,
-      "examples": ["Puce promesse irrésistible"]
+      "required": true
     },
     {
       "key": "price_tag",
       "label": "Prix principal",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_display",
       "description": "Prix GROS (3rem, weight 800, couleur #33334d)",
-      "examples": ["97€", "147€"],
+      "examples": [
+        "97€",
+        "147€"
+      ],
       "maxLength": 20,
       "required": true
     },
@@ -92,9 +123,14 @@
       "key": "price_detail",
       "label": "Détail prix",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "price_payment_options",
       "description": "Détail de paiement (0.95rem, color #777)",
-      "examples": ["(ou 2 X 50€)", "(ou 3 X 35€)"],
+      "examples": [
+        "(ou 2 X 50€)",
+        "(ou 3 X 35€)"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -102,9 +138,12 @@
       "key": "hero_cta_text",
       "label": "CTA hero",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du CTA principal hero",
-      "examples": ["REJOINDRE LE PROGRAMME →"],
+      "examples": [
+        "REJOINDRE LE PROGRAMME →"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -112,9 +151,12 @@
       "key": "discover_title",
       "label": "Titre section découverte",
       "type": "string",
+      "source": "ai",
       "intention": "content_preview",
       "description": "Titre section vidéo (2.5rem Noto Serif, couleur #33334d, letter-spacing -0.5px, text-center)",
-      "examples": ["DÉCOUVREZ LA FORMATION"],
+      "examples": [
+        "DÉCOUVREZ LA FORMATION"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -122,9 +164,12 @@
       "key": "situations_title",
       "label": "Titre situations",
       "type": "string",
+      "source": "ai",
       "intention": "qualification_intro",
       "description": "Titre section situations (2rem Noto Serif, couleur #33334d, text-center). Peut contenir <br>",
-      "examples": ["EST-CE QUE CES SITUATIONS VOUS\nPARLENT ?"],
+      "examples": [
+        "EST-CE QUE CES SITUATIONS VOUS\nPARLENT ?"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -132,21 +177,27 @@
       "key": "situations_list",
       "label": "Liste situations",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "3-6 situations avec ✓ doré (1.05rem, padding 15px 0, padding-left 40px, ::before ✓ bold 1.4rem)",
+      "examples": [
+        "Situation que vit ton client idéal"
+      ],
       "minItems": 3,
       "maxItems": 6,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": ["Situation que vit ton client idéal"]
+      "required": true
     },
     {
       "key": "situations_cta_paragraph_1",
       "label": "CTA situations ligne 1",
       "type": "string",
+      "source": "ai",
       "intention": "transition_hook",
       "description": "Première ligne CTA situations (1.1rem, italic, color #555, text-center). Peut contenir <br>",
-      "examples": ["Si vous avez répondu \"OUI\" à une de ces questions ..."],
+      "examples": [
+        "Si vous avez répondu \"OUI\" à une de ces questions ..."
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -154,9 +205,12 @@
       "key": "situations_cta_paragraph_2",
       "label": "CTA situations ligne 2",
       "type": "string",
+      "source": "ai",
       "intention": "solution_tease",
       "description": "Deuxième ligne CTA avec <strong> (1.1rem, italic, text-center). Peut contenir <br>",
-      "examples": ["<strong>ALORS COMMENCEZ AVEC MOI LE\nPROGRAMME POUR \"PROMESSE\"</strong>"],
+      "examples": [
+        "<strong>ALORS COMMENCEZ AVEC MOI LE\nPROGRAMME POUR \"PROMESSE\"</strong>"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -164,9 +218,12 @@
       "key": "quote_title",
       "label": "Titre citation",
       "type": "string",
+      "source": "ai",
       "intention": "quote_intro",
       "description": "Titre citation en h2 (2.2rem Noto Serif, couleur #33334d, line-height 1.3). Peut contenir <br>",
-      "examples": ["\"TU DEVRAIS OUVRIR TES\nCHAKRAS !\""],
+      "examples": [
+        "\"TU DEVRAIS OUVRIR TES\nCHAKRAS !\""
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -174,23 +231,27 @@
       "key": "quote_paragraphs",
       "label": "Paragraphes citation",
       "type": "string[]",
+      "source": "ai",
       "intention": "problem_education",
       "description": "3-5 paragraphes (1.05rem, line-height 1.8, color #555). Un paragraphe peut avoir class='highlight' (weight 700, color #33334d)",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Qui n'a jamais entendu cette phrase prononcée sur un ton ironique ?"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Qui n'a jamais entendu cette phrase prononcée sur un ton ironique ?"
-      ]
+      "required": true
     },
     {
       "key": "transformation_title",
       "label": "Titre transformation",
       "type": "string",
+      "source": "ai",
       "intention": "challenge_question",
       "description": "Titre transformation (2.2rem Noto Serif, couleur blanche sur fond gradient rose). Peut contenir <br>",
-      "examples": ["... MAIS ARRIVEZ-VOUS\nÀ ANCRER CES\nCHANGEMENTS DANS\nVOTRE QUOTIDIEN ?"],
+      "examples": [
+        "... MAIS ARRIVEZ-VOUS\nÀ ANCRER CES\nCHANGEMENTS DANS\nVOTRE QUOTIDIEN ?"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -198,23 +259,27 @@
       "key": "transformation_paragraphs",
       "label": "Paragraphes transformation",
       "type": "string[]",
+      "source": "ai",
       "intention": "problem_deepening",
       "description": "3-5 paragraphes transformation (1.05rem, line-height 1.8, rgba white 0.95). Peut contenir <strong>",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous avez peut-être encore du mal à <strong>intégrer des actions dans votre quotidien</strong> pour les maintenir équilibrés et faire circuler l'énergie."
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vous avez peut-être encore du mal à <strong>intégrer des actions dans votre quotidien</strong> pour les maintenir équilibrés et faire circuler l'énergie."
-      ]
+      "required": true
     },
     {
       "key": "method_title",
       "label": "Titre méthode",
       "type": "string",
+      "source": "ai",
       "intention": "solution_intro",
       "description": "Titre section méthode (2.5rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["MON OUTIL PRÉFÉRÉ POUR [OBJECTIF]"],
+      "examples": [
+        "MON OUTIL PRÉFÉRÉ POUR [OBJECTIF]"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -222,9 +287,12 @@
       "key": "belief_title",
       "label": "Titre croyance",
       "type": "string",
+      "source": "ai",
       "intention": "philosophy_statement",
       "description": "Titre croyance (2rem Noto Serif, couleur #33334d, text-center). Peut contenir <br>",
-      "examples": ["JE CROIS\nPROFONDÉMENT EN\n[MÉTHODE UNIQUE]"],
+      "examples": [
+        "JE CROIS\nPROFONDÉMENT EN\n[MÉTHODE UNIQUE]"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -232,23 +300,27 @@
       "key": "belief_paragraphs",
       "label": "Paragraphes croyance",
       "type": "string[]",
+      "source": "ai",
       "intention": "methodology_explanation",
       "description": "2-3 paragraphes méthode (1.05rem, line-height 1.8, color #555, text-center, max-width 800px). Peut contenir <strong>",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. En méditant, vous allez \"à l'intérieur\" et vous concentrez votre attention dans une direction précise. Partout où vous mettez de l'attention, cela grandit."
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemMaxLength": 400,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. En méditant, vous allez \"à l'intérieur\" et vous concentrez votre attention dans une direction précise. Partout où vous mettez de l'attention, cela grandit."
-      ]
+      "required": true
     },
     {
       "key": "belief_subtitle",
       "label": "Sous-titre transformation",
       "type": "string",
+      "source": "ai",
       "intention": "transformation_promise",
       "description": "Sous-titre transformation (1.8rem Noto Serif, couleur #33334d, text-center). Peut contenir <br>",
-      "examples": ["CETTE RECONNEXION À NOS CHAKRAS EST UN PROCESSUS\nPROFONDÉMENT TRANSFORMATEUR"],
+      "examples": [
+        "CETTE RECONNEXION À NOS CHAKRAS EST UN PROCESSUS\nPROFONDÉMENT TRANSFORMATEUR"
+      ],
       "maxLength": 150,
       "required": true
     },
@@ -256,9 +328,12 @@
       "key": "transformation_box_title",
       "label": "Titre box transformation",
       "type": "string",
+      "source": "ai",
       "intention": "outcome_vision",
       "description": "Titre dans la box bordure dorée (2rem Noto Serif, couleur #33334d, text-center). Peut contenir <br>",
-      "examples": ["VIVRE VOTRE GRANDE\nTRANSFORMATION"],
+      "examples": [
+        "VIVRE VOTRE GRANDE\nTRANSFORMATION"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -266,9 +341,12 @@
       "key": "transformation_box_intro",
       "label": "Intro box transformation",
       "type": "string",
+      "source": "ai",
       "intention": "outcome_intro",
       "description": "Texte intro dans box (1.05rem, color #555, text-center)",
-      "examples": ["Lorsque vous méditez sur vos centres énergétiques, votre énergie abonde et des libérations se produisent :"],
+      "examples": [
+        "Lorsque vous méditez sur vos centres énergétiques, votre énergie abonde et des libérations se produisent :"
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -276,8 +354,15 @@
       "key": "benefits_grid_items",
       "label": "Items grid bénéfices",
       "type": "object[]",
+      "source": "ai",
       "intention": "outcome_itemization",
       "description": "4 bénéfices en grid 4 colonnes avec icône ronde 60px gradient beige, emoji 1.8rem, texte (0.95rem line-height 1.5 color #33334d, text-center)",
+      "examples": [
+        {
+          "benefit_icon": "✦",
+          "benefit_text": "Vous vous libérez de fonctionnements qui ne vous servent plus"
+        }
+      ],
       "minItems": 4,
       "maxItems": 4,
       "itemSchema": {
@@ -292,21 +377,18 @@
           "description": "Texte du bénéfice"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "benefit_icon": "✦",
-          "benefit_text": "Vous vous libérez de fonctionnements qui ne vous servent plus"
-        }
-      ]
+      "required": true
     },
     {
       "key": "program_intro_title",
       "label": "Titre intro programme",
       "type": "string",
+      "source": "ai",
       "intention": "program_intro",
       "description": "Titre intro programme (2.5rem Noto Serif, couleur blanche, text-center)",
-      "examples": ["PRÉSENTATION DU PROGRAMME"],
+      "examples": [
+        "PRÉSENTATION DU PROGRAMME"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -314,9 +396,12 @@
       "key": "program_intro_text",
       "label": "Texte intro programme",
       "type": "string",
+      "source": "ai",
       "intention": "program_context",
       "description": "Texte intro programme (1.1rem, rgba white 0.95, line-height 1.8, max-width 800px, text-center)",
-      "examples": ["Dans ce programme complet, vous allez découvrir..."],
+      "examples": [
+        "Dans ce programme complet, vous allez découvrir..."
+      ],
       "maxLength": 400,
       "required": true
     },
@@ -324,9 +409,12 @@
       "key": "program_offer_title",
       "label": "Titre offre programme",
       "type": "string",
+      "source": "ai",
       "intention": "offer_intro",
       "description": "Titre section offre (2rem Noto Serif, couleur blanche, text-center)",
-      "examples": ["CE QUE VOUS ALLEZ RECEVOIR"],
+      "examples": [
+        "CE QUE VOUS ALLEZ RECEVOIR"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -334,8 +422,15 @@
       "key": "offer_cards",
       "label": "Cartes offre",
       "type": "object[]",
+      "source": "ai",
       "intention": "offer_breakdown",
       "description": "4-8 cartes offre en grid 2 colonnes avec icône 80px carrée gradient beige, titre (1.2rem bold uppercase color #33334d), description (0.95rem line-height 1.6 color #555). Cards background rgba white 0.95, padding 30px, border-radius 15px, text-center",
+      "examples": [
+        {
+          "offer_title": "MÉDITATIONS GUIDÉES",
+          "offer_description": "9 méditations complètes pour chaque chakra..."
+        }
+      ],
       "minItems": 4,
       "maxItems": 8,
       "itemSchema": {
@@ -350,21 +445,18 @@
           "description": "Description de l'offre"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "offer_title": "MÉDITATIONS GUIDÉES",
-          "offer_description": "9 méditations complètes pour chaque chakra..."
-        }
-      ]
+      "required": true
     },
     {
       "key": "ready_cta_title",
       "label": "Titre CTA prêt",
       "type": "string",
+      "source": "ai",
       "intention": "readiness_check",
       "description": "Titre CTA ready (1.8rem Noto Serif, couleur blanche, text-center)",
-      "examples": ["PRÊT À COMMENCER VOTRE VOYAGE ?"],
+      "examples": [
+        "PRÊT À COMMENCER VOTRE VOYAGE ?"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -372,9 +464,12 @@
       "key": "curriculum_title",
       "label": "Titre curriculum",
       "type": "string",
+      "source": "ai",
       "intention": "curriculum_intro",
       "description": "Titre section curriculum (2.5rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["LE PROGRAMME DÉTAILLÉ"],
+      "examples": [
+        "LE PROGRAMME DÉTAILLÉ"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -382,9 +477,12 @@
       "key": "curriculum_subtitle",
       "label": "Sous-titre curriculum",
       "type": "string",
+      "source": "ai",
       "intention": "curriculum_overview",
       "description": "Sous-titre curriculum (1.1rem, color #555, text-center, max-width 800px)",
-      "examples": ["Découvrez en détail ce qui vous attend dans chaque module..."],
+      "examples": [
+        "Découvrez en détail ce qui vous attend dans chaque module..."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -392,8 +490,20 @@
       "key": "modules",
       "label": "Modules détaillés",
       "type": "object[]",
+      "source": "ai",
       "intention": "curriculum_breakdown",
       "description": "7-12 modules avec numéro pill gradient doré (padding 8px 25px border-radius 50px), titre (1.8rem Noto Serif #33334d), description (1.05rem line-height 1.8 #555), liste bullets ✓ dorés (0.95rem). Module-card background blanc border 3px beige hover doré, padding 40px, border-radius 20px",
+      "examples": [
+        {
+          "module_number": "MODULE 1",
+          "module_title": "LE CHAKRA RACINE",
+          "module_description": "Découvrez comment ancrer votre énergie...",
+          "module_items": [
+            "Méditation guidée de 20 minutes",
+            "Exercices pratiques quotidiens"
+          ]
+        }
+      ],
       "minItems": 7,
       "maxItems": 12,
       "itemSchema": {
@@ -420,26 +530,18 @@
           "description": "3-8 items du module avec ✓"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "module_number": "MODULE 1",
-          "module_title": "LE CHAKRA RACINE",
-          "module_description": "Découvrez comment ancrer votre énergie...",
-          "module_items": [
-            "Méditation guidée de 20 minutes",
-            "Exercices pratiques quotidiens"
-          ]
-        }
-      ]
+      "required": true
     },
     {
       "key": "author_title",
       "label": "Titre auteur",
       "type": "string",
+      "source": "ai",
       "intention": "authority_intro",
       "description": "Titre section auteur (2.5rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["QUI SUIS-JE ?"],
+      "examples": [
+        "QUI SUIS-JE ?"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -447,9 +549,13 @@
       "key": "author_name",
       "label": "Nom auteur",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "authority_name",
       "description": "Nom de l'auteur (2rem Noto Serif, weight 700, couleur #9f7800 doré, text-center)",
-      "examples": ["PRÉNOM NOM"],
+      "examples": [
+        "PRÉNOM NOM"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -457,23 +563,28 @@
       "key": "author_bio_paragraphs",
       "label": "Paragraphes bio",
       "type": "string[]",
+      "source": "ai",
       "intention": "authority_credentials",
       "description": "2-4 paragraphes bio (1.05rem, line-height 1.8, color #555). Peut contenir <strong>",
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Passionnée de développement personnel..."
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemMaxLength": 500,
-      "required": true,
-      "examples": [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Passionnée de développement personnel..."
-      ]
+      "required": true
     },
     {
       "key": "testimonials_title",
       "label": "Titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre section témoignages (2.5rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["CE QU'ELLES EN PENSENT"],
+      "examples": [
+        "CE QU'ELLES EN PENSENT"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -481,9 +592,13 @@
       "key": "testimonials_subtitle",
       "label": "Sous-titre témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_scale",
       "description": "Sous-titre témoignages (1.1rem, color #555, text-center)",
-      "examples": ["Plus de 3000 personnes ont déjà fait ce voyage intérieur, voici ce que certaines en pensent..."],
+      "examples": [
+        "Plus de 3000 personnes ont déjà fait ce voyage intérieur, voici ce que certaines en pensent..."
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -491,20 +606,27 @@
       "key": "testimonials_count",
       "label": "Nombre de témoignages",
       "type": "integer",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_display",
       "description": "Nombre de témoignages à afficher (6-12). Grid 3 colonnes avec placeholder aspect-ratio 4/3 gradient beige + texte <strong>",
-      "minimum": 6,
-      "maximum": 12,
+      "examples": [
+        6
+      ],
       "required": true,
-      "examples": [6]
+      "minimum": 6,
+      "maximum": 12
     },
     {
       "key": "guarantee_title",
       "label": "Titre garantie",
       "type": "string",
+      "source": "ai",
       "intention": "guarantee_headline",
       "description": "Titre garantie (2rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["VOUS NE PRENEZ AUCUN RISQUE !"],
+      "examples": [
+        "VOUS NE PRENEZ AUCUN RISQUE !"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -512,9 +634,12 @@
       "key": "guarantee_intro",
       "label": "Intro garantie",
       "type": "string",
+      "source": "ai",
       "intention": "guarantee_promise",
       "description": "Intro garantie (1.05rem, color #555, text-center). Peut contenir <strong>",
-      "examples": ["<strong>Explique brièvement ta garantie (ex : 14 jours satisfait ou remboursée, satisfait ou rembourse 2X, 30 jours garantie, ...)</strong>"],
+      "examples": [
+        "<strong>Explique brièvement ta garantie (ex : 14 jours satisfait ou remboursée, satisfait ou rembourse 2X, 30 jours garantie, ...)</strong>"
+      ],
       "maxLength": 250,
       "required": true
     },
@@ -522,9 +647,12 @@
       "key": "guarantee_details",
       "label": "Détails garantie",
       "type": "string",
+      "source": "ai",
       "intention": "guarantee_terms",
       "description": "Détails garantie (1.05rem, line-height 1.8, color #555, text-center)",
-      "examples": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Détaille les conditions de ta garantie, comment elle s'applique, comment elle évite à ton prospect de prendre des risques, ce que tu fais pour prouver que tu es sûr de ton offre..."],
+      "examples": [
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Détaille les conditions de ta garantie, comment elle s'applique, comment elle évite à ton prospect de prendre des risques, ce que tu fais pour prouver que tu es sûr de ton offre..."
+      ],
       "maxLength": 500,
       "required": true
     },
@@ -532,9 +660,12 @@
       "key": "faq_title",
       "label": "Titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre FAQ (2.5rem Noto Serif, couleur #33334d, text-center)",
-      "examples": ["UNE QUESTION ?"],
+      "examples": [
+        "UNE QUESTION ?"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -542,21 +673,28 @@
       "key": "faq_questions",
       "label": "Questions FAQ",
       "type": "string[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "8-15 questions FAQ avec + (1rem weight 600 color #33334d, padding 25px, background blanc border 2px beige hover doré, border-radius 15px)",
+      "examples": [
+        "Question ou objection"
+      ],
       "minItems": 8,
       "maxItems": 15,
       "itemMaxLength": 150,
-      "required": true,
-      "examples": ["Question ou objection"]
+      "required": true
     },
     {
       "key": "footer_logo",
       "label": "Logo footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_brand",
       "description": "Logo footer (1.5rem Noto Serif, weight 700, couleur #9f7800 doré). Peut contenir <br>",
-      "examples": ["MA SUPER\nFORMATION\n9 CHAKRAS"],
+      "examples": [
+        "MA SUPER\nFORMATION\n9 CHAKRAS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -564,9 +702,12 @@
       "key": "footer_text",
       "label": "Texte footer",
       "type": "string",
+      "source": "ai",
       "intention": "legal_disclaimer",
       "description": "Texte légal footer (0.85rem, color #666, text-center). Peut contenir <br>",
-      "examples": ["Ta marque 2024 © Tous droits réservés\nCe site n'appartient pas à Youtube/Facebook et n'est pas affilié à Facebook/Youtube..."],
+      "examples": [
+        "Ta marque 2024 © Tous droits réservés\nCe site n'appartient pas à Youtube/Facebook et n'est pas affilié à Facebook/Youtube..."
+      ],
       "maxLength": 400,
       "required": true
     },
@@ -574,21 +715,31 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "3-5 liens footer (0.9rem, color #9f7800 doré, gap 20px)",
+      "examples": [
+        "CGV",
+        "Mentions Légales",
+        "Politique de confidentialité"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": true,
-      "examples": ["CGV", "Mentions Légales", "Politique de confidentialité"]
+      "required": true
     },
     {
       "key": "footer_brand_name",
       "label": "Nom marque footer",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "footer_signature",
       "description": "Nom de marque footer (1.2rem, weight 700, couleur #9f7800 doré, text-center). Peut contenir <br>",
-      "examples": ["PRÉNOM +\nNOM FAMILLE"],
+      "examples": [
+        "PRÉNOM +\nNOM FAMILLE"
+      ],
       "maxLength": 60,
       "required": true
     }

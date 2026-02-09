@@ -8,9 +8,14 @@
       "key": "logo_text",
       "label": "Texte du logo",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "generate",
       "intention": "brand_identity",
       "description": "Nom de votre marque/événement en majuscules pour le header fixe",
-      "examples": ["SUMMIT 2025", "VQX EUROPE"],
+      "examples": [
+        "SUMMIT 2025",
+        "VQX EUROPE"
+      ],
       "maxLength": 25,
       "required": true
     },
@@ -18,9 +23,15 @@
       "key": "nav_links",
       "label": "Liens de navigation",
       "type": "string[]",
+      "source": "ai",
       "intention": "navigation_anchors",
       "description": "3-5 ancres pour naviguer dans la page (espacement 45px)",
-      "examples": ["TRISTAN RUI", "PROGRAMME", "TÉMOIGNAGES", "TARIFS"],
+      "examples": [
+        "TRISTAN RUI",
+        "PROGRAMME",
+        "TÉMOIGNAGES",
+        "TARIFS"
+      ],
       "minItems": 3,
       "maxItems": 5,
       "itemMaxLength": 20,
@@ -30,9 +41,13 @@
       "key": "alert_banner_text",
       "label": "Texte bannière alerte",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_announcement",
       "description": "Message d'urgence ou info importante en majuscules avec fond gradient bleu (13px, bold, letter-spacing 1px)",
-      "examples": ["TRADUCTION FRANÇAISE DE L'ÉVÉNEMENT DISPONIBLE", "PLACES LIMITÉES • INSCRIPTIONS JUSQU'AU 15 JANVIER"],
+      "examples": [
+        "TRADUCTION FRANÇAISE DE L'ÉVÉNEMENT DISPONIBLE",
+        "PLACES LIMITÉES • INSCRIPTIONS JUSQU'AU 15 JANVIER"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -40,9 +55,13 @@
       "key": "hero_eyebrow",
       "label": "Sur-titre hero",
       "type": "string",
+      "source": "ai",
       "intention": "event_context",
       "description": "Catégorie ou type d'événement en majuscules, couleur bleu (16px, bold, uppercase, letter-spacing 2.5px)",
-      "examples": ["LIBÉREZ VOTRE FORCE INTÉRIEURE", "ÉVÉNEMENT EXCLUSIF 2025"],
+      "examples": [
+        "LIBÉREZ VOTRE FORCE INTÉRIEURE",
+        "ÉVÉNEMENT EXCLUSIF 2025"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -50,9 +69,13 @@
       "key": "hero_title",
       "label": "Titre principal hero",
       "type": "string",
+      "source": "ai",
       "intention": "promise_headline",
       "description": "Titre impactant de l'événement en TRÈS GROS (68px, weight 900, uppercase, line-height 1.15, letter-spacing -1px). Peut contenir des parties à surligner.",
-      "examples": ["TRANSFORMATION DIGITALE", "DEVENEZ UN LEADER"],
+      "examples": [
+        "TRANSFORMATION DIGITALE",
+        "DEVENEZ UN LEADER"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -60,9 +83,13 @@
       "key": "hero_meta",
       "label": "Méta hero (lieu + dates)",
       "type": "string",
+      "source": "ai",
       "intention": "event_logistics",
       "description": "Ville, pays et dates de l'événement en bleu (22px, bold, letter-spacing 0.5px)",
-      "examples": ["TOULOUSE | FRANCE | 9 au 12 JANVIER 2025", "PARIS | 15-17 MARS 2025"],
+      "examples": [
+        "TOULOUSE | FRANCE | 9 au 12 JANVIER 2025",
+        "PARIS | 15-17 MARS 2025"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -70,9 +97,13 @@
       "key": "hero_quote",
       "label": "Citation d'accroche hero",
       "type": "string",
+      "source": "ai",
       "intention": "hook_quote",
       "description": "Citation entre guillemets, peut contenir un mot à surligner avec effet jaune fluo (32px italic, max-width 900px). IMPORTANT: Utiliser des guillemets standards, pas typographiques.",
-      "examples": ["QUAND LA SCIENCE rencontre la transformation", "Le moment de changer votre vie est maintenant"],
+      "examples": [
+        "QUAND LA SCIENCE rencontre la transformation",
+        "Le moment de changer votre vie est maintenant"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -80,9 +111,12 @@
       "key": "hero_subtext",
       "label": "Sous-texte hero",
       "type": "string",
+      "source": "ai",
       "intention": "credibility_proof",
       "description": "Texte sous la citation pour établir crédibilité/preuve scientifique (18px, line-height 1.8, opacity 0.88)",
-      "examples": ["Les bénéfices durables de VQX sur les participants ont été prouvés par une étude menée par le Snader Labo pour la Génétique de l'Université de Strasbourg."],
+      "examples": [
+        "Les bénéfices durables de VQX sur les participants ont été prouvés par une étude menée par le Snader Labo pour la Génétique de l'Université de Strasbourg."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -90,8 +124,23 @@
       "key": "stats",
       "label": "Statistiques de preuve sociale",
       "type": "object[]",
+      "source": "ai",
       "intention": "social_proof_metrics",
       "description": "3 statistiques impressionnantes dans des cartes (grid 3 colonnes, 72px pour le chiffre en bleu, 16px pour le texte)",
+      "examples": [
+        {
+          "stat_number": "300%",
+          "stat_text": "Nombre qui prouve la légitimité ou éveille la conscience de ton visiteur"
+        },
+        {
+          "stat_number": "159%",
+          "stat_text": "Augmentation moyenne de performance des participants"
+        },
+        {
+          "stat_number": "139%",
+          "stat_text": "Boost de confiance mesuré scientifiquement"
+        }
+      ],
       "minItems": 3,
       "maxItems": 3,
       "itemSchema": {
@@ -106,20 +155,19 @@
           "description": "Explication de ce que représente le chiffre"
         }
       },
-      "required": true,
-      "examples": [
-        {"stat_number": "300%", "stat_text": "Nombre qui prouve la légitimité ou éveille la conscience de ton visiteur"},
-        {"stat_number": "159%", "stat_text": "Augmentation moyenne de performance des participants"},
-        {"stat_number": "139%", "stat_text": "Boost de confiance mesuré scientifiquement"}
-      ]
+      "required": true
     },
     {
       "key": "cta_primary_text",
       "label": "Texte CTA principal",
       "type": "string",
+      "source": "ai",
       "intention": "action_trigger",
       "description": "Texte du bouton principal gradient bleu en majuscules (16px, bold, uppercase, letter-spacing 0.8px, border-radius 60px)",
-      "examples": ["RÉSERVER MA PLACE", "S'INSCRIRE MAINTENANT"],
+      "examples": [
+        "RÉSERVER MA PLACE",
+        "S'INSCRIRE MAINTENANT"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -127,9 +175,13 @@
       "key": "cta_primary_subtitle",
       "label": "Sous-texte CTA principal",
       "type": "string",
+      "source": "ai",
       "intention": "urgency_scarcity",
       "description": "Petit texte sous le bouton CTA pour créer urgence (11px, weight 500, opacity 0.85)",
-      "examples": ["Nombre limité", "Places limitées à 100 participants"],
+      "examples": [
+        "Nombre limité",
+        "Places limitées à 100 participants"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -137,9 +189,12 @@
       "key": "partner_statement",
       "label": "Déclaration partenaire",
       "type": "string",
+      "source": "ai",
       "intention": "authority_partnership",
       "description": "Texte qui établit autorité via partenariat ou exclusivité (14px, opacity 0.8)",
-      "examples": ["Partenaire francophone de Tristan Rui (VQX Europe) depuis 1796"],
+      "examples": [
+        "Partenaire francophone de Tristan Rui (VQX Europe) depuis 1796"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -147,9 +202,12 @@
       "key": "contact_bar_text",
       "label": "Texte barre contact",
       "type": "string",
+      "source": "ai",
       "intention": "lead_nurture",
       "description": "Question pour inciter au contact avant achat (14px, opacity 0.8)",
-      "examples": ["Des questions avant votre réservation ou discuter d'un tarif de groupe ?"],
+      "examples": [
+        "Des questions avant votre réservation ou discuter d'un tarif de groupe ?"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -157,8 +215,19 @@
       "key": "contact_bar_links",
       "label": "Liens barre contact",
       "type": "object[]",
+      "source": "ai",
       "intention": "contact_options",
       "description": "2-3 options de contact (14px, couleur bleu #00adef, hover underline)",
+      "examples": [
+        {
+          "link_text": "RÉSERVER UN APPEL MAINTENANT",
+          "link_url": "#contact"
+        },
+        {
+          "link_text": "NOUS JOINDRE SUR WHATSAPP",
+          "link_url": "#whatsapp"
+        }
+      ],
       "minItems": 1,
       "maxItems": 3,
       "itemSchema": {
@@ -173,19 +242,20 @@
           "description": "URL ou ancre du lien"
         }
       },
-      "required": false,
-      "examples": [
-        {"link_text": "RÉSERVER UN APPEL MAINTENANT", "link_url": "#contact"},
-        {"link_text": "NOUS JOINDRE SUR WHATSAPP", "link_url": "#whatsapp"}
-      ]
+      "required": false
     },
     {
       "key": "section_1_speaker_name",
       "label": "Nom intervenant 1",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "authority_identity",
       "description": "Nom complet du premier intervenant en majuscules (52px section-title ou 32px speaker-name, bold)",
-      "examples": ["TRISTAN RUI", "MARIE DUPONT"],
+      "examples": [
+        "TRISTAN RUI",
+        "MARIE DUPONT"
+      ],
       "maxLength": 40,
       "required": true
     },
@@ -193,9 +263,13 @@
       "key": "section_1_intro_title",
       "label": "Titre intro section 1",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_statement",
       "description": "Titre de section qui introduit la promesse ou le rêve (52px, uppercase, weight 900)",
-      "examples": ["L'IMMANQUABLE ÉVÈNEMENT MYTHIQUE", "TRANSFORMEZ VOTRE VIE"],
+      "examples": [
+        "L'IMMANQUABLE ÉVÈNEMENT MYTHIQUE",
+        "TRANSFORMEZ VOTRE VIE"
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -203,9 +277,12 @@
       "key": "section_1_intro_subtitle",
       "label": "Sous-titre intro section 1",
       "type": "string",
+      "source": "ai",
       "intention": "social_proof_celebrity",
       "description": "Complément du titre avec noms de célébrités ou preuves (20px, weight 300, max-width 700px)",
-      "examples": ["QUE CHOISISSENT LES PERSONNALITÉS COMME OPRAH WINFREY, USHER, HUGH JACKMAN... POUR CHANGER DE VIE"],
+      "examples": [
+        "QUE CHOISISSENT LES PERSONNALITÉS COMME OPRAH WINFREY, USHER, HUGH JACKMAN... POUR CHANGER DE VIE"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -213,9 +290,13 @@
       "key": "quote_section_1",
       "label": "Citation section 1",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_quote",
       "description": "Citation inspirante centrée en italique (32px italic, weight 300, max-width 900px, padding 90px)",
-      "examples": ["UN JOUR... C'EST MAINTENANT.", "Le succès n'est pas une destination"],
+      "examples": [
+        "UN JOUR... C'EST MAINTENANT.",
+        "Le succès n'est pas une destination"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -223,9 +304,13 @@
       "key": "quote_section_1_highlight_text",
       "label": "Texte surligné citation 1",
       "type": "string",
+      "source": "ai",
       "intention": "emphasis_highlight",
       "description": "Partie de la citation à surligner en jaune fluo",
-      "examples": ["UN JOUR", "MAINTENANT"],
+      "examples": [
+        "UN JOUR",
+        "MAINTENANT"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -233,9 +318,12 @@
       "key": "transformation_section_title",
       "label": "Titre section transformation",
       "type": "string",
+      "source": "ai",
       "intention": "outcome_promise",
       "description": "Titre en majuscules pour la section de transformation (42px, uppercase, weight 900)",
-      "examples": ["ACCÉDEZ À LA VIE POUR LAQUELLE VOUS ÊTES FAIT"],
+      "examples": [
+        "ACCÉDEZ À LA VIE POUR LAQUELLE VOUS ÊTES FAIT"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -243,9 +331,12 @@
       "key": "pain_intro_text",
       "label": "Texte intro douleur",
       "type": "string",
+      "source": "ai",
       "intention": "pain_identification",
       "description": "Paragraphe qui introduit les douleurs/rêves du prospect (18px, line-height 1.8, opacity 0.88)",
-      "examples": ["Nous l'avons tous dit. 'Un jour', nous..."],
+      "examples": [
+        "Nous l'avons tous dit. 'Un jour', nous..."
+      ],
       "maxLength": 100,
       "required": true
     },
@@ -253,26 +344,30 @@
       "key": "pain_points_checklist",
       "label": "Liste de douleurs/rêves",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_points",
       "description": "Liste avec checkbox (◻️) des rêves non réalisés (18px, border-bottom, icône checkbox 26px en bleu)",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 80,
-      "required": true,
       "examples": [
         "Lancerons notre propre entreprise à succès",
         "Améliorerons et apaiserons nos relations",
         "Perdrons du poids",
         "Trouverons notre âme soeur"
-      ]
+      ],
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 80,
+      "required": true
     },
     {
       "key": "pain_elaboration",
       "label": "Élaboration de la douleur",
       "type": "string",
+      "source": "ai",
       "intention": "pain_agitation",
       "description": "Paragraphes qui agitent la douleur (max-width 920px, 18px, plusieurs paragraphes possibles, max 600 caractères total)",
-      "examples": ["Nous attendons le « bon moment » et laissons nos circonstances déterminer notre avenir. Puis, le temps passe… Et rien ne change. Sauf le poids des années."],
+      "examples": [
+        "Nous attendons le « bon moment » et laissons nos circonstances déterminer notre avenir. Puis, le temps passe… Et rien ne change. Sauf le poids des années."
+      ],
       "maxLength": 600,
       "required": true
     },
@@ -280,9 +375,12 @@
       "key": "solution_intro",
       "label": "Introduction de la solution",
       "type": "string",
+      "source": "ai",
       "intention": "solution_reveal",
       "description": "Paragraphe de transition vers la solution (18px, line-height 1.8)",
-      "examples": ["Parce que la réalisation de vos plus grands objectifs n'a rien d'un hasard. Elle est plutôt dans vos standards."],
+      "examples": [
+        "Parce que la réalisation de vos plus grands objectifs n'a rien d'un hasard. Elle est plutôt dans vos standards."
+      ],
       "maxLength": 200,
       "required": true
     },
@@ -290,24 +388,28 @@
       "key": "rhetorical_questions",
       "label": "Questions rhétoriques",
       "type": "string[]",
+      "source": "ai",
       "intention": "engagement_questions",
       "description": "3-5 questions qui font réfléchir le prospect (18px, line-height 1.8)",
-      "minItems": 2,
-      "maxItems": 5,
-      "itemMaxLength": 120,
-      "required": false,
       "examples": [
         "N'est-il pas temps de vous élever, de faire de votre avenir une priorité, et de vos rêves une réalité ?",
         "N'est-il pas temps de devenir cette personne qui mérite une vie extraordinaire ?"
-      ]
+      ],
+      "minItems": 2,
+      "maxItems": 5,
+      "itemMaxLength": 120,
+      "required": false
     },
     {
       "key": "cta_section_2_title",
       "label": "Titre CTA section 2",
       "type": "string",
+      "source": "ai",
       "intention": "action_headline",
       "description": "Titre en majuscules avant le CTA (52px ou 42px, uppercase, weight 900)",
-      "examples": ["LIBÉREZ VOTRE PLEIN POTENTIEL DÈS MAINTENANT"],
+      "examples": [
+        "LIBÉREZ VOTRE PLEIN POTENTIEL DÈS MAINTENANT"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -315,9 +417,12 @@
       "key": "cta_section_2_subtitle",
       "label": "Sous-titre CTA section 2",
       "type": "string",
+      "source": "ai",
       "intention": "event_reminder",
       "description": "Rappel des dates de l'événement (20px ou 28px)",
-      "examples": ["Plongez dans cet événement mythique — 9 au 12 Janvier 2025"],
+      "examples": [
+        "Plongez dans cet événement mythique — 9 au 12 Janvier 2025"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -325,9 +430,13 @@
       "key": "destiny_section_title",
       "label": "Titre section destin",
       "type": "string",
+      "source": "ai",
       "intention": "empowerment_statement",
       "description": "Titre pour la section qui parle de prendre le contrôle (42px, uppercase)",
-      "examples": ["C'EST VOTRE DESTIN", "PRENEZ LE CONTRÔLE"],
+      "examples": [
+        "C'EST VOTRE DESTIN",
+        "PRENEZ LE CONTRÔLE"
+      ],
       "maxLength": 50,
       "required": false
     },
@@ -335,9 +444,12 @@
       "key": "destiny_section_subtitle",
       "label": "Sous-titre section destin",
       "type": "string",
+      "source": "ai",
       "intention": "control_promise",
       "description": "Complément du titre destin (42px, uppercase)",
-      "examples": ["POUR OBTENIR CE QUE VOUS VOULEZ"],
+      "examples": [
+        "POUR OBTENIR CE QUE VOUS VOULEZ"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -345,9 +457,12 @@
       "key": "destiny_section_text",
       "label": "Texte section destin",
       "type": "string",
+      "source": "ai",
       "intention": "control_elaboration",
       "description": "Explication de comment reprendre le contrôle (18px, line-height 1.8)",
-      "examples": ["Contrôlez comment vous vivrez votre prochain mois, année ou décennie à venir."],
+      "examples": [
+        "Contrôlez comment vous vivrez votre prochain mois, année ou décennie à venir."
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -355,8 +470,15 @@
       "key": "benefits_grid",
       "label": "Grille de bénéfices",
       "type": "object[]",
+      "source": "ai",
       "intention": "benefit_showcase",
       "description": "6 bénéfices avec icônes animées GIF (grid 3x2, avec icône + titre + description)",
+      "examples": [
+        {
+          "benefit_title": "PUCE PROMESSE IRRESISTIBLE",
+          "benefit_text": "bénéfice + conséquence concrète du bénéfice pour ton prospect"
+        }
+      ],
       "minItems": 4,
       "maxItems": 6,
       "itemSchema": {
@@ -371,21 +493,18 @@
           "description": "Explication bénéfice + conséquence (16px, line-height 1.7)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "benefit_title": "PUCE PROMESSE IRRESISTIBLE",
-          "benefit_text": "bénéfice + conséquence concrète du bénéfice pour ton prospect"
-        }
-      ]
+      "required": true
     },
     {
       "key": "investment_statement",
       "label": "Déclaration d'investissement",
       "type": "string",
+      "source": "ai",
       "intention": "value_framing",
       "description": "Phrase qui positionne l'événement comme investissement nécessaire (18px, line-height 1.8)",
-      "examples": ["Investir dans votre avenir et celui de votre famille n'est plus un luxe. Mais une nécessité."],
+      "examples": [
+        "Investir dans votre avenir et celui de votre famille n'est plus un luxe. Mais une nécessité."
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -393,9 +512,12 @@
       "key": "new_world_title",
       "label": "Titre nouveau monde",
       "type": "string",
+      "source": "ai",
       "intention": "paradigm_shift",
       "description": "Titre qui annonce une nouvelle ère (52px, uppercase, weight 900)",
-      "examples": ["BIENVENUE DANS LE NOUVEAU MONDE"],
+      "examples": [
+        "BIENVENUE DANS LE NOUVEAU MONDE"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -403,9 +525,12 @@
       "key": "new_world_text",
       "label": "Texte nouveau monde",
       "type": "string",
+      "source": "ai",
       "intention": "context_setting",
       "description": "Texte en majuscules qui décrit le contexte actuel (uppercase, letterspacing, max-width 920px)",
-      "examples": ["DANS DES MOMENTS COMME CEUX QUE NOUS CONNAISSONS AUJOURD'HUI REMPLIS D'INCERTITUDE, D'INNOMBRABLES DÉFIS ET OBSTACLES, LES VIES EXTRAORDINAIRES N'ARRIVENT PAS PAR HASARD."],
+      "examples": [
+        "DANS DES MOMENTS COMME CEUX QUE NOUS CONNAISSONS AUJOURD'HUI REMPLIS D'INCERTITUDE, D'INNOMBRABLES DÉFIS ET OBSTACLES, LES VIES EXTRAORDINAIRES N'ARRIVENT PAS PAR HASARD."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -413,9 +538,12 @@
       "key": "speakers_section_title",
       "label": "Titre section intervenants",
       "type": "string",
+      "source": "ai",
       "intention": "authority_intro",
       "description": "Titre en majuscules pour introduire les speakers (52px, uppercase, weight 900)",
-      "examples": ["APPRENEZ AUPRÈS DES MEILLEURS"],
+      "examples": [
+        "APPRENEZ AUPRÈS DES MEILLEURS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -423,9 +551,12 @@
       "key": "speakers_section_subtitle",
       "label": "Sous-titre section intervenants",
       "type": "string",
+      "source": "ai",
       "intention": "authority_emphasis",
       "description": "Complément du titre intervenants (52px, uppercase)",
-      "examples": ["ET PLUS GRANDS LEADERS MONDIAUX"],
+      "examples": [
+        "ET PLUS GRANDS LEADERS MONDIAUX"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -433,8 +564,16 @@
       "key": "speakers",
       "label": "Intervenants",
       "type": "object[]",
+      "source": "ai",
       "intention": "authority_speakers",
       "description": "2-6 intervenants avec photo ronde (220px), nom (32px bold bleu), titre (18px uppercase bold) et bio (16px)",
+      "examples": [
+        {
+          "speaker_name": "INTERVENANT NUMERO 1",
+          "speaker_title": "PRÉSENTATION ET PREUVES SOCIALES",
+          "speaker_bio": "Speech qui explique pourquoi cet intervenant est légitime à présenter cet événement."
+        }
+      ],
       "minItems": 2,
       "maxItems": 6,
       "itemSchema": {
@@ -454,22 +593,18 @@
           "description": "Biographie avec réalisations et preuves sociales"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "speaker_name": "INTERVENANT NUMERO 1",
-          "speaker_title": "PRÉSENTATION ET PREUVES SOCIALES",
-          "speaker_bio": "Speech qui explique pourquoi cet intervenant est légitime à présenter cet événement."
-        }
-      ]
+      "required": true
     },
     {
       "key": "program_section_title",
       "label": "Titre section programme",
       "type": "string",
+      "source": "ai",
       "intention": "program_intro",
       "description": "Titre en majuscules pour le programme (52px, uppercase, weight 900)",
-      "examples": ["TRANSFORMEZ VOTRE VIE EN 4 JOURS"],
+      "examples": [
+        "TRANSFORMEZ VOTRE VIE EN 4 JOURS"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -477,8 +612,15 @@
       "key": "program_days",
       "label": "Programme jour par jour",
       "type": "object[]",
+      "source": "ai",
       "intention": "daily_curriculum",
       "description": "4 jours avec icône GIF animée, titre (30px uppercase weight 900), description (16px line-height 1.8) et image placeholder (220px height)",
+      "examples": [
+        {
+          "day_title": "CRÉEZ VOTRE PREMIÈRE IMPULSION",
+          "day_description": "Le premier jour est consacré à la transformation de la peur en POUVOIR. Vous apprendrez exactement comment surmonter toutes vos limites et, à la fin de la journée, vous concrétiserez cette expérience intérieure par la légendaire marche sur le feu !"
+        }
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemSchema": {
@@ -493,21 +635,18 @@
           "description": "Description complète de ce qui se passe ce jour-là"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "day_title": "CRÉEZ VOTRE PREMIÈRE IMPULSION",
-          "day_description": "Le premier jour est consacré à la transformation de la peur en POUVOIR. Vous apprendrez exactement comment surmonter toutes vos limites et, à la fin de la journée, vous concrétiserez cette expérience intérieure par la légendaire marche sur le feu !"
-        }
-      ]
+      "required": true
     },
     {
       "key": "firewalk_section_title",
       "label": "Titre section marche sur le feu",
       "type": "string",
+      "source": "ai",
       "intention": "unique_experience",
       "description": "Titre en majuscules pour l'expérience unique (52px, uppercase)",
-      "examples": ["DEVENEZ MARCHEUR SUR LE FEU"],
+      "examples": [
+        "DEVENEZ MARCHEUR SUR LE FEU"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -515,9 +654,12 @@
       "key": "firewalk_intro",
       "label": "Introduction marche sur le feu",
       "type": "string",
+      "source": "ai",
       "intention": "experience_context",
       "description": "Texte qui explique le sérieux de l'expérience (18px, line-height 1.8, max-width 920px)",
-      "examples": ["Nous sommes sérieux. Lors du PQX, vous passerez la première journée à détruire vos croyances limitantes..."],
+      "examples": [
+        "Nous sommes sérieux. Lors du PQX, vous passerez la première journée à détruire vos croyances limitantes..."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -525,25 +667,29 @@
       "key": "limiting_beliefs",
       "label": "Croyances limitantes",
       "type": "string[]",
+      "source": "ai",
       "intention": "pain_internal_dialogue",
       "description": "3-4 phrases de la petite voix intérieure négative (affichées dans des cartes avec images)",
-      "minItems": 3,
-      "maxItems": 4,
-      "itemMaxLength": 60,
-      "required": false,
       "examples": [
         "Je ne suis pas assez bon",
         "C'est trop risqué",
         "Je n'y arriverai jamais"
-      ]
+      ],
+      "minItems": 3,
+      "maxItems": 4,
+      "itemMaxLength": 60,
+      "required": false
     },
     {
       "key": "firewalk_transformation_text",
       "label": "Texte transformation marche sur le feu",
       "type": "string",
+      "source": "ai",
       "intention": "breakthrough_promise",
       "description": "Paragraphe qui explique la transformation via la marche sur le feu (18px, plusieurs paragraphes possibles, max 400 caractères)",
-      "examples": ["Toutes ces peurs, ces croyances, ces doutes, et mensonges que l'on se raconte… impactent directement votre niveau d'estime, de confiance et de certitude. A la fin de cette première journée, vous allez faire quelque chose d'inimaginable..."],
+      "examples": [
+        "Toutes ces peurs, ces croyances, ces doutes, et mensonges que l'on se raconte… impactent directement votre niveau d'estime, de confiance et de certitude. A la fin de cette première journée, vous allez faire quelque chose d'inimaginable..."
+      ],
       "maxLength": 400,
       "required": false
     },
@@ -551,9 +697,12 @@
       "key": "firewalk_impact_statement",
       "label": "Déclaration d'impact marche sur le feu",
       "type": "string",
+      "source": "ai",
       "intention": "before_after_moment",
       "description": "Phrase impactante sur le changement (uppercase ou mixed, bold)",
-      "examples": ["IL Y AURA UN AVANT, ET UN APRÈS. VOUS POURREZ DIRE. JE L'AI FAIT."],
+      "examples": [
+        "IL Y AURA UN AVANT, ET UN APRÈS. VOUS POURREZ DIRE. JE L'AI FAIT."
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -561,9 +710,13 @@
       "key": "bonuses_section_title",
       "label": "Titre section bonus",
       "type": "string",
+      "source": "ai",
       "intention": "bonus_intro",
       "description": "Titre en majuscules pour les bonus (52px, uppercase)",
-      "examples": ["EN PLUS DE L'ÉVÈNEMENT - BONUS INCLUS", "CE QUE VOUS OBTENEZ"],
+      "examples": [
+        "EN PLUS DE L'ÉVÈNEMENT - BONUS INCLUS",
+        "CE QUE VOUS OBTENEZ"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -571,8 +724,15 @@
       "key": "bonuses",
       "label": "Bonus",
       "type": "object[]",
+      "source": "ai",
       "intention": "bonus_value_stack",
       "description": "2-4 bonus avec icône GIF, titre (24px uppercase bold) et description (16px max 200 caractères)",
+      "examples": [
+        {
+          "bonus_title": "NOM DU BONUS 1",
+          "bonus_description": "Avantages + conséquence des avantages du bonus 1, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale."
+        }
+      ],
       "minItems": 2,
       "maxItems": 4,
       "itemSchema": {
@@ -587,21 +747,18 @@
           "description": "Avantages + conséquence, en lien avec l'offre principale"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "bonus_title": "NOM DU BONUS 1",
-          "bonus_description": "Avantages + conséquence des avantages du bonus 1, en lien avec l'offre principale, et qui résout un vrai problème pour ton audience cible. L'avantage seul doit être un argument de vente pour ton offre principale."
-        }
-      ]
+      "required": true
     },
     {
       "key": "dream_life_intro",
       "label": "Introduction vie de rêve",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_visualization",
       "description": "Phrase qui invite à imaginer la vie de rêve (18px, line-height 1.8)",
-      "examples": ["Prenez un instant et osez imaginer la vie de vos rêves…"],
+      "examples": [
+        "Prenez un instant et osez imaginer la vie de vos rêves…"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -609,25 +766,29 @@
       "key": "dream_life_questions",
       "label": "Questions vie de rêve",
       "type": "string[]",
+      "source": "ai",
       "intention": "aspiration_questions",
       "description": "Questions qui font visualiser les aspirations (18px, format liste avec •)",
-      "minItems": 3,
-      "maxItems": 6,
-      "itemMaxLength": 100,
-      "required": false,
       "examples": [
         "Plus de temps libre à consacrer à votre famille et à vos proches ?",
         "Une énergie et une confiance illimitée ?",
         "La liberté financière ultime et la capacité de donner en retour ?"
-      ]
+      ],
+      "minItems": 3,
+      "maxItems": 6,
+      "itemMaxLength": 100,
+      "required": false
     },
     {
       "key": "dream_life_statement",
       "label": "Déclaration vie de rêve",
       "type": "string",
+      "source": "ai",
       "intention": "aspiration_affirmation",
       "description": "Affirmation finale sur la création de cette vie (uppercase ou bold)",
-      "examples": ["CRÉER LA VIE QUE VOUS DÉSIREZ ET QUE VOUS MÉRITEZ"],
+      "examples": [
+        "CRÉER LA VIE QUE VOUS DÉSIREZ ET QUE VOUS MÉRITEZ"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -635,9 +796,13 @@
       "key": "pricing_section_title",
       "label": "Titre section tarifs",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "pricing_intro",
       "description": "Titre avec lieu et dates de l'événement (52px ou grand)",
-      "examples": ["PQX 2025 TOULOUSE (FRANCE) — 9-12 JANVIER 2025"],
+      "examples": [
+        "PQX 2025 TOULOUSE (FRANCE) — 9-12 JANVIER 2025"
+      ],
       "maxLength": 80,
       "required": true
     },
@@ -645,9 +810,13 @@
       "key": "pricing_subtitle",
       "label": "Sous-titre tarifs",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "payment_options",
       "description": "Info sur les options de paiement (18px ou 20px)",
-      "examples": ["Paiement disponible en 1x, 3x et 6x (traduction française disponible)"],
+      "examples": [
+        "Paiement disponible en 1x, 3x et 6x (traduction française disponible)"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -655,8 +824,26 @@
       "key": "pricing_plans",
       "label": "Formules tarifaires",
       "type": "object[]",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "pricing_tiers",
       "description": "3 formules avec nom, position, prix barré, prix promo, avantages (liste avec ✓) - la formule du milieu est featured avec scale(1.05)",
+      "examples": [
+        {
+          "plan_name": "Diamond",
+          "plan_tagline": "Le + proche de Tristan",
+          "plan_price_old": "5999€",
+          "plan_price_new": "3499€",
+          "plan_early_bird_label": "Super early bird",
+          "plan_features": [
+            "Le plus proche de Tristan",
+            "Sur le devant de la scène",
+            "4 jours PQX",
+            "Expérience de marche sur le feu"
+          ],
+          "plan_featured": true
+        }
+      ],
       "minItems": 2,
       "maxItems": 3,
       "itemSchema": {
@@ -697,31 +884,19 @@
           "description": "True si c'est la formule mise en avant (milieu)"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "plan_name": "Diamond",
-          "plan_tagline": "Le + proche de Tristan",
-          "plan_price_old": "5999€",
-          "plan_price_new": "3499€",
-          "plan_early_bird_label": "Super early bird",
-          "plan_features": [
-            "Le plus proche de Tristan",
-            "Sur le devant de la scène",
-            "4 jours PQX",
-            "Expérience de marche sur le feu"
-          ],
-          "plan_featured": true
-        }
-      ]
+      "required": true
     },
     {
       "key": "pricing_cta_title",
       "label": "Titre CTA pricing",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "final_question",
       "description": "Question finale avant le CTA (uppercase, bold)",
-      "examples": ["ÊTES-VOUS PRÊT POUR UNE AVENTURE RÉVOLUTIONNAIRE AUX CÔTÉS DE TRISTAN RUI ?"],
+      "examples": [
+        "ÊTES-VOUS PRÊT POUR UNE AVENTURE RÉVOLUTIONNAIRE AUX CÔTÉS DE TRISTAN RUI ?"
+      ],
       "maxLength": 120,
       "required": true
     },
@@ -729,9 +904,13 @@
       "key": "pricing_disclaimer",
       "label": "Disclaimer pricing",
       "type": "string",
+      "source": "user",
+      "fallback": "placeholder",
       "intention": "legal_consent",
       "description": "Texte légal sous le formulaire de réservation (14px)",
-      "examples": ["En cliquant sur 'réserver' je reconnais avoir lu et accepté la politique de confidentialité"],
+      "examples": [
+        "En cliquant sur 'réserver' je reconnais avoir lu et accepté la politique de confidentialité"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -739,9 +918,13 @@
       "key": "testimonials_intro_quote",
       "label": "Citation intro témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "testimonial_context",
       "description": "Citation qui introduit les témoignages (uppercase, bold)",
-      "examples": ["IL Y A UNE DIFFÉRENCE ENTRE SAVOIR LES CHOSES ET LES VIVRE"],
+      "examples": [
+        "IL Y A UNE DIFFÉRENCE ENTRE SAVOIR LES CHOSES ET LES VIVRE"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -749,9 +932,13 @@
       "key": "testimonials_section_title",
       "label": "Titre section témoignages",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_intro",
       "description": "Titre pour les témoignages (52px, uppercase)",
-      "examples": ["Ils ont fait PQX et ils témoignent"],
+      "examples": [
+        "Ils ont fait PQX et ils témoignent"
+      ],
       "maxLength": 60,
       "required": true
     },
@@ -759,8 +946,16 @@
       "key": "testimonials",
       "label": "Témoignages",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_testimonial",
       "description": "3-6 témoignages avec photo, nom et texte (format card avec photo ronde ou carrée)",
+      "examples": [
+        {
+          "testimonial_name": "Serena Williams",
+          "testimonial_text": "Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats."
+        }
+      ],
       "minItems": 3,
       "maxItems": 12,
       "itemSchema": {
@@ -775,21 +970,19 @@
           "description": "Témoignage inspirant avec résultats obtenus"
         }
       },
-      "required": true,
-      "examples": [
-        {
-          "testimonial_name": "Serena Williams",
-          "testimonial_text": "Témoignage inspirant d'un élève/client qui a participé à l'événement ou qui a déjà mis en place ton offre et qui a obtenu des résultats."
-        }
-      ]
+      "required": true
     },
     {
       "key": "testimonials_transformation_title",
       "label": "Titre témoignages transformation",
       "type": "string",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "results_showcase",
       "description": "Titre pour section témoignages de résultats (52px, uppercase)",
-      "examples": ["ILS ONT TRANSFORMÉ LEUR VIE ET LEURS RÉSULTATS"],
+      "examples": [
+        "ILS ONT TRANSFORMÉ LEUR VIE ET LEURS RÉSULTATS"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -797,6 +990,8 @@
       "key": "visual_testimonials",
       "label": "Témoignages visuels",
       "type": "object[]",
+      "source": "user_or_ai",
+      "fallback": "remove",
       "intention": "social_proof_visual",
       "description": "3-6 captures d'écran de témoignages (format image + icône play GIF)",
       "minItems": 3,
@@ -814,9 +1009,12 @@
       "key": "logistics_section_title",
       "label": "Titre section logistique",
       "type": "string",
+      "source": "ai",
       "intention": "practical_info_intro",
       "description": "Titre optionnel pour infos pratiques",
-      "examples": ["INFORMATIONS PRATIQUES"],
+      "examples": [
+        "INFORMATIONS PRATIQUES"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -824,9 +1022,12 @@
       "key": "location_title",
       "label": "Titre lieu",
       "type": "string",
+      "source": "ai",
       "intention": "venue_header",
       "description": "LIEU en majuscules (avec icône location GIF)",
-      "examples": ["LIEU"],
+      "examples": [
+        "LIEU"
+      ],
       "maxLength": 20,
       "required": false
     },
@@ -834,9 +1035,13 @@
       "key": "location_venue",
       "label": "Nom du lieu",
       "type": "string",
+      "source": "ai",
       "intention": "venue_name",
       "description": "Nom de la salle/lieu de l'événement",
-      "examples": ["Lieu de l'événement", "Palais des Congrès"],
+      "examples": [
+        "Lieu de l'événement",
+        "Palais des Congrès"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -844,9 +1049,12 @@
       "key": "location_address",
       "label": "Adresse",
       "type": "string",
+      "source": "ai",
       "intention": "venue_address",
       "description": "Adresse complète sur plusieurs lignes",
-      "examples": ["123 Rue de la République\n75000 PARIS"],
+      "examples": [
+        "123 Rue de la République\n75000 PARIS"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -854,9 +1062,12 @@
       "key": "schedule_title",
       "label": "Titre horaires",
       "type": "string",
+      "source": "ai",
       "intention": "schedule_header",
       "description": "HORAIRE en majuscules (avec icône clock GIF)",
-      "examples": ["HORAIRE"],
+      "examples": [
+        "HORAIRE"
+      ],
       "maxLength": 20,
       "required": false
     },
@@ -864,24 +1075,28 @@
       "key": "schedule_times",
       "label": "Horaires",
       "type": "string[]",
+      "source": "ai",
       "intention": "event_timing",
       "description": "Liste des horaires jour par jour",
-      "minItems": 1,
-      "maxItems": 5,
-      "itemMaxLength": 60,
-      "required": false,
       "examples": [
         "Jeudi 9 janvier : 9h-18h",
         "Vendredi 10 janvier : 9h-20h"
-      ]
+      ],
+      "minItems": 1,
+      "maxItems": 5,
+      "itemMaxLength": 60,
+      "required": false
     },
     {
       "key": "schedule_disclaimer",
       "label": "Disclaimer horaires",
       "type": "string",
+      "source": "ai",
       "intention": "schedule_flexibility",
       "description": "Note sur la flexibilité des horaires (14px, italic)",
-      "examples": ["Les heures indiquées ci-dessus pour le séminaire sont des heures approximatives. Tristan s'engage à respecter les normes les plus strictes en matière de présentation et insiste pour que tous les sujets soient abordés, c'est pourquoi l'horaire peut varier."],
+      "examples": [
+        "Les heures indiquées ci-dessus pour le séminaire sont des heures approximatives. Tristan s'engage à respecter les normes les plus strictes en matière de présentation et insiste pour que tous les sujets soient abordés, c'est pourquoi l'horaire peut varier."
+      ],
       "maxLength": 250,
       "required": false
     },
@@ -889,9 +1104,12 @@
       "key": "transport_title",
       "label": "Titre transport",
       "type": "string",
+      "source": "ai",
       "intention": "transport_header",
       "description": "Titre section transport (avec icône location GIF)",
-      "examples": ["SE RENDRE SUR PLACE"],
+      "examples": [
+        "SE RENDRE SUR PLACE"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -899,9 +1117,12 @@
       "key": "transport_info",
       "label": "Infos transport",
       "type": "string",
+      "source": "ai",
       "intention": "transport_details",
       "description": "Consignes pour se rendre sur place",
-      "examples": ["Consignes claires pour se rendre sur place : transports en commun, parking, aéroports..."],
+      "examples": [
+        "Consignes claires pour se rendre sur place : transports en commun, parking, aéroports..."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -909,9 +1130,12 @@
       "key": "hotel_title",
       "label": "Titre hôtels",
       "type": "string",
+      "source": "ai",
       "intention": "accommodation_header",
       "description": "Titre section hébergement (avec icône building GIF)",
-      "examples": ["RÉSERVATION D'HÔTEL"],
+      "examples": [
+        "RÉSERVATION D'HÔTEL"
+      ],
       "maxLength": 30,
       "required": false
     },
@@ -919,9 +1143,12 @@
       "key": "hotel_info",
       "label": "Infos hôtels",
       "type": "string",
+      "source": "ai",
       "intention": "accommodation_details",
       "description": "Informations sur les hôtels à proximité avec lien optionnel",
-      "examples": ["Il y a plusieurs hôtels à distance de marche du site. Cliquez ici pour consulter les options d'hébergement disponibles."],
+      "examples": [
+        "Il y a plusieurs hôtels à distance de marche du site. Cliquez ici pour consulter les options d'hébergement disponibles."
+      ],
       "maxLength": 200,
       "required": false
     },
@@ -929,9 +1156,12 @@
       "key": "final_message_title",
       "label": "Titre message final",
       "type": "string",
+      "source": "ai",
       "intention": "closing_statement",
       "description": "Titre de la section de clôture (52px, uppercase)",
-      "examples": ["LA CRISE N'EST QU'UNE OPPORTUNITÉ DÉGUISÉE. QU'EN FEREZ-VOUS ?"],
+      "examples": [
+        "LA CRISE N'EST QU'UNE OPPORTUNITÉ DÉGUISÉE. QU'EN FEREZ-VOUS ?"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -939,9 +1169,12 @@
       "key": "final_message_text",
       "label": "Texte message final",
       "type": "string",
+      "source": "ai",
       "intention": "closing_motivation",
       "description": "Message de motivation final avant le dernier CTA (18px, line-height 1.8, max 500 caractères)",
-      "examples": ["La voie de la réussite passe par une action massive et déterminée. Les enjeux étant si importants, vous ne pouvez plus chercher d'excuses..."],
+      "examples": [
+        "La voie de la réussite passe par une action massive et déterminée. Les enjeux étant si importants, vous ne pouvez plus chercher d'excuses..."
+      ],
       "maxLength": 500,
       "required": false
     },
@@ -949,25 +1182,29 @@
       "key": "final_questions",
       "label": "Questions finales",
       "type": "string[]",
+      "source": "ai",
       "intention": "reflection_questions",
       "description": "Questions de réflexion finale",
-      "minItems": 2,
-      "maxItems": 4,
-      "itemMaxLength": 100,
-      "required": false,
       "examples": [
         "Qui choisirez-vous d'être ?",
         "Quel héritage allez-vous laisser ?",
         "Comment allez-vous créer une nouvelle vie pour votre famille ?"
-      ]
+      ],
+      "minItems": 2,
+      "maxItems": 4,
+      "itemMaxLength": 100,
+      "required": false
     },
     {
       "key": "signature_text",
       "label": "Signature",
       "type": "string",
+      "source": "ai",
       "intention": "personal_sign_off",
       "description": "Nom de la personne qui signe (peut être une image de signature manuscrite)",
-      "examples": ["Tristan Rui"],
+      "examples": [
+        "Tristan Rui"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -975,9 +1212,12 @@
       "key": "leader_question",
       "label": "Question de leadership",
       "type": "string",
+      "source": "ai",
       "intention": "call_to_leadership",
       "description": "Question finale sur devenir un leader (uppercase, bold)",
-      "examples": ["COMMENT ALLEZ-VOUS DEVENIR UN LEADER AU MOMENT OÙ LE MONDE EN A LE PLUS BESOIN ?"],
+      "examples": [
+        "COMMENT ALLEZ-VOUS DEVENIR UN LEADER AU MOMENT OÙ LE MONDE EN A LE PLUS BESOIN ?"
+      ],
       "maxLength": 120,
       "required": false
     },
@@ -985,9 +1225,12 @@
       "key": "group_offers_title",
       "label": "Titre offres groupe",
       "type": "string",
+      "source": "ai",
       "intention": "group_sales_intro",
       "description": "Titre section offres de groupe (52px, uppercase)",
-      "examples": ["OFFRES EXCLUSIVES GROUPES & LOGES PRIVÉES"],
+      "examples": [
+        "OFFRES EXCLUSIVES GROUPES & LOGES PRIVÉES"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -995,6 +1238,7 @@
       "key": "group_offers_intro",
       "label": "Intro offres groupe",
       "type": "string",
+      "source": "ai",
       "intention": "group_sales_pitch",
       "description": "Texte qui explique les offres de groupe",
       "maxLength": 200,
@@ -1004,6 +1248,7 @@
       "key": "group_benefits",
       "label": "Bénéfices offres groupe",
       "type": "object[]",
+      "source": "ai",
       "intention": "group_value_props",
       "description": "3 avantages des offres de groupe avec icône et texte",
       "minItems": 3,
@@ -1026,9 +1271,12 @@
       "key": "experience_title",
       "label": "Titre section expérience",
       "type": "string",
+      "source": "ai",
       "intention": "experience_promise",
       "description": "Titre sur l'expérience vécue (uppercase)",
-      "examples": ["VOTRE VIE NE SERA PLUS JAMAIS LA MÊME"],
+      "examples": [
+        "VOTRE VIE NE SERA PLUS JAMAIS LA MÊME"
+      ],
       "maxLength": 60,
       "required": false
     },
@@ -1036,6 +1284,7 @@
       "key": "experience_text",
       "label": "Texte expérience",
       "type": "string",
+      "source": "ai",
       "intention": "experience_description",
       "description": "Description de l'intensité de l'expérience",
       "maxLength": 250,
@@ -1045,9 +1294,13 @@
       "key": "faq_title",
       "label": "Titre FAQ",
       "type": "string",
+      "source": "ai",
       "intention": "faq_intro",
       "description": "Titre section FAQ (52px, uppercase)",
-      "examples": ["QUESTIONS - RÉPONSES", "FAQ"],
+      "examples": [
+        "QUESTIONS - RÉPONSES",
+        "FAQ"
+      ],
       "maxLength": 40,
       "required": false
     },
@@ -1055,8 +1308,15 @@
       "key": "faqs",
       "label": "Questions fréquentes",
       "type": "object[]",
+      "source": "ai",
       "intention": "objection_handling",
       "description": "5-10 questions/réponses pour lever les objections",
+      "examples": [
+        {
+          "question": "Question fréquente ou objection à contourner",
+          "answer": "Réponse précise à la question ou à l'objection."
+        }
+      ],
       "minItems": 3,
       "maxItems": 10,
       "itemSchema": {
@@ -1071,21 +1331,18 @@
           "description": "Réponse précise et rassurante"
         }
       },
-      "required": false,
-      "examples": [
-        {
-          "question": "Question fréquente ou objection à contourner",
-          "answer": "Réponse précise à la question ou à l'objection."
-        }
-      ]
+      "required": false
     },
     {
       "key": "footer_partner_text",
       "label": "Texte partenaire footer",
       "type": "string",
+      "source": "ai",
       "intention": "footer_authority",
       "description": "Texte avec année de partenariat (uppercase ou mixed)",
-      "examples": ["Partenaire francophone de Tristan Rui (PQX) depuis 1794"],
+      "examples": [
+        "Partenaire francophone de Tristan Rui (PQX) depuis 1794"
+      ],
       "maxLength": 80,
       "required": false
     },
@@ -1093,9 +1350,12 @@
       "key": "footer_copyright",
       "label": "Copyright",
       "type": "string",
+      "source": "ai",
       "intention": "legal_copyright",
       "description": "Ligne de copyright (14px)",
-      "examples": ["© 1996 - 2024 Robert Leman - Tous Droits Réservés"],
+      "examples": [
+        "© 1996 - 2024 Robert Leman - Tous Droits Réservés"
+      ],
       "maxLength": 100,
       "required": false
     },
@@ -1103,9 +1363,12 @@
       "key": "footer_company_info",
       "label": "Infos entreprise",
       "type": "string",
+      "source": "ai",
       "intention": "legal_company",
       "description": "Raison sociale et adresse",
-      "examples": ["LIVE WITH CHALLENGE SA - 4 Rue du Simpson, 75000 PARIS - FRANCE"],
+      "examples": [
+        "LIVE WITH CHALLENGE SA - 4 Rue du Simpson, 75000 PARIS - FRANCE"
+      ],
       "maxLength": 150,
       "required": false
     },
@@ -1113,13 +1376,19 @@
       "key": "footer_links",
       "label": "Liens footer",
       "type": "string[]",
+      "source": "user",
+      "fallback": "empty",
       "intention": "legal_links",
       "description": "Liens légaux (Contact, Mentions légales, CGV)",
+      "examples": [
+        "Nous contacter",
+        "Mentions Légales",
+        "Conditions générales de vente"
+      ],
       "minItems": 2,
       "maxItems": 5,
       "itemMaxLength": 40,
-      "required": false,
-      "examples": ["Nous contacter", "Mentions Légales", "Conditions générales de vente"]
+      "required": false
     }
   ]
 }
