@@ -3,561 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Template Challenge Dream Team</title>
+    <title>Template Solo Expert — Capture</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Poppins',sans-serif;color:#353535;line-height:1.6;background:#fff}
+        h1,h2,h3{font-family:'Poppins',sans-serif}
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: #353535;
-            line-height: 1.6;
-            background: #fff;
-        }
+        .header-section{background:#fff;padding:60px 20px 50px;text-align:center}
+        .site-name{font-size:18px;font-weight:600;color:#353535;margin-bottom:40px;letter-spacing:0.5px}
+        .site-name-light{font-weight:400;color:#4b5563}
+        .main-headline{font-size:36px;font-weight:700;line-height:1.3;color:#353535;max-width:900px;margin:0 auto 30px}
+        .headline-highlight{color:#dd0c14;font-weight:800}
+        .headline-underline{text-decoration:underline;text-decoration-color:#dd0c14;text-decoration-thickness:2px}
 
-        h1, h2, h3 {
-            font-family: 'Poppins', sans-serif;
-        }
+        .cta-primary{display:inline-block;background:linear-gradient(135deg,#eb2028 0%,#dd0c14 100%);color:#fff;padding:18px 45px;border-radius:50px;text-decoration:none;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 10px 30px rgba(221,12,20,0.4);transition:all 0.3s ease;border:none;cursor:pointer;margin-top:15px}
+        .cta-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(221,12,20,0.6)}
+        .cta-primary::after{content:" \27A4";margin-left:8px}
 
-        /* Header Section */
-        .header-section {
-            background: #ffffff;
-            padding: 60px 20px 50px;
-            text-align: center;
-        }
+        .hero-dark{background:linear-gradient(135deg,#151619 0%,#1f2937 100%);padding:70px 20px;color:#fff}
+        .hero-title{text-align:center;font-size:26px;font-weight:700;margin-bottom:50px;letter-spacing:0.5px}
 
-        .site-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #353535;
-            margin-bottom: 40px;
-            letter-spacing: 0.5px;
-        }
+        .author-block{max-width:700px;margin:0 auto 50px;text-align:center}
+        .author-photo{width:180px;height:180px;border-radius:50%;border:5px solid rgba(255,255,255,0.15);margin:0 auto 25px;background:linear-gradient(135deg,#2d3748 0%,#1a202c 100%);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,255,255,0.5)}
+        .author-name-text{font-size:28px;font-weight:700;color:#fff;margin-bottom:20px}
+        .author-story-text{font-size:15px;line-height:1.8;color:rgba(255,255,255,0.85);max-width:600px;margin:0 auto}
 
-        .site-name-light {
-            font-weight: 400;
-            color: #4b5563;
-        }
+        .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px;max-width:1100px;margin:0 auto}
+        .feature-card{text-align:center}
+        .feature-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:15px;line-height:1.6}
 
-        .main-headline {
-            font-size: 36px;
-            font-weight: 700;
-            line-height: 1.3;
-            color: #353535;
-            max-width: 900px;
-            margin: 0 auto 30px;
-        }
+        .testimonial-section{background:#fff;padding:80px 20px}
+        .testimonial-title{text-align:center;font-size:28px;font-weight:700;color:#353535;margin-bottom:60px}
+        .testimonial-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;max-width:1100px;margin:0 auto 50px}
+        .testimonial-card{background:#fff;border:2px solid #e1e7ef;border-radius:12px;padding:30px 25px;text-align:center;transition:all 0.3s ease}
+        .testimonial-card:hover{border-color:#dd0c14;box-shadow:0 10px 30px rgba(221,12,20,0.1);transform:translateY(-5px)}
+        .testimonial-quote{font-size:15px;line-height:1.8;color:#353535;font-style:italic;margin-bottom:20px}
+        .testimonial-quote::before{content:"\201C";font-size:30px;color:#dd0c14;font-weight:700;display:block;margin-bottom:10px;line-height:1}
+        .testimonial-name{font-size:14px;font-weight:700;color:#dd0c14}
 
-        .headline-highlight {
-            color: #dd0c14;
-            font-weight: 800;
-        }
+        .bottom-cta{background:#fff;padding:0 20px 60px;text-align:center}
+        .accent-bar{height:4px;background:linear-gradient(90deg,transparent 0%,#dd0c14 50%,transparent 100%);margin:60px auto;max-width:400px}
 
-        .headline-underline {
-            text-decoration: underline;
-            text-decoration-color: #dd0c14;
-            text-decoration-thickness: 2px;
-        }
+        .footer{background:linear-gradient(135deg,#151619 0%,#1f2937 100%);padding:50px 20px;text-align:center;color:rgba(255,255,255,0.7)}
+        .footer-logo{font-size:18px;font-weight:600;color:#fff;margin-bottom:25px;letter-spacing:0.5px}
+        .footer-text{font-size:12px;line-height:1.8;max-width:900px;margin:0 auto 20px}
+        .footer-links{display:flex;justify-content:center;gap:25px;flex-wrap:wrap;margin-top:20px}
+        .footer-links a{color:rgba(255,255,255,0.7);text-decoration:none;font-size:12px;transition:color 0.3s ease}
+        .footer-links a:hover{color:#dd0c14}
+        .footer-links span{color:rgba(255,255,255,0.3)}
 
-        .headline-accent {
-            font-size: 32px;
-        }
-
-        /* CTA Button Primary */
-        .cta-primary {
-            display: inline-block;
-            background: linear-gradient(135deg, #eb2028 0%, #dd0c14 100%);
-            color: #fff;
-            padding: 18px 45px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 10px 30px rgba(221, 12, 20, 0.4);
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-
-        .cta-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(221, 12, 20, 0.6);
-            background: linear-gradient(135deg, #dd0c14 0%, #a50309 100%);
-        }
-
-        .cta-primary::after {
-            content: " ➔";
-            margin-left: 8px;
-        }
-
-        /* Hero Section Dark */
-        .hero-dark {
-            background: linear-gradient(135deg, #151619 0%, #1f2937 100%);
-            padding: 70px 20px;
-            color: #fff;
-        }
-
-        .hero-title {
-            text-align: center;
-            font-size: 26px;
-            font-weight: 700;
-            margin-bottom: 50px;
-            letter-spacing: 0.5px;
-        }
-
-        /* Team Banner */
-        .team-banner {
-            max-width: 1100px;
-            margin: 0 auto 50px;
-            position: relative;
-            background: linear-gradient(135deg, #151619 0%, #dd0c14 50%, #151619 100%);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .team-image-placeholder {
-            width: 100%;
-            height: 400px;
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .team-members {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            height: 100%;
-            padding: 40px 20px;
-        }
-
-        .team-member {
-            text-align: center;
-            color: rgba(255,255,255,0.6);
-            font-size: 12px;
-            font-weight: 600;
-            padding: 20px;
-            width: 25%;
-        }
-
-        .member-placeholder {
-            width: 120px;
-            height: 200px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            margin: 0 auto 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid rgba(255,255,255,0.1);
-        }
-
-        .challenge-badge {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: linear-gradient(90deg, #dd0c14 0%, rgba(221, 12, 20, 0.95) 60%, transparent 100%);
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-weight: 800;
-            font-size: 20px;
-            letter-spacing: 2px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .challenge-logo {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.9;
-        }
-
-        /* Features Grid */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 40px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .feature-card {
-            text-align: center;
-        }
-
-        .feature-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        .feature-author {
-            font-size: 14px;
-            color: #dd0c14;
-            font-weight: 700;
-            font-style: italic;
-        }
-
-        /* Results Section */
-        .results-section {
-            background: #ffffff;
-            padding: 80px 20px;
-        }
-
-        .results-title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 700;
-            color: #353535;
-            margin-bottom: 60px;
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto 50px;
-        }
-
-        .result-card {
-            background: #fff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-        }
-
-        .result-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .result-header {
-            background: linear-gradient(135deg, #151619 0%, #2d3748 100%);
-            padding: 20px;
-            text-align: center;
-            color: #fff;
-        }
-
-        .result-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .result-metric {
-            font-size: 13px;
-            color: rgba(255,255,255,0.8);
-        }
-
-        .result-image {
-            width: 100%;
-            height: 350px;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #4b5563;
-            font-size: 14px;
-            font-weight: 600;
-            position: relative;
-        }
-
-        .result-cta-container {
-            position: absolute;
-            top: 50%;
-            right: -180px;
-            transform: translateY(-50%);
-        }
-
-        @media (min-width: 1400px) {
-            .results-section {
-                position: relative;
-            }
-        }
-
-        .result-badge {
-            background: #dd0c14;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 700;
-            display: inline-block;
-            margin-top: 15px;
-        }
-
-        /* Bottom CTA Section */
-        .bottom-cta {
-            background: #ffffff;
-            padding: 0 20px 60px;
-            text-align: center;
-        }
-
-        /* Footer */
-        .footer {
-            background: linear-gradient(135deg, #151619 0%, #1f2937 100%);
-            padding: 50px 20px;
-            text-align: center;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .footer-logo {
-            font-size: 18px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 25px;
-            letter-spacing: 0.5px;
-        }
-
-        .footer-text {
-            font-size: 12px;
-            line-height: 1.8;
-            max-width: 900px;
-            margin: 0 auto 20px;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .footer-links a {
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            font-size: 12px;
-            transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: #dd0c14;
-        }
-
-        .footer-links span {
-            color: rgba(255,255,255,0.3);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .main-headline {
-                font-size: 26px;
-            }
-
-            .headline-accent {
-                font-size: 24px;
-            }
-
-            .team-image-placeholder {
-                height: 300px;
-            }
-
-            .team-members {
-                flex-wrap: wrap;
-            }
-
-            .team-member {
-                width: 50%;
-                margin-bottom: 20px;
-            }
-
-            .member-placeholder {
-                width: 100px;
-                height: 160px;
-            }
-
-            .challenge-badge {
-                font-size: 16px;
-                padding: 10px 15px;
-            }
-
-            .hero-title {
-                font-size: 20px;
-            }
-
-            .results-title {
-                font-size: 22px;
-            }
-
-            .result-image {
-                height: 280px;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-
-            .results-grid {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-        }
-
-        /* Visual accent bars */
-        .accent-bar {
-            height: 4px;
-            background: linear-gradient(90deg, transparent 0%, #dd0c14 50%, transparent 100%);
-            margin: 60px auto;
-            max-width: 400px;
+        @media(max-width:768px){
+            .main-headline{font-size:26px}
+            .hero-title{font-size:20px}
+            .author-name-text{font-size:22px}
+            .features-grid{grid-template-columns:1fr;gap:30px}
+            .testimonial-grid{grid-template-columns:1fr}
+            .testimonial-title{font-size:22px}
         }
     </style>
 </head>
 <body>
-    <!-- Header Section -->
     <section class="header-section">
-        <div class="site-name">
-            VotreSite<span class="site-name-light">.com</span>
-        </div>
-
-        <h1 class="main-headline">
-            <span class="headline-accent">X jours pour [action/transformation],</span><br>
-            <span class="headline-highlight">votre [domaine/business]</span> pour qu'elle dépasse les<br>
-            <span class="headline-highlight">XXX€ par mois</span> de profit... <span class="headline-underline">sans vous</span> !
-        </h1>
-
-        <a href="#" class="cta-primary">Rejoindre le challenge (gratuit)</a>
+        <div class="site-name">VotreSite<span class="site-name-light">.com</span></div>
+        <h1 class="main-headline">Votre promesse principale impactante qui parle directement à votre audience cible et promet un résultat concret</h1>
+        <a href="#" class="cta-primary">Accéder gratuitement</a>
     </section>
 
-    <!-- Hero Dark Section -->
     <section class="hero-dark">
-        <h2 class="hero-title">
-            Pour les [audience cible] & les [sous-niche spécifique] :
-        </h2>
-
-        <!-- Team Banner -->
-        <div class="team-banner">
-            <div class="team-image-placeholder">
-                <div class="team-members">
-                    <div class="team-member">
-                        <div class="member-placeholder">[Expert 1]</div>
-                        [ENTREPRISE/LOGO]
-                    </div>
-                    <div class="team-member">
-                        <div class="member-placeholder">[Expert 2]</div>
-                        [ENTREPRISE/LOGO]
-                    </div>
-                    <div class="team-member">
-                        <div class="member-placeholder">[Expert 3]</div>
-                        [ENTREPRISE/LOGO]
-                    </div>
-                    <div class="team-member">
-                        <div class="member-placeholder">[Expert 4]</div>
-                        [ENTREPRISE/LOGO]
-                    </div>
-                </div>
-                <div class="challenge-badge">
-                    CHALLENGE <span class="challenge-logo">VotreSite.com</span>
-                </div>
-            </div>
+        <h2 class="hero-title">Pour les [audience cible] qui veulent [transformation] :</h2>
+        <div class="author-block">
+            <div class="author-photo">[Photo]</div>
+            <div class="author-name-text">Prénom Nom</div>
+            <p class="author-story-text">Votre storytelling ici. Racontez votre parcours, ce qui vous a amené à créer cette offre, et pourquoi vous êtes la bonne personne pour accompagner votre audience.</p>
         </div>
-
-        <!-- Features Grid -->
         <div class="features-grid">
-            <div class="feature-card">
-                <p class="feature-title">
-                    Bénéfice concret et désirable exprimé en une phrase qui résout un problème spécifique de ton audience.
-                </p>
-                <p class="feature-author">- Avec Prénom Nom Expert 1</p>
-            </div>
-
-            <div class="feature-card">
-                <p class="feature-title">
-                    Transformation ou résultat mesurable que ton audience obtiendra grâce à cette approche unique.
-                </p>
-                <p class="feature-author">- Avec Prénom Nom Expert 2</p>
-            </div>
-
-            <div class="feature-card">
-                <p class="feature-title">
-                    Promesse forte qui connecte émotionnellement avec le désir profond de ta cible et crée l'urgence.
-                </p>
-                <p class="feature-author">- Avec Prénom Nom Expert 3</p>
-            </div>
+            <div class="feature-card"><p class="feature-title">Première promesse concrète et désirable pour votre audience cible.</p></div>
+            <div class="feature-card"><p class="feature-title">Deuxième promesse avec une transformation mesurable et motivante.</p></div>
+            <div class="feature-card"><p class="feature-title">Troisième promesse qui connecte avec le désir profond de votre cible.</p></div>
         </div>
-
-        <div style="text-align: center; margin-top: 50px;">
-            <a href="#" class="cta-primary">Rejoindre le challenge (gratuit)</a>
-        </div>
+        <div style="text-align:center;margin-top:50px"><a href="#" class="cta-primary">Accéder gratuitement</a></div>
     </section>
 
     <div class="accent-bar"></div>
 
-    <!-- Results Section -->
-    <section class="results-section">
-        <h2 class="results-title">Les résultats des challengers :</h2>
-
-        <div class="results-grid">
-            <div class="result-card">
-                <div class="result-header">
-                    <div class="result-name">Prénom</div>
-                    <div class="result-metric">(Métrique de résultat)</div>
-                </div>
-                <div class="result-image">
-                    [Capture d'écran témoignage]
-                </div>
-            </div>
-
-            <div class="result-card">
-                <div class="result-header">
-                    <div class="result-name">Prénom</div>
-                    <div class="result-metric">(Métrique de résultat)</div>
-                </div>
-                <div class="result-image">
-                    [Capture d'écran témoignage]
-                    <div class="result-badge">Résultat [type]</div>
-                </div>
-            </div>
-
-            <div class="result-card">
-                <div class="result-header">
-                    <div class="result-name">Prénom</div>
-                    <div class="result-metric">(Métrique de résultat)</div>
-                </div>
-                <div class="result-image">
-                    [Capture d'écran témoignage]
-                </div>
-            </div>
+    <section class="testimonial-section">
+        <h2 class="testimonial-title">Ce qu'en disent ceux qui ont testé :</h2>
+        <div class="testimonial-grid">
+            <div class="testimonial-card"><p class="testimonial-quote">Témoignage de votre client, résultat obtenu et ressenti.</p><div class="testimonial-name">Prénom</div></div>
+            <div class="testimonial-card"><p class="testimonial-quote">Témoignage de votre client, résultat obtenu et ressenti.</p><div class="testimonial-name">Prénom</div></div>
+            <div class="testimonial-card"><p class="testimonial-quote">Témoignage de votre client, résultat obtenu et ressenti.</p><div class="testimonial-name">Prénom</div></div>
         </div>
-
-        <div class="bottom-cta">
-            <a href="#" class="cta-primary">Rejoindre le challenge (gratuit)</a>
-        </div>
+        <div class="bottom-cta"><a href="#" class="cta-primary">Accéder gratuitement</a></div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="footer-logo">VotreSite.com</div>
-        
         <div class="footer-links">
-            <a href="#">Politique de confidentialité</a>
-            <span>|</span>
-            <a href="#">Mentions Légales</a>
-            <span>|</span>
+            <a href="#">Politique de confidentialité</a><span>|</span>
+            <a href="#">Mentions Légales</a><span>|</span>
             <a href="#">CGV</a>
         </div>
-
-        <p class="footer-text">
-            Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. De plus, ce site n'est en aucun cas approuvé par Facebook. Facebook est une marque déposée de Meta, Inc.
-        </p>
+        <p class="footer-text">Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. Facebook est une marque déposée de Meta, Inc.</p>
     </footer>
 </body>
 </html>

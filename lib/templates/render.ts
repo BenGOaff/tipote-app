@@ -170,6 +170,17 @@ function renderPlaceholders(templateHtml: string, contentData: Record<string, an
   });
 }
 
+function renderConditionals(html: string, contentData: Record<string, any>): string {
+  return html.replace(
+    /<!--\s*IF\s+([a-zA-Z0-9_.]+)\s*-->([\s\S]*?)<!--\s*ENDIF\s+\1\s*-->/g,
+    (_m, key, block) => {
+      const val = getByPath(contentData, key);
+      const hasValue = Array.isArray(val) ? val.length > 0 : !!toText(val).trim();
+      return hasValue ? block : "";
+    }
+  );
+}
+
 function renderRepeaters(templateHtml: string, contentData: Record<string, any>): string {
   // Simple repeater syntax:
   // <!-- BEGIN items --> ... {{items[].field}} ... <!-- END items -->
@@ -426,6 +437,11 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   let out = html;
 
+    // conditionals first (remove absent optional sections)
+  out = renderConditionals(out, req.contentData);
+
+  // repeaters so placeholders inside blocks are expanded
+  out = renderRepeaters(out, req.contentData);
   // repeaters first so placeholders inside blocks are expanded
   out = renderRepeaters(out, req.contentData);
 

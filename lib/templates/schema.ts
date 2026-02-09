@@ -1,42 +1,78 @@
 // lib/templates/schema.ts
-// Loads an explicit "content-schema.json" when available (source of truth),
-// otherwise infers a minimal "contentData" schema from a Mustache-like HTML template.
-// Used to make IA output fit the template (premium fidelity).
-
 import fs from "node:fs/promises";
 import path from "node:path";
 
+export type FieldSource = "user" | "ai" | "user_or_ai";
+export type FieldFallback = "remove" | "generate" | "placeholder";
+export type FieldInputType = "text" | "textarea" | "url" | "image_url";
+
 export type InferredField =
-  | { kind: "scalar"; key: string; maxLength?: number }
-  | { kind: "array_scalar"; key: string; minItems: number; maxItems: number; itemMaxLength?: number }
+  | {
+      kind: "scalar";
+      key: string;
+      maxLength?: number;
+      source?: FieldSource;
+      fallback?: FieldFallback;
+      inputType?: FieldInputType;
+      label?: string;
+      description?: string;
+      required?: boolean;
+    }
+  | {
+      kind: "array_scalar";
+      key: string;
+      minItems: number;
+      maxItems: number;
+      itemMaxLength?: number;
+      source?: FieldSource;
+      fallback?: FieldFallback;
+      label?: string;
+      description?: string;
+      required?: boolean;
+    }
   | {
       kind: "array_object";
       key: string;
-      fields: Array<{ key: string; maxLength?: number }>;
+      fields: Array<{ key: string; maxLength?: number; description?: string }>;
       minItems: number;
       maxItems: number;
+      source?: FieldSource;
+      fallback?: FieldFallback;
+      label?: string;
+      description?: string;
+      required?: boolean;
     };
 
 export type InferredTemplateSchema = {
   kind: "capture" | "vente";
   templateId: string;
+  name?: string;
+  description?: string;
   fields: InferredField[];
 };
 
-type JsonSchemaField =
-  | { key: string; type: "string"; maxLength?: number }
-  | { key: string; type: "string[]"; minItems?: number; maxItems?: number; itemMaxLength?: number }
-  | {
-      key: string;
-      type: "object[]";
-      minItems?: number;
-      maxItems?: number;
-      fields?: Array<{ key: string; type?: "string"; maxLength?: number }>;
-    };
+type JsonSchemaField = {
+  key: string;
+  type: string;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  itemMaxLength?: number;
+  fields?: Array<{ key: string; type?: string; maxLength?: number; description?: string }>;
+  itemSchema?: Record<string, { type?: string; maxLength?: number; description?: string }>;
+  source?: string;
+  fallback?: string;
+  inputType?: string;
+  label?: string;
+  description?: string;
+  required?: boolean;
+};
 
 type JsonSchemaFile = {
   kind?: "capture" | "vente";
   templateId?: string;
+  name?: string;
+  description?: string;
   fields?: JsonSchemaField[];
 };
 
@@ -46,6 +82,10 @@ function safeId(v: string): string {
 
 function uniq<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
+}
+
+function isRecord(v: unknown): v is Record<string, any> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
 function guessCountForArrayKey(key: string): { min: number; max: number } {
@@ -77,58 +117,107 @@ function stripSections(template: string): string {
   return template.replace(/\{\{#([a-zA-Z0-9_]+)\}\}[\s\S]*?\{\{\/\1\}\}/g, "");
 }
 
+function safeSource(v: any): FieldSource | undefined {
+  const s = String(v || "").trim();
+  if (s === "user" || s === "ai" || s === "user_or_ai") return s;
+  return undefined;
+}
+
+function safeFallback(v: any): FieldFallback | undefined {
+  const s = String(v || "").trim();
+  if (s === "remove" || s === "generate" || s === "placeholder") return s;
+  return undefined;
+}
+
+function safeInputType(v: any): FieldInputType | undefined {
+  const s = String(v || "").trim();
+  if (s === "text" || s === "textarea" || s === "url" || s === "image_url") return s;
+  return undefined;
+}
+
 function normalizeJsonSchema(kind: "capture" | "vente", templateId: string, json: JsonSchemaFile): InferredTemplateSchema {
-  const out: InferredTemplateSchema = { kind, templateId, fields: [] };
+  const out: InferredTemplateSchema = {
+    kind,
+    templateId,
+    name: json.name || undefined,
+    description: json.description || undefined,
+    fields: [],
+  };
 
   const fields = Array.isArray(json?.fields) ? json.fields : [];
   for (const f of fields) {
-    if (!f || typeof (f as any).key !== "string") continue;
+    if (!f || typeof f.key !== "string") continue;
 
-    const key = String((f as any).key).trim();
-    const type = String((f as any).type || "").trim();
+    const key = String(f.key).trim();
+    const type = String(f.type || "").trim();
     if (!key || !type) continue;
+
+    const source = safeSource(f.source);
+    const fallback = safeFallback(f.fallback);
+    const inputType = safeInputType(f.inputType);
+    const label = typeof f.label === "string" ? f.label : undefined;
+    const description = typeof f.description === "string" ? f.description : undefined;
+    const required = typeof f.required === "boolean" ? f.required : undefined;
 
     if (type === "string") {
       out.fields.push({
         kind: "scalar",
         key,
-        maxLength: typeof (f as any).maxLength === "number" ? (f as any).maxLength : undefined,
+        maxLength: typeof f.maxLength === "number" ? f.maxLength : undefined,
+        source,
+        fallback,
+        inputType,
+        label,
+        description,
+        required,
       });
       continue;
     }
 
     if (type === "string[]") {
       const guessed = guessCountForArrayKey(key);
-      const minItems = typeof (f as any).minItems === "number" ? Math.max(0, (f as any).minItems) : guessed.min;
-      const maxItems =
-        typeof (f as any).maxItems === "number" ? Math.max(minItems, (f as any).maxItems) : guessed.max;
-      const itemMaxLength = typeof (f as any).itemMaxLength === "number" ? (f as any).itemMaxLength : undefined;
+      const minItems = typeof f.minItems === "number" ? Math.max(0, f.minItems) : guessed.min;
+      const maxItems = typeof f.maxItems === "number" ? Math.max(minItems, f.maxItems) : guessed.max;
+      const itemMaxLength = typeof f.itemMaxLength === "number" ? f.itemMaxLength : undefined;
 
-      out.fields.push({ kind: "array_scalar", key, minItems, maxItems, itemMaxLength });
+      out.fields.push({ kind: "array_scalar", key, minItems, maxItems, itemMaxLength, source, fallback, label, description, required });
       continue;
     }
 
     if (type === "object[]") {
       const guessed = guessCountForArrayKey(key);
-      const minItems = typeof (f as any).minItems === "number" ? Math.max(0, (f as any).minItems) : guessed.min;
-      const maxItems =
-        typeof (f as any).maxItems === "number" ? Math.max(minItems, (f as any).maxItems) : guessed.max;
+      const minItems = typeof f.minItems === "number" ? Math.max(0, f.minItems) : guessed.min;
+      const maxItems = typeof f.maxItems === "number" ? Math.max(minItems, f.maxItems) : guessed.max;
 
-        
-        type ObjField = { key: string; maxLength?: number };
-        const inner: any[] = Array.isArray((f as any).fields) ? (f as any).fields : [];
-        const objFields: ObjField[] = inner
+      type ObjField = { key: string; maxLength?: number; description?: string };
+      let objFields: ObjField[] = [];
+
+      // Support array format: fields: [{ key: "name", maxLength: 30 }]
+      const fieldsArr = Array.isArray(f.fields) ? f.fields : [];
+      if (fieldsArr.length > 0) {
+        objFields = fieldsArr
           .map((x: any): ObjField => ({
             key: String(x?.key || "").trim(),
             maxLength: typeof x?.maxLength === "number" ? x.maxLength : undefined,
+            description: typeof x?.description === "string" ? x.description : undefined,
           }))
-          .filter((x: ObjField) => Boolean(x.key));
+          .filter((x) => Boolean(x.key));
+      }
+      // Support object format: itemSchema: { name: { type: "string", maxLength: 30 } }
+      else if (isRecord(f.itemSchema)) {
+        objFields = Object.entries(f.itemSchema)
+          .map(([k, v]: [string, any]): ObjField => ({
+            key: k,
+            maxLength: typeof v?.maxLength === "number" ? v.maxLength : undefined,
+            description: typeof v?.description === "string" ? v.description : undefined,
+          }))
+          .filter((x) => Boolean(x.key));
+      }
 
-
-              out.fields.push({ kind: "array_object", key, fields: objFields, minItems, maxItems });
-              continue;
-            }
-          }
+      out.fields.push({ kind: "array_object", key, fields: objFields, minItems, maxItems, source, fallback, label, description, required });
+      continue;
+    }
+  }
 
   const scalars = out.fields.filter((x) => x.kind === "scalar");
   const arrays = out.fields.filter((x) => x.kind !== "scalar");
@@ -146,7 +235,6 @@ export async function inferTemplateSchema(params: {
 
   const baseDir = path.join(process.cwd(), "src", "templates", kind, templateId);
 
-  // ✅ Source de vérité si fourni
   const schemaPath = path.join(baseDir, "content-schema.json");
   try {
     const raw = await fs.readFile(schemaPath, "utf-8");
@@ -190,7 +278,7 @@ export async function inferTemplateSchema(params: {
   const scalarKeys = uniq(extractMustacheKeys(withoutSections));
 
   for (const key of scalarKeys) {
-    if (!fields.some((f) => (f as any).key === key)) fields.push({ kind: "scalar", key });
+    if (!fields.some((f) => f.key === key)) fields.push({ kind: "scalar", key });
   }
 
   const scalars = fields.filter((f) => f.kind === "scalar");
@@ -201,7 +289,7 @@ export async function inferTemplateSchema(params: {
 
 function fieldRuleLineMax(max?: number): string {
   if (!max || !Number.isFinite(max)) return "";
-  return ` (max ${Math.max(10, Math.floor(max))} caractères)`;
+  return ` (max ${Math.max(10, Math.floor(max))} caract\u00e8res)`;
 }
 
 export function schemaToPrompt(schema: InferredTemplateSchema): string {
@@ -209,16 +297,19 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   lines.push(`TEMPLATE_KIND: ${schema.kind}`);
   lines.push(`TEMPLATE_ID: ${schema.templateId}`);
   lines.push("");
-  lines.push("CHAMPS À REMPLIR (JSON) :");
+  lines.push("CHAMPS \u00c0 REMPLIR (JSON) :");
 
   for (const f of schema.fields) {
+    // Skip user-provided fields — AI does not generate them
+    if (f.source === "user") continue;
+
     if (f.kind === "scalar") {
       lines.push(`- ${f.key}: string${fieldRuleLineMax(f.maxLength)}`);
       continue;
     }
     if (f.kind === "array_scalar") {
       const lenInfo =
-        typeof f.itemMaxLength === "number" ? ` (item max ${Math.floor(f.itemMaxLength)} caractères)` : "";
+        typeof f.itemMaxLength === "number" ? ` (item max ${Math.floor(f.itemMaxLength)} caract\u00e8res)` : "";
       lines.push(`- ${f.key}: string[] (items: ${f.minItems}..${f.maxItems})${lenInfo}`);
       continue;
     }
@@ -227,15 +318,15 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   }
 
   lines.push("");
-  lines.push("RÈGLES DE SORTIE (STRICT) :");
+  lines.push("R\u00c8GLES DE SORTIE (STRICT) :");
   lines.push("- Retourne UNIQUEMENT un objet JSON valide (double quotes, pas de commentaire, pas de texte autour).");
-  lines.push("- Respecte STRICTEMENT les clés ci-dessus (aucune clé en plus, aucune clé manquante).");
-  lines.push("- Aucune valeur null/undefined : si tu n'as pas l'info, mets une string vide \"\".");
+  lines.push("- Respecte STRICTEMENT les cl\u00e9s ci-dessus (aucune cl\u00e9 en plus, aucune cl\u00e9 manquante).");
+  lines.push('- Aucune valeur null/undefined : si tu n\'as pas l\'info, mets une string vide "".');
   lines.push("- Pas de markdown. Pas de balises HTML. Pas d'emojis.");
-  lines.push("- Les strings : 1–2 phrases max, pas de sauts de ligne.");
-  lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots).");
-  lines.push("- CTA : verbe d'action clair, 2–5 mots max.");
-  lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
+  lines.push("- Les strings : 1\u20132 phrases max, pas de sauts de ligne.");
+  lines.push("- Les listes : items courts, concrets (id\u00e9alement 6\u201314 mots).");
+  lines.push("- CTA : verbe d'action clair, 2\u20135 mots max.");
+  lines.push("- Style : premium, direct, tr\u00e8s lisible. Z\u00e9ro blabla.");
 
-  return lines.join("\\n");
+  return lines.join("\n");
 }
