@@ -94,19 +94,24 @@ function normalizeStatus(v: unknown): string | null {
   return s;
 }
 
-const V2_SEL_WITH_PROMPT_UPDATED =
-  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at,updated_at";
-const V2_SEL_WITH_PROMPT_NO_UPDATED =
-  "id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags,meta,created_at";
-const V2_SEL_NO_PROMPT_NO_UPDATED =
+// ✅ Start without prompt (most DBs don't have it) — add it only if needed
+const V2_SEL =
+  "id,user_id,type,title,content,status,scheduled_date,channel,tags,meta,created_at,updated_at";
+const V2_SEL_NO_UPDATED =
   "id,user_id,type,title,content,status,scheduled_date,channel,tags,meta,created_at";
 
-const FR_SEL_WITH_PROMPT_UPDATED =
-  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at,updated_at";
-const FR_SEL_WITH_PROMPT_NO_UPDATED =
-  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,prompt,meta,created_at";
-const FR_SEL_NO_PROMPT_NO_UPDATED =
+const FR_SEL =
+  "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,meta,created_at,updated_at";
+const FR_SEL_NO_UPDATED =
   "id,user_id,type,titre,contenu,statut,date_planifiee,canal,tags,meta,created_at";
+
+// Legacy compat (kept for reference)
+const V2_SEL_WITH_PROMPT_UPDATED = V2_SEL;
+const V2_SEL_WITH_PROMPT_NO_UPDATED = V2_SEL_NO_UPDATED;
+const V2_SEL_NO_PROMPT_NO_UPDATED = V2_SEL_NO_UPDATED;
+const FR_SEL_WITH_PROMPT_UPDATED = FR_SEL;
+const FR_SEL_WITH_PROMPT_NO_UPDATED = FR_SEL_NO_UPDATED;
+const FR_SEL_NO_PROMPT_NO_UPDATED = FR_SEL_NO_UPDATED;
 
 function toDTOFromV2(row: any): ContentItemDTO {
   return {
@@ -278,7 +283,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   const baseV2: Record<string, any> = {};
   if ("type" in body) baseV2.type = body.type;
   if ("title" in body) baseV2.title = body.title;
-  if ("prompt" in body) baseV2.prompt = body.prompt;
   if ("content" in body) baseV2.content = body.content;
   if ("status" in body) baseV2.status = body.status;
   if ("channel" in body) baseV2.channel = body.channel;
@@ -287,6 +291,10 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   if ("tags" in body) baseV2.tags = tagsArr;
 
   if (metaObj) baseV2.meta = metaObj;
+
+  // prompt: only include if the column exists (will be stripped on retry if it doesn't)
+  const hasPromptInBody = "prompt" in body;
+  if (hasPromptInBody) baseV2.prompt = body.prompt;
 
   let v2 = await tryUpdate(baseV2, V2_SEL_WITH_PROMPT_UPDATED);
 
@@ -301,11 +309,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 
   if (v2.error && isMissingColumnError(v2.error.message)) {
-    v2 = await tryUpdate(baseV2, V2_SEL_WITH_PROMPT_NO_UPDATED);
-  }
-
-  if (v2.error && isMissingColumnError(v2.error.message)) {
-    v2 = await tryUpdate(baseV2, V2_SEL_NO_PROMPT_NO_UPDATED);
+    // Remove prompt from payload + select if the column doesn't exist
+    const { prompt: _p, ...v2NoPrompt } = baseV2;
+    v2 = await tryUpdate(v2NoPrompt, V2_SEL_NO_PROMPT_NO_UPDATED);
   }
 
   if (!v2.error && v2.data) {
@@ -316,7 +322,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   const baseFR: Record<string, any> = {};
   if ("type" in body) baseFR.type = body.type;
   if ("title" in body) baseFR.titre = body.title;
-  if ("prompt" in body) baseFR.prompt = body.prompt;
   if ("content" in body) baseFR.contenu = body.content;
   if ("status" in body) baseFR.statut = body.status;
   if ("channel" in body) baseFR.canal = body.channel;
@@ -325,6 +330,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   if ("tags" in body) baseFR.tags = tagsArr;
 
   if (metaObj) baseFR.meta = metaObj;
+
+  if (hasPromptInBody) baseFR.prompt = body.prompt;
 
   let fr = await tryUpdate(baseFR, FR_SEL_WITH_PROMPT_UPDATED);
 
@@ -339,11 +346,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 
   if (fr.error && isMissingColumnError(fr.error.message)) {
-    fr = await tryUpdate(baseFR, FR_SEL_WITH_PROMPT_NO_UPDATED);
-  }
-
-  if (fr.error && isMissingColumnError(fr.error.message)) {
-    fr = await tryUpdate(baseFR, FR_SEL_NO_PROMPT_NO_UPDATED);
+    const { prompt: _p2, ...frNoPrompt } = baseFR;
+    fr = await tryUpdate(frNoPrompt, FR_SEL_NO_PROMPT_NO_UPDATED);
   }
 
   if (fr.error || !fr.data) {
