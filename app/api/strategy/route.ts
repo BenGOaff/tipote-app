@@ -392,6 +392,106 @@ async function getOrCreateStrategyIdBestEffort(params: {
 
 /**
  * -----------------------
+ * Persona persistence (best-effort, RLS-safe via service role)
+ * -----------------------
+ * IMPORTANT:
+ * - We use a dynamic import to avoid crashing if env vars are missing.
+ * - If admin client is unavailable, we silently skip (fail-open).
+ */
+async function getSupabaseAdminSafe(): Promise<any | null> {
+  try {
+    const mod = await import("@/lib/supabaseAdmin");
+    return (mod as any).supabaseAdmin ?? null;
+  } catch (e) {
+    console.error("supabaseAdmin not available (skipping persona persistence):", e);
+    return null;
+  }
+}
+
+function personaLooksUseful(persona: AnyRecord | null): boolean {
+  if (!persona) return false;
+  const title = cleanString(persona.title ?? persona.profile ?? persona.name, 120);
+  const pains = asArray(persona.pains).filter((x) => !!cleanString(x, 2));
+  const desires = asArray(persona.desires).filter((x) => !!cleanString(x, 2));
+  return !!title || pains.length >= 2 || desires.length >= 2;
+}
+
+function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
+  if (!persona) return null;
+
+  const title = cleanString(persona.title ?? persona.profile ?? persona.name, 180);
+  const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
+  const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
+  const channels = asArray(persona.channels).map((x) => cleanString(x, 64)).filter(Boolean);
+  const tags = asArray(persona.tags).map((x) => cleanString(x, 64)).filter(Boolean);
+
+  const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
+  const triggers = asArray(persona.triggers).map((x) => cleanString(x, 160)).filter(Boolean);
+  const exact_phrases = asArray(persona.exact_phrases ?? persona.exactPhrases).map((x) => cleanString(x, 180)).filter(Boolean);
+
+  const result = { title, pains, desires, channels, tags, objections, triggers, exact_phrases };
+  return personaLooksUseful(result) ? result : null;
+}
+
+async function persistPersonaBestEffort(params: {
+  userId: string;
+  strategyId: string | null;
+  persona: AnyRecord | null;
+}): Promise<void> {
+  const { userId, strategyId, persona } = params;
+
+  if (!persona || !personaLooksUseful(persona)) return;
+
+  const admin = await getSupabaseAdminSafe();
+  if (!admin) return;
+
+  const now = new Date().toISOString();
+
+  const payload: AnyRecord = {
+    user_id: userId,
+    ...(strategyId ? { strategy_id: strategyId } : {}),
+    role: "client_ideal",
+    name: cleanString(persona.title, 240) || null,
+    description: cleanString((persona as any).description ?? (persona as any).current_situation ?? "", 4000) || null,
+    pains: JSON.stringify((persona as any).pains ?? []),
+    desires: JSON.stringify((persona as any).desires ?? []),
+    objections: JSON.stringify((persona as any).objections ?? []),
+    current_situation: cleanString((persona as any).current_situation ?? "", 6000) || null,
+    desired_situation: cleanString((persona as any).desired_situation ?? "", 6000) || null,
+    awareness_level: cleanString((persona as any).awareness_level ?? "", 120) || null,
+    budget_level: cleanString((persona as any).budget_level ?? "", 120) || null,
+    channels: JSON.stringify((persona as any).channels ?? []),
+    triggers: JSON.stringify((persona as any).triggers ?? []),
+    exact_phrases: JSON.stringify((persona as any).exact_phrases ?? (persona as any).exactPhrases ?? []),
+    persona_json: persona,
+    updated_at: now,
+  };
+
+  try {
+    const up = await admin.from("personas").upsert(payload, { onConflict: "user_id,role" });
+    if (!up.error) return;
+    console.error("persistPersonaBestEffort upsert error:", up.error);
+  } catch (e) {
+    console.error("persistPersonaBestEffort upsert failed:", e);
+  }
+
+  try {
+    const ins = await admin.from("personas").insert({ ...payload, created_at: now });
+    if (!ins.error) return;
+    console.error("persistPersonaBestEffort insert error:", ins.error);
+  } catch (e) {
+    console.error("persistPersonaBestEffort insert failed:", e);
+  }
+
+  try {
+    await admin.from("personas").update(payload).eq("user_id", userId).eq("role", "client_ideal");
+  } catch (e) {
+    console.error("persistPersonaBestEffort update fallback failed:", e);
+  }
+}
+
+/**
+ * -----------------------
  * Pyramids normalization + persistence
  * -----------------------
  */
@@ -592,31 +692,6 @@ function buildFallbackTasksByTimeframe(
     d60: withDueDates(d60Titles, 33, 27),
     d90: withDueDates(d90Titles, 63, 27),
   };
-}
-
-function personaLooksUseful(persona: AnyRecord | null): boolean {
-  if (!persona) return false;
-  const title = cleanString(persona.title ?? persona.profile ?? persona.name, 120);
-  const pains = asArray(persona.pains).filter((x) => !!cleanString(x, 2));
-  const desires = asArray(persona.desires).filter((x) => !!cleanString(x, 2));
-  return !!title || pains.length >= 2 || desires.length >= 2;
-}
-
-function normalizePersona(persona: AnyRecord | null): AnyRecord | null {
-  if (!persona) return null;
-
-  const title = cleanString(persona.title ?? persona.profile ?? persona.name, 180);
-  const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
-  const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
-  const channels = asArray(persona.channels).map((x) => cleanString(x, 64)).filter(Boolean);
-  const tags = asArray(persona.tags).map((x) => cleanString(x, 64)).filter(Boolean);
-
-  const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
-  const triggers = asArray(persona.triggers).map((x) => cleanString(x, 160)).filter(Boolean);
-  const exact_phrases = asArray(persona.exact_phrases ?? persona.exactPhrases).map((x) => cleanString(x, 180)).filter(Boolean);
-
-  const result = { title, pains, desires, channels, tags, objections, triggers, exact_phrases };
-  return personaLooksUseful(result) ? result : null;
 }
 
 function tasksByTimeframeLooksUseful(planJson: AnyRecord | null): boolean {
@@ -898,9 +973,8 @@ export async function POST(req: Request) {
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    const allChunks = Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [];
     const limitedChunks = pickTopResourceChunks({
-      chunks: allChunks,
+      chunks: Array.isArray(resourceChunks) ? (resourceChunks as AnyRecord[]) : [],
       businessProfile: businessProfile as AnyRecord,
       selectedPyramid: null,
       maxChunks: 18,
@@ -1373,6 +1447,23 @@ CONTRAINTES TASKS
 
       await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
 
+      try {
+        const strategyId = await getOrCreateStrategyIdBestEffort({
+          supabase,
+          userId,
+          businessProfile: businessProfile as AnyRecord,
+          planJson: nextPlan,
+        });
+
+        await persistPersonaBestEffort({
+          userId,
+          strategyId,
+          persona: normalizePersona(asRecord(nextPlan.persona)),
+        });
+      } catch (e) {
+        console.error("persona persistence error (non-blocking):", e);
+      }
+
       return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
     }
 
@@ -1561,6 +1652,23 @@ CONSINGNES
     }
 
     await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
+
+    try {
+      const strategyId = await getOrCreateStrategyIdBestEffort({
+        supabase,
+        userId,
+        businessProfile: businessProfile as AnyRecord,
+        planJson: nextPlan,
+      });
+
+      await persistPersonaBestEffort({
+        userId,
+        strategyId,
+        persona: normalizePersona(asRecord(nextPlan.persona)),
+      });
+    } catch (e) {
+      console.error("persona persistence error (non-blocking):", e);
+    }
 
     return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
   } catch (err) {
