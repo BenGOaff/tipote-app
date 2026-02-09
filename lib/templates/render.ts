@@ -53,12 +53,19 @@ function isRecord(v: unknown): v is Record<string, any> {
 }
 
 function escapeHtml(s: string): string {
-  return (s ?? "")
+  let out = (s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+
+  // Encode non-ASCII characters as numeric HTML entities (&#xxx;)
+  // so accented text renders correctly even without a charset declaration
+  // (e.g. when kit HTML fragments are pasted into Systeme.io).
+  out = out.replace(/[^\x00-\x7F]/g, (ch) => `&#${ch.codePointAt(0)};`);
+
+  return out;
 }
 
 // Allows {{a.b.c}} placeholders.
@@ -378,114 +385,10 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
   return out;
 }
 
-function ensureArray<T>(v: any): T[] {
-  return Array.isArray(v) ? (v as T[]) : [];
-}
-
-function splitSiteName(siteName: string): { root: string; tld: string } {
-  const s = safeString(siteName).trim();
-  if (!s) return { root: "VotreSite", tld: ".com" };
-  const lastDot = s.lastIndexOf(".");
-  if (lastDot > 0 && lastDot < s.length - 1) return { root: s.slice(0, lastDot), tld: s.slice(lastDot) };
-  return { root: s, tld: ".com" };
-}
-
-function buildCapture02ContentData(contentData: Record<string, any>): Record<string, any> {
-  const out: Record<string, any> = { ...(contentData || {}) };
-
-  const split = splitSiteName(safeString(out.site_name));
-  out.site_name_root = safeString(out.site_name_root) || split.root;
-  out.site_name_tld = safeString(out.site_name_tld) || split.tld;
-
-  out.cta_href = safeString(out.cta_href) || "#";
-
-  out.legal_privacy_text = safeString(out.legal_privacy_text) || "Politique de confidentialité";
-  out.legal_mentions_text = safeString(out.legal_mentions_text) || "Mentions légales";
-  out.legal_cgv_text = safeString(out.legal_cgv_text) || "CGV";
-  out.legal_privacy_url = safeString(out.legal_privacy_url) || "#";
-  out.legal_mentions_url = safeString(out.legal_mentions_url) || "#";
-  out.legal_cgv_url = safeString(out.legal_cgv_url) || "#";
-
-  const mh = safeString(out.main_headline);
-
-  if (!safeString(out.headline_line1)) {
-    const m = mh.match(/^(\d+\s*jours\s*pour[^,]*,?)/i);
-    out.headline_line1 = m?.[1]?.trim() || "X jours pour [action/transformation],";
-  }
-
-  if (!safeString(out.headline_domain)) {
-    const m = mh.match(/votre\s+([^\n]+?)\s+pour/i);
-    const v = m?.[1]?.trim();
-    out.headline_domain = v ? `votre ${v}` : "votre [domaine/business]";
-  }
-
-  if (!safeString(out.headline_profit)) {
-    const m = mh.match(/(\d[\d\s]*€\s*par\s*mois)/i);
-    out.headline_profit = m?.[1]?.replace(/\s+/g, " ")?.trim() || "XXX€ par mois";
-  }
-
-  out.headline_without_you =
-    safeString(out.headline_without_you) || (mh.toLowerCase().includes("sans vous") ? "sans vous" : "sans vous");
-
-  out.headline_domain_suffix = safeString(out.headline_domain_suffix) || "pour qu'elle dépasse les";
-  out.headline_profit_suffix = safeString(out.headline_profit_suffix) || "de profit...";
-
-  const experts = ensureArray<any>(out.experts);
-  while (experts.length < 4) experts.push({ expert_name: `Expert ${experts.length + 1}`, expert_company: "" });
-  out.experts = experts.slice(0, 4).map((e: any, i: number) => ({
-    expert_name: toText(e?.expert_name).trim() || `Expert ${i + 1}`,
-    expert_company: toText(e?.expert_company).trim(),
-  }));
-
-  const features = ensureArray<any>(out.features);
-  while (features.length < 3) {
-    features.push({
-      benefit_text: "Bénéfice concret et transformation mesurable pour ton audience.",
-      expert_attribution: `— Avec ${toText(out.experts?.[Math.min(features.length, 3)]?.expert_name).trim() || "un expert"}`,
-    });
-  }
-  out.features = features.slice(0, 3).map((f: any, i: number) => ({
-    benefit_text: toText(f?.benefit_text).trim() || "Bénéfice concret et transformation mesurable pour ton audience.",
-    expert_attribution:
-      toText(f?.expert_attribution).trim() ||
-      `— Avec ${toText(out.experts?.[i]?.expert_name).trim() || "un expert"}`,
-  }));
-
-  const testimonials = ensureArray<any>(out.testimonials);
-  while (testimonials.length < 3) testimonials.push({ person_name: "Prénom", result_metric: "Métrique de résultat" });
-  out.testimonials = testimonials.slice(0, 3).map((t: any) => ({
-    person_name: toText(t?.person_name).trim() || "Prénom",
-    result_metric: toText(t?.result_metric).trim() || "Métrique de résultat",
-  }));
-
-  const imgs = ensureArray<any>(out.testimonials_images);
-  while (imgs.length < 3) imgs.push({ image_url: "", image_alt: "[Capture d'écran témoignage]", badge_text: "" });
-
-  out.testimonials_images = imgs.slice(0, 3).map((img: any, i: number) => ({
-    image_url: toText(img?.image_url).trim(),
-    image_alt: toText(img?.image_alt).trim() || "[Capture d'écran témoignage]",
-    badge_text: i === 1 ? toText(img?.badge_text).trim() || "Résultat" : toText(img?.badge_text).trim(),
-  }));
-
-  out.results_title = toText(out.results_title).trim() || "Les résultats des challengers :";
-  out.footer_disclaimer =
-    toText(out.footer_disclaimer).trim() ||
-    "Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. Facebook est une marque déposée de Meta, Inc.";
-
-  return out;
-}
-
-function postProcessContentData(args: { kind: TemplateKind; templateId: string; contentData: Record<string, any> }) {
-  if (args.kind === "capture" && args.templateId === "capture-02") return buildCapture02ContentData(args.contentData);
-  return args.contentData || {};
-}
-
-export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html: string }> {
+export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
   const kind = normalizeKind(req.kind);
   const mode: RenderMode = req.mode === "kit" ? "kit" : "preview";
   const templateId = normalizeTemplateId(req.templateId, kind);
-
-  const contentData = postProcessContentData({ kind, templateId, contentData: req.contentData || {} });
 
   const root = process.cwd();
   const tplDir = path.join(root, "src", "templates", kind, templateId);
@@ -523,44 +426,35 @@ export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html
 
   let out = html;
 
-  out = renderRepeaters(out, contentData);
-  out = renderPlaceholders(out, contentData);
+  // repeaters first so placeholders inside blocks are expanded
+  out = renderRepeaters(out, req.contentData);
+
+  // then simple placeholders
+  out = renderPlaceholders(out, req.contentData);
+
+  // apply variant hooks
   out = applyVariant(out, req.variantId);
 
+  // apply static replacements (premium raw HTML templates)
   out = applyStaticTemplateReplacements({
     kind,
     templateId,
     html: out,
-    contentData: contentData || {},
+    contentData: req.contentData || {},
   });
 
   const isFullDoc = looksLikeFullHtmlDocument(out);
 
+  // If it's a full standalone HTML doc, do NOT wrap it again.
   if (isFullDoc) {
     return { html: out };
   }
 
-  if (mode === "kit") {
-    const hasInlineAssets =
-      /<style[\s>]/i.test(out) || /<link[\s>]/i.test(out) || /<script[\s>]/i.test(out);
-
-    if (hasInlineAssets) {
-      return { html: out };
-    }
-
-    const styleCss = kitCss || css || "";
-    const vars = cssVars ? `:root{${cssVars}}\n` : "";
-    const styleBlock = `<style>\n${vars}${styleCss}\n</style>`;
-
-    const body = out.includes('class="tpt-scope"') ? out : `<div class="tpt-scope">${out}</div>`;
-    const head = (fontsHtml || "").trim();
-
-    return { html: `${head ? head + "\n\n" : ""}${styleBlock}\n\n${body}` };
-  }
+  const styleCss = mode === "kit" ? kitCss || css : css;
 
   const doc = wrapAsDocument({
     htmlBody: out,
-    styleCss: css,
+    styleCss,
     cssVars,
     mode,
     headHtml: fontsHtml || "",
@@ -570,18 +464,7 @@ export async function renderTemplate(req: RenderTemplateRequest): Promise<{ html
 }
 
 /**
- * ✅ IMPORTANT : les routes API attendent renderTemplateHtml(...) => { html }
- * (et font: const { html } = await renderTemplateHtml(...))
+ * Backward-compat : certains endroits appellent déjà renderTemplate(...)
+ * → on garde un alias sans casser l'existant.
  */
-export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
-  return renderTemplate(req);
-}
-
-/**
- * Optionnel: si un autre endroit veut directement une string.
- * (ne casse pas les imports actuels)
- */
-export async function renderTemplateHtmlString(req: RenderTemplateRequest): Promise<string> {
-  const { html } = await renderTemplate(req);
-  return html;
-}
+export const renderTemplate = renderTemplateHtml;
