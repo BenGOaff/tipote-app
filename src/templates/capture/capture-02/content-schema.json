@@ -10,7 +10,10 @@
       "type": "string",
       "intention": "brand_identity",
       "description": "Nom de votre site ou marque",
-      "examples": ["VotreSite.com", "FormationPro"],
+      "examples": [
+        "VotreSite.com",
+        "FormationPro"
+      ],
       "maxLength": 25,
       "required": true
     },
@@ -20,7 +23,9 @@
       "type": "string",
       "intention": "promise_headline",
       "description": "Promesse principale avec durée + action/transformation + métrique financière + sans vous (formule challenge)",
-      "examples": ["7 jours pour transformer votre business pour qu'il dépasse les 5000€ par mois de profit... sans vous !"],
+      "examples": [
+        "7 jours pour transformer votre business pour qu'il dépasse les 5000€ par mois de profit... sans vous !"
+      ],
       "maxLength": 130,
       "required": true
     },
@@ -30,7 +35,10 @@
       "type": "string",
       "intention": "action_trigger",
       "description": "Action orientée résultat pour rejoindre le challenge",
-      "examples": ["Rejoindre le challenge (gratuit)", "Je m'inscris maintenant"],
+      "examples": [
+        "Rejoindre le challenge (gratuit)",
+        "Je m'inscris maintenant"
+      ],
       "maxLength": 35,
       "required": true
     },
@@ -40,7 +48,9 @@
       "type": "string",
       "intention": "audience_qualification",
       "description": "Pour qui est le challenge - audience cible et sous-niche spécifique",
-      "examples": ["Pour les coachs bien-être & les thérapeutes holistiques :"],
+      "examples": [
+        "Pour les coachs bien-être & les thérapeutes holistiques :"
+      ],
       "maxLength": 70,
       "required": true
     },
@@ -50,7 +60,10 @@
       "type": "string",
       "intention": "event_branding",
       "description": "Nom accrocheur de votre challenge",
-      "examples": ["CHALLENGE BUSINESS BOOST", "DÉFI VENTE EXPRESS"],
+      "examples": [
+        "CHALLENGE BUSINESS BOOST",
+        "DÉFI VENTE EXPRESS"
+      ],
       "maxLength": 30,
       "required": true
     },
@@ -104,7 +117,10 @@
       "type": "string",
       "intention": "social_proof_intro",
       "description": "Titre pour introduire les témoignages visuels de résultats",
-      "examples": ["Les résultats des challengers :", "Ils ont réussi avec ce challenge :"],
+      "examples": [
+        "Les résultats des challengers :",
+        "Ils ont réussi avec ce challenge :"
+      ],
       "maxLength": 50,
       "required": true
     },
@@ -136,8 +152,172 @@
       "type": "string",
       "intention": "legal_disclaimer",
       "description": "Mention légale standard Facebook",
-      "examples": ["Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. Facebook est une marque déposée de Meta, Inc."],
+      "examples": [
+        "Ce site ne fait pas partie du site Web de Facebook ou de Facebook, Inc. Facebook est une marque déposée de Meta, Inc."
+      ],
       "maxLength": 150,
+      "required": false
+    },
+    {
+      "key": "site_name_root",
+      "label": "Nom du site (racine)",
+      "type": "string",
+      "intention": "brand_identity",
+      "description": "Auto: partie avant .com/.fr",
+      "maxLength": 25,
+      "required": false
+    },
+    {
+      "key": "site_name_tld",
+      "label": "Extension du site",
+      "type": "string",
+      "intention": "brand_identity",
+      "description": "Auto: extension (.com, .fr)",
+      "maxLength": 10,
+      "required": false
+    },
+    {
+      "key": "headline_line1",
+      "label": "Headline ligne 1",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Auto/généré: 'X jours pour ...'",
+      "maxLength": 80,
+      "required": false
+    },
+    {
+      "key": "headline_domain",
+      "label": "Headline domaine",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Auto/généré: 'votre ...'",
+      "maxLength": 60,
+      "required": false
+    },
+    {
+      "key": "headline_profit",
+      "label": "Headline profit",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Auto/généré: 'XXXX€ par mois'",
+      "maxLength": 30,
+      "required": false
+    },
+    {
+      "key": "headline_without_you",
+      "label": "Headline sans vous",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Auto/généré: 'sans vous'",
+      "maxLength": 20,
+      "required": false
+    },
+    {
+      "key": "cta_href",
+      "label": "Lien CTA",
+      "type": "string",
+      "intention": "action_trigger",
+      "description": "Lien CTA (popup ou ancre)",
+      "maxLength": 200,
+      "required": false
+    },
+    {
+      "key": "testimonials_images",
+      "label": "URLs images témoignages",
+      "type": "object[]",
+      "intention": "social_proof_results",
+      "description": "3 items: url + alt + badge (optionnel)",
+      "minItems": 3,
+      "maxItems": 3,
+      "itemSchema": {
+        "image_url": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "URL image"
+        },
+        "image_alt": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Alt/placeholder"
+        },
+        "badge_text": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Badge optionnel"
+        }
+      },
+      "required": false
+    },
+    {
+      "key": "legal_privacy_url",
+      "label": "URL Politique de confidentialité",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 300,
+      "required": false
+    },
+    {
+      "key": "legal_privacy_text",
+      "label": "Texte Politique de confidentialité",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 40,
+      "required": false
+    },
+    {
+      "key": "legal_mentions_url",
+      "label": "URL Mentions légales",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 300,
+      "required": false
+    },
+    {
+      "key": "legal_mentions_text",
+      "label": "Texte Mentions légales",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 40,
+      "required": false
+    },
+    {
+      "key": "legal_cgv_url",
+      "label": "URL CGV",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 300,
+      "required": false
+    },
+    {
+      "key": "legal_cgv_text",
+      "label": "Texte CGV",
+      "type": "string",
+      "intention": "legal_links",
+      "description": "Optionnel",
+      "maxLength": 40,
+      "required": false
+    },
+    {
+      "key": "headline_domain_suffix",
+      "label": "Suffixe domaine",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Texte après domaine (ex: pour qu'elle dépasse les) ",
+      "maxLength": 60,
+      "required": false
+    },
+    {
+      "key": "headline_profit_suffix",
+      "label": "Suffixe profit",
+      "type": "string",
+      "intention": "promise_headline",
+      "description": "Texte après profit (ex: de profit...) ",
+      "maxLength": 40,
       "required": false
     }
   ]

@@ -887,8 +887,35 @@ export async function POST(req: Request) {
       console.error("onboarding_facts read failed:", e);
     }
 
+    // -----------------------------
+    // Onboarding facts helpers (guardrails)
+    // -----------------------------
+    const FACT_FALLBACKS: Record<string, string[]> = {
+      business_model: ["businessModel", "business_model_v2"],
+      has_offers: ["hasOffers", "has_offer", "offers_exist"],
+      offers_satisfaction: ["offer_satisfaction", "satisfaction_offers", "offersSatisfaction"],
+    };
+
+    function getFact<T = unknown>(key: string, fallbacks: string[] = []): T | undefined {
+      const all = [key, ...(FACT_FALLBACKS[key] ?? []), ...fallbacks];
+      for (const k of all) {
+        if (!k) continue;
+        if (Object.prototype.hasOwnProperty.call(onboardingFacts, k)) return (onboardingFacts as any)[k] as T;
+      }
+      return undefined;
+    }
+
+    function warnMissingFact(key: string, requiredWhen: boolean) {
+      if (!requiredWhen) return;
+      const v = getFact(key);
+      if (v === undefined || v === null || v === "") {
+        console.warn(`[strategy] missing onboarding_fact "${key}" (fallbacks: ${(FACT_FALLBACKS[key] ?? []).join(",")})`);
+      }
+    }
+
     // ✅ Derive mode (SOURCE OF TRUTH for "generate pyramids or not")
-    const businessModel = cleanString((onboardingFacts as any)["business_model"], 40).toLowerCase();
+    warnMissingFact("business_model", true);
+    const businessModel = cleanString(getFact("business_model") as any, 40).toLowerCase();
     const isAffiliate =
       businessModel === "affiliate" ||
       businessModel === "affiliation" ||
@@ -896,17 +923,22 @@ export async function POST(req: Request) {
       businessModel === "affiliate-marketing";
 
     const hasOffersEffective =
-      (onboardingFacts as any)["has_offers"] === true ||
+      getFact("has_offers") === true ||
       (businessProfile as any).has_offers === true ||
       (Array.isArray((businessProfile as any).offers) && (businessProfile as any).offers.length > 0);
 
-    const offersSatisfactionRaw = cleanString((onboardingFacts as any)["offers_satisfaction"], 40).toLowerCase();
+    warnMissingFact("offers_satisfaction", hasOffersEffective);
+    const offersSatisfactionRaw = cleanString(getFact("offers_satisfaction") as any, 40).toLowerCase();
     const isSatisfiedWithOffers = ["yes", "y", "true", "satisfied", "ok", "okay", "oui"].includes(offersSatisfactionRaw);
 
     // ✅ FIX demandé :
     // - On génère des pyramides si NON affiliate ET (pas d'offre OU pas satisfait)
     // - Si l'utilisateur a une offre ET satisfait => pas de pyramides (stratégie autour de l'existant)
-    const shouldGeneratePyramids = !isAffiliate && (!hasOffersEffective || !isSatisfiedWithOffers);
+    const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
+
+    // If user HAS offers but is NOT satisfied, we do NOT generate 3 new pyramids.
+    // Instead we generate an "offer audit & improvements" + "alternative angles" section (see no-pyramids mode prompt).
+    const shouldAuditOffers = !isAffiliate && hasOffersEffective && !isSatisfiedWithOffers;
 
     // 3) ressources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
@@ -1283,6 +1315,7 @@ MISSION
 RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Tu NE CRÉES PAS de nouvelles offres si l'utilisateur a déjà une offre.
 - Si offers_satisfaction = yes : tu considères l'offre existante comme “flagship” et tu n'y touches pas.
+- Si l'utilisateur a déjà une offre MAIS n'est PAS satisfait : tu proposes un audit (offer_audit) + 2-3 angles alternatifs (offer_alternatives) SANS inventer 3 nouvelles offres complètes.
 - Si business_model = affiliate : tu NE PARLES PAS de créer une offre.
 - Zéro blabla : tout doit être actionnable, spécifique, niché.
 - Respect strict des contraintes si elles existent.
@@ -1310,7 +1343,17 @@ FORMAT JSON STRICT UNIQUEMENT :
       "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
       "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
     }
-  }
+  },
+  "offer_audit": {
+    "diagnosis": "string",
+    "quick_wins": ["string","string","string"],
+    "improvements": [
+      { "area": "positioning|promise|pricing|packaging|delivery|funnel|traffic", "recommendation": "string", "test": "string (simple experiment 7-14 days)" }
+    ]
+  },
+  "offer_alternatives": [
+    { "angle": "string", "for_who": "string", "core_promise": "string", "suggested_changes": ["string"], "first_test": "string" }
+  ]
 }`.trim();
 
       const selectedChunks = pickTopResourceChunks({
@@ -1379,6 +1422,45 @@ CONTRAINTES TASKS
       const plan90Raw = asRecord(fullParsed.plan_90_days) ?? asRecord(fullParsed.plan90) ?? {};
       const tasksByTf = normalizeTasksByTimeframe(asRecord(plan90Raw.tasks_by_timeframe));
 
+      // Offer audit & alternatives (only meaningful when user already has offers and is not satisfied)
+      const offerAuditRaw = asRecord((fullParsed as any).offer_audit);
+      const offerAudit = offerAuditRaw
+        ? {
+            diagnosis: cleanString((offerAuditRaw as any).diagnosis, 3000),
+            quick_wins: asArray((offerAuditRaw as any).quick_wins)
+              .map((x) => cleanString(x, 220))
+              .filter(Boolean)
+              .slice(0, 10),
+            improvements: asArray((offerAuditRaw as any).improvements)
+              .map((it) => {
+                const r = asRecord(it) ?? {};
+                const area = cleanString((r as any).area, 48);
+                const recommendation = cleanString((r as any).recommendation, 1800);
+                const test = cleanString((r as any).test, 600);
+                return area || recommendation || test ? { ...(area ? { area } : {}), ...(recommendation ? { recommendation } : {}), ...(test ? { test } : {}) } : null;
+              })
+              .filter(Boolean)
+              .slice(0, 12),
+          }
+        : null;
+
+      const offerAlternatives = asArray((fullParsed as any).offer_alternatives)
+        .map((a) => {
+          const r = asRecord(a) ?? {};
+          const angle = cleanString((r as any).angle, 140);
+          const for_who = cleanString((r as any).for_who ?? (r as any).forWho, 220);
+          const core_promise = cleanString((r as any).core_promise ?? (r as any).corePromise, 220);
+          const suggested_changes = asArray((r as any).suggested_changes ?? (r as any).suggestedChanges)
+            .map((x) => cleanString(x, 180))
+            .filter(Boolean)
+            .slice(0, 10);
+          const first_test = cleanString((r as any).first_test ?? (r as any).firstTest, 320);
+          if (!angle && !core_promise) return null;
+          return { ...(angle ? { angle } : {}), ...(for_who ? { for_who } : {}), ...(core_promise ? { core_promise } : {}), ...(suggested_changes.length ? { suggested_changes } : {}), ...(first_test ? { first_test } : {}) };
+        })
+        .filter(Boolean)
+        .slice(0, 6);
+
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
 
       const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
@@ -1403,6 +1485,12 @@ CONTRAINTES TASKS
         ...basePlan,
         offer_mode: isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none",
         offers_satisfaction: offersSatisfactionRaw || null,
+        ...(shouldAuditOffers
+          ? {
+              offer_audit: offerAudit ?? (basePlan as any).offer_audit ?? null,
+              offer_alternatives: offerAlternatives?.length ? offerAlternatives : (basePlan as any).offer_alternatives ?? [],
+            }
+          : {}),
         mission: cleanString(basePlan.mission, 240) || mission,
         promise: cleanString(basePlan.promise, 240) || promise,
         positioning: cleanString(basePlan.positioning, 320) || positioning,
@@ -1523,7 +1611,17 @@ FORMAT JSON STRICT UNIQUEMENT :
       "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
       "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
     }
-  }
+  },
+  "offer_audit": {
+    "diagnosis": "string",
+    "quick_wins": ["string","string","string"],
+    "improvements": [
+      { "area": "positioning|promise|pricing|packaging|delivery|funnel|traffic", "recommendation": "string", "test": "string (simple experiment 7-14 days)" }
+    ]
+  },
+  "offer_alternatives": [
+    { "angle": "string", "for_who": "string", "core_promise": "string", "suggested_changes": ["string"], "first_test": "string" }
+  ]
 }`.trim();
 
     const selectedChunks = pickTopResourceChunks({

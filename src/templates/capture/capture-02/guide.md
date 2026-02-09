@@ -2,7 +2,8 @@
 
 Ce template est exporté par Tipote sous forme de **2 blocs HTML** (BLOC 1 + BLOC 2) à coller dans Systeme.io.
 
-✅ Le rendu est fidèle au template preview : Tipote remplace les textes par ceux de ton offre/persona.
+✅ Le rendu est fidèle au template preview : Tipote remplace les textes par ceux de ton offre/persona.  
+⚠️ **Important : pour capture-02, le formulaire est dans une POPUP (pas sur la page).**
 
 ---
 
@@ -10,40 +11,46 @@ Ce template est exporté par Tipote sous forme de **2 blocs HTML** (BLOC 1 + BLO
 
 1. Systeme.io → **Pages** → crée une nouvelle page.
 2. Ajoute un bloc **Code HTML** en haut de page → colle **BLOC 1**.
-3. Dans le BLOC 1, à l’endroit indiqué **“ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO”** :
-   - ajoute un **Formulaire natif** (Prénom + Email)
-   - puis supprime le bloc “tpt-slot” (ou remplace-le directement par ton formulaire).
-4. Ajoute un second bloc **Code HTML** juste en dessous → colle **BLOC 2**.
+3. Ajoute un second bloc **Code HTML** juste en dessous → colle **BLOC 2**.
 
 Le **BLOC 1** contient aussi les **fonts + le CSS** : il doit être collé en premier.
 
 ---
 
-## 2) Boutons (CTA)
+## 2) Créer la popup (formulaire)
 
-Tous les boutons du template pointent vers `#tpt-form` (le formulaire).
-👉 Résultat : clic = scroll direct vers le formulaire.
-
-Si tu préfères, tu peux aussi remplacer les boutons HTML par des **boutons natifs Systeme.io** (même texte) : c’est souvent plus simple à éditer ensuite.
-
----
-
-## 3) Images des résultats (témoignages)
-
-Tipote peut injecter une URL d’image par témoignage :
-- `testimonials.0.image_url`
-- `testimonials.1.image_url`
-- `testimonials.2.image_url`
-
-Si une URL est présente, l’image est affichée en background dans la carte.
+1. Systeme.io → **Popups** → crée une popup.
+2. Ajoute un **formulaire natif** (Prénom + Email).
+3. Dans les options du formulaire, choisis l’action (tag / campagne / email de bienvenue).
 
 ---
 
-## 4) Liens légaux
+## 3) Connecter les boutons (CTA) à la popup
+
+Le kit exporte des boutons HTML pour garder le design.
+
+👉 **Recommandé (le plus simple)** : dans Systeme.io, remplace chaque bouton HTML par un **bouton natif Systeme.io** (même texte), puis règle l’action :
+- **Au clic** → **Ouvrir une popup** → choisis ta popup.
+
+✅ Résultat : les boutons ouvrent la popup proprement sur desktop + mobile.
+
+---
+
+## 4) Témoignages & images
+
+Tipote génère toujours **3 témoignages** (même si tu n’en as pas encore).
+
+Tu peux ensuite remplacer les captures d’écran dans Tipote (ou dans Systeme.io si tu préfères) :
+- si une URL d’image est disponible, la carte affiche l’image en background
+- sinon, la carte affiche un placeholder texte
+
+---
+
+## 5) Liens légaux
 
 Tipote remplit (si tu les as) :
-- `legal_privacy_url` / `legal_privacy_text`
-- `legal_mentions_url` / `legal_mentions_text`
-- `legal_cgv_url` / `legal_cgv_text`
+- `Politique de confidentialité`
+- `Mentions légales`
+- `CGV`
 
-Sinon, tu peux les modifier directement dans Systeme.io.
+Sinon tu peux éditer ces liens directement dans Systeme.io.

@@ -253,7 +253,7 @@ export async function POST(req: Request) {
         error:
           "Crédits insuffisants pour appliquer un changement (0,5 crédit). Recharge ou upgrade pour continuer.",
         balance,
-        upgrade_url: "/pricing",
+        upgrade_url: "/settings?tab=billing",
       },
       { status: 402 }
     );
@@ -358,7 +358,7 @@ export async function POST(req: Request) {
           ok: false,
           code: "NO_CREDITS",
           error: "Crédits insuffisants. Recharge ou upgrade pour continuer.",
-          upgrade_url: "/pricing",
+          upgrade_url: "/settings?tab=billing",
         },
         { status: 402 }
       );

@@ -1486,7 +1486,7 @@ export async function POST(req: Request) {
           code: "NO_CREDITS",
           error: "Crédits insuffisants. Recharge tes crédits ou upgrade ton abonnement pour continuer.",
           balance,
-          upgrade_url: "/pricing",
+          upgrade_url: "/settings?tab=billing",
         },
         { status: 402 },
       );
