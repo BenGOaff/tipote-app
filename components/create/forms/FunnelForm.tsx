@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Route, X } from "lucide-react";
 
 import type { SystemeTemplate } from "@/data/systemeTemplates";
 import { FunnelModeStep } from "@/components/create/forms/funnel/FunnelModeStep";
@@ -587,110 +586,129 @@ export function FunnelForm({
     toast({ title: "Modifications refusées" });
   };
 
-  return (
-    <div className="w-full">
-      <Card className="p-4 md:p-6">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="text-base font-semibold">Funnel (Capture / Vente)</div>
-            <div className="text-sm text-muted-foreground">Génère une page de capture ou de vente (texte ou template).</div>
-          </div>
+  // ─── Step progress ────────────────────────────────────────────
 
-          <Button variant="ghost" onClick={onClose} className="gap-2">
-            <X className="h-4 w-4" />
-            Fermer
+  const visibleSteps =
+    mode === "visual"
+      ? [
+          { key: "mode", label: "Format" },
+          { key: "template", label: "Template" },
+          { key: "config", label: "Offre" },
+          { key: "preview", label: "Résultat" },
+        ]
+      : [
+          { key: "mode", label: "Format" },
+          { key: "config", label: "Offre" },
+          { key: "preview", label: "Résultat" },
+        ];
+  const currentStepIdx = visibleSteps.findIndex((s) => s.key === step);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Route className="w-5 h-5" />
+          Créer un Funnel
+        </h2>
+        <div className="flex items-center gap-3">
+          {/* Progress indicator */}
+          {step !== "mode" && (
+            <div className="hidden sm:flex items-center gap-1 text-xs">
+              {visibleSteps.map((s, i) => (
+                <div key={s.key} className="flex items-center gap-1">
+                  {i > 0 && <div className="w-6 h-px bg-border" />}
+                  <div
+                    className={`h-6 px-2.5 rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors ${
+                      step === s.key
+                        ? "bg-primary text-primary-foreground"
+                        : currentStepIdx > i
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-5 h-5" />
           </Button>
         </div>
-
-        {step === "mode" ? <FunnelModeStep onSelectMode={handleSelectMode} /> : null}
-
-        {step === "template" ? (
-          <FunnelTemplateStep
-            onBack={() => setStep("mode")}
-            onSelectTemplate={handleSelectTemplate}
-            onPreviewTemplate={handlePreviewTemplate}
-            preselected={selectedTemplate}
-          />
-        ) : null}
-
-        {step === "config" ? (
-          <FunnelConfigStep
-            mode={mode}
-            selectedTemplate={selectedTemplate}
-            funnelPageType={funnelPageType}
-            setFunnelPageType={setFunnelPageType}
-            offers={offers}
-            offerChoice={offerChoice}
-            setOfferChoice={setOfferChoice}
-            selectedOfferId={selectedOfferId}
-            setSelectedOfferId={setSelectedOfferId}
-            offerName={offerName}
-            setOfferName={setOfferName}
-            offerPromise={offerPromise}
-            setOfferPromise={setOfferPromise}
-            offerTarget={offerTarget}
-            setOfferTarget={setOfferTarget}
-            offerPrice={offerPrice}
-            setOfferPrice={setOfferPrice}
-            urgency={urgency}
-            setUrgency={setUrgency}
-            guarantee={guarantee}
-            setGuarantee={setGuarantee}
-            templateUserFields={templateUserFields}
-            templateFieldValues={templateFieldValues}
-            setTemplateFieldValue={setTemplateFieldValue}
-            templateFieldChoices={templateFieldChoices}
-            setTemplateFieldChoice={setTemplateFieldChoice}
-            isLoadingSchema={isLoadingSchema}
-            isGenerating={isGenerating}
-            onGenerate={handleGenerate}
-            onBack={() => {
-              if (mode === "visual") setStep("template");
-              else setStep("mode");
-            }}
-            creditCost={creditCost}
-          />
-        ) : null}
-
-        {step === "preview" ? (
-          <FunnelPreviewStep
-            mode={mode}
-            title={title}
-            setTitle={setTitle}
-            markdownText={markdownText}
-            renderedHtml={renderedHtml}
-            onSave={handleSave}
-            kitFileName={kitFileName}
-            messages={messages}
-            isIterating={isIterating}
-            hasPendingChanges={hasPendingChanges}
-            onSendIteration={handleSendIteration}
-            onAcceptIteration={handleAcceptIteration}
-            onRejectIteration={handleRejectIteration}
-            iterationCost={0.5}
-            disabledChat={mode !== "visual" || !contentData}
-          />
-        ) : null}
-
-        {/* Small helper modal / guidance: keep it simple for now */}
-        <Dialog open={false} onOpenChange={() => null}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Aide</DialogTitle>
-            </DialogHeader>
-            <div className="text-sm text-muted-foreground">—</div>
-          </DialogContent>
-        </Dialog>
-      </Card>
-
-      <div className="mt-3 flex items-center justify-between">
-        <Badge variant="secondary">
-          {step === "mode" ? "Écran 1" : step === "template" ? "Écran 2" : step === "config" ? "Écran 3" : "Résultat"}
-        </Badge>
-        <div className="text-xs text-muted-foreground">
-          {mode === "visual" ? "Mode: page prête à l'emploi" : "Mode: copywriting uniquement"}
-        </div>
       </div>
+
+      {/* Steps */}
+      {step === "mode" && <FunnelModeStep onSelectMode={handleSelectMode} />}
+
+      {step === "template" && (
+        <FunnelTemplateStep
+          onBack={() => setStep("mode")}
+          onSelectTemplate={handleSelectTemplate}
+          onPreviewTemplate={handlePreviewTemplate}
+          preselected={selectedTemplate}
+        />
+      )}
+
+      {step === "config" && (
+        <FunnelConfigStep
+          mode={mode}
+          selectedTemplate={selectedTemplate}
+          funnelPageType={funnelPageType}
+          setFunnelPageType={setFunnelPageType}
+          offers={offers}
+          offerChoice={offerChoice}
+          setOfferChoice={setOfferChoice}
+          selectedOfferId={selectedOfferId}
+          setSelectedOfferId={setSelectedOfferId}
+          offerName={offerName}
+          setOfferName={setOfferName}
+          offerPromise={offerPromise}
+          setOfferPromise={setOfferPromise}
+          offerTarget={offerTarget}
+          setOfferTarget={setOfferTarget}
+          offerPrice={offerPrice}
+          setOfferPrice={setOfferPrice}
+          urgency={urgency}
+          setUrgency={setUrgency}
+          guarantee={guarantee}
+          setGuarantee={setGuarantee}
+          templateUserFields={templateUserFields}
+          templateFieldValues={templateFieldValues}
+          setTemplateFieldValue={setTemplateFieldValue}
+          templateFieldChoices={templateFieldChoices}
+          setTemplateFieldChoice={setTemplateFieldChoice}
+          isLoadingSchema={isLoadingSchema}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerate}
+          onBack={() => {
+            if (mode === "visual") setStep("template");
+            else setStep("mode");
+          }}
+          creditCost={creditCost}
+        />
+      )}
+
+      {step === "preview" && (
+        <FunnelPreviewStep
+          mode={mode}
+          title={title}
+          setTitle={setTitle}
+          markdownText={markdownText}
+          renderedHtml={renderedHtml}
+          onSave={handleSave}
+          kitFileName={kitFileName}
+          messages={messages}
+          isIterating={isIterating}
+          hasPendingChanges={hasPendingChanges}
+          onSendIteration={handleSendIteration}
+          onAcceptIteration={handleAcceptIteration}
+          onRejectIteration={handleRejectIteration}
+          iterationCost={0.5}
+          disabledChat={mode !== "visual" || !contentData}
+        />
+      )}
     </div>
   );
 }

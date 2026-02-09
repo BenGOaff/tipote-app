@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Loader2, Wand2, Coins, ImageIcon, Link2, Sparkles, Trash2 } from "lucide-react";
 import { type SystemeTemplate } from "@/data/systemeTemplates";
@@ -77,6 +76,8 @@ interface FunnelConfigStepProps {
   creditCost: number;
 }
 
+// ─── Sub-components ──────────────────────────────────────────────
+
 function FieldChoiceToggle({
   field,
   choice,
@@ -89,7 +90,7 @@ function FieldChoiceToggle({
   if (field.source !== "user_or_ai") return null;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-1.5 flex-wrap">
       <button
         type="button"
         onClick={() => onChoiceChange("user")}
@@ -203,6 +204,8 @@ function getPlaceholder(field: UserField): string {
   return `ex: ${field.label}`;
 }
 
+// ─── Main component ──────────────────────────────────────────────
+
 export function FunnelConfigStep({
   mode,
   selectedTemplate,
@@ -244,255 +247,306 @@ export function FunnelConfigStep({
   const showVisualExtras = mode === "visual";
 
   // Group template fields by category
-  const identityFields = templateUserFields.filter(
-    (f) => !f.key.includes("legal") && !f.key.includes("cgv") && f.inputType !== "url" || f.inputType === "image_url"
-  );
   const legalFields = templateUserFields.filter(
     (f) => (f.key.includes("legal") || f.key.includes("cgv")) && f.inputType === "url"
   );
   const optionalSections = templateUserFields.filter(
     (f) => f.source === "user_or_ai" && (f.fallback === "remove" || f.fallback === "generate") && f.kind !== "scalar"
   );
-
-  // Fields that are NOT in optionalSections and NOT in legalFields
   const mainFields = templateUserFields.filter(
     (f) => !legalFields.includes(f) && !optionalSections.includes(f)
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">Infos de ta page</h3>
-          <p className="text-sm text-muted-foreground">
-            L'IA utilise ton persona, tes ressources Tipote et les caractéristiques de l'offre.
-          </p>
-        </div>
-
-        <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-5">
+      {/* Header row */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4 mr-1" />
           Retour
         </Button>
+        <div>
+          <h3 className="text-lg font-semibold">Décris ton offre</h3>
+          <p className="text-sm text-muted-foreground">
+            L'IA utilisera ces informations pour personnaliser le contenu.
+          </p>
+        </div>
       </div>
 
-      {showVisualExtras && selectedTemplate ? (
-        <Card className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-sm font-semibold">{selectedTemplate.name}</div>
-              <div className="text-xs text-muted-foreground">{selectedTemplate.description}</div>
-            </div>
-            <Badge variant="secondary">{selectedTemplate.type === "capture" ? "Capture" : "Vente"}</Badge>
+      {/* Template reminder (visual mode) */}
+      {showVisualExtras && selectedTemplate && (
+        <Card className="p-3 flex items-center gap-3 bg-muted/50">
+          <div className="w-16 h-11 rounded overflow-hidden bg-muted border flex-shrink-0">
+            <iframe
+              src={`/api/templates/file/${selectedTemplate.layoutPath || `src/templates/${selectedTemplate.type === "sales" ? "vente" : "capture"}/${selectedTemplate.id}/layout.html`}`}
+              title={`mini-${selectedTemplate.id}`}
+              className="w-[300%] h-[300%] scale-[0.33] origin-top-left pointer-events-none"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">{selectedTemplate.name}</p>
+            <Badge variant="outline" className="text-[10px]">
+              {selectedTemplate.type === "capture" ? "Page de capture" : "Page de vente"}
+            </Badge>
           </div>
         </Card>
-      ) : null}
+      )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Left column: Offer info */}
-        <Card className="p-4">
+      {/* Page type selector (text_only mode only) */}
+      {mode === "text_only" && (
+        <div className="space-y-2">
+          <Label>Type de page</Label>
+          <div className="flex gap-2">
+            <Button
+              variant={funnelPageType === "capture" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFunnelPageType("capture")}
+            >
+              Page de capture
+            </Button>
+            <Button
+              variant={funnelPageType === "sales" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFunnelPageType("sales")}
+            >
+              Page de vente
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Offer source choice */}
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant={offerChoice === "existing" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOfferChoice("existing")}
+            disabled={offers.length === 0}
+          >
+            Offre existante
+          </Button>
+          <Button
+            type="button"
+            variant={offerChoice === "scratch" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOfferChoice("scratch")}
+          >
+            À partir de zéro
+          </Button>
+        </div>
+
+        {offerChoice === "existing" ? (
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Choisis une offre, tu n'auras pas à tout re-renseigner.
+            </Label>
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger>
+                <SelectValue placeholder={offers.length ? "Sélectionne une offre" : "Aucune offre disponible"} />
+              </SelectTrigger>
+              <SelectContent>
+                {offers.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Type de page</Label>
-              <Badge variant="secondary">{funnelPageType === "capture" ? "Capture" : "Vente"}</Badge>
+            <div className="space-y-2">
+              <Label>Ton offre *</Label>
+              <Textarea
+                placeholder="Ex: Formation Instagram pour coachs sportifs – 297€ – Inclut 6 modules vidéo, des templates et un groupe privé…"
+                value={offerPromise}
+                onChange={(e) => setOfferPromise(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Décris ton offre ou colle une description existante. Plus tu donnes de détails, meilleur sera le résultat.
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={funnelPageType === "capture" ? "default" : "outline"}
-                onClick={() => setFunnelPageType("capture")}
-              >
-                Capture
-              </Button>
-              <Button
-                type="button"
-                variant={funnelPageType === "sales" ? "default" : "outline"}
-                onClick={() => setFunnelPageType("sales")}
-              >
-                Vente
-              </Button>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nom de l'offre</Label>
+                <Input
+                  value={offerName}
+                  onChange={(e) => setOfferName(e.target.value)}
+                  placeholder="ex: Plan d'action 90 jours"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cible</Label>
+                <Input
+                  value={offerTarget}
+                  onChange={(e) => setOfferTarget(e.target.value)}
+                  placeholder="ex: Coachs / freelances..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Prix</Label>
+                <Input
+                  value={offerPrice}
+                  onChange={(e) => setOfferPrice(e.target.value)}
+                  placeholder="ex: 49€ / 490€ / 1997€"
+                />
+              </div>
             </div>
+          </div>
+        )}
+      </div>
 
-            <div className="pt-2">
-              <Label>Offre</Label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={offerChoice === "existing" ? "default" : "outline"}
-                  onClick={() => setOfferChoice("existing")}
-                  disabled={offers.length === 0}
-                >
-                  Offre existante
-                </Button>
-                <Button
-                  type="button"
-                  variant={offerChoice === "scratch" ? "default" : "outline"}
-                  onClick={() => setOfferChoice("scratch")}
-                >
-                  A partir de zéro
-                </Button>
+      {/* Urgency & guarantee */}
+      <div className="space-y-4 border-t pt-4">
+        <p className="text-sm font-medium text-muted-foreground">
+          Angles de persuasion (optionnel)
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Urgence</Label>
+            <Input
+              value={urgency}
+              onChange={(e) => setUrgency(e.target.value)}
+              placeholder="ex: Offre valable jusqu'à dimanche"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Garantie</Label>
+            <Input
+              value={guarantee}
+              onChange={(e) => setGuarantee(e.target.value)}
+              placeholder="ex: Satisfait ou remboursé 14 jours"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Schema-driven template fields (visual mode only) */}
+      {showVisualExtras && !isLoadingSchema && templateUserFields.length > 0 && (
+        <div className="space-y-4 border-t pt-4">
+          <p className="text-sm font-medium text-muted-foreground">
+            Personnalisation du template (optionnel)
+          </p>
+
+          {/* Main user fields (identity, images, etc.) */}
+          {mainFields.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <ImageIcon className="h-4 w-4" />
+                Ce dont le template a besoin
               </div>
 
-              {offerChoice === "existing" ? (
-                <div className="mt-3 space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Choisis une offre, tu n'auras pas à tout re-renseigner.
-                  </Label>
-                  <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={offers.length ? "Sélectionne une offre" : "Aucune offre disponible"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {offers.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-3">
-                  <div className="space-y-2">
-                    <Label>Nom de l'offre</Label>
-                    <Input value={offerName} onChange={(e) => setOfferName(e.target.value)} placeholder="ex: Plan d'action 90 jours" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Promesse</Label>
-                    <Textarea
-                      value={offerPromise}
-                      onChange={(e) => setOfferPromise(e.target.value)}
-                      placeholder="ex: Trouver tes 10 prochains clients en 90 jours"
-                      className="min-h-[90px]"
+              <div className="grid sm:grid-cols-2 gap-4">
+                {mainFields
+                  .filter((f) => f.kind === "scalar" && f.inputType !== "textarea")
+                  .map((field) => (
+                    <SchemaFieldInput
+                      key={field.key}
+                      field={field}
+                      value={templateFieldValues[field.key] || ""}
+                      onChange={(v) => setTemplateFieldValue(field.key, v)}
+                      choice={templateFieldChoices[field.key] || (field.source === "user" ? "user" : "generate")}
+                      onChoiceChange={(c) => setTemplateFieldChoice(field.key, c)}
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Cible</Label>
-                    <Input value={offerTarget} onChange={(e) => setOfferTarget(e.target.value)} placeholder="ex: Coachs / freelances / e-commerçants..." />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Prix</Label>
-                    <Input value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} placeholder="ex: 49€ / 490€ / 1997€" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* Right column: Template-specific fields (schema-driven) */}
-        <Card className="p-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>
-                {showVisualExtras ? "Personnalisation du template" : "Angles & persuasion"}
-              </Label>
-              <Badge variant="secondary" className="gap-1">
-                <Coins className="h-3.5 w-3.5" />
-                {creditCost} crédits
-              </Badge>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Urgence (optionnel)</Label>
-              <Input value={urgency} onChange={(e) => setUrgency(e.target.value)} placeholder="ex: Offre valable jusqu'à dimanche" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Garantie (optionnel)</Label>
-              <Input value={guarantee} onChange={(e) => setGuarantee(e.target.value)} placeholder="ex: Satisfait ou remboursé 14 jours" />
-            </div>
-
-            {showVisualExtras && !isLoadingSchema && templateUserFields.length > 0 ? (
-              <>
-                <Separator className="my-3" />
-
-                {/* Main user fields (identity, images, etc.) */}
-                {mainFields.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <ImageIcon className="h-4 w-4" />
-                      Ce dont le template a besoin
-                    </div>
-
-                    {mainFields.map((field) => (
-                      <SchemaFieldInput
-                        key={field.key}
-                        field={field}
-                        value={templateFieldValues[field.key] || ""}
-                        onChange={(v) => setTemplateFieldValue(field.key, v)}
-                        choice={templateFieldChoices[field.key] || (field.source === "user" ? "user" : "generate")}
-                        onChoiceChange={(c) => setTemplateFieldChoice(field.key, c)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Optional sections (testimonials, etc.) */}
-                {optionalSections.length > 0 && (
-                  <div className="space-y-4">
-                    <Separator className="my-3" />
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <Sparkles className="h-4 w-4" />
-                      Sections optionnelles
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Fournissez vos propres données, laissez l'IA générer, ou supprimez la section.
-                    </p>
-
-                    {optionalSections.map((field) => (
-                      <SchemaFieldInput
-                        key={field.key}
-                        field={field}
-                        value={templateFieldValues[field.key] || ""}
-                        onChange={(v) => setTemplateFieldValue(field.key, v)}
-                        choice={templateFieldChoices[field.key] || (field.fallback === "remove" ? "generate" : "generate")}
-                        onChoiceChange={(c) => setTemplateFieldChoice(field.key, c)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Legal links */}
-                {legalFields.length > 0 && (
-                  <div className="space-y-4">
-                    <Separator className="my-3" />
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <Link2 className="h-4 w-4" />
-                      Liens légaux
-                    </div>
-
-                    {legalFields.map((field) => (
-                      <SchemaFieldInput
-                        key={field.key}
-                        field={field}
-                        value={templateFieldValues[field.key] || ""}
-                        onChange={(v) => setTemplateFieldValue(field.key, v)}
-                        choice="user"
-                        onChoiceChange={() => {}}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : showVisualExtras && isLoadingSchema ? (
-              <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Chargement des champs du template...
+                  ))}
               </div>
-            ) : null}
-          </div>
-        </Card>
-      </div>
 
-      <div className="flex items-center justify-end">
-        <Button onClick={onGenerate} disabled={isGenerating} className="gap-2">
-          {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-          Générer
+              {/* Full-width fields (textareas, arrays) */}
+              {mainFields
+                .filter((f) => f.kind !== "scalar" || f.inputType === "textarea")
+                .map((field) => (
+                  <SchemaFieldInput
+                    key={field.key}
+                    field={field}
+                    value={templateFieldValues[field.key] || ""}
+                    onChange={(v) => setTemplateFieldValue(field.key, v)}
+                    choice={templateFieldChoices[field.key] || (field.source === "user" ? "user" : "generate")}
+                    onChoiceChange={(c) => setTemplateFieldChoice(field.key, c)}
+                  />
+                ))}
+            </div>
+          )}
+
+          {/* Optional sections (testimonials, etc.) */}
+          {optionalSections.length > 0 && (
+            <div className="space-y-4">
+              <Separator />
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4" />
+                Sections optionnelles
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Fournis tes propres données, laisse l'IA générer, ou supprime la section.
+              </p>
+
+              {optionalSections.map((field) => (
+                <SchemaFieldInput
+                  key={field.key}
+                  field={field}
+                  value={templateFieldValues[field.key] || ""}
+                  onChange={(v) => setTemplateFieldValue(field.key, v)}
+                  choice={templateFieldChoices[field.key] || "generate"}
+                  onChoiceChange={(c) => setTemplateFieldChoice(field.key, c)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Legal links */}
+          {legalFields.length > 0 && (
+            <div className="space-y-4">
+              <Separator />
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Link2 className="h-4 w-4" />
+                Liens légaux
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                {legalFields.map((field) => (
+                  <SchemaFieldInput
+                    key={field.key}
+                    field={field}
+                    value={templateFieldValues[field.key] || ""}
+                    onChange={(v) => setTemplateFieldValue(field.key, v)}
+                    choice="user"
+                    onChoiceChange={() => {}}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showVisualExtras && isLoadingSchema && (
+        <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Chargement des champs du template...
+        </div>
+      )}
+
+      {/* Generate button */}
+      <div className="flex items-center gap-3 pt-2">
+        <Button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="flex-1"
+          size="lg"
+        >
+          {isGenerating ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération en cours...</>
+          ) : (
+            <><Wand2 className="w-4 h-4 mr-2" />Générer {mode === "visual" ? "la page" : "le copywriting"}</>
+          )}
         </Button>
+        <Badge variant="outline" className="gap-1 whitespace-nowrap py-2">
+          <Coins className="w-3.5 h-3.5" />
+          {creditCost} crédits
+        </Badge>
       </div>
     </div>
   );

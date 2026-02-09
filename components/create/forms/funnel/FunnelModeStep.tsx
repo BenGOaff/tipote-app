@@ -10,53 +10,40 @@ export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">Que veux-tu créer ?</h3>
-        <p className="text-sm text-muted-foreground">
-          Choisis si tu veux uniquement le copywriting, ou une page prête à l’emploi (design + textes).
+        <p className="text-sm text-muted-foreground mt-1">
+          Choisis le format qui correspond à ton besoin.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div
-          role="button"
-          tabIndex={0}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <button
           onClick={() => onSelectMode("visual")}
-          onKeyDown={(e) => (e.key === "Enter" ? onSelectMode("visual") : null)}
-          className="group relative rounded-xl border bg-card p-5 text-left shadow-sm transition hover:border-primary hover:shadow-md"
+          className="group text-left rounded-xl border-2 border-border p-6 hover:border-primary hover:shadow-md transition-all space-y-3"
         >
-          <div className="mb-3 flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <LayoutTemplate className="h-3.5 w-3.5" />
-              Page prête à l’emploi
-            </Badge>
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+            <LayoutTemplate className="w-6 h-6 text-primary" />
           </div>
-          <div className="space-y-1">
-            <div className="text-base font-semibold">Design + Copywriting</div>
-            <div className="text-sm text-muted-foreground">
-              Tu choisis un template, l’IA intègre tes infos et te livre une page designée + rédigée.
-            </div>
-          </div>
-        </div>
+          <h3 className="font-semibold text-lg">Page prête à l'emploi</h3>
+          <p className="text-sm text-muted-foreground">
+            Une page complète avec design + texte. Tu choisis un template, l'IA rédige le contenu
+            et tu obtiens un fichier HTML prêt à utiliser.
+          </p>
+          <Badge variant="secondary" className="mt-1">Recommandé</Badge>
+        </button>
 
-        <div
-          role="button"
-          tabIndex={0}
+        <button
           onClick={() => onSelectMode("text_only")}
-          onKeyDown={(e) => (e.key === "Enter" ? onSelectMode("text_only") : null)}
-          className="group relative rounded-xl border bg-card p-5 text-left shadow-sm transition hover:border-primary hover:shadow-md"
+          className="group text-left rounded-xl border-2 border-border p-6 hover:border-primary hover:shadow-md transition-all space-y-3"
         >
-          <div className="mb-3 flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <FileText className="h-3.5 w-3.5" />
-              Copywriting uniquement
-            </Badge>
+          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+            <FileText className="w-6 h-6 text-muted-foreground" />
           </div>
-          <div className="space-y-1">
-            <div className="text-base font-semibold">Texte prêt à publier</div>
-            <div className="text-sm text-muted-foreground">
-              Tu récupères le copywriting (structure + sections), avec export PDF et enregistrement.
-            </div>
-          </div>
-        </div>
+          <h3 className="font-semibold text-lg">Juste le copywriting</h3>
+          <p className="text-sm text-muted-foreground">
+            L'IA génère uniquement le texte de ta page. Tu pourras le copier-coller
+            dans Systeme.io ou n'importe quel outil.
+          </p>
+        </button>
       </div>
     </div>
   );

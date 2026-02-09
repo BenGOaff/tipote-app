@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Check, Eye } from "lucide-react";
 import { type SystemeTemplate, captureTemplates, salesTemplates } from "@/data/systemeTemplates";
 
 interface Props {
@@ -16,17 +16,15 @@ interface Props {
 }
 
 function getLayoutPath(t: SystemeTemplate): string {
-  // layoutPath (source de vérité) si présent
   const lp = t.layoutPath;
   if (typeof lp === "string" && lp.trim()) return lp.trim();
-
-  // fallback déterministe (évite preview cassé si un template n'a pas encore layoutPath)
   if (t.type === "capture") return `src/templates/capture/${t.id}/layout.html`;
   return `src/templates/vente/${t.id}/layout.html`;
 }
 
 export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate, preselected }: Props) {
   const [tab, setTab] = useState<"capture" | "sales">(preselected?.type ?? "capture");
+  const [previewTemplate, setPreviewTemplate] = useState<SystemeTemplate | null>(null);
 
   const templates: SystemeTemplate[] = useMemo(
     () => (tab === "capture" ? captureTemplates : salesTemplates),
@@ -40,7 +38,6 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
           <ArrowLeft className="w-4 h-4 mr-1" />
           Retour
         </Button>
-
         <div>
           <h3 className="text-lg font-semibold">Choisis ton template</h3>
           <p className="text-sm text-muted-foreground">
@@ -49,51 +46,103 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "capture" | "sales")} className="w-full">
-        <TabsList className="grid w-fit grid-cols-2">
-          <TabsTrigger value="capture">Capture ({captureTemplates.length})</TabsTrigger>
-          <TabsTrigger value="sales">Vente ({salesTemplates.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={tab} className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {templates.map((t: SystemeTemplate) => {
-              const layoutPath = getLayoutPath(t);
-
-              return (
-                <Card key={t.id} className="overflow-hidden border hover:ring-2 hover:ring-primary transition">
-                  {/* PREVIEW RÉEL : top du layout.html en 16:9 */}
-                  <div className="relative aspect-[16/9] bg-muted overflow-hidden border-b">
-                    <iframe
-                      src={`/api/templates/file/${layoutPath}`}
-                      title={`preview-${t.id}`}
-                      className="absolute inset-0 w-[300%] h-[300%] scale-[0.33] origin-top-left pointer-events-none"
-                    />
-                    <Badge className="absolute top-2 left-2" variant="secondary">
-                      {t.type === "capture" ? "Capture" : "Vente"}
-                    </Badge>
-                  </div>
-
-                  <div className="p-4 space-y-2">
-                    <div className="font-semibold">{t.name}</div>
-                    {t.description ? <p className="text-sm text-muted-foreground">{t.description}</p> : null}
-
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" className="w-full gap-2" onClick={() => onPreviewTemplate(t)}>
-                        <Eye className="h-4 w-4" />
-                        Voir
-                      </Button>
-                      <Button className="w-full" onClick={() => onSelectTemplate(t)}>
-                        Utiliser
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+      {/* Inline preview mode */}
+      {previewTemplate ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setPreviewTemplate(null)}>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Retour aux templates
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{previewTemplate.name}</span>
+              <Badge variant="outline" className="text-xs">
+                {previewTemplate.type === "capture" ? "Capture" : "Vente"}
+              </Badge>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          {/* Live HTML preview */}
+          <Card className="overflow-hidden">
+            <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                Aperçu du style (texte de démonstration)
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => onPreviewTemplate(previewTemplate)}>
+                Nouvel onglet
+              </Button>
+            </div>
+            <div className="h-[450px]">
+              <iframe
+                src={`/api/templates/file/${getLayoutPath(previewTemplate)}`}
+                title="Aperçu template"
+                className="w-full h-full border-0"
+                sandbox="allow-scripts"
+              />
+            </div>
+          </Card>
+
+          <div className="flex gap-3">
+            <p className="text-sm text-muted-foreground flex-1">
+              {previewTemplate.description}
+            </p>
+            <Button onClick={() => { onSelectTemplate(previewTemplate); setPreviewTemplate(null); }}>
+              <Check className="w-4 h-4 mr-1" />
+              Utiliser ce template
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "capture" | "sales")} className="w-full">
+          <TabsList className="grid w-full max-w-xs grid-cols-2">
+            <TabsTrigger value="capture">Capture ({captureTemplates.length})</TabsTrigger>
+            <TabsTrigger value="sales">Vente ({salesTemplates.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={tab} className="mt-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {templates.map((t: SystemeTemplate) => {
+                const layoutPath = getLayoutPath(t);
+
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setPreviewTemplate(t)}
+                    className={`group text-left rounded-lg border overflow-hidden hover:ring-2 hover:ring-primary transition-all ${
+                      preselected?.id === t.id ? "ring-2 ring-primary" : "bg-card"
+                    }`}
+                  >
+                    <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                      <iframe
+                        src={`/api/templates/file/${layoutPath}`}
+                        title={`preview-${t.id}`}
+                        className="absolute inset-0 w-[300%] h-[300%] scale-[0.33] origin-top-left pointer-events-none"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-sm">{t.name}</p>
+                        {preselected?.id === t.id && (
+                          <Check className="w-3.5 h-3.5 text-primary" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{t.description}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {t.category.slice(0, 2).map((c) => (
+                          <Badge key={c} variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {c}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

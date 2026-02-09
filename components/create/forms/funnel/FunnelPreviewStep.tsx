@@ -63,7 +63,7 @@ export function FunnelPreviewStep({
   const { toast } = useToast();
 
   const handleCopyText = () => {
-    const toCopy = (mode === "text_only" ? markdownText : markdownText) || "";
+    const toCopy = markdownText || "";
     if (!toCopy.trim()) {
       navigator.clipboard.writeText(renderedHtml || "");
       toast({ title: "HTML copié !" });
@@ -110,6 +110,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
 
   return (
     <div className="space-y-4">
+      {/* Title */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <Input
@@ -121,8 +122,10 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
         </div>
       </div>
 
+      {/* Preview area */}
       {mode === "visual" && renderedHtml ? (
         <div className="space-y-4">
+          {/* Visual preview */}
           <Card className="overflow-hidden">
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-sm font-medium flex items-center gap-1.5">
@@ -150,6 +153,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
             </div>
           </Card>
 
+          {/* Copywriting section */}
           <Card className="overflow-hidden">
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-sm font-medium">Copywriting</span>
@@ -164,13 +168,14 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
               ) : (
                 <div className="text-sm text-muted-foreground">
                   Le template est rendu depuis <code>src/templates</code>. Si tu veux ajuster le copywriting, utilise le
-                  chat d’itération ci-dessous.
+                  chat d'itération ci-dessous.
                 </div>
               )}
             </div>
           </Card>
         </div>
       ) : (
+        /* Text-only preview */
         <Card className="overflow-hidden">
           <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
             <span className="text-sm font-medium">Copywriting généré</span>
@@ -191,6 +196,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
         </Card>
       )}
 
+      {/* Chat bar */}
       <FunnelChatBar
         onSendMessage={onSendIteration}
         onAccept={onAcceptIteration}
@@ -202,6 +208,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
         disabled={disabledChat}
       />
 
+      {/* Save actions */}
       <div className="flex gap-2 flex-wrap justify-end">
         <Button variant="outline" size="sm" onClick={() => onSave("draft")} disabled={!title}>
           <Save className="w-4 h-4 mr-1" />
