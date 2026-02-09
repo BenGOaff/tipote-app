@@ -1,120 +1,528 @@
 <!-- capture-01 / kit-systeme.html -->
 <!-- TIPOTE — KIT SYSTEME.IO -->
-<!-- À COPIER / COLLER TEL QUEL DANS DES BLOCS HTML SYSTEME.IO -->
-<!-- NE RIEN SUPPRIMER SAUF LES BLOCS EN POINTILLÉS APRÈS INSTALLATION -->
+<!-- COPIE 1:1 du layout.html (SANS toucher layout.html) + placeholders {{...}} remplis par Tipote -->
+<!-- À coller dans SYSTEME.IO en 2 blocs "Code HTML" -->
+<!-- IMPORTANT POPUP :
+  - Ce template est pensé pour une popup (formulaire dans la popup).
+  - Le plus fiable dans Systeme.io = remplacer les CTA HTML par des BOUTONS NATIFS Systeme.io qui ouvrent une popup.
+  - Sinon, configure cta_href vers ta popup si ton setup Systeme.io le permet.
+-->
 
-<!-- ===================== BLOC 1 ===================== -->
+<!-- ===================== BLOC 1 (CSS + HERO) ===================== -->
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+.tpt-scope *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }.tpt-scope{
+            font-family: 'Open Sans', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }.tpt-scope h1, .tpt-scope h2, .tpt-scope h3{
+            font-family: 'Lato', sans-serif;
+        }
+
+        /* Header Notice */
+        .tpt-scope .top-notice{
+            background: linear-gradient(135deg, #f1f5f9 0%, #e1e7ef 100%);
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #353535;
+            border-bottom: 1px solid #dfe7f1;
+        }
+
+        .tpt-scope .top-notice a{
+            color: #2a80ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Hero Section */
+        .tpt-scope .hero-section{
+            background: linear-gradient(135deg, #020817 0%, #1a1f31 100%);
+            padding: 60px 20px 80px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .tpt-scope .logo{
+            margin-bottom: 40px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        .tpt-scope .logo-subtitle{
+            font-size: 11px;
+            letter-spacing: 3px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .tpt-scope .hook{
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #6297ff;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .tpt-scope .hero-title{
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tpt-scope .hero-title .highlight{
+            color: #2a80ff;
+        }
+
+        .tpt-scope .hero-title .highlight-secondary{
+            color: #55c0fe;
+        }
+
+        /* Video Container */
+        .tpt-scope .video-container{
+            max-width: 700px;
+            margin: 0 auto 40px;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .tpt-scope .video-placeholder{
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: linear-gradient(135deg, #2a3442 0%, #1e252f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tpt-scope .video-overlay{
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tpt-scope .video-text{
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .tpt-scope .video-subtext{
+            font-size: 16px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* CTA Button */
+        .tpt-scope .cta-button{
+            display: inline-block;
+            background: linear-gradient(135deg, #55c0fe 0%, #2a80ff 100%);
+            color: #fff;
+            padding: 18px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 30px rgba(42, 128, 255, 0.4);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .tpt-scope .cta-button:hover{
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(42, 128, 255, 0.6);
+        }
+
+        .tpt-scope .cta-button::before{
+            content: "▶ ";
+            margin-right: 8px;
+        }
+
+        .tpt-scope .cta-subtitle{
+            display: block;
+            font-size: 11px;
+            margin-top: 8px;
+            opacity: 0.9;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        /* Benefits Section */
+        .tpt-scope .benefits-section{
+            background: #fff;
+            padding: 80px 20px;
+        }
+
+        .tpt-scope .section-title{
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #020817;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tpt-scope .section-title::after{
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #2a80ff, #55c0fe);
+            margin: 20px auto 0;
+        }
+
+        .tpt-scope .benefits-grid{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .tpt-scope .benefit-card{
+            background: #fff;
+            border: 2px solid #e1e7ef;
+            border-radius: 12px;
+            padding: 35px 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tpt-scope .benefit-card:hover{
+            border-color: #2a80ff;
+            box-shadow: 0 10px 30px rgba(42, 128, 255, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .tpt-scope .benefit-number{
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #2a80ff, #55c0fe);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 25px;
+        }
+
+        .tpt-scope .benefit-text{
+            font-size: 15px;
+            line-height: 1.8;
+            color: #353535;
+        }
+
+        .tpt-scope .benefit-text .text-bold{
+            font-weight: 700;
+            color: #020817;
+        }
+
+        .tpt-scope .benefit-text .text-highlight{
+            color: #2a80ff;
+            font-weight: 600;
+        }
+
+        .tpt-scope .benefit-text .text-curiosity{
+            color: #55c0fe;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        /* About Section */
+        .tpt-scope .about-section{
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 80px 20px;
+            color: #fff;
+        }
+
+        .tpt-scope .about-container{
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .tpt-scope .about-label{
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #6297ff;
+            margin-bottom: 15px;
+        }
+
+        .tpt-scope .about-name{
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .tpt-scope .about-description{
+            font-size: 15px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 40px;
+        }
+
+        .tpt-scope .about-description .highlight-text{
+            font-weight: 700;
+            color: #55c0fe;
+        }
+
+        .tpt-scope .about-description .objective-text{
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .tpt-scope .profile-image{
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.15);
+            margin: 30px auto;
+            background: linear-gradient(135deg, #2a3442 0%, #1e252f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Footer */
+        .tpt-scope .footer{
+            background: #020817;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .tpt-scope .footer-logo{
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .tpt-scope .footer-text{
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+
+        .tpt-scope .footer-links{
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .tpt-scope .footer-links a{
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s ease;
+        }
+
+        .tpt-scope .footer-links a:hover{
+            color: #2a80ff;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px){
+            .tpt-scope .hero-title{
+                font-size: 28px;
+            }
+
+            .tpt-scope .video-text{
+                font-size: 24px;
+            }
+
+            .tpt-scope .section-title{
+                font-size: 24px;
+            }
+
+            .tpt-scope .benefits-grid{
+                grid-template-columns: 1fr;
+            }
+
+            .tpt-scope .about-name{
+                font-size: 28px;
+            }
+        }
+
+        /* Tipote — assets (logo/photo/footer-logo) sans changer le DOM du layout */
+        .tpt-scope .logo{
+            background-image: var(--tpt-logo-bg, none);
+            background-repeat: no-repeat;
+            background-position: center top;
+            background-size: contain;
+        }
+        .tpt-scope .logo.has-image{ padding-top: 56px; }
+
+        .tpt-scope .profile-image{
+            background-image: var(--tpt-author-photo-bg, none);
+            background-size: cover;
+            background-position: center;
+        }
+        .tpt-scope .profile-image.has-photo{ color: rgba(255,255,255,0); }
+
+        .tpt-scope .footer-logo{
+            background-image: var(--tpt-footer-logo-bg, none);
+            background-repeat: no-repeat;
+            background-position: center top;
+            background-size: contain;
+        }
+        .tpt-scope .footer-logo.has-image{ padding-top: 44px; }
+</style>
+
 <div class="tpt-scope">
-
+  <div class="top-notice">{{top_notice_text}} <a href="{{top_notice_link_url}}">{{top_notice_link_text}}</a></div>
   <section class="hero-section">
-    <div class="hero-container">
-
-      <div class="hero-content">
-        <h1 class="hero-title">
-          {{hero_title}}
-        </h1>
-
-        <p class="hero-subtitle">
-          {{hero_subtitle}}
-        </p>
-
-        <p class="hero-description">
-          {{hero_description}}
-        </p>
-
-        <!-- ===== EMPLACEMENT FORMULAIRE SYSTEME.IO ===== -->
-        <div
-          class="tpt-slot"
-          data-tpt="systeme-form"
-          style="border:2px dashed #9f7800;padding:20px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
-        >
-          <strong>ICI : AJOUTE TON FORMULAIRE NATIF SYSTEME.IO</strong><br>
-          Champs conseillés : Prénom + Email (+ Téléphone si besoin)
-        </div>
-        <!-- ============================================= -->
-
-      </div>
-
-      <div class="hero-image">
-        {{hero_image}}
-      </div>
-
+    <div class="logo" data-tpt-logo-url="{{logo_image_url}}">
+      {{logo_text}}
+      <div class="logo-subtitle">{{logo_subtitle}}</div>
     </div>
-  </section>
 
+    <div class="hook">{{hook}}</div>
+
+    <h1 class="hero-title">{{hero_title_prefix}}<span class="highlight">{{hero_title_highlight_1}}</span>{{hero_title_between_1}}<span class="highlight-secondary">{{hero_title_highlight_2}}</span>{{hero_title_between_2}}<span class="highlight">{{hero_title_highlight_3}}</span>{{hero_title_suffix}}</h1>
+
+    <div class="video-container">
+      <div class="video-placeholder">
+        <div class="video-overlay">
+          <div class="video-text">{{video_line_1}}</div>
+          <div class="video-text">{{video_line_2}}</div>
+          <div class="video-text">{{video_line_3}}</div>
+        </div>
+      </div>
+    </div>
+
+    <a href="{{cta_href}}" class="cta-button">{{cta_text}}
+      <span class="cta-subtitle">{{cta_subtitle}}</span>
+    </a>
+  </section>
 </div>
 <!-- =================== FIN BLOC 1 =================== -->
 
 
-<!-- ===================== BLOC 2 ===================== -->
+<!-- ===================== BLOC 2 (RESTE) ===================== -->
 <div class="tpt-scope">
-
   <section class="benefits-section">
-    <div class="benefits-container">
-      <h2 class="section-title">{{benefits_title}}</h2>
-      <p class="benefits-intro">{{benefits_intro}}</p>
+    <h2 class="section-title">{{benefits_title}}</h2>
 
-      <div class="benefits-grid">
-        <div class="benefit-image">
-          {{benefits_image}}
-        </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-number">1</div>
+        <p class="benefit-text"><span class="text-bold">{{benefit_1_bold}}</span>{{benefit_1_after_bold}}<span class="text-highlight">{{benefit_1_highlight}}</span>{{benefit_1_after_highlight}}<span class="text-curiosity">{{benefit_1_curiosity}}</span>{{benefit_1_after_curiosity}}</p>
+      </div>
 
-        <ul class="benefit-list">
-          {{benefits_list}}
-        </ul>
+      <div class="benefit-card">
+        <div class="benefit-number">2</div>
+        <p class="benefit-text"><span class="text-bold">{{benefit_2_bold}}</span>{{benefit_2_after_bold}}<span class="text-highlight">{{benefit_2_highlight}}</span>{{benefit_2_after_highlight}}<span class="text-curiosity">{{benefit_2_curiosity}}</span>{{benefit_2_after_curiosity}}</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-number">3</div>
+        <p class="benefit-text"><span class="text-bold">{{benefit_3_bold}}</span>{{benefit_3_after_bold}}<span class="text-highlight">{{benefit_3_highlight}}</span>{{benefit_3_after_highlight}}<span class="text-curiosity">{{benefit_3_curiosity}}</span>{{benefit_3_after_curiosity}}</p>
       </div>
     </div>
-  </section>
 
-  <section class="target-section">
-    <div class="target-container">
-      <p class="target-title">{{target_label}}</p>
-      <h2 class="target-subtitle">{{target_title}}</h2>
-
-      <div class="target-grid">
-        {{target_cards}}
-      </div>
-
-      <p class="target-conclusion">{{target_conclusion}}</p>
+    <div style="text-align: center; margin-top: 50px;">
+      <a href="{{cta_href}}" class="cta-button">{{cta_text}}
+        <span class="cta-subtitle">{{cta_subtitle}}</span>
+      </a>
     </div>
   </section>
 
   <section class="about-section">
     <div class="about-container">
-      <div class="about-image">
-        {{about_image}}
-      </div>
+      <div class="about-label">{{about_label}}</div>
+      <h2 class="about-name">{{about_name}}</h2>
 
-      <div class="about-content">
-        <h2>{{about_title}}</h2>
-        {{about_text}}
+      <p class="about-description">{{about_story_prefix}}<span class="highlight-text">{{about_story_highlight}}</span>{{about_story_between}}<span class="objective-text">{{about_story_objective}}</span>{{about_story_suffix}}</p>
 
-        <!-- ===== EMPLACEMENT BOUTON SYSTEME.IO ===== -->
-        <div
-          class="tpt-slot"
-          data-tpt="systeme-button"
-          style="border:2px dashed #9f7800;padding:16px;margin:30px 0;text-align:center;font-family:system-ui;background:#fff;color:#9f7800;"
-        >
-          <strong>ICI : AJOUTE TON BOUTON NATIF SYSTEME.IO</strong><br>
-          Action conseillée : ouvrir le formulaire
-        </div>
-        <!-- ======================================== -->
+      <div class="profile-image" data-tpt-photo-url="{{author_photo_url}}">{{author_photo_alt_text}}</div>
 
-      </div>
+      <a href="{{cta_href}}" class="cta-button">{{cta_text}}
+        <span class="cta-subtitle">{{cta_subtitle}}</span>
+      </a>
     </div>
   </section>
 
   <footer class="footer">
-    <p class="footer-text">
-      {{footer_text}}
-    </p>
+    <div class="footer-logo" data-tpt-footer-logo-url="{{footer_logo_image_url}}">{{footer_logo_text}}</div>
+
+    <p class="footer-text">{{footer_text_prefix}} <a href="mailto:{{contact_email}}" style="color: #2a80ff;">{{contact_email}}</a>. {{footer_text_suffix}}</p>
 
     <div class="footer-links">
-      <a href="{{footer_link_1_url}}">{{footer_link_1_label}}</a>
-      <span>|</span>
-      <a href="{{footer_link_2_url}}">{{footer_link_2_label}}</a>
+      <a href="{{legal_cgv_url}}">{{legal_cgv_text}}</a>
+      <a href="{{legal_mentions_url}}">{{legal_mentions_text}}</a>
+      <a href="{{legal_privacy_url}}">{{legal_privacy_text}}</a>
     </div>
   </footer>
-
 </div>
+
+<script>
+(function(){
+  try{
+    var logo = document.querySelector('.tpt-scope .logo[data-tpt-logo-url]');
+    if(logo){
+      var u = (logo.getAttribute('data-tpt-logo-url')||'').trim();
+      if(u){
+        logo.style.setProperty('--tpt-logo-bg','url("'+u.replace(/"/g,'%22')+'")');
+        logo.classList.add('has-image');
+      }
+    }
+
+    var photo = document.querySelector('.tpt-scope .profile-image[data-tpt-photo-url]');
+    if(photo){
+      var p = (photo.getAttribute('data-tpt-photo-url')||'').trim();
+      if(p){
+        photo.style.setProperty('--tpt-author-photo-bg','url("'+p.replace(/"/g,'%22')+'")');
+        photo.classList.add('has-photo');
+      }
+    }
+
+    var footerLogo = document.querySelector('.tpt-scope .footer-logo[data-tpt-footer-logo-url]');
+    if(footerLogo){
+      var fu = (footerLogo.getAttribute('data-tpt-footer-logo-url')||'').trim();
+      if(fu){
+        footerLogo.style.setProperty('--tpt-footer-logo-bg','url("'+fu.replace(/"/g,'%22')+'")');
+        footerLogo.classList.add('has-image');
+      }
+    }
+  }catch(e){}
+})();
+</script>
 <!-- =================== FIN BLOC 2 =================== -->
