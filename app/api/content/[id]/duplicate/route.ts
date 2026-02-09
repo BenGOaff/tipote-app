@@ -8,7 +8,6 @@ type ContentRowV2 = {
   user_id: string;
   type: string | null;
   title: string | null;
-  prompt: string | null;
   content: string | null;
   status: string | null;
   scheduled_date: string | null;
@@ -95,7 +94,7 @@ async function loadSourceContent(
   // 1) Try "V2/EN-ish" columns
   const v2 = await supabase
     .from("content_item")
-    .select("id,user_id,type,title,prompt,content,status,scheduled_date,channel,tags")
+    .select("id,user_id,type,title,content,status,scheduled_date,channel,tags")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -111,7 +110,6 @@ async function loadSourceContent(
         user_id: String(row.user_id),
         type: typeof row.type === "string" ? row.type : null,
         title: typeof row.title === "string" ? row.title : null,
-        prompt: typeof row.prompt === "string" ? row.prompt : null,
         content: typeof row.content === "string" ? row.content : null,
         status: typeof row.status === "string" ? row.status : null,
         scheduled_date: typeof row.scheduled_date === "string" ? row.scheduled_date : null,
@@ -130,7 +128,7 @@ async function loadSourceContent(
   const fr = await supabase
     .from("content_item")
     .select(
-      "id,user_id,type,title:titre,prompt,content:contenu,status:statut,scheduled_date:date_planifiee,channel:canal,tags"
+      "id,user_id,type,title:titre,content:contenu,status:statut,scheduled_date:date_planifiee,channel:canal,tags"
     )
     .eq("id", id)
     .eq("user_id", userId)
@@ -150,7 +148,6 @@ async function loadSourceContent(
       user_id: String(row.user_id),
       type: typeof row.type === "string" ? row.type : null,
       title: typeof row.title === "string" ? row.title : null,
-      prompt: typeof row.prompt === "string" ? row.prompt : null,
       content: typeof row.content === "string" ? row.content : null,
       status: typeof row.status === "string" ? row.status : null,
       scheduled_date: typeof row.scheduled_date === "string" ? row.scheduled_date : null,
@@ -173,7 +170,6 @@ async function insertDuplicateV2(
       user_id: userId,
       type: src.type,
       title: src.title ? `${src.title} (copie)` : "Copie",
-      prompt: src.prompt,
       content: src.content,
       status: "draft",
       scheduled_date: null,
@@ -203,7 +199,6 @@ async function insertDuplicateFR(
       user_id: userId,
       type: src.type,
       titre: src.title ? `${src.title} (copie)` : "Copie",
-      prompt: src.prompt,
       contenu: src.content,
       statut: "draft",
       date_planifiee: null,
