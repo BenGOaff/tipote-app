@@ -426,11 +426,24 @@ export function FunnelForm({
       }
 
       // Visual: parse contentData JSON
-      const extracted = extractTemplateContentData(out || "");
+      const outTrimmed = (out || "").trim();
+
+      // Detect server-side error stored as content (e.g. "Erreur: ...")
+      if (!outTrimmed || outTrimmed.startsWith("Erreur:")) {
+        const errorDetail = outTrimmed.replace(/^Erreur:\s*/i, "").trim();
+        toast({
+          title: "Erreur de génération",
+          description: errorDetail || "La génération a échoué ou le délai a expiré. Réessaye.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const extracted = extractTemplateContentData(outTrimmed);
       if (!extracted) {
         toast({
           title: "Réponse IA invalide",
-          description: "Impossible de lire le contentData du template.",
+          description: "Impossible de lire le contentData du template. Le modèle n'a peut-être pas renvoyé du JSON valide.",
           variant: "destructive",
         });
         return;

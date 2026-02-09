@@ -2203,7 +2203,7 @@ export async function POST(req: Request) {
                   apiKey,
                   system: systemPrompt,
                   user: baseUserPrompt,
-                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : 4000, // ✅ safe & cohérent
+                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : (type === "funnel" && safeString((body as any).templateId).trim() ? 8000 : 4000),
                   temperature: 0.7,
                 });
 
