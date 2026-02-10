@@ -84,7 +84,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     setOffersLoading(true);
 
     loadAllOffers(getSupabaseBrowserClient())
-      .then((result) => { if (mounted) setOffers(result); })
+      .then((result: OfferOption[]) => { if (mounted) setOffers(result); })
       .catch(() => { if (mounted) setOffers([]); })
       .finally(() => { if (mounted) setOffersLoading(false); });
 

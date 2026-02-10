@@ -87,11 +87,11 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [offersLoading, setOffersLoading] = useState(false);
 
   // Sales: choisir offre à vendre
-  const [offerSource, setOfferSource] = useState<"pyramid" | "manual">("pyramid");
+  const [offerSource, setOfferSource] = useState<"existing" | "manual">("existing");
   const [offerId, setOfferId] = useState<string>("");
 
   // Onboarding: choisir lead magnet (optionnel mais recommandé)
-  const [onboardingSource, setOnboardingSource] = useState<"pyramid" | "manual">("pyramid");
+  const [onboardingSource, setOnboardingSource] = useState<"existing" | "manual">("existing");
   const [leadMagnetOfferId, setLeadMagnetOfferId] = useState<string>("");
 
   // Manual offer specs (fallback)
@@ -110,7 +110,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     setOffersLoading(true);
 
     loadAllOffers(getSupabaseBrowserClient())
-      .then((result) => { if (mounted) setOffers(result); })
+      .then((result: OfferOption[]) => { if (mounted) setOffers(result); })
       .catch(() => { if (mounted) setOffers([]); })
       .finally(() => { if (mounted) setOffersLoading(false); });
 
@@ -143,14 +143,14 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   }, [offers]);
 
   const selectedSalesOffer = useMemo(() => {
-    if (offerSource !== "pyramid") return null;
+    if (offerSource !== "existing") return null;
     const id = (offerId ?? "").trim();
     if (!id) return null;
     return offers.find((o) => o.id === id) ?? null;
   }, [offerSource, offerId, offers]);
 
   const selectedLeadMagnetOffer = useMemo(() => {
-    if (onboardingSource !== "pyramid") return null;
+    if (onboardingSource !== "existing") return null;
     const id = (leadMagnetOfferId ?? "").trim();
     if (!id) return null;
     return offers.find((o) => o.id === id) ?? null;
@@ -159,10 +159,10 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   // ✅ validations
   const needsSalesOffer =
     emailType === "sales" &&
-    (offerSource === "pyramid" ? !offerId : !offerName.trim() && !offerPromise.trim() && !offerOutcome.trim());
+    (offerSource === "existing" ? !offerId : !offerName.trim() && !offerPromise.trim() && !offerOutcome.trim());
 
   const needsOnboardingLeadMagnet =
-    emailType === "onboarding" && onboardingSource === "pyramid" && leadMagnetOffers.length > 0 && !leadMagnetOfferId;
+    emailType === "onboarding" && onboardingSource === "existing" && leadMagnetOffers.length > 0 && !leadMagnetOfferId;
 
   const canGenerate = useMemo(() => {
     if (emailType === "newsletter") {
@@ -210,7 +210,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
       payload.subject = salesAngle;
       payload.salesCta = salesCta;
 
-      if (offerSource === "pyramid") {
+      if (offerSource === "existing") {
         payload.offerId = offerId || undefined;
 
         // Bonus (fail-open): si le prompt builder côté API n’a pas assez de détails,
@@ -245,7 +245,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
       // Bonus (fail-open): on enrichit le contexte via offerManual (le backend ignore peut-être
       // hors sales, mais ça ne casse rien et ça aide si buildEmailPrompt l’exploite).
-      if (onboardingSource === "pyramid" && selectedLeadMagnetOffer) {
+      if (onboardingSource === "existing" && selectedLeadMagnetOffer) {
         payload.offerManual = {
           name: selectedLeadMagnetOffer.name || undefined,
           promise: selectedLeadMagnetOffer.promise || undefined,
@@ -373,10 +373,10 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>Offre à vendre</Label>
 
-                <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as any)} className="flex gap-4">
+                <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as "existing" | "manual")} className="flex gap-4">
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pyramid" id="pyramid" />
-                    <Label htmlFor="pyramid">Offre existante</Label>
+                    <RadioGroupItem value="existing" id="existing" />
+                    <Label htmlFor="existing">Offre existante</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="manual" id="manual" />
@@ -384,7 +384,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   </div>
                 </RadioGroup>
 
-                {offerSource === "pyramid" ? (
+                {offerSource === "existing" ? (
                   offersLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -496,10 +496,10 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>Lead magnet</Label>
 
-                <RadioGroup value={onboardingSource} onValueChange={(v) => setOnboardingSource(v as any)} className="flex gap-4">
+                <RadioGroup value={onboardingSource} onValueChange={(v) => setOnboardingSource(v as "existing" | "manual")} className="flex gap-4">
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pyramid" id="onb_pyramid" />
-                    <Label htmlFor="onb_pyramid">Offre existante</Label>
+                    <RadioGroupItem value="existing" id="onb_existing" />
+                    <Label htmlFor="onb_existing">Offre existante</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="manual" id="onb_manual" />
@@ -507,7 +507,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   </div>
                 </RadioGroup>
 
-                {onboardingSource === "pyramid" ? (
+                {onboardingSource === "existing" ? (
                   offersLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin" />
