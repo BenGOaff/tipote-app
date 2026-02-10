@@ -790,3 +790,4 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     </div>
   );
 }
+
