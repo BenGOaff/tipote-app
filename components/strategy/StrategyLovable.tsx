@@ -1052,13 +1052,12 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     })),
                   }}
                   phaseIndex={selectedPhaseIndex}
+                  onToggleTask={toggleTask}
                   onUpdatePhase={() => {
-                    // Best-effort (Lovable): UX only — les tâches sont gérées par les endpoints existants.
                     toast({
                       title: "Phase mise à jour",
                       description: "Les modifications ont été enregistrées",
                     });
-                    setSelectedPhaseIndex(null);
                   }}
                 />
               );

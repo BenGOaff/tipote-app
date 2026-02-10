@@ -209,6 +209,47 @@ export async function POST() {
     // ✅ Forcer le retour onboarding (sans casser NOT NULL onboarding_version)
     await bestEffortResetBusinessProfileAdmin(userId);
 
+    // ✅ Ensure profiles row exists (FK guard for onboarding_sessions)
+    // For old users or edge cases, the profiles row may not exist.
+    try {
+      const { data: profileExists } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profileExists) {
+        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+        await supabaseAdmin.from("profiles").insert({
+          id: userId,
+          email: authUser?.user?.email ?? null,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.warn("reset: profiles ensure failed (non-blocking):", e);
+    }
+
+    // ✅ Ensure business_profiles row exists (required for onboarding)
+    try {
+      const { data: bpExists } = await supabaseAdmin
+        .from("business_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!bpExists) {
+        await supabaseAdmin.from("business_profiles").insert({
+          user_id: userId,
+          onboarding_completed: false,
+          onboarding_version: "v2",
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.warn("reset: business_profiles ensure failed (non-blocking):", e);
+    }
+
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     console.error("Unhandled error in POST /api/account/reset:", err);

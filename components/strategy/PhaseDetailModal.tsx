@@ -63,6 +63,7 @@ interface PhaseDetailModalProps {
   phase: Phase;
   phaseIndex: number;
   onUpdatePhase: (phaseIndex: number, phase: Phase) => void;
+  onToggleTask?: (taskId: string, nextChecked: boolean) => void;
 }
 
 const SortableTaskItem = ({
@@ -178,20 +179,22 @@ export const PhaseDetailModal = ({
   phase,
   phaseIndex,
   onUpdatePhase,
+  onToggleTask,
 }: PhaseDetailModalProps) => {
   const [localPhase, setLocalPhase] = useState<Phase>(phase);
   const [isEditing, setIsEditing] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
   const [savedPhase, setSavedPhase] = useState<Phase>(phase);
 
-  // ✅ Important : sync si on ouvre la modale sur une autre phase (sans casser l’existant)
+  // ✅ Sync quand on ouvre la modale ou change de phase (pas quand les données de la même phase sont rafraîchies)
   useEffect(() => {
     if (!isOpen) return;
     setLocalPhase(phase);
     setSavedPhase(phase);
     setIsEditing(false);
     setNewTaskName("");
-  }, [isOpen, phase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, phaseIndex]);
 
   const descriptionData = useMemo(() => {
     return phaseDescriptions[localPhase.title] || phaseDescriptions[phase.title];
@@ -221,12 +224,15 @@ export const PhaseDetailModal = ({
           t.id === taskId ? { ...t, done: !t.done } : t,
         );
         const progress = calculateProgress(tasks);
-        const updated = { ...prev, tasks, progress };
-        onUpdatePhase(phaseIndex, updated);
-        return updated;
+        // Find the new done state for the toggled task
+        const toggled = tasks.find((t) => t.id === taskId);
+        if (toggled && onToggleTask) {
+          onToggleTask(taskId, toggled.done);
+        }
+        return { ...prev, tasks, progress };
       });
     },
-    [calculateProgress, isEditing, onUpdatePhase, phaseIndex],
+    [calculateProgress, isEditing, onToggleTask],
   );
 
   const handleDeleteTask = useCallback(
@@ -439,12 +445,11 @@ export const PhaseDetailModal = ({
                       </DndContext>
                     ) : (
                       (localPhase.tasks || []).map((task) => (
-                        <button
+                        <div
                           key={task.id}
-                          type="button"
                           className={[
                             "w-full text-left flex items-center gap-3 rounded-xl border",
-                            "bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/30",
+                            "bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer",
                           ].join(" ")}
                           onClick={() => handleToggleTask(task.id)}
                         >
@@ -463,7 +468,7 @@ export const PhaseDetailModal = ({
                           >
                             {task.task}
                           </span>
-                        </button>
+                        </div>
                       ))
                     )
                   ) : (

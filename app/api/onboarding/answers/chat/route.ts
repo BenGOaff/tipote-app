@@ -644,7 +644,49 @@ export async function POST(req: NextRequest) {
 
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;
+    const userEmail = auth?.user?.email;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 0) Ensure profiles & business_profiles rows exist (FK guard)
+    //    After account reset or for old users, these rows may be missing.
+    //    onboarding_sessions has a FK that requires the parent row to exist.
+    try {
+      const { data: profileExists } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profileExists) {
+        await supabase.from("profiles").insert({
+          id: userId,
+          email: userEmail ?? null,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      // best-effort — if profiles table doesn't have the expected schema, ignore
+      console.warn("[OnboardingChatV2] profiles ensure failed (non-blocking):", e);
+    }
+
+    try {
+      const { data: bpExists } = await supabase
+        .from("business_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!bpExists) {
+        await supabase.from("business_profiles").insert({
+          user_id: userId,
+          onboarding_completed: false,
+          onboarding_version: "v2",
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.warn("[OnboardingChatV2] business_profiles ensure failed (non-blocking):", e);
+    }
 
     // 1) find or create session
     let sessionId = body.sessionId ?? null;
