@@ -5,9 +5,11 @@
 // - PATCH: met à jour un sous-ensemble de champs safe (sans casser l’onboarding)
 
 
- import { NextRequest, NextResponse } from "next/server";
- import { z } from "zod";
- import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+export const dynamic = "force-dynamic";
 
 type AnyRecord = Record<string, any>;
 
@@ -19,23 +21,21 @@ const OfferItemSchema = z.object({
   link: z.string().trim().max(400).optional().default(""),
 });
 
-const UpdateSchema = z
-  .object({
-    first_name: z.string().trim().max(120).optional(),
-    country: z.string().trim().max(120).optional(),
-    niche: z.string().trim().max(200).optional(),
-    mission: z.string().trim().max(500).optional(),
+const UpdateSchema = z.object({
+  first_name: z.string().trim().max(120).optional(),
+  country: z.string().trim().max(120).optional(),
+  niche: z.string().trim().max(5000).optional(),
+  mission: z.string().trim().max(10000).optional(),
 
-    business_maturity: z.string().trim().max(120).optional(),
-    offers_status: z.string().trim().max(120).optional(),
+  business_maturity: z.string().trim().max(120).optional(),
+  offers_status: z.string().trim().max(120).optional(),
 
-    main_goals: z.array(z.string().trim().max(200)).max(10).optional(),
-    preferred_content_types: z.array(z.string().trim().max(120)).max(12).optional(),
-    tone_preference: z.string().trim().max(120).optional(),
+  main_goals: z.array(z.string().trim().max(200)).max(10).optional(),
+  preferred_content_types: z.array(z.string().trim().max(120)).max(12).optional(),
+  tone_preference: z.string().trim().max(120).optional(),
 
-    offers: z.array(OfferItemSchema).max(50).optional(),
-  })
-  .strict();
+  offers: z.array(OfferItemSchema).max(50).optional(),
+});
 
 export async function GET() {
   try {
@@ -87,8 +87,14 @@ export async function PATCH(req: NextRequest) {
 
     const parsed = UpdateSchema.safeParse(body);
     if (!parsed.success) {
+      const flat = parsed.error.flatten();
+      const fieldErrors = flat.fieldErrors ?? {};
+      const summary = Object.entries(fieldErrors)
+        .map(([k, msgs]) => `${k}: ${(msgs as string[]).join(", ")}`)
+        .join("; ");
+      console.error("[PATCH /api/profile] Validation error:", JSON.stringify(flat));
       return NextResponse.json(
-        { ok: false, error: "Validation error", details: parsed.error.flatten() },
+        { ok: false, error: summary || "Validation error", details: flat },
         { status: 400 },
       );
     }
@@ -112,10 +118,14 @@ export async function PATCH(req: NextRequest) {
       .select("*")
       .maybeSingle();
 
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    if (error) {
+      console.error("[PATCH /api/profile] DB error:", error.message, error.code);
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
 
     return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
   } catch (e) {
+    console.error("[PATCH /api/profile] Unexpected error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
