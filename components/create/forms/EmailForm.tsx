@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
-
+import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
+import type { OfferOption } from "@/lib/offers";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -28,31 +29,9 @@ const emailTypes = [
   { id: "onboarding", label: "Onboarding (Know/Like/Trust)" },
 ];
 
-type OfferOption = {
-  id: string;
-  name: string;
-  level: string;
-  is_flagship?: boolean | null;
-
-  // détails utiles pour l’IA (et preview UI)
-  promise?: string | null;
-  description?: string | null;
-  price_min?: number | null;
-  price_max?: number | null;
-  main_outcome?: string | null;
-  format?: string | null;
-  delivery?: string | null;
-  target?: string | null; // quand présent dans plan_json
-  updated_at?: string | null;
-};
-
-function levelLabel(level: string) {
+function isLeadMagnetLevel(level: string | null | undefined) {
   const s = String(level ?? "").toLowerCase();
-  if (s.includes("lead") || s.includes("free") || s.includes("gratuit")) return "Gratuit (Lead magnet)";
-  if (s.includes("low")) return "Low ticket";
-  if (s.includes("middle") || s.includes("mid")) return "Middle ticket";
-  if (s.includes("high") || s.includes("premium")) return "High ticket";
-  return level || "Offre";
+  return s.includes("lead") || s.includes("free") || s.includes("gratuit") || s === "user_offer";
 }
 
 function splitEmails(raw: string): string[] {
@@ -70,187 +49,6 @@ function joinEmails(parts: string[]): string {
   return cleaned.join("\n\n-----\n\n").trim();
 }
 
-function isRecord(v: unknown): v is Record<string, any> {
-  return !!v && typeof v === "object" && !Array.isArray(v);
-}
-
-function safeStringOrNull(v: unknown): string | null {
-  if (typeof v === "string") {
-    const s = v.trim();
-    return s ? s : null;
-  }
-  return null;
-}
-
-function toNumberOrNull(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const s = v.trim().replace(",", ".");
-    if (!s) return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}
-
-function isLeadMagnetLevel(level: string | null | undefined) {
-  const s = String(level ?? "").toLowerCase();
-  return s.includes("lead") || s.includes("free") || s.includes("gratuit");
-}
-
-/**
- * Normalise business_plan.plan_json.selected_pyramid (legacy + new shapes) vers une liste d'offres
- * Objectif: ne jamais dépendre d'un shape rigide.
- */
-function normalizeSelectedPyramid(userId: string, selected: any, updatedAt: string | null): OfferOption[] {
-  const out: OfferOption[] = [];
-
-  const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
-    const level = safeStringOrNull(levelRaw) ?? null;
-    const o = isRecord(offerRaw) ? offerRaw : null;
-    if (!o) return;
-
-    const name =
-      safeStringOrNull((o as any).name) ??
-      safeStringOrNull((o as any).title) ??
-      safeStringOrNull((o as any).offer_name) ??
-      safeStringOrNull((o as any).offerTitle) ??
-      null;
-
-    if (!name) return;
-
-    const idRaw = safeStringOrNull((o as any).id);
-    const id = idRaw ? idRaw : `${userId}:${level ?? "unknown"}:${idxHint ?? 0}`;
-
-    const promise =
-      safeStringOrNull((o as any).promise) ??
-      safeStringOrNull((o as any).promesse) ??
-      safeStringOrNull((o as any).purpose) ??
-      safeStringOrNull((o as any).objectif) ??
-      safeStringOrNull((o as any).benefit) ??
-      null;
-
-    const description = safeStringOrNull((o as any).description) ?? safeStringOrNull((o as any).desc) ?? null;
-
-    const main_outcome =
-      safeStringOrNull((o as any).main_outcome) ??
-      safeStringOrNull((o as any).mainOutcome) ??
-      safeStringOrNull((o as any).outcome) ??
-      null;
-
-    const format = safeStringOrNull((o as any).format) ?? null;
-    const delivery = safeStringOrNull((o as any).delivery) ?? safeStringOrNull((o as any).livraison) ?? null;
-    const target =
-      safeStringOrNull((o as any).target) ??
-      safeStringOrNull((o as any).public) ??
-      safeStringOrNull((o as any).audience) ??
-      safeStringOrNull((o as any).who) ??
-      null;
-
-    const price_min =
-      toNumberOrNull((o as any).price_min) ??
-      toNumberOrNull((o as any).priceMin) ??
-      toNumberOrNull((o as any).prix_min) ??
-      toNumberOrNull((o as any).price) ??
-      null;
-
-    const price_max =
-      toNumberOrNull((o as any).price_max) ??
-      toNumberOrNull((o as any).priceMax) ??
-      toNumberOrNull((o as any).prix_max) ??
-      null;
-
-    const is_flagship = typeof (o as any).is_flagship === "boolean" ? ((o as any).is_flagship as boolean) : null;
-
-    out.push({
-      id,
-      name,
-      level: level ?? safeStringOrNull((o as any).level) ?? safeStringOrNull((o as any).offer_level) ?? "",
-      promise,
-      description,
-      price_min,
-      price_max,
-      main_outcome,
-      format,
-      delivery,
-      target,
-      is_flagship,
-      updated_at: safeStringOrNull((o as any).updated_at) ?? updatedAt,
-    });
-  };
-
-  // 1) Array shape
-  if (Array.isArray(selected)) {
-    selected.forEach((item, idx) => {
-      const level = isRecord(item)
-        ? (item as any).level ?? (item as any).offer_level ?? (item as any).type ?? (item as any).tier
-        : null;
-      pushOffer(level, item, idx);
-    });
-    return out;
-  }
-
-  // 2) Object shape
-  if (isRecord(selected)) {
-    const nested =
-      (Array.isArray((selected as any).offers) && (selected as any).offers) ||
-      (Array.isArray((selected as any).items) && (selected as any).items) ||
-      (Array.isArray((selected as any).pyramid) && (selected as any).pyramid) ||
-      null;
-
-    if (nested) {
-      nested.forEach((item: any, idx: number) => {
-        const level = isRecord(item) ? item.level ?? item.offer_level ?? item.type ?? item.tier : null;
-        pushOffer(level, item, idx);
-      });
-      return out;
-    }
-
-    // 3) keyed tiers
-    const KEY_TO_LEVEL: Array<[string, string]> = [
-      ["lead_magnet", "lead_magnet"],
-      ["leadmagnet", "lead_magnet"],
-      ["free", "lead_magnet"],
-      ["gratuit", "lead_magnet"],
-      ["low_ticket", "low_ticket"],
-      ["lowticket", "low_ticket"],
-      ["middle_ticket", "middle_ticket"],
-      ["mid_ticket", "middle_ticket"],
-      ["midticket", "middle_ticket"],
-      ["middle", "middle_ticket"],
-      ["high_ticket", "high_ticket"],
-      ["highticket", "high_ticket"],
-      ["high", "high_ticket"],
-    ];
-
-    const loweredKeys = Object.keys(selected).reduce<Record<string, string>>((acc, k) => {
-      acc[k.toLowerCase()] = k;
-      return acc;
-    }, {});
-
-    for (const [kLower, level] of KEY_TO_LEVEL) {
-      const realKey = loweredKeys[kLower];
-      if (!realKey) continue;
-      pushOffer(level, (selected as any)[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
-    }
-
-    // 4) last resort
-    if (out.length === 0) {
-      const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
-      pushOffer(lvl, selected, 0);
-    }
-  }
-
-  return out;
-}
-
-function formatPriceRange(offer: OfferOption): string | null {
-  const min = typeof offer.price_min === "number" ? offer.price_min : null;
-  const max = typeof offer.price_max === "number" ? offer.price_max : null;
-  if (min == null && max == null) return null;
-  if (min != null && max != null && min !== max) return `${min}€ – ${max}€`;
-  return `${(min ?? max) as number}€`;
-}
 
 export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: EmailFormProps) {
   const [emailType, setEmailType] = useState("newsletter");
@@ -309,95 +107,14 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
   useEffect(() => {
     let mounted = true;
-    const supabase = getSupabaseBrowserClient();
+    setOffersLoading(true);
 
-    const loadOffers = async () => {
-      setOffersLoading(true);
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    loadAllOffers(getSupabaseBrowserClient())
+      .then((result) => { if (mounted) setOffers(result); })
+      .catch(() => { if (mounted) setOffers([]); })
+      .finally(() => { if (mounted) setOffersLoading(false); });
 
-        if (!mounted) return;
-        if (!user?.id) {
-          setOffers([]);
-          return;
-        }
-
-        // 1) business_plan.plan_json.selected_pyramid
-        const { data: planRow, error: planErr } = await supabase
-          .from("business_plan")
-          .select("plan_json, updated_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!mounted) return;
-
-        if (!planErr && planRow?.plan_json) {
-          const planJson: any = (planRow as any).plan_json ?? null;
-          const selected =
-            planJson?.selected_pyramid ?? planJson?.pyramid?.selected_pyramid ?? planJson?.pyramid ?? planJson?.offer_pyramid ?? null;
-
-          if (selected) {
-            const fromPlan = normalizeSelectedPyramid(user.id, selected, safeStringOrNull((planRow as any)?.updated_at));
-            if (fromPlan.length) {
-              setOffers(fromPlan);
-              return;
-            }
-          }
-        }
-
-        // 2) fallback legacy: offer_pyramids (on prend le max d’infos utiles)
-        const { data, error } = await supabase
-          .from("offer_pyramids")
-          .select("id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
-          .order("is_flagship", { ascending: false })
-          .order("updated_at", { ascending: false })
-          .limit(100);
-
-        if (!mounted) return;
-        if (error) {
-          setOffers([]);
-          return;
-        }
-
-        const rows = Array.isArray(data) ? data : [];
-        const mapped: OfferOption[] = rows
-          .map((r: any) => {
-            const id = typeof r?.id === "string" ? r.id : "";
-            const name = typeof r?.name === "string" ? r.name : "";
-            if (!id || !name) return null;
-
-            return {
-              id,
-              name,
-              level: typeof r?.level === "string" ? r.level : "",
-              is_flagship: typeof r?.is_flagship === "boolean" ? r.is_flagship : null,
-              description: typeof r?.description === "string" ? r.description : null,
-              promise: typeof r?.promise === "string" ? r.promise : null,
-              price_min: toNumberOrNull(r?.price_min),
-              price_max: toNumberOrNull(r?.price_max),
-              main_outcome: typeof r?.main_outcome === "string" ? r.main_outcome : null,
-              format: typeof r?.format === "string" ? r.format : null,
-              delivery: typeof r?.delivery === "string" ? r.delivery : null,
-              updated_at: typeof r?.updated_at === "string" ? r.updated_at : null,
-            } as OfferOption;
-          })
-          .filter(Boolean) as OfferOption[];
-
-        setOffers(mapped);
-      } catch {
-        if (mounted) setOffers([]);
-      } finally {
-        if (mounted) setOffersLoading(false);
-      }
-    };
-
-    loadOffers();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const offersByLevel = useMemo(() => {
@@ -659,7 +376,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as any)} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pyramid" id="pyramid" />
-                    <Label htmlFor="pyramid">Pyramide</Label>
+                    <Label htmlFor="pyramid">Offre existante</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="manual" id="manual" />
@@ -677,7 +394,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                     <>
                       <Select value={offerId} onValueChange={setOfferId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Choisis une offre de ta pyramide" />
+                          <SelectValue placeholder="Choisis une offre existante" />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.entries(offersByLevel).map(([lvl, list]) => (
@@ -737,7 +454,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                     </>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Aucune offre trouvée dans la pyramide. Passe en mode Manuel.
+                      Aucune offre trouvée. Passe en mode Manuel ou ajoute tes offres dans les réglages.
                     </p>
                   )
                 ) : (
@@ -758,7 +475,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                 {emailType === "sales" && needsSalesOffer && (
                   <p className="text-xs text-muted-foreground">
-                    Sélectionne une offre (pyramide) ou renseigne au moins le nom de l&apos;offre.
+                    Sélectionne une offre existante ou renseigne au moins le nom de l&apos;offre.
                   </p>
                 )}
               </div>
@@ -782,7 +499,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 <RadioGroup value={onboardingSource} onValueChange={(v) => setOnboardingSource(v as any)} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pyramid" id="onb_pyramid" />
-                    <Label htmlFor="onb_pyramid">Pyramide</Label>
+                    <Label htmlFor="onb_pyramid">Offre existante</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="manual" id="onb_manual" />
@@ -851,7 +568,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                     </>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Aucun lead magnet détecté dans ta pyramide. Passe en mode Manuel.
+                      Aucun lead magnet trouvé. Passe en mode Manuel ou ajoute tes offres dans les réglages.
                     </p>
                   )
                 ) : (
@@ -871,7 +588,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                 {needsOnboardingLeadMagnet && (
                   <p className="text-xs text-muted-foreground">
-                    Choisis ton lead magnet (pyramide) pour des emails d&apos;onboarding plus alignés.
+                    Choisis ton lead magnet pour des emails d&apos;onboarding plus alignés.
                   </p>
                 )}
               </div>

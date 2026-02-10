@@ -14,7 +14,7 @@ import { downloadAsPdf } from "@/lib/content-utils";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
 
-type OfferMode = "from_pyramid" | "from_scratch";
+type OfferMode = "from_existing" | "from_scratch";
 type OfferType = "lead_magnet" | "paid_training";
 
 export type OfferFormProps = {
@@ -31,7 +31,7 @@ export type OfferFormProps = {
 export function OfferForm(props: OfferFormProps) {
   const { toast } = useToast();
 
-  const [mode, setMode] = useState<OfferMode>("from_pyramid");
+  const [mode, setMode] = useState<OfferMode>("from_existing");
   const [offerType, setOfferType] = useState<OfferType>("lead_magnet");
 
   const [title, setTitle] = useState("");
@@ -70,10 +70,10 @@ export function OfferForm(props: OfferFormProps) {
     setShowRawEditor(false);
 
     const payload =
-      mode === "from_pyramid"
+      mode === "from_existing"
         ? {
             type: "offer",
-            offerMode: "from_pyramid",
+            offerMode: "from_existing",
             offerType,
             sourceOfferId: selectedPyramidOffer?.id ?? undefined,
             theme: selectedPyramidOffer?.promise || selectedPyramidOffer?.name || "Offre",
@@ -142,13 +142,13 @@ export function OfferForm(props: OfferFormProps) {
             <Label>Mode de création</Label>
             <Tabs value={mode} onValueChange={(v) => setMode(v as OfferMode)}>
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="from_pyramid">À partir de la pyramide</TabsTrigger>
+                <TabsTrigger value="from_existing">À partir d'une offre existante</TabsTrigger>
                 <TabsTrigger value="from_scratch">À partir de zéro</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
-          {mode === "from_pyramid" ? (
+          {mode === "from_existing" ? (
             <div className="rounded-md border p-3 text-sm">
               <div className="font-medium mb-1">Offre détectée</div>
               {selectedPyramidOffer ? (
@@ -168,7 +168,7 @@ export function OfferForm(props: OfferFormProps) {
                 </div>
               ) : (
                 <div className="text-muted-foreground">
-                  Aucune offre trouvée dans ta pyramide pour ce type. Passe en “À partir de zéro”.
+                  Aucune offre trouvée. Passe en "À partir de zéro" ou ajoute tes offres dans les réglages.
                 </div>
               )}
             </div>
