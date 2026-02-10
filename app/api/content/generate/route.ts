@@ -1510,6 +1510,21 @@ export async function POST(req: Request) {
 
     const planOffers = extractOffersFromPlanJson(userId, planJson);
 
+    // Competitor analysis (optional, best-effort)
+    let competitorSummary = "";
+    try {
+      const { data: compAnalysis } = await supabase
+        .from("competitor_analyses")
+        .select("summary")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (compAnalysis?.summary) {
+        competitorSummary = compAnalysis.summary;
+      }
+    } catch (e) {
+      // non-blocking
+    }
+
     // Persona (optionnel)
     let personaContext: any = null;
     try {
@@ -1549,7 +1564,10 @@ export async function POST(req: Request) {
     const systemPrompt =
       "Tu es un expert francophone en copywriting, marketing et stratégie de contenu. " +
       "Tu dois produire des contenus très actionnables, concrets, et de haute qualité. " +
-      "Retourne uniquement le contenu final, sans explication, sans markdown.";
+      "Retourne uniquement le contenu final, sans explication, sans markdown." +
+      (competitorSummary
+        ? `\n\nCONTEXTE CONCURRENTIEL (à utiliser pour différencier le contenu) :\n${competitorSummary}`
+        : "");
 
     const batchCount = normalizeBatchCount(body.batchCount);
     const promoKind = normalizePromoKind(body.promoKind);

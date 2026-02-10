@@ -985,6 +985,29 @@ export async function POST(req: Request) {
     // Instead we generate an "offer audit & improvements" + "alternative angles" section (see no-offers mode prompt).
     const shouldAuditOffers = !isAffiliate && hasOffersEffective && !isSatisfiedWithOffers;
 
+    // 2b) competitor analysis (best-effort)
+    let competitorContext = "";
+    try {
+      const { data: competitorAnalysis } = await supabase
+        .from("competitor_analyses")
+        .select("summary, strengths, weaknesses, opportunities, positioning_matrix")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (competitorAnalysis?.summary) {
+        competitorContext = `
+ANALYSE CONCURRENTIELLE (fournie par l'utilisateur) :
+Synthese : ${competitorAnalysis.summary}
+${competitorAnalysis.strengths?.length ? `Forces vs concurrents : ${JSON.stringify(competitorAnalysis.strengths)}` : ""}
+${competitorAnalysis.weaknesses?.length ? `Faiblesses vs concurrents : ${JSON.stringify(competitorAnalysis.weaknesses)}` : ""}
+${competitorAnalysis.opportunities?.length ? `Opportunites : ${JSON.stringify(competitorAnalysis.opportunities)}` : ""}
+${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competitorAnalysis.positioning_matrix}` : ""}
+`.trim();
+      }
+    } catch (e) {
+      console.error("competitor analysis read failed (non-blocking):", e);
+    }
+
     // 3) ressources (best-effort)
     const { data: resources, error: resourcesError } = await supabase.from("resources").select("*");
     if (resourcesError) console.error("Error loading resources:", resourcesError);
@@ -1196,8 +1219,9 @@ ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 Chunks pertinents (extraits) :
 ${JSON.stringify(limitedChunks ?? [], null, 2)}
 
-Contraintes :
+${competitorContext ? competitorContext + "\n" : ""}Contraintes :
 - Génère 3 offres complètes.
+${competitorContext ? "- Tiens compte de l'analyse concurrentielle pour proposer des offres différenciantes." : ""}
 - Chaque offre contient : lead_magnet, low_ticket, high_ticket.
 - Pour chaque offre :
   - title, format, price (number), composition, purpose, insight
@@ -1432,7 +1456,7 @@ ${JSON.stringify(
   2,
 )}
 
-RESSOURCES INTERNES (résumé)
+${competitorContext ? competitorContext + "\n" : ""}RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 
 CHUNKS PERTINENTS (extraits)
@@ -1442,6 +1466,7 @@ CONTRAINTES TASKS
 - Minimum 6 tâches par timeframe (d30/d60/d90).
 - due_date valides et réparties.
 - Focus = 1 levier concret.
+${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}
 `.trim();
 
       const fullAiResponse = await ai.chat.completions.create({
@@ -1712,7 +1737,7 @@ ${JSON.stringify(
 OFFRE CHOISIE
 ${JSON.stringify(selectedOffers, null, 2)}
 
-RESSOURCES INTERNES (résumé)
+${competitorContext ? competitorContext + "\n" : ""}RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
 
 CHUNKS PERTINENTS (extraits)
@@ -1721,7 +1746,8 @@ ${JSON.stringify(selectedChunks ?? [], null, 2)}
 CONSINGNES
 - Min 6 tâches par timeframe.
 - due_date YYYY-MM-DD.
-- Focus = 1 levier concret (tunnel lead magnet → low-ticket → high-ticket).`.trim();
+- Focus = 1 levier concret (tunnel lead magnet → low-ticket → high-ticket).
+${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
       model: "gpt-4.1",

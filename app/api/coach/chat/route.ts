@@ -811,7 +811,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes] = await Promise.all([
+    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes] = await Promise.all([
       supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle(),
       supabase
@@ -826,6 +826,11 @@ export async function POST(req: NextRequest) {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30),
+      supabase
+        .from("competitor_analyses")
+        .select("summary, strengths, weaknesses, opportunities")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     const living = summarizeLivingContext({
@@ -885,6 +890,22 @@ Rules:
       topicHints.length ? `Topic hints:\n- ${topicHints.join("\n- ")}` : "Topic hints: (none)",
       "",
       knowledgeBlock ? knowledgeBlock : "TIPOTE-KNOWLEDGE: (none)",
+      "",
+      competitorRes.data?.summary
+        ? `COMPETITOR ANALYSIS:\n${competitorRes.data.summary}\n${
+            competitorRes.data.strengths?.length
+              ? `Strengths: ${JSON.stringify(competitorRes.data.strengths)}`
+              : ""
+          }\n${
+            competitorRes.data.weaknesses?.length
+              ? `Weaknesses: ${JSON.stringify(competitorRes.data.weaknesses)}`
+              : ""
+          }\n${
+            competitorRes.data.opportunities?.length
+              ? `Opportunities: ${JSON.stringify(competitorRes.data.opportunities)}`
+              : ""
+          }`
+        : "COMPETITOR ANALYSIS: (none)",
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",

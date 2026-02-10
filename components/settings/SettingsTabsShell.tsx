@@ -17,9 +17,12 @@ import {
   RotateCcw,
   Plus,
   Trash2,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
+import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -230,6 +233,54 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         toast({ title: "Impossible d'enregistrer", description: e?.message ?? "Erreur", variant: "destructive" });
       }
     });
+  };
+
+  // -------------------------
+  // Persona enrichment
+  // -------------------------
+  const [enriching, setEnriching] = useState(false);
+
+  const enrichPersona = async () => {
+    setEnriching(true);
+    try {
+      const res = await fetch("/api/persona/enrich", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as any;
+      if (!json?.ok) {
+        if (json?.error === "NO_CREDITS") {
+          toast({
+            title: "Crédits insuffisants",
+            description: "L'enrichissement du persona coûte 1 crédit.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(json?.error || "Erreur");
+      }
+
+      if (json.persona_summary) {
+        setMission(json.persona_summary);
+      }
+      if (json.niche_summary) {
+        setNiche(json.niche_summary);
+      }
+
+      // Update initialProfile to reflect new values
+      setInitialProfile((prev) => ({
+        ...prev,
+        niche: json.niche_summary || prev?.niche,
+        mission: json.persona_summary || prev?.mission,
+      }));
+
+      toast({ title: "Persona enrichi avec succès" });
+    } catch (e: any) {
+      toast({
+        title: "Erreur lors de l'enrichissement",
+        description: e?.message ?? "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setEnriching(false);
+    }
   };
 
   // -------------------------
@@ -465,11 +516,26 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
           </div>
 
-          <Button variant="outline" className="mt-4" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
-            <Save className="w-4 h-4 mr-2" />
-            {pendingProfile ? "Mise à jour…" : "Mettre à jour"}
-          </Button>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Button variant="outline" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
+              <Save className="w-4 h-4 mr-2" />
+              {pendingProfile ? "Mise à jour…" : "Mettre à jour"}
+            </Button>
+            <Button variant="outline" onClick={enrichPersona} disabled={enriching}>
+              {enriching ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              {enriching ? "Enrichissement…" : "Enrichir avec l'IA"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            L&apos;enrichissement IA utilise vos données d&apos;onboarding, l&apos;analyse concurrentielle et les conversations avec le coach pour améliorer votre persona. Coût : 1 crédit.
+          </p>
         </Card>
+
+        <CompetitorAnalysisSection />
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
