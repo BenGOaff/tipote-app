@@ -7,7 +7,7 @@
 // is injected in /app/api/content/generate/route.ts
 
 export type FunnelPage = "capture" | "sales";
-export type FunnelMode = "from_offer" | "from_pyramid" | "from_scratch";
+export type FunnelMode = "from_offer" | "from_existing" | "from_scratch";
 
 export type FunnelOfferContext = {
   id: string;
@@ -96,7 +96,7 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   }
   lines.push("");
 
-  if ((params.mode === "from_offer" || params.mode === "from_pyramid") && params.offer) {
+  if ((params.mode === "from_offer" || params.mode === "from_existing") && params.offer) {
     lines.push("OFFRE (source) :");
     lines.push(oneLine(JSON.stringify(params.offer)));
     lines.push("");
@@ -130,7 +130,7 @@ function buildLegacyTextPrompt(params: FunnelPromptParams): string {
   lines.push("IMPORTANT: Retourne uniquement le contenu final, sans explication, sans markdown.");
   lines.push("");
 
-  if ((params.mode === "from_offer" || params.mode === "from_pyramid") && params.offer) {
+  if ((params.mode === "from_offer" || params.mode === "from_existing") && params.offer) {
     lines.push("Offre (source):");
     lines.push(JSON.stringify(params.offer, null, 0));
     lines.push("");

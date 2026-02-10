@@ -183,7 +183,7 @@ const BOOT_STEPS: BootStep[] = [
 ];
 
 
-/** ✅ Offer pyramids (uniquement si PAS d’offre et PAS affiliation) */
+/** ✅ Offer sets (uniquement si PAS d'offre et PAS affiliation) */
 type Offer = {
   title?: string;
   format?: string;
@@ -193,7 +193,7 @@ type Offer = {
   insight?: string;
 };
 
-type OfferPyramid = {
+type OfferSet = {
   id?: string;
   name?: string;
   strategy_summary?: string;
@@ -202,10 +202,10 @@ type OfferPyramid = {
   high_ticket?: Offer | null;
 };
 
-type OfferPyramidState = {
+type OfferSetState = {
   shouldGeneratePyramids: boolean;
   offerMode?: string | null;
-  pyramids: OfferPyramid[];
+  offerSets: OfferSet[];
   selectedIndex: number | null;
 };
 
@@ -215,9 +215,9 @@ function formatPrice(p?: number) {
   return `${Math.round(p)}€`;
 }
 
-function pyramidTitle(p: OfferPyramid, idx: number) {
+function offerSetTitle(p: OfferSet, idx: number) {
   const name = (p?.name ?? "").trim();
-  return name || `Pyramide ${idx + 1}`;
+  return name || `Option ${idx + 1}`;
 }
 
 export function OnboardingChatV2(props: OnboardingChatV2Props) {
@@ -260,22 +260,22 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const [recapProfile, setRecapProfile] = useState<ProfileRow>(null);
   const [recapSummary, setRecapSummary] = useState<string>("");
 
-  // ✅ pyramids modal
-  const [showPyramids, setShowPyramids] = useState(false);
-  const [pyramidsState, setPyramidsState] = useState<OfferPyramidState>({
+  // ✅ offer sets modal
+  const [showOfferSets, setShowOfferSets] = useState(false);
+  const [offerSetsState, setOfferSetsState] = useState<OfferSetState>({
     shouldGeneratePyramids: false,
     offerMode: null,
-    pyramids: [],
+    offerSets: [],
     selectedIndex: null,
   });
-  const [pyramidChoice, setPyramidChoice] = useState<number>(0);
-  const pyramidsResolverRef = useRef<((idx: number) => void) | null>(null);
+  const [offerSetChoice, setOfferSetChoice] = useState<number>(0);
+  const offerSetsResolverRef = useRef<((idx: number) => void) | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, isAssistantTyping, isFinalizing, showPyramids]);
+  }, [messages.length, isAssistantTyping, isFinalizing, showOfferSets]);
 
   useEffect(() => {
     try {
@@ -337,13 +337,13 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     }
   }
 
-  async function loadOfferPyramidsBestEffort(): Promise<OfferPyramidState | null> {
+  async function loadOfferSetsBestEffort(): Promise<OfferSetState | null> {
     try {
       const res = await getJSON<any>("/api/strategy/offer-pyramid");
-      const state: OfferPyramidState = {
+      const state: OfferSetState = {
         shouldGeneratePyramids: Boolean(res?.shouldGeneratePyramids ?? res?.should_generate_pyramids ?? false),
         offerMode: (res?.offerMode ?? res?.offer_mode ?? null) as any,
-        pyramids: Array.isArray(res?.offerPyramids ?? res?.offer_pyramids)
+        offerSets: Array.isArray(res?.offerPyramids ?? res?.offer_pyramids)
           ? (res?.offerPyramids ?? res?.offer_pyramids)
           : [],
         selectedIndex:
@@ -357,37 +357,37 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     }
   }
 
-  async function ensureOfferPyramidsExist(): Promise<OfferPyramidState | null> {
-    let st = await loadOfferPyramidsBestEffort();
+  async function ensureOfferSetsExist(): Promise<OfferSetState | null> {
+    let st = await loadOfferSetsBestEffort();
 
-    // Si on DOIT générer des pyramides mais qu'il n'y en a pas => on génère (idempotent backend)
-    if (st?.shouldGeneratePyramids && (st.pyramids?.length ?? 0) < 1) {
+    // Si on DOIT générer des offres mais qu'il n'y en a pas => on génère (idempotent backend)
+    if (st?.shouldGeneratePyramids && (st.offerSets?.length ?? 0) < 1) {
       try {
         await postJSON<any>("/api/strategy/offer-pyramid", {});
       } catch {
         // ignore
       }
-      st = await loadOfferPyramidsBestEffort();
+      st = await loadOfferSetsBestEffort();
     }
 
     return st;
   }
 
-  function waitForPyramidChoice(): Promise<number> {
+  function waitForOfferSetChoice(): Promise<number> {
     return new Promise((resolve) => {
-      pyramidsResolverRef.current = resolve;
+      offerSetsResolverRef.current = resolve;
     });
   }
 
-  function confirmPyramidChoice() {
-    const idx = pyramidChoice;
-    const resolver = pyramidsResolverRef.current;
-    pyramidsResolverRef.current = null;
-    setShowPyramids(false);
+  function confirmOfferSetChoice() {
+    const idx = offerSetChoice;
+    const resolver = offerSetsResolverRef.current;
+    offerSetsResolverRef.current = null;
+    setShowOfferSets(false);
     if (typeof resolver === "function") resolver(idx);
   }
 
-  // ✅ FINALIZE — pyramides (si needed) -> selection -> full strategy -> sync tasks -> /app
+  // ✅ FINALIZE — offres (si needed) -> selection -> full strategy -> sync tasks -> /app
   const finalize = async () => {
     if (isFinalizing) return;
 
@@ -417,16 +417,16 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      // Step 1bis: pyramides uniquement si nécessaire
-      const st = await ensureOfferPyramidsExist();
+      // Step 1bis: offres uniquement si nécessaire
+      const st = await ensureOfferSetsExist();
       if (st?.shouldGeneratePyramids) {
-        const pyramids = st?.pyramids ?? [];
-        if (pyramids.length >= 1) {
-          setPyramidsState(st);
-          setPyramidChoice(typeof st.selectedIndex === "number" ? st.selectedIndex : 0);
-          setShowPyramids(true);
+        const offerSets = st?.offerSets ?? [];
+        if (offerSets.length >= 1) {
+          setOfferSetsState(st);
+          setOfferSetChoice(typeof st.selectedIndex === "number" ? st.selectedIndex : 0);
+          setShowOfferSets(true);
 
-          const chosen = await waitForPyramidChoice();
+          const chosen = await waitForOfferSetChoice();
 
           // patch selectedIndex
           try {
@@ -546,36 +546,36 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   // Recap values (best-effort — kept for potential future use)
 
-  const pyramids = pyramidsState?.pyramids ?? [];
+  const offerSets = offerSetsState?.offerSets ?? [];
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6">
-      {/* ✅ Pyramids modal (UNIQUEMENT si shouldGeneratePyramids) */}
+      {/* ✅ Offer sets modal (UNIQUEMENT si shouldGeneratePyramids) */}
       <Dialog
-        open={showPyramids}
+        open={showOfferSets}
         onOpenChange={(v) => {
           // pas de fermeture sauvage : on veut un choix
           if (!v) return;
-          setShowPyramids(v);
+          setShowOfferSets(v);
         }}
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Choisis ta pyramide d’offres</DialogTitle>
+            <DialogTitle>Choisis tes offres</DialogTitle>
             <DialogDescription>
               On a généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
             </DialogDescription>
           </DialogHeader>
 
-          {pyramids.length < 1 ? (
+          {offerSets.length < 1 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Génération des pyramides…
+              Chargement des offres…
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {pyramids.slice(0, 3).map((p, idx) => {
-                const selected = pyramidChoice === idx;
+              {offerSets.slice(0, 3).map((p, idx) => {
+                const selected = offerSetChoice === idx;
                 const lead = p?.lead_magnet ?? null;
                 const low = p?.low_ticket ?? null;
                 const high = p?.high_ticket ?? null;
@@ -584,13 +584,13 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                   <button
                     key={p?.id ?? idx}
                     type="button"
-                    onClick={() => setPyramidChoice(idx)}
+                    onClick={() => setOfferSetChoice(idx)}
                     className={cn(
                       "text-left rounded-2xl border p-4 transition hover:shadow-sm",
                       selected ? "border-primary ring-2 ring-primary/20" : "border-border"
                     )}
                   >
-                    <div className="text-base font-semibold">{pyramidTitle(p, idx)}</div>
+                    <div className="text-base font-semibold">{offerSetTitle(p, idx)}</div>
                     {p?.strategy_summary ? (
                       <div className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap">
                         {String(p.strategy_summary)}
@@ -634,7 +634,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           )}
 
           <DialogFooter className="gap-2">
-            <Button type="button" onClick={confirmPyramidChoice} disabled={pyramids.length < 1}>
+            <Button type="button" onClick={confirmOfferSetChoice} disabled={offerSets.length < 1}>
               Continuer avec cette stratégie
             </Button>
           </DialogFooter>
@@ -832,7 +832,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
-            disabled={isSending || isDone || isFinalizing || showRecap || showPyramids}
+            disabled={isSending || isDone || isFinalizing || showRecap || showOfferSets}
             className="min-h-[90px]"
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

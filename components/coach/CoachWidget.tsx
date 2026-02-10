@@ -19,7 +19,7 @@ type CoachMessage = {
 
 type CoachSuggestion = {
   id: string;
-  type: "update_offer_pyramid" | "update_tasks" | "open_tipote_tool";
+  type: "update_offers" | "update_tasks" | "open_tipote_tool";
   title: string;
   description?: string;
   payload?: Record<string, unknown>;
@@ -200,7 +200,7 @@ export function CoachWidget() {
         tasks: "/projects",
         project_tasks: "/projects",
         strategy: "/strategy",
-        offer_pyramid: "/strategy/offers",
+        offers: "/strategy/offers",
       };
       if (map[key]) return map[key];
     }
@@ -270,8 +270,8 @@ export function CoachWidget() {
       const msg =
         s.type === "update_tasks"
           ? "✅ Ok, j’ai mis à jour la tâche."
-          : s.type === "update_offer_pyramid"
-            ? "✅ Ok, j’ai mis à jour ta pyramide d’offre."
+          : s.type === "update_offers"
+            ? "✅ Ok, j'ai mis à jour tes offres."
             : "✅ Ok.";
 
       setMessages((m) => [...m, { id: assistantLocalId, role: "assistant", content: msg, createdAt: Date.now() }]);

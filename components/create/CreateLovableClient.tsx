@@ -123,7 +123,7 @@ const quickTemplates = [
 type ContentType = (typeof contentTypes)[number]["id"] | null;
 type AnyParams = Record<string, any>;
 
-type PyramidOfferLite = {
+type SourceOfferLite = {
   id: string;
   name: string | null;
   level?: string | null;
@@ -165,11 +165,11 @@ function safeObj(v: unknown): Record<string, any> | null {
 }
 
 /**
- * Normalise plan_json.selected_pyramid (legacy + new shapes) vers une liste d'offres.
+ * Normalise plan_json.selected_pyramid (legacy DB key) vers une liste d'offres existantes.
  * Objectif: ne jamais dépendre d'un shape rigide (keys / array / nested).
  */
-function normalizeSelectedPyramid(userId: string, selected: any, updatedAt: string | null): PyramidOfferLite[] {
-  const out: PyramidOfferLite[] = [];
+function normalizeSelectedOffers(userId: string, selected: any, updatedAt: string | null): SourceOfferLite[] {
+  const out: SourceOfferLite[] = [];
 
   const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
     const level = safeString(levelRaw) ?? null;
@@ -416,19 +416,19 @@ export default function CreateLovableClient() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [pyramidOffers, setPyramidOffers] = useState<PyramidOfferLite[]>([]);
-  const [pyramidLeadMagnet, setPyramidLeadMagnet] = useState<PyramidOfferLite | null>(null);
-  const [pyramidPaidOffer, setPyramidPaidOffer] = useState<PyramidOfferLite | null>(null);
+  const [existingOffers, setPyramidOffers] = useState<SourceOfferLite[]>([]);
+  const [sourceLeadMagnet, setPyramidLeadMagnet] = useState<SourceOfferLite | null>(null);
+  const [sourcePaidOffer, setPyramidPaidOffer] = useState<SourceOfferLite | null>(null);
 
   // ✅ PATCH IMPORTANT :
-  // On lit d’abord business_plan.plan_json.selected_pyramid (source de vérité), en supportant les shapes legacy,
-  // puis fallback sur offer_pyramids (legacy).
-  // + abonnement realtime => si user modifie sa pyramide, c'est reflété sans refresh.
+  // On lit d'abord business_plan.plan_json.selected_pyramid (DB key legacy, source de vérité),
+  // en supportant les shapes legacy, puis fallback sur offer_pyramids (table legacy).
+  // + abonnement realtime => si user modifie ses offres, c'est reflété sans refresh.
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let cancelled = false;
 
-    const computeFromOffers = (offers: PyramidOfferLite[]) => {
+    const computeFromOffers = (offers: SourceOfferLite[]) => {
       const normalized = (offers ?? []).filter((o) => o && o.name);
       setPyramidOffers(normalized);
 
@@ -456,7 +456,7 @@ export default function CreateLovableClient() {
         if (cancelled) return;
         if (userErr || !user?.id) return;
 
-        // 1) Source de vérité : business_plan.plan_json.selected_pyramid
+        // 1) Source de vérité : business_plan.plan_json.selected_pyramid (DB key legacy)
         const { data: planRow, error: planErr } = await supabase
           .from("business_plan")
           .select("plan_json, updated_at")
@@ -468,7 +468,7 @@ export default function CreateLovableClient() {
           const selected = planJson?.selected_pyramid ?? planJson?.pyramid?.selected_pyramid ?? planJson?.pyramid ?? null;
 
           if (selected) {
-            const offersFromPlan = normalizeSelectedPyramid(
+            const offersFromPlan = normalizeSelectedOffers(
               user.id,
               selected,
               safeString((planRow as any)?.updated_at),
@@ -480,7 +480,7 @@ export default function CreateLovableClient() {
           }
         }
 
-        // 2) Fallback legacy : offer_pyramids
+        // 2) Fallback legacy : offer_pyramids (table legacy)
         const { data, error } = await supabase
           .from("offer_pyramids")
           .select("id,user_id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
@@ -491,7 +491,7 @@ export default function CreateLovableClient() {
         if (error) return;
 
         const offers = (data as any[] | null) ?? [];
-        const normalized: PyramidOfferLite[] = offers.map((o) => ({
+        const normalized: SourceOfferLite[] = offers.map((o) => ({
           id: String(o.id),
           name: (o.name ?? null) as any,
           level: (o.level ?? null) as any,
@@ -525,7 +525,7 @@ export default function CreateLovableClient() {
 
       // Realtime: si l'utilisateur modifie business_plan ou offer_pyramids, on reload.
       channel = supabase
-        .channel(`pyramid-offers:${user.id}`)
+        .channel(`existing-offers:${user.id}`)
         .on("postgres_changes", { event: "*", schema: "public", table: "business_plan", filter: `user_id=eq.${user.id}` }, () => {
           load();
         })
@@ -659,8 +659,8 @@ export default function CreateLovableClient() {
 
     switch (selectedType) {
       case "post":
-        // ✅ IMPORTANT: PostForm gère lui-même le chargement des offres/pyramide.
-        // On ne passe pas pyramidOffers ici -> sinon TS2322 (prop inexistante).
+        // ✅ IMPORTANT: PostForm gère lui-même le chargement des offres.
+        // On ne passe pas existingOffers ici -> sinon TS2322 (prop inexistante).
         return <PostForm {...common} />;
       case "email":
         return <EmailForm {...common} />;
@@ -669,14 +669,14 @@ export default function CreateLovableClient() {
       case "video":
         return <VideoForm {...common} />;
       case "offer":
-        return <OfferForm {...common} pyramidLeadMagnet={pyramidLeadMagnet} pyramidPaidOffer={pyramidPaidOffer} />;
+        return <OfferForm {...common} sourceLeadMagnet={sourceLeadMagnet} sourcePaidOffer={sourcePaidOffer} />;
       case "funnel":
-        // ✅ FunnelForm n'accepte que pyramidOffers (dropdown offres existantes)
-        return <FunnelForm {...common} pyramidOffers={pyramidOffers} />;
+        // ✅ FunnelForm accepte existingOffers (dropdown offres existantes)
+        return <FunnelForm {...common} existingOffers={existingOffers} />;
       default:
         return null;
     }
-  }, [selectedType, isGenerating, isSaving, pyramidOffers, pyramidLeadMagnet, pyramidPaidOffer]);
+  }, [selectedType, isGenerating, isSaving, existingOffers, sourceLeadMagnet, sourcePaidOffer]);
 
   return (
     <SidebarProvider>

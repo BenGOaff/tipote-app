@@ -6,9 +6,9 @@
 // Sortie : TEXTE BRUT (plain text), prêt à être utilisé
 
 export type OfferType = "lead_magnet" | "paid_training";
-export type OfferMode = "from_pyramid" | "from_scratch";
+export type OfferMode = "from_existing" | "from_scratch";
 
-export type OfferPyramidContext = {
+export type OfferSourceContext = {
   id?: string;
   name?: string | null;
   level?: string | null;
@@ -33,8 +33,8 @@ export type OfferPromptParams = {
   // ✅ Lead magnet (zéro): format demandé côté UI
   leadMagnetFormat?: string;
 
-  // ✅ Contexte pyramide (si offerMode === from_pyramid)
-  sourceOffer?: OfferPyramidContext | null;
+  // ✅ Contexte offre existante (si offerMode === from_existing)
+  sourceOffer?: OfferSourceContext | null;
 
   // Contexte enrichi (injecté automatiquement par route.ts)
   language?: string; // défaut fr
@@ -58,7 +58,7 @@ function pickString(v: any): string {
   return String(v).trim();
 }
 
-function inferOfferNameFromSource(sourceOffer: OfferPyramidContext | null): string {
+function inferOfferNameFromSource(sourceOffer: OfferSourceContext | null): string {
   const name = pickString(sourceOffer?.name);
   if (name) return name;
   // fallback doux: essaye description/promise
@@ -66,13 +66,13 @@ function inferOfferNameFromSource(sourceOffer: OfferPyramidContext | null): stri
   if (p) return p.slice(0, 80);
   const d = pickString(sourceOffer?.description);
   if (d) return d.slice(0, 80);
-  return "Offre de la pyramide";
+  return "Offre existante";
 }
 
 export function buildOfferPrompt(params: OfferPromptParams): string {
   const lang = safe(params.language) || "fr";
   const offerType = params.offerType;
-  const mode: OfferMode = params.offerMode === "from_pyramid" ? "from_pyramid" : "from_scratch";
+  const mode: OfferMode = params.offerMode === "from_existing" ? "from_existing" : "from_scratch";
 
   const theme = safe(params.theme);
   const leadMagnetFormat = safe(params.leadMagnetFormat);
@@ -101,7 +101,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "- Persona client idéal: douleurs, désirs, objections, vocabulaire.",
     "- Business profile + business plan (si disponibles).",
     "- Ressources Tipote Knowledge (si présentes).",
-    "- Si une offre source (pyramide) est fournie: tu DOIS t’y aligner et ne pas inventer son existence.",
+    "- Si une offre source (existante) est fournie: tu DOIS t'y aligner et ne pas inventer son existence.",
   ].join("\n");
 
   const strategyRules = [
@@ -113,10 +113,10 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
   ].join("\n");
 
   const sourceBlock =
-    mode === "from_pyramid"
+    mode === "from_existing"
       ? [
-          "OFFRE SOURCE (PYRAMIDE) :",
-          "Tu disposes d'une offre existante issue de la pyramide. Tu dois la développer et la rendre exploitable.",
+          "OFFRE SOURCE (EXISTANTE) :",
+          "Tu disposes d'une offre existante. Tu dois la développer et la rendre exploitable.",
           "Données source (JSON):",
           compactJson(sourceOffer),
           "",
@@ -124,7 +124,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
           "- Ne demande pas le thème: il est déduit de l'offre source.",
           "- Ne renomme pas arbitrairement l'offre source si son nom est fourni.",
           "- Si un champ manque, tu complètes intelligemment en restant cohérent avec persona + business plan + knowledge.",
-          "- Ta sortie doit être alignée avec la logique de la pyramide (lead magnet -> offre payante, etc.).",
+          "- Ta sortie doit être alignée avec la logique des offres (lead magnet -> offre payante, etc.).",
         ].join("\n")
       : "";
 
@@ -133,9 +133,9 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
      ========================= */
   if (offerType === "lead_magnet") {
     const lmModeInstructions =
-      mode === "from_pyramid"
+      mode === "from_existing"
         ? [
-            "MODE : CRÉER LE LEAD MAGNET DE LA PYRAMIDE",
+            "MODE : CRÉER LE LEAD MAGNET À PARTIR D'UNE OFFRE EXISTANTE",
             "Tu produis le lead magnet final en te basant sur l'offre source (nom / promesse / but / contenu implicite).",
             "Tu optimises la conversion (capture email) ET la cohérence avec l'offre payante à venir.",
           ].join("\n")
@@ -147,7 +147,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
           ].join("\n");
 
     const lmInputs =
-      mode === "from_pyramid"
+      mode === "from_existing"
         ? [
             "INFOS CLÉS À UTILISER :",
             `- Nom (si fourni) : ${inferOfferNameFromSource(sourceOffer)}`,
@@ -197,8 +197,8 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
       "",
       strategyRules,
       "",
-      mode === "from_pyramid" ? sourceBlock : "",
-      mode === "from_pyramid" ? "" : "",
+      mode === "from_existing" ? sourceBlock : "",
+      mode === "from_existing" ? "" : "",
       lmModeInstructions,
       "",
       lmInputs,
@@ -221,10 +221,10 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
      OFFRE PAYANTE / FORMATION
      ========================= */
   const ptModeInstructions =
-    mode === "from_pyramid"
+    mode === "from_existing"
       ? [
-          "MODE : DÉVELOPPER L'OFFRE PAYANTE DE LA PYRAMIDE",
-          "Tu développes l'offre existante à partir des infos de la pyramide (sans réinventer l'offre).",
+          "MODE : DÉVELOPPER L'OFFRE PAYANTE À PARTIR D'UNE OFFRE EXISTANTE",
+          "Tu développes l'offre existante à partir des infos fournies (sans réinventer l'offre).",
           "Tu renforces: promesse, différenciation, contenu, pédagogie, exécution, valeur perçue, pricing, preuves, objections.",
         ].join("\n")
       : [
@@ -235,7 +235,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
         ].join("\n");
 
   const ptInputs =
-    mode === "from_pyramid"
+    mode === "from_existing"
       ? [
           "INFOS OFFRE SOURCE À UTILISER :",
           `- Nom (si fourni) : ${inferOfferNameFromSource(sourceOffer)}`,
@@ -246,7 +246,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
           `- Delivery : ${pickString(sourceOffer?.delivery) || "à préciser"}`,
           `- Prix min/max : ${sourceOffer?.price_min ?? "?"} / ${sourceOffer?.price_max ?? "?"}`,
           "",
-          "RÈGLE : si le prix est absent, propose une fourchette cohérente avec le marché ET avec la pyramide.",
+          "RÈGLE : si le prix est absent, propose une fourchette cohérente avec le marché ET avec les autres offres.",
         ].join("\n")
       : [
           "SUJET DE L'OFFRE (OBLIGATOIRE) :",
@@ -294,8 +294,8 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "",
     strategyRules,
     "",
-    mode === "from_pyramid" ? sourceBlock : "",
-    mode === "from_pyramid" ? "" : "",
+    mode === "from_existing" ? sourceBlock : "",
+    mode === "from_existing" ? "" : "",
     ptModeInstructions,
     "",
     ptInputs,

@@ -9,8 +9,8 @@
 // ✅ Emails: support nouveau modèle via buildEmailPrompt.
 // ✅ Articles: support 2 étapes via buildArticlePrompt.
 // ✅ Vidéos: support prompt builder via buildVideoScriptPrompt.
-// ✅ Offres: support lead magnet + offre payante via buildOfferPrompt (mode from_pyramid / from_scratch)
-// ✅ Funnels: page capture / vente via buildFunnelPrompt (mode from_offer / from_scratch) — legacy: from_pyramid
+// ✅ Offres: support lead magnet + offre payante via buildOfferPrompt (mode from_existing / from_scratch)
+// ✅ Funnels: page capture / vente via buildFunnelPrompt (mode from_offer / from_scratch)
 // ✅ Claude uniquement (owner key): jamais de clé user côté API.
 
 import { NextResponse } from "next/server";
@@ -27,7 +27,7 @@ import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
-import type { OfferMode, OfferPyramidContext, OfferType } from "@/lib/prompts/content/offer";
+import type { OfferMode, OfferSourceContext, OfferType } from "@/lib/prompts/content/offer";
 import { renderTemplateHtml } from "@/lib/templates/render";
 import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
 
@@ -72,7 +72,7 @@ type Body = {
 
   // funnel
   funnelPage?: "capture" | "sales";
-  funnelMode?: "from_offer" | "from_pyramid" | "from_scratch" | "from_existing" | "from_existing_offer";
+  funnelMode?: "from_offer" | "from_existing" | "from_scratch" | "from_existing_offer";
   funnelOfferId?: string;
   urgency?: string;
   guarantee?: string;
@@ -89,7 +89,7 @@ type Body = {
   };
 
   // offer
-  offerMode?: "from_pyramid" | "from_scratch";
+  offerMode?: "from_existing" | "from_scratch";
   offerType?: "lead_magnet" | "paid_training";
   leadMagnetFormat?: string;
   sourceOfferId?: string;
@@ -787,15 +787,16 @@ async function getKnowledgeSnippets(args: {
 }
 
 /** ---------------------------
- * Offer pyramids helpers (fail-open)
+ * Offer helpers (fail-open)
  * -------------------------- */
 
-const OFFER_PYRAMID_SELECT =
+const OFFER_TABLE_SELECT =
   "id,name,level,description,promise,price_min,price_max,main_outcome,format,delivery,is_flagship,updated_at";
 
 function normalizeOfferMode(raw: unknown): OfferMode {
   const s = safeString(raw).trim().toLowerCase();
-  return s === "from_pyramid" ? "from_pyramid" : "from_scratch";
+  if (s === "from_existing" || s === "from_pyramid") return "from_existing"; // from_pyramid = legacy compat
+  return "from_scratch";
 }
 
 function normalizeOfferType(raw: unknown): OfferType | null {
@@ -846,11 +847,11 @@ function safeStringOrNull(v: unknown): string | null {
 }
 
 /**
- * ✅ Source de vérité "temps réel" : business_plan.plan_json.selected_pyramid
+ * ✅ Source de vérité "temps réel" : business_plan.plan_json (DB keys legacy)
  * Supporte plusieurs shapes (legacy/new) sans dépendre d'un UUID.
  */
-function extractOffersFromPlanJson(userId: string, planJson: any): OfferPyramidContext[] {
-  const out: OfferPyramidContext[] = [];
+function extractOffersFromPlanJson(userId: string, planJson: any): OfferSourceContext[] {
+  const out: OfferSourceContext[] = [];
   if (!planJson) return out;
 
   const selected =
@@ -975,11 +976,11 @@ function extractOffersFromPlanJson(userId: string, planJson: any): OfferPyramidC
 }
 
 /**
- * ✅ Offres "existantes" (hors pyramide) — stockées dans business_profiles.offers (new onboarding).
+ * ✅ Offres "existantes" — stockées dans business_profiles.offers (new onboarding).
  * - Fail-open: accepte array JSON, string JSON, ou shape legacy.
- * - IDs: si absent, on génère un id stable basé sur l’index.
+ * - IDs: si absent, on génère un id stable basé sur l'index.
  */
-function parseOffersFromBusinessProfile(userId: string, profile: any): OfferPyramidContext[] {
+function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSourceContext[] {
   const raw = (profile as any)?.offers ?? (profile as any)?.offers_json ?? (profile as any)?.offer_list ?? null;
 
   let arr: any[] = [];
@@ -1001,7 +1002,7 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferPyra
     if (Array.isArray(nested)) arr = nested;
   }
 
-  const out: OfferPyramidContext[] = [];
+  const out: OfferSourceContext[] = [];
   for (let i = 0; i < arr.length; i++) {
     const o = arr[i];
     if (!o || typeof o !== "object" || Array.isArray(o)) continue;
@@ -1081,20 +1082,18 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferPyra
 type FunnelMode = "from_offer" | "from_scratch";
 
 /**
- * ✅ Funnel mode (nouvel onboarding)
- * - from_pyramid (legacy) -> from_offer
- * - from_offer / from_existing / from_existing_offer -> from_offer
+ * ✅ Funnel mode
+ * - from_offer / from_existing / from_existing_offer / from_pyramid (legacy) -> from_offer
  * - from_scratch -> from_scratch
  */
 function normalizeFunnelMode(raw: unknown): FunnelMode {
   const s = safeString(raw).trim().toLowerCase();
   if (s === "from_scratch") return "from_scratch";
-  if (s === "from_offer" || s === "from_existing" || s === "from_existing_offer") return "from_offer";
-  if (s === "from_pyramid") return "from_offer"; // legacy
+  if (s === "from_offer" || s === "from_existing" || s === "from_existing_offer" || s === "from_pyramid") return "from_offer";
   return "from_scratch";
 }
 
-function findOfferByIdOrName(offers: OfferPyramidContext[], idOrName: string): OfferPyramidContext | null {
+function findOfferByIdOrName(offers: OfferSourceContext[], idOrName: string): OfferSourceContext | null {
   const s = String(idOrName ?? "").trim();
   if (!s) return null;
 
@@ -1115,8 +1114,8 @@ async function resolveOfferForFunnel(args: {
   userId: string;
   offerIdOrName: string;
   profile: any;
-  planOffers: OfferPyramidContext[];
-}): Promise<OfferPyramidContext | null> {
+  planOffers: OfferSourceContext[];
+}): Promise<OfferSourceContext | null> {
   const { supabase, userId, offerIdOrName, profile, planOffers } = args;
 
   // 1) business_profiles.offers (new onboarding)
@@ -1124,24 +1123,24 @@ async function resolveOfferForFunnel(args: {
   const fromProfile = findOfferByIdOrName(profileOffers, offerIdOrName);
   if (fromProfile) return fromProfile;
 
-  // 2) business_plan.plan_json.selected_pyramid (temps réel)
+  // 2) business_plan.plan_json (temps réel, DB keys legacy)
   const fromPlan = findOfferByIdOrName(planOffers, offerIdOrName);
   if (fromPlan) return fromPlan;
 
-  // 3) offer_pyramids (legacy table) if UUID
+  // 3) offer_pyramids table (legacy) if UUID
   if (isUuid(offerIdOrName)) {
-    return await fetchOfferPyramidById({ supabase, userId, id: offerIdOrName });
+    return await fetchOfferFromLegacyTable({ supabase, userId, id: offerIdOrName });
   }
 
   return null;
 }
 
-function pickLeadOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidContext | null {
+function pickLeadOfferFromPlan(planOffers: OfferSourceContext[]): OfferSourceContext | null {
   const offers = planOffers ?? [];
   return offers.find((o) => isLeadMagnetLevel((o as any)?.level)) ?? null;
 }
 
-function pickPaidOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidContext | null {
+function pickPaidOfferFromPlan(planOffers: OfferSourceContext[]): OfferSourceContext | null {
   const offers = planOffers ?? [];
   return (
     offers.find((o) => String((o as any)?.level ?? "").toLowerCase().includes("middle")) ??
@@ -1154,24 +1153,24 @@ function pickPaidOfferFromPlan(planOffers: OfferPyramidContext[]): OfferPyramidC
   );
 }
 
-function findOfferByAnyId(planOffers: OfferPyramidContext[], id: string): OfferPyramidContext | null {
+function findOfferByAnyId(planOffers: OfferSourceContext[], id: string): OfferSourceContext | null {
   const s = String(id ?? "").trim();
   if (!s) return null;
   const offers = planOffers ?? [];
   return offers.find((o) => String((o as any)?.id ?? "") === s) ?? null;
 }
 
-async function fetchOfferPyramidById(args: {
+async function fetchOfferFromLegacyTable(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
   id: string;
-}): Promise<OfferPyramidContext | null> {
+}): Promise<OfferSourceContext | null> {
   const { supabase, userId, id } = args;
   if (!id) return null;
 
   const q1 = await supabase
     .from("offer_pyramids")
-    .select(OFFER_PYRAMID_SELECT)
+    .select(OFFER_TABLE_SELECT)
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -1179,7 +1178,7 @@ async function fetchOfferPyramidById(args: {
   if (!q1.error) return (q1.data as any) ?? null;
 
   if (isMissingColumnError(q1.error.message)) {
-    const q2 = await supabase.from("offer_pyramids").select(OFFER_PYRAMID_SELECT).eq("id", id).maybeSingle();
+    const q2 = await supabase.from("offer_pyramids").select(OFFER_TABLE_SELECT).eq("id", id).maybeSingle();
     if (!q2.error) return (q2.data as any) ?? null;
   }
 
@@ -1189,7 +1188,7 @@ async function fetchOfferPyramidById(args: {
 async function fetchUserLeadMagnet(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
-}): Promise<OfferPyramidContext | null> {
+}): Promise<OfferSourceContext | null> {
   const { supabase, userId } = args;
 
   const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
@@ -1199,7 +1198,7 @@ async function fetchUserLeadMagnet(args: {
 
   const q = await supabase
     .from("offer_pyramids")
-    .select(OFFER_PYRAMID_SELECT)
+    .select(OFFER_TABLE_SELECT)
     .eq("user_id", userId)
     .or("level.ilike.%lead%,level.ilike.%free%,level.ilike.%gratuit%")
     .order("updated_at", { ascending: false })
@@ -1213,7 +1212,7 @@ async function fetchUserLeadMagnet(args: {
 async function fetchUserPaidOffer(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
-}): Promise<OfferPyramidContext | null> {
+}): Promise<OfferSourceContext | null> {
   const { supabase, userId } = args;
 
   const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
@@ -1223,7 +1222,7 @@ async function fetchUserPaidOffer(args: {
 
   const middle = await supabase
     .from("offer_pyramids")
-    .select(OFFER_PYRAMID_SELECT)
+    .select(OFFER_TABLE_SELECT)
     .eq("user_id", userId)
     .or("level.ilike.%middle%,level.ilike.%mid%")
     .order("updated_at", { ascending: false })
@@ -1233,7 +1232,7 @@ async function fetchUserPaidOffer(args: {
 
   const high = await supabase
     .from("offer_pyramids")
-    .select(OFFER_PYRAMID_SELECT)
+    .select(OFFER_TABLE_SELECT)
     .eq("user_id", userId)
     .or("level.ilike.%high%,level.ilike.%premium%")
     .order("updated_at", { ascending: false })
@@ -1243,7 +1242,7 @@ async function fetchUserPaidOffer(args: {
 
   const anyPaid = await supabase
     .from("offer_pyramids")
-    .select(OFFER_PYRAMID_SELECT)
+    .select(OFFER_TABLE_SELECT)
     .eq("user_id", userId)
     .not("level", "ilike", "%free%")
     .not("level", "ilike", "%gratuit%")
@@ -1554,7 +1553,7 @@ export async function POST(req: Request) {
     const promoKind = normalizePromoKind(body.promoKind);
 
     /** ---------------------------
-     * Offre (pyramide) — pour offer generator + emails sales
+     * Offre (existante) — pour offer generator + emails sales
      * -------------------------- */
 
     const offerMode = normalizeOfferMode(body.offerMode);
@@ -1564,15 +1563,15 @@ export async function POST(req: Request) {
     const offerName = safeString(body.offer).trim();
     const offerManual = isRecord(body.offerManual) ? body.offerManual : null;
 
-    let sourceOffer: OfferPyramidContext | null = null;
+    let sourceOffer: OfferSourceContext | null = null;
 
-    if (type === "offer" && offerMode === "from_pyramid") {
-      // ✅ Temps réel : on privilégie business_plan.plan_json.selected_pyramid (planOffers),
-      // puis fallback offer_pyramids (legacy).
+    if (type === "offer" && offerMode === "from_existing") {
+      // ✅ Temps réel : on privilégie planOffers (business_plan),
+      // puis fallback offer_pyramids table (legacy).
       if (sourceOfferId) {
         if (isUuid(sourceOfferId)) {
           sourceOffer =
-            (await fetchOfferPyramidById({ supabase, userId, id: sourceOfferId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
+            (await fetchOfferFromLegacyTable({ supabase, userId, id: sourceOfferId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
         } else {
           sourceOffer = findOfferByAnyId(planOffers, sourceOfferId);
         }
@@ -1595,7 +1594,7 @@ export async function POST(req: Request) {
             ok: false,
             code: "missing_source_offer",
             error:
-              "Impossible de retrouver automatiquement l'offre source de la pyramide. Réessaie ou choisis explicitement l'offre source.",
+              "Impossible de retrouver automatiquement l'offre source. Réessaie ou choisis explicitement l'offre.",
           },
           { status: 400 },
         );
@@ -1603,7 +1602,7 @@ export async function POST(req: Request) {
     }
 
     // Offre context emails sales
-    let offerContextForSalesEmail: OfferPyramidContext | null = null;
+    let offerContextForSalesEmail: OfferSourceContext | null = null;
     if (type === "email" && offerId) {
       // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
       // on résout via planOffers. Sinon on tente offer_pyramids puis fallback planOffers.
@@ -1613,7 +1612,7 @@ export async function POST(req: Request) {
         try {
           const { data: offerRow, error: offerErr } = await supabase
             .from("offer_pyramids")
-            .select(OFFER_PYRAMID_SELECT)
+            .select(OFFER_TABLE_SELECT)
             .eq("id", offerId)
             .eq("user_id", userId)
             .maybeSingle();
@@ -1650,7 +1649,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             ok: false,
-            error: "Choisis une offre (pyramide) ou renseigne les spécificités de l'offre pour générer l'email de vente.",
+            error: "Choisis une offre existante ou renseigne les spécificités de l'offre pour générer l'email de vente.",
           },
           { status: 400 },
         );
@@ -1666,7 +1665,7 @@ export async function POST(req: Request) {
           ? ((body as any).offerManual as any)
           : null;
 
-    let offerContextForPost: OfferPyramidContext | null = null;
+    let offerContextForPost: OfferSourceContext | null = null;
 
     if (type === "post" && postOfferId) {
       // ✅ Temps réel : si offerId n’est pas un UUID (id "synthetic" issu du plan),
@@ -1677,7 +1676,7 @@ export async function POST(req: Request) {
         try {
           const { data: offerRow, error: offerErr } = await supabase
             .from("offer_pyramids")
-            .select(OFFER_PYRAMID_SELECT)
+            .select(OFFER_TABLE_SELECT)
             .eq("id", postOfferId)
             .eq("user_id", userId)
             .maybeSingle();
@@ -1706,11 +1705,11 @@ export async function POST(req: Request) {
       safeString((body as any).offerId).trim() ||
       safeString((body as any).sourceOfferId).trim();
 
-    let funnelSourceOffer: OfferPyramidContext | null = null;
+    let funnelSourceOffer: OfferSourceContext | null = null;
 
     if (type === "funnel" && funnelMode === "from_offer") {
       // ✅ Nouvel onboarding : l’utilisateur choisit explicitement son offre.
-      // Source possible : business_profiles.offers (prioritaire) OU business_plan.plan_json.selected_pyramid OU offer_pyramids (legacy).
+      // Source possible : business_profiles.offers (prioritaire) OU business_plan.plan_json OU offer_pyramids table (legacy).
       if (!funnelOfferId) {
         return NextResponse.json(
           {
@@ -1764,11 +1763,11 @@ export async function POST(req: Request) {
           offerLink,
         } as any);
 
-        // ✅ Ajout contexte offre (pyramide ou manual)
+        // ✅ Ajout contexte offre (existante ou manual)
         const offerCtxLines: string[] = [];
 
         if (offerContextForPost) {
-          offerCtxLines.push("Offre (pyramide) :");
+          offerCtxLines.push("Offre (existante) :");
           offerCtxLines.push(
             JSON.stringify(
               {
@@ -1939,7 +1938,7 @@ export async function POST(req: Request) {
           theme,
           target,
           leadMagnetFormat,
-          sourceOffer: offerMode === "from_pyramid" ? sourceOffer : null,
+          sourceOffer: offerMode === "from_existing" ? sourceOffer : null,
           language: "fr",
         } as any);
       }
@@ -2026,8 +2025,8 @@ export async function POST(req: Request) {
             : type === "video"
               ? safeString(body.subject).trim() || prompt
               : type === "offer"
-                ? offerMode === "from_pyramid"
-                  ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_pyramide")
+                ? offerMode === "from_existing"
+                  ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_existante")
                   : safeString(body.theme).trim() || safeString(body.subject).trim() || prompt
                 : type === "funnel"
                   ? safeString((body as any).offer).trim() ||
@@ -2055,7 +2054,7 @@ export async function POST(req: Request) {
     if (type === "offer") {
       if (body.offerType) userContextLines.push(`OfferType: ${safeString(body.offerType).trim()}`);
       userContextLines.push(`OfferMode: ${offerMode}`);
-      if (offerMode === "from_pyramid") {
+      if (offerMode === "from_existing") {
         userContextLines.push("SourceOffer (JSON):");
         userContextLines.push(JSON.stringify(sourceOffer));
       }

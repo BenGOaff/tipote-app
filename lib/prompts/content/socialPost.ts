@@ -2,7 +2,7 @@
 // Prompt builder: Posts Réseaux Sociaux (Create -> type "post")
 // Objectif: produire un prompt "niveau prod" orienté viralité & conversion, en exploitant:
 // - business_profiles
-// - business_plan.plan_json (incl. pyramide/offres si dispo)
+// - business_plan.plan_json (incl. offres existantes si dispo)
 // - personas (role = client_ideal)
 // - Tipote Knowledge (ressources internes via manifest xlsx)
 // ⚠️ Sortie attendue: texte brut uniquement (pas de markdown).

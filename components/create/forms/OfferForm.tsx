@@ -12,7 +12,7 @@ import { FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
 import { downloadAsPdf } from "@/lib/content-utils";
 
-import type { PyramidOfferLite } from "@/components/create/forms/_shared";
+import type { SourceOfferLite } from "@/components/create/forms/_shared";
 
 type OfferMode = "from_existing" | "from_scratch";
 type OfferType = "lead_magnet" | "paid_training";
@@ -24,8 +24,8 @@ export type OfferFormProps = {
   isGenerating: boolean;
   isSaving: boolean;
 
-  pyramidLeadMagnet?: PyramidOfferLite | null;
-  pyramidPaidOffer?: PyramidOfferLite | null;
+  sourceLeadMagnet?: SourceOfferLite | null;
+  sourcePaidOffer?: SourceOfferLite | null;
 };
 
 export function OfferForm(props: OfferFormProps) {
@@ -52,9 +52,9 @@ export function OfferForm(props: OfferFormProps) {
     setShowRawEditor(false);
   }, [mode, offerType]);
 
-  const selectedPyramidOffer = useMemo(() => {
-    return offerType === "lead_magnet" ? props.pyramidLeadMagnet : props.pyramidPaidOffer;
-  }, [offerType, props.pyramidLeadMagnet, props.pyramidPaidOffer]);
+  const selectedSourceOffer = useMemo(() => {
+    return offerType === "lead_magnet" ? props.sourceLeadMagnet : props.sourcePaidOffer;
+  }, [offerType, props.sourceLeadMagnet, props.sourcePaidOffer]);
 
   const handleCopy = async () => {
     try {
@@ -75,8 +75,8 @@ export function OfferForm(props: OfferFormProps) {
             type: "offer",
             offerMode: "from_existing",
             offerType,
-            sourceOfferId: selectedPyramidOffer?.id ?? undefined,
-            theme: selectedPyramidOffer?.promise || selectedPyramidOffer?.name || "Offre",
+            sourceOfferId: selectedSourceOffer?.id ?? undefined,
+            theme: selectedSourceOffer?.promise || selectedSourceOffer?.name || "Offre",
           }
         : {
             type: "offer",
@@ -151,18 +151,18 @@ export function OfferForm(props: OfferFormProps) {
           {mode === "from_existing" ? (
             <div className="rounded-md border p-3 text-sm">
               <div className="font-medium mb-1">Offre détectée</div>
-              {selectedPyramidOffer ? (
+              {selectedSourceOffer ? (
                 <div className="space-y-1">
                   <div>
-                    <span className="font-medium">Nom :</span> {selectedPyramidOffer.name ?? "—"}
+                    <span className="font-medium">Nom :</span> {selectedSourceOffer.name ?? "—"}
                   </div>
                   <div>
-                    <span className="font-medium">Promesse :</span> {selectedPyramidOffer.promise ?? "—"}
+                    <span className="font-medium">Promesse :</span> {selectedSourceOffer.promise ?? "—"}
                   </div>
-                  {typeof selectedPyramidOffer.price_min === "number" || typeof selectedPyramidOffer.price_max === "number" ? (
+                  {typeof selectedSourceOffer.price_min === "number" || typeof selectedSourceOffer.price_max === "number" ? (
                     <div>
-                      <span className="font-medium">Prix :</span> {selectedPyramidOffer.price_min ?? "—"} →{" "}
-                      {selectedPyramidOffer.price_max ?? "—"}
+                      <span className="font-medium">Prix :</span> {selectedSourceOffer.price_min ?? "—"} →{" "}
+                      {selectedSourceOffer.price_max ?? "—"}
                     </div>
                   ) : null}
                 </div>

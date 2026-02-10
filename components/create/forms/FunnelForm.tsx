@@ -13,7 +13,7 @@ import { FunnelTemplateStep } from "@/components/create/forms/funnel/FunnelTempl
 import { FunnelConfigStep, type FunnelOfferOption, type UserField } from "@/components/create/forms/funnel/FunnelConfigStep";
 import { FunnelPreviewStep } from "@/components/create/forms/funnel/FunnelPreviewStep";
 
-import type { PyramidOfferLite } from "@/components/create/forms/_shared";
+import type { SourceOfferLite } from "@/components/create/forms/_shared";
 
 type FunnelPageType = "capture" | "sales";
 type Mode = "visual" | "text_only";
@@ -83,7 +83,7 @@ export type FunnelFormProps = {
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
-  pyramidOffers?: PyramidOfferLite[];
+  existingOffers?: SourceOfferLite[];
 };
 
 export function FunnelForm({
@@ -92,7 +92,7 @@ export function FunnelForm({
   onClose,
   isGenerating,
   isSaving,
-  pyramidOffers = [],
+  existingOffers = [],
 }: FunnelFormProps) {
   const { toast } = useToast();
 
@@ -105,13 +105,13 @@ export function FunnelForm({
 
   // Offer linking
   const offers: FunnelOfferOption[] = useMemo(() => {
-    return (pyramidOffers || [])
+    return (existingOffers || [])
       .filter((o) => !!o?.id)
       .map((o) => ({
         id: String(o.id),
         name: String(o.name ?? "Offre").trim() || "Offre",
       }));
-  }, [pyramidOffers]);
+  }, [existingOffers]);
 
   const [offerChoice, setOfferChoice] = useState<OfferChoice>(offers.length ? "existing" : "scratch");
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?.id ?? "");

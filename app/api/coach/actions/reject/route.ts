@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const SuggestionTypeSchema = z.enum(["update_offer_pyramid", "update_tasks", "open_tipote_tool"]);
+const SuggestionTypeSchema = z.enum(["update_offers", "update_tasks", "open_tipote_tool"]);
 
 // Nouveau format (celui que tu veux côté UI)
 const NewRejectBodySchema = z

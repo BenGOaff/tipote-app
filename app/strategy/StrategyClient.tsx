@@ -16,19 +16,19 @@ export type OfferLevel = {
   type?: string;
 };
 
-export type OfferPyramid = {
+export type OfferSet = {
   name: string;
   label: string;
   levels: OfferLevel[];
 };
 
 type Props = {
-  offerPyramids: AnyRecord[];
+  offerSets: AnyRecord[];
   initialSelectedIndex: number;
-  initialSelectedPyramid?: AnyRecord;
+  initialSelectedOffers?: AnyRecord;
 };
 
-function normalisePyramid(raw?: AnyRecord): OfferPyramid {
+function normaliseOfferSet(raw?: AnyRecord): OfferSet {
   if (!raw) {
     return {
       name: "",
@@ -53,36 +53,36 @@ function normalisePyramid(raw?: AnyRecord): OfferPyramid {
 }
 
 export default function StrategyClient({
-  offerPyramids,
+  offerSets,
   initialSelectedIndex,
-  initialSelectedPyramid,
+  initialSelectedOffers,
 }: Props) {
   const router = useRouter();
 
-  const hasInitial = !!initialSelectedPyramid;
+  const hasInitial = !!initialSelectedOffers;
 
   const [mode, setMode] = useState<"choose" | "edit">(hasInitial ? "edit" : "choose");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(
     hasInitial ? initialSelectedIndex ?? 0 : null,
   );
-  const [draft, setDraft] = useState<OfferPyramid | null>(
-    hasInitial ? normalisePyramid(initialSelectedPyramid) : null,
+  const [draft, setDraft] = useState<OfferSet | null>(
+    hasInitial ? normaliseOfferSet(initialSelectedOffers) : null,
   );
 
-  // on garde l’état (anti-régression) même si le choix est désormais sur /strategy/pyramids
+  // on garde l'état (anti-régression) même si le choix est désormais sur /strategy/pyramids
   const [chooserOpen, setChooserOpen] = useState<boolean>(
-    !hasInitial && offerPyramids.length > 0,
+    !hasInitial && offerSets.length > 0,
   );
 
   const [saving, startSaving] = useTransition();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const scenarios: OfferPyramid[] = useMemo(
-    () => (offerPyramids || []).map((p) => normalisePyramid(p)),
-    [offerPyramids],
+  const scenarios: OfferSet[] = useMemo(
+    () => (offerSets || []).map((p) => normaliseOfferSet(p)),
+    [offerSets],
   );
 
-  // ✅ Si aucune pyramide n’a été choisie, le flow officiel = page Lovable /strategy/pyramids
+  // Si aucune offre n'a été choisie, le flow officiel = page Lovable /strategy/pyramids
   useEffect(() => {
     if (!hasInitial) {
       router.push("/strategy/pyramids");
@@ -94,7 +94,7 @@ export default function StrategyClient({
   function updateLevel(levelIndex: number, field: keyof OfferLevel, value: string) {
     if (!draft) return;
 
-    setDraft((prev: OfferPyramid | null) => {
+    setDraft((prev: OfferSet | null) => {
       if (!prev) return prev;
       const levels = [...(prev.levels || [])];
       if (!levels[levelIndex]) levels[levelIndex] = {};
@@ -105,17 +105,17 @@ export default function StrategyClient({
 
   function updateName(value: string) {
     if (!draft) return;
-    setDraft((prev: OfferPyramid | null) =>
+    setDraft((prev: OfferSet | null) =>
       prev ? { ...prev, name: value, label: value } : prev,
     );
   }
 
-  // (compat) gardée au cas où — actuellement le choix se fait sur /strategy/pyramids
-  async function handleChoose(index: number, pyramid: OfferPyramid) {
+  // (compat) gardee au cas ou -- actuellement le choix se fait sur /strategy/pyramids
+  async function handleChoose(index: number, offerSet: OfferSet) {
     setStatusMessage(null);
 
     setSelectedIndex(index);
-    setDraft(pyramid);
+    setDraft(offerSet);
     setMode("edit");
     setChooserOpen(false);
 
@@ -126,21 +126,21 @@ export default function StrategyClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             selected_offer_pyramid_index: index,
-            selected_offer_pyramid: pyramid,
+            selected_offer_pyramid: offerSet,
           }),
         });
 
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          console.error("Save pyramid error", body);
+          console.error("Save offer set error", body);
           setStatusMessage(
             (body as any)?.error ||
-              "Erreur lors de la sauvegarde de la pyramide. Réessaie.",
+              "Erreur lors de la sauvegarde des offres. Réessaie.",
           );
           return;
         }
 
-        setStatusMessage("Pyramide choisie et sauvegardée ✅");
+        setStatusMessage("Offres choisies et sauvegardées ✅");
       } catch (e) {
         console.error(e);
         setStatusMessage("Erreur réseau. Réessaie.");
@@ -152,7 +152,7 @@ export default function StrategyClient({
     setStatusMessage(null);
 
     if (mode !== "edit" || draft == null || selectedIndex === null) {
-      setStatusMessage("Choisis d'abord un scénario de pyramide avant de le modifier.");
+      setStatusMessage("Choisis d'abord un scénario d'offres avant de le modifier.");
       return;
     }
 
@@ -169,10 +169,10 @@ export default function StrategyClient({
 
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          console.error("Save pyramid error", body);
+          console.error("Save offer set error", body);
           setStatusMessage(
             (body as any)?.error ||
-              "Erreur lors de la sauvegarde de la pyramide. Réessaie.",
+              "Erreur lors de la sauvegarde des offres. Réessaie.",
           );
           return;
         }
@@ -191,12 +191,13 @@ export default function StrategyClient({
     <>
       {/* Le choix se fait sur la page Lovable dédiée (/strategy/pyramids).
           On conserve l'UX via le bouton "Changer de scénario". */}
+      {/* NOTE : les offres remplacent l'ancien concept "pyramide d'offres" côté UI */}
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">
-              Pyramide d&apos;Offres
+              Tes Offres
             </h2>
             <p className="mt-1 text-xs text-slate-500">
               L&apos;offre de base, l&apos;offre coeur et l&apos;offre premium vont
@@ -226,7 +227,7 @@ export default function StrategyClient({
             </span>
             <div>
               <p className="font-medium text-slate-900">
-                {scenarioLabel || "Aucune pyramide encore sélectionnée"}
+                {scenarioLabel || "Aucune offre encore sélectionnée"}
               </p>
               <p className="text-[11px] text-slate-500">
                 Scénarios générés automatiquement à partir de ton onboarding.
@@ -252,7 +253,7 @@ export default function StrategyClient({
           <>
             <div className="mb-4">
               <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                Nom de ta pyramide
+                Nom de tes offres
               </label>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-[#a855f7] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
@@ -352,7 +353,7 @@ export default function StrategyClient({
                 disabled={saving}
                 className="inline-flex items-center justify-center rounded-lg bg-[#a855f7] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#9333ea] disabled:opacity-60"
               >
-                {saving ? "Sauvegarde..." : "Sauvegarder la pyramide"}
+                {saving ? "Sauvegarde..." : "Sauvegarder les offres"}
               </button>
             </div>
           </>

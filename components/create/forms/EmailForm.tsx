@@ -80,8 +80,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const generatedContent = useMemo(() => joinEmails(emails), [emails]);
 
   /**
-   * ✅ Offres: on charge d’abord business_plan.plan_json.selected_pyramid (source de vérité),
-   * puis fallback offer_pyramids (legacy) si besoin.
+   * ✅ Offres: chargées via loadAllOffers() (offres existantes + legacy + user).
    */
   const [offers, setOffers] = useState<OfferOption[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);

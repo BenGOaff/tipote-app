@@ -2,7 +2,7 @@
 
 export type AnyParams = Record<string, any>;
 
-export type PyramidOfferLite = {
+export type SourceOfferLite = {
   id: string;
   name: string | null;
   level?: string | null;

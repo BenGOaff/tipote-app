@@ -1,8 +1,8 @@
 /**
  * Shared offer loading utility.
  * Merges offers from 3 sources:
- *  1. business_plan.plan_json.selected_pyramid (AI-generated pyramid)
- *  2. offer_pyramids table (legacy)
+ *  1. business_plan.plan_json.selected_pyramid (AI-generated offers — DB key kept for compat)
+ *  2. offer_pyramids table (legacy DB table — name kept for compat)
  *  3. business_profiles.offers (user's own / affiliate offers from settings)
  */
 
@@ -11,7 +11,7 @@ export type OfferOption = {
   name: string;
   level: string;
   is_flagship?: boolean | null;
-  source?: "pyramid" | "user" | "legacy";
+  source?: "generated" | "user" | "legacy";
 
   // Details for AI copywriting
   promise?: string | null;
@@ -42,9 +42,9 @@ function toNumberOrNull(v: unknown): number | null {
 }
 
 /**
- * Normalise business_plan.plan_json.selected_pyramid (legacy + new shapes) vers une liste d'offres
+ * Normalise business_plan.plan_json.selected_pyramid (legacy DB key) vers une liste d'offres existantes
  */
-function normalizeSelectedPyramid(userId: string, selected: any, updatedAt?: string | null): OfferOption[] {
+function normalizeSelectedOffers(userId: string, selected: any, updatedAt?: string | null): OfferOption[] {
   const out: OfferOption[] = [];
 
   const pushOffer = (levelRaw: unknown, offerRaw: any, idxHint?: number) => {
@@ -73,7 +73,7 @@ function normalizeSelectedPyramid(userId: string, selected: any, updatedAt?: str
       id,
       name,
       level,
-      source: "pyramid",
+      source: "generated",
       is_flagship: typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null,
       description: safeStringOrNull((o as any).description) ?? safeStringOrNull((o as any).desc) ?? null,
       promise: safeStringOrNull((o as any).promise) ?? safeStringOrNull((o as any).promesse) ?? null,
@@ -184,7 +184,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
   const allOffers: OfferOption[] = [];
   const userId = user.id;
 
-  // ---- Source 1: business_plan.plan_json.selected_pyramid ----
+  // ---- Source 1: business_plan.plan_json.selected_pyramid (DB key kept for compat) ----
   try {
     let planRow: any = null;
     const { data, error } = await supabase
@@ -210,7 +210,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
         null;
 
       if (selected) {
-        const fromPlan = normalizeSelectedPyramid(userId, selected, safeStringOrNull(planRow?.updated_at));
+        const fromPlan = normalizeSelectedOffers(userId, selected, safeStringOrNull(planRow?.updated_at));
         allOffers.push(...fromPlan);
       }
     }
@@ -218,7 +218,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
     // continue
   }
 
-  // ---- Source 2: offer_pyramids table (legacy) ----
+  // ---- Source 2: offer_pyramids table (legacy DB table — name kept for compat) ----
   if (allOffers.length === 0) {
     try {
       const { data, error } = await supabase
@@ -273,7 +273,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
         const name = typeof o?.name === "string" ? o.name.trim() : "";
         if (!name) continue;
 
-        // Skip duplicates (same name already from pyramid/legacy)
+        // Skip duplicates (same name already from generated/legacy)
         if (existingNames.has(name.toLowerCase())) continue;
 
         const priceStr = typeof o?.price === "string" ? o.price.trim() : typeof o?.price === "number" ? String(o.price) : "";

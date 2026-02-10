@@ -3,7 +3,7 @@
 // Objectif: produire des emails très convertissants en FR, en s'appuyant sur persona/plan/knowledge injectés côté API.
 // PATCH (2026-01):
 // - Offre enrichie (target/public, format, delivery, prix) + résumé plus exploitable par l’IA
-// - Onboarding KLT: support explicite du lead magnet (pyramide ou manuel) + consignes “envoi + KLT 3”
+// - Onboarding KLT: support explicite du lead magnet (offre existante ou manuel) + consignes "envoi + KLT 3"
 // - Backward compatible: continue d’accepter offer/offerManual comme avant
 
 export type emailType = "newsletter" | "sales_single" | "sales_sequence_7" | "onboarding_klt_3";

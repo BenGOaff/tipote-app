@@ -3,7 +3,7 @@
 // ✅ Anti-régression: support ancien format + nouveau format
 // ✅ Double ceinture: re-validate + sanitize server-side (même si /chat a déjà filtré)
 // ✅ update_tasks: single + batch
-// ✅ update_offer_pyramid: business_plan.plan_json + compat legacy + sync offer_pyramids delete+insert
+// ✅ update_offers: business_plan.plan_json + compat legacy + sync offer_pyramids delete+insert
 // ✅ Log "applied_suggestion" dans coach_messages (facts) pour mémoire long terme
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,7 +17,7 @@ export const maxDuration = 60;
 
 // -------------------- SCHEMAS --------------------
 
-const SuggestionTypeSchema = z.enum(["update_offer_pyramid", "update_tasks", "open_tipote_tool"]);
+const SuggestionTypeSchema = z.enum(["update_offers", "update_tasks", "open_tipote_tool"]);
 type SuggestionType = z.infer<typeof SuggestionTypeSchema>;
 
 const NewApplyBodySchema = z
@@ -176,8 +176,8 @@ async function logApplied(args: {
     const base =
       args.type === "update_tasks"
         ? "✅ J’ai appliqué la mise à jour de tâche."
-        : args.type === "update_offer_pyramid"
-          ? "✅ J’ai appliqué la mise à jour de ta pyramide d’offre."
+        : args.type === "update_offers"
+          ? "✅ J'ai appliqué la mise à jour de tes offres."
           : "✅ Ok, je t’ai ouvert l’outil.";
 
     const content = title ? `${base}\n(${title})` : base;
@@ -255,7 +255,7 @@ function sanitizeTaskPatch(raw: AnyRecord): { taskId: string; patch: AnyRecord }
   return { taskId, patch };
 }
 
-// -------------------- OFFER PYRAMID --------------------
+// -------------------- OFFERS --------------------
 
 async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRecord }) {
   // Best-effort sync: delete + insert (comme l’ancien code)
@@ -306,7 +306,7 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
   }
 }
 
-function sanitizeOfferPyramidPayload(payload: AnyRecord) {
+function sanitizeOffersPayload(payload: AnyRecord) {
   const selectedIndexRaw = payload.selectedIndex ?? payload.selected_index;
   const pyramidRaw = payload.pyramid ?? payload.selected_offer_pyramid;
 
@@ -411,14 +411,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, type, result: { task: r.task } }, { status: 200 });
     }
 
-    // ---------------- update_offer_pyramid ----------------
-    if (type === "update_offer_pyramid") {
+    // ---------------- update_offers ----------------
+    if (type === "update_offers") {
       const p = asRecord(payload);
       if (!p) return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
 
-      const clean = sanitizeOfferPyramidPayload(p);
+      const clean = sanitizeOffersPayload(p);
       if (!clean) {
-        return NextResponse.json({ ok: false, error: "Invalid update_offer_pyramid payload" }, { status: 400 });
+        return NextResponse.json({ ok: false, error: "Invalid update_offers payload" }, { status: 400 });
       }
 
       const { data: planRow, error: planErr } = await supabaseAdmin
