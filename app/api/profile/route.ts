@@ -11,6 +11,14 @@
 
 type AnyRecord = Record<string, any>;
 
+const OfferItemSchema = z.object({
+  name: z.string().trim().max(200).default(""),
+  type: z.string().trim().max(80).optional().default(""),
+  price: z.union([z.string().max(40), z.number()]).optional().default(""),
+  salesCount: z.union([z.string().max(40), z.number()]).optional().default(""),
+  link: z.string().trim().max(400).optional().default(""),
+});
+
 const UpdateSchema = z
   .object({
     first_name: z.string().trim().max(120).optional(),
@@ -24,6 +32,8 @@ const UpdateSchema = z
     main_goals: z.array(z.string().trim().max(200)).max(10).optional(),
     preferred_content_types: z.array(z.string().trim().max(120)).max(12).optional(),
     tone_preference: z.string().trim().max(120).optional(),
+
+    offers: z.array(OfferItemSchema).max(50).optional(),
   })
   .strict();
 

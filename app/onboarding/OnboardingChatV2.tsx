@@ -37,6 +37,7 @@ type ApiReply = {
   done?: boolean;
   shouldFinish?: boolean;
   should_finish?: boolean;
+  recapSummary?: string;
   error?: string;
 };
 
@@ -181,23 +182,6 @@ const BOOT_STEPS: BootStep[] = [
   },
 ];
 
-function safeStr(v: unknown, max = 140) {
-  const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
-  if (!s) return "";
-  return s.length > max ? s.slice(0, max) : s;
-}
-
-function RecapRow({ label, value }: { label: string; value?: string | null }) {
-  const v = (value ?? "").trim();
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border px-3 py-2">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className={cn("text-sm font-medium text-right", v ? "text-foreground" : "text-muted-foreground")}>
-        {v || "—"}
-      </div>
-    </div>
-  );
-}
 
 /** ✅ Offer pyramids (uniquement si PAS d’offre et PAS affiliation) */
 type Offer = {
@@ -274,6 +258,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
   const [showRecap, setShowRecap] = useState(false);
   const [recapLoading, setRecapLoading] = useState(false);
   const [recapProfile, setRecapProfile] = useState<ProfileRow>(null);
+  const [recapSummary, setRecapSummary] = useState<string>("");
 
   // ✅ pyramids modal
   const [showPyramids, setShowPyramids] = useState(false);
@@ -533,6 +518,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
       if (doneFlag) {
         setIsDone(true);
+        if (typeof reply.recapSummary === "string" && reply.recapSummary.trim()) {
+          setRecapSummary(reply.recapSummary);
+        }
         setShowRecap(true);
         void loadRecapProfileBestEffort();
       }
@@ -556,16 +544,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const currentBoot = BOOT_STEPS[Math.min(BOOT_STEPS.length - 1, Math.max(0, bootStepIndex))];
 
-  // Recap values (best-effort)
-  const recapFirstName = safeStr((recapProfile as any)?.first_name ?? firstName, 60);
-  const recapCountry = safeStr((recapProfile as any)?.country, 80);
-  const recapNiche = safeStr((recapProfile as any)?.niche, 120);
-  const recapMainGoal = safeStr((recapProfile as any)?.main_goal ?? (recapProfile as any)?.main_goal_90_days, 160);
-  const recapRev = safeStr((recapProfile as any)?.revenue_goal_monthly, 60);
-  const recapTime = safeStr((recapProfile as any)?.time_available ?? (recapProfile as any)?.weekly_hours, 60);
-  const recapTone = safeStr((recapProfile as any)?.preferred_tone ?? (recapProfile as any)?.tone_preference, 80);
-  const recapContent = safeStr((recapProfile as any)?.content_preference ?? (recapProfile as any)?.preferred_content_type, 80);
-  const recapPrimary = safeStr(primaryActivity, 120);
+  // Recap values (best-effort — kept for potential future use)
 
   const pyramids = pyramidsState?.pyramids ?? [];
 
@@ -662,7 +641,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ Recap modal */}
+      {/* ✅ Recap modal — prose summary */}
       <Dialog
         open={showRecap}
         onOpenChange={(v) => {
@@ -674,27 +653,25 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           <DialogHeader>
             <DialogTitle>Résumé de ton onboarding</DialogTitle>
             <DialogDescription>
-              Vérifie rapidement. Ensuite je génère ton plan et je t’emmène sur ton dashboard.
+              Vérifie que tout est correct. Ensuite je génère ton plan et je t&apos;emmène sur ton dashboard.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            {recapLoading ? (
+          <div className="rounded-xl border bg-muted/30 px-4 py-4">
+            {recapSummary ? (
+              <p className="text-sm leading-relaxed whitespace-pre-line text-foreground">
+                {recapSummary}
+              </p>
+            ) : recapLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Je prépare le résumé…
               </div>
-            ) : null}
-
-            <RecapRow label="Prénom" value={recapFirstName} />
-            <RecapRow label="Pays" value={recapCountry} />
-            <RecapRow label="Niche" value={recapNiche} />
-            <RecapRow label="Activité prioritaire" value={recapPrimary} />
-            <RecapRow label="Objectif principal (90 jours)" value={recapMainGoal} />
-            <RecapRow label="Objectif revenu mensuel" value={recapRev} />
-            <RecapRow label="Temps disponible / semaine" value={recapTime} />
-            <RecapRow label="Ton préféré" value={recapTone} />
-            <RecapRow label="Type de contenu préféré" value={recapContent} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Aucune information récupérée pour l&apos;instant. Tu pourras tout compléter dans tes réglages.
+              </p>
+            )}
           </div>
 
           <DialogFooter className="gap-2">
@@ -724,7 +701,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
                   Finalisation…
                 </>
               ) : (
-                "Continuer"
+                "C'est bon, on continue !"
               )}
             </Button>
           </DialogFooter>

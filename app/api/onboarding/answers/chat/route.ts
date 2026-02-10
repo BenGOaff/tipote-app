@@ -109,6 +109,11 @@ function normalizeFactValue(key: string, value: unknown): any {
     }
   }
 
+  if (k === "offers_list") {
+    if (Array.isArray(value)) return value.slice(0, 50);
+    return value;
+  }
+
   if (k === "acquisition_channels" || k === "content_channels_priority") {
     if (Array.isArray(value)) {
       const arr = value
@@ -417,6 +422,120 @@ function formatTimeAvailable(hoursWeek: number | null): string | null {
   return `${n}h/semaine`;
 }
 
+/**
+ * Build a natural prose recap from known facts.
+ * Displayed in the onboarding recap dialog instead of a table with empty rows.
+ */
+function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string | null): string {
+  const parts: string[] = [];
+
+  const name = typeof firstName === "string" && firstName.trim() ? firstName.trim() : null;
+  parts.push(name ? `Voici ce que j'ai retenu de notre échange, ${name} :` : "Voici ce que j'ai retenu de notre échange :");
+
+  // Activity / Niche
+  const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]).trim() : "";
+  const niche = typeof knownFacts["main_topic"] === "string" ? String(knownFacts["main_topic"]).trim() : (typeof knownFacts["niche"] === "string" ? String(knownFacts["niche"]).trim() : "");
+  if (primary) {
+    parts.push(`Tu te concentres sur : ${primary}${niche && niche.toLowerCase() !== primary.toLowerCase() ? ` (niche : ${niche})` : ""}.`);
+  } else if (niche) {
+    parts.push(`Ton domaine : ${niche}.`);
+  }
+
+  // Business model
+  const model = typeof knownFacts["business_model"] === "string" ? String(knownFacts["business_model"]).trim() : "";
+  if (model) {
+    const modelLabels: Record<string, string> = {
+      offers: "vente de produits / services",
+      affiliate: "affiliation",
+      service: "prestation de services",
+      freelancing: "freelancing",
+      content_creator: "création de contenu",
+      mixed: "modèle mixte",
+    };
+    parts.push(`Modèle économique : ${modelLabels[model] || model}.`);
+  }
+
+  // Target audience
+  const audience = typeof knownFacts["target_audience_short"] === "string" ? String(knownFacts["target_audience_short"]).trim() : "";
+  if (audience) parts.push(`Tu t'adresses à : ${audience}.`);
+
+  // Revenue goal
+  const rev = knownFacts["revenue_goal_monthly"];
+  if (typeof rev === "number" && Number.isFinite(rev)) {
+    parts.push(`Objectif de revenu mensuel : ${rev.toLocaleString("fr-FR")}€.`);
+  }
+
+  // Time available
+  const timeHrs = knownFacts["time_available_hours_week"];
+  const timeStr = typeof knownFacts["time_available"] === "string" ? String(knownFacts["time_available"]).trim() : "";
+  if (typeof timeHrs === "number" && Number.isFinite(timeHrs)) {
+    parts.push(`Temps disponible : environ ${Math.round(timeHrs)}h par semaine.`);
+  } else if (timeStr) {
+    parts.push(`Temps disponible : ${timeStr}.`);
+  }
+
+  // Conversion status
+  const conv = typeof knownFacts["conversion_status"] === "string" ? String(knownFacts["conversion_status"]).trim() : "";
+  if (conv) {
+    const convLabels: Record<string, string> = {
+      selling_well: "Tu as déjà des ventes régulières",
+      inconsistent: "Tu commences à vendre mais ce n'est pas encore régulier",
+      not_selling: "Tu n'as pas encore réalisé de ventes",
+    };
+    if (convLabels[conv]) parts.push(`${convLabels[conv]}.`);
+  }
+
+  // Offers info
+  const hasOffers = knownFacts["has_offers"];
+  const offersCount = knownFacts["offers_count"];
+  if (hasOffers === true && typeof offersCount === "number") {
+    parts.push(`Tu as ${offersCount} offre${offersCount > 1 ? "s" : ""} en place.`);
+  } else if (hasOffers === false) {
+    parts.push("Tu n'as pas encore d'offre structurée.");
+  }
+
+  // Channels
+  const channels = knownFacts["acquisition_channels"];
+  if (Array.isArray(channels) && channels.length > 0) {
+    const labels: Record<string, string> = {
+      social: "réseaux sociaux", youtube: "YouTube", blog: "blog", seo: "SEO",
+      email: "email / newsletter", ads: "publicité payante", partnerships: "partenariats",
+      word_of_mouth: "bouche-à-oreille",
+    };
+    const named = channels.map((c) => labels[String(c)] || String(c));
+    parts.push(`Canaux d'acquisition : ${named.join(", ")}.`);
+  }
+
+  // Content preferences
+  const contentPref = knownFacts["content_channels_priority"];
+  if (Array.isArray(contentPref) && contentPref.length > 0) {
+    parts.push(`Contenus privilégiés : ${contentPref.join(", ")}.`);
+  }
+
+  // Tone
+  const tone = typeof knownFacts["tone_preference_hint"] === "string" ? String(knownFacts["tone_preference_hint"]).trim() : (typeof knownFacts["preferred_tone"] === "string" ? String(knownFacts["preferred_tone"]).trim() : "");
+  if (tone) parts.push(`Ton préféré : ${tone}.`);
+
+  // Primary focus
+  const focus = typeof knownFacts["primary_focus"] === "string" ? String(knownFacts["primary_focus"]).trim() : "";
+  if (focus) {
+    const focusLabels: Record<string, string> = {
+      sales: "Générer des ventes", visibility: "Gagner en visibilité", clarity: "Clarifier ton positionnement",
+      systems: "Mettre en place des systèmes", offer_improvement: "Améliorer tes offres", traffic: "Générer du trafic",
+    };
+    parts.push(`Priorité : ${focusLabels[focus] || focus}.`);
+  }
+
+  if (parts.length <= 1) {
+    parts.push("Je n'ai pas encore beaucoup d'informations, mais on va pouvoir construire ta stratégie avec ce qu'on a.");
+  }
+
+  parts.push("");
+  parts.push("Tu pourras toujours ajuster ces informations dans tes réglages.");
+
+  return parts.join("\n");
+}
+
 function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: unknown }>) {
   const patch: Record<string, any> = {};
 
@@ -474,6 +593,19 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value)) setIf("success_definition", getStr(value, 240));
     if (key === "success_metrics" && value && typeof value === "object") {
       setIf("success_definition", JSON.stringify(value).slice(0, 240));
+    }
+
+    // offers_list → business_profiles.offers
+    if (key === "offers_list" && Array.isArray(value)) {
+      const offersArr = value
+        .filter((o) => o && typeof o === "object")
+        .map((o: any) => ({
+          name: typeof o.name === "string" ? o.name.trim().slice(0, 200) : "",
+          price: typeof o.price === "string" ? o.price.trim().slice(0, 40) : typeof o.price === "number" ? String(o.price) : "",
+          link: typeof o.link === "string" ? o.link.trim().slice(0, 400) : "",
+        }))
+        .filter((o) => o.name);
+      if (offersArr.length > 0) setIf("offers", offersArr);
     }
 
     // auditables
@@ -637,11 +769,17 @@ export async function POST(req: NextRequest) {
 
         if (insertAssistErr) return NextResponse.json({ error: insertAssistErr.message }, { status: 400 });
 
+        const recapSummary = buildRecapProse(
+          knownFacts,
+          typeof (bp as any)?.first_name === "string" ? (bp as any).first_name : null,
+        );
+
         return NextResponse.json({
           sessionId,
           message: finishMessage,
           appliedFacts,
           shouldFinish: true,
+          recapSummary,
         });
       }
     } catch {
@@ -873,12 +1011,21 @@ export async function POST(req: NextRequest) {
 
     if (insertAssistErr) return NextResponse.json({ error: insertAssistErr.message }, { status: 400 });
 
-    return NextResponse.json({
+    const responsePayload: Record<string, any> = {
       sessionId,
       message: out.message,
       appliedFacts,
       shouldFinish,
-    });
+    };
+
+    if (shouldFinish) {
+      responsePayload.recapSummary = buildRecapProse(
+        knownFacts,
+        typeof (bp as any)?.first_name === "string" ? (bp as any).first_name : null,
+      );
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (err: any) {
     console.error("[OnboardingChatV2] error:", err);
     return NextResponse.json({ error: err?.message ?? "Bad Request" }, { status: 400 });

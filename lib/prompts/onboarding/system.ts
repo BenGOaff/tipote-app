@@ -94,6 +94,7 @@ C) Assets today
 D) Offers branch (ONLY if business_model includes offers/service/freelancing)
 - has_offers: boolean
 - offers_count: number or null
+- offers_list: array of objects like [{ "name": "My Course", "price": "97€" }, ...] — extract EVERY offer the user mentions by name (CRITICAL: capture the actual offer names and prices so they appear in settings)
 - offers_satisfaction: one of ["yes","partly","no"]
 - offer_price_range: object { min: number|null, max: number|null } or null
 - offer_delivery_type: one of ["1to1","group","course","product","mixed"] or null
