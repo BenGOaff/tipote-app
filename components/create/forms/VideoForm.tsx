@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
+import { downloadAsPdf } from "@/lib/content-utils";
 
 interface VideoFormProps {
   onGenerate: (params: any) => Promise<string>;
@@ -238,6 +239,16 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
                   {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
                   {copied ? "Copié" : "Copier"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadAsPdf(generatedContent, title || "Script Vidéo")}
+                  disabled={!generatedContent}
+                >
+                  <FileDown className="w-4 h-4 mr-1" />
+                  PDF
                 </Button>
               </div>
             </div>

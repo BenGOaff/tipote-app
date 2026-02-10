@@ -15,7 +15,11 @@ import {
   Send,
   X,
   Pencil,
+  Copy,
+  Check,
+  FileDown,
 } from "lucide-react";
+import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import {
   Select,
   SelectContent,
@@ -62,6 +66,7 @@ export function ArticleForm({
 
   // ✅ modal "Modifier & copier"
   const [editorOpen, setEditorOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // ✅ UX: afficher un aperçu "beau" par défaut, avec option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
@@ -388,6 +393,29 @@ export function ArticleForm({
                 >
                   <RefreshCw className="w-4 h-4 mr-1" />
                   Regénérer
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const ok = await copyToClipboard(generatedContent);
+                    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+                  }}
+                  disabled={!generatedContent}
+                >
+                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                  {copied ? "Copié" : "Copier"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadAsPdf(generatedContent, title || "Article")}
+                  disabled={!generatedContent}
+                >
+                  <FileDown className="w-4 h-4 mr-1" />
+                  PDF
                 </Button>
               </div>
             </div>

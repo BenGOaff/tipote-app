@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
+import { downloadAsPdf } from "@/lib/content-utils";
 
 import type { PyramidOfferLite } from "@/components/create/forms/_shared";
 
@@ -227,6 +229,16 @@ export function OfferForm(props: OfferFormProps) {
 
               <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
                 Copier
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadAsPdf(result, title || "Offre")}
+                disabled={!result.trim()}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                PDF
               </Button>
             </div>
           </div>
