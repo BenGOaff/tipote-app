@@ -19,6 +19,8 @@ import {
   Trash2,
   Sparkles,
   Loader2,
+  Shield,
+  Key,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
@@ -63,6 +65,10 @@ type ProfileRow = {
   niche?: string | null;
   mission?: string | null;
   offers?: OfferItem[] | null;
+  privacy_url?: string | null;
+  terms_url?: string | null;
+  cgv_url?: string | null;
+  sio_user_api_key?: string | null;
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
@@ -104,6 +110,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [mission, setMission] = useState("");
   const [pendingProfile, startProfileTransition] = useTransition();
 
+  const [privacyUrl, setPrivacyUrl] = useState("");
+  const [termsUrl, setTermsUrl] = useState("");
+  const [cgvUrl, setCgvUrl] = useState("");
+  const [pendingLegal, startLegalTransition] = useTransition();
+
+  const [sioApiKey, setSioApiKey] = useState("");
+  const [pendingSio, startSioTransition] = useTransition();
+
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [initialOffers, setInitialOffers] = useState<OfferItem[]>([]);
   const [pendingOffers, startOffersTransition] = useTransition();
@@ -126,6 +140,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setFirstName(row?.first_name ?? "");
         setNiche(row?.niche ?? "");
         setMission(row?.mission ?? "");
+        setPrivacyUrl(row?.privacy_url ?? "");
+        setTermsUrl(row?.terms_url ?? "");
+        setCgvUrl(row?.cgv_url ?? "");
+        setSioApiKey(row?.sio_user_api_key ?? "");
 
         const loadedOffers = Array.isArray(row?.offers)
           ? row.offers.map((o: any) => ({
@@ -281,6 +299,82 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     } finally {
       setEnriching(false);
     }
+  };
+
+  // -------------------------
+  // Legal URLs
+  // -------------------------
+  const legalDirty = useMemo(() => {
+    const i = initialProfile;
+    return (i?.privacy_url ?? "") !== privacyUrl || (i?.terms_url ?? "") !== termsUrl || (i?.cgv_url ?? "") !== cgvUrl;
+  }, [initialProfile, privacyUrl, termsUrl, cgvUrl]);
+
+  const saveLegalUrls = () => {
+    startLegalTransition(async () => {
+      try {
+        const body: any = {};
+        if ((initialProfile?.privacy_url ?? "") !== privacyUrl) body.privacy_url = privacyUrl;
+        if ((initialProfile?.terms_url ?? "") !== termsUrl) body.terms_url = termsUrl;
+        if ((initialProfile?.cgv_url ?? "") !== cgvUrl) body.cgv_url = cgvUrl;
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setPrivacyUrl(row?.privacy_url ?? "");
+        setTermsUrl(row?.terms_url ?? "");
+        setCgvUrl(row?.cgv_url ?? "");
+
+        toast({ title: "URLs légales enregistrées" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Systeme.io API Key
+  // -------------------------
+  const sioDirty = useMemo(() => {
+    return (initialProfile?.sio_user_api_key ?? "") !== sioApiKey;
+  }, [initialProfile, sioApiKey]);
+
+  const saveSioKey = () => {
+    startSioTransition(async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sio_user_api_key: sioApiKey }),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setSioApiKey(row?.sio_user_api_key ?? "");
+
+        toast({ title: "Clé API Systeme.io enregistrée" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   // -------------------------
@@ -536,6 +630,78 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </Card>
 
         <CompetitorAnalysisSection />
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Mentions légales & CGV</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Ces URLs seront utilisées automatiquement dans vos quiz, tunnels et pages publiques.
+          </p>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Politique de confidentialité</Label>
+              <Input
+                placeholder="https://monsite.com/politique-de-confidentialite"
+                value={privacyUrl}
+                onChange={(e) => setPrivacyUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mentions légales / Conditions d&apos;utilisation</Label>
+              <Input
+                placeholder="https://monsite.com/mentions-legales"
+                value={termsUrl}
+                onChange={(e) => setTermsUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Conditions Générales de Vente (CGV)</Label>
+              <Input
+                placeholder="https://monsite.com/cgv"
+                value={cgvUrl}
+                onChange={(e) => setCgvUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveLegalUrls} disabled={!legalDirty || pendingLegal}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingLegal ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Key className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Systeme.io</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz.
+            Ta clé API est disponible dans Réglages &gt; Clés API publiques de ton dashboard Systeme.io.
+          </p>
+
+          <div className="space-y-2">
+            <Label>Clé API Systeme.io</Label>
+            <Input
+              type="password"
+              placeholder="Colle ta clé API ici..."
+              value={sioApiKey}
+              onChange={(e) => setSioApiKey(e.target.value)}
+              disabled={profileLoading}
+            />
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingSio ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </Card>
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>

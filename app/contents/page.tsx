@@ -144,13 +144,52 @@ export default async function ContentsPage({
   const initialView =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
-  const { data: items, error } = await fetchContentsForUser(session.user.id, q, status, type, channel);
+  const [{ data: items, error }, quizzesResult] = await Promise.all([
+    fetchContentsForUser(session.user.id, q, status, type, channel),
+    supabase
+      .from("quizzes")
+      .select("id, title, status, views_count, shares_count, created_at")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  // Count leads per quiz
+  const quizRows = (quizzesResult?.data as any[]) ?? [];
+  const quizzes = quizRows.map((qz: any) => ({
+    id: String(qz.id),
+    title: qz.title ?? "",
+    status: qz.status ?? "draft",
+    views_count: qz.views_count ?? 0,
+    shares_count: qz.shares_count ?? 0,
+    leads_count: 0,
+    created_at: String(qz.created_at),
+  }));
+
+  // Fetch lead counts if there are quizzes
+  if (quizzes.length > 0) {
+    const quizIds = quizzes.map((qz) => qz.id);
+    const { data: leadCounts } = await supabase
+      .from("quiz_leads")
+      .select("quiz_id")
+      .in("quiz_id", quizIds);
+    if (Array.isArray(leadCounts)) {
+      const countMap: Record<string, number> = {};
+      for (const l of leadCounts) {
+        const qid = String(l.quiz_id);
+        countMap[qid] = (countMap[qid] ?? 0) + 1;
+      }
+      for (const qz of quizzes) {
+        qz.leads_count = countMap[qz.id] ?? 0;
+      }
+    }
+  }
 
   return (
     <MyContentLovableClient
       userEmail={session.user.email ?? ""}
       initialView={initialView}
       items={items}
+      quizzes={quizzes}
       error={error}
     />
   );

@@ -53,6 +53,10 @@ import {
   CheckCircle2,
   Calendar,
   CalendarX,
+  ClipboardList,
+  Eye,
+  Users,
+  Share2,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -62,10 +66,21 @@ import type { ContentListItem } from "@/lib/types/content";
 import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { toast } from "@/components/ui/use-toast";
 
+type QuizListItem = {
+  id: string;
+  title: string;
+  status: string;
+  views_count: number;
+  shares_count: number;
+  leads_count: number;
+  created_at: string;
+};
+
 type Props = {
   userEmail: string;
   initialView: "list" | "calendar";
   items: ContentListItem[];
+  quizzes?: QuizListItem[];
   error?: string;
 };
 
@@ -74,6 +89,7 @@ const typeIcons: Record<string, any> = {
   email: Mail,
   article: FileText,
   video: Video,
+  quiz: ClipboardList,
 };
 
 const statusColors: Record<string, string> = {
@@ -133,6 +149,7 @@ export default function MyContentLovableClient({
   userEmail,
   initialView,
   items: initialItems,
+  quizzes = [],
   error,
 }: Props) {
   const router = useRouter();
@@ -613,6 +630,61 @@ export default function MyContentLovableClient({
                 </div>
               )}
             </div>
+
+            {/* Quiz section */}
+            {quizzes.length > 0 && view === "list" && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Quiz Lead Magnets
+                </h3>
+                <div className="space-y-3">
+                  {quizzes.map((qz) => {
+                    const isActive = qz.status === "active";
+                    return (
+                      <Card key={qz.id} className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2">
+                              <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="font-medium truncate">
+                                  {qz.title || "Quiz sans titre"}
+                                </div>
+                                <Badge
+                                  className={
+                                    isActive
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                      : "bg-muted text-muted-foreground"
+                                  }
+                                >
+                                  {isActive ? "Actif" : "Brouillon"}
+                                </Badge>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <span className="inline-flex items-center gap-1">
+                                  <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/quiz/${qz.id}`}>Gérer</Link>
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Edit Dialog (Lovable 1:1) */}
             <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>

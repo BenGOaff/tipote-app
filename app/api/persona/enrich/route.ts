@@ -150,10 +150,10 @@ Genere le profil persona enrichi complet en JSON.`;
     const profilePatch: AnyRecord = { updated_at: now };
 
     if (parsed.persona_summary) {
-      profilePatch.mission = cleanString(parsed.persona_summary, 500);
+      profilePatch.mission = cleanString(parsed.persona_summary, 10000);
     }
     if (parsed.niche_summary) {
-      profilePatch.niche = cleanString(parsed.niche_summary, 200);
+      profilePatch.niche = cleanString(parsed.niche_summary, 5000);
     }
 
     await supabase.from("business_profiles").update(profilePatch).eq("user_id", user.id);

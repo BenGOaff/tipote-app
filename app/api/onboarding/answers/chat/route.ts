@@ -169,11 +169,19 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
 
     if (activities.length >= 2 && !primary) return false;
 
-    const hasSales = hasNonEmptyFact(knownFacts, "conversion_status");
-    const hasAcq = hasNonEmptyFact(knownFacts, "acquisition_channels");
-    const hasSuccess = hasNonEmptyFact(knownFacts, "success_metrics");
+    // Essential: at least main_topic + business_model (or primary_activity)
+    const hasTopic = hasNonEmptyFact(knownFacts, "main_topic") || hasNonEmptyFact(knownFacts, "primary_activity");
+    const hasModel = hasNonEmptyFact(knownFacts, "business_model");
+    const hasFocus = hasNonEmptyFact(knownFacts, "primary_focus");
 
-    return hasSales && hasAcq && hasSuccess;
+    // If we have the 3 essentials, we're ready
+    if (hasTopic && hasModel && hasFocus) return true;
+
+    // Fallback: if we have topic + at least 3 other facts, that's enough
+    const factCount = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k)).length;
+    if (hasTopic && factCount >= 4) return true;
+
+    return false;
   } catch {
     return false;
   }
@@ -361,6 +369,26 @@ function extractSuccessMetrics(answer: string): Record<string, any> | null {
   }
 
   return Object.keys(payload).length ? payload : null;
+}
+
+function extractContentPreferences(answer: string): string[] {
+  const t = (answer || "").toLowerCase();
+  const out: string[] = [];
+
+  const push = (v: string) => {
+    if (!out.includes(v)) out.push(v);
+  };
+
+  if (t.includes("article") || t.includes("blog")) push("articles");
+  if (t.includes("vidéo") || t.includes("video") || t.includes("youtube")) push("vidéo");
+  if (t.includes("placement") || t.includes("lien")) push("placement de liens");
+  if (t.includes("affiliation") || t.includes("affilié")) push("affiliation");
+  if (t.includes("email") || t.includes("newsletter")) push("email");
+  if (t.includes("post") || t.includes("réseaux") || t.includes("social")) push("réseaux sociaux");
+  if (t.includes("podcast")) push("podcast");
+  if (t.includes("comparatif") || t.includes("test") || t.includes("review")) push("comparatifs / tests");
+
+  return out.slice(0, 8);
 }
 
 function extractRevenueGoalMonthly(answer: string): number | null {
@@ -929,6 +957,34 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
+    // ✅ Auto-extract content_channels_priority (articles, placements, etc.)
+    try {
+      if (!Array.isArray(knownFacts["content_channels_priority"])) {
+        const contentPrefs = extractContentPreferences(userMsg);
+        if (contentPrefs.length > 0) {
+          await upsertOneFact({ key: "content_channels_priority", value: contentPrefs, confidence: "high", source: "server_extract_content" });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // ✅ Auto-extract affiliate hints
+    try {
+      const t = userMsg.toLowerCase();
+      if (
+        !isNonEmptyString(knownFacts["business_model"]) &&
+        (t.includes("affili") || t.includes("amazon") || t.includes("programme") || t.includes("commission"))
+      ) {
+        await upsertOneFact({ key: "business_model", value: "affiliate", confidence: "medium", source: "server_extract_affiliate" });
+      }
+      if (t.includes("amazon") && !hasNonEmptyFact(knownFacts, "affiliate_programs_known")) {
+        await upsertOneFact({ key: "affiliate_programs_known", value: true, confidence: "high", source: "server_extract_affiliate" });
+      }
+    } catch {
+      // ignore
+    }
+
     // Contexte unifié (facts + profil)
     let userContextText = "";
     try {
@@ -944,12 +1000,21 @@ export async function POST(req: NextRequest) {
       userCountry: typeof (bp as any)?.country === "string" ? (bp as any).country : null,
     });
 
+    // Count exchanges to help AI know when to finish
+    const exchangeCount = Math.floor((hist.length + 1) / 2);
+    const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
+
     const userPrompt = JSON.stringify(
       {
-        goal:
-          "Understand, extract and persist facts. " +
-          "Your message MUST start with a 1-sentence acknowledgement of what the user just said, then ask 1 new question. " +
-          "NEVER repeat a question already answered in known_facts or conversation_history.",
+        instruction:
+          "Extrais les facts de la dernière réponse. Reformule ce que tu as compris en 1 phrase, puis pose 1 NOUVELLE question (jamais déjà posée). " +
+          "Si tu as assez d'infos (main_topic + business_model + primary_focus), TERMINE avec done=true.",
+        anti_loop_check:
+          `Échange n°${exchangeCount}. ` +
+          `Facts déjà collectés : [${collectedFactKeys.join(", ")}]. ` +
+          `NE POSE PAS de question sur ces sujets. ` +
+          (exchangeCount >= 6 ? "ATTENTION : tu approches de la limite. Termine bientôt." : "") +
+          (exchangeCount >= 8 ? " TERMINE MAINTENANT avec done=true." : ""),
         known_facts: knownFacts,
         business_profile_snapshot: bp ?? null,
         conversation_history: (history ?? []).map((m: any) => ({ role: m.role as ChatRole, content: m.content })),
@@ -1053,11 +1118,21 @@ export async function POST(req: NextRequest) {
 
     if (insertAssistErr) return NextResponse.json({ error: insertAssistErr.message }, { status: 400 });
 
+    // Compute progress for the UI (0-100)
+    const essentialKeys = ["main_topic", "business_model", "primary_focus", "target_audience_short"];
+    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"];
+    const essentialDone = essentialKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
+    const importantDone = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
+    const progress = Math.min(100, Math.round(
+      (essentialDone / essentialKeys.length) * 70 + (importantDone / importantKeys.length) * 30
+    ));
+
     const responsePayload: Record<string, any> = {
       sessionId,
       message: out.message,
       appliedFacts,
       shouldFinish,
+      progress,
     };
 
     if (shouldFinish) {

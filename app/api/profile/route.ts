@@ -35,6 +35,12 @@ const UpdateSchema = z.object({
   tone_preference: z.string().trim().max(120).optional(),
 
   offers: z.array(OfferItemSchema).max(50).optional(),
+
+  privacy_url: z.string().trim().max(500).optional(),
+  terms_url: z.string().trim().max(500).optional(),
+  cgv_url: z.string().trim().max(500).optional(),
+
+  sio_user_api_key: z.string().trim().max(200).optional(),
 });
 
 export async function GET() {

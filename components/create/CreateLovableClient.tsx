@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
-import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route } from "lucide-react";
+import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 import { QuickTemplateCard } from "@/components/create/QuickTemplateCard";
@@ -22,6 +22,7 @@ import { ArticleForm } from "@/components/create/forms/ArticleForm";
 import { VideoForm } from "@/components/create/forms/VideoForm";
 import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
+import { QuizForm } from "@/components/quiz/QuizForm";
 
 const contentTypes = [
   {
@@ -65,6 +66,13 @@ const contentTypes = [
     description: "Pages de vente, de capture ...",
     icon: Route,
     color: "bg-indigo-500",
+  },
+  {
+    id: "quiz",
+    label: "Quiz Lead Magnet",
+    description: "Quiz interactif pour capturer des emails",
+    icon: ClipboardList,
+    color: "bg-teal-500",
   },
 ] as const;
 
@@ -673,6 +681,8 @@ export default function CreateLovableClient() {
       case "funnel":
         // ✅ FunnelForm accepte existingOffers (dropdown offres existantes)
         return <FunnelForm {...common} existingOffers={existingOffers} />;
+      case "quiz":
+        return <QuizForm onClose={common.onClose} />;
       default:
         return null;
     }

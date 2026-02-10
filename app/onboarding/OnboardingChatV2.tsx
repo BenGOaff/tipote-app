@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -38,6 +39,7 @@ type ApiReply = {
   shouldFinish?: boolean;
   should_finish?: boolean;
   recapSummary?: string;
+  progress?: number;
   error?: string;
 };
 
@@ -253,6 +255,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const [activityCandidates, setActivityCandidates] = useState<string[]>([]);
   const [primaryActivity, setPrimaryActivity] = useState<string | null>(null);
+
+  // ✅ progress indicator
+  const [progress, setProgress] = useState(0);
 
   // ✅ recap modal
   const [showRecap, setShowRecap] = useState(false);
@@ -504,6 +509,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
       });
 
       if (reply?.sessionId) setSessionId(reply.sessionId);
+      if (typeof reply.progress === "number") setProgress(reply.progress);
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply.message, at: nowIso() }]);
 
@@ -759,11 +765,25 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <div className="text-xl font-semibold">Onboarding</div>
           <div className="text-sm text-muted-foreground">Un échange simple pour personnaliser Tipote.</div>
         </div>
       </div>
+
+      {/* Progress indicator */}
+      {progress > 0 && !isFinalizing && (
+        <div className="mb-4 space-y-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Progression</span>
+            <span>{progress}%</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+          {progress >= 80 && !isDone && (
+            <div className="text-xs text-primary">Presque terminé !</div>
+          )}
+        </div>
+      )}
 
       <Card className="p-4 sm:p-6">
         <div className="space-y-4">
