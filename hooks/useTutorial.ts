@@ -402,7 +402,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       case "tour_create":
         return "Le cœur de Tipote : génère posts, emails, articles... en quelques clics. ✨";
       case "tour_strategy":
-        return "Ton plan personnalisé et ta pyramide d'offres. Tout s'adapte à toi. 🎯";
+        return "Ton plan personnalisé et tes offres. Tout s'adapte à toi. 🎯";
       case "tour_complete":
         return "C'est bon ! Tu peux explorer. Je suis là si tu as besoin. 🚀";
       default:

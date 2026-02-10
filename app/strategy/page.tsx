@@ -178,7 +178,7 @@ export default async function StrategyPage() {
   const firstName = asString(profileRow?.first_name);
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
 
-  // ✅ Pyramides d'offres : UNIQUEMENT pour les users SANS offres et NON affiliés (sinon: jamais de /strategy/pyramids)
+  // Offres : UNIQUEMENT pour les users SANS offres et NON affilies (sinon: jamais de /strategy/pyramids)
   let isAffiliate = Boolean((profileRow as AnyRecord | null)?.is_affiliate);
 
   // Aligne la détection affiliation avec l'API /api/strategy/offer-pyramid (best-effort)
@@ -198,7 +198,7 @@ export default async function StrategyPage() {
 
   const offersArr = Array.isArray((profileRow as AnyRecord | null)?.offers) ? (((profileRow as AnyRecord | null)?.offers) as any[]) : [];
   const hasOffersEffective = Boolean((profileRow as AnyRecord | null)?.has_offers) || offersArr.length > 0;
-  const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
+  const shouldGenerateOffers = !isAffiliate && !hasOffersEffective;
 
   // Plan
   const planRes = await supabase
@@ -250,18 +250,18 @@ export default async function StrategyPage() {
           desires: [],
           channels: preferredContentTypes.length ? preferredContentTypes : [],
         }}
-        offerPyramids={[]}
+        offerSets={[]}
         initialSelectedIndex={0}
-        initialSelectedPyramid={undefined}
+        initialSelectedOffers={undefined}
         planTasksCount={0}
       />
     );
   }
 
-  // ✅ Sélection pyramide :
-  // - On NE redirige JAMAIS vers /strategy/pyramids (route réservée à l'onboarding et aux users sans offres).
-  // - Si une sélection existe dans le plan -> on l'utilise.
-  // - Sinon, on fail-open en prenant la 1ère pyramide si dispo (sans bloquer l'accès à /strategy).
+  // Selection des offres :
+  // - On NE redirige JAMAIS vers /strategy/pyramids (route reservee a l'onboarding et aux users sans offres).
+  // - Si une selection existe dans le plan -> on l'utilise.
+  // - Sinon, on fail-open en prenant le 1er jeu d'offres si dispo (sans bloquer l'acces a /strategy).
   const selectedIndexRaw = (planJson as AnyRecord).selected_offer_pyramid_index;
   const selectedIndex = typeof selectedIndexRaw === "number" ? (selectedIndexRaw as number) : null;
 
@@ -274,25 +274,25 @@ export default async function StrategyPage() {
     channels: preferredContentTypes.length ? preferredContentTypes : asStringArray(personaRaw.channels),
   };
 
-  // Pyramides (depuis plan_json)
-  const offerPyramids = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
+  // Offres (depuis plan_json -- DB key: offer_pyramids)
+  const offerSets = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
 
   const hasExplicitSelection =
     typeof (planJson as AnyRecord).selected_offer_pyramid_index === "number" && !!(planJson as AnyRecord).selected_offer_pyramid;
 
-  // ✅ Index sélectionné : si pas de sélection explicite, on choisit 0 si on a des pyramides (sinon 0 par défaut)
+  // Index selectionne : si pas de selection explicite, on choisit 0 si on a des offres (sinon 0 par defaut)
   const initialSelectedIndex =
     hasExplicitSelection
       ? ((planJson as AnyRecord).selected_offer_pyramid_index as number)
-      : offerPyramids.length > 0
+      : offerSets.length > 0
         ? 0
         : 0;
 
-  const initialSelectedPyramid =
+  const initialSelectedOffers =
     hasExplicitSelection
       ? ((planJson as AnyRecord).selected_offer_pyramid as AnyRecord)
-      : offerPyramids.length > 0
-        ? (offerPyramids[0] as AnyRecord)
+      : offerSets.length > 0
+        ? (offerSets[0] as AnyRecord)
         : undefined;
 
   // ✅ IMPORTANT (prod/RLS-safe):
@@ -385,9 +385,9 @@ export default async function StrategyPage() {
           { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: byPhase.p3 },
         ]}
         persona={persona}
-        offerPyramids={offerPyramids}
+        offerSets={offerSets}
         initialSelectedIndex={initialSelectedIndex}
-        initialSelectedPyramid={initialSelectedPyramid}
+        initialSelectedOffers={initialSelectedOffers}
         planTasksCount={planTasksCount}
       />
     </>

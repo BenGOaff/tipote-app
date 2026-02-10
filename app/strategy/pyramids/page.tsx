@@ -1,12 +1,12 @@
 // app/strategy/pyramids/page.tsx
 //
-// ✅ IMPORTANT
-// Cette route est *désactivée* pour les utilisateurs “normaux”.
-// La sélection de pyramide d'offres se fait UNIQUEMENT dans l'onboarding
-// (et uniquement pour les users SANS offres et NON affiliés).
+// IMPORTANT
+// Cette route est *desactivee* pour les utilisateurs "normaux".
+// La selection des offres se fait UNIQUEMENT dans l'onboarding
+// (et uniquement pour les users SANS offres et NON affilies).
 //
-// Objectif : empêcher qu'un user déjà onboardé (et/ou déjà satisfait de ses offres)
-// atterrisse sur une page de pyramides vide.
+// Objectif : empecher qu'un user deja onboarde (et/ou deja satisfait de ses offres)
+// atterrisse sur une page d'offres vide.
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -18,7 +18,7 @@ export default async function StrategyPyramidsPage() {
   // ✅ login = "/"
   if (authError || !auth?.user) redirect("/");
 
-  // ✅ Si onboarding non complété => retour vers l'onboarding (c'est là que la sélection se fait)
+  // Si onboarding non complete => retour vers l'onboarding (c'est la que la selection se fait)
   const { data: profile } = await supabase
     .from("business_profiles")
     .select("onboarding_completed")

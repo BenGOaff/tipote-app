@@ -37,7 +37,7 @@ const BodySchema = z
 
 type StoredPlan = "free" | "basic" | "pro" | "elite";
 
-type CoachSuggestionType = "update_offer_pyramid" | "update_tasks" | "open_tipote_tool";
+type CoachSuggestionType = "update_offers" | "update_tasks" | "open_tipote_tool";
 
 type CoachSuggestion = {
   id: string;
@@ -50,7 +50,7 @@ type CoachSuggestion = {
 const SuggestionSchema = z
   .object({
     id: z.string().trim().min(1).max(128).optional(),
-    type: z.enum(["update_offer_pyramid", "update_tasks", "open_tipote_tool"]),
+    type: z.enum(["update_offers", "update_tasks", "open_tipote_tool"]),
     title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(800).optional(),
     payload: z.record(z.unknown()).optional(),
@@ -117,7 +117,7 @@ function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSu
         ...(s.description ? { description: s.description } : {}),
         payload: next,
       });
-    } else if (s.type === "update_offer_pyramid") {
+    } else if (s.type === "update_offers") {
       const idx = (payload as any).selectedIndex ?? (payload as any).selected_index;
       const pyramid = (payload as any).pyramid ?? (payload as any).selected_offer_pyramid;
       if (typeof idx !== "number" || !Number.isFinite(idx) || idx < 0) continue;
@@ -130,7 +130,7 @@ function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSu
 
       out.push({
         id: s.id || makeId(),
-        type: "update_offer_pyramid",
+        type: "update_offers",
         title: s.title,
         ...(s.description ? { description: s.description } : {}),
         payload: { selectedIndex: idx, pyramid: p as any },

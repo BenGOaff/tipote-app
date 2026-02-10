@@ -87,9 +87,9 @@ type StrategyLovableProps = {
     desires: string[];
     channels: string[];
   };
-  offerPyramids: AnyRecord[];
+  offerSets: AnyRecord[];
   initialSelectedIndex: number;
-  initialSelectedPyramid?: AnyRecord;
+  initialSelectedOffers?: AnyRecord;
   planTasksCount: number;
 
   // ✅ nouveau (optionnel) : permet d’afficher un état “plan en cours”
@@ -115,16 +115,16 @@ function isDoneStatus(v: unknown) {
   );
 }
 
-function pickSelectedPyramid(
-  offerPyramids: AnyRecord[],
+function pickSelectedOfferSet(
+  offerSets: AnyRecord[],
   index: number,
   explicit?: AnyRecord,
 ) {
   if (explicit) return explicit;
-  if (!Array.isArray(offerPyramids) || offerPyramids.length === 0) return null;
-  if (typeof index !== "number" || index < 0 || index >= offerPyramids.length)
-    return offerPyramids[0];
-  return offerPyramids[index];
+  if (!Array.isArray(offerSets) || offerSets.length === 0) return null;
+  if (typeof index !== "number" || index < 0 || index >= offerSets.length)
+    return offerSets[0];
+  return offerSets[index];
 }
 
 function pickFirstNonEmpty(...vals: unknown[]): string {
@@ -199,22 +199,22 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     }
   }, [isGeneratingPlan, router, toast]);
 
-  // --- Sélection pyramide (inchangé) ---
-  const selectedPyramid = pickSelectedPyramid(
-    (props.offerPyramids || []) as AnyRecord[],
+  // --- Sélection offres (inchangé) ---
+  const selectedOfferSet = pickSelectedOfferSet(
+    (props.offerSets || []) as AnyRecord[],
     props.initialSelectedIndex ?? 0,
-    props.initialSelectedPyramid as AnyRecord | undefined,
+    props.initialSelectedOffers as AnyRecord | undefined,
   );
 
-  const lead = (selectedPyramid?.lead_magnet ??
-    selectedPyramid?.leadMagnet ??
+  const lead = (selectedOfferSet?.lead_magnet ??
+    selectedOfferSet?.leadMagnet ??
     null) as AnyRecord | null;
-  const mid = (selectedPyramid?.low_ticket ??
-    selectedPyramid?.middle_ticket ??
-    selectedPyramid?.midTicket ??
+  const mid = (selectedOfferSet?.low_ticket ??
+    selectedOfferSet?.middle_ticket ??
+    selectedOfferSet?.midTicket ??
     null) as AnyRecord | null;
-  const high = (selectedPyramid?.high_ticket ??
-    selectedPyramid?.highTicket ??
+  const high = (selectedOfferSet?.high_ticket ??
+    selectedOfferSet?.highTicket ??
     null) as AnyRecord | null;
 
   // --- Persona (inchangé) ---
@@ -511,7 +511,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             {/* ✅ NEW : Bandeau “plan en cours” (sans casser le reste) */}
             {(props.mode === "generating" ||
               (!props.planTasksCount &&
-                (!props.offerPyramids || props.offerPyramids.length === 0))) && (
+                (!props.offerSets || props.offerSets.length === 0))) && (
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -589,8 +589,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             <Tabs defaultValue="plan" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="plan">Plan d&apos;action</TabsTrigger>
-                <TabsTrigger value="pyramid">
-                  Pyramide d&apos;offres
+                <TabsTrigger value="offers">
+                  Tes offres
                 </TabsTrigger>
                 <TabsTrigger value="persona">Persona cible</TabsTrigger>
               </TabsList>
@@ -843,14 +843,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 </div>
               </TabsContent>
 
-              {/* Pyramide d'offres Tab */}
-              <TabsContent value="pyramid" className="space-y-6">
+              {/* Tes offres Tab */}
+              <TabsContent value="offers" className="space-y-6">
                 <Card className="p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                       <Layers className="w-5 h-5 text-primary-foreground" />
                     </div>
-                    <h3 className="text-xl font-bold">Pyramide d&apos;offres</h3>
+                    <h3 className="text-xl font-bold">Tes offres</h3>
                   </div>
 
                   <div className="space-y-4">

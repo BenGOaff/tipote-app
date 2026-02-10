@@ -1,10 +1,10 @@
 // app/api/strategy/offer-pyramid/route.ts
-// ✅ Génère les pyramides (si besoin) + sauvegarde dans business_plan.plan_json
+// ✅ Génère les offres (si besoin) + sauvegarde dans business_plan.plan_json
 // ✅ PATCH : sauvegarde le choix (selected_offer_pyramid_index + selected_offer_pyramid) dans business_plan
-// ✅ POST : si pyramides manquantes -> génère ; si pyramide choisie + stratégie incomplète -> génère stratégie complète (persona + plan 90j)
+// ✅ POST : si offres manquantes -> génère ; si offre choisie + stratégie incomplète -> génère stratégie complète (persona + plan 90j)
 // ✅ Best-effort sync (ne casse jamais le flux si erreur DB) :
 //    - public.strategies (ligne par user)
-//    - public.offer_pyramids (3 lignes par pyramide : lead/low/high)
+//    - public.offer_pyramids (3 lignes par offre : lead/low/high)
 //    - public.personas (colonnes lisibles + persona_json JSONB complet)
 
 import { NextResponse } from "next/server";
@@ -139,16 +139,16 @@ function scoreTextByQuery(text: string, queryTokens: string[]): number {
   return score;
 }
 
-function buildRetrievalQuery(params: { businessProfile: AnyRecord; selectedPyramid?: AnyRecord | null }): string {
+function buildRetrievalQuery(params: { businessProfile: AnyRecord; selectedOffers?: AnyRecord | null }): string {
   const bp = params.businessProfile ?? {};
-  const pyr = params.selectedPyramid ?? {};
+  const pyr = params.selectedOffers ?? {};
 
   const niche = cleanString(bp.niche ?? bp.market ?? bp.activity ?? bp.business_type, 120);
   const goal = cleanString(bp.main_goal_90_days ?? bp.main_goal ?? bp.goal ?? bp.revenue_goal, 180);
   const blocker = cleanString(bp.biggest_blocker ?? bp.biggestBlocker, 160);
   const maturity = cleanString(bp.maturity, 80);
 
-  const pyramidBits = [
+  const offerBits = [
     cleanString(pyr?.name, 160),
     cleanString(pyr?.strategy_summary, 280),
     cleanString(pyr?.lead_magnet?.title, 160),
@@ -156,7 +156,7 @@ function buildRetrievalQuery(params: { businessProfile: AnyRecord; selectedPyram
     cleanString(pyr?.high_ticket?.title, 160),
   ].filter(Boolean);
 
-  return [niche && `niche ${niche}`, goal && `objectif ${goal}`, blocker && `blocage ${blocker}`, maturity && `maturité ${maturity}`, ...pyramidBits]
+  return [niche && `niche ${niche}`, goal && `objectif ${goal}`, blocker && `blocage ${blocker}`, maturity && `maturité ${maturity}`, ...offerBits]
     .filter(Boolean)
     .join(" | ");
 }
@@ -165,13 +165,13 @@ function selectRelevantContext(params: {
   resources: AnyRecord[];
   resourceChunks: AnyRecord[];
   businessProfile: AnyRecord;
-  selectedPyramid?: AnyRecord | null;
+  selectedOffers?: AnyRecord | null;
   maxResources?: number;
   maxChunks?: number;
 }): { pickedResources: AnyRecord[]; pickedChunks: AnyRecord[]; contextBlock: string } {
-  const { resources, resourceChunks, businessProfile, selectedPyramid = null, maxResources = 6, maxChunks = 12 } = params;
+  const { resources, resourceChunks, businessProfile, selectedOffers = null, maxResources = 6, maxChunks = 12 } = params;
 
-  const query = buildRetrievalQuery({ businessProfile, selectedPyramid });
+  const query = buildRetrievalQuery({ businessProfile, selectedOffers });
   const qTokens = tokenize(query);
 
   const scoredResources = (Array.isArray(resources) ? resources : [])
@@ -224,7 +224,7 @@ function selectRelevantContext(params: {
 
 /**
  * -----------------------
- * Pyramids normalization
+ * Offers normalization
  * -----------------------
  */
 function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
@@ -239,9 +239,9 @@ function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
   return { title, composition, purpose, format, insight, ...(price !== null ? { price } : {}) };
 }
 
-function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
+function normalizeOfferSet(p: AnyRecord | null, idx: number): AnyRecord {
   const id = String(p?.id ?? idx);
-  const name = cleanString(p?.name ?? p?.nom ?? `Pyramide ${idx + 1}`, 160);
+  const name = cleanString(p?.name ?? p?.nom ?? `Offre ${idx + 1}`, 160);
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
@@ -261,10 +261,10 @@ function normalizePyramid(p: AnyRecord | null, idx: number): AnyRecord {
   };
 }
 
-function pyramidsLookUseful(pyramids: unknown[]): boolean {
-  if (!Array.isArray(pyramids) || pyramids.length < 1) return false;
-  const ok = pyramids
-    .map((p, idx) => normalizePyramid(asRecord(p), idx))
+function offersLookUseful(offers: unknown[]): boolean {
+  if (!Array.isArray(offers) || offers.length < 1) return false;
+  const ok = offers
+    .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
     .filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
   return ok.length >= 1;
 }
@@ -560,8 +560,8 @@ async function persistOfferPyramidsBestEffort(params: {
   const now = new Date().toISOString();
 
   function mkRow(args: {
-    pyramidName: string;
-    pyramidSummary: string;
+    offerSetName: string;
+    offerSetSummary: string;
     level: "lead_magnet" | "low_ticket" | "high_ticket";
     offer: AnyRecord;
     isFlagship: boolean;
@@ -577,8 +577,8 @@ async function persistOfferPyramidsBestEffort(params: {
       user_id: userId,
       ...(strategyId ? { strategy_id: strategyId } : {}),
       level: args.level,
-      name: cleanString(`${args.pyramidName} — ${title || args.level}`, 240) || args.level,
-      description: cleanString(`${args.pyramidSummary}\n\n${composition}`, 4000),
+      name: cleanString(`${args.offerSetName} — ${title || args.level}`, 240) || args.level,
+      description: cleanString(`${args.offerSetSummary}\n\n${composition}`, 4000),
       promise: purpose,
       format,
       delivery: insight,
@@ -591,8 +591,8 @@ async function persistOfferPyramidsBestEffort(params: {
 
   const rows: AnyRecord[] = [];
   pyramids.forEach((p, idx) => {
-    const pyramidName = cleanString(p.name, 160) || `Pyramide ${idx + 1}`;
-    const pyramidSummary = cleanString(p.strategy_summary, 1200);
+    const offerSetName = cleanString(p.name, 160) || `Offre ${idx + 1}`;
+    const offerSetSummary = cleanString(p.strategy_summary, 1200);
 
     const lead = asRecord(p.lead_magnet);
     const low = asRecord(p.low_ticket);
@@ -600,9 +600,9 @@ async function persistOfferPyramidsBestEffort(params: {
 
     const isSelected = typeof selectedIndex === "number" && idx === selectedIndex;
 
-    if (lead) rows.push(mkRow({ pyramidName, pyramidSummary, level: "lead_magnet", offer: lead, isFlagship: isSelected }));
-    if (low) rows.push(mkRow({ pyramidName, pyramidSummary, level: "low_ticket", offer: low, isFlagship: isSelected }));
-    if (high) rows.push(mkRow({ pyramidName, pyramidSummary, level: "high_ticket", offer: high, isFlagship: isSelected }));
+    if (lead) rows.push(mkRow({ offerSetName, offerSetSummary, level: "lead_magnet", offer: lead, isFlagship: isSelected }));
+    if (low) rows.push(mkRow({ offerSetName, offerSetSummary, level: "low_ticket", offer: low, isFlagship: isSelected }));
+    if (high) rows.push(mkRow({ offerSetName, offerSetSummary, level: "high_ticket", offer: high, isFlagship: isSelected }));
   });
 
   if (!rows.length) return;
@@ -731,7 +731,7 @@ export async function GET(_req: Request) {
       (Array.isArray((businessProfile as any)?.offers) && (businessProfile as any).offers.length > 0);
 
     const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
-    const shouldGeneratePyramids = !isAffiliate && !hasOffersEffective;
+    const shouldGenerateOffers = !isAffiliate && !hasOffersEffective;
 
     const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
     const planJson = (planRow?.plan_json ?? null) as AnyRecord | null;
@@ -748,7 +748,7 @@ export async function GET(_req: Request) {
       {
         success: true,
         offer_mode: offerMode,
-        shouldGeneratePyramids,
+        shouldGenerateOffers,
         offer_pyramids,
         selected_offer_pyramid_index,
       },
@@ -799,7 +799,7 @@ export async function PATCH(req: Request) {
 
       if (!pyramid) {
         return NextResponse.json(
-          { success: false, error: "Missing pyramid: no pyramid provided and offer_pyramids[selectedIndex] not found" },
+          { success: false, error: "Missing offer set: no offer set provided and offer_pyramids[selectedIndex] not found" },
           { status: 400 },
         );
       }
@@ -838,13 +838,13 @@ export async function PATCH(req: Request) {
         });
 
         const pyramids = asArray(nextPlan.offer_pyramids)
-          .map((p, idx) => normalizePyramid(asRecord(p), idx))
+          .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
           .filter((x) => !!x && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
 
         if (pyramids.length) {
           await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids, selectedIndex });
         } else {
-          const normalizedSelected = normalizePyramid(pyramid, 0);
+          const normalizedSelected = normalizeOfferSet(pyramid, 0);
           await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids: [normalizedSelected], selectedIndex: 0 });
         }
       }
@@ -878,7 +878,7 @@ export async function POST(req: Request) {
 
     const existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
 
-    const existingOfferPyramids = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
+    const existingOffers = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
     const existingSelectedIndex =
       typeof existingPlanJson?.selected_offer_pyramid_index === "number"
         ? existingPlanJson.selected_offer_pyramid_index
@@ -888,12 +888,12 @@ export async function POST(req: Request) {
 
     const hasSelected = typeof existingSelectedIndex === "number";
     const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
-    const hasUsefulPyramids = pyramidsLookUseful(existingOfferPyramids);
+    const hasUsefulOffers = offersLookUseful(existingOffers);
 
     if (hasSelected && !needFullStrategy) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
     }
-    if (!hasSelected && hasUsefulPyramids) {
+    if (!hasSelected && hasUsefulOffers) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
@@ -906,7 +906,7 @@ export async function POST(req: Request) {
     // -----------------------
     // Offer mode (new onboarding)
     // -----------------------
-    // Pyramides ONLY si: user sans offre ET pas affilié
+    // Offres ONLY si: user sans offre ET pas affilié
     const onboardingFacts: Record<string, unknown> = {};
     try {
       const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
@@ -931,10 +931,10 @@ export async function POST(req: Request) {
       (Array.isArray((businessProfile as any)?.offers) && (businessProfile as any).offers.length > 0);
 
     const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
-    const shouldGeneratePyramids = offerMode === "none";
+    const shouldGenerateOffers = offerMode === "none";
 
-    // ✅ Si l'onboarding dit "affiliate" ou "existing_offer", ce endpoint ne doit PAS générer de pyramides.
-    if (!shouldGeneratePyramids) {
+    // ✅ Si l'onboarding dit "affiliate" ou "existing_offer", ce endpoint ne doit PAS générer d'offres.
+    if (!shouldGenerateOffers) {
       return NextResponse.json({ success: true, skipped: true, reason: "offer_mode_no_pyramids", offer_mode: offerMode }, { status: 200 });
     }
 
@@ -953,23 +953,23 @@ export async function POST(req: Request) {
     }
 
     /**
-     * 1) Générer les pyramides si besoin
+     * 1) Générer les offres si besoin
      */
-    if (!hasUsefulPyramids) {
-      const PYRAMIDS_COUNT = 5;
+    if (!hasUsefulOffers) {
+      const OFFERS_COUNT = 5;
 
       const { contextBlock } = selectRelevantContext({
         resources: (resources ?? []) as AnyRecord[],
         resourceChunks: (resourceChunks ?? []) as AnyRecord[],
         businessProfile: businessProfile as AnyRecord,
-        selectedPyramid: null,
+        selectedOffers: null,
         maxResources: 5,
         maxChunks: 10,
       });
 
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
-OBJECTIF : Proposer ${PYRAMIDS_COUNT} pyramides d'offres (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
+OBJECTIF : Proposer ${OFFERS_COUNT} offres existantes (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain.
@@ -979,8 +979,8 @@ SOURCE DE VÉRITÉ (ordre de priorité) :
 EXIGENCES “ANTI-GÉNÉRALITÉS” :
 - Interdit: “faire du contenu”, “améliorer la com”, “poster sur Instagram” sans préciser QUOI / ANGLE / FORMAT / FRÉQUENCE / CTA.
 - Chaque offre doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit”.
-- Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
-- Intègre un quick win 7 jours cohérent avec la pyramide.
+- Chaque offre = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
+- Intègre un quick win 7 jours cohérent avec l'offre.
 
 IMPORTANT : Réponds en JSON strict uniquement, sans texte autour.`;
 
@@ -1022,8 +1022,8 @@ RESSOURCES INTERNES (top extraits pertinents) :
 ${contextBlock || "(aucun extrait pertinent trouvé)"}
 
 Contraintes de sortie :
-- Génère ${PYRAMIDS_COUNT} pyramides complètes.
-- Chaque pyramide contient : lead_magnet, low_ticket, high_ticket.
+- Génère ${OFFERS_COUNT} offres complètes.
+- Chaque offre contient : lead_magnet, low_ticket, high_ticket.
 - Pour chaque offre, renseigne :
   - title (spécifique + outcome + mécanisme)
   - format (PDF, mini-cours, workshop, template, audit, coaching, etc.)
@@ -1031,14 +1031,14 @@ Contraintes de sortie :
   - composition (livrables concrets)
   - purpose (objectif/transformation mesurable)
   - insight (1 phrase: pourquoi ça convertit à ce niveau)
-- La logique globale de chaque pyramide = strategy_summary (1 phrase).
+- La logique globale de chaque offre = strategy_summary (1 phrase).
 
 STRUCTURE EXACTE À RENVOYER :
 {
   "offer_pyramids": [
     {
       "id": "A",
-      "name": "Pyramide A — ...",
+      "name": "Offre A — ...",
       "strategy_summary": "1 phrase",
       "lead_magnet": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
       "low_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
@@ -1064,10 +1064,10 @@ STRUCTURE EXACTE À RENVOYER :
       const parsed = JSON.parse(raw) as AnyRecord;
       await consumeCredits(userId, 1, { feature: "offer_pyramid" });
 
-      const pyramidsRaw = asArray(parsed.offer_pyramids);
-      const normalizedOfferPyramids = pyramidsRaw.map((p, idx) => normalizePyramid(asRecord(p), idx));
+      const offersRaw = asArray(parsed.offer_pyramids);
+      const normalizedOffers = offersRaw.map((p, idx) => normalizeOfferSet(asRecord(p), idx));
 
-      if (!pyramidsLookUseful(normalizedOfferPyramids)) {
+      if (!offersLookUseful(normalizedOffers)) {
         console.error("AI returned incomplete offer_pyramids payload:", parsed);
         return NextResponse.json({ success: false, error: "AI returned incomplete offer_pyramids" }, { status: 502 });
       }
@@ -1075,7 +1075,7 @@ STRUCTURE EXACTE À RENVOYER :
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
       const plan_json: AnyRecord = {
         ...basePlan,
-        offer_pyramids: normalizedOfferPyramids,
+        offer_pyramids: normalizedOffers,
 
         ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel } : {}),
 
@@ -1099,7 +1099,7 @@ STRUCTURE EXACTE À RENVOYER :
         .maybeSingle();
 
       if (saveErr) {
-        console.error("Error saving business_plan pyramids:", saveErr);
+        console.error("Error saving business_plan offers:", saveErr);
         return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
       }
 
@@ -1113,23 +1113,23 @@ STRUCTURE EXACTE À RENVOYER :
         await persistOfferPyramidsBestEffort({
           userId,
           strategyId,
-          pyramids: normalizedOfferPyramids,
+          pyramids: normalizedOffers,
           selectedIndex: null,
         });
       } catch (e) {
-        console.error("POST pyramids sync unexpected error:", e);
+        console.error("POST offers sync unexpected error:", e);
       }
 
       return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
     }
 
     /**
-     * 2) Générer la stratégie complète si pyramide choisie et stratégie pas encore complète
+     * 2) Générer la stratégie complète si offre choisie et stratégie pas encore complète
      */
-    const selectedPyramid = pickSelectedPyramidFromPlan(existingPlanJson);
-    if (!selectedPyramid) {
+    const selectedOffers = pickSelectedPyramidFromPlan(existingPlanJson);
+    if (!selectedOffers) {
       return NextResponse.json(
-        { success: false, error: "selected_offer_pyramid is missing. Choose a pyramid first before generating the full strategy." },
+        { success: false, error: "selected_offer_pyramid is missing. Choose an offer set first before generating the full strategy." },
         { status: 400 },
       );
     }
@@ -1138,19 +1138,19 @@ STRUCTURE EXACTE À RENVOYER :
       resources: (resources ?? []) as AnyRecord[],
       resourceChunks: (resourceChunks ?? []) as AnyRecord[],
       businessProfile: businessProfile as AnyRecord,
-      selectedPyramid: selectedPyramid as AnyRecord,
+      selectedOffers: selectedOffers as AnyRecord,
       maxResources: 6,
       maxChunks: 12,
     });
 
     const fullSystemPrompt = `Tu es Tipote™, un stratège business senior + expert persona francophone (niveau mondial).
-Tu dois créer une stratégie complète et actionnable à partir de l'onboarding + de la pyramide choisie.
+Tu dois créer une stratégie complète et actionnable à partir de l'onboarding + de l'offre choisie.
 
 RÈGLES “COACH-LEVEL” :
 - Réponds en JSON strict uniquement (zéro texte autour).
 - Concret, actionnable, niché. Aucun conseil générique.
 - Chaque recommandation doit préciser: QUOI / COMMENT / LIVRABLE / MÉTRIQUE.
-- Cohérence totale avec la pyramide (angle, canal principal, offre, promesse).
+- Cohérence totale avec l'offre choisie (angle, canal principal, promesse).
 - Interdit: “crée du contenu” sans (thèmes, formats, fréquence, CTA, distribution).
 - Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé.
 - Plan 90 jours: tâches “solo-exécutables”, avec due_date valides, et priorité.
@@ -1198,8 +1198,8 @@ ${JSON.stringify(
   2,
 )}
 
-PYRAMIDE CHOISIE :
-${JSON.stringify(selectedPyramid, null, 2)}
+OFFRE CHOISIE :
+${JSON.stringify(selectedOffers, null, 2)}
 
 RESSOURCES INTERNES (top extraits pertinents) :
 ${contextBlock || "(aucun extrait pertinent trouvé)"}
@@ -1270,7 +1270,7 @@ Contraintes :
           : typeof existingSelectedIndex === "number"
             ? existingSelectedIndex
             : null,
-      selected_offer_pyramid: basePlan.selected_offer_pyramid ?? selectedPyramid ?? null,
+      selected_offer_pyramid: basePlan.selected_offer_pyramid ?? selectedOffers ?? null,
 
       // legacy compat
       selected_pyramid_index:
@@ -1279,7 +1279,7 @@ Contraintes :
           : typeof existingSelectedIndex === "number"
             ? existingSelectedIndex
             : null,
-      selected_pyramid: basePlan.selected_pyramid ?? selectedPyramid ?? null,
+      selected_pyramid: basePlan.selected_pyramid ?? selectedOffers ?? null,
 
       updated_at: new Date().toISOString(),
     };
@@ -1304,7 +1304,7 @@ Contraintes :
 
       try {
         const pyramids = asArray(nextPlan.offer_pyramids)
-          .map((p, idx) => normalizePyramid(asRecord(p), idx))
+          .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
           .filter((x) => !!x && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
 
         if (pyramids.length) {

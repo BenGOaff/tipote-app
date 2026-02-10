@@ -147,7 +147,7 @@ export async function POST() {
       { table: "onboarding_facts", column: "user_id" },
       { table: "onboarding_sessions", column: "user_id" },
 
-      // Onboarding / stratégie / pyramides / persona / plan business (regénérables)
+      // Onboarding / stratégie / offres (legacy table) / persona / plan business (regénérables)
       { table: "offer_pyramids", column: "user_id" },
       { table: "personas", column: "user_id" },
       { table: "strategies", column: "user_id" },

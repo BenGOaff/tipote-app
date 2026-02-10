@@ -2,10 +2,10 @@
 // Dashboard "Aujourd'hui" — rendu pixel-perfect Lovable (Today.tsx)
 // - Protégé par l'auth Supabase
 // - Si onboarding non complété => redirect /onboarding
-// NOTE: on NE bloque plus sur la stratégie/pyramide ici.
+// NOTE: on NE bloque plus sur la stratégie/offres ici.
 // L'utilisateur arrive sur un dashboard immédiatement.
 //
-// ✅ Suite logique Onboarding 3.0 : la finalisation (pyramide + stratégie + tâches) se fait dans l'onboarding,
+// ✅ Suite logique Onboarding 3.0 : la finalisation (offres + stratégie + tâches) se fait dans l'onboarding,
 // puis redirect vers /app. On garde /app clean (pas de bandeau / nudge post-onboarding).
 
 import { redirect } from "next/navigation";

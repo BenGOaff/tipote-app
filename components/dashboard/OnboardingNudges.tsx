@@ -43,7 +43,7 @@ function pickSelectedIndex(planJson: AnyRecord | null): number | null {
   return typeof idx === "number" && Number.isFinite(idx) ? idx : null;
 }
 
-function hasOfferPyramids(planJson: AnyRecord | null): boolean {
+function hasExistingOffers(planJson: AnyRecord | null): boolean {
   if (!planJson) return false;
   const arr = asArray(planJson.offer_pyramids);
   return arr.length >= 1;
@@ -85,12 +85,12 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
 
   const plan = useMemo(() => (asRecord(props.planJson) ? (props.planJson as AnyRecord) : null), [props.planJson]);
 
-  const pyramidsExist = useMemo(() => hasOfferPyramids(plan), [plan]);
+  const offersExist = useMemo(() => hasExistingOffers(plan), [plan]);
   const selectedIndex = useMemo(() => pickSelectedIndex(plan), [plan]);
-  const selectedMissing = pyramidsExist && selectedIndex === null;
+  const selectedMissing = offersExist && selectedIndex === null;
 
   const fullReady = useMemo(() => hasFullStrategy(plan), [plan]);
-  const needsFull = !selectedMissing && pyramidsExist && selectedIndex !== null && !fullReady;
+  const needsFull = !selectedMissing && offersExist && selectedIndex !== null && !fullReady;
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -126,7 +126,7 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
                   <Badge variant="outline">À faire</Badge>
                   <p className="text-sm text-muted-foreground">Dernière étape pour débloquer ta stratégie complète</p>
                 </div>
-                <h3 className="mt-2 text-lg font-semibold">Choisis ta pyramide d’offres</h3>
+                <h3 className="mt-2 text-lg font-semibold">Choisis tes offres</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Tipote a généré 3 options. Sélectionne celle qui te ressemble le plus pour finaliser le plan 90 jours.
                 </p>
@@ -139,7 +139,7 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
                 </div>
                 <h3 className="mt-2 text-lg font-semibold">Générer la stratégie complète</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  On transforme ta pyramide choisie en mission, positionnement, persona et tâches datées (90 jours).
+                  Tes offres prennent vie : mission, positionnement, persona et tâches datées (90 jours).
                 </p>
               </>
             )}
