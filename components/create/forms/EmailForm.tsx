@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
+import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -275,6 +276,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [scheduledAt, setScheduledAt] = useState("");
   // ✅ UX: aperçu "beau" + option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
+  const [copied, setCopied] = useState(false);
 
 
   const generatedContent = useMemo(() => joinEmails(emails), [emails]);
@@ -1039,6 +1041,29 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 >
                   <RefreshCw className="w-4 h-4 mr-1" />
                   Regénérer
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const ok = await copyToClipboard(generatedContent);
+                    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+                  }}
+                  disabled={!generatedContent}
+                >
+                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                  {copied ? "Copié" : "Copier"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadAsPdf(generatedContent, title || "Email")}
+                  disabled={!generatedContent}
+                >
+                  <FileDown className="w-4 h-4 mr-1" />
+                  PDF
                 </Button>
               </div>
             </div>
