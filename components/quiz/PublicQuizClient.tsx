@@ -81,7 +81,13 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
           setError("Ce quiz n\u2019est pas disponible.");
           return;
         }
-        setQuiz(json.quiz as PublicQuizData);
+        // API returns quiz, questions, results as separate fields
+        const quizData: PublicQuizData = {
+          ...json.quiz,
+          questions: json.questions ?? [],
+          results: json.results ?? [],
+        };
+        setQuiz(quizData);
       } catch {
         setError("Impossible de charger le quiz.");
       } finally {

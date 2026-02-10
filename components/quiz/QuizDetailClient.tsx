@@ -145,7 +145,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           router.push("/contents");
           return;
         }
-        const q = json.quiz as QuizData;
+        const q: QuizData = {
+          ...json.quiz,
+          leads: json.leads ?? json.quiz.leads ?? [],
+        };
         setQuiz(q);
         setTitle(q.title);
         setIntroduction(q.introduction ?? "");

@@ -1,9 +1,18 @@
 // app/api/systeme-io/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+
+// Client "anon" pour envoyer le magic link (utilise les templates Supabase)
+const supabaseAnon = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { persistSession: false } },
+);
 
 // ---------- Zod schemas ----------
 
@@ -262,6 +271,21 @@ async function ensureUserCredits(userId: string) {
   }
 }
 
+// Envoie un magic link de connexion au client après l'achat
+async function sendMagicLink(email: string) {
+  const { error } = await supabaseAnon.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${APP_URL}/auth/callback`,
+      shouldCreateUser: false, // user déjà créé via admin.createUser
+    },
+  });
+  if (error) {
+    console.error("[Systeme.io webhook] sendMagicLink error:", error);
+    // Non-blocking: le user existe quand même, il pourra se connecter via "mot de passe oublié"
+  }
+}
+
 // ---------- Debug GET ----------
 
 export async function GET(req: NextRequest) {
@@ -392,6 +416,9 @@ export async function POST(req: NextRequest) {
       // ✅ Pas de bonus via webhook. Les crédits sont gérés par ensure_user_credits (DB).
       await ensureUserCredits(userId);
 
+      // ✅ Envoie le magic link de connexion au client
+      await sendMagicLink(resolvedEmail);
+
       return NextResponse.json({
         status: "ok",
         action: "profile_updated",
@@ -400,6 +427,7 @@ export async function POST(req: NextRequest) {
         plan,
         product_id: offerId || null,
         order_id: orderId,
+        magic_link_sent: true,
       });
     }
 
@@ -438,6 +466,9 @@ export async function POST(req: NextRequest) {
 
       await ensureUserCredits(userId);
 
+      // ✅ Envoie le magic link de connexion au client
+      await sendMagicLink(email.toLowerCase());
+
       return NextResponse.json({
         status: "ok",
         mode: "simple_test",
@@ -445,6 +476,7 @@ export async function POST(req: NextRequest) {
         user_id: userId,
         plan,
         product_id,
+        magic_link_sent: true,
       });
     }
 
