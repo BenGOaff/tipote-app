@@ -15,6 +15,8 @@ import {
   Link as LinkIcon,
   AlertTriangle,
   RotateCcw,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
@@ -47,10 +49,17 @@ function normalizeTab(v: string | null): TabKey {
   return "profile";
 }
 
+type OfferItem = {
+  name: string;
+  price: string;
+  link: string;
+};
+
 type ProfileRow = {
   first_name?: string | null;
   niche?: string | null;
   mission?: string | null;
+  offers?: OfferItem[] | null;
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
@@ -92,6 +101,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [mission, setMission] = useState("");
   const [pendingProfile, startProfileTransition] = useTransition();
 
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [initialOffers, setInitialOffers] = useState<OfferItem[]>([]);
+  const [pendingOffers, startOffersTransition] = useTransition();
+
   const [initialProfile, setInitialProfile] = useState<ProfileRow | null>(null);
 
   useEffect(() => {
@@ -110,6 +123,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setFirstName(row?.first_name ?? "");
         setNiche(row?.niche ?? "");
         setMission(row?.mission ?? "");
+
+        const loadedOffers = Array.isArray(row?.offers)
+          ? row.offers.map((o: any) => ({
+              name: String(o?.name ?? ""),
+              price: String(o?.price ?? ""),
+              link: String(o?.link ?? ""),
+            }))
+          : [];
+        setOffers(loadedOffers);
+        setInitialOffers(loadedOffers);
       } catch (e: any) {
         if (!cancelled) {
           toast({
@@ -161,6 +184,50 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           description: e?.message ?? "Erreur inconnue",
           variant: "destructive",
         });
+      }
+    });
+  };
+
+  // -------------------------
+  // Offers management
+  // -------------------------
+  const offersDirty = useMemo(() => {
+    if (offers.length !== initialOffers.length) return true;
+    return offers.some(
+      (o, i) => o.name !== initialOffers[i]?.name || o.price !== initialOffers[i]?.price || o.link !== initialOffers[i]?.link,
+    );
+  }, [offers, initialOffers]);
+
+  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "" }]);
+
+  const removeOffer = (idx: number) => setOffers((prev) => prev.filter((_, i) => i !== idx));
+
+  const updateOffer = (idx: number, field: keyof OfferItem, value: string) => {
+    setOffers((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)));
+  };
+
+  const saveOffers = () => {
+    startOffersTransition(async () => {
+      try {
+        const cleaned = offers.filter((o) => o.name.trim());
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offers: cleaned }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        const saved = Array.isArray(row?.offers)
+          ? row.offers.map((o: any) => ({ name: String(o?.name ?? ""), price: String(o?.price ?? ""), link: String(o?.link ?? "") }))
+          : cleaned;
+        setOffers(saved);
+        setInitialOffers(saved);
+
+        toast({ title: "Offres enregistrées" });
+      } catch (e: any) {
+        toast({ title: "Impossible d'enregistrer", description: e?.message ?? "Erreur", variant: "destructive" });
       }
     });
   };
@@ -428,19 +495,51 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-6">Liste des offres</h3>
-          <p className="text-sm text-muted-foreground mb-4">Ajoutez vos offres pour les utiliser dans les modules de génération.</p>
+          <h3 className="text-lg font-bold mb-4">Liste des offres</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Ajoutez vos offres pour les utiliser dans les modules de génération.
+          </p>
 
           <div className="space-y-3">
-            <div className="flex gap-3">
-              <Input placeholder="Nom de l'offre" className="flex-1" />
-              <Input placeholder="Prix" className="w-24" />
-              <Input placeholder="Lien" className="flex-1" />
-              <Button variant="outline" size="icon" disabled>
-                +
-              </Button>
-            </div>
+            {offers.map((offer, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <Input
+                  placeholder="Nom de l'offre"
+                  className="flex-1"
+                  value={offer.name}
+                  onChange={(e) => updateOffer(idx, "name", e.target.value)}
+                  disabled={profileLoading}
+                />
+                <Input
+                  placeholder="Prix"
+                  className="w-24"
+                  value={offer.price}
+                  onChange={(e) => updateOffer(idx, "price", e.target.value)}
+                  disabled={profileLoading}
+                />
+                <Input
+                  placeholder="Lien"
+                  className="flex-1"
+                  value={offer.link}
+                  onChange={(e) => updateOffer(idx, "link", e.target.value)}
+                  disabled={profileLoading}
+                />
+                <Button variant="ghost" size="icon" onClick={() => removeOffer(idx)} disabled={profileLoading}>
+                  <Trash2 className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+
+            <Button variant="outline" size="sm" onClick={addOffer} disabled={profileLoading} className="gap-1">
+              <Plus className="w-4 h-4" />
+              Ajouter une offre
+            </Button>
           </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveOffers} disabled={!offersDirty || pendingOffers}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingOffers ? "Enregistrement…" : "Enregistrer les offres"}
+          </Button>
         </Card>
       </TabsContent>
 

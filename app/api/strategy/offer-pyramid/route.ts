@@ -652,6 +652,45 @@ async function persistPersonaBestEffort(params: { userId: string; strategyId: st
   }
 }
 
+async function enrichBusinessProfileMissionBestEffort(params: {
+  supabase: any;
+  userId: string;
+  persona: AnyRecord | null;
+  planJson: AnyRecord | null;
+}): Promise<void> {
+  const { supabase, userId, persona, planJson } = params;
+  if (!persona) return;
+
+  try {
+    const parts: string[] = [];
+    const title = cleanString(persona.title ?? persona.profile ?? persona.name, 200);
+    if (title) parts.push(title);
+
+    const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
+    if (pains.length > 0) parts.push(`Douleurs principales : ${pains.slice(0, 4).join(" ; ")}.`);
+
+    const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
+    if (desires.length > 0) parts.push(`Désirs : ${desires.slice(0, 4).join(" ; ")}.`);
+
+    const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
+    if (objections.length > 0) parts.push(`Objections fréquentes : ${objections.slice(0, 3).join(" ; ")}.`);
+
+    const channels = asArray(persona.channels).map((x) => cleanString(x, 80)).filter(Boolean);
+    if (channels.length > 0) parts.push(`Canaux préférés : ${channels.join(", ")}.`);
+
+    const summary = parts.join("\n");
+    if (!summary.trim()) return;
+
+    const patch: AnyRecord = { mission: summary, updated_at: new Date().toISOString() };
+    const positioning = cleanString(planJson?.positioning, 300);
+    if (positioning) patch.niche = positioning;
+
+    await supabase.from("business_profiles").update(patch).eq("user_id", userId);
+  } catch (e) {
+    console.error("enrichBusinessProfileMissionBestEffort error (non-blocking):", e);
+  }
+}
+
 /**
  * -----------------------
  * GET (for onboarding UI)
@@ -1281,6 +1320,13 @@ Contraintes :
       }
 
       await persistPersonaBestEffort({ userId, strategyId, persona: persona ?? null });
+
+      await enrichBusinessProfileMissionBestEffort({
+        supabase,
+        userId,
+        persona: persona ?? null,
+        planJson: nextPlan,
+      });
     } catch (e) {
       console.error("POST best-effort sync (strategy/persona) unexpected error:", e);
     }
