@@ -669,7 +669,7 @@ export default function CreateLovableClient() {
       case "video":
         return <VideoForm {...common} />;
       case "offer":
-        return <OfferForm {...common} sourceLeadMagnet={sourceLeadMagnet} sourcePaidOffer={sourcePaidOffer} />;
+        return <OfferForm {...common} />;
       case "funnel":
         // ✅ FunnelForm accepte existingOffers (dropdown offres existantes)
         return <FunnelForm {...common} existingOffers={existingOffers} />;

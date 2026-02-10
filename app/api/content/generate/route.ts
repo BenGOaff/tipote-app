@@ -89,7 +89,8 @@ type Body = {
   };
 
   // offer
-  offerMode?: "from_existing" | "from_scratch";
+  offerMode?: "from_existing" | "from_scratch" | "improve";
+  improvementGoal?: string;
   offerType?: "lead_magnet" | "paid_training";
   leadMagnetFormat?: string;
   sourceOfferId?: string;
@@ -795,6 +796,7 @@ const OFFER_TABLE_SELECT =
 
 function normalizeOfferMode(raw: unknown): OfferMode {
   const s = safeString(raw).trim().toLowerCase();
+  if (s === "improve") return "improve";
   if (s === "from_existing" || s === "from_pyramid") return "from_existing"; // from_pyramid = legacy compat
   return "from_scratch";
 }
@@ -1565,7 +1567,7 @@ export async function POST(req: Request) {
 
     let sourceOffer: OfferSourceContext | null = null;
 
-    if (type === "offer" && offerMode === "from_existing") {
+    if (type === "offer" && (offerMode === "from_existing" || offerMode === "improve")) {
       // ✅ Temps réel : on privilégie planOffers (business_plan),
       // puis fallback offer_pyramids table (legacy).
       if (sourceOfferId) {
@@ -1938,7 +1940,8 @@ export async function POST(req: Request) {
           theme,
           target,
           leadMagnetFormat,
-          sourceOffer: offerMode === "from_existing" ? sourceOffer : null,
+          sourceOffer: (offerMode === "from_existing" || offerMode === "improve") ? sourceOffer : null,
+          improvementGoal: offerMode === "improve" ? safeString(body.improvementGoal).trim() || undefined : undefined,
           language: "fr",
         } as any);
       }
@@ -2025,7 +2028,7 @@ export async function POST(req: Request) {
             : type === "video"
               ? safeString(body.subject).trim() || prompt
               : type === "offer"
-                ? offerMode === "from_existing"
+                ? (offerMode === "from_existing" || offerMode === "improve")
                   ? (sourceOffer?.name ?? sourceOffer?.promise ?? sourceOffer?.description ?? "offre_existante")
                   : safeString(body.theme).trim() || safeString(body.subject).trim() || prompt
                 : type === "funnel"
@@ -2054,9 +2057,12 @@ export async function POST(req: Request) {
     if (type === "offer") {
       if (body.offerType) userContextLines.push(`OfferType: ${safeString(body.offerType).trim()}`);
       userContextLines.push(`OfferMode: ${offerMode}`);
-      if (offerMode === "from_existing") {
+      if (offerMode === "from_existing" || offerMode === "improve") {
         userContextLines.push("SourceOffer (JSON):");
         userContextLines.push(JSON.stringify(sourceOffer));
+      }
+      if (offerMode === "improve" && body.improvementGoal) {
+        userContextLines.push(`ImprovementGoal: ${safeString(body.improvementGoal).trim()}`);
       }
     }
 

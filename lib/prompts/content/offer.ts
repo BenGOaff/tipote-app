@@ -2,11 +2,12 @@
 // Génération d'offres Tipote :
 // - Lead Magnet (gratuit)
 // - Offre payante / formation
+// - Amélioration d'une offre existante
 // Objectif : livrable final structuré, stratégique et actionnable
 // Sortie : TEXTE BRUT (plain text), prêt à être utilisé
 
 export type OfferType = "lead_magnet" | "paid_training";
-export type OfferMode = "from_existing" | "from_scratch";
+export type OfferMode = "from_existing" | "from_scratch" | "improve";
 
 export type OfferSourceContext = {
   id?: string;
@@ -33,8 +34,11 @@ export type OfferPromptParams = {
   // ✅ Lead magnet (zéro): format demandé côté UI
   leadMagnetFormat?: string;
 
-  // ✅ Contexte offre existante (si offerMode === from_existing)
+  // ✅ Contexte offre existante (si offerMode === from_existing ou improve)
   sourceOffer?: OfferSourceContext | null;
+
+  // ✅ Improve: direction d'amélioration décrite par l'user
+  improvementGoal?: string;
 
   // Contexte enrichi (injecté automatiquement par route.ts)
   language?: string; // défaut fr
@@ -70,6 +74,10 @@ function inferOfferNameFromSource(sourceOffer: OfferSourceContext | null): strin
 }
 
 export function buildOfferPrompt(params: OfferPromptParams): string {
+  if (params.offerMode === "improve") {
+    return buildOfferImprovementPrompt(params);
+  }
+
   const lang = safe(params.language) || "fr";
   const offerType = params.offerType;
   const mode: OfferMode = params.offerMode === "from_existing" ? "from_existing" : "from_scratch";
@@ -309,6 +317,82 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "- Tu évites le remplissage. Chaque ligne doit augmenter la valeur perçue.",
     "",
     "Génère maintenant l'offre complète.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/* =========================
+   AMÉLIORATION D'UNE OFFRE EXISTANTE
+   ========================= */
+function buildOfferImprovementPrompt(params: OfferPromptParams): string {
+  const sourceOffer = params.sourceOffer ?? null;
+  const improvementGoal = safe(params.improvementGoal);
+
+  return [
+    "RÔLE & POSTURE :",
+    "Tu es un consultant business senior spécialisé en design d'offres à haute valeur perçue.",
+    "Tu analyses une offre existante et proposes des améliorations concrètes et actionnables.",
+    "Tu t'appuies sur le persona client, le business plan, les ressources internes et les meilleures pratiques du marché.",
+    "Tu ne mentionnes jamais que tu es une IA.",
+    "",
+    "CONTRAINTES DE SORTIE :",
+    "- Sortie = TEXTE BRUT (plain text).",
+    "- Interdit: markdown, titres avec #, emojis excessifs.",
+    "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
+    "- Ton: clair, pro, actionnable, précis.",
+    "",
+    "OFFRE À ANALYSER :",
+    compactJson(sourceOffer),
+    "",
+    improvementGoal
+      ? [
+          "DIRECTION D'AMÉLIORATION DEMANDÉE PAR L'UTILISATEUR :",
+          improvementGoal,
+          "",
+          "Tu dois te concentrer sur cette direction tout en restant cohérent avec l'ensemble de l'offre.",
+        ].join("\n")
+      : "L'utilisateur veut améliorer cette offre globalement. Identifie les axes les plus impactants.",
+    "",
+    "CONTEXTE À EXPLOITER :",
+    "- Persona client idéal (douleurs, désirs, objections, vocabulaire) — injecté par l'API.",
+    "- Business profile + business plan (si disponibles).",
+    "- Ressources Tipote Knowledge (si présentes).",
+    "- Tu croises ces infos avec l'offre pour identifier les gaps et les opportunités.",
+    "",
+    "STRUCTURE ATTENDUE (OBLIGATOIRE) :",
+    "",
+    "1) DIAGNOSTIC RAPIDE",
+    "- Points forts de l'offre actuelle (2-3 max)",
+    "- Points faibles ou manques identifiés (2-4 max)",
+    "- Alignement avec le persona et le marché (note sur 10 + justification courte)",
+    "",
+    "2) AMÉLIORATIONS PROPOSÉES",
+    "Pour chaque amélioration (3 à 6 max) :",
+    "- Titre clair de l'amélioration",
+    "- Pourquoi c'est important (impact business/conversion)",
+    "- Ce qu'il faut faire concrètement (actionnable, pas vague)",
+    "- Résultat attendu",
+    "",
+    "3) OFFRE AMÉLIORÉE (RÉSUMÉ)",
+    "- Nouveau positionnement / promesse (si changement suggéré)",
+    "- Nouvelle structure résumée",
+    "- Nouveau pricing recommandé (si pertinent)",
+    "",
+    "4) TÂCHES À RÉALISER",
+    "Liste numérotée de tâches concrètes que l'utilisateur peut exécuter pour appliquer ces améliorations.",
+    "Chaque tâche doit être courte (1 phrase), actionnable, et priorisée.",
+    "Format strict pour chaque tâche :",
+    "TÂCHE: [description courte et actionnable]",
+    "Exemple : TÂCHE: Ajouter un bonus vidéo de 15 min dans le lead magnet",
+    "Exemple : TÂCHE: Réécrire la promesse principale pour cibler la douleur n°1 du persona",
+    "",
+    "IMPORTANT :",
+    "- Tu ne poses AUCUNE question. Tu produis directement l'analyse et les recommandations.",
+    "- Tu fais des choix fermes. Tu ne listes pas 10 options: tu recommandes et tu justifies.",
+    "- Les tâches doivent être réalistes et faisables en moins d'1 semaine chacune.",
+    "",
+    "Génère maintenant l'analyse et les améliorations.",
   ]
     .filter(Boolean)
     .join("\n");
