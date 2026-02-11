@@ -9,10 +9,15 @@
 // - Ne casse rien : aucune nouvelle route, aucun changement front requis
 //
 // ✅ MULTI-PROJETS : accepte `project_id` dans le body pour scoper l'onboarding au projet actif.
+//
+// ✅ HARDENING (prod) :
+// - Auth via cookies (getSupabaseServerClient)
+// - Writes via service_role (supabaseAdmin) pour éviter les edge cases RLS/politiques
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectIdFromRequest } from "@/lib/projects/activeProject";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function isMissingColumnError(message: string | null | undefined) {
   const m = (message ?? "").toLowerCase();
@@ -80,17 +85,21 @@ async function updateThenInsertBusinessProfile(
 
 export async function POST(req: Request) {
   try {
-    const supabase = await getSupabaseServerClient();
+    // Client auth (cookies)
+    const supabaseAuth = await getSupabaseServerClient();
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await supabaseAuth.auth.getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.id;
+
+    // Writes via service_role (durable)
+    const supabase = supabaseAdmin;
 
     const body = (await req.json().catch(() => ({}))) as {
       diagnosticCompleted?: boolean;
@@ -104,7 +113,8 @@ export async function POST(req: Request) {
     // ✅ Résoudre le project_id (body > cookie > default)
     let projectId: string | null = typeof body?.project_id === "string" ? body.project_id.trim() : "";
     if (!projectId) {
-      projectId = await getActiveProjectIdFromRequest(supabase, userId, req as any);
+      // lecture via client auth (cookies), pas via service_role
+      projectId = await getActiveProjectIdFromRequest(supabaseAuth, userId, req as any);
     }
 
     // 1) business_profiles = source de vérité UI
@@ -124,10 +134,16 @@ export async function POST(req: Request) {
 
       const r2 = await updateThenInsertBusinessProfile(supabase, userId, patch2, projectId);
       if (!r2.ok) {
-        return NextResponse.json({ ok: false, error: r2.error?.message ?? "Failed to complete onboarding" }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, error: r2.error?.message ?? "Failed to complete onboarding" },
+          { status: 400 },
+        );
       }
     } else if (!r1.ok) {
-      return NextResponse.json({ ok: false, error: r1.error?.message ?? "Failed to complete onboarding" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: r1.error?.message ?? "Failed to complete onboarding" },
+        { status: 400 },
+      );
     }
 
     // 2) best-effort: fermer la session si fournie (ne jamais casser si schema différent)

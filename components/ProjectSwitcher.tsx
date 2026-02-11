@@ -246,11 +246,8 @@ export function ProjectSwitcher() {
     );
   }
 
-  // Si aucun projet, ne rien afficher (backward compat)
+  // Si aucun projet, ne rien afficher (backward compat / table pas encore créée)
   if (!projects.length) return null;
-
-  // Si un seul projet et pas ELITE, pas de switcher
-  if (projects.length <= 1 && plan !== "elite") return null;
 
   return (
     <>
