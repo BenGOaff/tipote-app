@@ -141,14 +141,14 @@ export function ProjectSwitcher() {
         throw new Error(json.message || json.error || "Erreur");
       }
 
-      toast({ title: "Projet cr\u00e9\u00e9", description: `"${trimmed}" est pr\u00eat.` });
+      toast({ title: "Projet créé", description: `"${trimmed}" est prêt.` });
       setShowCreateDialog(false);
 
       // Switcher vers le nouveau projet (redirige vers onboarding)
       switchProject(json.project.id);
     } catch (e) {
       toast({
-        title: "Impossible de cr\u00e9er le projet",
+        title: "Impossible de créer le projet",
         description: e instanceof Error ? e.message : "Erreur",
         variant: "destructive",
       });
@@ -182,7 +182,7 @@ export function ProjectSwitcher() {
       setProjects((prev) =>
         prev.map((p) => (p.id === targetProject.id ? { ...p, name: trimmed } : p)),
       );
-      toast({ title: "Projet renomm\u00e9" });
+      toast({ title: "Projet renommé" });
       setShowRenameDialog(false);
     } catch (e) {
       toast({
@@ -211,7 +211,7 @@ export function ProjectSwitcher() {
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Erreur");
 
-      toast({ title: "Projet supprim\u00e9" });
+      toast({ title: "Projet supprimé" });
       setShowDeleteDialog(false);
 
       // Si on supprime le projet actif, switcher au default
@@ -322,7 +322,7 @@ export function ProjectSwitcher() {
 
           {!projects.length && (
             <div className="px-2 py-3 text-xs text-muted-foreground text-center">
-              G\u00e8re plusieurs business ou clients depuis un seul compte.
+              Gère plusieurs business ou clients depuis un seul compte.
             </div>
           )}
 
@@ -341,19 +341,19 @@ export function ProjectSwitcher() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Dialog : Cr\u00e9er un projet */}
+      {/* Dialog : Créer un projet */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nouveau projet</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Chaque projet est un Tipote ind\u00e9pendant : strat\u00e9gie, contenus, t\u00e2ches...
-            tout repart de z\u00e9ro. Les cr\u00e9dits IA sont partag\u00e9s entre tous tes projets.
+            Chaque projet est un Tipote indépendant : stratégie, contenus, tâches...
+            tout repart de zéro. Les crédits IA sont partagés entre tous tes projets.
           </p>
           <Input
             ref={inputRef}
-            placeholder="Nom du projet (ex : Agence Dupont, Coaching Sant\u00e9...)"
+            placeholder="Nom du projet (ex : Agence Dupont, Coaching Santé...)"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -374,7 +374,7 @@ export function ProjectSwitcher() {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Cr\u00e9er
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -386,16 +386,16 @@ export function ProjectSwitcher() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-500" />
-              Fonctionnalit\u00e9 Elite
+              Fonctionnalité Elite
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Le multi-projets te permet de g\u00e9rer plusieurs business ou clients
+            Le multi-projets te permet de gérer plusieurs business ou clients
             depuis un seul compte Tipote. Chaque projet est totalement
-            ind\u00e9pendant avec sa propre strat\u00e9gie, ses contenus et ses t\u00e2ches.
+            indépendant avec sa propre stratégie, ses contenus et ses tâches.
           </p>
           <p className="text-sm font-medium">
-            Cette fonctionnalit\u00e9 est r\u00e9serv\u00e9e au plan Elite.
+            Cette fonctionnalité est réservée au plan Elite.
           </p>
           <DialogFooter>
             <DialogClose asChild>
@@ -449,8 +449,8 @@ export function ProjectSwitcher() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Tu es sur le point de supprimer <b>&quot;{targetProject?.name}&quot;</b>.
-            Toutes les donn\u00e9es associ\u00e9es (strat\u00e9gie, contenus, t\u00e2ches, quiz...)
-            seront d\u00e9finitivement supprim\u00e9es. Cette action est irr\u00e9versible.
+            Toutes les données associées (stratégie, contenus, tâches, quiz...)
+            seront définitivement supprimées. Cette action est irréversible.
           </p>
           <DialogFooter>
             <DialogClose asChild>
@@ -462,7 +462,7 @@ export function ProjectSwitcher() {
               disabled={submitting}
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Supprimer d\u00e9finitivement
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>
