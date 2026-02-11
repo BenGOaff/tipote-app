@@ -48,6 +48,11 @@ import {
   Code,
   Download,
   Upload,
+  Plus,
+  Info,
+  ChevronDown,
+  Pencil,
+  X,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -116,7 +121,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [copied, setCopied] = useState<string | null>(null);
 
   // Systeme.io sync
-  const [sioTagName, setSioTagName] = useState("");
+  const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
+  const [sioTagsLoading, setSioTagsLoading] = useState(false);
+  const [sioTagsLoaded, setSioTagsLoaded] = useState(false);
+  const [selectedTag, setSelectedTag] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{
     synced: number;
@@ -134,6 +144,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
   const [status, setStatus] = useState("draft");
+
+  // Editable questions & results
+  const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
+  const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -159,6 +173,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
         setStatus(q.status);
+        setEditQuestions(q.questions ?? []);
+        setEditResults(q.results ?? []);
       } catch {
         toast({ title: "Erreur de chargement", variant: "destructive" });
       } finally {
@@ -184,6 +200,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           bonus_description: bonusDescription,
           share_message: shareMessage,
           status,
+          questions: editQuestions.map((q, i) => ({
+            question_text: q.question_text,
+            options: q.options,
+            sort_order: i,
+          })),
+          results: editResults.map((r, i) => ({
+            title: r.title,
+            description: r.description,
+            insight: r.insight,
+            projection: r.projection,
+            cta_text: r.cta_text,
+            sort_order: i,
+          })),
         }),
       });
       const json = await res.json();
@@ -203,6 +232,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               bonus_description: bonusDescription,
               share_message: shareMessage,
               status,
+              questions: editQuestions,
+              results: editResults,
             }
           : prev,
       );
@@ -293,11 +324,44 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     URL.revokeObjectURL(url);
   };
 
+  const loadSioTags = async () => {
+    setSioTagsLoading(true);
+    try {
+      const res = await fetch("/api/systeme-io/tags");
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.tags)) {
+        setSioTags(json.tags);
+        setSioTagsLoaded(true);
+      } else if (json?.error === "NO_API_KEY") {
+        toast({
+          title: "Clé API manquante",
+          description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
+          variant: "destructive",
+        });
+      } else if (json?.error === "INVALID_API_KEY") {
+        toast({
+          title: "Clé API invalide",
+          description: "Vérifie ta clé API dans Réglages > Systeme.io.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les tags Systeme.io.",
+        variant: "destructive",
+      });
+    } finally {
+      setSioTagsLoading(false);
+    }
+  };
+
   const handleSyncSystemeIo = async () => {
-    if (!sioTagName.trim()) {
+    const tagName = showNewTagInput ? newTagName.trim() : selectedTag;
+    if (!tagName) {
       toast({
         title: "Tag requis",
-        description: "Entre un nom de tag pour identifier ces leads dans Systeme.io.",
+        description: "Choisis un tag existant ou crée un nouveau tag.",
         variant: "destructive",
       });
       return;
@@ -309,7 +373,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       const res = await fetch(`/api/quiz/${quizId}/sync-systeme`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tagName: sioTagName.trim() }),
+        body: JSON.stringify({ tagName }),
       });
       const json = await res.json();
 
@@ -317,8 +381,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         if (json?.error === "NO_API_KEY") {
           toast({
             title: "Clé API manquante",
-            description:
-              "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
+            description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
             variant: "destructive",
           });
           return;
@@ -336,8 +399,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         title: `${json.synced} lead${json.synced > 1 ? "s" : ""} synchronisé${json.synced > 1 ? "s" : ""}`,
         description: json.errors > 0
           ? `${json.errors} erreur(s) rencontrée(s).`
-          : `Tag "${sioTagName}" appliqué dans Systeme.io.`,
+          : `Tag "${tagName}" appliqué dans Systeme.io.`,
       });
+
+      // Refresh tags list to include newly created tag
+      if (showNewTagInput) {
+        loadSioTags();
+        setShowNewTagInput(false);
+        setNewTagName("");
+      }
     } catch (err: any) {
       toast({
         title: "Erreur",
@@ -464,22 +534,62 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-bold">
-                    Questions ({quiz.questions?.length ?? 0})
-                  </h3>
-                  {quiz.questions?.map((q, qi) => (
-                    <Card key={q.id} className="p-4">
-                      <p className="font-medium">
-                        Q{qi + 1}. {q.question_text}
-                      </p>
-                      <div className="mt-2 grid gap-1 text-sm text-muted-foreground pl-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold">
+                      Questions ({editQuestions.length})
+                    </h3>
+                  </div>
+                  {editQuestions.map((q, qi) => (
+                    <Card key={q.id || qi} className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-muted-foreground flex-shrink-0">Q{qi + 1}.</span>
+                        <Input
+                          value={q.question_text}
+                          onChange={(e) => {
+                            const next = [...editQuestions];
+                            next[qi] = { ...next[qi], question_text: e.target.value };
+                            setEditQuestions(next);
+                          }}
+                          className="flex-1"
+                          placeholder="Texte de la question"
+                        />
+                      </div>
+                      <div className="pl-6 space-y-2">
                         {q.options.map((opt, oi) => (
-                          <p key={oi}>
-                            {String.fromCharCode(65 + oi)}. {opt.text}{" "}
-                            <span className="text-xs">
-                              → Profil {opt.result_index + 1}
+                          <div key={oi} className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-muted-foreground w-5 flex-shrink-0">
+                              {String.fromCharCode(65 + oi)}.
                             </span>
-                          </p>
+                            <Input
+                              value={opt.text}
+                              onChange={(e) => {
+                                const next = [...editQuestions];
+                                const opts = [...next[qi].options];
+                                opts[oi] = { ...opts[oi], text: e.target.value };
+                                next[qi] = { ...next[qi], options: opts };
+                                setEditQuestions(next);
+                              }}
+                              className="flex-1 text-sm"
+                              placeholder="Texte de la réponse"
+                            />
+                            <select
+                              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                              value={opt.result_index}
+                              onChange={(e) => {
+                                const next = [...editQuestions];
+                                const opts = [...next[qi].options];
+                                opts[oi] = { ...opts[oi], result_index: Number(e.target.value) };
+                                next[qi] = { ...next[qi], options: opts };
+                                setEditQuestions(next);
+                              }}
+                            >
+                              {editResults.map((_, ri) => (
+                                <option key={ri} value={ri}>
+                                  Profil {ri + 1}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         ))}
                       </div>
                     </Card>
@@ -487,18 +597,80 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-bold">
-                    Profils résultat ({quiz.results?.length ?? 0})
-                  </h3>
-                  {quiz.results?.map((r, ri) => (
-                    <Card key={r.id} className="p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold">
+                      Profils résultat ({editResults.length})
+                    </h3>
+                  </div>
+                  {editResults.map((r, ri) => (
+                    <Card key={r.id || ri} className="p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Profil {ri + 1}</Badge>
-                        <span className="font-medium">{r.title}</span>
+                        <Badge variant="secondary" className="flex-shrink-0">Profil {ri + 1}</Badge>
+                        <Input
+                          value={r.title}
+                          onChange={(e) => {
+                            const next = [...editResults];
+                            next[ri] = { ...next[ri], title: e.target.value };
+                            setEditResults(next);
+                          }}
+                          className="flex-1 font-medium"
+                          placeholder="Titre du profil"
+                        />
                       </div>
-                      {r.description && (
-                        <p className="text-sm text-muted-foreground">{r.description}</p>
-                      )}
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Description</Label>
+                          <Textarea
+                            value={r.description ?? ""}
+                            onChange={(e) => {
+                              const next = [...editResults];
+                              next[ri] = { ...next[ri], description: e.target.value || null };
+                              setEditResults(next);
+                            }}
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Prise de conscience</Label>
+                          <Textarea
+                            value={r.insight ?? ""}
+                            onChange={(e) => {
+                              const next = [...editResults];
+                              next[ri] = { ...next[ri], insight: e.target.value || null };
+                              setEditResults(next);
+                            }}
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Projection</Label>
+                          <Textarea
+                            value={r.projection ?? ""}
+                            onChange={(e) => {
+                              const next = [...editResults];
+                              next[ri] = { ...next[ri], projection: e.target.value || null };
+                              setEditResults(next);
+                            }}
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">CTA personnalisé</Label>
+                          <Input
+                            value={r.cta_text ?? ""}
+                            onChange={(e) => {
+                              const next = [...editResults];
+                              next[ri] = { ...next[ri], cta_text: e.target.value || null };
+                              setEditResults(next);
+                            }}
+                            className="text-sm"
+                            placeholder="Texte du bouton CTA (optionnel)"
+                          />
+                        </div>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -699,31 +871,116 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <Upload className="w-5 h-5 text-muted-foreground" />
                       <h4 className="font-bold">Exporter vers Systeme.io</h4>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Envoie tes leads dans ton compte Systeme.io avec un tag pour les identifier.
-                      Configure ta clé API dans Réglages &gt; Systeme.io.
-                    </p>
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-1 space-y-1">
-                        <Label className="text-xs">Nom du tag</Label>
-                        <Input
-                          placeholder="Ex: quiz-entrepreneur"
-                          value={sioTagName}
-                          onChange={(e) => setSioTagName(e.target.value)}
-                        />
+
+                    <div className="p-3 rounded-lg bg-muted/50 border text-sm text-muted-foreground space-y-1">
+                      <div className="flex items-start gap-2">
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-foreground">Comment ça marche ?</p>
+                          <ol className="list-decimal list-inside mt-1 space-y-0.5">
+                            <li>Choisis un tag existant ou crées-en un nouveau</li>
+                            <li>Tipote envoie chaque lead capturé vers ton Systeme.io</li>
+                            <li>Le tag est appliqué automatiquement pour segmenter tes contacts</li>
+                          </ol>
+                          <p className="mt-1 text-xs">
+                            Configure ta clé API dans{" "}
+                            <a href="/settings?tab=settings" className="underline text-primary">
+                              Réglages
+                            </a>.
+                          </p>
+                        </div>
                       </div>
+                    </div>
+
+                    {!sioTagsLoaded ? (
                       <Button
-                        onClick={handleSyncSystemeIo}
-                        disabled={syncing || !sioTagName.trim()}
+                        variant="outline"
+                        onClick={loadSioTags}
+                        disabled={sioTagsLoading}
                       >
-                        {syncing ? (
+                        {sioTagsLoading ? (
                           <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                         ) : (
-                          <Upload className="w-4 h-4 mr-1" />
+                          <ChevronDown className="w-4 h-4 mr-1" />
                         )}
-                        {syncing ? "Synchronisation..." : "Synchroniser"}
+                        {sioTagsLoading ? "Chargement des tags..." : "Charger mes tags Systeme.io"}
                       </Button>
-                    </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {!showNewTagInput ? (
+                          <div className="space-y-2">
+                            <Label className="text-xs">Tag à appliquer</Label>
+                            <div className="flex gap-2">
+                              <select
+                                className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={selectedTag}
+                                onChange={(e) => setSelectedTag(e.target.value)}
+                              >
+                                <option value="">Sélectionne un tag...</option>
+                                {sioTags.map((t) => (
+                                  <option key={t.id} value={t.name}>
+                                    {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowNewTagInput(true)}
+                                title="Créer un nouveau tag"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {sioTags.length === 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Aucun tag trouvé. Crée un nouveau tag ci-dessus.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label className="text-xs">Nouveau tag</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="Ex: quiz-entrepreneur"
+                                value={newTagName}
+                                onChange={(e) => setNewTagName(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setShowNewTagInput(false);
+                                  setNewTagName("");
+                                }}
+                                title="Annuler"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={handleSyncSystemeIo}
+                          disabled={
+                            syncing ||
+                            (!showNewTagInput && !selectedTag) ||
+                            (showNewTagInput && !newTagName.trim())
+                          }
+                        >
+                          {syncing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4 mr-1" />
+                          )}
+                          {syncing ? "Synchronisation..." : "Synchroniser"}
+                        </Button>
+                      </div>
+                    )}
+
                     {syncResult && (
                       <p className="text-sm text-muted-foreground">
                         {syncResult.synced}/{syncResult.total} leads synchronisés

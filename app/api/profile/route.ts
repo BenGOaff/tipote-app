@@ -41,6 +41,11 @@ const UpdateSchema = z.object({
   cgv_url: z.string().trim().max(500).optional(),
 
   sio_user_api_key: z.string().trim().max(200).optional(),
+
+  linkedin_url: z.string().trim().max(500).optional(),
+  instagram_url: z.string().trim().max(500).optional(),
+  youtube_url: z.string().trim().max(500).optional(),
+  website_url: z.string().trim().max(500).optional(),
 });
 
 export async function GET() {

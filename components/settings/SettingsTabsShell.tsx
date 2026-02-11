@@ -69,6 +69,10 @@ type ProfileRow = {
   terms_url?: string | null;
   cgv_url?: string | null;
   sio_user_api_key?: string | null;
+  linkedin_url?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  website_url?: string | null;
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
@@ -118,6 +122,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [sioApiKey, setSioApiKey] = useState("");
   const [pendingSio, startSioTransition] = useTransition();
 
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [pendingLinks, startLinksTransition] = useTransition();
+
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [initialOffers, setInitialOffers] = useState<OfferItem[]>([]);
   const [pendingOffers, startOffersTransition] = useTransition();
@@ -144,6 +154,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setTermsUrl(row?.terms_url ?? "");
         setCgvUrl(row?.cgv_url ?? "");
         setSioApiKey(row?.sio_user_api_key ?? "");
+        setLinkedinUrl(row?.linkedin_url ?? "");
+        setInstagramUrl(row?.instagram_url ?? "");
+        setYoutubeUrl(row?.youtube_url ?? "");
+        setWebsiteUrl(row?.website_url ?? "");
 
         const loadedOffers = Array.isArray(row?.offers)
           ? row.offers.map((o: any) => ({
@@ -367,6 +381,55 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setSioApiKey(row?.sio_user_api_key ?? "");
 
         toast({ title: "Clé API Systeme.io enregistrée" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Social Links
+  // -------------------------
+  const linksDirty = useMemo(() => {
+    const i = initialProfile;
+    return (
+      (i?.linkedin_url ?? "") !== linkedinUrl ||
+      (i?.instagram_url ?? "") !== instagramUrl ||
+      (i?.youtube_url ?? "") !== youtubeUrl ||
+      (i?.website_url ?? "") !== websiteUrl
+    );
+  }, [initialProfile, linkedinUrl, instagramUrl, youtubeUrl, websiteUrl]);
+
+  const saveLinks = () => {
+    startLinksTransition(async () => {
+      try {
+        const body: any = {};
+        if ((initialProfile?.linkedin_url ?? "") !== linkedinUrl) body.linkedin_url = linkedinUrl;
+        if ((initialProfile?.instagram_url ?? "") !== instagramUrl) body.instagram_url = instagramUrl;
+        if ((initialProfile?.youtube_url ?? "") !== youtubeUrl) body.youtube_url = youtubeUrl;
+        if ((initialProfile?.website_url ?? "") !== websiteUrl) body.website_url = websiteUrl;
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setLinkedinUrl(row?.linkedin_url ?? "");
+        setInstagramUrl(row?.instagram_url ?? "");
+        setYoutubeUrl(row?.youtube_url ?? "");
+        setWebsiteUrl(row?.website_url ?? "");
+
+        toast({ title: "Liens enregistrés" });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -682,8 +745,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <h3 className="text-lg font-bold">Systeme.io</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz.
-            Ta clé API est disponible dans Réglages &gt; Clés API publiques de ton dashboard Systeme.io.
+            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz avec des tags.{" "}
+            <a
+              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80"
+            >
+              Comment trouver ma clé API ?
+            </a>
           </p>
 
           <div className="space-y-2">
@@ -707,22 +777,51 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
 
           <div className="space-y-4">
-            {[
-              { label: "LinkedIn", icon: Linkedin, placeholder: "https://linkedin.com/in/..." },
-              { label: "Instagram", icon: Instagram, placeholder: "https://instagram.com/..." },
-              { label: "YouTube", icon: Youtube, placeholder: "https://youtube.com/@..." },
-              { label: "Blog", icon: LinkIcon, placeholder: "https://monblog.com" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3">
-                <item.icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                <Input placeholder={item.placeholder} className="flex-1" />
-              </div>
-            ))}
+            <div className="flex items-center gap-3">
+              <Linkedin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://linkedin.com/in/..."
+                className="flex-1"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Instagram className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://instagram.com/..."
+                className="flex-1"
+                value={instagramUrl}
+                onChange={(e) => setInstagramUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Youtube className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://youtube.com/@..."
+                className="flex-1"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <LinkIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://monsite.com"
+                className="flex-1"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
           </div>
 
-          <Button variant="outline" className="mt-4" disabled>
+          <Button variant="outline" className="mt-4" onClick={saveLinks} disabled={!linksDirty || pendingLinks}>
             <Save className="w-4 h-4 mr-2" />
-            Enregistrer les liens
+            {pendingLinks ? "Enregistrement…" : "Enregistrer les liens"}
           </Button>
         </Card>
 
