@@ -25,6 +25,8 @@ const PUBLIC_PREFIXES = [
   "/tipote-logo.png",
 ];
 
+const ADMIN_EMAIL = "hello@ethilife.fr";
+
 const PROTECTED_PREFIXES = [
   "/app",
   "/dashboard",
@@ -36,6 +38,7 @@ const PROTECTED_PREFIXES = [
   "/pepites",
   "/settings",
   "/analytics",
+  "/admin",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
@@ -88,6 +91,17 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // ✅ Admin: accessible uniquement à l'email admin (et ne dépend pas de l'onboarding)
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+      const email = (user.email ?? "").toLowerCase();
+      if (email !== ADMIN_EMAIL.toLowerCase()) {
+        const url = req.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+      return res;
+    }
+
     // Vérif onboarding (fail-open)
     const { data: bp, error } = await supabase
       .from("business_profiles")
@@ -121,5 +135,6 @@ export const config = {
     "/pepites/:path*",
     "/settings/:path*",
     "/analytics/:path*",
+    "/admin/:path*",
   ],
 };
