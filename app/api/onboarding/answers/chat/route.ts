@@ -10,6 +10,11 @@
 // - Si l'utilisateur répond juste "ok" après ce message => finish immédiat (pas de boucle)
 // - Extracteurs serveur pour alimenter le récap (revenue_goal_monthly, time_available, niche, main_goal, tone, content)
 // - Garde-fou : si activities_list>=2 et primary_activity manquante => on ne termine pas
+//
+// ✅ HARDENING (prod, durable) :
+// - Fix FK "onboarding_sessions_user_id_fkey" : on bootstrap les rows parent (profiles + business_profiles)
+// - Writes via service_role (supabaseAdmin) pour éviter RLS/politiques trop strictes et edge cases
+// - Reads restent via supabase server client (cookies) pour respecter l'auth/ctx
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -18,6 +23,7 @@ import { openai } from "@/lib/openaiClient";
 import { buildOnboardingClarifierSystemPrompt } from "@/lib/prompts/onboarding/system";
 import { getUserContextBundle, userContextToPromptText } from "@/lib/onboarding/userContext";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,6 +65,80 @@ function safeJsonParse(s: string): any {
     return JSON.parse(s);
   } catch {
     return {};
+  }
+}
+
+function isMissingTableOrColumnError(message?: string | null) {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("does not exist") ||
+    (m.includes("relation") && m.includes("does not exist")) ||
+    (m.includes("column") && (m.includes("does not exist") || m.includes("unknown"))) ||
+    m.includes("schema cache") ||
+    m.includes("pgrst")
+  );
+}
+
+/**
+ * ✅ Fix durable FK onboarding_sessions_user_id_fkey
+ * Certains comptes n'ont pas encore les rows parents attendues par tes contraintes FK
+ * (souvent profiles.id=userId, et parfois business_profiles.user_id=userId)
+ * => on force leur existence AVANT toute écriture dans onboarding_sessions/messages/facts.
+ *
+ * Best-effort : si schéma différent, on n'empêche jamais l'onboarding d'avancer.
+ */
+async function ensureUserBootstrap(params: {
+  userId: string;
+  userEmail?: string | null;
+  projectId?: string | null;
+}) {
+  const { userId, userEmail, projectId } = params;
+  const now = new Date().toISOString();
+
+  // profiles (parent FK le plus probable)
+  try {
+    await supabaseAdmin.from("profiles").upsert(
+      {
+        id: userId,
+        email: userEmail ?? null,
+        updated_at: now,
+        created_at: now,
+      } as any,
+      { onConflict: "id" } as any,
+    );
+  } catch (e) {
+    // best-effort
+    console.warn("[OnboardingChatV2] profiles bootstrap failed (non-blocking):", e);
+  }
+
+  // business_profiles (source de vérité UI + onboarding_version souvent NOT NULL)
+  try {
+    const bpRow: Record<string, any> = {
+      user_id: userId,
+      onboarding_completed: false,
+      onboarding_version: "v2",
+      updated_at: now,
+      created_at: now,
+    };
+    if (projectId) bpRow.project_id = projectId;
+
+    // Insert-only : si ça existe déjà, on ignore
+    const ins = await supabaseAdmin.from("business_profiles").insert(bpRow as any);
+    if (ins?.error) {
+      const msg = String(ins.error.message ?? "").toLowerCase();
+      const isDuplicate =
+        msg.includes("duplicate") ||
+        msg.includes("already exists") ||
+        msg.includes("unique constraint") ||
+        msg.includes("violates unique constraint");
+
+      if (!isDuplicate && !isMissingTableOrColumnError(ins.error.message)) {
+        console.warn("[OnboardingChatV2] business_profiles bootstrap insert failed (ignored):", ins.error);
+      }
+    }
+  } catch (e) {
+    // best-effort
+    console.warn("[OnboardingChatV2] business_profiles bootstrap failed (non-blocking):", e);
   }
 }
 
@@ -166,7 +246,10 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
     const activities = Array.isArray((knownFacts as any)["activities_list"])
       ? ((knownFacts as any)["activities_list"] as any[]).filter((x) => typeof x === "string")
       : [];
-    const primary = typeof (knownFacts as any)["primary_activity"] === "string" ? String((knownFacts as any)["primary_activity"]).trim() : "";
+    const primary =
+      typeof (knownFacts as any)["primary_activity"] === "string"
+        ? String((knownFacts as any)["primary_activity"]).trim()
+        : "";
 
     if (activities.length >= 2 && !primary) return false;
 
@@ -217,7 +300,9 @@ function looksFrustrated(text: string) {
   );
 }
 
-function inferConversionStatusFromAnswer(answer: string): "selling_well" | "inconsistent" | "not_selling" | "unknown" {
+function inferConversionStatusFromAnswer(
+  answer: string,
+): "selling_well" | "inconsistent" | "not_selling" | "unknown" {
   const t = (answer || "").toLowerCase();
 
   if (
@@ -305,7 +390,8 @@ function extractAcquisitionChannels(answer: string): string[] {
     if (!out.includes(v)) out.push(v);
   };
 
-  if (t.includes("bouche") || t.includes("oreille") || t.includes("recommand") || t.includes("referr")) push("word_of_mouth");
+  if (t.includes("bouche") || t.includes("oreille") || t.includes("recommand") || t.includes("referr"))
+    push("word_of_mouth");
   if (
     t.includes("réseaux") ||
     t.includes("reseaux") ||
@@ -324,7 +410,8 @@ function extractAcquisitionChannels(answer: string): string[] {
   if (t.includes("seo")) push("seo");
   if (t.includes("email") || t.includes("newsletter") || t.includes("liste")) push("email");
   if (t.includes("pub") || t.includes("ads") || t.includes("publicit")) push("ads");
-  if (t.includes("parten") || t.includes("collab") || t.includes("affiliation") || t.includes("affiliate")) push("partnerships");
+  if (t.includes("parten") || t.includes("collab") || t.includes("affiliation") || t.includes("affiliate"))
+    push("partnerships");
 
   return out.slice(0, 8);
 }
@@ -336,7 +423,14 @@ function inferTrafficSourceTodayFromChannels(
   if (set.has("ads")) return "ads";
   if (set.has("seo")) return "seo";
   if (set.has("partnerships")) return "partnerships";
-  if (set.has("social") || set.has("word_of_mouth") || set.has("youtube") || set.has("blog") || set.has("email")) return "organic_social";
+  if (
+    set.has("social") ||
+    set.has("word_of_mouth") ||
+    set.has("youtube") ||
+    set.has("blog") ||
+    set.has("email")
+  )
+    return "organic_social";
   return "none";
 }
 
@@ -459,13 +553,25 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   const parts: string[] = [];
 
   const name = typeof firstName === "string" && firstName.trim() ? firstName.trim() : null;
-  parts.push(name ? `Voici ce que j'ai retenu de notre échange, ${name} :` : "Voici ce que j'ai retenu de notre échange :");
+  parts.push(
+    name ? `Voici ce que j'ai retenu de notre échange, ${name} :` : "Voici ce que j'ai retenu de notre échange :",
+  );
 
   // Activity / Niche
-  const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]).trim() : "";
-  const niche = typeof knownFacts["main_topic"] === "string" ? String(knownFacts["main_topic"]).trim() : (typeof knownFacts["niche"] === "string" ? String(knownFacts["niche"]).trim() : "");
+  const primary =
+    typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]).trim() : "";
+  const niche =
+    typeof knownFacts["main_topic"] === "string"
+      ? String(knownFacts["main_topic"]).trim()
+      : typeof knownFacts["niche"] === "string"
+        ? String(knownFacts["niche"]).trim()
+        : "";
   if (primary) {
-    parts.push(`Tu te concentres sur : ${primary}${niche && niche.toLowerCase() !== primary.toLowerCase() ? ` (niche : ${niche})` : ""}.`);
+    parts.push(
+      `Tu te concentres sur : ${primary}${
+        niche && niche.toLowerCase() !== primary.toLowerCase() ? ` (niche : ${niche})` : ""
+      }.`,
+    );
   } else if (niche) {
     parts.push(`Ton domaine : ${niche}.`);
   }
@@ -485,7 +591,10 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   }
 
   // Target audience
-  const audience = typeof knownFacts["target_audience_short"] === "string" ? String(knownFacts["target_audience_short"]).trim() : "";
+  const audience =
+    typeof knownFacts["target_audience_short"] === "string"
+      ? String(knownFacts["target_audience_short"]).trim()
+      : "";
   if (audience) parts.push(`Tu t'adresses à : ${audience}.`);
 
   // Revenue goal
@@ -504,7 +613,8 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   }
 
   // Conversion status
-  const conv = typeof knownFacts["conversion_status"] === "string" ? String(knownFacts["conversion_status"]).trim() : "";
+  const conv =
+    typeof knownFacts["conversion_status"] === "string" ? String(knownFacts["conversion_status"]).trim() : "";
   if (conv) {
     const convLabels: Record<string, string> = {
       selling_well: "Tu as déjà des ventes régulières",
@@ -527,8 +637,13 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   const channels = knownFacts["acquisition_channels"];
   if (Array.isArray(channels) && channels.length > 0) {
     const labels: Record<string, string> = {
-      social: "réseaux sociaux", youtube: "YouTube", blog: "blog", seo: "SEO",
-      email: "email / newsletter", ads: "publicité payante", partnerships: "partenariats",
+      social: "réseaux sociaux",
+      youtube: "YouTube",
+      blog: "blog",
+      seo: "SEO",
+      email: "email / newsletter",
+      ads: "publicité payante",
+      partnerships: "partenariats",
       word_of_mouth: "bouche-à-oreille",
     };
     const named = channels.map((c) => labels[String(c)] || String(c));
@@ -542,15 +657,24 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   }
 
   // Tone
-  const tone = typeof knownFacts["tone_preference_hint"] === "string" ? String(knownFacts["tone_preference_hint"]).trim() : (typeof knownFacts["preferred_tone"] === "string" ? String(knownFacts["preferred_tone"]).trim() : "");
+  const tone =
+    typeof knownFacts["tone_preference_hint"] === "string"
+      ? String(knownFacts["tone_preference_hint"]).trim()
+      : typeof knownFacts["preferred_tone"] === "string"
+        ? String(knownFacts["preferred_tone"]).trim()
+        : "";
   if (tone) parts.push(`Ton préféré : ${tone}.`);
 
   // Primary focus
   const focus = typeof knownFacts["primary_focus"] === "string" ? String(knownFacts["primary_focus"]).trim() : "";
   if (focus) {
     const focusLabels: Record<string, string> = {
-      sales: "Générer des ventes", visibility: "Gagner en visibilité", clarity: "Clarifier ton positionnement",
-      systems: "Mettre en place des systèmes", offer_improvement: "Améliorer tes offres", traffic: "Générer du trafic",
+      sales: "Générer des ventes",
+      visibility: "Gagner en visibilité",
+      clarity: "Clarifier ton positionnement",
+      systems: "Mettre en place des systèmes",
+      offer_improvement: "Améliorer tes offres",
+      traffic: "Générer du trafic",
     };
     parts.push(`Priorité : ${focusLabels[focus] || focus}.`);
   }
@@ -606,7 +730,8 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if ((key === "time_available" || key === "weekly_hours") && isNonEmptyString(value)) {
       setIf("time_available", getStr(value, 80));
     }
-    if ((key === "tone_preference_hint" || key === "preferred_tone") && isNonEmptyString(value)) setIf("preferred_tone", getStr(value, 140));
+    if ((key === "tone_preference_hint" || key === "preferred_tone") && isNonEmptyString(value))
+      setIf("preferred_tone", getStr(value, 140));
     if ((key === "content_channels_priority" || key === "content_preference" || key === "preferred_content_type") && value) {
       if (Array.isArray(value)) {
         const joined = value
@@ -619,7 +744,8 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
         setIf("content_preference", getStr(value, 180));
       }
     }
-    if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value)) setIf("success_definition", getStr(value, 240));
+    if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value))
+      setIf("success_definition", getStr(value, 240));
     if (key === "success_metrics" && value && typeof value === "object") {
       setIf("success_definition", JSON.stringify(value).slice(0, 240));
     }
@@ -630,7 +756,12 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
         .filter((o) => o && typeof o === "object")
         .map((o: any) => ({
           name: typeof o.name === "string" ? o.name.trim().slice(0, 200) : "",
-          price: typeof o.price === "string" ? o.price.trim().slice(0, 40) : typeof o.price === "number" ? String(o.price) : "",
+          price:
+            typeof o.price === "string"
+              ? o.price.trim().slice(0, 40)
+              : typeof o.price === "number"
+                ? String(o.price)
+                : "",
           link: typeof o.link === "string" ? o.link.trim().slice(0, 400) : "",
         }))
         .filter((o) => o.name);
@@ -638,13 +769,19 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     }
 
     // auditables
-    if ((key === "business_stage" || key === "business_maturity") && isNonEmptyString(value)) setIf("business_maturity", getStr(value, 60));
+    if ((key === "business_stage" || key === "business_maturity") && isNonEmptyString(value))
+      setIf("business_maturity", getStr(value, 60));
   }
 
   return patch;
 }
 
-async function updateThenInsertBusinessProfile(supabase: any, userId: string, patch: Record<string, any>, projectId?: string | null): Promise<void> {
+async function updateThenInsertBusinessProfile(
+  supabase: any,
+  userId: string,
+  patch: Record<string, any>,
+  projectId?: string | null,
+): Promise<void> {
   if (!patch || Object.keys(patch).length === 0) return;
 
   const row: Record<string, any> = {
@@ -681,18 +818,18 @@ export async function POST(req: NextRequest) {
 
     const projectId = await getActiveProjectId(supabase, userId);
 
+    // ✅ Writes via service_role (durable, bypass RLS)
+    const supabaseWrite = supabaseAdmin;
+
     // 0) Ensure profiles & business_profiles rows exist (FK guard)
-    //    After account reset or for old users, these rows may be missing.
-    //    onboarding_sessions has a FK that requires the parent row to exist.
+    await ensureUserBootstrap({ userId, userEmail, projectId });
+
+    // (On garde l’ancien code en best-effort, mais via supabaseWrite pour éviter RLS)
     try {
-      const { data: profileExists } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: profileExists } = await supabaseWrite.from("profiles").select("id").eq("id", userId).maybeSingle();
 
       if (!profileExists) {
-        await supabase.from("profiles").insert({
+        await supabaseWrite.from("profiles").insert({
           id: userId,
           email: userEmail ?? null,
           updated_at: new Date().toISOString(),
@@ -704,10 +841,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      let bpQuery = supabase
-        .from("business_profiles")
-        .select("user_id")
-        .eq("user_id", userId);
+      let bpQuery = supabaseWrite.from("business_profiles").select("user_id").eq("user_id", userId);
       if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
       const { data: bpExists } = await bpQuery.maybeSingle();
 
@@ -719,7 +853,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         };
         if (projectId) bpRow.project_id = projectId;
-        await supabase.from("business_profiles").insert(bpRow);
+        await supabaseWrite.from("business_profiles").insert(bpRow);
       }
     } catch (e) {
       console.warn("[OnboardingChatV2] business_profiles ensure failed (non-blocking):", e);
@@ -737,18 +871,15 @@ export async function POST(req: NextRequest) {
         meta: {},
       };
       if (projectId) sessionRow.project_id = projectId;
-      const { data: created, error } = await supabase
-        .from("onboarding_sessions")
-        .insert(sessionRow)
-        .select("id")
-        .maybeSingle();
+
+      const { data: created, error } = await supabaseWrite.from("onboarding_sessions").insert(sessionRow).select("id").maybeSingle();
 
       if (error || !created?.id) {
         return NextResponse.json({ error: error?.message ?? "Failed to create session" }, { status: 400 });
       }
       sessionId = String(created.id);
     } else {
-      let sessionQuery = supabase.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId);
+      let sessionQuery = supabaseWrite.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId);
       if (projectId) sessionQuery = sessionQuery.eq("project_id", projectId);
       const { data: s, error } = await sessionQuery.maybeSingle();
       if (error || !s?.id) return NextResponse.json({ error: "Invalid session" }, { status: 400 });
@@ -756,7 +887,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) store user message
-    const { error: insertMsgErr } = await supabase.from("onboarding_messages").insert({
+    const { error: insertMsgErr } = await supabaseWrite.from("onboarding_messages").insert({
       session_id: sessionId,
       role: "user",
       content: body.message,
@@ -765,15 +896,22 @@ export async function POST(req: NextRequest) {
     });
     if (insertMsgErr) return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
 
-    // 3) fetch existing context
+    // 3) fetch existing context (reads: via supabase)
     const bpSelect = supabase.from("business_profiles").select("*").eq("user_id", userId);
     if (projectId) bpSelect.eq("project_id", projectId);
-    const factsSelect = supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId);
+
+    const factsSelect = supabaseWrite.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId);
     if (projectId) factsSelect.eq("project_id", projectId);
+
     const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
       bpSelect.maybeSingle(),
       factsSelect,
-      supabase.from("onboarding_messages").select("role,content,created_at").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(60),
+      supabaseWrite
+        .from("onboarding_messages")
+        .select("role,content,created_at")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .limit(60),
     ]);
 
     const knownFacts: Record<string, unknown> = {};
@@ -786,10 +924,16 @@ export async function POST(req: NextRequest) {
     // --------- helper: upsert fact (RPC then fallback) ----------
     const appliedFacts: Array<{ key: string; confidence: string }> = [];
 
-    async function upsertOneFact(fact: { key: string; value: unknown; confidence: "high" | "medium" | "low"; source: string }): Promise<boolean> {
+    async function upsertOneFact(fact: {
+      key: string;
+      value: unknown;
+      confidence: "high" | "medium" | "low";
+      source: string;
+    }): Promise<boolean> {
       const key = normalizeKey(fact.key).slice(0, 80);
       const value = normalizeFactValue(key, fact.value);
 
+      // 1) RPC si dispo
       try {
         const rpcParams: Record<string, any> = {
           p_user_id: userId,
@@ -799,7 +943,8 @@ export async function POST(req: NextRequest) {
           p_source: fact.source,
         };
         if (projectId) rpcParams.p_project_id = projectId;
-        const rpc = await supabase.rpc("upsert_onboarding_fact", rpcParams);
+
+        const rpc = await supabaseWrite.rpc("upsert_onboarding_fact", rpcParams);
         if (!rpc.error) {
           appliedFacts.push({ key, confidence: fact.confidence });
           knownFacts[key] = value;
@@ -809,6 +954,7 @@ export async function POST(req: NextRequest) {
         // ignore
       }
 
+      // 2) Fallback upsert table
       try {
         const factRow: Record<string, any> = {
           user_id: userId,
@@ -819,11 +965,13 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         };
         if (projectId) factRow.project_id = projectId;
-        const { error } = await supabase.from("onboarding_facts").upsert(
-          factRow,
-          { onConflict: "user_id,key" },
-        );
-        if (!error) {
+
+        // onConflict varie selon schéma => on essaye large puis on retombe sur "user_id,key"
+        let up = await supabaseWrite.from("onboarding_facts").upsert(factRow, { onConflict: "user_id,project_id,key" } as any);
+        if (up?.error && isMissingTableOrColumnError(up.error.message)) {
+          up = await supabaseWrite.from("onboarding_facts").upsert(factRow, { onConflict: "user_id,key" } as any);
+        }
+        if (!up?.error) {
           appliedFacts.push({ key, confidence: fact.confidence });
           knownFacts[key] = value;
           return true;
@@ -850,7 +998,7 @@ export async function POST(req: NextRequest) {
             ? "Parfait ✅ Je te montre le récap et je lance la création de ta stratégie."
             : "Perfect ✅ I’ll show you the recap and start building your strategy.";
 
-        const { error: insertAssistErr } = await supabase.from("onboarding_messages").insert({
+        const { error: insertAssistErr } = await supabaseWrite.from("onboarding_messages").insert({
           session_id: sessionId,
           role: "assistant",
           content: finishMessage,
@@ -893,7 +1041,12 @@ export async function POST(req: NextRequest) {
       }
 
       if (uniq.length >= 2 && !Array.isArray(knownFacts["activities_list"])) {
-        await upsertOneFact({ key: "activities_list", value: uniq.slice(0, 6), confidence: "low", source: "server_extract_activities" });
+        await upsertOneFact({
+          key: "activities_list",
+          value: uniq.slice(0, 6),
+          confidence: "low",
+          source: "server_extract_activities",
+        });
       }
     } catch {
       // ignore
@@ -901,11 +1054,19 @@ export async function POST(req: NextRequest) {
 
     // Auto-capture primary_activity si question explicite précédente + réponse simple
     try {
-      const prevWasPrimary = typeof prevAssistant === "string" && prevAssistant.toLowerCase().includes("laquelle") && prevAssistant.toLowerCase().includes("prior");
+      const prevWasPrimary =
+        typeof prevAssistant === "string" &&
+        prevAssistant.toLowerCase().includes("laquelle") &&
+        prevAssistant.toLowerCase().includes("prior");
       if (prevWasPrimary && !isNonEmptyString(knownFacts["primary_activity"])) {
         const candidate = userMsg.trim();
         if (candidate && candidate.length <= 120 && !candidate.includes("\n")) {
-          await upsertOneFact({ key: "primary_activity", value: candidate, confidence: "high", source: "server_extract_primary_activity" });
+          await upsertOneFact({
+            key: "primary_activity",
+            value: candidate,
+            confidence: "high",
+            source: "server_extract_primary_activity",
+          });
         }
       }
     } catch {
@@ -914,7 +1075,10 @@ export async function POST(req: NextRequest) {
 
     // Auto-extract sales
     try {
-      if (!isNonEmptyString(knownFacts["conversion_status"]) && (isSalesQuestion(prevAssistant) || looksFrustrated(userMsg))) {
+      if (
+        !isNonEmptyString(knownFacts["conversion_status"]) &&
+        (isSalesQuestion(prevAssistant) || looksFrustrated(userMsg))
+      ) {
         const inferred = inferConversionStatusFromAnswer(userMsg);
         if (inferred !== "unknown") {
           await upsertOneFact({ key: "conversion_status", value: inferred, confidence: "high", source: "server_extract_sales" });
@@ -926,14 +1090,27 @@ export async function POST(req: NextRequest) {
 
     // Auto-extract acquisition
     try {
-      if (!Array.isArray(knownFacts["acquisition_channels"]) && (isAcquisitionQuestion(prevAssistant) || looksFrustrated(userMsg))) {
+      if (
+        !Array.isArray(knownFacts["acquisition_channels"]) &&
+        (isAcquisitionQuestion(prevAssistant) || looksFrustrated(userMsg))
+      ) {
         const channels = extractAcquisitionChannels(userMsg);
         if (channels.length > 0) {
-          const ok = await upsertOneFact({ key: "acquisition_channels", value: channels, confidence: "high", source: "server_extract_acquisition" });
+          const ok = await upsertOneFact({
+            key: "acquisition_channels",
+            value: channels,
+            confidence: "high",
+            source: "server_extract_acquisition",
+          });
           if (ok && !isNonEmptyString(knownFacts["traffic_source_today"])) {
             const traffic = inferTrafficSourceTodayFromChannels(channels);
             if (traffic !== "none") {
-              await upsertOneFact({ key: "traffic_source_today", value: traffic, confidence: "medium", source: "server_extract_acquisition" });
+              await upsertOneFact({
+                key: "traffic_source_today",
+                value: traffic,
+                confidence: "medium",
+                source: "server_extract_acquisition",
+              });
             }
           }
         }
@@ -993,10 +1170,7 @@ export async function POST(req: NextRequest) {
     // ✅ Auto-extract affiliate hints
     try {
       const t = userMsg.toLowerCase();
-      if (
-        !isNonEmptyString(knownFacts["business_model"]) &&
-        (t.includes("affili") || t.includes("amazon") || t.includes("programme") || t.includes("commission"))
-      ) {
+      if (!isNonEmptyString(knownFacts["business_model"]) && (t.includes("affili") || t.includes("amazon") || t.includes("programme") || t.includes("commission"))) {
         await upsertOneFact({ key: "business_model", value: "affiliate", confidence: "medium", source: "server_extract_affiliate" });
       }
       if (t.includes("amazon") && !hasNonEmptyFact(knownFacts, "affiliate_programs_known")) {
@@ -1084,7 +1258,10 @@ export async function POST(req: NextRequest) {
           key,
           value,
           confidence: normalizeConfidence((f as any).confidence),
-          source: typeof (f as any).source === "string" && (f as any).source.trim() ? (f as any).source.trim().slice(0, 80) : "onboarding_chat",
+          source:
+            typeof (f as any).source === "string" && (f as any).source.trim()
+              ? (f as any).source.trim().slice(0, 80)
+              : "onboarding_chat",
         };
       })
       .filter((f) => f.key && f.key.length > 0);
@@ -1095,7 +1272,9 @@ export async function POST(req: NextRequest) {
 
     // Garde-fou : interdit le finish si activities_list>=2 et primary_activity manquante
     try {
-      const activities = Array.isArray(knownFacts["activities_list"]) ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string") : [];
+      const activities = Array.isArray(knownFacts["activities_list"])
+        ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string")
+        : [];
       const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]) : "";
 
       if (activities.length >= 2 && !primary) {
@@ -1122,14 +1301,14 @@ export async function POST(req: NextRequest) {
     try {
       const patch = buildBusinessProfilePatchFromFacts(Object.entries(knownFacts).map(([key, value]) => ({ key, value })));
       if (Object.keys(patch).length > 0) {
-        await updateThenInsertBusinessProfile(supabase, userId, patch, projectId);
+        await updateThenInsertBusinessProfile(supabaseWrite, userId, patch, projectId);
       }
     } catch {
       // ignore
     }
 
     // 5) store assistant message
-    const { error: insertAssistErr } = await supabase.from("onboarding_messages").insert({
+    const { error: insertAssistErr } = await supabaseWrite.from("onboarding_messages").insert({
       session_id: sessionId,
       role: "assistant",
       content: out.message,
@@ -1144,9 +1323,10 @@ export async function POST(req: NextRequest) {
     const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"];
     const essentialDone = essentialKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const importantDone = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
-    const progress = Math.min(100, Math.round(
-      (essentialDone / essentialKeys.length) * 70 + (importantDone / importantKeys.length) * 30
-    ));
+    const progress = Math.min(
+      100,
+      Math.round((essentialDone / essentialKeys.length) * 70 + (importantDone / importantKeys.length) * 30),
+    );
 
     const responsePayload: Record<string, any> = {
       sessionId,

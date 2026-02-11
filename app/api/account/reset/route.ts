@@ -107,6 +107,14 @@ async function bestEffortResetBusinessProfileAdmin(userId: string) {
         offer_price: null,
         offer_sales_count: null,
         offer_sales_page_links: null,
+        // ✅ Champs onboarding v2 (récap + extracteurs) — best-effort
+        activities_list: null,
+        primary_activity: null,
+        business_model: null,
+        target_audience_short: null,
+        revenue_goal_monthly: null,
+        time_available_hours_week: null,
+        tone: null,
       })
       .eq("user_id", userId);
 
@@ -119,30 +127,21 @@ async function bestEffortResetBusinessProfileAdmin(userId: string) {
 }
 
 export async function POST() {
+  const supabase = await getSupabaseServerClient();
+
   try {
-    // ✅ Auth via cookies (user session)
-    const supabase = await getSupabaseServerClient();
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+    const userId = user?.id;
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = user.id;
-
-    /**
-     * IMPORTANT — RESET "SOFT" (ONBOARDING)
-     * - ✅ On supprime uniquement les données générées / contenus / tâches / stratégie / onboarding
-     * - ❌ On ne touche PAS aux crédits, abonnement, ni auth user
-     *
-     * ✅ On utilise supabaseAdmin (service_role) pour BYPASS RLS
-     */
-
+    // ✅ Delete best-effort (admin bypass)
     const deletions: Array<{ table: string; column?: string }> = [
-      // Onboarding V2 (sessions/messages/facts) — regénérable
+      // Onboarding v2
       { table: "onboarding_messages", column: "user_id" }, // best-effort si colonne existe
       { table: "onboarding_facts", column: "user_id" },
       { table: "onboarding_sessions", column: "user_id" },
@@ -219,7 +218,7 @@ export async function POST() {
         .maybeSingle();
 
       if (!profileExists) {
-        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+        const { data: authUser } = await supabase.auth.getUser();
         await supabaseAdmin.from("profiles").insert({
           id: userId,
           email: authUser?.user?.email ?? null,
