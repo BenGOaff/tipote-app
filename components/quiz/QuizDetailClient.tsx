@@ -72,6 +72,7 @@ type QuizResult = {
   insight: string | null;
   projection: string | null;
   cta_text: string | null;
+  sio_tag_name: string | null;
   sort_order: number;
 };
 
@@ -97,6 +98,7 @@ type QuizData = {
   bonus_description: string | null;
   share_message: string | null;
   status: string;
+  sio_share_tag_name: string | null;
   views_count: number;
   shares_count: number;
   created_at: string;
@@ -120,13 +122,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Systeme.io sync
+  // Systeme.io tags
   const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
   const [sioTagsLoading, setSioTagsLoading] = useState(false);
   const [sioTagsLoaded, setSioTagsLoaded] = useState(false);
-  const [selectedTag, setSelectedTag] = useState("");
+  const [sioShareTagName, setSioShareTagName] = useState("");
+  // Track which picker is in "create new" mode: "share" | "result-0" | "result-1" etc.
+  const [newTagFor, setNewTagFor] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState("");
-  const [showNewTagInput, setShowNewTagInput] = useState(false);
+  // Manual bulk sync
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{
     synced: number;
@@ -173,6 +177,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
         setStatus(q.status);
+        setSioShareTagName(q.sio_share_tag_name ?? "");
         setEditQuestions(q.questions ?? []);
         setEditResults(q.results ?? []);
       } catch {
@@ -200,6 +205,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           bonus_description: bonusDescription,
           share_message: shareMessage,
           status,
+          sio_share_tag_name: sioShareTagName || null,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
             options: q.options,
@@ -211,6 +217,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             insight: r.insight,
             projection: r.projection,
             cta_text: r.cta_text,
+            sio_tag_name: r.sio_tag_name || null,
             sort_order: i,
           })),
         }),
@@ -232,6 +239,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               bonus_description: bonusDescription,
               share_message: shareMessage,
               status,
+              sio_share_tag_name: sioShareTagName || null,
               questions: editQuestions,
               results: editResults,
             }
@@ -356,64 +364,113 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   };
 
-  const handleSyncSystemeIo = async () => {
-    const tagName = showNewTagInput ? newTagName.trim() : selectedTag;
-    if (!tagName) {
-      toast({
-        title: "Tag requis",
-        description: "Choisis un tag existant ou crée un nouveau tag.",
-        variant: "destructive",
-      });
-      return;
+  /** Confirm new tag creation for a specific picker slot */
+  const confirmNewTag = (pickerId: string) => {
+    const name = newTagName.trim();
+    if (!name) return;
+    // Add to local tag list (it will be created in Systeme.io automatically when lead is sent)
+    if (!sioTags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setSioTags((prev) => [...prev, { id: Date.now(), name }]);
+    }
+    // Assign the tag to the right slot
+    if (pickerId === "share") {
+      setSioShareTagName(name);
+    } else if (pickerId.startsWith("result-")) {
+      const ri = parseInt(pickerId.replace("result-", ""), 10);
+      const next = [...editResults];
+      if (next[ri]) {
+        next[ri] = { ...next[ri], sio_tag_name: name };
+        setEditResults(next);
+      }
+    }
+    setNewTagFor(null);
+    setNewTagName("");
+  };
+
+  /** Reusable tag picker renderer */
+  const renderTagPicker = (pickerId: string, value: string, onChange: (v: string) => void) => {
+    if (newTagFor === pickerId) {
+      return (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Nom du nouveau tag"
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            className="flex-1 text-sm"
+            onKeyDown={(e) => e.key === "Enter" && confirmNewTag(pickerId)}
+          />
+          <Button variant="outline" size="sm" onClick={() => confirmNewTag(pickerId)} disabled={!newTagName.trim()}>
+            <Check className="w-3 h-3 mr-1" /> OK
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setNewTagFor(null); setNewTagName(""); }}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      );
     }
 
+    if (!sioTagsLoaded) {
+      return (
+        <Button variant="outline" size="sm" onClick={loadSioTags} disabled={sioTagsLoading}>
+          {sioTagsLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <ChevronDown className="w-3 h-3 mr-1" />}
+          {sioTagsLoading ? "Chargement..." : "Charger mes tags"}
+        </Button>
+      );
+    }
+
+    return (
+      <div className="flex gap-2">
+        <select
+          className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">— Aucun tag —</option>
+          {sioTags.map((t) => (
+            <option key={t.id} value={t.name}>{t.name}</option>
+          ))}
+        </select>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => { setNewTagFor(pickerId); setNewTagName(""); }}
+          title="Créer un nouveau tag"
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    );
+  };
+
+  /** Manual bulk sync for existing leads */
+  const handleBulkSync = async () => {
     setSyncing(true);
     setSyncResult(null);
     try {
+      // Collect all unique tag names from results
+      const resultTags = editResults
+        .filter((r) => r.sio_tag_name?.trim())
+        .map((r) => r.sio_tag_name!.trim());
+      const tagName = resultTags[0] || sioShareTagName || "";
+      if (!tagName) {
+        toast({ title: "Aucun tag configuré", description: "Configure au moins un tag avant de synchroniser.", variant: "destructive" });
+        return;
+      }
+
       const res = await fetch(`/api/quiz/${quizId}/sync-systeme`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tagName }),
       });
       const json = await res.json();
-
       if (!json?.ok) {
-        if (json?.error === "NO_API_KEY") {
-          toast({
-            title: "Clé API manquante",
-            description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw new Error(json?.message || json?.error || "Erreur de synchronisation");
+        throw new Error(json?.message || json?.error || "Erreur");
       }
-
-      setSyncResult({
-        synced: json.synced ?? 0,
-        errors: json.errors ?? 0,
-        total: json.total ?? 0,
-      });
-
-      toast({
-        title: `${json.synced} lead${json.synced > 1 ? "s" : ""} synchronisé${json.synced > 1 ? "s" : ""}`,
-        description: json.errors > 0
-          ? `${json.errors} erreur(s) rencontrée(s).`
-          : `Tag "${tagName}" appliqué dans Systeme.io.`,
-      });
-
-      // Refresh tags list to include newly created tag
-      if (showNewTagInput) {
-        loadSioTags();
-        setShowNewTagInput(false);
-        setNewTagName("");
-      }
+      setSyncResult({ synced: json.synced ?? 0, errors: json.errors ?? 0, total: json.total ?? 0 });
+      toast({ title: `${json.synced} lead(s) synchronisé(s)` });
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Impossible de synchroniser.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: err.message || "Impossible de synchroniser.", variant: "destructive" });
     } finally {
       setSyncing(false);
     }
@@ -670,10 +727,92 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             placeholder="Texte du bouton CTA (optionnel)"
                           />
                         </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            Tag Systeme.io
+                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">auto</span>
+                          </Label>
+                          {renderTagPicker(
+                            `result-${ri}`,
+                            r.sio_tag_name ?? "",
+                            (v) => {
+                              const next = [...editResults];
+                              next[ri] = { ...next[ri], sio_tag_name: v || null };
+                              setEditResults(next);
+                            },
+                          )}
+                          <p className="text-[10px] text-muted-foreground">
+                            Ce tag sera appliqué automatiquement au contact dans Systeme.io quand un visiteur obtient ce profil.
+                          </p>
+                        </div>
                       </div>
                     </Card>
                   ))}
                 </div>
+
+                {/* ── Systeme.io automation config ── */}
+                <Card className="p-5 space-y-4 border-primary/20 bg-primary/[0.02]">
+                  <div className="flex items-start gap-3">
+                    <Upload className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="space-y-1">
+                      <h3 className="font-bold">Automatisation Systeme.io</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Tipote envoie automatiquement chaque lead capturé vers ton compte Systeme.io avec le bon tag.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-muted/60 border text-sm space-y-2">
+                    <p className="font-medium text-foreground flex items-center gap-1.5">
+                      <Info className="w-4 h-4 text-primary" />
+                      Comment ça marche
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-1">
+                      <li>
+                        <strong>Configure ta clé API</strong> dans{" "}
+                        <a href="/settings?tab=settings" className="underline text-primary hover:text-primary/80">
+                          Réglages &gt; Systeme.io
+                        </a>
+                      </li>
+                      <li>
+                        <strong>Assigne un tag par profil résultat</strong> ci-dessus — quand un visiteur obtient ce résultat, le tag est appliqué au contact dans Systeme.io
+                      </li>
+                      <li>
+                        <strong>Dans Systeme.io</strong>, crée une règle d&apos;automatisation : &quot;Quand le tag X est ajouté → envoyer la séquence email Y&quot;
+                      </li>
+                    </ol>
+                    {viralityEnabled && (
+                      <p className="text-muted-foreground mt-1">
+                        <strong>Bonus de partage :</strong> configure aussi un tag &quot;partagé&quot; ci-dessous pour déclencher l&apos;envoi du bonus via une automatisation Systeme.io.
+                      </p>
+                    )}
+                  </div>
+
+                  {viralityEnabled && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        Tag &quot;Quiz partagé&quot;
+                        <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">bonus</span>
+                      </Label>
+                      {renderTagPicker("share", sioShareTagName, setSioShareTagName)}
+                      <p className="text-xs text-muted-foreground">
+                        Ce tag sera ajouté quand un visiteur partage le quiz.
+                        Crée une automatisation dans Systeme.io : &quot;Quand ce tag est ajouté → envoyer le bonus&quot;.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      editResults.some((r) => r.sio_tag_name?.trim()) ? "bg-green-500" : "bg-amber-400"
+                    }`} />
+                    <p className="text-xs text-muted-foreground">
+                      {editResults.some((r) => r.sio_tag_name?.trim())
+                        ? `${editResults.filter((r) => r.sio_tag_name?.trim()).length}/${editResults.length} profils ont un tag configuré`
+                        : "Aucun tag configuré — les leads ne seront pas envoyés vers Systeme.io"}
+                    </p>
+                  </div>
+                </Card>
 
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="font-bold">Paramètres</h3>
@@ -864,127 +1003,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </Card>
                 )}
 
-                {/* Systeme.io sync */}
-                {leadsCount > 0 && (
-                  <Card className="p-6 space-y-4 border-dashed">
-                    <div className="flex items-center gap-2">
-                      <Upload className="w-5 h-5 text-muted-foreground" />
-                      <h4 className="font-bold">Exporter vers Systeme.io</h4>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-muted/50 border text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-start gap-2">
-                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-foreground">Comment ça marche ?</p>
-                          <ol className="list-decimal list-inside mt-1 space-y-0.5">
-                            <li>Choisis un tag existant ou crées-en un nouveau</li>
-                            <li>Tipote envoie chaque lead capturé vers ton Systeme.io</li>
-                            <li>Le tag est appliqué automatiquement pour segmenter tes contacts</li>
-                          </ol>
-                          <p className="mt-1 text-xs">
-                            Configure ta clé API dans{" "}
-                            <a href="/settings?tab=settings" className="underline text-primary">
-                              Réglages
-                            </a>.
-                          </p>
-                        </div>
+                {/* Bulk sync for leads captured before tags were configured */}
+                {leadsCount > 0 && editResults.some((r) => r.sio_tag_name?.trim()) && (
+                  <Card className="p-4 border-dashed">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Rattraper les anciens leads ?</span>{" "}
+                        Synchronise les leads existants vers Systeme.io avec le premier tag configuré.
                       </div>
-                    </div>
-
-                    {!sioTagsLoaded ? (
                       <Button
                         variant="outline"
-                        onClick={loadSioTags}
-                        disabled={sioTagsLoading}
+                        size="sm"
+                        onClick={handleBulkSync}
+                        disabled={syncing}
+                        className="flex-shrink-0"
                       >
-                        {sioTagsLoading ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 mr-1" />
-                        )}
-                        {sioTagsLoading ? "Chargement des tags..." : "Charger mes tags Systeme.io"}
+                        {syncing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                        {syncing ? "Sync..." : "Synchroniser"}
                       </Button>
-                    ) : (
-                      <div className="space-y-3">
-                        {!showNewTagInput ? (
-                          <div className="space-y-2">
-                            <Label className="text-xs">Tag à appliquer</Label>
-                            <div className="flex gap-2">
-                              <select
-                                className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                value={selectedTag}
-                                onChange={(e) => setSelectedTag(e.target.value)}
-                              >
-                                <option value="">Sélectionne un tag...</option>
-                                {sioTags.map((t) => (
-                                  <option key={t.id} value={t.name}>
-                                    {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setShowNewTagInput(true)}
-                                title="Créer un nouveau tag"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            {sioTags.length === 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Aucun tag trouvé. Crée un nouveau tag ci-dessus.
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label className="text-xs">Nouveau tag</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Ex: quiz-entrepreneur"
-                                value={newTagName}
-                                onChange={(e) => setNewTagName(e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setShowNewTagInput(false);
-                                  setNewTagName("");
-                                }}
-                                title="Annuler"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        <Button
-                          onClick={handleSyncSystemeIo}
-                          disabled={
-                            syncing ||
-                            (!showNewTagInput && !selectedTag) ||
-                            (showNewTagInput && !newTagName.trim())
-                          }
-                        >
-                          {syncing ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          ) : (
-                            <Upload className="w-4 h-4 mr-1" />
-                          )}
-                          {syncing ? "Synchronisation..." : "Synchroniser"}
-                        </Button>
-                      </div>
-                    )}
-
+                    </div>
                     {syncResult && (
-                      <p className="text-sm text-muted-foreground">
-                        {syncResult.synced}/{syncResult.total} leads synchronisés
-                        {syncResult.errors > 0 && `, ${syncResult.errors} erreur(s)`}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {syncResult.synced}/{syncResult.total} synchronisés
+                        {syncResult.errors > 0 && ` · ${syncResult.errors} erreur(s)`}
                       </p>
                     )}
                   </Card>

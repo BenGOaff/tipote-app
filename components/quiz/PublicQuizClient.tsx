@@ -249,6 +249,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             Commencer <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </Card>
+        <TipoteFooter />
       </div>
     );
   }
@@ -364,6 +365,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             </p>
           )}
         </Card>
+        <TipoteFooter />
       </div>
     );
   }
@@ -511,9 +513,25 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             </p>
           )}
         </Card>
+        <TipoteFooter />
       </div>
     );
   }
 
   return null;
+}
+
+function TipoteFooter() {
+  return (
+    <p className="text-center text-xs text-muted-foreground/60 mt-6">
+      <a
+        href="https://www.tipote.com/commande"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-muted-foreground transition-colors"
+      >
+        Ce quiz vous est offert par Tipote
+      </a>
+    </p>
+  );
 }
