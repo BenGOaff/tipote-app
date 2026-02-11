@@ -630,7 +630,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               placeholder="Texte de la réponse"
                             />
                             <select
-                              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                              className="h-9 w-[120px] shrink-0 rounded-md border border-input bg-background px-2 text-xs"
                               value={opt.result_index}
                               onChange={(e) => {
                                 const next = [...editQuestions];
@@ -662,7 +662,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   {editResults.map((r, ri) => (
                     <Card key={r.id || ri} className="p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="flex-shrink-0">Profil {ri + 1}</Badge>
+                        <Badge variant="secondary" className="shrink-0 whitespace-nowrap">Profil {ri + 1}</Badge>
                         <Input
                           value={r.title}
                           onChange={(e) => {

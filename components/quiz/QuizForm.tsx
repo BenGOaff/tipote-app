@@ -22,6 +22,11 @@ import {
   GripVertical,
   Eye,
   Save,
+  ChevronDown,
+  Check,
+  X,
+  Info,
+  Upload,
 } from "lucide-react";
 
 type QuizQuestion = {
@@ -36,6 +41,7 @@ type QuizResult = {
   insight: string | null;
   projection: string | null;
   cta_text: string | null;
+  sio_tag_name: string | null;
   sort_order: number;
 };
 
@@ -73,6 +79,105 @@ export function QuizForm({ onClose }: QuizFormProps) {
   );
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
+  const [sioShareTagName, setSioShareTagName] = useState("");
+
+  // Systeme.io tags
+  const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
+  const [sioTagsLoading, setSioTagsLoading] = useState(false);
+  const [sioTagsLoaded, setSioTagsLoaded] = useState(false);
+  const [newTagFor, setNewTagFor] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState("");
+
+  const loadSioTags = async () => {
+    setSioTagsLoading(true);
+    try {
+      const res = await fetch("/api/systeme-io/tags");
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.tags)) {
+        setSioTags(json.tags);
+        setSioTagsLoaded(true);
+      } else if (json?.error === "NO_API_KEY") {
+        toast({
+          title: "Clé API manquante",
+          description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger les tags.", variant: "destructive" });
+    } finally {
+      setSioTagsLoading(false);
+    }
+  };
+
+  const confirmNewTag = (pickerId: string) => {
+    const name = newTagName.trim();
+    if (!name) return;
+    if (!sioTags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setSioTags((prev) => [...prev, { id: Date.now(), name }]);
+    }
+    if (pickerId === "share") {
+      setSioShareTagName(name);
+    } else if (pickerId.startsWith("result-")) {
+      const ri = parseInt(pickerId.replace("result-", ""), 10);
+      updateResult(ri, "sio_tag_name", name);
+    }
+    setNewTagFor(null);
+    setNewTagName("");
+  };
+
+  const renderTagPicker = (pickerId: string, value: string, onChange: (v: string) => void) => {
+    if (newTagFor === pickerId) {
+      return (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Nom du nouveau tag"
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            className="flex-1 text-sm"
+            onKeyDown={(e) => e.key === "Enter" && confirmNewTag(pickerId)}
+          />
+          <Button variant="outline" size="sm" onClick={() => confirmNewTag(pickerId)} disabled={!newTagName.trim()}>
+            <Check className="w-3 h-3 mr-1" /> OK
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setNewTagFor(null); setNewTagName(""); }}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      );
+    }
+    if (!sioTagsLoaded) {
+      return (
+        <Button variant="outline" size="sm" onClick={loadSioTags} disabled={sioTagsLoading}>
+          {sioTagsLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <ChevronDown className="w-3 h-3 mr-1" />}
+          {sioTagsLoading ? "Chargement..." : "Charger mes tags"}
+        </Button>
+      );
+    }
+    return (
+      <div className="flex gap-2">
+        <select
+          className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">— Aucun tag —</option>
+          {sioTags.map((t) => (
+            <option key={t.id} value={t.name}>{t.name}</option>
+          ))}
+        </select>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => { setNewTagFor(pickerId); setNewTagName(""); }}
+          title="Créer un nouveau tag"
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    );
+  };
 
   const handleGenerate = async () => {
     if (!objective.trim() || !target.trim()) {
@@ -134,6 +239,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           insight: r.insight ?? null,
           projection: r.projection ?? null,
           cta_text: r.cta_text ?? null,
+          sio_tag_name: null,
           sort_order: i,
         })),
       );
@@ -170,6 +276,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
+          sio_share_tag_name: sioShareTagName || null,
           status,
           config_objective: objective,
           config_target: target,
@@ -177,7 +284,10 @@ export function QuizForm({ onClose }: QuizFormProps) {
           config_cta: cta,
           config_bonus: bonus,
           questions,
-          results,
+          results: results.map((r) => ({
+            ...r,
+            sio_tag_name: r.sio_tag_name || null,
+          })),
         }),
       });
 
@@ -453,13 +563,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
                             value={String(opt.result_index)}
                             onValueChange={(v) => updateOption(qi, oi, "result_index", parseInt(v))}
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-[160px] shrink-0">
                               <SelectValue placeholder="Profil →" />
                             </SelectTrigger>
                             <SelectContent>
                               {results.map((r, ri) => (
                                 <SelectItem key={ri} value={String(ri)}>
-                                  {r.title || `Profil ${ri + 1}`}
+                                  Profil {ri + 1}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -489,7 +599,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           {results.map((r, ri) => (
             <Card key={ri} className="p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Badge>Profil {ri + 1}</Badge>
+                <Badge className="whitespace-nowrap shrink-0">Profil {ri + 1}</Badge>
                 <Input
                   value={r.title}
                   onChange={(e) => updateResult(ri, "title", e.target.value)}
@@ -528,8 +638,69 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   onChange={(e) => updateResult(ri, "cta_text", e.target.value)}
                 />
               </div>
+              <div className="space-y-1 pt-2 border-t">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  Tag Systeme.io
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">optionnel</span>
+                </Label>
+                {renderTagPicker(
+                  `result-${ri}`,
+                  r.sio_tag_name ?? "",
+                  (v) => updateResult(ri, "sio_tag_name", v || null),
+                )}
+                <p className="text-[10px] text-muted-foreground">
+                  Quand un visiteur obtient ce profil, ce tag sera appliqué dans Systeme.io.
+                </p>
+              </div>
             </Card>
           ))}
+
+          {/* Systeme.io explanation */}
+          <Card className="p-4 space-y-3 border-primary/20 bg-primary/[0.02]">
+            <div className="flex items-start gap-3">
+              <Upload className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-sm">Automatisation Systeme.io</h4>
+                <p className="text-xs text-muted-foreground">
+                  Tipote envoie automatiquement chaque lead vers ton Systeme.io avec le bon tag.
+                </p>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/60 border text-xs space-y-1.5">
+              <p className="font-medium text-foreground flex items-center gap-1">
+                <Info className="w-3.5 h-3.5 text-primary" /> Comment ça marche
+              </p>
+              <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground ml-0.5">
+                <li>Configure ta clé API dans <a href="/settings?tab=settings" className="underline text-primary">Réglages</a></li>
+                <li>Assigne un tag par profil résultat ci-dessus</li>
+                <li>Dans Systeme.io, crée une automatisation : &quot;Quand le tag X est ajouté → envoyer la séquence email Y&quot;</li>
+              </ol>
+            </div>
+
+            {viralityEnabled && (
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1.5">
+                  Tag &quot;Quiz partagé&quot;
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">bonus</span>
+                </Label>
+                {renderTagPicker("share", sioShareTagName, setSioShareTagName)}
+                <p className="text-[10px] text-muted-foreground">
+                  Ce tag sera ajouté quand un visiteur partage le quiz. Crée une automatisation dans Systeme.io pour envoyer le bonus.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${
+                results.some((r) => r.sio_tag_name?.trim()) ? "bg-green-500" : "bg-amber-400"
+              }`} />
+              <p className="text-[10px] text-muted-foreground">
+                {results.some((r) => r.sio_tag_name?.trim())
+                  ? `${results.filter((r) => r.sio_tag_name?.trim()).length}/${results.length} profils ont un tag`
+                  : "Aucun tag configuré — les leads ne seront pas envoyés vers Systeme.io (tu pourras le faire plus tard)"}
+              </p>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4 mt-4">

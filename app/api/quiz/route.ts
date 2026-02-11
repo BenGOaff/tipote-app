@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
         virality_enabled: Boolean(body.virality_enabled),
         bonus_description: body.bonus_description ?? null,
         share_message: body.share_message ?? null,
+        sio_share_tag_name: body.sio_share_tag_name ?? null,
         status: body.status === "active" ? "active" : "draft",
         config_objective: body.config_objective ?? null,
         config_target: body.config_target ?? null,
@@ -130,6 +131,7 @@ export async function POST(req: NextRequest) {
           insight: r.insight ?? null,
           projection: r.projection ?? null,
           cta_text: r.cta_text ?? null,
+          sio_tag_name: r.sio_tag_name ?? null,
           sort_order: i,
         })),
       );
