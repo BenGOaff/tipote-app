@@ -243,6 +243,7 @@ function messageLooksFinished(text: string): boolean {
 
 function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
   try {
+    // Guard: if user listed multiple activities but hasn't picked a primary one yet, don't finish
     const activities = Array.isArray((knownFacts as any)["activities_list"])
       ? ((knownFacts as any)["activities_list"] as any[]).filter((x) => typeof x === "string")
       : [];
@@ -253,19 +254,12 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
 
     if (activities.length >= 2 && !primary) return false;
 
-    // Essential: at least main_topic + business_model (or primary_activity)
+    // Essential: need all 3 — main_topic + business_model + primary_focus
     const hasTopic = hasNonEmptyFact(knownFacts, "main_topic") || hasNonEmptyFact(knownFacts, "primary_activity");
     const hasModel = hasNonEmptyFact(knownFacts, "business_model");
     const hasFocus = hasNonEmptyFact(knownFacts, "primary_focus");
 
-    // If we have the 3 essentials, we're ready
-    if (hasTopic && hasModel && hasFocus) return true;
-
-    // Fallback: if we have topic + at least 3 other facts, that's enough
-    const factCount = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k)).length;
-    if (hasTopic && factCount >= 4) return true;
-
-    return false;
+    return hasTopic && hasModel && hasFocus;
   } catch {
     return false;
   }
@@ -986,13 +980,18 @@ export async function POST(req: NextRequest) {
     const hist = Array.isArray(history) ? history : [];
     const prevAssistant = [...hist].reverse().find((m: any) => m?.role === "assistant")?.content ?? "";
 
+    // Count exchanges early — needed for all finish guards
+    const exchangeCount = Math.floor((hist.length + 1) / 2);
+
     const userMsg = String(body.message || "");
 
     // EARLY_FINISH_CONFIRM: si l'assistant vient d'indiquer "tu peux passer à la suite"
-    // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin (UX premium).
+    // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin.
+    // Guarded by MIN_EXCHANGES (3) to prevent premature finish.
     try {
+      const MIN_EXCHANGES_EARLY = 3;
       const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
-      if (prevWasFinished && isUserConfirmingToFinish(userMsg)) {
+      if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY) {
         const finishMessage =
           locale === "fr"
             ? "Parfait ✅ Je te montre le récap et je lance la création de ta stratégie."
@@ -1195,21 +1194,45 @@ export async function POST(req: NextRequest) {
       userCountry: typeof (bp as any)?.country === "string" ? (bp as any).country : null,
     });
 
-    // Count exchanges to help AI know when to finish
-    const exchangeCount = Math.floor((hist.length + 1) / 2);
+    // ═══════════════════════════════════════════════════
+    // EXCHANGE LIMITS — prevent premature finish AND infinite loops
+    // ═══════════════════════════════════════════════════
+    const MIN_EXCHANGES = 3;  // Never finish before the user has answered 3 questions
+    const MAX_EXCHANGES = 10; // Force finish after 10 exchanges to prevent loops
+
     const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
+
+    // Determine which phase the AI should be in based on exchange count
+    const missingEssentials = ["main_topic", "business_model", "primary_focus", "target_audience_short"]
+      .filter((k) => !hasNonEmptyFact(knownFacts, k));
+    const missingImportant = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"]
+      .filter((k) => !hasNonEmptyFact(knownFacts, k));
+
+    let phaseHint = "";
+    if (exchangeCount <= 2) {
+      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model.";
+    } else if (exchangeCount <= 4) {
+      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est.";
+    } else if (exchangeCount <= 6) {
+      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif). Pose une question sur sa priorité, ses objectifs.";
+    } else if (exchangeCount <= 8) {
+      phaseHint = "Tu es en PHASE 4 (préférences rapides). Si il reste des infos utiles à collecter, pose une dernière question. Sinon mets should_finish=true.";
+    }
 
     const userPrompt = JSON.stringify(
       {
         instruction:
           "Extrais les facts de la dernière réponse. Reformule ce que tu as compris en 1 phrase, puis pose 1 NOUVELLE question (jamais déjà posée). " +
-          "Si tu as assez d'infos (main_topic + business_model + primary_focus), TERMINE avec done=true.",
+          "NE METS PAS done=true sauf si anti_loop_check te le demande explicitement.",
+        phase: phaseHint,
         anti_loop_check:
           `Échange n°${exchangeCount}. ` +
           `Facts déjà collectés : [${collectedFactKeys.join(", ")}]. ` +
-          `NE POSE PAS de question sur ces sujets. ` +
-          (exchangeCount >= 6 ? "ATTENTION : tu approches de la limite. Termine bientôt." : "") +
-          (exchangeCount >= 8 ? " TERMINE MAINTENANT avec done=true." : ""),
+          `Facts essentiels manquants : [${missingEssentials.join(", ") || "aucun"}]. ` +
+          `Facts importants manquants : [${missingImportant.join(", ") || "aucun"}]. ` +
+          `NE POSE PAS de question sur les facts déjà collectés. ` +
+          (exchangeCount >= 7 ? "Tu approches de la fin. Concentre-toi sur les facts manquants essentiels." : "") +
+          (exchangeCount >= MAX_EXCHANGES ? " TERMINE MAINTENANT avec done=true et should_finish=true. Ne pose plus de question." : ""),
         known_facts: knownFacts,
         business_profile_snapshot: bp ?? null,
         conversation_history: (history ?? []).map((m: any) => ({ role: m.role as ChatRole, content: m.content })),
@@ -1243,8 +1266,6 @@ export async function POST(req: NextRequest) {
     const parsed = safeJsonParse(raw);
     const out = AiResponseSchema.parse(parsed);
 
-    let shouldFinish = Boolean(out.should_finish ?? out.done ?? false);
-
     // 4) apply facts + patch business_profiles
     const toUpsert = (out.facts || [])
       .map((f) => {
@@ -1270,31 +1291,24 @@ export async function POST(req: NextRequest) {
       await upsertOneFact({ key: f.key, value: f.value, confidence: f.confidence, source: f.source });
     }
 
-    // Garde-fou : interdit le finish si activities_list>=2 et primary_activity manquante
-    try {
-      const activities = Array.isArray(knownFacts["activities_list"])
-        ? (knownFacts["activities_list"] as any[]).filter((x) => typeof x === "string")
-        : [];
-      const primary = typeof knownFacts["primary_activity"] === "string" ? String(knownFacts["primary_activity"]) : "";
+    // ═══════════════════════════════════════════════════
+    // FINISH DECISION — server is the single source of truth
+    // ═══════════════════════════════════════════════════
+    let shouldFinish = false;
 
-      if (activities.length >= 2 && !primary) {
-        shouldFinish = false;
-      }
-    } catch {
-      // ignore
-    }
-
-    // ✅ Décision finish (serveur = source de vérité)
-    // - cas normal: ready => finish
-    // - cas UX premium: si message indique fin => finish
     try {
       const ready = isReadyToFinish(knownFacts);
 
-      if (ready) shouldFinish = true;
-      if (messageLooksFinished(out.message)) shouldFinish = true;
-      if (Boolean(out.should_finish ?? out.done ?? false)) shouldFinish = true;
+      if (exchangeCount >= MAX_EXCHANGES) {
+        // Hard cap: force finish to prevent infinite loops regardless of facts
+        shouldFinish = true;
+      } else if (exchangeCount >= MIN_EXCHANGES && ready) {
+        // After minimum exchanges: finish only if we have all 3 essentials
+        shouldFinish = true;
+      }
+      // Before MIN_EXCHANGES: never finish, regardless of AI or facts
     } catch {
-      // ignore
+      // ignore — fail-open, don't finish on error
     }
 
     // Patch business_profiles (best-effort) : on pousse surtout les champs récap
