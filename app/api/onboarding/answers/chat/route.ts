@@ -719,13 +719,13 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     const key = normalizeKey(f.key);
     const value = f.value;
 
-    // champs UI existants (déjà)
-    if (key === "primary_activity" && isNonEmptyString(value)) setIf("primary_activity", String(value).slice(0, 200));
-    if (key === "traffic_source_today" && isNonEmptyString(value)) setIf("traffic_source_today", String(value));
+    // champs existants dans business_profiles
+    // primary_activity → niche (pas de colonne primary_activity dans DB)
+    if (key === "primary_activity" && isNonEmptyString(value) && !patch["niche"]) setIf("niche", getStr(value, 140));
+    // traffic_source_today, conversion_status → pas de colonne dans DB, on les garde dans onboarding_facts uniquement
     if (key === "has_offers" && typeof value === "boolean") setIf("has_offers", value);
-    if (key === "conversion_status" && isNonEmptyString(value)) setIf("conversion_status", String(value));
 
-    // ✅ champs récap (business_profiles_rows csv)
+    // ✅ champs récap (business_profiles columns)
     if ((key === "main_topic" || key === "niche") && isNonEmptyString(value)) setIf("niche", getStr(value, 140));
     if ((key === "mission" || key === "target_audience_short") && isNonEmptyString(value)) setIf("mission", getStr(value, 260));
     if ((key === "main_goal" || key === "main_goal_90_days" || key === "objective_90_days") && isNonEmptyString(value))
@@ -755,13 +755,9 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
         setIf("content_preference", getStr(value, 180));
       }
     }
-    if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value))
-      setIf("success_definition", getStr(value, 240));
-    if (key === "success_metrics" && value && typeof value === "object") {
-      setIf("success_definition", JSON.stringify(value).slice(0, 240));
-    }
+    // success_metric → pas de colonne success_definition dans DB, stocké dans onboarding_facts uniquement
 
-    // offers_list → business_profiles.offers
+    // offers_list → business_profiles.offers + offer_price + offer_sales_page_links
     if (key === "offers_list" && Array.isArray(value)) {
       const offersArr = value
         .filter((o) => o && typeof o === "object")
@@ -776,7 +772,15 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
           link: typeof o.link === "string" ? o.link.trim().slice(0, 400) : "",
         }))
         .filter((o) => o.name);
-      if (offersArr.length > 0) setIf("offers", offersArr);
+      if (offersArr.length > 0) {
+        setIf("offers", offersArr);
+        // Also set offer_price from first offer with a price
+        const firstPrice = offersArr.find((o) => o.price)?.price;
+        if (firstPrice && !patch["offer_price"]) setIf("offer_price", firstPrice);
+        // Also set offer_sales_page_links from links
+        const links = offersArr.map((o) => o.link).filter(Boolean);
+        if (links.length > 0 && !patch["offer_sales_page_links"]) setIf("offer_sales_page_links", links.join(", "));
+      }
     }
 
     // auditables
@@ -813,9 +817,15 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
       else if (isNonEmptyString(value)) setIf("audience_email", getStr(value, 60));
     }
 
-    // ✅ social_links
+    // ✅ social_links (generic)
     if (key === "social_links" && isNonEmptyString(value))
       setIf("social_links", getStr(value, 500));
+
+    // ✅ specific social URLs → dedicated columns
+    if (key === "linkedin_url" && isNonEmptyString(value)) setIf("linkedin_url", getStr(value, 400));
+    if (key === "instagram_url" && isNonEmptyString(value)) setIf("instagram_url", getStr(value, 400));
+    if (key === "youtube_url" && isNonEmptyString(value)) setIf("youtube_url", getStr(value, 400));
+    if (key === "website_url" && isNonEmptyString(value)) setIf("website_url", getStr(value, 400));
   }
 
   return patch;
@@ -1225,6 +1235,25 @@ export async function POST(req: NextRequest) {
       }
       if (t.includes("amazon") && !hasNonEmptyFact(knownFacts, "affiliate_programs_known")) {
         await upsertOneFact({ key: "affiliate_programs_known", value: true, confidence: "high", source: "server_extract_affiliate" });
+      }
+    } catch {
+      // ignore
+    }
+
+    // ✅ Auto-extract URLs (linkedin, instagram, youtube, website)
+    try {
+      const urlMatches = userMsg.match(/https?:\/\/[^\s,)]+/gi) ?? [];
+      for (const url of urlMatches) {
+        const u = url.toLowerCase();
+        if (u.includes("linkedin.com") && !hasNonEmptyFact(knownFacts, "linkedin_url")) {
+          await upsertOneFact({ key: "linkedin_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+        } else if (u.includes("instagram.com") && !hasNonEmptyFact(knownFacts, "instagram_url")) {
+          await upsertOneFact({ key: "instagram_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+        } else if (u.includes("youtube.com") && !hasNonEmptyFact(knownFacts, "youtube_url")) {
+          await upsertOneFact({ key: "youtube_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+        } else if (!u.includes("linkedin") && !u.includes("instagram") && !u.includes("youtube") && !u.includes("facebook") && !u.includes("twitter") && !u.includes("tiktok") && !hasNonEmptyFact(knownFacts, "website_url")) {
+          await upsertOneFact({ key: "website_url", value: url.trim(), confidence: "medium", source: "server_extract_url" });
+        }
       }
     } catch {
       // ignore
