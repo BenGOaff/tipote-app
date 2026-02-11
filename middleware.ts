@@ -5,13 +5,20 @@ import { createServerClient } from "@supabase/ssr";
 /**
  * Invariants (anti-régression)
  * 1) /api, /auth, /onboarding, assets => jamais bloqués par le middleware
- * 2) Routes protégées => user connecté + onboarding complété
+ * 2) Routes protégées => user connecté + onboarding complété (pour le projet actif)
  * 3) Fail-open DB: si Supabase/table/colonne casse => on laisse passer (ne jamais casser la prod)
  *
  * IMPORTANT:
  * - Dans ce repo, la page de connexion est "/" (pas "/login")
  * - On garde "/login" en public au cas où (legacy / liens externes), mais on ne redirige pas dessus.
+ *
+ * MULTI-PROJETS:
+ * - Le cookie `tipote_active_project` indique le projet actif
+ * - Si ce projet n'a pas complété l'onboarding => redirect /onboarding
+ * - Fallback : vérifier le business_profiles par user_id (ancien comportement)
  */
+
+const ACTIVE_PROJECT_COOKIE = "tipote_active_project";
 
 const PUBLIC_PREFIXES = [
   "/", // ✅ page login du repo
@@ -102,7 +109,34 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
-    // Vérif onboarding (fail-open)
+    // Vérif onboarding pour le projet actif (fail-open)
+    const activeProjectId = req.cookies.get(ACTIVE_PROJECT_COOKIE)?.value?.trim() ?? "";
+
+    // Si un project_id est défini, vérifier l'onboarding de CE projet
+    if (activeProjectId) {
+      try {
+        const { data: bp, error } = await supabase
+          .from("business_profiles")
+          .select("onboarding_completed")
+          .eq("user_id", user.id)
+          .eq("project_id", activeProjectId)
+          .maybeSingle();
+
+        if (!error && bp) {
+          if (!bp.onboarding_completed) {
+            const url = req.nextUrl.clone();
+            url.pathname = "/onboarding";
+            return NextResponse.redirect(url);
+          }
+          return res;
+        }
+        // Si pas de résultat avec project_id (migration pas encore faite), fallback ci-dessous
+      } catch {
+        // fail-open
+      }
+    }
+
+    // Fallback : vérifier par user_id seul (ancien comportement / compat)
     const { data: bp, error } = await supabase
       .from("business_profiles")
       .select("onboarding_completed")

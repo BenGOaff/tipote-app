@@ -246,8 +246,8 @@ export function ProjectSwitcher() {
     );
   }
 
-  // Si aucun projet, ne rien afficher (backward compat / table pas encore créée)
-  if (!projects.length) return null;
+  // Toujours afficher le switcher : même avec 0 projets on montre le bouton
+  // pour que la feature soit visible et incite à upgrader
 
   return (
     <>
@@ -258,7 +258,7 @@ export function ProjectSwitcher() {
             title="Changer de projet"
           >
             <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="truncate">{activeProject?.name ?? "Projet"}</span>
+            <span className="truncate">{activeProject?.name ?? "Mon Tipote"}</span>
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           </button>
         </DropdownMenuTrigger>
@@ -319,6 +319,12 @@ export function ProjectSwitcher() {
               </div>
             </DropdownMenuItem>
           ))}
+
+          {!projects.length && (
+            <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+              G\u00e8re plusieurs business ou clients depuis un seul compte.
+            </div>
+          )}
 
           <DropdownMenuSeparator />
 
