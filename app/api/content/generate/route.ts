@@ -1026,7 +1026,7 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSour
     if (!name) continue;
 
     const idRaw = safeStringOrNull((o as any).id) ?? safeStringOrNull((o as any).uuid) ?? null;
-    const id = idRaw ? idRaw : `${userId}:profile_offer:${i}`;
+    const id = idRaw ? idRaw : `user:${userId}:${i}`;
 
     const level =
       safeStringOrNull((o as any).level) ??
@@ -1535,6 +1535,7 @@ export async function POST(req: Request) {
     const planJson = (planRow as any)?.plan_json ?? null;
 
     const planOffers = extractOffersFromPlanJson(userId, planJson);
+    const profileOffers = parseOffersFromBusinessProfile(userId, profile);
 
     // Competitor analysis (optional, best-effort)
     let competitorSummary = "";
@@ -1616,13 +1617,14 @@ export async function POST(req: Request) {
 
     if (type === "offer" && (offerMode === "from_existing" || offerMode === "improve")) {
       // ✅ Temps réel : on privilégie planOffers (business_plan),
+      // puis fallback profileOffers (business_profiles.offers),
       // puis fallback offer_pyramids table (legacy).
       if (sourceOfferId) {
         if (isUuid(sourceOfferId)) {
           sourceOffer =
             (await fetchOfferFromLegacyTable({ supabase, userId, id: sourceOfferId, projectId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
         } else {
-          sourceOffer = findOfferByAnyId(planOffers, sourceOfferId);
+          sourceOffer = findOfferByAnyId(planOffers, sourceOfferId) ?? findOfferByAnyId(profileOffers, sourceOfferId);
         }
       } else if (offerTypeNorm === "lead_magnet") {
         sourceOffer = pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId, projectId }));

@@ -228,16 +228,22 @@ function hasNonEmptyFact(knownFacts: Record<string, unknown>, key: string): bool
 function messageLooksFinished(text: string): boolean {
   const t = (text || "").toLowerCase();
   return (
-    t.includes("j’ai tout") ||
     t.includes("j'ai tout") ||
-    t.includes("tout ce qu’il me faut") ||
+    t.includes("j\u2019ai tout") ||
     t.includes("tout ce qu'il me faut") ||
+    t.includes("tout ce qu\u2019il me faut") ||
     t.includes("tout est clair") ||
     t.includes("tu peux passer à la suite") ||
     t.includes("passer à la suite") ||
     t.includes("passer a la suite") ||
     t.includes("tu peux continuer") ||
-    t.includes("tu peux passer la suite")
+    t.includes("tu peux passer la suite") ||
+    t.includes("je te montre le récap") ||
+    t.includes("je te montre le recap") ||
+    t.includes("montre le récap") ||
+    t.includes("montre le recap") ||
+    t.includes("je lance la création") ||
+    t.includes("je lance la creation")
   );
 }
 
@@ -354,7 +360,8 @@ function inferConversionStatusFromAnswer(
 }
 
 function isUserConfirmingToFinish(text: string): boolean {
-  const t = (text || "").trim().toLowerCase();
+  // Strip punctuation and extra whitespace so "Super !" matches "super"
+  const t = (text || "").trim().toLowerCase().replace(/[!?.,;:…\s]+$/g, "").trim();
   if (!t) return false;
   return (
     t === "ok" ||
@@ -369,7 +376,14 @@ function isUserConfirmingToFinish(text: string): boolean {
     t === "parfait" ||
     t === "super" ||
     t === "yes" ||
-    t === "oui"
+    t === "oui" ||
+    t === "on y va" ||
+    t === "allons-y" ||
+    t === "let's go" ||
+    t === "top" ||
+    t === "nickel" ||
+    t === "c'est parti" ||
+    t === "cest parti"
   );
 }
 
@@ -770,6 +784,10 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
                 ? String(o.price)
                 : "",
           link: typeof o.link === "string" ? o.link.trim().slice(0, 400) : "",
+          promise: typeof o.promise === "string" ? o.promise.trim().slice(0, 500) : "",
+          description: typeof o.description === "string" ? o.description.trim().slice(0, 2000) : "",
+          target: typeof o.target === "string" ? o.target.trim().slice(0, 500) : "",
+          format: typeof o.format === "string" ? o.format.trim().slice(0, 200) : "",
         }))
         .filter((o) => o.name);
       if (offersArr.length > 0) {
@@ -1414,7 +1432,12 @@ export async function POST(req: NextRequest) {
         // Hard cap: force finish to prevent infinite loops regardless of facts
         shouldFinish = true;
       } else if (exchangeCount >= MIN_EXCHANGES && ready) {
-        // After minimum exchanges: finish only if we have all 3 essentials
+        // After minimum exchanges: finish only if we have all essentials + enough important facts
+        shouldFinish = true;
+      } else if (exchangeCount >= MIN_EXCHANGES && messageLooksFinished(out.message)) {
+        // Safety valve: if the AI itself says "Je te montre le récap" / "J'ai tout ce qu'il me faut"
+        // but isReadyToFinish() is false (e.g. some facts failed to save), force finish
+        // to avoid infinite loop where the AI keeps saying "here's the recap" forever.
         shouldFinish = true;
       }
       // Before MIN_EXCHANGES: never finish, regardless of AI or facts

@@ -58,6 +58,10 @@ type OfferItem = {
   name: string;
   price: string;
   link: string;
+  promise: string;
+  description: string;
+  target: string;
+  format: string;
 };
 
 type ProfileRow = {
@@ -164,6 +168,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               name: String(o?.name ?? ""),
               price: String(o?.price ?? ""),
               link: String(o?.link ?? ""),
+              promise: String(o?.promise ?? ""),
+              description: String(o?.description ?? ""),
+              target: String(o?.target ?? ""),
+              format: String(o?.format ?? ""),
             }))
           : [];
         setOffers(loadedOffers);
@@ -229,11 +237,18 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const offersDirty = useMemo(() => {
     if (offers.length !== initialOffers.length) return true;
     return offers.some(
-      (o, i) => o.name !== initialOffers[i]?.name || o.price !== initialOffers[i]?.price || o.link !== initialOffers[i]?.link,
+      (o, i) =>
+        o.name !== initialOffers[i]?.name ||
+        o.price !== initialOffers[i]?.price ||
+        o.link !== initialOffers[i]?.link ||
+        o.promise !== initialOffers[i]?.promise ||
+        o.description !== initialOffers[i]?.description ||
+        o.target !== initialOffers[i]?.target ||
+        o.format !== initialOffers[i]?.format,
     );
   }, [offers, initialOffers]);
 
-  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "" }]);
+  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "", promise: "", description: "", target: "", format: "" }]);
 
   const removeOffer = (idx: number) => setOffers((prev) => prev.filter((_, i) => i !== idx));
 
@@ -255,7 +270,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
         const row = (json.profile ?? null) as ProfileRow | null;
         const saved = Array.isArray(row?.offers)
-          ? row.offers.map((o: any) => ({ name: String(o?.name ?? ""), price: String(o?.price ?? ""), link: String(o?.link ?? "") }))
+          ? row.offers.map((o: any) => ({
+              name: String(o?.name ?? ""),
+              price: String(o?.price ?? ""),
+              link: String(o?.link ?? ""),
+              promise: String(o?.promise ?? ""),
+              description: String(o?.description ?? ""),
+              target: String(o?.target ?? ""),
+              format: String(o?.format ?? ""),
+            }))
           : cleaned;
         setOffers(saved);
         setInitialOffers(saved);
@@ -828,36 +851,86 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-4">Liste des offres</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Ajoutez vos offres pour les utiliser dans les modules de génération.
+            Ajoutez vos offres avec leurs détails pour que l'IA puisse créer du contenu pertinent.
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {offers.map((offer, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
-                <Input
-                  placeholder="Nom de l'offre"
-                  className="flex-1"
-                  value={offer.name}
-                  onChange={(e) => updateOffer(idx, "name", e.target.value)}
-                  disabled={profileLoading}
-                />
-                <Input
-                  placeholder="Prix"
-                  className="w-24"
-                  value={offer.price}
-                  onChange={(e) => updateOffer(idx, "price", e.target.value)}
-                  disabled={profileLoading}
-                />
-                <Input
-                  placeholder="Lien"
-                  className="flex-1"
-                  value={offer.link}
-                  onChange={(e) => updateOffer(idx, "link", e.target.value)}
-                  disabled={profileLoading}
-                />
-                <Button variant="ghost" size="icon" onClick={() => removeOffer(idx)} disabled={profileLoading}>
-                  <Trash2 className="w-4 h-4 text-muted-foreground" />
-                </Button>
+              <div key={idx} className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Offre {idx + 1}</span>
+                  <Button variant="ghost" size="icon" onClick={() => removeOffer(idx)} disabled={profileLoading}>
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nom de l'offre *</Label>
+                    <Input
+                      placeholder="Ex: Formation Copywriting"
+                      value={offer.name}
+                      onChange={(e) => updateOffer(idx, "name", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Prix</Label>
+                    <Input
+                      placeholder="Ex: 297€"
+                      value={offer.price}
+                      onChange={(e) => updateOffer(idx, "price", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Promesse principale</Label>
+                  <Input
+                    placeholder="Ex: Apprends à écrire des textes qui vendent en 30 jours"
+                    value={offer.promise}
+                    onChange={(e) => updateOffer(idx, "promise", e.target.value)}
+                    disabled={profileLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Public cible</Label>
+                  <Input
+                    placeholder="Ex: Entrepreneurs et freelances qui veulent vendre en ligne"
+                    value={offer.target}
+                    onChange={(e) => updateOffer(idx, "target", e.target.value)}
+                    disabled={profileLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Description courte</Label>
+                  <Textarea
+                    placeholder="En 2-3 phrases, décris ce que contient ton offre et le résultat attendu"
+                    value={offer.description}
+                    onChange={(e) => updateOffer(idx, "description", e.target.value)}
+                    disabled={profileLoading}
+                    className="min-h-[60px]"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Format</Label>
+                    <Input
+                      placeholder="Ex: Vidéo, PDF, coaching, ebook..."
+                      value={offer.format}
+                      onChange={(e) => updateOffer(idx, "format", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Lien</Label>
+                    <Input
+                      placeholder="https://..."
+                      value={offer.link}
+                      onChange={(e) => updateOffer(idx, "link", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                  </div>
+                </div>
               </div>
             ))}
 
