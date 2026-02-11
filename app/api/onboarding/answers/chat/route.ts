@@ -254,12 +254,23 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
 
     if (activities.length >= 2 && !primary) return false;
 
-    // Essential: need all 3 — main_topic + business_model + primary_focus
+    // Essential: need all 4 — main_topic + business_model + primary_focus + target_audience
     const hasTopic = hasNonEmptyFact(knownFacts, "main_topic") || hasNonEmptyFact(knownFacts, "primary_activity");
     const hasModel = hasNonEmptyFact(knownFacts, "business_model");
     const hasFocus = hasNonEmptyFact(knownFacts, "primary_focus");
+    const hasAudience = hasNonEmptyFact(knownFacts, "target_audience_short");
 
-    return hasTopic && hasModel && hasFocus;
+    if (!(hasTopic && hasModel && hasFocus && hasAudience)) return false;
+
+    // Important: need at least 3 out of these 7 to have a solid profile
+    const importantKeys = [
+      "revenue_goal_monthly", "has_offers", "conversion_status",
+      "content_channels_priority", "time_available_hours_week",
+      "tone_preference_hint", "biggest_blocker",
+    ];
+    const importantCount = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
+
+    return importantCount >= 3;
   } catch {
     return false;
   }
@@ -659,6 +670,12 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
         : "";
   if (tone) parts.push(`Ton préféré : ${tone}.`);
 
+  // Biggest blocker
+  const blocker =
+    typeof knownFacts["biggest_blocker"] === "string" ? String(knownFacts["biggest_blocker"]).trim() :
+    typeof knownFacts["biggest_challenge"] === "string" ? String(knownFacts["biggest_challenge"]).trim() : "";
+  if (blocker) parts.push(`Plus gros blocage : ${blocker}.`);
+
   // Primary focus
   const focus = typeof knownFacts["primary_focus"] === "string" ? String(knownFacts["primary_focus"]).trim() : "";
   if (focus) {
@@ -702,13 +719,13 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     const key = normalizeKey(f.key);
     const value = f.value;
 
-    // champs UI existants (déjà)
-    if (key === "primary_activity" && isNonEmptyString(value)) setIf("primary_activity", String(value).slice(0, 200));
-    if (key === "traffic_source_today" && isNonEmptyString(value)) setIf("traffic_source_today", String(value));
+    // champs existants dans business_profiles
+    // primary_activity → niche (pas de colonne primary_activity dans DB)
+    if (key === "primary_activity" && isNonEmptyString(value) && !patch["niche"]) setIf("niche", getStr(value, 140));
+    // traffic_source_today, conversion_status → pas de colonne dans DB, on les garde dans onboarding_facts uniquement
     if (key === "has_offers" && typeof value === "boolean") setIf("has_offers", value);
-    if (key === "conversion_status" && isNonEmptyString(value)) setIf("conversion_status", String(value));
 
-    // ✅ champs récap (business_profiles_rows csv)
+    // ✅ champs récap (business_profiles columns)
     if ((key === "main_topic" || key === "niche") && isNonEmptyString(value)) setIf("niche", getStr(value, 140));
     if ((key === "mission" || key === "target_audience_short") && isNonEmptyString(value)) setIf("mission", getStr(value, 260));
     if ((key === "main_goal" || key === "main_goal_90_days" || key === "objective_90_days") && isNonEmptyString(value))
@@ -738,13 +755,9 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
         setIf("content_preference", getStr(value, 180));
       }
     }
-    if ((key === "success_metric" || key === "success_definition") && isNonEmptyString(value))
-      setIf("success_definition", getStr(value, 240));
-    if (key === "success_metrics" && value && typeof value === "object") {
-      setIf("success_definition", JSON.stringify(value).slice(0, 240));
-    }
+    // success_metric → pas de colonne success_definition dans DB, stocké dans onboarding_facts uniquement
 
-    // offers_list → business_profiles.offers
+    // offers_list → business_profiles.offers + offer_price + offer_sales_page_links
     if (key === "offers_list" && Array.isArray(value)) {
       const offersArr = value
         .filter((o) => o && typeof o === "object")
@@ -759,12 +772,70 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
           link: typeof o.link === "string" ? o.link.trim().slice(0, 400) : "",
         }))
         .filter((o) => o.name);
-      if (offersArr.length > 0) setIf("offers", offersArr);
+      if (offersArr.length > 0) {
+        setIf("offers", offersArr);
+        // Also set offer_price from first offer with a price
+        const firstPrice = offersArr.find((o) => o.price)?.price;
+        if (firstPrice && !patch["offer_price"]) setIf("offer_price", firstPrice);
+        // Also set offer_sales_page_links from links
+        const links = offersArr.map((o) => o.link).filter(Boolean);
+        if (links.length > 0 && !patch["offer_sales_page_links"]) setIf("offer_sales_page_links", links.join(", "));
+      }
     }
 
     // auditables
     if ((key === "business_stage" || key === "business_maturity") && isNonEmptyString(value))
       setIf("business_maturity", getStr(value, 60));
+
+    // ✅ biggest_blocker → biggest_blocker column
+    if ((key === "biggest_blocker" || key === "biggest_challenge") && isNonEmptyString(value))
+      setIf("biggest_blocker", getStr(value, 260));
+
+    // ✅ main_goals → main_goals column (stored as JSON array text in DB, e.g. '["goal1","goal2"]')
+    if (key === "main_goals" && value) {
+      if (Array.isArray(value)) {
+        const arr = value
+          .map((x) => (typeof x === "string" ? x.trim() : ""))
+          .filter(Boolean)
+          .slice(0, 6);
+        if (arr.length > 0) setIf("main_goals", JSON.stringify(arr));
+      } else if (isNonEmptyString(value)) {
+        // Single goal → wrap in array for consistency
+        setIf("main_goals", JSON.stringify([String(value).trim()]));
+      }
+    }
+
+    // ✅ audience sizes (int4 columns — only write numbers)
+    if ((key === "audience_social" || key === "social_presence") && (typeof value === "number" || isNonEmptyString(value))) {
+      const n = typeof value === "number" ? value : Number(String(value).replace(/[^\d]/g, ""));
+      if (Number.isFinite(n) && n >= 0) setIf("audience_social", Math.round(n));
+    }
+    if ((key === "audience_email" || key === "email_list_size") && (typeof value === "number" || isNonEmptyString(value))) {
+      const n = typeof value === "number" ? value : Number(String(value).replace(/[^\d]/g, ""));
+      if (Number.isFinite(n) && n >= 0) setIf("audience_email", Math.round(n));
+    }
+
+    // ✅ social_links (stored as JSON array text in DB, e.g. '[{"platform":"LinkedIn","url":"..."}]')
+    if (key === "social_links" && value) {
+      if (Array.isArray(value)) {
+        // Already an array of objects → stringify
+        setIf("social_links", JSON.stringify(value).slice(0, 1000));
+      } else if (typeof value === "string") {
+        // If it's already JSON, keep as-is; otherwise wrap in array
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[")) {
+          setIf("social_links", trimmed.slice(0, 1000));
+        } else {
+          setIf("social_links", JSON.stringify([{ platform: "other", url: trimmed }]));
+        }
+      }
+    }
+
+    // ✅ specific social URLs → dedicated columns
+    if (key === "linkedin_url" && isNonEmptyString(value)) setIf("linkedin_url", getStr(value, 400));
+    if (key === "instagram_url" && isNonEmptyString(value)) setIf("instagram_url", getStr(value, 400));
+    if (key === "youtube_url" && isNonEmptyString(value)) setIf("youtube_url", getStr(value, 400));
+    if (key === "website_url" && isNonEmptyString(value)) setIf("website_url", getStr(value, 400));
   }
 
   return patch;
@@ -989,7 +1060,7 @@ export async function POST(req: NextRequest) {
     // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin.
     // Guarded by MIN_EXCHANGES (3) to prevent premature finish.
     try {
-      const MIN_EXCHANGES_EARLY = 3;
+      const MIN_EXCHANGES_EARLY = 5;
       const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
       if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY) {
         const finishMessage =
@@ -1179,6 +1250,41 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
+    // ✅ Auto-extract URLs (linkedin, instagram, youtube, website) + build social_links JSON
+    try {
+      const urlMatches = userMsg.match(/https?:\/\/[^\s,)]+/gi) ?? [];
+      const socialLinksArr: Array<{ platform: string; url: string }> = [];
+      for (const url of urlMatches) {
+        const u = url.toLowerCase();
+        if (u.includes("linkedin.com")) {
+          if (!hasNonEmptyFact(knownFacts, "linkedin_url")) {
+            await upsertOneFact({ key: "linkedin_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "LinkedIn", url: url.trim() });
+        } else if (u.includes("instagram.com")) {
+          if (!hasNonEmptyFact(knownFacts, "instagram_url")) {
+            await upsertOneFact({ key: "instagram_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "Instagram", url: url.trim() });
+        } else if (u.includes("youtube.com")) {
+          if (!hasNonEmptyFact(knownFacts, "youtube_url")) {
+            await upsertOneFact({ key: "youtube_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "YouTube", url: url.trim() });
+        } else if (!u.includes("facebook") && !u.includes("twitter") && !u.includes("tiktok")) {
+          if (!hasNonEmptyFact(knownFacts, "website_url")) {
+            await upsertOneFact({ key: "website_url", value: url.trim(), confidence: "medium", source: "server_extract_url" });
+          }
+        }
+      }
+      // Also populate social_links fact (JSON array format matching DB schema)
+      if (socialLinksArr.length > 0 && !hasNonEmptyFact(knownFacts, "social_links")) {
+        await upsertOneFact({ key: "social_links", value: socialLinksArr, confidence: "high", source: "server_extract_url" });
+      }
+    } catch {
+      // ignore
+    }
+
     // Contexte unifié (facts + profil)
     let userContextText = "";
     try {
@@ -1197,7 +1303,7 @@ export async function POST(req: NextRequest) {
     // ═══════════════════════════════════════════════════
     // EXCHANGE LIMITS — prevent premature finish AND infinite loops
     // ═══════════════════════════════════════════════════
-    const MIN_EXCHANGES = 3;  // Never finish before the user has answered 3 questions
+    const MIN_EXCHANGES = 5;  // Never finish before the user has answered 5 questions
     const MAX_EXCHANGES = 10; // Force finish after 10 exchanges to prevent loops
 
     const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
@@ -1205,18 +1311,23 @@ export async function POST(req: NextRequest) {
     // Determine which phase the AI should be in based on exchange count
     const missingEssentials = ["main_topic", "business_model", "primary_focus", "target_audience_short"]
       .filter((k) => !hasNonEmptyFact(knownFacts, k));
-    const missingImportant = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"]
-      .filter((k) => !hasNonEmptyFact(knownFacts, k));
+    const missingImportant = [
+      "revenue_goal_monthly", "has_offers", "conversion_status",
+      "content_channels_priority", "time_available_hours_week",
+      "tone_preference_hint", "biggest_blocker",
+    ].filter((k) => !hasNonEmptyFact(knownFacts, k));
 
     let phaseHint = "";
     if (exchangeCount <= 2) {
-      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model.";
+      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model, et à qui il s'adresse.";
     } else if (exchangeCount <= 4) {
-      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est.";
+      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est, son plus gros blocage actuel (biggest_blocker).";
     } else if (exchangeCount <= 6) {
-      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif). Pose une question sur sa priorité, ses objectifs.";
+      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif et les préférences). Pose une question sur sa priorité, ses objectifs de revenu, le temps qu'il peut y consacrer.";
     } else if (exchangeCount <= 8) {
-      phaseHint = "Tu es en PHASE 4 (préférences rapides). Si il reste des infos utiles à collecter, pose une dernière question. Sinon mets should_finish=true.";
+      phaseHint = "Tu es en PHASE 4 (ton, contenu, canaux). Pose une question sur : le ton qu'il préfère pour sa communication (tone_preference_hint), les types de contenu qui l'intéressent (content_channels_priority), ou ses canaux de trafic actuels. Si tu as déjà ces infos, mets should_finish=true.";
+    } else {
+      phaseHint = "Tu es en PHASE 5 (finalisation). Si il manque encore des facts importants, pose UNE dernière question. Sinon mets should_finish=true.";
     }
 
     const userPrompt = JSON.stringify(
@@ -1334,7 +1445,7 @@ export async function POST(req: NextRequest) {
 
     // Compute progress for the UI (0-100)
     const essentialKeys = ["main_topic", "business_model", "primary_focus", "target_audience_short"];
-    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"];
+    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week", "tone_preference_hint", "biggest_blocker"];
     const essentialDone = essentialKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const importantDone = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const progress = Math.min(

@@ -16,7 +16,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectIdFromRequest } from "@/lib/projects/activeProject";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function isMissingColumnError(message: string | null | undefined) {
@@ -113,8 +113,8 @@ export async function POST(req: Request) {
     // ✅ Résoudre le project_id (body > cookie > default)
     let projectId: string | null = typeof body?.project_id === "string" ? body.project_id.trim() : "";
     if (!projectId) {
-      // lecture via client auth (cookies), pas via service_role
-      projectId = await getActiveProjectIdFromRequest(supabaseAuth, userId, req as any);
+      // lecture via client auth (cookies)
+      projectId = await getActiveProjectId(supabaseAuth, userId);
     }
 
     // 1) business_profiles = source de vérité UI
