@@ -4,12 +4,15 @@
 // Best-effort: also closes onboarding_sessions if sessionId provided (fail-open on schema diffs)
 //
 // ✅ PATCH (suite logique onboarding 3.0) :
-// - Fix boucle /onboarding si business_profiles row n’existe pas encore : update THEN insert (fail-open)
+// - Fix boucle /onboarding si business_profiles row n'existe pas encore : update THEN insert (fail-open)
 // - Conserve la compat colonne onboarding_version (si absente, retry sans)
 // - Ne casse rien : aucune nouvelle route, aucun changement front requis
+//
+// ✅ MULTI-PROJETS : accepte `project_id` dans le body pour scoper l'onboarding au projet actif.
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectIdFromRequest } from "@/lib/projects/activeProject";
 
 function isMissingColumnError(message: string | null | undefined) {
   const m = (message ?? "").toLowerCase();
@@ -26,39 +29,49 @@ async function updateThenInsertBusinessProfile(
   supabase: any,
   userId: string,
   patch: Record<string, unknown>,
+  projectId?: string | null,
 ) {
   const now = new Date().toISOString();
 
-  // On garde l’update d’abord (anti-régression)
-  const upd = await supabase
+  // On garde l'update d'abord (anti-régression)
+  let updQuery = supabase
     .from("business_profiles")
     .update({ ...patch, updated_at: now } as any)
-    .eq("user_id", userId)
-    .select("id");
+    .eq("user_id", userId);
+
+  // Si un project_id est fourni, scoper l'update
+  if (projectId) {
+    updQuery = updQuery.eq("project_id", projectId);
+  }
+
+  const upd = await updQuery.select("id");
 
   if (!upd.error) {
     if (Array.isArray(upd.data) && upd.data.length > 0) return { ok: true, error: null as any };
   }
 
-  // Si erreur “colonne manquante”, on laisse caller gérer (retry sans colonne).
+  // Si erreur "colonne manquante", on laisse caller gérer (retry sans colonne).
   if (upd.error && isMissingColumnError(upd.error.message)) {
     return { ok: false, error: upd.error };
   }
 
   // Si 0 row (ou autre cas), insert best-effort
-  const ins = await supabase.from("business_profiles").insert({
+  const insertPayload: Record<string, unknown> = {
     user_id: userId,
     ...patch,
     created_at: now,
     updated_at: now,
-  } as any);
+  };
+  if (projectId) insertPayload.project_id = projectId;
+
+  const ins = await supabase.from("business_profiles").insert(insertPayload as any);
 
   if (ins.error && isMissingColumnError(ins.error.message)) {
     // On retente sans created_at/updated_at si jamais ces colonnes diffèrent (fail-open)
-    const ins2 = await supabase.from("business_profiles").insert({
-      user_id: userId,
-      ...patch,
-    } as any);
+    const retryPayload: Record<string, unknown> = { user_id: userId, ...patch };
+    if (projectId) retryPayload.project_id = projectId;
+
+    const ins2 = await supabase.from("business_profiles").insert(retryPayload as any);
     return { ok: !ins2.error, error: ins2.error };
   }
 
@@ -83,9 +96,16 @@ export async function POST(req: Request) {
       diagnosticCompleted?: boolean;
       diagnostic_completed?: boolean; // compat
       sessionId?: string;
+      project_id?: string; // multi-projets
     };
 
     const diagnosticCompleted = !!(body?.diagnosticCompleted ?? (body as any)?.diagnostic_completed);
+
+    // ✅ Résoudre le project_id (body > cookie > default)
+    let projectId: string | null = typeof body?.project_id === "string" ? body.project_id.trim() : "";
+    if (!projectId) {
+      projectId = await getActiveProjectIdFromRequest(supabase, userId, req as any);
+    }
 
     // 1) business_profiles = source de vérité UI
     // (fail-open si la colonne onboarding_version n'existe pas encore)
@@ -95,14 +115,14 @@ export async function POST(req: Request) {
     };
     if (diagnosticCompleted) patch.diagnostic_completed = true;
 
-    const r1 = await updateThenInsertBusinessProfile(supabase, userId, patch);
+    const r1 = await updateThenInsertBusinessProfile(supabase, userId, patch, projectId);
 
     if (!r1.ok && r1.error && isMissingColumnError(r1.error.message)) {
       // Retry sans onboarding_version si colonne absente
       const patch2: Record<string, unknown> = { onboarding_completed: true };
       if (diagnosticCompleted) patch2.diagnostic_completed = true;
 
-      const r2 = await updateThenInsertBusinessProfile(supabase, userId, patch2);
+      const r2 = await updateThenInsertBusinessProfile(supabase, userId, patch2, projectId);
       if (!r2.ok) {
         return NextResponse.json({ ok: false, error: r2.error?.message ?? "Failed to complete onboarding" }, { status: 400 });
       }

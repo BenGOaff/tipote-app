@@ -1,9 +1,11 @@
 // app/api/tasks/route.ts
 // GET: liste des tâches (table public.project_tasks)
 // POST: création d'une tâche (source='manual')
+// ✅ MULTI-PROJETS : scoped au projet actif via cookie
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type CreateBody = {
   title?: unknown;
@@ -57,10 +59,16 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
+
+    let query = supabase
       .from("project_tasks")
       .select("id, title, status, priority, due_date, source, created_at, updated_at")
-      .eq("user_id", auth.user.id)
+      .eq("user_id", auth.user.id);
+
+    if (projectId) query = query.eq("project_id", projectId);
+
+    const { data, error } = await query
       .order("due_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
 
@@ -86,6 +94,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
+
     const raw = (await req.json()) as CreateBody;
 
     const title = cleanString(raw.title);
@@ -99,16 +109,19 @@ export async function POST(req: Request) {
     const st = cleanNullableString(raw.status);
     const status = st ? st : "todo";
 
+    const insertPayload: Record<string, unknown> = {
+      user_id: auth.user.id,
+      title,
+      status,
+      due_date,
+      priority,
+      source: "manual",
+    };
+    if (projectId) insertPayload.project_id = projectId;
+
     const { data, error } = await supabase
       .from("project_tasks")
-      .insert({
-        user_id: auth.user.id,
-        title,
-        status,
-        due_date,
-        priority,
-        source: "manual",
-      })
+      .insert(insertPayload)
       .select("id, title, status, priority, due_date, source, created_at, updated_at")
       .single();
 

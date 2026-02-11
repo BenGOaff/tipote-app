@@ -10,6 +10,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -82,6 +83,7 @@ type InsertResult = { data: { id: string } | null; error: PostgrestError | null 
 async function insertContentV2(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>> | typeof supabaseAdmin;
   userId: string;
+  projectId: string | null;
   type: string;
   title: string;
   content: string;
@@ -92,7 +94,7 @@ async function insertContentV2(params: {
   tagsCsv: string;
   meta: AnyRecord | null;
 }): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
+  const { supabase, userId, projectId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
 
   const basePayload: AnyRecord = {
     user_id: userId,
@@ -105,6 +107,7 @@ async function insertContentV2(params: {
     tags,
   };
 
+  if (projectId) basePayload.project_id = projectId;
   if (meta) basePayload.meta = meta;
 
   let first = await (supabase as any)
@@ -125,6 +128,7 @@ async function insertContentV2(params: {
       scheduled_date: scheduledDate,
       tags: tagsCsv,
     };
+    if (projectId) retryPayload.project_id = projectId;
     if (meta) retryPayload.meta = meta;
 
     first = await (supabase as any)
@@ -148,6 +152,7 @@ async function insertContentV2(params: {
         channel,
         scheduled_date: scheduledDate,
         tags,
+        ...(projectId ? { project_id: projectId } : {}),
       })
       .select("id")
       .maybeSingle();
@@ -164,6 +169,7 @@ async function insertContentV2(params: {
           channel,
           scheduled_date: scheduledDate,
           tags: tagsCsv,
+          ...(projectId ? { project_id: projectId } : {}),
         })
         .select("id")
         .maybeSingle();
@@ -178,6 +184,7 @@ async function insertContentV2(params: {
 async function insertContentFR(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>> | typeof supabaseAdmin;
   userId: string;
+  projectId: string | null;
   type: string;
   title: string;
   content: string;
@@ -188,7 +195,7 @@ async function insertContentFR(params: {
   tagsCsv: string;
   meta: AnyRecord | null;
 }): Promise<InsertResult> {
-  const { supabase, userId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
+  const { supabase, userId, projectId, type, title, content, status, channel, scheduledDate, tags, tagsCsv, meta } = params;
 
   const basePayload: AnyRecord = {
     user_id: userId,
@@ -201,6 +208,7 @@ async function insertContentFR(params: {
     tags,
   };
 
+  if (projectId) basePayload.project_id = projectId;
   if (meta) basePayload.meta = meta;
 
   let first = await (supabase as any)
@@ -220,6 +228,7 @@ async function insertContentFR(params: {
       date_planifiee: scheduledDate,
       tags: tagsCsv,
     };
+    if (projectId) retryPayload.project_id = projectId;
     if (meta) retryPayload.meta = meta;
 
     first = await (supabase as any)
@@ -241,6 +250,7 @@ async function insertContentFR(params: {
         canal: channel,
         date_planifiee: scheduledDate,
         tags,
+        ...(projectId ? { project_id: projectId } : {}),
       })
       .select("id")
       .maybeSingle();
@@ -257,6 +267,7 @@ async function insertContentFR(params: {
           canal: channel,
           date_planifiee: scheduledDate,
           tags: tagsCsv,
+          ...(projectId ? { project_id: projectId } : {}),
         })
         .select("id")
         .maybeSingle();
@@ -286,6 +297,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
 
   const type = asString(body.type, 80) || "post";
   const title = asString(body.title, 240);
@@ -307,6 +319,7 @@ export async function POST(req: NextRequest) {
   inserted = await insertContentV2({
     supabase,
     userId,
+    projectId,
     type,
     title,
     content,
@@ -323,6 +336,7 @@ export async function POST(req: NextRequest) {
     inserted = await insertContentFR({
       supabase,
       userId,
+      projectId,
       type,
       title,
       content,
@@ -341,6 +355,7 @@ export async function POST(req: NextRequest) {
     inserted = await insertContentV2({
       supabase: supabaseAdmin,
       userId,
+      projectId,
       type,
       title,
       content,
@@ -356,6 +371,7 @@ export async function POST(req: NextRequest) {
       inserted = await insertContentFR({
         supabase: supabaseAdmin,
         userId,
+        projectId,
         type,
         title,
         content,

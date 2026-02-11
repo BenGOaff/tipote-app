@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 const BodySchema = z.object({
   metricId: z.string().min(1),
@@ -28,16 +29,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  const projectId = await getActiveProjectId(supabase, user.id);
+
   try {
     const json = await req.json();
     const parsed = BodySchema.parse(json);
 
     // Récupération contexte business (best-effort, sans casser si colonnes diffèrent)
-    const { data: businessProfile } = await supabase
+    let bpQuery = supabase
       .from("business_profiles")
       .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: businessProfile } = await bpQuery.maybeSingle();
 
     const metrics = parsed.metrics ?? {};
     const previous = parsed.previousMetrics ?? null;
@@ -80,11 +84,13 @@ Ta mission :
     }
 
     // Persist dans la table metrics (RLS OK via service server + user vérifié)
-    const { error: updErr } = await supabase
+    let updQuery = supabase
       .from("metrics")
       .update({ ai_analysis: analysis, updated_at: new Date().toISOString() })
       .eq("id", parsed.metricId)
       .eq("user_id", user.id);
+    if (projectId) updQuery = updQuery.eq("project_id", projectId);
+    const { error: updErr } = await updQuery;
 
     if (updErr) {
       return NextResponse.json({ ok: false, error: updErr.message }, { status: 400 });

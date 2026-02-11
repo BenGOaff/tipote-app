@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 import { buildPromptByType } from "@/lib/prompts/content";
@@ -407,6 +408,7 @@ function parseLinks(raw: string): string[] {
 async function insertContentEN(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
+  projectId: string | null;
   type: string;
   title: string | null;
   content: string;
@@ -429,6 +431,7 @@ async function insertContentEN(params: {
       channel: row.channel,
       scheduled_date: row.scheduledDate,
       tags: row.tags,
+      ...(row.projectId ? { project_id: row.projectId } : {}),
     } as any)
     .select("id, title")
     .single();
@@ -445,6 +448,7 @@ async function insertContentEN(params: {
         channel: row.channel,
         scheduled_date: row.scheduledDate,
         tags: row.tagsCsv,
+        ...(row.projectId ? { project_id: row.projectId } : {}),
       } as any)
       .select("id, title")
       .single();
@@ -458,6 +462,7 @@ async function insertContentEN(params: {
 async function insertContentFR(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
+  projectId: string | null;
   type: string;
   title: string | null;
   content: string;
@@ -480,6 +485,7 @@ async function insertContentFR(params: {
       canal: row.channel,
       date_planifiee: row.scheduledDate,
       tags: row.tags,
+      ...(row.projectId ? { project_id: row.projectId } : {}),
     } as any)
     .select("id, titre")
     .single();
@@ -496,6 +502,7 @@ async function insertContentFR(params: {
         canal: row.channel,
         date_planifiee: row.scheduledDate,
         tags: row.tagsCsv,
+        ...(row.projectId ? { project_id: row.projectId } : {}),
       } as any)
       .select("id, titre")
       .single();
@@ -1117,8 +1124,9 @@ async function resolveOfferForFunnel(args: {
   offerIdOrName: string;
   profile: any;
   planOffers: OfferSourceContext[];
+  projectId?: string | null;
 }): Promise<OfferSourceContext | null> {
-  const { supabase, userId, offerIdOrName, profile, planOffers } = args;
+  const { supabase, userId, offerIdOrName, profile, planOffers, projectId } = args;
 
   // 1) business_profiles.offers (new onboarding)
   const profileOffers = parseOffersFromBusinessProfile(userId, profile);
@@ -1131,7 +1139,7 @@ async function resolveOfferForFunnel(args: {
 
   // 3) offer_pyramids table (legacy) if UUID
   if (isUuid(offerIdOrName)) {
-    return await fetchOfferFromLegacyTable({ supabase, userId, id: offerIdOrName });
+    return await fetchOfferFromLegacyTable({ supabase, userId, id: offerIdOrName, projectId });
   }
 
   return null;
@@ -1166,16 +1174,18 @@ async function fetchOfferFromLegacyTable(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
   id: string;
+  projectId?: string | null;
 }): Promise<OfferSourceContext | null> {
-  const { supabase, userId, id } = args;
+  const { supabase, userId, id, projectId } = args;
   if (!id) return null;
 
-  const q1 = await supabase
+  const q1b = supabase
     .from("offer_pyramids")
     .select(OFFER_TABLE_SELECT)
     .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
+  if (projectId) q1b.eq("project_id", projectId);
+  const q1 = await q1b.maybeSingle();
 
   if (!q1.error) return (q1.data as any) ?? null;
 
@@ -1190,18 +1200,21 @@ async function fetchOfferFromLegacyTable(args: {
 async function fetchUserLeadMagnet(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
+  projectId?: string | null;
 }): Promise<OfferSourceContext | null> {
-  const { supabase, userId } = args;
+  const { supabase, userId, projectId } = args;
 
   const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
   if (probe.error && isMissingColumnError(probe.error.message)) {
     return null;
   }
 
-  const q = await supabase
+  const qb = supabase
     .from("offer_pyramids")
     .select(OFFER_TABLE_SELECT)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  if (projectId) qb.eq("project_id", projectId);
+  const q = await qb
     .or("level.ilike.%lead%,level.ilike.%free%,level.ilike.%gratuit%")
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -1214,38 +1227,45 @@ async function fetchUserLeadMagnet(args: {
 async function fetchUserPaidOffer(args: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
+  projectId?: string | null;
 }): Promise<OfferSourceContext | null> {
-  const { supabase, userId } = args;
+  const { supabase, userId, projectId } = args;
 
   const probe = await supabase.from("offer_pyramids").select("id,user_id").limit(1).maybeSingle();
   if (probe.error && isMissingColumnError(probe.error.message)) {
     return null;
   }
 
-  const middle = await supabase
+  const mq = supabase
     .from("offer_pyramids")
     .select(OFFER_TABLE_SELECT)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  if (projectId) mq.eq("project_id", projectId);
+  const middle = await mq
     .or("level.ilike.%middle%,level.ilike.%mid%")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!middle.error && middle.data) return middle.data as any;
 
-  const high = await supabase
+  const hq = supabase
     .from("offer_pyramids")
     .select(OFFER_TABLE_SELECT)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  if (projectId) hq.eq("project_id", projectId);
+  const high = await hq
     .or("level.ilike.%high%,level.ilike.%premium%")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!high.error && high.data) return high.data as any;
 
-  const anyPaid = await supabase
+  const aq = supabase
     .from("offer_pyramids")
     .select(OFFER_TABLE_SELECT)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  if (projectId) aq.eq("project_id", projectId);
+  const anyPaid = await aq
     .not("level", "ilike", "%free%")
     .not("level", "ilike", "%gratuit%")
     .not("level", "ilike", "%lead%")
@@ -1461,6 +1481,7 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
     const body = (await req.json()) as Body;
 
     const type = safeString(body?.type).trim();
@@ -1504,8 +1525,13 @@ export async function POST(req: Request) {
 
     const tagsCsv = joinTagsCsv(tags);
 
-    const { data: profile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
-    const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    const profileQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
+    if (projectId) profileQuery.eq("project_id", projectId);
+    const { data: profile } = await profileQuery.maybeSingle();
+
+    const planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+    if (projectId) planQuery.eq("project_id", projectId);
+    const { data: planRow } = await planQuery.maybeSingle();
     const planJson = (planRow as any)?.plan_json ?? null;
 
     const planOffers = extractOffersFromPlanJson(userId, planJson);
@@ -1513,11 +1539,12 @@ export async function POST(req: Request) {
     // Competitor analysis (optional, best-effort)
     let competitorSummary = "";
     try {
-      const { data: compAnalysis } = await supabase
+      const compQuery = supabase
         .from("competitor_analyses")
         .select("summary")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .eq("user_id", userId);
+      if (projectId) compQuery.eq("project_id", projectId);
+      const { data: compAnalysis } = await compQuery.maybeSingle();
       if (compAnalysis?.summary) {
         competitorSummary = compAnalysis.summary;
       }
@@ -1528,13 +1555,15 @@ export async function POST(req: Request) {
     // Persona (optionnel)
     let personaContext: any = null;
     try {
-      const { data: personaRow, error: personaErr } = await supabase
+      const personaQuery = supabase
         .from("personas")
         .select(
           "persona_json,name,role,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level,updated_at",
         )
         .eq("user_id", userId)
-        .eq("role", "client_ideal")
+        .eq("role", "client_ideal");
+      if (projectId) personaQuery.eq("project_id", projectId);
+      const { data: personaRow, error: personaErr } = await personaQuery
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -1591,21 +1620,21 @@ export async function POST(req: Request) {
       if (sourceOfferId) {
         if (isUuid(sourceOfferId)) {
           sourceOffer =
-            (await fetchOfferFromLegacyTable({ supabase, userId, id: sourceOfferId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
+            (await fetchOfferFromLegacyTable({ supabase, userId, id: sourceOfferId, projectId })) ?? findOfferByAnyId(planOffers, sourceOfferId);
         } else {
           sourceOffer = findOfferByAnyId(planOffers, sourceOfferId);
         }
       } else if (offerTypeNorm === "lead_magnet") {
-        sourceOffer = pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId }));
+        sourceOffer = pickLeadOfferFromPlan(planOffers) ?? (await fetchUserLeadMagnet({ supabase, userId, projectId }));
       } else if (offerTypeNorm === "paid_training") {
-        sourceOffer = pickPaidOfferFromPlan(planOffers) ?? (await fetchUserPaidOffer({ supabase, userId }));
+        sourceOffer = pickPaidOfferFromPlan(planOffers) ?? (await fetchUserPaidOffer({ supabase, userId, projectId }));
       } else {
         // fail-open : si le front ne donne pas offerType, on tente paid puis lead
         sourceOffer =
           pickPaidOfferFromPlan(planOffers) ??
           pickLeadOfferFromPlan(planOffers) ??
-          (await fetchUserPaidOffer({ supabase, userId })) ??
-          (await fetchUserLeadMagnet({ supabase, userId }));
+          (await fetchUserPaidOffer({ supabase, userId, projectId })) ??
+          (await fetchUserLeadMagnet({ supabase, userId, projectId }));
       }
 
       if (!sourceOffer) {
@@ -1630,12 +1659,13 @@ export async function POST(req: Request) {
         offerContextForSalesEmail = findOfferByAnyId(planOffers, offerId);
       } else {
         try {
-          const { data: offerRow, error: offerErr } = await supabase
+          const offerQb = supabase
             .from("offer_pyramids")
             .select(OFFER_TABLE_SELECT)
             .eq("id", offerId)
-            .eq("user_id", userId)
-            .maybeSingle();
+            .eq("user_id", userId);
+          if (projectId) offerQb.eq("project_id", projectId);
+          const { data: offerRow, error: offerErr } = await offerQb.maybeSingle();
 
           if (!offerErr && offerRow) offerContextForSalesEmail = offerRow as any;
         } catch {
@@ -1694,12 +1724,13 @@ export async function POST(req: Request) {
         offerContextForPost = findOfferByAnyId(planOffers, postOfferId);
       } else {
         try {
-          const { data: offerRow, error: offerErr } = await supabase
+          const postOfferQb = supabase
             .from("offer_pyramids")
             .select(OFFER_TABLE_SELECT)
             .eq("id", postOfferId)
-            .eq("user_id", userId)
-            .maybeSingle();
+            .eq("user_id", userId);
+          if (projectId) postOfferQb.eq("project_id", projectId);
+          const { data: offerRow, error: offerErr } = await postOfferQb.maybeSingle();
 
           if (!offerErr && offerRow) offerContextForPost = offerRow as any;
         } catch {
@@ -1747,6 +1778,7 @@ export async function POST(req: Request) {
         offerIdOrName: funnelOfferId,
         profile,
         planOffers,
+        projectId,
       });
 
       if (!funnelSourceOffer) {
@@ -2155,6 +2187,7 @@ export async function POST(req: Request) {
     const placeholderEN = await insertContentEN({
       supabase,
       userId,
+      projectId,
       type,
       title: null,
       content: "",
@@ -2180,6 +2213,7 @@ export async function POST(req: Request) {
       const placeholderFR = await insertContentFR({
         supabase,
         userId,
+        projectId,
         type,
         title: null,
         content: "",

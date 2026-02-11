@@ -15,6 +15,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
 import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -739,6 +740,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     let body: unknown;
     try {
       body = await req.json();
@@ -765,10 +768,12 @@ export async function POST(req: NextRequest) {
     let isTeaser = false;
 
     if (plan !== "pro" && plan !== "elite") {
-      const usedRes = await supabase
+      let usedQuery = supabase
         .from("coach_messages")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id);
+      if (projectId) usedQuery = usedQuery.eq("project_id", projectId);
+      const usedRes = await usedQuery
         .contains("facts", { teaser_month: monthKey })
         .limit(1);
 
@@ -793,10 +798,12 @@ export async function POST(req: NextRequest) {
     const userMessage = parsed.data.message;
     const goDeeper = !isTeaser && isGoDeeperMessage(userMessage);
 
-    const memoryRes = await supabase
+    let memoryQuery = supabase
       .from("coach_messages")
       .select("role, content, summary_tags, facts, created_at")
-      .eq("user_id", user.id)
+      .eq("user_id", user.id);
+    if (projectId) memoryQuery = memoryQuery.eq("project_id", projectId);
+    const memoryRes = await memoryQuery
       .order("created_at", { ascending: false })
       .limit(30);
 
@@ -811,26 +818,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const bpQuery = supabase.from("business_profiles").select("*").eq("user_id", user.id);
+    if (projectId) bpQuery.eq("project_id", projectId);
+
+    const planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", user.id);
+    if (projectId) planQuery.eq("project_id", projectId);
+
+    const tasksQuery = supabase
+      .from("project_tasks")
+      .select("id, title, status, due_date, timeframe, updated_at")
+      .eq("user_id", user.id);
+    if (projectId) tasksQuery.eq("project_id", projectId);
+
+    const contentsQuery = supabase
+      .from("content_item")
+      .select("id, type, title, status, scheduled_date, created_at")
+      .eq("user_id", user.id);
+    if (projectId) contentsQuery.eq("project_id", projectId);
+
+    const competitorQuery = supabase
+      .from("competitor_analyses")
+      .select("summary, strengths, weaknesses, opportunities")
+      .eq("user_id", user.id);
+    if (projectId) competitorQuery.eq("project_id", projectId);
+
     const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes] = await Promise.all([
-      supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
-      supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle(),
-      supabase
-        .from("project_tasks")
-        .select("id, title, status, due_date, timeframe, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(30),
-      supabase
-        .from("content_item")
-        .select("id, type, title, status, scheduled_date, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(30),
-      supabase
-        .from("competitor_analyses")
-        .select("summary, strengths, weaknesses, opportunities")
-        .eq("user_id", user.id)
-        .maybeSingle(),
+      bpQuery.maybeSingle(),
+      planQuery.maybeSingle(),
+      tasksQuery.order("updated_at", { ascending: false }).limit(30),
+      contentsQuery.order("created_at", { ascending: false }).limit(30),
+      competitorQuery.maybeSingle(),
     ]);
 
     const living = summarizeLivingContext({

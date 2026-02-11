@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,14 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const projectId = await getActiveProjectId(supabase, user.id);
+
+    let query = supabase
       .from("quizzes")
       .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .eq("user_id", user.id);
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     let body: any;
     try {
       body = await req.json();
@@ -66,11 +72,12 @@ export async function POST(req: NextRequest) {
     // If user has a privacy_url in profile, use it as default
     let privacyUrl = String(body.privacy_url ?? "").trim();
     if (!privacyUrl) {
-      const { data: profile } = await supabase
+      let bpQuery = supabase
         .from("business_profiles")
         .select("privacy_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("user_id", user.id);
+      if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+      const { data: profile } = await bpQuery.maybeSingle();
       privacyUrl = profile?.privacy_url ?? "";
     }
 
@@ -79,6 +86,7 @@ export async function POST(req: NextRequest) {
       .from("quizzes")
       .insert({
         user_id: user.id,
+        ...(projectId ? { project_id: projectId } : {}),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,

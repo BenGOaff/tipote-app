@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildEnhancedPersonaPrompt } from "@/lib/prompts/persona/system";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,8 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     const ai = openai;
     if (!ai) {
       return NextResponse.json(
@@ -52,6 +55,24 @@ export async function POST() {
     }
 
     // Gather all available data
+    const bpQ = supabase.from("business_profiles").select("*").eq("user_id", user.id);
+    if (projectId) bpQ.eq("project_id", projectId);
+
+    const ofQ = supabase.from("onboarding_facts").select("key,value").eq("user_id", user.id);
+    if (projectId) ofQ.eq("project_id", projectId);
+
+    const caQ = supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", user.id);
+    if (projectId) caQ.eq("project_id", projectId);
+
+    const cmQ = supabase.from("coach_messages").select("content,role").eq("user_id", user.id);
+    if (projectId) cmQ.eq("project_id", projectId);
+
+    const pQ = supabase.from("personas").select("persona_json").eq("user_id", user.id).eq("role", "client_ideal");
+    if (projectId) pQ.eq("project_id", projectId);
+
+    const plQ = supabase.from("business_plan").select("plan_json").eq("user_id", user.id);
+    if (projectId) plQ.eq("project_id", projectId);
+
     const [
       { data: businessProfile },
       { data: onboardingFactsRows },
@@ -60,12 +81,12 @@ export async function POST() {
       { data: existingPersona },
       { data: businessPlan },
     ] = await Promise.all([
-      supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
-      supabase.from("onboarding_facts").select("key,value").eq("user_id", user.id),
-      supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", user.id).maybeSingle(),
-      supabase.from("coach_messages").select("content,role").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
-      supabase.from("personas").select("persona_json").eq("user_id", user.id).eq("role", "client_ideal").maybeSingle(),
-      supabase.from("business_plan").select("plan_json").eq("user_id", user.id).maybeSingle(),
+      bpQ.maybeSingle(),
+      ofQ,
+      caQ.maybeSingle(),
+      cmQ.order("created_at", { ascending: false }).limit(20),
+      pQ.maybeSingle(),
+      plQ.maybeSingle(),
     ]);
 
     // Build onboarding facts map
@@ -156,7 +177,9 @@ Genere le profil persona enrichi complet en JSON.`;
       profilePatch.niche = cleanString(parsed.niche_summary, 5000);
     }
 
-    await supabase.from("business_profiles").update(profilePatch).eq("user_id", user.id);
+    const bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", user.id);
+    if (projectId) bpUpdateQ.eq("project_id", projectId);
+    await bpUpdateQ;
 
     // Update personas table with enriched data
     if (parsed.persona_classic) {
@@ -165,6 +188,7 @@ Genere le profil persona enrichi complet en JSON.`;
         if (admin) {
           const personaPayload: AnyRecord = {
             user_id: user.id,
+            ...(projectId ? { project_id: projectId } : {}),
             role: "client_ideal",
             name: cleanString(parsed.persona_classic?.title, 240) || null,
             pains: JSON.stringify(parsed.persona_classic?.pains ?? []),

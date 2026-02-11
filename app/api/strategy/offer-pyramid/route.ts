@@ -12,6 +12,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -489,8 +490,8 @@ function pickSelectedPyramidFromPlan(planJson: AnyRecord | null): AnyRecord | nu
  * ✅ BEST-EFFORT SYNC (ADMIN)
  * -----------------------
  */
-async function persistStrategyRowBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord }): Promise<string | null> {
-  const { userId, businessProfile, planJson } = params;
+async function persistStrategyRowBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord; projectId?: string | null }): Promise<string | null> {
+  const { userId, businessProfile, planJson, projectId } = params;
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
     const horizonDays = toNumber(planJson.horizon_days) ?? toNumber(planJson.horizonDays) ?? 90;
@@ -511,6 +512,7 @@ async function persistStrategyRowBestEffort(params: { userId: string; businessPr
 
     const payload: AnyRecord = {
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
       title,
       horizon_days: horizonDays,
@@ -530,17 +532,21 @@ async function persistStrategyRowBestEffort(params: { userId: string; businessPr
   }
 }
 
-async function getOrCreateStrategyIdBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord }): Promise<string | null> {
-  const { userId, businessProfile, planJson } = params;
+async function getOrCreateStrategyIdBestEffort(params: { userId: string; businessProfile: AnyRecord; planJson: AnyRecord; projectId?: string | null }): Promise<string | null> {
+  const { userId, businessProfile, planJson, projectId } = params;
 
   try {
-    const readRes = await supabaseAdmin.from("strategies").select("id").eq("user_id", userId).maybeSingle();
+    let readQuery = supabaseAdmin.from("strategies").select("id").eq("user_id", userId);
+    if (projectId) readQuery = readQuery.eq("project_id", projectId);
+    const readRes = await readQuery.maybeSingle();
     if (readRes?.data?.id) return String(readRes.data.id);
 
-    const created = await persistStrategyRowBestEffort({ userId, businessProfile, planJson });
+    const created = await persistStrategyRowBestEffort({ userId, businessProfile, planJson, projectId });
     if (created) return created;
 
-    const readRes2 = await supabaseAdmin.from("strategies").select("id").eq("user_id", userId).maybeSingle();
+    let readQuery2 = supabaseAdmin.from("strategies").select("id").eq("user_id", userId);
+    if (projectId) readQuery2 = readQuery2.eq("project_id", projectId);
+    const readRes2 = await readQuery2.maybeSingle();
     if (readRes2?.data?.id) return String(readRes2.data.id);
   } catch (e) {
     console.error("getOrCreateStrategyIdBestEffort error:", e);
@@ -553,8 +559,9 @@ async function persistOfferPyramidsBestEffort(params: {
   strategyId: string | null;
   pyramids: AnyRecord[];
   selectedIndex: number | null;
+  projectId?: string | null;
 }): Promise<void> {
-  const { userId, strategyId, pyramids, selectedIndex } = params;
+  const { userId, strategyId, pyramids, selectedIndex, projectId } = params;
   if (!Array.isArray(pyramids) || pyramids.length < 1) return;
 
   const now = new Date().toISOString();
@@ -575,6 +582,7 @@ async function persistOfferPyramidsBestEffort(params: {
 
     return {
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       ...(strategyId ? { strategy_id: strategyId } : {}),
       level: args.level,
       name: cleanString(`${args.offerSetName} — ${title || args.level}`, 240) || args.level,
@@ -608,7 +616,9 @@ async function persistOfferPyramidsBestEffort(params: {
   if (!rows.length) return;
 
   try {
-    const del = await supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+    let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+    if (projectId) delQuery = delQuery.eq("project_id", projectId);
+    const del = await delQuery;
     if (del?.error) console.error("persistOfferPyramidsBestEffort delete error:", del.error);
 
     const ins = await supabaseAdmin.from("offer_pyramids").insert(rows);
@@ -618,14 +628,15 @@ async function persistOfferPyramidsBestEffort(params: {
   }
 }
 
-async function persistPersonaBestEffort(params: { userId: string; strategyId: string | null; persona: AnyRecord | null }): Promise<void> {
-  const { userId, strategyId, persona } = params;
+async function persistPersonaBestEffort(params: { userId: string; strategyId: string | null; persona: AnyRecord | null; projectId?: string | null }): Promise<void> {
+  const { userId, strategyId, persona, projectId } = params;
   if (!persona || !personaLooksUseful(persona)) return;
 
   const now = new Date().toISOString();
 
   const payload: AnyRecord = {
     user_id: userId,
+    ...(projectId ? { project_id: projectId } : {}),
     ...(strategyId ? { strategy_id: strategyId } : {}),
     name: cleanString(persona.title, 240) || null,
     role: "client_ideal",
@@ -657,8 +668,9 @@ async function enrichBusinessProfileMissionBestEffort(params: {
   userId: string;
   persona: AnyRecord | null;
   planJson: AnyRecord | null;
+  projectId?: string | null;
 }): Promise<void> {
-  const { supabase, userId, persona, planJson } = params;
+  const { supabase, userId, persona, planJson, projectId } = params;
   if (!persona) return;
 
   try {
@@ -685,7 +697,9 @@ async function enrichBusinessProfileMissionBestEffort(params: {
     const positioning = cleanString(planJson?.positioning, 300);
     if (positioning) patch.niche = positioning;
 
-    await supabase.from("business_profiles").update(patch).eq("user_id", userId);
+    let bpUpdateQuery = supabase.from("business_profiles").update(patch).eq("user_id", userId);
+    if (projectId) bpUpdateQuery = bpUpdateQuery.eq("project_id", projectId);
+    await bpUpdateQuery;
   } catch (e) {
     console.error("enrichBusinessProfileMissionBestEffort error (non-blocking):", e);
   }
@@ -704,12 +718,17 @@ export async function GET(_req: Request) {
 
     if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
-    const { data: businessProfile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
+    let bpQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: businessProfile } = await bpQuery.maybeSingle();
 
     const onboardingFacts: Record<string, unknown> = {};
     try {
-      const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      let factsQuery = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      if (projectId) factsQuery = factsQuery.eq("project_id", projectId);
+      const { data: rows } = await factsQuery;
       for (const r of rows ?? []) {
         if (!r?.key) continue;
         onboardingFacts[String((r as any).key)] = (r as any).value;
@@ -733,7 +752,9 @@ export async function GET(_req: Request) {
     const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
     const shouldGenerateOffers = !isAffiliate && !hasOffersEffective;
 
-    const { data: planRow } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+    if (projectId) planQuery = planQuery.eq("project_id", projectId);
+    const { data: planRow } = await planQuery.maybeSingle();
     const planJson = (planRow?.plan_json ?? null) as AnyRecord | null;
 
     const offer_pyramids = planJson ? asArray((planJson as any).offer_pyramids) : [];
@@ -773,6 +794,7 @@ export async function PATCH(req: Request) {
 
     if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
     const body = (await req.json().catch(() => ({}))) as AnyRecord;
     const selectedIndexRaw = body?.selectedIndex;
@@ -785,7 +807,9 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: "Invalid selectedIndex" }, { status: 400 });
     }
 
-    const { data: planRow, error: planErr } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    let patchPlanQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+    if (projectId) patchPlanQuery = patchPlanQuery.eq("project_id", projectId);
+    const { data: planRow, error: planErr } = await patchPlanQuery.maybeSingle();
     if (planErr) console.error("Error reading business_plan for PATCH:", planErr);
 
     const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
@@ -819,7 +843,7 @@ export async function PATCH(req: Request) {
 
     const { data: saved, error: saveErr } = await supabase
       .from("business_plan")
-      .upsert({ user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
       .select("id")
       .maybeSingle();
 
@@ -829,12 +853,15 @@ export async function PATCH(req: Request) {
     }
 
     try {
-      const { data: businessProfile } = await supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle();
+      let patchBpQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
+      if (projectId) patchBpQuery = patchBpQuery.eq("project_id", projectId);
+      const { data: businessProfile } = await patchBpQuery.maybeSingle();
       if (businessProfile) {
         const strategyId = await getOrCreateStrategyIdBestEffort({
           userId,
           businessProfile: businessProfile as AnyRecord,
           planJson: nextPlan,
+          projectId,
         });
 
         const pyramids = asArray(nextPlan.offer_pyramids)
@@ -842,10 +869,10 @@ export async function PATCH(req: Request) {
           .filter((x) => !!x && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
 
         if (pyramids.length) {
-          await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids, selectedIndex });
+          await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids, selectedIndex, projectId });
         } else {
           const normalizedSelected = normalizeOfferSet(pyramid, 0);
-          await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids: [normalizedSelected], selectedIndex: 0 });
+          await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids: [normalizedSelected], selectedIndex: 0, projectId });
         }
       }
     } catch (e) {
@@ -872,8 +899,11 @@ export async function POST(req: Request) {
 
     if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
-    const { data: existingPlan, error: existingPlanError } = await supabase.from("business_plan").select("plan_json").eq("user_id", userId).maybeSingle();
+    let postPlanQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+    if (projectId) postPlanQuery = postPlanQuery.eq("project_id", projectId);
+    const { data: existingPlan, error: existingPlanError } = await postPlanQuery.maybeSingle();
     if (existingPlanError) console.error("Error checking existing business_plan:", existingPlanError);
 
     const existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
@@ -897,7 +927,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
     }
 
-    const { data: businessProfile, error: profileError } = await supabase.from("business_profiles").select("*").eq("user_id", userId).single();
+    let postBpQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
+    if (projectId) postBpQuery = postBpQuery.eq("project_id", projectId);
+    const { data: businessProfile, error: profileError } = await postBpQuery.single();
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
       return NextResponse.json({ success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` }, { status: 400 });
@@ -909,7 +941,9 @@ export async function POST(req: Request) {
     // Offres ONLY si: user sans offre ET pas affilié
     const onboardingFacts: Record<string, unknown> = {};
     try {
-      const { data: rows } = await supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      let postFactsQuery = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+      if (projectId) postFactsQuery = postFactsQuery.eq("project_id", projectId);
+      const { data: rows } = await postFactsQuery;
       for (const r of rows ?? []) {
         if (!r?.key) continue;
         onboardingFacts[String((r as any).key)] = (r as any).value;
@@ -1094,7 +1128,7 @@ STRUCTURE EXACTE À RENVOYER :
 
       const { data: saved, error: saveErr } = await supabase
         .from("business_plan")
-        .upsert({ user_id: userId, plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
         .select("id")
         .maybeSingle();
 
@@ -1108,6 +1142,7 @@ STRUCTURE EXACTE À RENVOYER :
           userId,
           businessProfile: businessProfile as AnyRecord,
           planJson: plan_json,
+          projectId,
         });
 
         await persistOfferPyramidsBestEffort({
@@ -1115,6 +1150,7 @@ STRUCTURE EXACTE À RENVOYER :
           strategyId,
           pyramids: normalizedOffers,
           selectedIndex: null,
+          projectId,
         });
       } catch (e) {
         console.error("POST offers sync unexpected error:", e);
@@ -1286,7 +1322,7 @@ Contraintes :
 
     const { data: saved2, error: saveErr2 } = await supabase
       .from("business_plan")
-      .upsert({ user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
       .select("id")
       .maybeSingle();
 
@@ -1300,6 +1336,7 @@ Contraintes :
         userId,
         businessProfile: businessProfile as AnyRecord,
         planJson: nextPlan,
+        projectId,
       });
 
       try {
@@ -1313,19 +1350,21 @@ Contraintes :
             strategyId,
             pyramids,
             selectedIndex: typeof existingSelectedIndex === "number" ? existingSelectedIndex : null,
+            projectId,
           });
         }
       } catch {
         // fail-open
       }
 
-      await persistPersonaBestEffort({ userId, strategyId, persona: persona ?? null });
+      await persistPersonaBestEffort({ userId, strategyId, persona: persona ?? null, projectId });
 
       await enrichBusinessProfileMissionBestEffort({
         supabase,
         userId,
         persona: persona ?? null,
         planJson: nextPlan,
+        projectId,
       });
     } catch (e) {
       console.error("POST best-effort sync (strategy/persona) unexpected error:", e);

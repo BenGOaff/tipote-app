@@ -17,6 +17,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { buildOnboardingClarifierSystemPrompt } from "@/lib/prompts/onboarding/system";
 import { getUserContextBundle, userContextToPromptText } from "@/lib/onboarding/userContext";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -643,7 +644,7 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
   return patch;
 }
 
-async function updateThenInsertBusinessProfile(supabase: any, userId: string, patch: Record<string, any>): Promise<void> {
+async function updateThenInsertBusinessProfile(supabase: any, userId: string, patch: Record<string, any>, projectId?: string | null): Promise<void> {
   if (!patch || Object.keys(patch).length === 0) return;
 
   const row: Record<string, any> = {
@@ -651,8 +652,11 @@ async function updateThenInsertBusinessProfile(supabase: any, userId: string, pa
     ...patch,
     updated_at: new Date().toISOString(),
   };
+  if (projectId) row.project_id = projectId;
 
-  const upd = await supabase.from("business_profiles").update(row).eq("user_id", userId).select("id");
+  let updQuery = supabase.from("business_profiles").update(row).eq("user_id", userId);
+  if (projectId) updQuery = updQuery.eq("project_id", projectId);
+  const upd = await updQuery.select("id");
   if (!upd.error) {
     if (Array.isArray(upd.data) && upd.data.length > 0) return;
   }
@@ -674,6 +678,8 @@ export async function POST(req: NextRequest) {
     const userId = auth?.user?.id;
     const userEmail = auth?.user?.email;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const projectId = await getActiveProjectId(supabase, userId);
 
     // 0) Ensure profiles & business_profiles rows exist (FK guard)
     //    After account reset or for old users, these rows may be missing.
@@ -698,19 +704,22 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const { data: bpExists } = await supabase
+      let bpQuery = supabase
         .from("business_profiles")
         .select("user_id")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .eq("user_id", userId);
+      if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+      const { data: bpExists } = await bpQuery.maybeSingle();
 
       if (!bpExists) {
-        await supabase.from("business_profiles").insert({
+        const bpRow: Record<string, any> = {
           user_id: userId,
           onboarding_completed: false,
           onboarding_version: "v2",
           updated_at: new Date().toISOString(),
-        });
+        };
+        if (projectId) bpRow.project_id = projectId;
+        await supabase.from("business_profiles").insert(bpRow);
       }
     } catch (e) {
       console.warn("[OnboardingChatV2] business_profiles ensure failed (non-blocking):", e);
@@ -720,15 +729,17 @@ export async function POST(req: NextRequest) {
     let sessionId = body.sessionId ?? null;
 
     if (!sessionId) {
+      const sessionRow: Record<string, any> = {
+        user_id: userId,
+        onboarding_version: "v2",
+        status: "active",
+        started_at: new Date().toISOString(),
+        meta: {},
+      };
+      if (projectId) sessionRow.project_id = projectId;
       const { data: created, error } = await supabase
         .from("onboarding_sessions")
-        .insert({
-          user_id: userId,
-          onboarding_version: "v2",
-          status: "active",
-          started_at: new Date().toISOString(),
-          meta: {},
-        })
+        .insert(sessionRow)
         .select("id")
         .maybeSingle();
 
@@ -737,7 +748,9 @@ export async function POST(req: NextRequest) {
       }
       sessionId = String(created.id);
     } else {
-      const { data: s, error } = await supabase.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId).maybeSingle();
+      let sessionQuery = supabase.from("onboarding_sessions").select("id,user_id,status").eq("id", sessionId);
+      if (projectId) sessionQuery = sessionQuery.eq("project_id", projectId);
+      const { data: s, error } = await sessionQuery.maybeSingle();
       if (error || !s?.id) return NextResponse.json({ error: "Invalid session" }, { status: 400 });
       if (String(s.user_id) !== String(userId)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -753,9 +766,13 @@ export async function POST(req: NextRequest) {
     if (insertMsgErr) return NextResponse.json({ error: insertMsgErr.message }, { status: 400 });
 
     // 3) fetch existing context
+    const bpSelect = supabase.from("business_profiles").select("*").eq("user_id", userId);
+    if (projectId) bpSelect.eq("project_id", projectId);
+    const factsSelect = supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId);
+    if (projectId) factsSelect.eq("project_id", projectId);
     const [{ data: bp }, { data: facts }, { data: history }] = await Promise.all([
-      supabase.from("business_profiles").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("onboarding_facts").select("key,value,confidence,updated_at").eq("user_id", userId),
+      bpSelect.maybeSingle(),
+      factsSelect,
       supabase.from("onboarding_messages").select("role,content,created_at").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(60),
     ]);
 
@@ -774,13 +791,15 @@ export async function POST(req: NextRequest) {
       const value = normalizeFactValue(key, fact.value);
 
       try {
-        const rpc = await supabase.rpc("upsert_onboarding_fact", {
+        const rpcParams: Record<string, any> = {
           p_user_id: userId,
           p_key: key,
           p_value: value,
           p_confidence: fact.confidence,
           p_source: fact.source,
-        });
+        };
+        if (projectId) rpcParams.p_project_id = projectId;
+        const rpc = await supabase.rpc("upsert_onboarding_fact", rpcParams);
         if (!rpc.error) {
           appliedFacts.push({ key, confidence: fact.confidence });
           knownFacts[key] = value;
@@ -791,15 +810,17 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        const factRow: Record<string, any> = {
+          user_id: userId,
+          key,
+          value,
+          confidence: fact.confidence,
+          source: fact.source,
+          updated_at: new Date().toISOString(),
+        };
+        if (projectId) factRow.project_id = projectId;
         const { error } = await supabase.from("onboarding_facts").upsert(
-          {
-            user_id: userId,
-            key,
-            value,
-            confidence: fact.confidence,
-            source: fact.source,
-            updated_at: new Date().toISOString(),
-          },
+          factRow,
           { onConflict: "user_id,key" },
         );
         if (!error) {
@@ -1101,7 +1122,7 @@ export async function POST(req: NextRequest) {
     try {
       const patch = buildBusinessProfilePatchFromFacts(Object.entries(knownFacts).map(([key, value]) => ({ key, value })));
       if (Object.keys(patch).length > 0) {
-        await updateThenInsertBusinessProfile(supabase, userId, patch);
+        await updateThenInsertBusinessProfile(supabase, userId, patch, projectId);
       }
     } catch {
       // ignore

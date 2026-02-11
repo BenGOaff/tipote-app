@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -185,12 +186,17 @@ export async function POST() {
     }
 
     const userId = authData.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
     // Charger business_plan (via session user)
-    const { data: planRow, error: planErr } = await supabase
+    let planQuery = supabase
       .from("business_plan")
       .select("plan_json")
-      .eq("user_id", userId)
+      .eq("user_id", userId);
+
+    if (projectId) planQuery = planQuery.eq("project_id", projectId);
+
+    const { data: planRow, error: planErr } = await planQuery
       .maybeSingle<{ plan_json: unknown }>();
 
     if (planErr) {
@@ -207,11 +213,15 @@ export async function POST() {
     // Lire existantes (uniquement sur les sources présentes dans le plan)
     const sources = Array.from(new Set(tasks.map((t) => t.source))).filter(Boolean);
 
-    const { data: existing, error: existingErr } = await supabaseAdmin
+    let existingQuery = supabaseAdmin
       .from("project_tasks")
       .select("id,title,due_date,source,priority,status")
       .eq("user_id", userId)
       .in("source", sources);
+
+    if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
+
+    const { data: existing, error: existingErr } = await existingQuery;
 
     if (existingErr) {
       return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
@@ -258,25 +268,31 @@ export async function POST() {
           toUpdate.push({ id: ex.id, patch });
         }
       } else {
-        toInsert.push({
+        const insertPayload: Record<string, unknown> = {
           user_id: userId,
           title: t.title,
           due_date: t.due_date,
           priority: t.priority ?? null,
           status: "todo" satisfies Status,
           source: t.source,
-        });
+        };
+        if (projectId) insertPayload.project_id = projectId;
+        toInsert.push(insertPayload);
       }
     }
 
     // Appliquer updates
     let updated = 0;
     for (const u of toUpdate) {
-      const { error: upErr } = await supabaseAdmin
+      let upQuery = supabaseAdmin
         .from("project_tasks")
         .update(u.patch)
         .eq("id", u.id)
         .eq("user_id", userId);
+
+      if (projectId) upQuery = upQuery.eq("project_id", projectId);
+
+      const { error: upErr } = await upQuery;
 
       if (upErr) {
         console.error("Update task error:", upErr);

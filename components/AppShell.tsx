@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import LogoutButton from "@/components/LogoutButton";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 type Props = {
@@ -31,6 +32,7 @@ export default function AppShell({
           <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
+              <ProjectSwitcher />
             </div>
 
             <div className="flex-1 px-4">

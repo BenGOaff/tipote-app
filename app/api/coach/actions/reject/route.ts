@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,6 +87,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     let body: unknown = null;
     try {
       body = await req.json();
@@ -129,10 +132,12 @@ export async function POST(req: NextRequest) {
     })();
 
     // On attache le log au dernier message existant (évite de polluer la conversation)
-    const { data: lastRow, error: lastErr } = await supabase
+    let lastRowQuery = supabase
       .from("coach_messages")
       .select("id, facts, summary_tags")
-      .eq("user_id", user.id)
+      .eq("user_id", user.id);
+    if (projectId) lastRowQuery = lastRowQuery.eq("project_id", projectId);
+    const { data: lastRow, error: lastErr } = await lastRowQuery
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -147,6 +152,7 @@ export async function POST(req: NextRequest) {
       const { error: insErr } = await supabase.from("coach_messages").insert([
         {
           user_id: user.id,
+          ...(projectId ? { project_id: projectId } : {}),
           role: "assistant",
           content: "Noté.",
           summary_tags: ["rejected"],

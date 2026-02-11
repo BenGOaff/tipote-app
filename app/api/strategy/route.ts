@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -254,8 +255,9 @@ async function persistStrategyRow(params: {
   userId: string;
   businessProfile: AnyRecord;
   planJson: AnyRecord;
+  projectId?: string | null;
 }): Promise<void> {
-  const { supabase, userId, businessProfile, planJson } = params;
+  const { supabase, userId, businessProfile, planJson, projectId } = params;
 
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
@@ -272,6 +274,7 @@ async function persistStrategyRow(params: {
 
     const payload: AnyRecord = {
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
       title,
       horizon_days: horizonDays,
@@ -279,7 +282,8 @@ async function persistStrategyRow(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
+    let upsertQuery = supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id");
+    const upsertRes = await upsertQuery.maybeSingle();
     if (upsertRes?.error) {
       const insRes = await supabase.from("strategies").insert(payload).select("id").maybeSingle();
       if (insRes?.error) console.error("persistStrategyRow failed:", insRes.error);
@@ -294,8 +298,9 @@ async function getOrCreateStrategyIdBestEffort(params: {
   userId: string;
   businessProfile: AnyRecord;
   planJson: AnyRecord;
+  projectId?: string | null;
 }): Promise<string | null> {
-  const { supabase, userId, businessProfile, planJson } = params;
+  const { supabase, userId, businessProfile, planJson, projectId } = params;
 
   try {
     const businessProfileId = cleanString(businessProfile.id, 80) || null;
@@ -313,6 +318,7 @@ async function getOrCreateStrategyIdBestEffort(params: {
 
     const payload: AnyRecord = {
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
       title,
       horizon_days: horizonDays,
@@ -323,7 +329,9 @@ async function getOrCreateStrategyIdBestEffort(params: {
     const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
     if (!upsertRes?.error && upsertRes?.data?.id) return String(upsertRes.data.id);
 
-    const sel = await supabase.from("strategies").select("id").eq("user_id", userId).maybeSingle();
+    let selQuery = supabase.from("strategies").select("id").eq("user_id", userId);
+    if (projectId) selQuery = selQuery.eq("project_id", projectId);
+    const sel = await selQuery.maybeSingle();
     if (!sel?.error && sel?.data?.id) return String(sel.data.id);
 
     return null;
@@ -377,8 +385,9 @@ async function persistPersonaBestEffort(params: {
   userId: string;
   strategyId: string | null;
   persona: AnyRecord | null;
+  projectId?: string | null;
 }): Promise<void> {
-  const { userId, strategyId, persona } = params;
+  const { userId, strategyId, persona, projectId } = params;
 
   if (!persona || !personaLooksUseful(persona)) return;
 
@@ -389,6 +398,7 @@ async function persistPersonaBestEffort(params: {
 
   const payload: AnyRecord = {
     user_id: userId,
+    ...(projectId ? { project_id: projectId } : {}),
     ...(strategyId ? { strategy_id: strategyId } : {}),
     role: "client_ideal",
     name: cleanString(persona.title, 240) || null,
@@ -438,8 +448,9 @@ async function enrichBusinessProfileMissionBestEffort(params: {
   userId: string;
   persona: AnyRecord | null;
   planJson: AnyRecord | null;
+  projectId?: string | null;
 }): Promise<void> {
-  const { supabase, userId, persona, planJson } = params;
+  const { supabase, userId, persona, planJson, projectId } = params;
   if (!persona) return;
 
   try {
@@ -469,7 +480,9 @@ async function enrichBusinessProfileMissionBestEffort(params: {
     const positioning = cleanString(planJson?.positioning, 300);
     if (positioning) patch.niche = positioning;
 
-    await supabase.from("business_profiles").update(patch).eq("user_id", userId);
+    let bpUpdateQuery = supabase.from("business_profiles").update(patch).eq("user_id", userId);
+    if (projectId) bpUpdateQuery = bpUpdateQuery.eq("project_id", projectId);
+    await bpUpdateQuery;
   } catch (e) {
     console.error("enrichBusinessProfileMissionBestEffort error (non-blocking):", e);
   }
@@ -529,8 +542,9 @@ async function persistOfferPyramidsBestEffort(params: {
   strategyId: string | null;
   pyramids: AnyRecord[];
   pyramidRunId: string;
+  projectId?: string | null;
 }): Promise<void> {
-  const { supabase, userId, strategyId, pyramids, pyramidRunId } = params;
+  const { supabase, userId, strategyId, pyramids, pyramidRunId, projectId } = params;
 
   try {
     if (!Array.isArray(pyramids) || pyramids.length < 1) return;
@@ -560,6 +574,7 @@ async function persistOfferPyramidsBestEffort(params: {
         const price = toNumber(o.price);
         rows.push({
           user_id: userId,
+          ...(projectId ? { project_id: projectId } : {}),
           ...(strategyId ? { strategy_id: strategyId } : {}),
           pyramid_run_id: pyramidRunId,
           option_index: idx,
@@ -866,16 +881,18 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
     const acceptLang = (req.headers.get("accept-language") || "").toLowerCase();
     const locale: "fr" | "en" = acceptLang.includes("fr") ? "fr" : "en";
 
     // 0) Lire plan existant (idempotence)
-    const { data: existingPlan, error: existingPlanError } = await supabase
+    let bpQuery = supabase
       .from("business_plan")
       .select("plan_json")
-      .eq("user_id", userId)
-      .maybeSingle();
+      .eq("user_id", userId);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: existingPlan, error: existingPlanError } = await bpQuery.maybeSingle();
 
     if (existingPlanError) console.error("Error checking existing business_plan:", existingPlanError);
 
@@ -895,11 +912,12 @@ export async function POST(req: Request) {
     const hasStarter = starterPlanLooksUseful(existingPlanJson);
 
     // 1) business_profile
-    const { data: businessProfile, error: profileError } = await supabase
+    let profileQuery = supabase
       .from("business_profiles")
       .select("*")
-      .eq("user_id", userId)
-      .single();
+      .eq("user_id", userId);
+    if (projectId) profileQuery = profileQuery.eq("project_id", projectId);
+    const { data: businessProfile, error: profileError } = await profileQuery.single();
 
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
@@ -915,10 +933,12 @@ export async function POST(req: Request) {
     // 2) onboarding_facts (best-effort)
     const onboardingFacts: Record<string, unknown> = {};
     try {
-      const { data: onboardingFactsRows, error: onboardingFactsError } = await supabase
+      let factsQuery = supabase
         .from("onboarding_facts")
         .select("key,value,confidence,updated_at")
         .eq("user_id", userId);
+      if (projectId) factsQuery = factsQuery.eq("project_id", projectId);
+      const { data: onboardingFactsRows, error: onboardingFactsError } = await factsQuery;
 
       if (onboardingFactsError) {
         console.error("Error reading onboarding_facts:", onboardingFactsError);
@@ -988,11 +1008,12 @@ export async function POST(req: Request) {
     // 2b) competitor analysis (best-effort)
     let competitorContext = "";
     try {
-      const { data: competitorAnalysis } = await supabase
+      let compQuery = supabase
         .from("competitor_analyses")
         .select("summary, strengths, weaknesses, opportunities, positioning_matrix")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .eq("user_id", userId);
+      if (projectId) compQuery = compQuery.eq("project_id", projectId);
+      const { data: competitorAnalysis } = await compQuery.maybeSingle();
 
       if (competitorAnalysis?.summary) {
         competitorContext = `
@@ -1059,7 +1080,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
           };
 
           await supabase.from("business_plan").upsert(
-            { user_id: userId, plan_json: cleaned, updated_at: new Date().toISOString() },
+            { user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: cleaned, updated_at: new Date().toISOString() },
             { onConflict: "user_id" },
           );
 
@@ -1096,7 +1117,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
           };
 
           await supabase.from("business_plan").upsert(
-            { user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() },
+            { user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() },
             { onConflict: "user_id" },
           );
 
@@ -1318,6 +1339,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
           userId,
           businessProfile: businessProfile as AnyRecord,
           planJson: plan_json,
+          projectId,
         });
 
         await persistOfferPyramidsBestEffort({
@@ -1326,6 +1348,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
           strategyId,
           pyramids: normalizedOffers,
           pyramidRunId: offerPyramidsRunId,
+          projectId,
         });
       } catch (e) {
         console.error("offer_pyramids persistence error:", e);
@@ -1333,7 +1356,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 
       const { data: saved, error: saveErr } = await supabase
         .from("business_plan")
-        .upsert({ user_id: userId, plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
         .select("id")
         .maybeSingle();
 
@@ -1342,7 +1365,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
         return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
       }
 
-      await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: plan_json });
+      await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: plan_json, projectId });
 
       return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
     }
@@ -1582,7 +1605,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
       const { data: savedFull, error: fullErr } = await supabase
         .from("business_plan")
-        .upsert({ user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
         .select("id")
         .maybeSingle();
 
@@ -1591,7 +1614,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
       }
 
-      await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
+      await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan, projectId });
 
       try {
         const strategyId = await getOrCreateStrategyIdBestEffort({
@@ -1599,12 +1622,14 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
           userId,
           businessProfile: businessProfile as AnyRecord,
           planJson: nextPlan,
+          projectId,
         });
 
         await persistPersonaBestEffort({
           userId,
           strategyId,
           persona: normalizePersona(asRecord(nextPlan.persona)),
+          projectId,
         });
 
         await enrichBusinessProfileMissionBestEffort({
@@ -1612,6 +1637,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
           userId,
           persona: normalizePersona(asRecord(nextPlan.persona)),
           planJson: nextPlan,
+          projectId,
         });
       } catch (e) {
         console.error("persona persistence error (non-blocking):", e);
@@ -1820,7 +1846,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
     const { data: savedFull, error: fullErr } = await supabase
       .from("business_plan")
-      .upsert({ user_id: userId, plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
       .select("id")
       .maybeSingle();
 
@@ -1829,7 +1855,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
       return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
     }
 
-    await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan });
+    await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan, projectId });
 
     try {
       const strategyId = await getOrCreateStrategyIdBestEffort({
@@ -1837,12 +1863,14 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         userId,
         businessProfile: businessProfile as AnyRecord,
         planJson: nextPlan,
+        projectId,
       });
 
       await persistPersonaBestEffort({
         userId,
         strategyId,
         persona: normalizePersona(asRecord(nextPlan.persona)),
+        projectId,
       });
 
       await enrichBusinessProfileMissionBestEffort({
@@ -1850,6 +1878,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         userId,
         persona: normalizePersona(asRecord(nextPlan.persona)),
         planJson: nextPlan,
+        projectId,
       });
     } catch (e) {
       console.error("persona persistence error (non-blocking):", e);

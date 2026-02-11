@@ -2,12 +2,14 @@
 // Profil business (business_profiles) — lecture + update depuis /settings
 // ✅ Cohérent avec le code existant : colonnes snake_case (cf. app/api/onboarding/answers/route.ts)
 // - GET: retourne le profil (ou null)
-// - PATCH: met à jour un sous-ensemble de champs safe (sans casser l’onboarding)
+// - PATCH: met à jour un sous-ensemble de champs safe (sans casser l'onboarding)
+// ✅ MULTI-PROJETS : scoped au projet actif via cookie
 
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 
@@ -60,11 +62,16 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const projectId = await getActiveProjectId(supabase, user.id);
+
+    let query = supabase
       .from("business_profiles")
       .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+
+    if (projectId) query = query.eq("project_id", projectId);
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
@@ -117,17 +124,39 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: true, profile: null }, { status: 200 });
     }
 
-    const row = {
+    const projectId = await getActiveProjectId(supabase, user.id);
+
+    const row: Record<string, unknown> = {
       user_id: user.id,
       ...patch,
       updated_at: new Date().toISOString(),
     };
+    if (projectId) row.project_id = projectId;
 
-    const { data, error } = await supabase
-      .from("business_profiles")
-      .upsert(row, { onConflict: "user_id" })
-      .select("*")
-      .maybeSingle();
+    // Si project_id est présent, update par user_id + project_id
+    // Sinon fallback au upsert par user_id seul (ancien comportement)
+    let data: any = null;
+    let error: any = null;
+
+    if (projectId) {
+      const upd = await supabase
+        .from("business_profiles")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("project_id", projectId)
+        .select("*")
+        .maybeSingle();
+      data = upd.data;
+      error = upd.error;
+    } else {
+      const ups = await supabase
+        .from("business_profiles")
+        .upsert(row, { onConflict: "user_id" })
+        .select("*")
+        .maybeSingle();
+      data = ups.data;
+      error = ups.error;
+    }
 
     if (error) {
       console.error("[PATCH /api/profile] DB error:", error.message, error.code);

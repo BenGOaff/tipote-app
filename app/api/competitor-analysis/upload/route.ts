@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const projectId = await getActiveProjectId(supabase, user.id);
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -121,11 +124,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch user's business profile for context
-    const { data: businessProfile } = await supabase
+    let bpQuery = supabase
       .from("business_profiles")
       .select("niche, mission, offers")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: businessProfile } = await bpQuery.maybeSingle();
 
     const summaryResult = await summarizeDocument({
       ai,
@@ -136,25 +140,25 @@ export async function POST(req: NextRequest) {
 
     // Upsert competitor analysis
     const now = new Date().toISOString();
+    const upsertPayload: Record<string, any> = {
+      user_id: user.id,
+      competitors: summaryResult.competitors_extracted,
+      competitor_details: summaryResult.competitor_details,
+      summary: summaryResult.summary,
+      strengths: summaryResult.strengths,
+      weaknesses: summaryResult.weaknesses,
+      opportunities: summaryResult.opportunities,
+      positioning_matrix: summaryResult.positioning_matrix,
+      uploaded_document_summary: summaryResult.document_summary,
+      status: "completed",
+      updated_at: now,
+      created_at: now,
+    };
+    if (projectId) upsertPayload.project_id = projectId;
+
     const { data, error } = await supabase
       .from("competitor_analyses")
-      .upsert(
-        {
-          user_id: user.id,
-          competitors: summaryResult.competitors_extracted,
-          competitor_details: summaryResult.competitor_details,
-          summary: summaryResult.summary,
-          strengths: summaryResult.strengths,
-          weaknesses: summaryResult.weaknesses,
-          opportunities: summaryResult.opportunities,
-          positioning_matrix: summaryResult.positioning_matrix,
-          uploaded_document_summary: summaryResult.document_summary,
-          status: "completed",
-          updated_at: now,
-          created_at: now,
-        },
-        { onConflict: "user_id" },
-      )
+      .upsert(upsertPayload, { onConflict: "user_id" })
       .select("*")
       .maybeSingle();
 
@@ -164,13 +168,15 @@ export async function POST(req: NextRequest) {
 
     // Update business_profiles (best-effort)
     try {
-      await supabase
+      let bpUpdate = supabase
         .from("business_profiles")
         .update({
           competitor_analysis_summary: summaryResult.summary.slice(0, 2000),
           updated_at: now,
         })
         .eq("user_id", user.id);
+      if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
+      await bpUpdate;
     } catch (e) {
       console.error("Failed to update business_profiles with competitor summary:", e);
     }

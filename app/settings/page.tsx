@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import SettingsTabsShell from "@/components/settings/SettingsTabsShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -43,6 +44,9 @@ export default async function SettingsPage({ searchParams }: Props) {
         <main className="flex-1 overflow-auto bg-muted/30">
           <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
+            <div className="ml-4">
+              <ProjectSwitcher />
+            </div>
             <div className="ml-4">
               <h1 className="text-xl font-display font-bold">Paramètres</h1>
             </div>

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -65,13 +66,18 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
+
     // ✅ RLS-safe read (service_role) + filtre user_id
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("project_tasks")
       .select("*")
       .eq("id", id)
-      .eq("user_id", auth.user.id)
-      .maybeSingle<TaskRow>();
+      .eq("user_id", auth.user.id);
+
+    if (projectId) query = query.eq("project_id", projectId);
+
+    const { data, error } = await query.maybeSingle<TaskRow>();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     if (!data) return NextResponse.json({ ok: false, error: "Task not found" }, { status: 404 });
@@ -95,6 +101,8 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     if (!auth?.user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
 
     let body: unknown = null;
     try {
@@ -142,11 +150,15 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     }
 
     // ✅ RLS-safe write + filtre user_id
-    const { data, error } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from("project_tasks")
       .update({ ...update, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", auth.user.id)
+      .eq("user_id", auth.user.id);
+
+    if (projectId) updateQuery = updateQuery.eq("project_id", projectId);
+
+    const { data, error } = await updateQuery
       .select("*")
       .maybeSingle<TaskRow>();
 
@@ -173,12 +185,18 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
+
     // ✅ RLS-safe delete + filtre user_id
-    const { error } = await supabaseAdmin
+    let deleteQuery = supabaseAdmin
       .from("project_tasks")
       .delete()
       .eq("id", id)
       .eq("user_id", auth.user.id);
+
+    if (projectId) deleteQuery = deleteQuery.eq("project_id", projectId);
+
+    const { error } = await deleteQuery;
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 

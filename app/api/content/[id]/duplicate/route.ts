@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type ContentRowV2 = {
   id: string;
@@ -39,12 +40,13 @@ function asTagsArray(tags: unknown): string[] {
 async function isPaidOrThrowQuota(params: {
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   userId: string;
+  projectId?: string | null;
 }): Promise<
   | { ok: true; paid: true }
   | { ok: true; paid: false; used: number; limit: number; windowDays: number }
   | { ok: true; paid: false; used: null; limit: number; windowDays: number }
 > {
-  const { supabase, userId } = params;
+  const { supabase, userId, projectId } = params;
 
   try {
     const { data: billingProfile, error: billingError } = await supabase
@@ -67,11 +69,13 @@ async function isPaidOrThrowQuota(params: {
   const windowDays = 7;
   try {
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await supabase
+    let countQ = supabase
       .from("content_item")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .gte("created_at", since);
+    if (projectId) countQ = countQ.eq("project_id", projectId);
+    const { count, error } = await countQ;
 
     if (error) {
       if (isMissingColumnError(error.message)) {
@@ -89,15 +93,17 @@ async function isPaidOrThrowQuota(params: {
 async function loadSourceContent(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   id: string,
-  userId: string
+  userId: string,
+  projectId?: string | null
 ): Promise<{ ok: true; data: ContentRowV2 } | { ok: false; status: number; error: string }> {
   // 1) Try "V2/EN-ish" columns
-  const v2 = await supabase
+  let v2Q = supabase
     .from("content_item")
     .select("id,user_id,type,title,content,status,scheduled_date,channel,tags")
     .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
+  if (projectId) v2Q = v2Q.eq("project_id", projectId);
+  const v2 = await v2Q.maybeSingle();
 
   if (!v2.error) {
     const row = v2.data as any | null;
@@ -125,14 +131,15 @@ async function loadSourceContent(
   }
 
   // 2) Fallback FR columns via alias (keeps a V2 shape)
-  const fr = await supabase
+  let frQ = supabase
     .from("content_item")
     .select(
       "id,user_id,type,title:titre,content:contenu,status:statut,scheduled_date:date_planifiee,channel:canal,tags"
     )
     .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
+  if (projectId) frQ = frQ.eq("project_id", projectId);
+  const fr = await frQ.maybeSingle();
 
   if (fr.error) {
     return { ok: false, status: 400, error: fr.error.message };
@@ -160,7 +167,8 @@ async function loadSourceContent(
 async function insertDuplicateV2(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   userId: string,
-  src: ContentRowV2
+  src: ContentRowV2,
+  projectId?: string | null
 ): Promise<{ ok: true; id: string | null } | { ok: false; missingColumns?: boolean; error: string }> {
   const tagsArray = asTagsArray(src.tags);
 
@@ -168,6 +176,7 @@ async function insertDuplicateV2(
     .from("content_item")
     .insert({
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       type: src.type,
       title: src.title ? `${src.title} (copie)` : "Copie",
       content: src.content,
@@ -189,7 +198,8 @@ async function insertDuplicateV2(
 async function insertDuplicateFR(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   userId: string,
-  src: ContentRowV2
+  src: ContentRowV2,
+  projectId?: string | null
 ): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> {
   const tagsArray = asTagsArray(src.tags);
 
@@ -197,6 +207,7 @@ async function insertDuplicateFR(
     .from("content_item")
     .insert({
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       type: src.type,
       titre: src.title ? `${src.title} (copie)` : "Copie",
       contenu: src.content,
@@ -226,10 +237,11 @@ export async function POST(
     if (!auth?.user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
     const userId = auth.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
     const { id } = await context.params;
 
     // ✅ Gating cohérent avec generate : plan payant => OK ; plan free => quota 7/7j
-    const gate = await isPaidOrThrowQuota({ supabase, userId });
+    const gate = await isPaidOrThrowQuota({ supabase, userId, projectId });
     if (!gate.paid) {
       if (typeof gate.used === "number") {
         if (gate.used >= gate.limit) {
@@ -247,7 +259,7 @@ export async function POST(
       // fail-open si on ne peut pas compter
     }
 
-    const srcRes = await loadSourceContent(supabase, id, userId);
+    const srcRes = await loadSourceContent(supabase, id, userId, projectId);
     if (!srcRes.ok) {
       return NextResponse.json({ ok: false, error: srcRes.error }, { status: srcRes.status });
     }
@@ -255,14 +267,14 @@ export async function POST(
     const src = srcRes.data;
 
     // Insert duplicate (try V2 then FR fallback if columns mismatch)
-    const insV2 = await insertDuplicateV2(supabase, userId, src);
+    const insV2 = await insertDuplicateV2(supabase, userId, src, projectId);
     if (insV2.ok) return NextResponse.json({ ok: true, id: insV2.id }, { status: 200 });
 
     if (!insV2.missingColumns) {
       return NextResponse.json({ ok: false, error: insV2.error }, { status: 400 });
     }
 
-    const insFR = await insertDuplicateFR(supabase, userId, src);
+    const insFR = await insertDuplicateFR(supabase, userId, src, projectId);
     if (!insFR.ok) return NextResponse.json({ ok: false, error: insFR.error }, { status: 400 });
 
     return NextResponse.json({ ok: true, id: insFR.id }, { status: 200 });

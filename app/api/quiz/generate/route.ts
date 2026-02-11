@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const projectId = await getActiveProjectId(supabase, user.id);
 
     const ai = openai;
     if (!ai) {
@@ -57,11 +60,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user context for better generation
-    const { data: profile } = await supabase
+    let bpQuery = supabase
       .from("business_profiles")
       .select("niche, mission")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: profile } = await bpQuery.maybeSingle();
 
     const { system, user: userPrompt } = buildQuizGenerationPrompt({
       objective,

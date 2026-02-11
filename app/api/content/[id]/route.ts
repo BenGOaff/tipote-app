@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 
@@ -160,31 +161,24 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
+
+  // Helper: build a content_item select query scoped by user + project
+  const ciSelect = (sel: string) => {
+    let q = supabase.from("content_item").select(sel).eq("id", id).eq("user_id", userId);
+    if (projectId) q = q.eq("project_id", projectId);
+    return q;
+  };
 
   // 1) try V2 select variants
-  let v2 = await supabase
-    .from("content_item")
-    .select(V2_SEL_WITH_PROMPT_UPDATED)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+  let v2 = await ciSelect(V2_SEL_WITH_PROMPT_UPDATED).maybeSingle();
 
   if (v2.error && isMissingColumnError(v2.error.message)) {
-    v2 = await supabase
-      .from("content_item")
-      .select(V2_SEL_WITH_PROMPT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    v2 = await ciSelect(V2_SEL_WITH_PROMPT_NO_UPDATED).maybeSingle();
   }
 
   if (v2.error && isMissingColumnError(v2.error.message)) {
-    v2 = await supabase
-      .from("content_item")
-      .select(V2_SEL_NO_PROMPT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    v2 = await ciSelect(V2_SEL_NO_PROMPT_NO_UPDATED).maybeSingle();
   }
 
   if (!v2.error && v2.data) {
@@ -192,29 +186,14 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   }
 
   // 2) fallback FR
-  let fr = await supabase
-    .from("content_item")
-    .select(FR_SEL_WITH_PROMPT_UPDATED)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+  let fr = await ciSelect(FR_SEL_WITH_PROMPT_UPDATED).maybeSingle();
 
   if (fr.error && isMissingColumnError(fr.error.message)) {
-    fr = await supabase
-      .from("content_item")
-      .select(FR_SEL_WITH_PROMPT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    fr = await ciSelect(FR_SEL_WITH_PROMPT_NO_UPDATED).maybeSingle();
   }
 
   if (fr.error && isMissingColumnError(fr.error.message)) {
-    fr = await supabase
-      .from("content_item")
-      .select(FR_SEL_NO_PROMPT_NO_UPDATED)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .maybeSingle();
+    fr = await ciSelect(FR_SEL_NO_PROMPT_NO_UPDATED).maybeSingle();
   }
 
   if (fr.error || !fr.data) {
@@ -238,6 +217,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
 
   let body: PatchBody = {};
   try {
@@ -270,11 +250,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   // Helper to attempt update with select + retry on missing columns
   const tryUpdate = async (payload: Record<string, any>, selectStr: string) => {
-    return await supabase
+    let q = supabase
       .from("content_item")
       .update(payload)
       .eq("id", id)
-      .eq("user_id", userId)
+      .eq("user_id", userId);
+    if (projectId) q = q.eq("project_id", projectId);
+    return await q
       .select(selectStr)
       .maybeSingle();
   };
@@ -371,8 +353,11 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
 
-  const del = await supabase.from("content_item").delete().eq("id", id).eq("user_id", userId);
+  let delQuery = supabase.from("content_item").delete().eq("id", id).eq("user_id", userId);
+  if (projectId) delQuery = delQuery.eq("project_id", projectId);
+  const del = await delQuery;
 
   if (del.error) {
     return NextResponse.json({ error: del.error.message || "Delete failed" }, { status: 500 });

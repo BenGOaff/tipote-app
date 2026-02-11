@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,6 +164,7 @@ function normalizeApplyBody(rawBody: unknown): NormalizedApply | null {
 
 async function logApplied(args: {
   userId: string;
+  projectId?: string | null;
   type: SuggestionType;
   suggestionId?: string;
   title?: string;
@@ -196,6 +198,7 @@ async function logApplied(args: {
 
     await supabaseAdmin.from("coach_messages").insert({
       user_id: args.userId,
+      ...(args.projectId ? { project_id: args.projectId } : {}),
       role: "assistant",
       content,
       summary_tags: ["applied_suggestion", args.type],
@@ -208,15 +211,18 @@ async function logApplied(args: {
 
 // -------------------- TASKS --------------------
 
-async function applySingleTaskUpdate(args: { userId: string; taskId: string; patch: AnyRecord }) {
-  const { userId, taskId, patch } = args;
+async function applySingleTaskUpdate(args: { userId: string; projectId?: string | null; taskId: string; patch: AnyRecord }) {
+  const { userId, projectId, taskId, patch } = args;
   const nowIso = new Date().toISOString();
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("project_tasks")
     .update({ ...patch, updated_at: nowIso })
     .eq("id", taskId)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  if (projectId) query = query.eq("project_id", projectId);
+
+  const { data, error } = await query
     .select("id, title, status, due_date, priority, timeframe, updated_at")
     .maybeSingle();
 
@@ -257,9 +263,9 @@ function sanitizeTaskPatch(raw: AnyRecord): { taskId: string; patch: AnyRecord }
 
 // -------------------- OFFERS --------------------
 
-async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRecord }) {
-  // Best-effort sync: delete + insert (comme l’ancien code)
-  const { userId, pyramid } = args;
+async function syncOfferPyramidsFlagship(args: { userId: string; projectId?: string | null; pyramid: AnyRecord }) {
+  // Best-effort sync: delete + insert (comme l'ancien code)
+  const { userId, projectId, pyramid } = args;
   const now = new Date().toISOString();
 
   const pyramidName = cleanString(pyramid.name, 160) || "Pyramide sélectionnée";
@@ -275,6 +281,7 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
 
     return {
       user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
       level,
       name: cleanString(`${pyramidName} — ${title}`, 240),
       description: cleanString(`${pyramidSummary}\n\n${composition}`, 4000),
@@ -299,7 +306,9 @@ async function syncOfferPyramidsFlagship(args: { userId: string; pyramid: AnyRec
   if (!rows.length) return;
 
   try {
-    await supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+    let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+    if (projectId) delQuery = delQuery.eq("project_id", projectId);
+    await delQuery;
     await supabaseAdmin.from("offer_pyramids").insert(rows);
   } catch {
     // silent best-effort
@@ -337,6 +346,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     let rawBody: unknown = null;
     try {
       rawBody = await req.json();
@@ -371,13 +382,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, error: "Invalid task patch in batch" }, { status: 400 });
           }
 
-          const r = await applySingleTaskUpdate({ userId: user.id, taskId: sanitized.taskId, patch: sanitized.patch });
+          const r = await applySingleTaskUpdate({ userId: user.id, projectId, taskId: sanitized.taskId, patch: sanitized.patch });
           if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
           results.push(r.task);
         }
 
         await logApplied({
           userId: user.id,
+          projectId,
           type,
           suggestionId,
           title,
@@ -395,11 +407,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "Invalid update_tasks payload" }, { status: 400 });
       }
 
-      const r = await applySingleTaskUpdate({ userId: user.id, taskId: sanitized.taskId, patch: sanitized.patch });
+      const r = await applySingleTaskUpdate({ userId: user.id, projectId, taskId: sanitized.taskId, patch: sanitized.patch });
       if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
 
       await logApplied({
         userId: user.id,
+        projectId,
         type,
         suggestionId,
         title,
@@ -421,11 +434,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "Invalid update_offers payload" }, { status: 400 });
       }
 
-      const { data: planRow, error: planErr } = await supabaseAdmin
+      let planQuery = supabaseAdmin
         .from("business_plan")
         .select("plan_json")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("user_id", user.id);
+      if (projectId) planQuery = planQuery.eq("project_id", projectId);
+      const { data: planRow, error: planErr } = await planQuery.maybeSingle();
 
       if (planErr) return NextResponse.json({ ok: false, error: planErr.message }, { status: 400 });
       if (!planRow) return NextResponse.json({ ok: false, error: "Business plan not found" }, { status: 404 });
@@ -442,10 +456,12 @@ export async function POST(req: NextRequest) {
         selected_pyramid: clean.pyramid,
       };
 
-      const { data, error } = await supabaseAdmin
+      let updatePlanQuery = supabaseAdmin
         .from("business_plan")
         .update({ plan_json: nextPlanJson, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id)
+        .eq("user_id", user.id);
+      if (projectId) updatePlanQuery = updatePlanQuery.eq("project_id", projectId);
+      const { data, error } = await updatePlanQuery
         .select("plan_json")
         .maybeSingle();
 
@@ -453,10 +469,11 @@ export async function POST(req: NextRequest) {
       if (!data) return NextResponse.json({ ok: false, error: "Business plan not found" }, { status: 404 });
 
       // Best-effort sync offer_pyramids (delete+insert)
-      void syncOfferPyramidsFlagship({ userId: user.id, pyramid: clean.pyramid });
+      void syncOfferPyramidsFlagship({ userId: user.id, projectId, pyramid: clean.pyramid });
 
       await logApplied({
         userId: user.id,
+        projectId,
         type,
         suggestionId,
         title,
@@ -482,6 +499,7 @@ export async function POST(req: NextRequest) {
 
     await logApplied({
       userId: user.id,
+      projectId,
       type,
       suggestionId,
       title,

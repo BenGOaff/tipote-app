@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,15 +48,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     const url = new URL(req.url);
     const limitRaw = url.searchParams.get("limit");
     const limitParsed = limitRaw ? Number(limitRaw) : 20;
     const limit = Number.isFinite(limitParsed) ? Math.max(1, Math.min(50, limitParsed)) : 20;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("coach_messages")
       .select("id, role, content, summary_tags, facts, created_at")
-      .eq("user_id", user.id)
+      .eq("user_id", user.id);
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -87,6 +92,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const projectId = await getActiveProjectId(supabase, user.id);
+
     let body: unknown;
     try {
       body = await req.json();
@@ -101,6 +108,7 @@ export async function POST(req: NextRequest) {
 
     const rows = parsed.data.map((m) => ({
       user_id: user.id,
+      ...(projectId ? { project_id: projectId } : {}),
       role: m.role,
       content: m.content,
       summary_tags: m.summary_tags ?? null,

@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -39,13 +40,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  const projectId = await getActiveProjectId(supabase, session.user.id);
+
   try {
     const since = daysAgo(periodDays).toISOString();
 
-    const v2 = await supabase
+    let v2Query = supabase
       .from("content_item")
       .select("id, title, type, status, channel, scheduled_date, created_at")
-      .eq("user_id", session.user.id)
+      .eq("user_id", session.user.id);
+    if (projectId) v2Query = v2Query.eq("project_id", projectId);
+    const v2 = await v2Query
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(5000);
@@ -54,12 +59,14 @@ export async function GET(req: Request) {
     let error = v2.error;
 
     if (error) {
-      const fb = await supabase
+      let fbQuery = supabase
         .from("content_item")
         .select(
           "id, title:titre, type, status:statut, channel:canal, scheduled_date:date_planifiee, created_at"
         )
-        .eq("user_id", session.user.id)
+        .eq("user_id", session.user.id);
+      if (projectId) fbQuery = fbQuery.eq("project_id", projectId);
+      const fb = await fbQuery
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(5000);

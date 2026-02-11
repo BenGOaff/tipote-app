@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,11 +60,14 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const projectId = await getActiveProjectId(supabase, user.id);
+
+    let query = supabase
       .from("competitor_analyses")
       .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
@@ -91,6 +95,8 @@ export async function POST(req: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const projectId = await getActiveProjectId(supabase, user.id);
 
     let body: unknown;
     try {
@@ -129,11 +135,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch user's business profile for context
-    const { data: businessProfile } = await supabase
+    let bpQuery = supabase
       .from("business_profiles")
       .select("niche, mission, offers")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: businessProfile } = await bpQuery.maybeSingle();
 
     // AI research on competitors
     const researchResult = await researchCompetitors({
@@ -145,7 +152,7 @@ export async function POST(req: NextRequest) {
     });
 
     const now = new Date().toISOString();
-    const row = {
+    const row: Record<string, any> = {
       user_id: user.id,
       competitors: competitors,
       competitor_details: researchResult.competitor_details,
@@ -157,6 +164,7 @@ export async function POST(req: NextRequest) {
       status: "completed" as const,
       updated_at: now,
     };
+    if (projectId) row.project_id = projectId;
 
     const { data, error } = await supabase
       .from("competitor_analyses")
@@ -170,13 +178,15 @@ export async function POST(req: NextRequest) {
 
     // Update business_profiles with competitor_analysis_summary (best-effort)
     try {
-      await supabase
+      let bpUpdate = supabase
         .from("business_profiles")
         .update({
           competitor_analysis_summary: researchResult.summary.slice(0, 2000),
           updated_at: now,
         })
         .eq("user_id", user.id);
+      if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
+      await bpUpdate;
     } catch (e) {
       console.error("Failed to update business_profiles with competitor summary:", e);
     }
@@ -207,6 +217,8 @@ export async function PATCH(req: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const projectId = await getActiveProjectId(supabase, user.id);
 
     let body: unknown;
     try {
@@ -240,6 +252,8 @@ export async function PATCH(req: NextRequest) {
 
     patch.updated_at = new Date().toISOString();
 
+    if (projectId) patch.project_id = projectId;
+
     const { data, error } = await supabase
       .from("competitor_analyses")
       .upsert({ user_id: user.id, ...patch }, { onConflict: "user_id" })
@@ -253,13 +267,15 @@ export async function PATCH(req: NextRequest) {
     // Update business_profiles summary (best-effort)
     if (d.summary || d.uploaded_document_summary) {
       try {
-        await supabase
+        let bpUpdate = supabase
           .from("business_profiles")
           .update({
             competitor_analysis_summary: (d.summary || d.uploaded_document_summary || "").slice(0, 2000),
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", user.id);
+        if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
+        await bpUpdate;
       } catch (e) {
         console.error("Failed to update business_profiles with competitor summary:", e);
       }
