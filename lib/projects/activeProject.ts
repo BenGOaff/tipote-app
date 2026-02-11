@@ -67,6 +67,32 @@ export async function getActiveProjectId(
     // fail-open : table projects n'existe peut-être pas encore
   }
 
+  // Fallback ultime : premier projet trouvé pour ce user
+  try {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data?.id) {
+      try {
+        cookieStore.set(ACTIVE_PROJECT_COOKIE, data.id, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: "lax",
+        });
+      } catch {
+        // read-only context
+      }
+      return data.id;
+    }
+  } catch {
+    // fail-open
+  }
+
   return null;
 }
 
@@ -103,6 +129,21 @@ export async function getActiveProjectIdFromRequest(
       .select("id")
       .eq("user_id", userId)
       .eq("is_default", true)
+      .maybeSingle();
+
+    if (!error && data?.id) return data.id;
+  } catch {
+    // fail-open
+  }
+
+  // Fallback ultime : premier projet trouvé pour ce user
+  try {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (!error && data?.id) return data.id;

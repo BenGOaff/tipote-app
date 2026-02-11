@@ -109,15 +109,22 @@ export async function POST(req: Request) {
     const st = cleanNullableString(raw.status);
     const status = st ? st : "todo";
 
+    if (!projectId) {
+      return NextResponse.json(
+        { ok: false, error: "Aucun projet actif. Sélectionne un projet avant de créer une tâche." },
+        { status: 400 },
+      );
+    }
+
     const insertPayload: Record<string, unknown> = {
       user_id: auth.user.id,
+      project_id: projectId,
       title,
       status,
       due_date,
       priority,
       source: "manual",
     };
-    if (projectId) insertPayload.project_id = projectId;
 
     const { data, error } = await supabase
       .from("project_tasks")
