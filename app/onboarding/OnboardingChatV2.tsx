@@ -55,6 +55,15 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label?: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout (${label ?? "op"} > ${ms}ms)`)), ms),
+    ),
+  ]);
+}
+
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
@@ -400,24 +409,38 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     setBootStepIndex(0);
     setBootLineIndex(0);
 
+    // Global safety net: never stay on boot overlay longer than 90s
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[OnboardingChatV2] Global finalize timeout reached (90s). Redirecting to /app.");
+      router.replace("/app");
+    }, 90_000);
+
     try {
       const sid = sessionId ?? undefined;
 
-      // Step 0: complete onboarding (best-effort)
+      // Step 0: complete onboarding (best-effort, 15s timeout)
       try {
-        await postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
-          sessionId: sid,
-          diagnosticCompleted: true,
-        });
+        await withTimeout(
+          postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
+            sessionId: sid,
+            diagnosticCompleted: true,
+          }),
+          15_000,
+          "onboarding/complete",
+        );
       } catch {
         // fail-open
       }
 
-      // Step 1: créer/mettre à jour le plan (idempotent)
+      // Step 1: créer/mettre à jour le plan (idempotent, 30s timeout)
       setBootStepIndex(1);
       setBootLineIndex(0);
       try {
-        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
+        await withTimeout(
+          postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true }),
+          30_000,
+          "strategy",
+        );
       } catch {
         // fail-open
       }
@@ -433,43 +456,57 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
           const chosen = await waitForOfferSetChoice();
 
-          // patch selectedIndex
+          // patch selectedIndex (10s timeout)
           try {
-            await patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", {
-              selectedIndex: chosen,
-            });
+            await withTimeout(
+              patchJSON<{ success?: boolean; ok?: boolean }>("/api/strategy/offer-pyramid", {
+                selectedIndex: chosen,
+              }),
+              10_000,
+              "offer-pyramid/patch",
+            );
           } catch {
             // fail-open
           }
         }
       }
 
-      // Step 2: generate full strategy (persona + plan 90j) — idempotent
+      // Step 2: generate full strategy (persona + plan 90j) — idempotent (30s timeout)
       setBootStepIndex(2);
       setBootLineIndex(0);
       try {
-        await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true });
+        await withTimeout(
+          postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", { force: true }),
+          30_000,
+          "strategy/full",
+        );
       } catch {
         // fail-open
       }
 
-      // Step 3: tasks sync (best-effort)
+      // Step 3: tasks sync (best-effort, 20s timeout)
       setBootStepIndex(3);
       setBootLineIndex(0);
       try {
-        await postJSON<{ ok?: boolean; error?: string }>("/api/tasks/sync", {});
+        await withTimeout(
+          postJSON<{ ok?: boolean; error?: string }>("/api/tasks/sync", {}),
+          20_000,
+          "tasks/sync",
+        );
       } catch {
         // fail-open
       }
 
       ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
 
+      clearTimeout(safetyTimeout);
       await new Promise((r) => setTimeout(r, 900));
       router.replace("/app");
     } catch (e) {
+      clearTimeout(safetyTimeout);
       toast({
         title: "Oups",
-        description: e instanceof Error ? e.message : "Impossible de finaliser l’onboarding.",
+        description: e instanceof Error ? e.message : "Impossible de finaliser l'onboarding.",
         variant: "destructive",
       });
       setIsFinalizing(false);

@@ -254,12 +254,23 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
 
     if (activities.length >= 2 && !primary) return false;
 
-    // Essential: need all 3 — main_topic + business_model + primary_focus
+    // Essential: need all 4 — main_topic + business_model + primary_focus + target_audience
     const hasTopic = hasNonEmptyFact(knownFacts, "main_topic") || hasNonEmptyFact(knownFacts, "primary_activity");
     const hasModel = hasNonEmptyFact(knownFacts, "business_model");
     const hasFocus = hasNonEmptyFact(knownFacts, "primary_focus");
+    const hasAudience = hasNonEmptyFact(knownFacts, "target_audience_short");
 
-    return hasTopic && hasModel && hasFocus;
+    if (!(hasTopic && hasModel && hasFocus && hasAudience)) return false;
+
+    // Important: need at least 3 out of these 7 to have a solid profile
+    const importantKeys = [
+      "revenue_goal_monthly", "has_offers", "conversion_status",
+      "content_channels_priority", "time_available_hours_week",
+      "tone_preference_hint", "biggest_blocker",
+    ];
+    const importantCount = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
+
+    return importantCount >= 3;
   } catch {
     return false;
   }
@@ -659,6 +670,12 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
         : "";
   if (tone) parts.push(`Ton préféré : ${tone}.`);
 
+  // Biggest blocker
+  const blocker =
+    typeof knownFacts["biggest_blocker"] === "string" ? String(knownFacts["biggest_blocker"]).trim() :
+    typeof knownFacts["biggest_challenge"] === "string" ? String(knownFacts["biggest_challenge"]).trim() : "";
+  if (blocker) parts.push(`Plus gros blocage : ${blocker}.`);
+
   // Primary focus
   const focus = typeof knownFacts["primary_focus"] === "string" ? String(knownFacts["primary_focus"]).trim() : "";
   if (focus) {
@@ -765,6 +782,40 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     // auditables
     if ((key === "business_stage" || key === "business_maturity") && isNonEmptyString(value))
       setIf("business_maturity", getStr(value, 60));
+
+    // ✅ biggest_blocker → biggest_blocker column
+    if ((key === "biggest_blocker" || key === "biggest_challenge") && isNonEmptyString(value))
+      setIf("biggest_blocker", getStr(value, 260));
+
+    // ✅ main_goals → main_goals column (array or string)
+    if (key === "main_goals" && value) {
+      if (Array.isArray(value)) {
+        const joined = value
+          .map((x) => (typeof x === "string" ? x.trim() : ""))
+          .filter(Boolean)
+          .slice(0, 6)
+          .join(", ");
+        if (joined) setIf("main_goals", joined);
+      } else if (isNonEmptyString(value)) {
+        setIf("main_goals", getStr(value, 260));
+      }
+    }
+
+    // ✅ audience sizes
+    if ((key === "audience_social" || key === "social_presence") && (typeof value === "number" || isNonEmptyString(value))) {
+      const n = typeof value === "number" ? value : Number(String(value).replace(/\s/g, ""));
+      if (Number.isFinite(n)) setIf("audience_social", n);
+      else if (isNonEmptyString(value)) setIf("audience_social", getStr(value, 60));
+    }
+    if ((key === "audience_email" || key === "email_list_size") && (typeof value === "number" || isNonEmptyString(value))) {
+      const n = typeof value === "number" ? value : Number(String(value).replace(/\s/g, ""));
+      if (Number.isFinite(n)) setIf("audience_email", n);
+      else if (isNonEmptyString(value)) setIf("audience_email", getStr(value, 60));
+    }
+
+    // ✅ social_links
+    if (key === "social_links" && isNonEmptyString(value))
+      setIf("social_links", getStr(value, 500));
   }
 
   return patch;
@@ -989,7 +1040,7 @@ export async function POST(req: NextRequest) {
     // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin.
     // Guarded by MIN_EXCHANGES (3) to prevent premature finish.
     try {
-      const MIN_EXCHANGES_EARLY = 3;
+      const MIN_EXCHANGES_EARLY = 5;
       const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
       if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY) {
         const finishMessage =
@@ -1197,7 +1248,7 @@ export async function POST(req: NextRequest) {
     // ═══════════════════════════════════════════════════
     // EXCHANGE LIMITS — prevent premature finish AND infinite loops
     // ═══════════════════════════════════════════════════
-    const MIN_EXCHANGES = 3;  // Never finish before the user has answered 3 questions
+    const MIN_EXCHANGES = 5;  // Never finish before the user has answered 5 questions
     const MAX_EXCHANGES = 10; // Force finish after 10 exchanges to prevent loops
 
     const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
@@ -1205,18 +1256,23 @@ export async function POST(req: NextRequest) {
     // Determine which phase the AI should be in based on exchange count
     const missingEssentials = ["main_topic", "business_model", "primary_focus", "target_audience_short"]
       .filter((k) => !hasNonEmptyFact(knownFacts, k));
-    const missingImportant = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"]
-      .filter((k) => !hasNonEmptyFact(knownFacts, k));
+    const missingImportant = [
+      "revenue_goal_monthly", "has_offers", "conversion_status",
+      "content_channels_priority", "time_available_hours_week",
+      "tone_preference_hint", "biggest_blocker",
+    ].filter((k) => !hasNonEmptyFact(knownFacts, k));
 
     let phaseHint = "";
     if (exchangeCount <= 2) {
-      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model.";
+      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model, et à qui il s'adresse.";
     } else if (exchangeCount <= 4) {
-      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est.";
+      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est, son plus gros blocage actuel (biggest_blocker).";
     } else if (exchangeCount <= 6) {
-      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif). Pose une question sur sa priorité, ses objectifs.";
+      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif et les préférences). Pose une question sur sa priorité, ses objectifs de revenu, le temps qu'il peut y consacrer.";
     } else if (exchangeCount <= 8) {
-      phaseHint = "Tu es en PHASE 4 (préférences rapides). Si il reste des infos utiles à collecter, pose une dernière question. Sinon mets should_finish=true.";
+      phaseHint = "Tu es en PHASE 4 (ton, contenu, canaux). Pose une question sur : le ton qu'il préfère pour sa communication (tone_preference_hint), les types de contenu qui l'intéressent (content_channels_priority), ou ses canaux de trafic actuels. Si tu as déjà ces infos, mets should_finish=true.";
+    } else {
+      phaseHint = "Tu es en PHASE 5 (finalisation). Si il manque encore des facts importants, pose UNE dernière question. Sinon mets should_finish=true.";
     }
 
     const userPrompt = JSON.stringify(
@@ -1334,7 +1390,7 @@ export async function POST(req: NextRequest) {
 
     // Compute progress for the UI (0-100)
     const essentialKeys = ["main_topic", "business_model", "primary_focus", "target_audience_short"];
-    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week"];
+    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week", "tone_preference_hint", "biggest_blocker"];
     const essentialDone = essentialKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const importantDone = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const progress = Math.min(
