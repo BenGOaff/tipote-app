@@ -1,14 +1,12 @@
 // app/admin/page.tsx
-// Admin dashboard (minimal) — accessible uniquement à hello@ethilife.fr
-// ✅ SSR auth guard + redirect
-// ✅ UI Tipote (AppShell)
-// ✅ Data via /api/admin/users (service_role côté serveur)
+// Admin dashboard minimal — accessible uniquement à hello@ethilife.fr
+// Protégé côté server (redirect) + middleware + API admin
 
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/AppShell";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import AdminUsersPageClient from "@/components/admin/AdminUsersPageClient";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 const ADMIN_EMAIL = "hello@ethilife.fr";
 
@@ -19,9 +17,10 @@ export default async function AdminPage() {
     data: { session },
   } = await supabase.auth.getSession();
 
+  const userId = session?.user?.id ?? "";
   const userEmail = session?.user?.email ?? "";
 
-  if (!session?.user?.id) {
+  if (!userId) {
     redirect("/");
   }
 
