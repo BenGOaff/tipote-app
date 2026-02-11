@@ -21,6 +21,10 @@ const OfferItemSchema = z.object({
   price: z.union([z.string().max(40), z.number()]).optional().default(""),
   salesCount: z.union([z.string().max(40), z.number()]).optional().default(""),
   link: z.string().trim().max(400).optional().default(""),
+  promise: z.string().trim().max(500).optional().default(""),
+  description: z.string().trim().max(2000).optional().default(""),
+  target: z.string().trim().max(500).optional().default(""),
+  format: z.string().trim().max(200).optional().default(""),
 });
 
 const UpdateSchema = z.object({

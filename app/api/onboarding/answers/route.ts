@@ -31,6 +31,10 @@ const OfferSchema = z.object({
   salesCount: z.union([z.string(), z.number()]).optional(),
   sales: z.union([z.string(), z.number()]).optional(),
   link: z.string().optional().default(""),
+  promise: z.string().optional().default(""),
+  description: z.string().optional().default(""),
+  target: z.string().optional().default(""),
+  format: z.string().optional().default(""),
 });
 
 const SocialLinkSchema = z.object({
@@ -185,6 +189,10 @@ export async function POST(req: NextRequest) {
     price: cleanString(o.price, 80),
     salesCount: cleanString(o.salesCount ?? o.sales, 80),
     link: cleanString(o.link, 500),
+    promise: cleanString(o.promise, 500),
+    description: cleanString(o.description, 2000),
+    target: cleanString(o.target, 500),
+    format: cleanString(o.format, 200),
   }));
 
   const offerPrice = normalizedOffers

@@ -285,12 +285,14 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
           level: "user_offer",
           source: "user",
           is_flagship: null,
-          promise: typeof o?.promise === "string" ? o.promise.trim() : null,
-          description: typeof o?.description === "string" ? o.description.trim() : null,
+          promise: typeof o?.promise === "string" ? o.promise.trim() || null : null,
+          description: typeof o?.description === "string" ? o.description.trim() || null : null,
           price_min: priceNum,
           price_max: priceNum,
-          main_outcome: typeof o?.main_outcome === "string" ? o.main_outcome.trim() : null,
-          link: typeof o?.link === "string" ? o.link.trim() : null,
+          main_outcome: typeof o?.main_outcome === "string" ? o.main_outcome.trim() || null : null,
+          format: typeof o?.format === "string" ? o.format.trim() || null : null,
+          target: typeof o?.target === "string" ? o.target.trim() || null : null,
+          link: typeof o?.link === "string" ? o.link.trim() || null : null,
           updated_at: null,
         });
       }
