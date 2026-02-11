@@ -791,35 +791,45 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if ((key === "biggest_blocker" || key === "biggest_challenge") && isNonEmptyString(value))
       setIf("biggest_blocker", getStr(value, 260));
 
-    // ✅ main_goals → main_goals column (array or string)
+    // ✅ main_goals → main_goals column (stored as JSON array text in DB, e.g. '["goal1","goal2"]')
     if (key === "main_goals" && value) {
       if (Array.isArray(value)) {
-        const joined = value
+        const arr = value
           .map((x) => (typeof x === "string" ? x.trim() : ""))
           .filter(Boolean)
-          .slice(0, 6)
-          .join(", ");
-        if (joined) setIf("main_goals", joined);
+          .slice(0, 6);
+        if (arr.length > 0) setIf("main_goals", JSON.stringify(arr));
       } else if (isNonEmptyString(value)) {
-        setIf("main_goals", getStr(value, 260));
+        // Single goal → wrap in array for consistency
+        setIf("main_goals", JSON.stringify([String(value).trim()]));
       }
     }
 
-    // ✅ audience sizes
+    // ✅ audience sizes (int4 columns — only write numbers)
     if ((key === "audience_social" || key === "social_presence") && (typeof value === "number" || isNonEmptyString(value))) {
-      const n = typeof value === "number" ? value : Number(String(value).replace(/\s/g, ""));
-      if (Number.isFinite(n)) setIf("audience_social", n);
-      else if (isNonEmptyString(value)) setIf("audience_social", getStr(value, 60));
+      const n = typeof value === "number" ? value : Number(String(value).replace(/[^\d]/g, ""));
+      if (Number.isFinite(n) && n >= 0) setIf("audience_social", Math.round(n));
     }
     if ((key === "audience_email" || key === "email_list_size") && (typeof value === "number" || isNonEmptyString(value))) {
-      const n = typeof value === "number" ? value : Number(String(value).replace(/\s/g, ""));
-      if (Number.isFinite(n)) setIf("audience_email", n);
-      else if (isNonEmptyString(value)) setIf("audience_email", getStr(value, 60));
+      const n = typeof value === "number" ? value : Number(String(value).replace(/[^\d]/g, ""));
+      if (Number.isFinite(n) && n >= 0) setIf("audience_email", Math.round(n));
     }
 
-    // ✅ social_links (generic)
-    if (key === "social_links" && isNonEmptyString(value))
-      setIf("social_links", getStr(value, 500));
+    // ✅ social_links (stored as JSON array text in DB, e.g. '[{"platform":"LinkedIn","url":"..."}]')
+    if (key === "social_links" && value) {
+      if (Array.isArray(value)) {
+        // Already an array of objects → stringify
+        setIf("social_links", JSON.stringify(value).slice(0, 1000));
+      } else if (typeof value === "string") {
+        // If it's already JSON, keep as-is; otherwise wrap in array
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[")) {
+          setIf("social_links", trimmed.slice(0, 1000));
+        } else {
+          setIf("social_links", JSON.stringify([{ platform: "other", url: trimmed }]));
+        }
+      }
+    }
 
     // ✅ specific social URLs → dedicated columns
     if (key === "linkedin_url" && isNonEmptyString(value)) setIf("linkedin_url", getStr(value, 400));
@@ -1240,20 +1250,36 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
-    // ✅ Auto-extract URLs (linkedin, instagram, youtube, website)
+    // ✅ Auto-extract URLs (linkedin, instagram, youtube, website) + build social_links JSON
     try {
       const urlMatches = userMsg.match(/https?:\/\/[^\s,)]+/gi) ?? [];
+      const socialLinksArr: Array<{ platform: string; url: string }> = [];
       for (const url of urlMatches) {
         const u = url.toLowerCase();
-        if (u.includes("linkedin.com") && !hasNonEmptyFact(knownFacts, "linkedin_url")) {
-          await upsertOneFact({ key: "linkedin_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
-        } else if (u.includes("instagram.com") && !hasNonEmptyFact(knownFacts, "instagram_url")) {
-          await upsertOneFact({ key: "instagram_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
-        } else if (u.includes("youtube.com") && !hasNonEmptyFact(knownFacts, "youtube_url")) {
-          await upsertOneFact({ key: "youtube_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
-        } else if (!u.includes("linkedin") && !u.includes("instagram") && !u.includes("youtube") && !u.includes("facebook") && !u.includes("twitter") && !u.includes("tiktok") && !hasNonEmptyFact(knownFacts, "website_url")) {
-          await upsertOneFact({ key: "website_url", value: url.trim(), confidence: "medium", source: "server_extract_url" });
+        if (u.includes("linkedin.com")) {
+          if (!hasNonEmptyFact(knownFacts, "linkedin_url")) {
+            await upsertOneFact({ key: "linkedin_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "LinkedIn", url: url.trim() });
+        } else if (u.includes("instagram.com")) {
+          if (!hasNonEmptyFact(knownFacts, "instagram_url")) {
+            await upsertOneFact({ key: "instagram_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "Instagram", url: url.trim() });
+        } else if (u.includes("youtube.com")) {
+          if (!hasNonEmptyFact(knownFacts, "youtube_url")) {
+            await upsertOneFact({ key: "youtube_url", value: url.trim(), confidence: "high", source: "server_extract_url" });
+          }
+          socialLinksArr.push({ platform: "YouTube", url: url.trim() });
+        } else if (!u.includes("facebook") && !u.includes("twitter") && !u.includes("tiktok")) {
+          if (!hasNonEmptyFact(knownFacts, "website_url")) {
+            await upsertOneFact({ key: "website_url", value: url.trim(), confidence: "medium", source: "server_extract_url" });
+          }
         }
+      }
+      // Also populate social_links fact (JSON array format matching DB schema)
+      if (socialLinksArr.length > 0 && !hasNonEmptyFact(knownFacts, "social_links")) {
+        await upsertOneFact({ key: "social_links", value: socialLinksArr, confidence: "high", source: "server_extract_url" });
       }
     } catch {
       // ignore
