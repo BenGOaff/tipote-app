@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Trash2, Copy, Pencil, Calendar, CalendarX } from "lucide-react";
+import { MoreVertical, Trash2, Copy, Pencil, Calendar, CalendarX, Linkedin } from "lucide-react";
 
 type Props = {
   id: string;
@@ -33,14 +33,16 @@ type ApiResponse = { ok: true; id?: string | null } | { ok: false; error?: strin
 
 export function ContentItemActions({ id, title, status, scheduledDate }: Props) {
   const router = useRouter();
-  const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
+  const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | "publish" | null>(null);
 
   const [planOpen, setPlanOpen] = React.useState(false);
   const [planDate, setPlanDate] = React.useState<string>(scheduledDate ?? "");
+  const [planTime, setPlanTime] = React.useState<string>("09:00");
   const planInputId = React.useMemo(() => `plan-date-${id}`, [id]);
 
   const normalizedStatus = (status ?? "").toLowerCase().trim();
   const isPlanned = normalizedStatus === "scheduled" || normalizedStatus === "planned";
+  const isPublished = normalizedStatus === "published";
 
   React.useEffect(() => {
     if (planOpen) setPlanDate(scheduledDate ?? "");
@@ -127,6 +129,7 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
         body: JSON.stringify({
           status: "scheduled",
           scheduledDate: planDate,
+          meta: planTime ? { scheduled_time: planTime } : undefined,
         }),
       });
 
@@ -191,6 +194,42 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
     }
   };
 
+  const onPublishLinkedin = async () => {
+    setBusy("publish");
+    try {
+      const res = await fetch("/api/social/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: id, platform: "linkedin" }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Publication impossible",
+          description: json?.error ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Publié sur LinkedIn ✅",
+        description: json?.message ?? "Ton post est en ligne.",
+      });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Publication impossible",
+        description: e instanceof Error ? e.message : "Erreur réseau",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const planLabel = isPlanned && scheduledDate ? "Modifier date" : "Planifier";
 
   return (
@@ -201,13 +240,19 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
           <AlertDialogHeader>
             <AlertDialogTitle>Planifier ce contenu</AlertDialogTitle>
             <AlertDialogDescription>
-              Choisis une date de publication. Le statut sera automatiquement mis sur “Planifié”.
+              Choisis une date et une heure de publication. Le statut sera automatiquement mis sur "Planifié".
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor={planInputId}>Date</Label>
-            <Input id={planInputId} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor={planInputId}>Date</Label>
+              <Input id={planInputId} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${planInputId}-time`}>Heure</Label>
+              <Input id={`${planInputId}-time`} type="time" value={planTime} onChange={(e) => setPlanTime(e.target.value)} />
+            </div>
           </div>
 
           <AlertDialogFooter>
@@ -241,6 +286,23 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
                 Voir / éditer
               </Link>
             </DropdownMenuItem>
+
+            {/* Publier sur LinkedIn */}
+            {!isPublished && (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  void onPublishLinkedin();
+                }}
+                className="flex items-center gap-2 text-[#0A66C2] focus:text-[#0A66C2]"
+                disabled={busy !== null}
+              >
+                <Linkedin className="w-4 h-4" />
+                {busy === "publish" ? "Publication…" : "Publier sur LinkedIn"}
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onSelect={(e) => {
@@ -280,6 +342,8 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
               {busy === "duplicate" ? "Duplication…" : "Dupliquer"}
             </DropdownMenuItem>
 
+            <DropdownMenuSeparator />
+
             <AlertDialogTrigger asChild>
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
@@ -297,7 +361,7 @@ export function ContentItemActions({ id, title, status, scheduledDate }: Props) 
             <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
             <AlertDialogDescription>
               {title?.trim()
-                ? `“${title.trim()}” sera supprimé définitivement. Cette action est irréversible.`
+                ? `"${title.trim()}" sera supprimé définitivement. Cette action est irréversible.`
                 : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
             </AlertDialogDescription>
           </AlertDialogHeader>

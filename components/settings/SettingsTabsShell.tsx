@@ -25,6 +25,7 @@ import {
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
+import SocialConnections from "@/components/settings/SocialConnections";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -795,6 +796,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingSio ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </Card>
+
+        <SocialConnections />
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
