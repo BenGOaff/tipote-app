@@ -145,14 +145,12 @@ function matchCandidate(input: string, candidates: string[]): string | null {
 }
 
 function buildDefaultGreeting(firstName: string) {
-  const greet = firstName ? `Salut ${firstName} ✨` : "Salut ✨";
+  const greet = firstName ? `Salut ${firstName} !` : "Salut !";
   return (
     `${greet}\n` +
-    `Avant tout : tu peux me répondre comme ça vient.\n` +
-    `Même si c’est flou, même si tu débutes, même si tu changes d’avis : c’est OK.\n` +
-    `Je suis là pour comprendre ta situation et te faire avancer avec tes ressources actuelles.\n\n` +
-    `Décris-moi simplement ce que tu fais (ou ce que tu voudrais faire) en ce moment.\n` +
-    `Si tu as plusieurs idées/projets, liste-les : on choisira ensuite une priorité.`
+    `Je suis Tipote, ton coach business. On va faire un petit diagnostic ensemble pour que je puisse te créer une stratégie vraiment adaptée à toi.\n\n` +
+    `Réponds-moi comme ça vient, même si c'est flou ou que tu débutes. Il n'y a pas de mauvaise réponse.\n\n` +
+    `Pour commencer : qu'est-ce que tu fais (ou voudrais faire) comme activité ? Et à qui tu t'adresses ?`
   );
 }
 
@@ -686,9 +684,9 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Résumé de ton onboarding</DialogTitle>
+            <DialogTitle>Résumé de ton diagnostic</DialogTitle>
             <DialogDescription>
-              Vérifie que tout est correct. Ensuite je génère ton plan et je t&apos;emmène sur ton dashboard.
+              Vérifie que tout est correct. Ensuite je génère ta stratégie personnalisée.
             </DialogDescription>
           </DialogHeader>
 
@@ -790,29 +788,32 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         </div>
       ) : null}
 
-      <div className="mb-6 flex items-center gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <Sparkles className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <div className="text-xl font-semibold">Onboarding</div>
-          <div className="text-sm text-muted-foreground">Un échange simple pour personnaliser Tipote.</div>
-        </div>
-      </div>
-
-      {/* Progress indicator */}
-      {progress > 0 && !isFinalizing && (
-        <div className="mb-4 space-y-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Progression</span>
-            <span>{progress}%</span>
+      {/* Sticky header: Diagnostic + progress */}
+      <div className="sticky top-0 z-30 bg-background pb-3 pt-1">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
-          <Progress value={progress} className="h-2" />
-          {progress >= 80 && !isDone && (
-            <div className="text-xs text-primary">Presque terminé !</div>
+          <div className="flex-1">
+            <div className="text-xl font-semibold">Diagnostic</div>
+            <div className="text-sm text-muted-foreground">
+              Un échange pour comprendre ta situation et créer ta stratégie sur-mesure.
+            </div>
+          </div>
+          {progress > 0 && !isFinalizing && (
+            <div className="flex-shrink-0 text-sm font-medium text-primary">
+              {progress}%
+            </div>
           )}
         </div>
-      )}
+
+        {/* Progress bar */}
+        {progress > 0 && !isFinalizing && (
+          <div className="mt-2">
+            <Progress value={progress} className="h-1.5" />
+          </div>
+        )}
+      </div>
 
       <Card className="p-4 sm:p-6">
         <div className="space-y-4">
@@ -880,7 +881,7 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isDone ? "C’est terminé ✅" : "Ta réponse…"}
+            placeholder={isDone ? "Diagnostic terminé" : "Ta réponse…"}
             disabled={isSending || isDone || isFinalizing || showRecap || showOfferSets}
             className="min-h-[90px]"
             onKeyDown={(e) => {
@@ -892,8 +893,23 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
           />
 
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {isDone ? "Onboarding terminé ✅" : "Astuce : Ctrl/⌘ + Entrée pour envoyer"}
+            <div className="flex items-center gap-2">
+              {!isDone && !isFinalizing && !isPrimaryChoiceLockActive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                  onClick={() => void send("Je ne sais pas")}
+                  disabled={isSending || isDone || isFinalizing}
+                >
+                  Je ne sais pas / Passer
+                </Button>
+              )}
+              {!isDone && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  Ctrl/⌘ + Entrée pour envoyer
+                </span>
+              )}
             </div>
 
             {isDone ? (
