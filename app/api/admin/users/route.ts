@@ -1,14 +1,14 @@
 // app/api/admin/users/route.ts
-// Admin Users API — list & update plans
-// ✅ Protégé : uniquement hello@ethilife.fr (via Supabase session cookies)
+// Admin Users API — list & update plans + credits
+// ✅ Protégé : uniquement emails autorisés (via Supabase session cookies)
 // ✅ Reads/Writes via service_role (supabaseAdmin) pour éviter RLS
 // ✅ Source de vérité: public.profiles.plan
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
-const ADMIN_EMAIL = "hello@ethilife.fr";
+import { isAdminEmail } from "@/lib/adminEmails";
+import { ensureUserCredits } from "@/lib/credits";
 
 type UserRow = {
   id: string;
@@ -18,9 +18,11 @@ type UserRow = {
   updated_at: string | null;
 };
 
+const VALID_PLANS = ["free", "basic", "pro", "elite", "beta"] as const;
+
 function normalizePlan(plan: string) {
   const p = (plan ?? "").trim().toLowerCase();
-  if (p === "free" || p === "basic" || p === "pro" || p === "elite") return p;
+  if (VALID_PLANS.includes(p as any)) return p;
   return p || "free";
 }
 
@@ -30,8 +32,7 @@ async function assertAdmin(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const email = (session?.user?.email ?? "").toLowerCase();
-  const ok = !!session?.user?.id && email === ADMIN_EMAIL.toLowerCase();
+  const ok = !!session?.user?.id && isAdminEmail(session?.user?.email);
 
   return { ok, session };
 }
@@ -161,13 +162,105 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
+    // Sync credits bucket after plan change (best-effort)
+    let credits = null;
+    if (userId) {
+      try {
+        credits = await ensureUserCredits(userId);
+      } catch {
+        // ignore — DB function may not exist yet
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       user_id: userId || null,
       email: targetEmail || null,
       old_plan: oldPlan,
       new_plan: plan,
+      credits,
     });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+// PATCH — Admin: view or add bonus credits for a user
+export async function PATCH(req: NextRequest) {
+  try {
+    const { ok, session } = await assertAdmin(req);
+    if (!ok) {
+      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = (await req.json().catch(() => ({}))) as {
+      user_id: string;
+      action: "get" | "add";
+      amount?: number;
+    };
+
+    const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    const action = body?.action ?? "get";
+
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Missing user_id" }, { status: 400 });
+    }
+
+    if (action === "add") {
+      const amount = Number(body?.amount ?? 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ ok: false, error: "amount must be > 0" }, { status: 400 });
+      }
+
+      // First ensure credits row exists
+      await ensureUserCredits(userId);
+
+      // Read current bonus, then increment
+      const { data: current } = await supabaseAdmin
+        .from("ai_credits")
+        .select("bonus_credits_total")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const currentBonus = Number(current?.bonus_credits_total ?? 0);
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("ai_credits")
+        .update({
+          bonus_credits_total: currentBonus + amount,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq("user_id", userId);
+
+      if (updateErr) {
+        return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
+      }
+
+      // Fetch updated snapshot
+      const snapshot = await ensureUserCredits(userId);
+
+      // Log the credit addition
+      try {
+        await supabaseAdmin.from("plan_change_log").insert({
+          actor_user_id: session?.user?.id ?? null,
+          target_user_id: userId,
+          old_plan: null,
+          new_plan: null,
+          reason: `admin: +${amount} bonus credits`,
+        } as any);
+      } catch {
+        // ignore
+      }
+
+      return NextResponse.json({ ok: true, credits: snapshot });
+    }
+
+    // Default action: get credits
+    const snapshot = await ensureUserCredits(userId);
+    return NextResponse.json({ ok: true, credits: snapshot });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

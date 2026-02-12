@@ -11,13 +11,14 @@ import { listSubscriptionsForContact } from "@/lib/systemeIoClient";
 
 // ✅ Roadmap: aligner sur free/basic/pro/elite
 // 🔁 Compat: "essential" est un alias legacy de "pro"
-type StoredPlan = "free" | "basic" | "pro" | "elite";
+type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 type IncomingPlan = "basic" | "pro" | "elite" | "essential";
 
 function normalizePlan(plan: IncomingPlan | string | null | undefined): StoredPlan {
   const s = String(plan ?? "").trim().toLowerCase();
   if (!s) return "free";
   if (s.includes("elite")) return "elite";
+  if (s.includes("beta")) return "beta";
   if (s.includes("pro")) return "pro";
   if (s.includes("essential")) return "pro";
   if (s.includes("basic")) return "basic";
@@ -117,7 +118,8 @@ export async function POST() {
     const currentProduct = String((profile as any)?.product_id ?? "").trim();
     const currentContact = String((profile as any)?.sio_contact_id ?? "").trim();
 
-    const shouldUpdatePlan = inferredPlan ? currentPlan !== inferredPlan : false;
+    // Never overwrite beta plan (lifetime access) via billing sync
+    const shouldUpdatePlan = inferredPlan && currentPlan !== "beta" ? currentPlan !== inferredPlan : false;
     const shouldUpdateProduct = inferredProductId ? !currentProduct || currentProduct !== inferredProductId : false;
     const shouldUpdateContact = !currentContact || parseContactId(currentContact) !== contactId;
 

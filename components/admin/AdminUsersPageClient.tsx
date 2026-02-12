@@ -1,7 +1,7 @@
 // components/admin/AdminUsersPageClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 
 import { Card } from "@/components/ui/card";
@@ -32,7 +32,17 @@ type AdminUser = {
   updated_at: string | null;
 };
 
-const PLANS = ["free", "basic", "pro", "elite"] as const;
+type CreditsSnapshot = {
+  monthly_credits_total: number;
+  monthly_credits_used: number;
+  bonus_credits_total: number;
+  bonus_credits_used: number;
+  monthly_remaining: number;
+  bonus_remaining: number;
+  total_remaining: number;
+};
+
+const PLANS = ["free", "basic", "pro", "beta", "elite"] as const;
 
 function fmtDate(value: string | null) {
   if (!value) return "—";
@@ -48,13 +58,20 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [draftPlanById, setDraftPlanById] = useState<Record<string, string>>({});
 
+  // Credits state
+  const [creditsById, setCreditsById] = useState<Record<string, CreditsSnapshot>>({});
+  const [loadingCreditsId, setLoadingCreditsId] = useState<string | null>(null);
+  const [addCreditsId, setAddCreditsId] = useState<string | null>(null);
+  const [addCreditsAmount, setAddCreditsAmount] = useState("");
+  const [savingCreditsId, setSavingCreditsId] = useState<string | null>(null);
+
   const filteredUsers = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return users;
     return users.filter((u) => (u.email ?? "").toLowerCase().includes(needle));
   }, [q, users]);
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/users`, { method: "GET" });
@@ -78,12 +95,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadUsers]);
 
   async function savePlan(user: AdminUser) {
     const nextPlan = (draftPlanById[user.id] ?? user.plan ?? "free").toLowerCase();
@@ -123,6 +139,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
         ),
       );
 
+      // Update credits if returned
+      if (json.credits) {
+        setCreditsById((prev) => ({ ...prev, [user.id]: json.credits }));
+      }
+
       toast({
         title: "Plan mis à jour",
         description: `${user.email ?? user.id} → ${nextPlan}`,
@@ -138,6 +159,71 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     }
   }
 
+  async function loadCredits(userId: string) {
+    setLoadingCreditsId(userId);
+    try {
+      const res = await fetch(`/api/admin/users`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, action: "get" }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to load credits");
+      }
+      setCreditsById((prev) => ({ ...prev, [userId]: json.credits }));
+    } catch (e) {
+      toast({
+        title: "Erreur crédits",
+        description: e instanceof Error ? e.message : "Impossible de charger les crédits",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCreditsId(null);
+    }
+  }
+
+  async function addBonusCredits(userId: string) {
+    const amount = parseInt(addCreditsAmount, 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({
+        title: "Montant invalide",
+        description: "Le nombre de crédits doit être > 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingCreditsId(userId);
+    try {
+      const res = await fetch(`/api/admin/users`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, action: "add", amount }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to add credits");
+      }
+      setCreditsById((prev) => ({ ...prev, [userId]: json.credits }));
+      setAddCreditsAmount("");
+      setAddCreditsId(null);
+
+      toast({
+        title: "Crédits ajoutés",
+        description: `+${amount} crédits bonus`,
+      });
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible d'ajouter les crédits",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingCreditsId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -145,8 +231,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           <div className="space-y-1">
             <div className="text-base font-semibold">Utilisateurs</div>
             <div className="text-sm text-muted-foreground">
-              Modifier le plan d’un user met à jour{" "}
-              <span className="font-mono">profiles.plan</span>.
+              Modifier le plan d&apos;un user met à jour{" "}
+              <span className="font-mono">profiles.plan</span> + crédits IA.
             </div>
           </div>
 
@@ -178,9 +264,10 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[320px]">Email</TableHead>
-                <TableHead className="w-[160px]">Plan</TableHead>
-                <TableHead className="w-[220px]">Updated</TableHead>
+                <TableHead className="w-[280px]">Email</TableHead>
+                <TableHead className="w-[180px]">Plan</TableHead>
+                <TableHead className="w-[200px]">Crédits IA</TableHead>
+                <TableHead className="w-[160px]">Updated</TableHead>
                 <TableHead className="w-[140px] text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -190,14 +277,18 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 const current = (u.plan ?? "free").toLowerCase();
                 const draft = (draftPlanById[u.id] ?? current).toLowerCase();
                 const dirty = draft !== current;
+                const credits = creditsById[u.id];
+                const isLoadingCredits = loadingCreditsId === u.id;
+                const isAddingCredits = addCreditsId === u.id;
+                const isSavingCredits = savingCreditsId === u.id;
 
                 return (
                   <TableRow key={u.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <div className="font-medium">{u.email ?? "—"}</div>
+                        <div className="font-medium text-sm">{u.email ?? "—"}</div>
                         <div className="text-xs text-muted-foreground font-mono">
-                          {u.id}
+                          {u.id.slice(0, 8)}…
                         </div>
                       </div>
                     </TableCell>
@@ -230,6 +321,69 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       </div>
                     </TableCell>
 
+                    <TableCell>
+                      {credits ? (
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">
+                            {credits.total_remaining} restants
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Mensuel: {credits.monthly_remaining}/{credits.monthly_credits_total}
+                            {" · "}
+                            Bonus: {credits.bonus_remaining}/{credits.bonus_credits_total}
+                          </div>
+                          {isAddingCredits ? (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={addCreditsAmount}
+                                onChange={(e) => setAddCreditsAmount(e.target.value)}
+                                placeholder="Nb"
+                                className="w-20 h-7 text-xs"
+                              />
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-7 text-xs px-2"
+                                disabled={isSavingCredits}
+                                onClick={() => addBonusCredits(u.id)}
+                              >
+                                {isSavingCredits ? "…" : "+"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs px-2"
+                                onClick={() => { setAddCreditsId(null); setAddCreditsAmount(""); }}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-xs px-1"
+                              onClick={() => { setAddCreditsId(u.id); setAddCreditsAmount(""); }}
+                            >
+                              + Ajouter bonus
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={isLoadingCredits}
+                          onClick={() => loadCredits(u.id)}
+                        >
+                          {isLoadingCredits ? "…" : "Voir crédits"}
+                        </Button>
+                      )}
+                    </TableCell>
+
                     <TableCell className="text-sm text-muted-foreground">
                       {fmtDate(u.updated_at)}
                     </TableCell>
@@ -250,7 +404,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               {filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     Aucun utilisateur trouvé.

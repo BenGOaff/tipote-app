@@ -42,7 +42,7 @@ type SubscriptionPayload = {
   error?: string;
 };
 
-type PlanKey = "free" | "basic" | "pro" | "elite" | "essential";
+type PlanKey = "free" | "basic" | "pro" | "elite" | "essential" | "beta";
 
 const CREDITS_PACK_URL = "https://www.tipote.com/pack-credits";
 
@@ -57,6 +57,7 @@ function normalizePlan(planName: string | null | undefined): Exclude<PlanKey, "e
 
   if (!s) return "free";
   if (s.includes("elite")) return "elite";
+  if (s.includes("beta")) return "beta";
   if (s.includes("pro")) return "pro";
   if (s.includes("essential")) return "pro";
   if (s.includes("basic")) return "basic";
@@ -92,6 +93,8 @@ function planMeta(plan: Exclude<PlanKey, "essential">) {
   switch (plan) {
     case "basic":
       return { label: "Basic", price: 19, desc: "1 module • Content Hub" };
+    case "beta":
+      return { label: "Beta", price: 0, desc: "Accès Pro lifetime (beta)" };
     case "pro":
       return { label: "Pro", price: 49, desc: "3 modules • Coach IA • Content Hub" };
     case "elite":
@@ -281,8 +284,9 @@ export default function BillingSection({ email }: Props) {
     window.location.href = url;
   };
 
+  const isBeta = currentPlan === "beta";
   const basicIsCurrent = currentPlan === "basic";
-  const proIsCurrent = currentPlan === "pro";
+  const proIsCurrent = currentPlan === "pro" || isBeta;
   const eliteIsCurrent = currentPlan === "elite";
 
   return (

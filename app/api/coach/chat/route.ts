@@ -36,7 +36,7 @@ const BodySchema = z
   })
   .strict();
 
-type StoredPlan = "free" | "basic" | "pro" | "elite";
+type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
 type CoachSuggestionType = "update_offers" | "update_tasks" | "open_tipote_tool";
 
@@ -162,6 +162,7 @@ function normalizePlan(plan: string | null | undefined): StoredPlan {
   const s = String(plan ?? "").trim().toLowerCase();
   if (!s) return "free";
   if (s.includes("elite")) return "elite";
+  if (s.includes("beta")) return "beta";
   if (s.includes("pro")) return "pro";
   if (s.includes("essential")) return "pro";
   if (s.includes("basic")) return "basic";
@@ -767,7 +768,7 @@ export async function POST(req: NextRequest) {
     const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
     let isTeaser = false;
 
-    if (plan !== "pro" && plan !== "elite") {
+    if (plan !== "pro" && plan !== "elite" && plan !== "beta") {
       let usedQuery = supabase
         .from("coach_messages")
         .select("id")

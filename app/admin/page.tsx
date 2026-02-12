@@ -1,5 +1,5 @@
 // app/admin/page.tsx
-// Admin dashboard minimal — accessible uniquement à hello@ethilife.fr
+// Admin dashboard — accessible uniquement aux emails autorisés
 // Protégé côté server (redirect) + middleware + API admin
 
 import { redirect } from "next/navigation";
@@ -7,8 +7,7 @@ import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import AdminUsersPageClient from "@/components/admin/AdminUsersPageClient";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-
-const ADMIN_EMAIL = "hello@ethilife.fr";
+import { isAdminEmail } from "@/lib/adminEmails";
 
 export default async function AdminPage() {
   const supabase = await getSupabaseServerClient();
@@ -24,7 +23,7 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  if (userEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  if (!isAdminEmail(userEmail)) {
     redirect("/dashboard");
   }
 
@@ -36,11 +35,11 @@ export default async function AdminPage() {
     >
       <div className="space-y-2">
         <div className="text-sm text-muted-foreground">
-          Gestion manuelle des plans et accès (réservé à {ADMIN_EMAIL}).
+          Gestion manuelle des plans, crédits et accès.
         </div>
       </div>
 
-      <AdminUsersPageClient adminEmail={ADMIN_EMAIL} />
+      <AdminUsersPageClient adminEmail={userEmail} />
     </AppShell>
   );
 }
