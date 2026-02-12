@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET() {
+  return NextResponse.json({ ok: true, route: "/api/n8n/linkedin" }, { status: 200 });
+}
+
+
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-tipote-secret");
   if (!secret || secret !== process.env.N8N_SHARED_SECRET) {
