@@ -270,10 +270,11 @@ export default async function StrategyPage() {
 
   let personaFromDb: { title: string; pains: string[]; desires: string[]; channels: string[] } | null = null;
   try {
-    // Use limit(1) + order to safely handle multiple persona rows (avoids maybeSingle error)
+    // Note: personas table has NO 'channels' column — channels live in persona_json.
+    // Only select columns that actually exist in the schema.
     const { data: personaRows } = await supabaseAdmin
       .from("personas")
-      .select("name, pains, desires, channels")
+      .select("name, pains, desires, persona_json")
       .eq("user_id", user.id)
       .eq("role", "client_ideal")
       .order("updated_at", { ascending: false })
@@ -290,11 +291,15 @@ export default async function StrategyPage() {
         return [];
       };
 
+      // Extract channels from persona_json (jsonb)
+      const pj = ((personaRow as AnyRecord).persona_json ?? {}) as AnyRecord;
+      const channelsRaw = pj.channels ?? pj.preferred_channels ?? [];
+
       personaFromDb = {
         title: asString(personaRow.name),
         pains: parseJson(personaRow.pains),
         desires: parseJson(personaRow.desires),
-        channels: parseJson(personaRow.channels),
+        channels: parseJson(channelsRaw),
       };
     }
   } catch {

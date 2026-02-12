@@ -32,10 +32,11 @@ export async function GET() {
     }
 
     // Persona is unique per user+role — no project_id filter needed.
-    // Use limit(1) + order to handle potential duplicate rows gracefully.
+    // Note: the personas table has NO 'channels' column — channels are stored
+    // in persona_json (jsonb). Only select columns that actually exist.
     const { data: rows, error } = await supabaseAdmin
       .from("personas")
-      .select("name, pains, desires, channels, persona_json, updated_at")
+      .select("name, pains, desires, persona_json, updated_at")
       .eq("user_id", auth.user.id)
       .eq("role", "client_ideal")
       .order("updated_at", { ascending: false })
@@ -59,13 +60,17 @@ export async function GET() {
       return v;
     };
 
+    // Channels live in persona_json, not as a separate column
+    const pj = (data.persona_json ?? {}) as AnyRecord;
+    const channelsRaw = pj.channels ?? pj.preferred_channels ?? [];
+
     return NextResponse.json({
       ok: true,
       persona: {
         title: data.name || "",
         pains: parseJson(data.pains) || [],
         desires: parseJson(data.desires) || [],
-        channels: parseJson(data.channels) || [],
+        channels: parseJson(channelsRaw) || [],
       },
     }, { status: 200 });
   } catch (e) {
@@ -105,14 +110,25 @@ export async function PATCH(request: NextRequest) {
     const now = new Date().toISOString();
 
     // 1. Update personas table
-    // Persona is unique per user+role. We use UPDATE (by user_id+role) then
-    // fall back to INSERT if no row exists. This avoids reliance on specific
-    // column names (id) or onConflict constraint definitions.
+    // IMPORTANT: the personas table has NO 'channels', 'triggers', or
+    // 'exact_phrases' columns. Channels are stored in persona_json (jsonb).
+    // Only write to columns that actually exist in the schema.
+
+    // First, read current persona_json to merge channels into it
+    const { data: currentRows } = await supabaseAdmin
+      .from("personas")
+      .select("persona_json")
+      .eq("user_id", auth.user.id)
+      .eq("role", "client_ideal")
+      .limit(1);
+
+    const currentPj = ((currentRows?.[0]?.persona_json ?? {}) as AnyRecord);
+
     const dataFields: AnyRecord = {
       name: title,
       pains: JSON.stringify(pains),
       desires: JSON.stringify(desires),
-      channels: JSON.stringify(channels),
+      persona_json: { ...currentPj, title, pains, desires, channels },
       updated_at: now,
     };
 
@@ -129,20 +145,35 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ ok: false, error: updateError.message }, { status: 400 });
     }
 
-    // Tier 2: If no row existed to update, INSERT a new one
+    // Tier 2: If no row existed, INSERT (strategy_id is NOT NULL so we need it)
     if (!updatedRows || updatedRows.length === 0) {
-      const { error: insertError } = await supabaseAdmin
-        .from("personas")
-        .insert({
-          user_id: auth.user.id,
-          ...(projectId ? { project_id: projectId } : {}),
-          role: "client_ideal",
-          ...dataFields,
-        });
+      // Try to get a strategy_id for this user (required by schema)
+      let strategyId: string | null = null;
+      const { data: stratRow } = await supabaseAdmin
+        .from("strategies")
+        .select("id")
+        .eq("user_id", auth.user.id)
+        .limit(1);
+      strategyId = stratRow?.[0]?.id ?? null;
 
-      if (insertError) {
-        console.error("Persona insert error:", insertError);
-        return NextResponse.json({ ok: false, error: insertError.message }, { status: 400 });
+      if (!strategyId) {
+        // Cannot insert without strategy_id — skip personas table, plan_json update below will still work
+        console.warn("No strategy_id found, skipping personas table insert");
+      } else {
+        const { error: insertError } = await supabaseAdmin
+          .from("personas")
+          .insert({
+            user_id: auth.user.id,
+            strategy_id: strategyId,
+            ...(projectId ? { project_id: projectId } : {}),
+            role: "client_ideal",
+            ...dataFields,
+          });
+
+        if (insertError) {
+          console.error("Persona insert error:", insertError);
+          // Non-fatal: plan_json update below will still save the data
+        }
       }
     }
 
