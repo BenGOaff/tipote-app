@@ -58,6 +58,32 @@ export async function ensureUserCredits(userId: string): Promise<CreditsSnapshot
  * ✅ Consume credits (RPC, atomic via row lock inside function)
  * Retourne le nouveau solde.
  */
+/**
+ * ✅ Add bonus credits for a user (admin action).
+ * Uses RPC admin_add_bonus_credits (must be created in Supabase SQL Editor).
+ */
+export async function addBonusCredits(userId: string, amount: number): Promise<CreditsSnapshot> {
+  // Ensure credits row exists first
+  await ensureUserCredits(userId);
+
+  const { data, error } = await supabaseAdmin.rpc("admin_add_bonus_credits", {
+    p_user_id: userId,
+    p_amount: amount,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to add bonus credits");
+  }
+
+  // If the RPC returns the updated row, use it; otherwise re-fetch
+  if (data && typeof data === "object" && "bonus_credits_total" in data) {
+    return computeCreditsSnapshot(data as CreditsBalance);
+  }
+
+  // Fallback: re-fetch current state
+  return ensureUserCredits(userId);
+}
+
 export async function consumeCredits(
   userId: string,
   amount: number,
