@@ -268,15 +268,16 @@ function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
 
     if (!(hasTopic && hasModel && hasFocus && hasAudience)) return false;
 
-    // Important: need at least 3 out of these 7 to have a solid profile
+    // Important: need at least 5 out of these to have coaching-level depth
     const importantKeys = [
       "revenue_goal_monthly", "has_offers", "conversion_status",
       "content_channels_priority", "time_available_hours_week",
       "tone_preference_hint", "biggest_blocker",
+      "situation_tried", "non_negotiables", "offers_satisfaction",
     ];
     const importantCount = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
 
-    return importantCount >= 3;
+    return importantCount >= 5;
   } catch {
     return false;
   }
@@ -595,16 +596,17 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
     parts.push(`Ton domaine : ${niche}.`);
   }
 
-  // Business model
+  // Business model — human-readable labels
   const model = typeof knownFacts["business_model"] === "string" ? String(knownFacts["business_model"]).trim() : "";
   if (model) {
     const modelLabels: Record<string, string> = {
-      offers: "vente de produits / services",
-      affiliate: "affiliation",
-      service: "prestation de services",
-      freelancing: "freelancing",
-      content_creator: "création de contenu",
-      mixed: "modèle mixte",
+      offers: "Vente de produits / services",
+      affiliate: "Affiliation (promotion des produits d'autres)",
+      service: "Prestation de services",
+      freelancing: "Freelancing",
+      content_creator: "Création de contenu",
+      mixed: "Modèle mixte",
+      unsure: "À définir",
     };
     parts.push(`Modèle économique : ${modelLabels[model] || model}.`);
   }
@@ -619,7 +621,7 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   // Revenue goal
   const rev = knownFacts["revenue_goal_monthly"];
   if (typeof rev === "number" && Number.isFinite(rev)) {
-    parts.push(`Objectif de revenu mensuel : ${rev.toLocaleString("fr-FR")}€.`);
+    parts.push(`Objectif de revenu mensuel : ${rev.toLocaleString("fr-FR")} \u20AC.`);
   }
 
   // Time available
@@ -631,7 +633,7 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
     parts.push(`Temps disponible : ${timeStr}.`);
   }
 
-  // Conversion status
+  // Conversion status — human-readable labels
   const conv =
     typeof knownFacts["conversion_status"] === "string" ? String(knownFacts["conversion_status"]).trim() : "";
   if (conv) {
@@ -646,11 +648,44 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
   // Offers info
   const hasOffers = knownFacts["has_offers"];
   const offersCount = knownFacts["offers_count"];
-  if (hasOffers === true && typeof offersCount === "number") {
-    parts.push(`Tu as ${offersCount} offre${offersCount > 1 ? "s" : ""} en place.`);
+  const offersList = Array.isArray(knownFacts["offers_list"]) ? knownFacts["offers_list"] as any[] : [];
+  if (hasOffers === true) {
+    if (offersList.length > 0) {
+      const offerNames = offersList
+        .map((o: any) => {
+          const n = typeof o?.name === "string" ? o.name.trim() : "";
+          const p = typeof o?.price === "string" ? o.price.trim() : typeof o?.price === "number" ? `${o.price}\u20AC` : "";
+          return n ? (p ? `${n} (${p})` : n) : null;
+        })
+        .filter(Boolean);
+      if (offerNames.length > 0) {
+        parts.push(`Tes offres : ${offerNames.join(", ")}.`);
+      }
+    } else if (typeof offersCount === "number") {
+      parts.push(`Tu as ${offersCount} offre${offersCount > 1 ? "s" : ""} en place.`);
+    } else {
+      parts.push("Tu as déjà des offres en place.");
+    }
   } else if (hasOffers === false) {
     parts.push("Tu n'as pas encore d'offre structurée.");
   }
+
+  // Offers satisfaction — human-readable labels
+  const offersSat =
+    typeof knownFacts["offers_satisfaction"] === "string" ? String(knownFacts["offers_satisfaction"]).trim() : "";
+  if (offersSat) {
+    const satLabels: Record<string, string> = {
+      satisfied: "Tu es satisfait(e) de tes offres actuelles",
+      wants_rework: "Tu voudrais retravailler tes offres",
+      unsure: "Tu hésites sur tes offres actuelles",
+    };
+    if (satLabels[offersSat]) parts.push(`${satLabels[offersSat]}.`);
+  }
+
+  // Situation tried
+  const tried =
+    typeof knownFacts["situation_tried"] === "string" ? String(knownFacts["situation_tried"]).trim() : "";
+  if (tried) parts.push(`Ce que tu as déjà essayé : ${tried}.`);
 
   // Channels
   const channels = knownFacts["acquisition_channels"];
@@ -690,7 +725,7 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
     typeof knownFacts["biggest_challenge"] === "string" ? String(knownFacts["biggest_challenge"]).trim() : "";
   if (blocker) parts.push(`Plus gros blocage : ${blocker}.`);
 
-  // Primary focus
+  // Primary focus — human-readable labels
   const focus = typeof knownFacts["primary_focus"] === "string" ? String(knownFacts["primary_focus"]).trim() : "";
   if (focus) {
     const focusLabels: Record<string, string> = {
@@ -703,6 +738,16 @@ function buildRecapProse(knownFacts: Record<string, unknown>, firstName?: string
     };
     parts.push(`Priorité : ${focusLabels[focus] || focus}.`);
   }
+
+  // Non-negotiables
+  const nonNeg =
+    typeof knownFacts["non_negotiables"] === "string" ? String(knownFacts["non_negotiables"]).trim() : "";
+  if (nonNeg) parts.push(`Ce que tu refuses de faire : ${nonNeg}.`);
+
+  // Root fear (if shared)
+  const rootFear =
+    typeof knownFacts["root_fear"] === "string" ? String(knownFacts["root_fear"]).trim() : "";
+  if (rootFear) parts.push(`Frein identifié : ${rootFear}.`);
 
   if (parts.length <= 1) {
     parts.push("Je n'ai pas encore beaucoup d'informations, mais on va pouvoir construire ta stratégie avec ce qu'on a.");
@@ -854,6 +899,29 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if (key === "instagram_url" && isNonEmptyString(value)) setIf("instagram_url", getStr(value, 400));
     if (key === "youtube_url" && isNonEmptyString(value)) setIf("youtube_url", getStr(value, 400));
     if (key === "website_url" && isNonEmptyString(value)) setIf("website_url", getStr(value, 400));
+
+    // ✅ offer_sales_count → offer_sales_count column
+    if (key === "offer_sales_count" && isNonEmptyString(value)) setIf("offer_sales_count", getStr(value, 60));
+
+    // ✅ persona (from real_persona_detail or persona)
+    if ((key === "real_persona_detail" || key === "persona") && isNonEmptyString(value)) setIf("persona", getStr(value, 500));
+
+    // ✅ New coaching fields → stored in diagnostic_profile jsonb column as a bundle
+    // These are collected individually and assembled at the end
+  }
+
+  // Bundle coaching fields into diagnostic_profile jsonb
+  const coachingFields: Record<string, string> = {};
+  for (const f of facts) {
+    const key = normalizeKey(f.key);
+    const v = typeof f.value === "string" ? f.value.trim() : "";
+    if (!v) continue;
+    if (["situation_tried", "root_fear", "differentiation", "non_negotiables", "constraints", "objective_90_days", "real_persona_detail", "offers_satisfaction"].includes(key)) {
+      coachingFields[key] = v;
+    }
+  }
+  if (Object.keys(coachingFields).length > 0) {
+    setIf("diagnostic_profile", coachingFields);
   }
 
   return patch;
@@ -1078,7 +1146,7 @@ export async function POST(req: NextRequest) {
     // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin.
     // Guarded by MIN_EXCHANGES (3) to prevent premature finish.
     try {
-      const MIN_EXCHANGES_EARLY = 5;
+      const MIN_EXCHANGES_EARLY = 7;
       const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
       if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY) {
         const finishMessage =
@@ -1255,10 +1323,19 @@ export async function POST(req: NextRequest) {
       // ignore
     }
 
-    // ✅ Auto-extract affiliate hints
+    // ✅ Auto-extract affiliate hints (conservative — avoid false positives)
     try {
       const t = userMsg.toLowerCase();
-      if (!isNonEmptyString(knownFacts["business_model"]) && (t.includes("affili") || t.includes("amazon") || t.includes("programme") || t.includes("commission"))) {
+      // Only trigger affiliate detection on STRONG signals, not broad words like "programme" or "commission"
+      const isStrongAffiliateSignal =
+        t.includes("affiliation") ||
+        t.includes("affilié") ||
+        t.includes("affiliee") ||
+        t.includes("affiliate") ||
+        t.includes("programme d'affiliation") ||
+        t.includes("marketing d'affiliation") ||
+        (t.includes("amazon") && (t.includes("lien") || t.includes("partenaire") || t.includes("commission")));
+      if (!isNonEmptyString(knownFacts["business_model"]) && isStrongAffiliateSignal) {
         await upsertOneFact({ key: "business_model", value: "affiliate", confidence: "medium", source: "server_extract_affiliate" });
       }
       if (t.includes("amazon") && !hasNonEmptyFact(knownFacts, "affiliate_programs_known")) {
@@ -1321,8 +1398,8 @@ export async function POST(req: NextRequest) {
     // ═══════════════════════════════════════════════════
     // EXCHANGE LIMITS — prevent premature finish AND infinite loops
     // ═══════════════════════════════════════════════════
-    const MIN_EXCHANGES = 5;  // Never finish before the user has answered 5 questions
-    const MAX_EXCHANGES = 10; // Force finish after 10 exchanges to prevent loops
+    const MIN_EXCHANGES = 7;  // Never finish before the user has answered 7 questions (coaching depth)
+    const MAX_EXCHANGES = 12; // Force finish after 12 exchanges to prevent loops
 
     const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
 
@@ -1333,17 +1410,18 @@ export async function POST(req: NextRequest) {
       "revenue_goal_monthly", "has_offers", "conversion_status",
       "content_channels_priority", "time_available_hours_week",
       "tone_preference_hint", "biggest_blocker",
+      "situation_tried", "non_negotiables", "offers_satisfaction",
     ].filter((k) => !hasNonEmptyFact(knownFacts, k));
 
     let phaseHint = "";
     if (exchangeCount <= 2) {
-      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model, et à qui il s'adresse.";
-    } else if (exchangeCount <= 4) {
-      phaseHint = "Tu es en PHASE 2 (comprendre la situation). Pose une question sur ses ventes, ses offres, où il en est, son plus gros blocage actuel (biggest_blocker).";
-    } else if (exchangeCount <= 6) {
-      phaseHint = "Tu es en PHASE 3 (comprendre l'objectif et les préférences). Pose une question sur sa priorité, ses objectifs de revenu, le temps qu'il peut y consacrer.";
-    } else if (exchangeCount <= 8) {
-      phaseHint = "Tu es en PHASE 4 (ton, contenu, canaux). Pose une question sur : le ton qu'il préfère pour sa communication (tone_preference_hint), les types de contenu qui l'intéressent (content_channels_priority), ou ses canaux de trafic actuels. Si tu as déjà ces infos, mets should_finish=true.";
+      phaseHint = "Tu es en PHASE 1 (comprendre le projet). Pose une question sur ce que fait l'utilisateur, son domaine, son business model, et à qui il s'adresse. RAPPEL : n'assigne JAMAIS business_model='affiliate' sauf si l'utilisateur dit EXPLICITEMENT qu'il fait de l'affiliation (promouvoir les produits des autres contre commission).";
+    } else if (exchangeCount <= 5) {
+      phaseHint = "Tu es en PHASE 2 (comprendre la situation réelle). Adapte selon le profil : si offres existantes, demande détails + satisfaction. Si pas d'offre, demande ce qui a été essayé. Pose une question sur ses ventes, ses offres, son plus gros blocage actuel (biggest_blocker), ce qu'il a déjà essayé (situation_tried).";
+    } else if (exchangeCount <= 7) {
+      phaseHint = "Tu es en PHASE 3 (objectifs et ressources). Pose une question sur sa priorité (primary_focus), ses objectifs de revenu (revenue_goal_monthly), le temps qu'il peut y consacrer (time_available_hours_week).";
+    } else if (exchangeCount <= 9) {
+      phaseHint = "Tu es en PHASE 4 (style, ton, limites). Pose une question sur : le ton de communication (tone_preference_hint), les types de contenu (content_channels_priority), ou ce qu'il refuse de faire (non_negotiables). Si tu as déjà ces infos, mets should_finish=true.";
     } else {
       phaseHint = "Tu es en PHASE 5 (finalisation). Si il manque encore des facts importants, pose UNE dernière question. Sinon mets should_finish=true.";
     }
@@ -1468,12 +1546,12 @@ export async function POST(req: NextRequest) {
 
     // Compute progress for the UI (0-100)
     const essentialKeys = ["main_topic", "business_model", "primary_focus", "target_audience_short"];
-    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week", "tone_preference_hint", "biggest_blocker"];
+    const importantKeys = ["revenue_goal_monthly", "has_offers", "conversion_status", "content_channels_priority", "time_available_hours_week", "tone_preference_hint", "biggest_blocker", "situation_tried", "non_negotiables", "offers_satisfaction"];
     const essentialDone = essentialKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const importantDone = importantKeys.filter((k) => hasNonEmptyFact(knownFacts, k)).length;
     const progress = Math.min(
       100,
-      Math.round((essentialDone / essentialKeys.length) * 70 + (importantDone / importantKeys.length) * 30),
+      Math.round((essentialDone / essentialKeys.length) * 60 + (importantDone / importantKeys.length) * 40),
     );
 
     const responsePayload: Record<string, any> = {
