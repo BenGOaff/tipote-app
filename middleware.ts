@@ -1,6 +1,7 @@
 // middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { isAdminEmail } from "@/lib/adminEmails";
 
 /**
  * Invariants (anti-régression)
@@ -31,8 +32,6 @@ const PUBLIC_PREFIXES = [
   "/icon.png",
   "/tipote-logo.png",
 ];
-
-const ADMIN_EMAIL = "hello@ethilife.fr";
 
 const PROTECTED_PREFIXES = [
   "/app",
@@ -98,10 +97,9 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // ✅ Admin: accessible uniquement à l'email admin (et ne dépend pas de l'onboarding)
+    // ✅ Admin: accessible uniquement aux emails admin (et ne dépend pas de l'onboarding)
     if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-      const email = (user.email ?? "").toLowerCase();
-      if (email !== ADMIN_EMAIL.toLowerCase()) {
+      if (!isAdminEmail(user.email)) {
         const url = req.nextUrl.clone();
         url.pathname = "/dashboard";
         return NextResponse.redirect(url);
