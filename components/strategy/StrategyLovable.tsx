@@ -264,7 +264,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     : [];
 
   // Sync phases local si props changent (ex: router.refresh après toggle)
-  // On ne force pas en mode édition pour éviter d’écraser l’ordre local en cours.
+  // On ne force pas en mode édition pour éviter d'écraser l'ordre local en cours.
   useMemo(() => {
     if (!isEditing) {
       setPhases(props.phases || []);
@@ -272,6 +272,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.phases]);
+
+  // Sync persona when props change (after router.refresh)
+  useMemo(() => {
+    if (!isPersonaEditOpen) {
+      setLocalPersona(props.persona);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.persona]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -474,116 +482,103 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const phasesForRender = isEditing ? phases : props.phases;
 
   const handleUpdatePhase = useCallback(
-    async (
-      phaseIndex: number,
-      updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] },
-    ) => {
-      const originalPhase = (phasesForRender || [])[phaseIndex];
-      if (!originalPhase) return;
-
-      const originalIds = new Set(
-        (originalPhase.tasks || []).map((t) => String(t.id)),
-      );
-      const updatedIds = new Set(
-        (updatedPhase.tasks || []).map((t) => String(t.id)),
-      );
-
-      // Tasks to create (in updated but not in original)
-      const newTasks = (updatedPhase.tasks || []).filter(
-        (t) => !originalIds.has(String(t.id)),
-      );
-
-      // Tasks to delete (in original but not in updated)
-      const deletedTaskIds = (originalPhase.tasks || [])
-        .map((t) => String(t.id))
-        .filter((id) => !updatedIds.has(id));
-
-      const due_date = phaseIndexToDueDate(phaseIndex);
-
-      // Create new tasks via API
-      const createdTasks: TaskRow[] = [];
-      for (const t of newTasks) {
-        try {
-          const res = await fetch("/api/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: t.task,
-              due_date,
-              priority: "high",
-              status: t.done ? "done" : "todo",
-            }),
-          });
-          const json = (await res.json().catch(() => null)) as
-            | { ok?: boolean; task?: TaskRow }
-            | null;
-          if (res.ok && json?.ok && json.task) {
-            createdTasks.push(json.task);
-          }
-        } catch {
-          // continue with other tasks
-        }
-      }
-
-      // Delete removed tasks via API
-      for (const id of deletedTaskIds) {
-        try {
-          await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
-            method: "DELETE",
-          });
-        } catch {
-          // continue
-        }
-      }
-
-      // Update local phases state
-      setPhases((prev) => {
-        const next = [...prev];
-        const ph = next[phaseIndex];
-        if (!ph) return prev;
-
-        // Keep tasks that weren't deleted, and add created tasks
-        const keptTasks = (ph.tasks || []).filter(
-          (t) => !deletedTaskIds.includes(String(t.id)),
-        );
-
-        // Map new task order from updatedPhase, replacing temp IDs with real IDs
-        const createdById = new Map<string, TaskRow>();
-        let createdIdx = 0;
-        for (const t of newTasks) {
-          if (createdIdx < createdTasks.length) {
-            createdById.set(t.id, createdTasks[createdIdx]);
-            createdIdx++;
-          }
-        }
-
-        const finalTasks: TaskRow[] = updatedPhase.tasks
-          .map((t) => {
-            // If it's a newly created task, use the API-returned task
-            const created = createdById.get(t.id);
-            if (created) return created;
-
-            // Otherwise, find the existing task
-            const existing = keptTasks.find(
-              (kt) => String(kt.id) === String(t.id),
-            );
-            return existing || null;
-          })
-          .filter(Boolean) as TaskRow[];
-
-        next[phaseIndex] = { ...ph, tasks: finalTasks };
-        return next;
-      });
-
+    (_phaseIndex: number, _updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] }) => {
+      // Tasks are now persisted immediately via onAddTask/onDeleteTask
+      // This callback just shows confirmation and refreshes
       toast({
         title: "Phase mise à jour",
         description: "Les modifications ont été enregistrées",
       });
-
-      // Refresh to get fresh server data
       router.refresh();
     },
-    [phasesForRender, toast, router],
+    [toast, router],
+  );
+
+  // Wrapper for addTask that updates modal local state + persists via API
+  const handleModalAddTask = useCallback(
+    async (taskName: string, phaseIndex: number) => {
+      const due_date = phaseIndexToDueDate(phaseIndex);
+
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: taskName,
+          due_date,
+          priority: "high",
+          status: "todo",
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as
+        | { ok?: boolean; task?: TaskRow; error?: string }
+        | null;
+
+      if (!res.ok || !json?.ok || !json?.task?.id) {
+        toast({
+          title: "Erreur",
+          description: json?.error || "Impossible d'ajouter la tâche.",
+          variant: "destructive",
+        });
+        throw new Error("Failed to add task");
+      }
+
+      // Update local phases state immediately so the modal reflects the change
+      setPhases((prev) => {
+        const next = [...prev];
+        const ph = next[phaseIndex] ?? null;
+        if (!ph) return prev;
+
+        next[phaseIndex] = {
+          ...ph,
+          tasks: [...(ph.tasks || []), json.task as TaskRow],
+        };
+        return next;
+      });
+
+      // Refresh to sync server data
+      router.refresh();
+    },
+    [toast, router],
+  );
+
+  // Wrapper for deleteTask that persists via API
+  const handleModalDeleteTask = useCallback(
+    async (taskId: string) => {
+      // Update local state immediately
+      setPhases((prev) =>
+        prev.map((ph) => ({
+          ...ph,
+          tasks: (ph.tasks || []).filter((t) => String(t.id) !== String(taskId)),
+        })),
+      );
+
+      try {
+        const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+          method: "DELETE",
+        });
+        const json = (await res.json().catch(() => null)) as
+          | { ok?: boolean; error?: string }
+          | null;
+
+        if (!res.ok || !json?.ok) {
+          toast({
+            title: "Erreur",
+            description: json?.error || "Impossible de supprimer la tâche.",
+            variant: "destructive",
+          });
+        }
+      } catch {
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer la tâche.",
+          variant: "destructive",
+        });
+      }
+
+      router.refresh();
+    },
+    [toast, router],
   );
 
   const openPhase = useCallback(
@@ -1177,6 +1172,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   phaseIndex={selectedPhaseIndex}
                   onToggleTask={toggleTask}
                   onUpdatePhase={handleUpdatePhase}
+                  onAddTask={handleModalAddTask}
+                  onDeleteTask={handleModalDeleteTask}
                 />
               );
             })()}
@@ -1269,7 +1266,12 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             persona={localPersona}
             onSaved={(updated) => {
               setLocalPersona(updated);
-              router.refresh();
+              toast({
+                title: "Persona mis à jour",
+                description: "Les modifications ont été enregistrées",
+              });
+              // Delay refresh to ensure local state is committed first
+              setTimeout(() => router.refresh(), 500);
             }}
           />
         </main>

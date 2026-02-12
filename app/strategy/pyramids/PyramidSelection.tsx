@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useToast } from "@/components/ui/use-toast";
-import { ampTrack } from "@/lib/telemetry/amplitude-client";
+
 
 interface OfferDetail {
   title: string;
@@ -273,12 +273,6 @@ export default function PyramidSelection() {
         throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
       }
 
-      ampTrack("tipote_offer_set_selected", {
-        selected_index: selectedIndex,
-        offer_set_id: selected.id,
-        offer_set_name: selected.name,
-      });
-
       // ✅ Générer la stratégie complète (idempotent)
       let fullRes: Response | null = null;
       let fullJson: any = null;
@@ -306,15 +300,6 @@ export default function PyramidSelection() {
       if (!syncRes.ok || syncJson?.ok === false) {
         throw new Error(syncJson?.error || "Impossible de générer les tâches.");
       }
-
-      ampTrack("tipote_tasks_synced", {
-        offer_set_id: selected.id,
-        offer_set_name: selected.name,
-        selected_index: selectedIndex,
-        inserted: syncJson?.inserted ?? null,
-        updated: syncJson?.updated ?? null,
-        total: syncJson?.total ?? null,
-      });
 
       toast({
         title: "Stratégie sélectionnée ✅",

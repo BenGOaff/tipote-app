@@ -20,9 +20,9 @@ import {
   Calendar,
   CheckCircle2,
   Pencil,
-  Save,
   X,
   ListChecks,
+  Loader2,
 } from "lucide-react";
 import {
   DndContext,
@@ -64,6 +64,8 @@ interface PhaseDetailModalProps {
   phaseIndex: number;
   onUpdatePhase: (phaseIndex: number, phase: Phase) => void;
   onToggleTask?: (taskId: string, nextChecked: boolean) => void;
+  onAddTask?: (taskName: string, phaseIndex: number) => Promise<void>;
+  onDeleteTask?: (taskId: string) => Promise<void>;
 }
 
 const SortableTaskItem = ({
@@ -180,13 +182,16 @@ export const PhaseDetailModal = ({
   phaseIndex,
   onUpdatePhase,
   onToggleTask,
+  onAddTask,
+  onDeleteTask,
 }: PhaseDetailModalProps) => {
   const [localPhase, setLocalPhase] = useState<Phase>(phase);
   const [isEditing, setIsEditing] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
   const [savedPhase, setSavedPhase] = useState<Phase>(phase);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ Sync quand on ouvre la modale ou change de phase (pas quand les données de la même phase sont rafraîchies)
+  // Sync when modal opens or phase changes
   useEffect(() => {
     if (!isOpen) return;
     setLocalPhase(phase);
@@ -195,6 +200,13 @@ export const PhaseDetailModal = ({
     setNewTaskName("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, phaseIndex]);
+
+  // Also sync when phase prop updates (e.g. after router.refresh)
+  useEffect(() => {
+    if (!isEditing && isOpen) {
+      setLocalPhase(phase);
+    }
+  }, [phase, isEditing, isOpen]);
 
   const descriptionData = useMemo(() => {
     return phaseDescriptions[localPhase.title] || phaseDescriptions[phase.title];
@@ -224,7 +236,6 @@ export const PhaseDetailModal = ({
           t.id === taskId ? { ...t, done: !t.done } : t,
         );
         const progress = calculateProgress(tasks);
-        // Find the new done state for the toggled task
         const toggled = tasks.find((t) => t.id === taskId);
         if (toggled && onToggleTask) {
           onToggleTask(taskId, toggled.done);
@@ -236,31 +247,54 @@ export const PhaseDetailModal = ({
   );
 
   const handleDeleteTask = useCallback(
-    (taskId: string) => {
+    async (taskId: string) => {
+      // Immediately update local UI
       setLocalPhase((prev) => {
         const tasks = (prev.tasks || []).filter((t) => t.id !== taskId);
         const progress = calculateProgress(tasks);
         return { ...prev, tasks, progress };
       });
+
+      // Persist via API if callback provided
+      if (onDeleteTask) {
+        try {
+          await onDeleteTask(taskId);
+        } catch {
+          // Task already removed from UI - acceptable
+        }
+      }
     },
-    [calculateProgress],
+    [calculateProgress, onDeleteTask],
   );
 
-  const handleAddTask = useCallback(() => {
+  const handleAddTask = useCallback(async () => {
     const name = newTaskName.trim();
     if (!name) return;
 
-    setLocalPhase((prev) => {
-      const tasks = [
-        ...(prev.tasks || []),
-        { id: Math.random().toString(36).slice(2, 11), task: name, done: false },
-      ];
-      const progress = calculateProgress(tasks);
-      return { ...prev, tasks, progress };
-    });
-
     setNewTaskName("");
-  }, [calculateProgress, newTaskName]);
+
+    if (onAddTask) {
+      // Persist via API and let parent handle state
+      setIsSaving(true);
+      try {
+        await onAddTask(name, phaseIndex);
+      } catch {
+        // Error handled by parent
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      // Fallback: local-only add (legacy behavior)
+      setLocalPhase((prev) => {
+        const tasks = [
+          ...(prev.tasks || []),
+          { id: Math.random().toString(36).slice(2, 11), task: name, done: false },
+        ];
+        const progress = calculateProgress(tasks);
+        return { ...prev, tasks, progress };
+      });
+    }
+  }, [calculateProgress, newTaskName, onAddTask, phaseIndex]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -288,6 +322,8 @@ export const PhaseDetailModal = ({
   }, [savedPhase]);
 
   const saveEditing = useCallback(() => {
+    // Tasks are already persisted via onAddTask/onDeleteTask during editing
+    // Just exit editing mode and notify parent
     const progress = calculateProgress(localPhase.tasks || []);
     const updated = { ...localPhase, progress };
     onUpdatePhase(phaseIndex, updated);
@@ -307,7 +343,6 @@ export const PhaseDetailModal = ({
         if (!open) onClose();
       }}
     >
-      {/* UX/UI: contenu scroll interne, header fixe, sections + separators */}
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
         <div className="flex flex-col max-h-[90vh]">
           <DialogHeader className="px-6 pt-6 pb-4">
@@ -329,8 +364,8 @@ export const PhaseDetailModal = ({
                     Annuler
                   </Button>
                   <Button onClick={saveEditing}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Enregistrer
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Terminé
                   </Button>
                 </div>
               ) : (
@@ -399,12 +434,6 @@ export const PhaseDetailModal = ({
                   <h4 className="font-semibold">
                     Tâches ({localPhase.tasks?.length || 0})
                   </h4>
-                  {isEditing && (
-                    <Button size="sm" onClick={handleAddTask}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Ajouter
-                    </Button>
-                  )}
                 </div>
 
                 {isEditing && (
@@ -416,7 +445,19 @@ export const PhaseDetailModal = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleAddTask();
                       }}
+                      disabled={isSaving}
                     />
+                    <Button
+                      size="sm"
+                      onClick={handleAddTask}
+                      disabled={!newTaskName.trim() || isSaving}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                    </Button>
                   </div>
                 )}
 
