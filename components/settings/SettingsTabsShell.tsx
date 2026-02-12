@@ -21,6 +21,7 @@ import {
   Loader2,
   Shield,
   Key,
+  Plug,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
@@ -40,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 
-type TabKey = "profile" | "settings" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "ai" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -49,7 +50,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "settings" || s === "ai") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "ai") return s;
   // compat ancien: tab=billing
   if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
@@ -524,6 +525,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <User className="w-4 h-4" />
           Profil
         </TabsTrigger>
+        <TabsTrigger value="connections" className="gap-2">
+          <Plug className="w-4 h-4" />
+          Connexions
+        </TabsTrigger>
         <TabsTrigger value="settings" className="gap-2">
           <Globe className="w-4 h-4" />
           Réglages
@@ -618,6 +623,45 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <Button variant="destructive" className="mt-4 gap-2" onClick={onResetAccount} disabled={resetting}>
             <RotateCcw className="h-4 h-4" />
             {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
+          </Button>
+        </Card>
+      </TabsContent>
+
+      {/* CONNEXIONS */}
+      <TabsContent value="connections" className="space-y-6">
+        <SocialConnections />
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Key className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Systeme.io</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz avec des tags.{" "}
+            <a
+              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80"
+            >
+              Comment trouver ma clé API ?
+            </a>
+          </p>
+
+          <div className="space-y-2">
+            <Label>Clé API Systeme.io</Label>
+            <Input
+              type="password"
+              placeholder="Colle ta clé API ici..."
+              value={sioApiKey}
+              onChange={(e) => setSioApiKey(e.target.value)}
+              disabled={profileLoading}
+            />
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingSio ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </Card>
       </TabsContent>
@@ -762,42 +806,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingLegal ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Key className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-lg font-bold">Systeme.io</h3>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz avec des tags.{" "}
-            <a
-              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-primary hover:text-primary/80"
-            >
-              Comment trouver ma clé API ?
-            </a>
-          </p>
-
-          <div className="space-y-2">
-            <Label>Clé API Systeme.io</Label>
-            <Input
-              type="password"
-              placeholder="Colle ta clé API ici..."
-              value={sioApiKey}
-              onChange={(e) => setSioApiKey(e.target.value)}
-              disabled={profileLoading}
-            />
-          </div>
-
-          <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
-            <Save className="w-4 h-4 mr-2" />
-            {pendingSio ? "Enregistrement…" : "Enregistrer"}
-          </Button>
-        </Card>
-
-        <SocialConnections />
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
