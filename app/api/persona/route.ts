@@ -105,9 +105,9 @@ export async function PATCH(request: NextRequest) {
     const now = new Date().toISOString();
 
     // 1. Update personas table
-    // Note: persona is unique per user+role, NOT per project.
-    // Existing row may have been created with a different project_id,
-    // so we search by user_id+role only (no project_id filter).
+    // Persona is unique per user+role. We use UPDATE (by user_id+role) then
+    // fall back to INSERT if no row exists. This avoids reliance on specific
+    // column names (id) or onConflict constraint definitions.
     const dataFields: AnyRecord = {
       name: title,
       pains: JSON.stringify(pains),
@@ -116,29 +116,22 @@ export async function PATCH(request: NextRequest) {
       updated_at: now,
     };
 
-    // Find ANY existing persona for this user + role (regardless of project_id)
-    const { data: existingRows, error: selectError } = await supabaseAdmin
+    // Tier 1: UPDATE existing persona row(s) for this user+role
+    const { data: updatedRows, error: updateError } = await supabaseAdmin
       .from("personas")
-      .select("id")
+      .update(dataFields)
       .eq("user_id", auth.user.id)
       .eq("role", "client_ideal")
-      .order("updated_at", { ascending: false })
-      .limit(1);
+      .select("name");
 
-    const existingId = existingRows?.[0]?.id;
+    if (updateError) {
+      console.error("Persona update error:", updateError);
+      return NextResponse.json({ ok: false, error: updateError.message }, { status: 400 });
+    }
 
-    let personaError: { message: string } | null = null;
-
-    if (existingId) {
-      // UPDATE existing row by id
-      const { error } = await supabaseAdmin
-        .from("personas")
-        .update(dataFields)
-        .eq("id", existingId);
-      personaError = error;
-    } else {
-      // No persona exists yet — INSERT
-      const { error } = await supabaseAdmin
+    // Tier 2: If no row existed to update, INSERT a new one
+    if (!updatedRows || updatedRows.length === 0) {
+      const { error: insertError } = await supabaseAdmin
         .from("personas")
         .insert({
           user_id: auth.user.id,
@@ -146,12 +139,11 @@ export async function PATCH(request: NextRequest) {
           role: "client_ideal",
           ...dataFields,
         });
-      personaError = error;
-    }
 
-    if (personaError) {
-      console.error("Persona save error:", personaError);
-      return NextResponse.json({ ok: false, error: personaError.message }, { status: 400 });
+      if (insertError) {
+        console.error("Persona insert error:", insertError);
+        return NextResponse.json({ ok: false, error: insertError.message }, { status: 400 });
+      }
     }
 
     // 2. Update business_plan.plan_json.persona (keep strategy page in sync)
