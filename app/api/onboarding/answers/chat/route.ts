@@ -854,6 +854,25 @@ function buildBusinessProfilePatchFromFacts(facts: Array<{ key: string; value: u
     if ((key === "biggest_blocker" || key === "biggest_challenge") && isNonEmptyString(value))
       setIf("biggest_blocker", getStr(value, 260));
 
+    // ✅ primary_focus → main_goal (when main_goal is not yet set, use focus as fallback)
+    // Human-readable label stored so UI doesn't show raw enum
+    if (key === "primary_focus" && isNonEmptyString(value) && !patch["main_goal"]) {
+      const focusLabels: Record<string, string> = {
+        sales: "Générer des ventes",
+        visibility: "Gagner en visibilité",
+        clarity: "Clarifier mon positionnement",
+        systems: "Mettre en place des systèmes",
+        offer_improvement: "Améliorer mes offres",
+        traffic: "Générer du trafic",
+      };
+      const label = focusLabels[String(value).trim().toLowerCase()];
+      if (label) setIf("main_goal", label);
+    }
+
+    // ✅ conversion_status → diagnostic_profile (persisted for strategy access)
+    if (key === "conversion_status" && isNonEmptyString(value))
+      setIf("business_maturity", getStr(value, 60));
+
     // ✅ main_goals → main_goals column (stored as JSON array text in DB, e.g. '["goal1","goal2"]')
     if (key === "main_goals" && value) {
       if (Array.isArray(value)) {
@@ -1168,6 +1187,21 @@ export async function POST(req: NextRequest) {
           knownFacts,
           typeof (bp as any)?.first_name === "string" ? (bp as any).first_name : null,
         );
+
+        // ✅ Persist diagnostic fields on early finish too
+        try {
+          const diagnosticPatch: Record<string, any> = {
+            diagnostic_completed: true,
+            diagnostic_summary: recapSummary.slice(0, 4000),
+            diagnostic_answers: knownFacts,
+            updated_at: new Date().toISOString(),
+          };
+          let diagQuery = supabaseWrite.from("business_profiles").update(diagnosticPatch).eq("user_id", userId);
+          if (projectId) diagQuery = diagQuery.eq("project_id", projectId);
+          await diagQuery;
+        } catch {
+          // best-effort
+        }
 
         return NextResponse.json({
           sessionId,
@@ -1563,10 +1597,26 @@ export async function POST(req: NextRequest) {
     };
 
     if (shouldFinish) {
-      responsePayload.recapSummary = buildRecapProse(
+      const recapSummary = buildRecapProse(
         knownFacts,
         typeof (bp as any)?.first_name === "string" ? (bp as any).first_name : null,
       );
+      responsePayload.recapSummary = recapSummary;
+
+      // ✅ Persist diagnostic fields to business_profiles when finishing
+      try {
+        const diagnosticPatch: Record<string, any> = {
+          diagnostic_completed: true,
+          diagnostic_summary: recapSummary.slice(0, 4000),
+          diagnostic_answers: knownFacts, // all collected facts as JSONB
+          updated_at: new Date().toISOString(),
+        };
+        let diagQuery = supabaseWrite.from("business_profiles").update(diagnosticPatch).eq("user_id", userId);
+        if (projectId) diagQuery = diagQuery.eq("project_id", projectId);
+        await diagQuery;
+      } catch {
+        // best-effort — don't block finish
+      }
     }
 
     return NextResponse.json(responsePayload);

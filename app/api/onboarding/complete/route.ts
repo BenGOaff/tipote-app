@@ -119,11 +119,12 @@ export async function POST(req: Request) {
 
     // 1) business_profiles = source de vérité UI
     // (fail-open si la colonne onboarding_version n'existe pas encore)
+    // ✅ Always set diagnostic_completed=true when completing onboarding (v2 is always diagnostic-based)
     const patch: Record<string, unknown> = {
       onboarding_completed: true,
       onboarding_version: "v2",
+      diagnostic_completed: true,
     };
-    if (diagnosticCompleted) patch.diagnostic_completed = true;
 
     const r1 = await updateThenInsertBusinessProfile(supabase, userId, patch, projectId);
 
