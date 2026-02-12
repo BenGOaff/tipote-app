@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { ensureUserCredits } from "@/lib/credits";
+import { ensureUserCredits, addBonusCredits } from "@/lib/credits";
 
 type UserRow = {
   id: string;
@@ -215,34 +215,10 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "amount must be > 0" }, { status: 400 });
       }
 
-      // First ensure credits row exists
-      await ensureUserCredits(userId);
+      // Add bonus credits via RPC (handles table access inside Postgres)
+      const snapshot = await addBonusCredits(userId, amount);
 
-      // Read current bonus, then increment
-      const { data: current } = await supabaseAdmin
-        .from("ai_credits")
-        .select("bonus_credits_total")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      const currentBonus = Number(current?.bonus_credits_total ?? 0);
-
-      const { error: updateErr } = await supabaseAdmin
-        .from("ai_credits")
-        .update({
-          bonus_credits_total: currentBonus + amount,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq("user_id", userId);
-
-      if (updateErr) {
-        return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
-      }
-
-      // Fetch updated snapshot
-      const snapshot = await ensureUserCredits(userId);
-
-      // Log the credit addition
+      // Log the credit addition (best-effort)
       try {
         await supabaseAdmin.from("plan_change_log").insert({
           actor_user_id: session?.user?.id ?? null,
