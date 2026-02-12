@@ -31,21 +31,21 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = await getActiveProjectId(supabase, auth.user.id);
-
-    let query = supabaseAdmin
+    // Persona is unique per user+role — no project_id filter needed.
+    // Use limit(1) + order to handle potential duplicate rows gracefully.
+    const { data: rows, error } = await supabaseAdmin
       .from("personas")
       .select("name, pains, desires, channels, persona_json, updated_at")
       .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal");
-
-    if (projectId) query = query.eq("project_id", projectId);
-
-    const { data, error } = await query.maybeSingle();
+      .eq("role", "client_ideal")
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
+
+    const data = rows?.[0] ?? null;
 
     if (!data) {
       return NextResponse.json({ ok: true, persona: null }, { status: 200 });
@@ -104,8 +104,11 @@ export async function PATCH(request: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // 1. Update personas table (SELECT + INSERT/UPDATE to avoid onConflict mismatch)
-    const dataFields = {
+    // 1. Update personas table
+    // Note: persona is unique per user+role, NOT per project.
+    // Existing row may have been created with a different project_id,
+    // so we search by user_id+role only (no project_id filter).
+    const dataFields: AnyRecord = {
       name: title,
       pains: JSON.stringify(pains),
       desires: JSON.stringify(desires),
@@ -113,28 +116,28 @@ export async function PATCH(request: NextRequest) {
       updated_at: now,
     };
 
-    // Find existing persona for this user + role (optionally scoped by project)
-    let existingQuery = supabaseAdmin
+    // Find ANY existing persona for this user + role (regardless of project_id)
+    const { data: existingRows, error: selectError } = await supabaseAdmin
       .from("personas")
       .select("id")
       .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal");
+      .eq("role", "client_ideal")
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
-
-    const { data: existingRow } = await existingQuery.limit(1).maybeSingle();
+    const existingId = existingRows?.[0]?.id;
 
     let personaError: { message: string } | null = null;
 
-    if (existingRow?.id) {
-      // UPDATE existing row
+    if (existingId) {
+      // UPDATE existing row by id
       const { error } = await supabaseAdmin
         .from("personas")
         .update(dataFields)
-        .eq("id", existingRow.id);
+        .eq("id", existingId);
       personaError = error;
     } else {
-      // INSERT new row
+      // No persona exists yet — INSERT
       const { error } = await supabaseAdmin
         .from("personas")
         .insert({
