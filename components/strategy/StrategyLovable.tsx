@@ -50,6 +50,7 @@ import {
 
 import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
 import { OfferDetailModal } from "@/components/strategy/OfferDetailModal";
+import { PersonaEditModal } from "@/components/strategy/PersonaEditModal";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -217,19 +218,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     selectedOfferSet?.highTicket ??
     null) as AnyRecord | null;
 
-  // --- Persona (inchangé) ---
-  const personaTitle = props.persona?.title || "—";
-  const personaPains = Array.isArray(props.persona?.pains)
-    ? props.persona.pains
-    : [];
-  const personaGoals = Array.isArray(props.persona?.desires)
-    ? props.persona.desires
-    : [];
-  const personaChannels = Array.isArray(props.persona?.channels)
-    ? props.persona.channels
-    : [];
-
-  // ✅ Local state statuses (existant) : permet de cocher/décocher sans casser l’UX
+  // ✅ Local state statuses (existant) : permet de cocher/décocher sans casser l'UX
   const initialStatusById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const ph of props.phases || []) {
@@ -257,6 +246,22 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const [selectedOfferType, setSelectedOfferType] = useState<
     "lead_magnet" | "low_ticket" | "high_ticket" | null
   >(null);
+
+  // Persona edit modal state
+  const [isPersonaEditOpen, setIsPersonaEditOpen] = useState(false);
+  const [localPersona, setLocalPersona] = useState(props.persona);
+
+  // --- Persona derived values ---
+  const personaTitle = localPersona?.title || "—";
+  const personaPains = Array.isArray(localPersona?.pains)
+    ? localPersona.pains
+    : [];
+  const personaGoals = Array.isArray(localPersona?.desires)
+    ? localPersona.desires
+    : [];
+  const personaChannels = Array.isArray(localPersona?.channels)
+    ? localPersona.channels
+    : [];
 
   // Sync phases local si props changent (ex: router.refresh après toggle)
   // On ne force pas en mode édition pour éviter d’écraser l’ordre local en cours.
@@ -467,6 +472,119 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   void pending;
 
   const phasesForRender = isEditing ? phases : props.phases;
+
+  const handleUpdatePhase = useCallback(
+    async (
+      phaseIndex: number,
+      updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] },
+    ) => {
+      const originalPhase = (phasesForRender || [])[phaseIndex];
+      if (!originalPhase) return;
+
+      const originalIds = new Set(
+        (originalPhase.tasks || []).map((t) => String(t.id)),
+      );
+      const updatedIds = new Set(
+        (updatedPhase.tasks || []).map((t) => String(t.id)),
+      );
+
+      // Tasks to create (in updated but not in original)
+      const newTasks = (updatedPhase.tasks || []).filter(
+        (t) => !originalIds.has(String(t.id)),
+      );
+
+      // Tasks to delete (in original but not in updated)
+      const deletedTaskIds = (originalPhase.tasks || [])
+        .map((t) => String(t.id))
+        .filter((id) => !updatedIds.has(id));
+
+      const due_date = phaseIndexToDueDate(phaseIndex);
+
+      // Create new tasks via API
+      const createdTasks: TaskRow[] = [];
+      for (const t of newTasks) {
+        try {
+          const res = await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: t.task,
+              due_date,
+              priority: "high",
+              status: t.done ? "done" : "todo",
+            }),
+          });
+          const json = (await res.json().catch(() => null)) as
+            | { ok?: boolean; task?: TaskRow }
+            | null;
+          if (res.ok && json?.ok && json.task) {
+            createdTasks.push(json.task);
+          }
+        } catch {
+          // continue with other tasks
+        }
+      }
+
+      // Delete removed tasks via API
+      for (const id of deletedTaskIds) {
+        try {
+          await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+          });
+        } catch {
+          // continue
+        }
+      }
+
+      // Update local phases state
+      setPhases((prev) => {
+        const next = [...prev];
+        const ph = next[phaseIndex];
+        if (!ph) return prev;
+
+        // Keep tasks that weren't deleted, and add created tasks
+        const keptTasks = (ph.tasks || []).filter(
+          (t) => !deletedTaskIds.includes(String(t.id)),
+        );
+
+        // Map new task order from updatedPhase, replacing temp IDs with real IDs
+        const createdById = new Map<string, TaskRow>();
+        let createdIdx = 0;
+        for (const t of newTasks) {
+          if (createdIdx < createdTasks.length) {
+            createdById.set(t.id, createdTasks[createdIdx]);
+            createdIdx++;
+          }
+        }
+
+        const finalTasks: TaskRow[] = updatedPhase.tasks
+          .map((t) => {
+            // If it's a newly created task, use the API-returned task
+            const created = createdById.get(t.id);
+            if (created) return created;
+
+            // Otherwise, find the existing task
+            const existing = keptTasks.find(
+              (kt) => String(kt.id) === String(t.id),
+            );
+            return existing || null;
+          })
+          .filter(Boolean) as TaskRow[];
+
+        next[phaseIndex] = { ...ph, tasks: finalTasks };
+        return next;
+      });
+
+      toast({
+        title: "Phase mise à jour",
+        description: "Les modifications ont été enregistrées",
+      });
+
+      // Refresh to get fresh server data
+      router.refresh();
+    },
+    [phasesForRender, toast, router],
+  );
 
   const openPhase = useCallback(
     (phaseIndex: number) => {
@@ -1017,7 +1135,12 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full mt-6">
+                  <Button
+                    variant="outline"
+                    className="w-full mt-6"
+                    onClick={() => setIsPersonaEditOpen(true)}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
                     Modifier le persona
                   </Button>
                 </Card>
@@ -1053,12 +1176,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   }}
                   phaseIndex={selectedPhaseIndex}
                   onToggleTask={toggleTask}
-                  onUpdatePhase={() => {
-                    toast({
-                      title: "Phase mise à jour",
-                      description: "Les modifications ont été enregistrées",
-                    });
-                  }}
+                  onUpdatePhase={handleUpdatePhase}
                 />
               );
             })()}
@@ -1144,6 +1262,16 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               }}
             />
           )}
+
+          <PersonaEditModal
+            isOpen={isPersonaEditOpen}
+            onClose={() => setIsPersonaEditOpen(false)}
+            persona={localPersona}
+            onSaved={(updated) => {
+              setLocalPersona(updated);
+              router.refresh();
+            }}
+          />
         </main>
       </div>
     </SidebarProvider>

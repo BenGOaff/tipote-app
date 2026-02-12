@@ -265,9 +265,39 @@ export default async function StrategyPage() {
   const selectedIndexRaw = (planJson as AnyRecord).selected_offer_pyramid_index;
   const selectedIndex = typeof selectedIndexRaw === "number" ? (selectedIndexRaw as number) : null;
 
-  // Persona (depuis plan_json)
+  // Persona : priorite a la table personas (source de verite), fallback plan_json
   const personaRaw = ((planJson as AnyRecord).persona ?? {}) as AnyRecord;
-  const persona = {
+
+  let personaFromDb: { title: string; pains: string[]; desires: string[]; channels: string[] } | null = null;
+  try {
+    const { data: personaRow } = await supabaseAdmin
+      .from("personas")
+      .select("name, pains, desires, channels")
+      .eq("user_id", user.id)
+      .eq("role", "client_ideal")
+      .maybeSingle();
+
+    if (personaRow?.name) {
+      const parseJson = (v: unknown): string[] => {
+        if (Array.isArray(v)) return v.map(asString).filter(Boolean);
+        if (typeof v === "string") {
+          try { const parsed = JSON.parse(v); return Array.isArray(parsed) ? parsed.map(asString).filter(Boolean) : []; } catch { return []; }
+        }
+        return [];
+      };
+
+      personaFromDb = {
+        title: asString(personaRow.name),
+        pains: parseJson(personaRow.pains),
+        desires: parseJson(personaRow.desires),
+        channels: parseJson(personaRow.channels),
+      };
+    }
+  } catch {
+    // fail-open: use plan_json fallback
+  }
+
+  const persona = personaFromDb || {
     title: asString(personaRaw.title) || asString(personaRaw.profile) || asString(personaRaw.name) || "",
     pains: asStringArray(personaRaw.pains),
     desires: asStringArray(personaRaw.desires),
