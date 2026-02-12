@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { ampTrack } from "@/lib/telemetry/amplitude-client";
+
 
 // ✅ shadcn dialog
 import {
@@ -497,8 +497,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
         // fail-open
       }
 
-      ampTrack("tipote_onboarding_completed", { onboarding_version: "v2_chat" });
-
       clearTimeout(safetyTimeout);
       await new Promise((r) => setTimeout(r, 900));
       router.replace("/app");
@@ -552,12 +550,6 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
       const appliedCount = Array.isArray(reply.appliedFacts) ? reply.appliedFacts.length : 0;
       const doneFlag = Boolean(reply.shouldFinish ?? reply.should_finish ?? reply.done ?? false);
-
-      ampTrack("tipote_onboarding_chat_turn", {
-        onboarding_version: "v2_chat",
-        applied_facts_count: appliedCount,
-        done: doneFlag,
-      });
 
       if (doneFlag) {
         setIsDone(true);

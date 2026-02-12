@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTutorial } from "@/hooks/useTutorial";
-import { ampTrack } from "@/lib/telemetry/amplitude-client";
+
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
 
@@ -44,18 +44,13 @@ export function TutorialSpotlight(props: {
     setMounted(true);
   }, []);
 
-  // ✅ Track : affichage d'une étape du tutoriel (spotlight visible)
+  // Track current step viewed
   useEffect(() => {
     if (!shouldShow) return;
 
     const key = `${phase}__${elementId}`;
     if (lastViewedKeyRef.current === key) return;
     lastViewedKeyRef.current = key;
-
-    ampTrack("tipote_tutorial_step_viewed", {
-      tutorial_phase: phase,
-      spotlight_element: elementId,
-    });
   }, [shouldShow, phase, elementId]);
 
   const computePosition = useMemo(() => {
@@ -122,11 +117,6 @@ export function TutorialSpotlight(props: {
   }, [shouldShow, computePosition]);
 
   const handleNext = () => {
-    ampTrack("tipote_tutorial_next_clicked", {
-      tutorial_phase: phase,
-      spotlight_element: elementId,
-    });
-
     nextPhase();
   };
 

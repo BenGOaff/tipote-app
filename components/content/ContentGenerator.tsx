@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ampTrack } from '@/lib/telemetry/amplitude-client'
+
 import { emitCreditsUpdated } from '@/lib/credits/client'
 import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
 
@@ -130,16 +130,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     setLoading(true)
     setResult(null)
 
-    ampTrack('tipote_content_generate_clicked', {
-      type: safeType,
-      channel: (channel ?? '').trim() || null,
-      tags_count: (tags ?? '')
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean).length,
-      prompt_len: safePrompt.length,
-    })
-
     try {
       const res = await fetch('/api/content/generate', {
         method: 'POST',
@@ -160,10 +150,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
       if (!data) {
         setResult({ ok: false, error: 'Réponse invalide.' })
-        ampTrack('tipote_content_generate_failed', {
-          type: safeType,
-          code: 'invalid_response',
-        })
         return
       }
 
@@ -176,22 +162,10 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
           code,
         })
 
-        ampTrack('tipote_content_generate_failed', {
-          type: safeType,
-          code: code ?? `http_${res.status}`,
-        })
         return
       }
 
       setResult(data)
-
-      ampTrack('tipote_content_generated', {
-        type: safeType,
-        content_id: data.id ?? null,
-        title_present: Boolean(data.title),
-        warning_present: Boolean(data.warning),
-        save_error_present: Boolean(data.saveError),
-      })
 
       // Refresh crédits partout (sidebar/billing/settings) après une génération réussie
       emitCreditsUpdated()
@@ -206,10 +180,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         error: e instanceof Error ? e.message : 'Erreur lors de la génération.',
       })
 
-      ampTrack('tipote_content_generate_failed', {
-        type: normalizeType(type),
-        code: 'exception',
-      })
     } finally {
       setLoading(false)
     }

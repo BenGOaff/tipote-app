@@ -10,7 +10,7 @@ import React, {
   useState,
 } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { ampTrack } from "@/lib/telemetry/amplitude-client";
+
 
 export type TutorialPhase =
   | "welcome"
@@ -317,10 +317,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (next === "tour_complete") {
       persistDone(true);
 
-      // ✅ Amplitude: tutorial completed (fin de tour)
-      ampTrack("tipote_tutorial_completed", {
-        version: TUTORIAL_VERSION,
-      });
+      // Tutorial completed (fin de tour)
     }
 
     setPhase(next);
@@ -328,8 +325,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, [phase, persistDone, setPhase]);
 
   const skipTutorial = useCallback(() => {
-    // ✅ “Pas maintenant” n’est plus définitif : on ferme, mais done=false / optout=false
-    ampTrack("tipote_tutorial_skipped", { version: TUTORIAL_VERSION });
+    // "Pas maintenant" n'est plus définitif : on ferme, mais done=false / optout=false
 
     setPhase("completed");
     setShowWelcome(false);
@@ -343,9 +339,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (value) {
         // opt-out = définitif => done
         persistDone(true);
-
-        // ✅ Amplitude: tutorial opt-out
-        ampTrack("tipote_tutorial_optout", { version: TUTORIAL_VERSION });
 
         setPhase("completed");
         setShowWelcome(false);
