@@ -104,11 +104,8 @@ export async function PATCH(request: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // 1. Update personas table
-    const personaPayload: AnyRecord = {
-      user_id: auth.user.id,
-      ...(projectId ? { project_id: projectId } : {}),
-      role: "client_ideal",
+    // 1. Update personas table (SELECT + INSERT/UPDATE to avoid onConflict mismatch)
+    const dataFields = {
       name: title,
       pains: JSON.stringify(pains),
       desires: JSON.stringify(desires),
@@ -116,12 +113,41 @@ export async function PATCH(request: NextRequest) {
       updated_at: now,
     };
 
-    const { error: personaError } = await supabaseAdmin
+    // Find existing persona for this user + role (optionally scoped by project)
+    let existingQuery = supabaseAdmin
       .from("personas")
-      .upsert(personaPayload, { onConflict: "user_id,role" });
+      .select("id")
+      .eq("user_id", auth.user.id)
+      .eq("role", "client_ideal");
+
+    if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
+
+    const { data: existingRow } = await existingQuery.limit(1).maybeSingle();
+
+    let personaError: { message: string } | null = null;
+
+    if (existingRow?.id) {
+      // UPDATE existing row
+      const { error } = await supabaseAdmin
+        .from("personas")
+        .update(dataFields)
+        .eq("id", existingRow.id);
+      personaError = error;
+    } else {
+      // INSERT new row
+      const { error } = await supabaseAdmin
+        .from("personas")
+        .insert({
+          user_id: auth.user.id,
+          ...(projectId ? { project_id: projectId } : {}),
+          role: "client_ideal",
+          ...dataFields,
+        });
+      personaError = error;
+    }
 
     if (personaError) {
-      console.error("Persona upsert error:", personaError);
+      console.error("Persona save error:", personaError);
       return NextResponse.json({ ok: false, error: personaError.message }, { status: 400 });
     }
 

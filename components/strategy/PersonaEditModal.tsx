@@ -1,7 +1,7 @@
 // components/strategy/PersonaEditModal.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -45,13 +45,9 @@ export const PersonaEditModal = ({
   const [newDesire, setNewDesire] = useState("");
   const [newChannel, setNewChannel] = useState("");
 
-  // Reset form when modal opens with new data
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        onClose();
-        return;
-      }
+  // Sync form state when modal opens or persona prop changes
+  useEffect(() => {
+    if (isOpen) {
       setTitle(persona.title);
       setPains([...persona.pains]);
       setDesires([...persona.desires]);
@@ -59,8 +55,16 @@ export const PersonaEditModal = ({
       setNewPain("");
       setNewDesire("");
       setNewChannel("");
+    }
+  }, [isOpen, persona]);
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onClose();
+      }
     },
-    [persona, onClose],
+    [onClose],
   );
 
   const addItem = (

@@ -270,12 +270,16 @@ export default async function StrategyPage() {
 
   let personaFromDb: { title: string; pains: string[]; desires: string[]; channels: string[] } | null = null;
   try {
-    const { data: personaRow } = await supabaseAdmin
+    // Use limit(1) + order to safely handle multiple persona rows (avoids maybeSingle error)
+    const { data: personaRows } = await supabaseAdmin
       .from("personas")
       .select("name, pains, desires, channels")
       .eq("user_id", user.id)
       .eq("role", "client_ideal")
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const personaRow = personaRows?.[0] ?? null;
 
     if (personaRow?.name) {
       const parseJson = (v: unknown): string[] => {

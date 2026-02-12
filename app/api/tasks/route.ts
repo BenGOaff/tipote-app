@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type CreateBody = {
@@ -126,7 +127,7 @@ export async function POST(req: Request) {
       source: "manual",
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("project_tasks")
       .insert(insertPayload)
       .select("id, title, status, priority, due_date, source, created_at, updated_at")
