@@ -7,11 +7,18 @@ const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 const THREADS_API_BASE = "https://graph.threads.net/v1.0";
 const FB_AUTH_URL = `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`;
+const THREADS_AUTH_URL = "https://threads.net/oauth/authorize";
+const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 
-const SCOPES = [
+// Facebook Pages scopes (OAuth Facebook Login)
+const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
+];
+
+// Threads scopes (OAuth Threads separe)
+const THREADS_SCOPES = [
   "threads_basic",
   "threads_content_publish",
 ];
@@ -39,18 +46,93 @@ function getRedirectUri(): string {
 // ----------------------------------------------------------------
 
 /**
- * Construit l'URL d'autorisation Facebook Login.
- * Permissions : pages_show_list, pages_manage_posts, threads_basic, threads_content_publish
+ * Construit l'URL d'autorisation Facebook Login (Pages uniquement).
+ * Permissions : pages_show_list, pages_manage_posts, pages_read_engagement
  */
 export function buildAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: getAppId(),
     redirect_uri: getRedirectUri(),
-    scope: SCOPES.join(","),
+    scope: FB_SCOPES.join(","),
     response_type: "code",
     state,
   });
   return `${FB_AUTH_URL}?${params.toString()}`;
+}
+
+// ----------------------------------------------------------------
+// Threads OAuth 2.0 (endpoint separe : threads.net/oauth/authorize)
+// ----------------------------------------------------------------
+
+function getThreadsRedirectUri(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
+  return `${appUrl}/api/auth/threads/callback`;
+}
+
+/**
+ * Construit l'URL d'autorisation Threads.
+ * Endpoint : https://threads.net/oauth/authorize
+ * Permissions : threads_basic, threads_content_publish
+ */
+export function buildThreadsAuthorizationUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: getAppId(),
+    redirect_uri: getThreadsRedirectUri(),
+    scope: THREADS_SCOPES.join(","),
+    response_type: "code",
+    state,
+  });
+  return `${THREADS_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Echange le code Threads contre un short-lived access token.
+ * Endpoint : https://graph.threads.net/oauth/access_token
+ */
+export async function exchangeThreadsCodeForToken(code: string): Promise<{
+  access_token: string;
+  user_id: string;
+}> {
+  const params = new URLSearchParams({
+    client_id: getAppId(),
+    client_secret: getAppSecret(),
+    redirect_uri: getThreadsRedirectUri(),
+    grant_type: "authorization_code",
+    code,
+  });
+
+  const res = await fetch(`${THREADS_TOKEN_URL}?${params.toString()}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Threads token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * Echange un short-lived Threads token contre un long-lived token (~60 jours).
+ * Endpoint : https://graph.threads.net/access_token
+ */
+export async function exchangeThreadsForLongLivedToken(shortLivedToken: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const params = new URLSearchParams({
+    grant_type: "th_exchange_token",
+    client_secret: getAppSecret(),
+    access_token: shortLivedToken,
+  });
+
+  const res = await fetch(`${THREADS_API_BASE}/access_token?${params.toString()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Threads long-lived token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
 }
 
 /**

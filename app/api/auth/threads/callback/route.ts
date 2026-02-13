@@ -1,15 +1,16 @@
-// app/api/auth/meta/callback/route.ts
-// Callback OAuth Facebook : echange le code, recupere les Pages,
-// stocke le token chiffre pour Facebook (Pages uniquement).
+// app/api/auth/threads/callback/route.ts
+// Callback OAuth Threads : echange le code, recupere le profil Threads,
+// stocke le token chiffre pour Threads.
+// Endpoint Threads : https://graph.threads.net/oauth/access_token
 
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import {
-  exchangeCodeForToken,
-  exchangeForLongLivedToken,
-  getUserPages,
+  exchangeThreadsCodeForToken,
+  exchangeThreadsForLongLivedToken,
+  getThreadsUser,
 } from "@/lib/meta";
 import { encrypt } from "@/lib/crypto";
 
@@ -39,76 +40,76 @@ export async function GET(req: NextRequest) {
     if (error) {
       const desc = url.searchParams.get("error_description") ?? error;
       return NextResponse.redirect(
-        `${settingsUrl}&meta_error=${encodeURIComponent(desc)}`
+        `${settingsUrl}&threads_error=${encodeURIComponent(desc)}`
       );
     }
 
     const cookieStore = await cookies();
-    const savedState = cookieStore.get("meta_oauth_state")?.value;
-    cookieStore.delete("meta_oauth_state");
+    const savedState = cookieStore.get("threads_oauth_state")?.value;
+    cookieStore.delete("threads_oauth_state");
 
     if (!code || !state || state !== savedState) {
       return NextResponse.redirect(
-        `${settingsUrl}&meta_error=${encodeURIComponent("State CSRF invalide. Reessaie.")}`
+        `${settingsUrl}&threads_error=${encodeURIComponent("State CSRF invalide. Reessaie.")}`
       );
     }
 
-    // 3. Echanger le code contre un short-lived token
-    const shortLived = await exchangeCodeForToken(code);
+    // 3. Echanger le code contre un short-lived Threads token
+    const shortLived = await exchangeThreadsCodeForToken(code);
 
     // 4. Echanger contre un long-lived token (~60 jours)
-    const longLived = await exchangeForLongLivedToken(shortLived.access_token);
+    const longLived = await exchangeThreadsForLongLivedToken(shortLived.access_token);
 
-    // 5. Recuperer les Pages Facebook
-    const pages = await getUserPages(longLived.access_token);
+    // 5. Recuperer le profil Threads
+    const threadsUser = await getThreadsUser(longLived.access_token);
 
-    if (pages.length === 0) {
+    if (!threadsUser) {
       return NextResponse.redirect(
-        `${settingsUrl}&meta_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvee. Assure-toi d'avoir une Page Facebook et d'avoir accorde les permissions."
+        `${settingsUrl}&threads_error=${encodeURIComponent(
+          "Impossible de recuperer ton profil Threads. Assure-toi d'avoir un compte Threads actif."
         )}`
       );
     }
 
-    // 6. Prendre la premiere page (v1 : selection automatique)
-    const page = pages[0];
-
+    // 6. Stocker la connexion Threads
     const projectId = await getActiveProjectId(supabase, user.id);
     const tokenExpiresAt = new Date(
       Date.now() + longLived.expires_in * 1000
     ).toISOString();
 
-    // 7. Stocker la connexion Facebook (Page)
-    const pageTokenEncrypted = encrypt(page.access_token);
+    const tokenEncrypted = encrypt(longLived.access_token);
 
-    const { error: fbError } = await supabase
+    const { error: dbError } = await supabase
       .from("social_connections")
       .upsert(
         {
           user_id: user.id,
           project_id: projectId ?? null,
-          platform: "facebook",
-          platform_user_id: page.id,
-          platform_username: page.name,
-          access_token_encrypted: pageTokenEncrypted,
+          platform: "threads",
+          platform_user_id: threadsUser.id,
+          platform_username: threadsUser.username ?? threadsUser.name ?? "Threads",
+          access_token_encrypted: tokenEncrypted,
           refresh_token_encrypted: null,
           token_expires_at: tokenExpiresAt,
-          scopes: "pages_show_list,pages_manage_posts,pages_read_engagement",
+          scopes: "threads_basic,threads_content_publish",
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,project_id,platform" }
       );
 
-    if (fbError) {
-      console.error("Facebook social_connections upsert error:", fbError);
+    if (dbError) {
+      console.error("Threads social_connections upsert error:", dbError);
+      return NextResponse.redirect(
+        `${settingsUrl}&threads_error=${encodeURIComponent("Erreur de sauvegarde. Reessaie.")}`
+      );
     }
 
-    return NextResponse.redirect(`${settingsUrl}&meta_connected=facebook`);
+    return NextResponse.redirect(`${settingsUrl}&threads_connected=1`);
   } catch (err) {
-    console.error("Meta OAuth callback error:", err);
+    console.error("Threads OAuth callback error:", err);
     return NextResponse.redirect(
-      `${settingsUrl}&meta_error=${encodeURIComponent(
-        "Erreur de connexion Facebook. Reessaie."
+      `${settingsUrl}&threads_error=${encodeURIComponent(
+        "Erreur de connexion Threads. Reessaie."
       )}`
     );
   }
