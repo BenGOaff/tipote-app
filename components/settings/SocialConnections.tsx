@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Linkedin, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, Instagram, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,50 @@ type Connection = {
   updated_at: string | null;
   expired: boolean;
 };
+
+type PlatformConfig = {
+  key: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+  hoverColor: string;
+  oauthUrl: string;
+};
+
+const PLATFORMS: PlatformConfig[] = [
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    description: "Publie sur ton profil personnel LinkedIn",
+    icon: <Linkedin className="h-5 w-5 text-[#0A66C2]" />,
+    color: "bg-[#0A66C2]",
+    bgColor: "bg-[#0A66C2]/10",
+    hoverColor: "hover:bg-[#004182]",
+    oauthUrl: "/api/auth/linkedin",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    description: "Publie sur ta Page Facebook",
+    icon: <Facebook className="h-5 w-5 text-[#1877F2]" />,
+    color: "bg-[#1877F2]",
+    bgColor: "bg-[#1877F2]/10",
+    hoverColor: "hover:bg-[#0C5DC7]",
+    oauthUrl: "/api/auth/meta",
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    description: "Publie sur ton compte Instagram Business",
+    icon: <Instagram className="h-5 w-5 text-[#E4405F]" />,
+    color: "bg-[#E4405F]",
+    bgColor: "bg-[#E4405F]/10",
+    hoverColor: "hover:bg-[#C13584]",
+    oauthUrl: "/api/auth/meta", // Même OAuth que Facebook
+  },
+];
 
 export default function SocialConnections() {
   const { toast } = useToast();
@@ -61,6 +105,7 @@ export default function SocialConnections() {
 
   // Afficher les toasts basés sur les query params (retour OAuth)
   useEffect(() => {
+    // LinkedIn
     if (searchParams.get("linkedin_connected") === "1") {
       toast({
         title: "LinkedIn connecté",
@@ -76,13 +121,30 @@ export default function SocialConnections() {
         variant: "destructive",
       });
     }
+
+    // Meta (Facebook + Instagram)
+    const metaConnected = searchParams.get("meta_connected");
+    if (metaConnected) {
+      const platforms = metaConnected.split(",");
+      const labels = platforms.map((p) => p === "facebook" ? "Facebook" : p === "instagram" ? "Instagram" : p);
+      toast({
+        title: `${labels.join(" + ")} connecté${labels.length > 1 ? "s" : ""}`,
+        description: `${labels.join(" et ")} ${labels.length > 1 ? "sont" : "est"} maintenant lié${labels.length > 1 ? "s" : ""} à Tipote.`,
+      });
+      fetchConnections();
+    }
+    const metaError = searchParams.get("meta_error");
+    if (metaError) {
+      toast({
+        title: "Erreur Facebook/Instagram",
+        description: decodeURIComponent(metaError),
+        variant: "destructive",
+      });
+    }
   }, [searchParams, toast]);
 
-  const linkedinConnection = connections.find((c) => c.platform === "linkedin");
-
-  const onConnectLinkedin = () => {
-    // Redirige vers l'endpoint OAuth
-    window.location.href = "/api/auth/linkedin";
+  const onConnect = (oauthUrl: string) => {
+    window.location.href = oauthUrl;
   };
 
   const onDisconnect = (id: string) => {
@@ -109,6 +171,8 @@ export default function SocialConnections() {
     });
   };
 
+  const getConnection = (platform: string) => connections.find((c) => c.platform === platform);
+
   return (
     <Card className="p-6">
       <h3 className="text-lg font-bold mb-2">Comptes sociaux</h3>
@@ -123,95 +187,114 @@ export default function SocialConnections() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* LinkedIn */}
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0A66C2]/10">
-                <Linkedin className="h-5 w-5 text-[#0A66C2]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">LinkedIn</span>
-                  {linkedinConnection && !linkedinConnection.expired && (
-                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Connecté
-                    </Badge>
-                  )}
-                  {linkedinConnection?.expired && (
-                    <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      Expiré
-                    </Badge>
-                  )}
-                </div>
-                {linkedinConnection ? (
-                  <p className="text-sm text-muted-foreground">
-                    {linkedinConnection.platform_username ?? "Profil connecté"}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Publie sur ton profil personnel LinkedIn
-                  </p>
-                )}
-              </div>
-            </div>
+          {PLATFORMS.map((platform) => {
+            const connection = getConnection(platform.key);
 
-            <div className="flex items-center gap-2">
-              {linkedinConnection ? (
-                <>
-                  {linkedinConnection.expired && (
-                    <Button variant="outline" size="sm" onClick={onConnectLinkedin}>
-                      <RefreshCw className="w-4 h-4 mr-1" />
-                      Reconnecter
+            // Instagram est connecté via le même OAuth que Facebook.
+            // Si Facebook est connecté mais pas Instagram, on montre un message spécifique.
+            const isFbConnected = !!getConnection("facebook");
+            const isIgMissingFromMeta =
+              platform.key === "instagram" && !connection && isFbConnected;
+
+            return (
+              <div
+                key={platform.key}
+                className="flex items-center justify-between rounded-lg border p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${platform.bgColor}`}>
+                    {platform.icon}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{platform.label}</span>
+                      {connection && !connection.expired && (
+                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Connecté
+                        </Badge>
+                      )}
+                      {connection?.expired && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Expiré
+                        </Badge>
+                      )}
+                    </div>
+                    {connection ? (
+                      <p className="text-sm text-muted-foreground">
+                        {connection.platform_username ?? "Compte connecté"}
+                      </p>
+                    ) : isIgMissingFromMeta ? (
+                      <p className="text-sm text-muted-foreground">
+                        Aucun compte Instagram Business lié à ta Page Facebook
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{platform.description}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {connection ? (
+                    <>
+                      {connection.expired && (
+                        <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Reconnecter
+                        </Button>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-rose-600"
+                            disabled={pendingDisconnect && disconnectingId === connection.id}
+                          >
+                            <Unplug className="w-4 h-4 mr-1" />
+                            Déconnecter
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Déconnecter {platform.label} ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tu ne pourras plus publier sur {platform.label} depuis Tipote.
+                              Tu peux reconnecter ton compte à tout moment.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onDisconnect(connection.id);
+                              }}
+                              className="bg-rose-600 hover:bg-rose-700"
+                            >
+                              Déconnecter
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={() => onConnect(platform.oauthUrl)}
+                      className={`${platform.color} ${platform.hoverColor} text-white`}
+                    >
+                      {platform.icon}
+                      <span className="ml-2">Connecter {platform.label}</span>
                     </Button>
                   )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-rose-600"
-                        disabled={pendingDisconnect && disconnectingId === linkedinConnection.id}
-                      >
-                        <Unplug className="w-4 h-4 mr-1" />
-                        Déconnecter
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Déconnecter LinkedIn ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tu ne pourras plus publier sur LinkedIn depuis Tipote.
-                          Tu peux reconnecter ton compte à tout moment.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onDisconnect(linkedinConnection.id);
-                          }}
-                          className="bg-rose-600 hover:bg-rose-700"
-                        >
-                          Déconnecter
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              ) : (
-                <Button onClick={onConnectLinkedin} className="bg-[#0A66C2] hover:bg-[#004182] text-white">
-                  <Linkedin className="w-4 h-4 mr-2" />
-                  Connecter LinkedIn
-                </Button>
-              )}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })}
 
           {/* Placeholder pour les futurs réseaux */}
-          {["Instagram", "X (Twitter)", "Facebook", "TikTok"].map((name) => (
+          {["X (Twitter)", "TikTok"].map((name) => (
             <div
               key={name}
               className="flex items-center justify-between rounded-lg border border-dashed p-4 opacity-50"

@@ -1,0 +1,543 @@
+{
+  "name": "Tipote - Meta (FB + IG) Scheduled Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=facebook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-fb-posts",
+      "name": "Fetch FB Scheduled Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=instagram",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-ig-posts",
+      "name": "Fetch IG Scheduled Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 420]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-fb-posts",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-fb-posts",
+      "name": "Has FB Posts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-ig-posts",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-ig-posts",
+      "name": "Has IG Posts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 420]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      },
+      "id": "split-fb-posts",
+      "name": "Split FB Posts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [910, 140]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      },
+      "id": "split-ig-posts",
+      "name": "Split IG Posts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [910, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "fb-has-image",
+              "leftValue": "={{ $json.image_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "fb-has-image",
+      "name": "FB Has Image?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1130, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/photos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Split FB Posts').item.json.commentary) }},\n  \"url\": \"{{ $('Split FB Posts').item.json.image_url }}\",\n  \"access_token\": \"{{ $('Split FB Posts').item.json.access_token }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "id": "fb-post-photo",
+      "name": "Post FB Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 80],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/feed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Split FB Posts').item.json.commentary) }},\n  \"access_token\": \"{{ $('Split FB Posts').item.json.access_token }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "id": "fb-post-text",
+      "name": "Post FB Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 200],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Split FB Posts').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split FB Posts').item.json.content_id }}\",\n  \"platform\": \"facebook\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || $json.body?.post_id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Facebook API error') : '' }}\"\n}",
+        "options": {}
+      },
+      "id": "callback-fb",
+      "name": "Callback FB to Tipote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_url\": \"{{ $('Split IG Posts').item.json.image_url }}\",\n  \"caption\": {{ JSON.stringify($('Split IG Posts').item.json.commentary) }},\n  \"access_token\": \"{{ $('Split IG Posts').item.json.access_token }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "id": "ig-create-media",
+      "name": "IG Create Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 360],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Split IG Posts').item.json.platform_user_id }}/media_publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"creation_id\": \"{{ $json.body.id }}\",\n  \"access_token\": \"{{ $('Split IG Posts').item.json.access_token }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "id": "ig-publish-media",
+      "name": "IG Publish Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 360],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Split IG Posts').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split IG Posts').item.json.content_id }}\",\n  \"platform\": \"instagram\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Instagram API error') : '' }}\"\n}",
+        "options": {}
+      },
+      "id": "callback-ig",
+      "name": "Callback IG to Tipote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 360]
+    },
+    {
+      "parameters": {},
+      "id": "no-fb-posts",
+      "name": "No FB Posts",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 260]
+    },
+    {
+      "parameters": {},
+      "id": "no-ig-posts",
+      "name": "No IG Posts",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 480]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch FB Scheduled Posts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch IG Scheduled Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch FB Scheduled Posts": {
+      "main": [
+        [
+          {
+            "node": "Has FB Posts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch IG Scheduled Posts": {
+      "main": [
+        [
+          {
+            "node": "Has IG Posts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has FB Posts?": {
+      "main": [
+        [
+          {
+            "node": "Split FB Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No FB Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has IG Posts?": {
+      "main": [
+        [
+          {
+            "node": "Split IG Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No IG Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split FB Posts": {
+      "main": [
+        [
+          {
+            "node": "FB Has Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Has Image?": {
+      "main": [
+        [
+          {
+            "node": "Post FB Photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post FB Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post FB Photo": {
+      "main": [
+        [
+          {
+            "node": "Callback FB to Tipote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post FB Text": {
+      "main": [
+        [
+          {
+            "node": "Callback FB to Tipote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split IG Posts": {
+      "main": [
+        [
+          {
+            "node": "IG Create Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Create Media": {
+      "main": [
+        [
+          {
+            "node": "IG Publish Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Publish Media": {
+      "main": [
+        [
+          {
+            "node": "Callback IG to Tipote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote",
+      "createdAt": "2026-02-13T00:00:00.000Z",
+      "updatedAt": "2026-02-13T00:00:00.000Z"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1"
+}

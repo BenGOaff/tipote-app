@@ -1,15 +1,19 @@
 // app/api/social/publish/route.ts
 // POST : publie un contenu sur un réseau social via n8n (ou directement).
 // Body : { contentId, platform }
-// Flow : récupère le contenu + token → appelle n8n webhook → retourne le résultat.
+// Plateformes supportées : linkedin, facebook, instagram
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishToInstagram } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
+
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram"] as const;
+type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
@@ -29,9 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "contentId manquant" }, { status: 400 });
   }
 
-  if (platform !== "linkedin") {
+  if (!SUPPORTED_PLATFORMS.includes(platform as Platform)) {
     return NextResponse.json(
-      { error: `Plateforme "${platform}" pas encore supportée. Seul LinkedIn est disponible.` },
+      { error: `Plateforme "${platform}" pas encore supportée. Disponibles : ${SUPPORTED_PLATFORMS.join(", ")}` },
       { status: 400 }
     );
   }
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
   // 1. Récupérer le contenu
   const { data: contentItem, error: contentError } = await supabase
     .from("content_item")
-    .select("id, title, content, status, type, channel")
+    .select("id, title, content, status, type, channel, meta")
     .eq("id", contentId)
     .eq("user_id", user.id)
     .single();
@@ -54,12 +58,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Le contenu est vide" }, { status: 400 });
   }
 
-  // 2. Récupérer la connexion LinkedIn
+  // 2. Récupérer la connexion sociale
   let connQuery = supabase
     .from("social_connections")
     .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
     .eq("user_id", user.id)
-    .eq("platform", "linkedin");
+    .eq("platform", platform);
 
   if (projectId) {
     connQuery = connQuery.eq("project_id", projectId);
@@ -67,9 +71,16 @@ export async function POST(req: NextRequest) {
 
   const { data: connection, error: connError } = await connQuery.single();
 
+  const platformLabels: Record<string, string> = {
+    linkedin: "LinkedIn",
+    facebook: "Facebook",
+    instagram: "Instagram",
+  };
+  const platformLabel = platformLabels[platform] ?? platform;
+
   if (connError || !connection) {
     return NextResponse.json(
-      { error: "LinkedIn non connecté. Va dans Paramètres pour connecter ton compte." },
+      { error: `${platformLabel} non connecté. Va dans Paramètres pour connecter ton compte.` },
       { status: 400 }
     );
   }
@@ -77,7 +88,7 @@ export async function POST(req: NextRequest) {
   // 3. Vérifier l'expiration du token
   if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
     return NextResponse.json(
-      { error: "Token LinkedIn expiré. Reconnecte ton compte dans les Paramètres." },
+      { error: `Token ${platformLabel} expiré. Reconnecte ton compte dans les Paramètres.` },
       { status: 401 }
     );
   }
@@ -88,15 +99,15 @@ export async function POST(req: NextRequest) {
     accessToken = decrypt(connection.access_token_encrypted);
   } catch {
     return NextResponse.json(
-      { error: "Erreur de déchiffrement du token. Reconnecte ton compte LinkedIn." },
+      { error: `Erreur de déchiffrement du token. Reconnecte ton compte ${platformLabel}.` },
       { status: 500 }
     );
   }
 
-  const personId = connection.platform_user_id;
-  if (!personId) {
+  const platformUserId = connection.platform_user_id;
+  if (!platformUserId) {
     return NextResponse.json(
-      { error: "ID LinkedIn manquant. Reconnecte ton compte." },
+      { error: `ID ${platformLabel} manquant. Reconnecte ton compte.` },
       { status: 500 }
     );
   }
@@ -108,16 +119,35 @@ export async function POST(req: NextRequest) {
   if (n8nWebhookBase && n8nSecret) {
     // --- Mode n8n : envoyer au webhook ---
     try {
-      const webhookUrl = `${n8nWebhookBase}/webhook/linkedin-publish`;
-      const n8nPayload = {
+      const webhookPath = platform === "linkedin" ? "linkedin-publish" : "meta-publish";
+      const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
+
+      const n8nPayload: Record<string, unknown> = {
         content_id: contentId,
         user_id: user.id,
-        platform: "linkedin",
-        person_id: personId,
+        platform,
+        platform_user_id: platformUserId,
         access_token: accessToken,
         commentary: contentItem.content,
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
       };
+
+      // Pour Instagram, ajouter l'image_url si présente (obligatoire pour IG)
+      if (platform === "instagram") {
+        const imageUrl = contentItem.meta?.image_url as string | undefined;
+        if (!imageUrl) {
+          return NextResponse.json(
+            { error: "Instagram requiert une image. Ajoute une image_url dans les métadonnées du contenu." },
+            { status: 400 }
+          );
+        }
+        n8nPayload.image_url = imageUrl;
+      }
+
+      // Pour Facebook, ajouter l'image_url si présente (optionnel)
+      if (platform === "facebook" && contentItem.meta?.image_url) {
+        n8nPayload.image_url = contentItem.meta.image_url;
+      }
 
       const n8nRes = await fetch(webhookUrl, {
         method: "POST",
@@ -137,7 +167,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Mettre le statut en "publishing" (temporaire)
+      // Mettre le statut en "published"
       await supabase
         .from("content_item")
         .update({ status: "published" })
@@ -147,8 +177,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         mode: "n8n",
-        postUrn: n8nResult?.postUrn,
-        message: "Post publié sur LinkedIn via n8n.",
+        postId: n8nResult?.postId ?? n8nResult?.postUrn,
+        message: `Post publié sur ${platformLabel} via n8n.`,
       });
     } catch (err) {
       console.error("n8n publish error:", err);
@@ -157,12 +187,35 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Mode direct (fallback si n8n pas configuré) ---
-  const result = await publishPost(accessToken, personId, contentItem.content);
+  let result: { ok: boolean; postId?: string; postUrn?: string; error?: string; statusCode?: number };
+
+  if (platform === "linkedin") {
+    const liResult = await publishPost(accessToken, platformUserId, contentItem.content);
+    result = { ...liResult, postId: liResult.postUrn };
+  } else if (platform === "facebook") {
+    const imageUrl = contentItem.meta?.image_url as string | undefined;
+    if (imageUrl) {
+      result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, imageUrl);
+    } else {
+      result = await publishToFacebookPage(accessToken, platformUserId, contentItem.content);
+    }
+  } else if (platform === "instagram") {
+    const imageUrl = contentItem.meta?.image_url as string | undefined;
+    if (!imageUrl) {
+      return NextResponse.json(
+        { error: "Instagram requiert une image. Ajoute une image_url dans les métadonnées du contenu." },
+        { status: 400 }
+      );
+    }
+    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, imageUrl);
+  } else {
+    return NextResponse.json({ error: "Plateforme non supportée" }, { status: 400 });
+  }
 
   if (!result.ok) {
-    console.error("LinkedIn publish error:", result.error);
+    console.error(`${platformLabel} publish error:`, result.error);
     return NextResponse.json(
-      { error: `Erreur LinkedIn: ${result.error}` },
+      { error: `Erreur ${platformLabel}: ${result.error}` },
       { status: result.statusCode ?? 500 }
     );
   }
@@ -176,7 +229,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     mode: "direct",
-    postUrn: result.postUrn,
-    message: "Post publié sur LinkedIn.",
+    postId: result.postId ?? result.postUrn,
+    message: `Post publié sur ${platformLabel}.`,
   });
 }
