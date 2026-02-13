@@ -1,8 +1,8 @@
 // app/api/n8n/scheduled-posts/route.ts
-// GET : appelé par les workflows cron n8n pour récupérer les posts à publier.
+// GET : appele par les workflows cron n8n pour recuperer les posts a publier.
 // Retourne les posts "scheduled" dont la date+heure est <= maintenant.
-// Sécurisé par N8N_SHARED_SECRET.
-// Query param optionnel : ?platform=linkedin|facebook|instagram (défaut: tous)
+// Securise par N8N_SHARED_SECRET.
+// Query param optionnel : ?platform=linkedin|facebook|threads (defaut: tous)
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -10,7 +10,7 @@ import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram"];
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads"];
 
 export async function GET(req: NextRequest) {
   // Auth par header secret
@@ -106,15 +106,13 @@ export async function GET(req: NextRequest) {
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
       };
 
-      // Pour Instagram, inclure l'image_url (obligatoire)
-      if (platform === "instagram") {
-        const imageUrl = post.meta?.image_url as string | undefined;
-        if (!imageUrl) return null; // Pas d'image, on ne peut pas poster sur IG
-        postData.image_url = imageUrl;
+      // Pour Facebook, inclure l'image_url si presente
+      if (platform === "facebook" && post.meta?.image_url) {
+        postData.image_url = post.meta.image_url;
       }
 
-      // Pour Facebook, inclure l'image_url si présente
-      if (platform === "facebook" && post.meta?.image_url) {
+      // Pour Threads, inclure l'image_url si presente (optionnel, Threads supporte le texte seul)
+      if (platform === "threads" && post.meta?.image_url) {
         postData.image_url = post.meta.image_url;
       }
 

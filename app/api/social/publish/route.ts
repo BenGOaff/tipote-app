@@ -1,18 +1,18 @@
 // app/api/social/publish/route.ts
-// POST : publie un contenu sur un réseau social via n8n (ou directement).
+// POST : publie un contenu sur un reseau social via n8n (ou directement).
 // Body : { contentId, platform }
-// Plateformes supportées : linkedin, facebook, instagram
+// Plateformes supportees : linkedin, facebook, threads
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
-import { publishToFacebookPage, publishPhotoToFacebookPage, publishToInstagram } from "@/lib/meta";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads"] as const;
 type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -35,14 +35,14 @@ export async function POST(req: NextRequest) {
 
   if (!SUPPORTED_PLATFORMS.includes(platform as Platform)) {
     return NextResponse.json(
-      { error: `Plateforme "${platform}" pas encore supportée. Disponibles : ${SUPPORTED_PLATFORMS.join(", ")}` },
+      { error: `Plateforme "${platform}" pas encore supportee. Disponibles : ${SUPPORTED_PLATFORMS.join(", ")}` },
       { status: 400 }
     );
   }
 
   const projectId = await getActiveProjectId(supabase, user.id);
 
-  // 1. Récupérer le contenu
+  // 1. Recuperer le contenu
   const { data: contentItem, error: contentError } = await supabase
     .from("content_item")
     .select("id, title, content, status, type, channel, meta")
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Le contenu est vide" }, { status: 400 });
   }
 
-  // 2. Récupérer la connexion sociale
+  // 2. Recuperer la connexion sociale
   let connQuery = supabase
     .from("social_connections")
     .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
@@ -74,32 +74,32 @@ export async function POST(req: NextRequest) {
   const platformLabels: Record<string, string> = {
     linkedin: "LinkedIn",
     facebook: "Facebook",
-    instagram: "Instagram",
+    threads: "Threads",
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
   if (connError || !connection) {
     return NextResponse.json(
-      { error: `${platformLabel} non connecté. Va dans Paramètres pour connecter ton compte.` },
+      { error: `${platformLabel} non connecte. Va dans Parametres pour connecter ton compte.` },
       { status: 400 }
     );
   }
 
-  // 3. Vérifier l'expiration du token
+  // 3. Verifier l'expiration du token
   if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
     return NextResponse.json(
-      { error: `Token ${platformLabel} expiré. Reconnecte ton compte dans les Paramètres.` },
+      { error: `Token ${platformLabel} expire. Reconnecte ton compte dans les Parametres.` },
       { status: 401 }
     );
   }
 
-  // 4. Déchiffrer le token
+  // 4. Dechiffrer le token
   let accessToken: string;
   try {
     accessToken = decrypt(connection.access_token_encrypted);
   } catch {
     return NextResponse.json(
-      { error: `Erreur de déchiffrement du token. Reconnecte ton compte ${platformLabel}.` },
+      { error: `Erreur de dechiffrement du token. Reconnecte ton compte ${platformLabel}.` },
       { status: 500 }
     );
   }
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 5. Décider du chemin : n8n ou direct
+  // 5. Decider du chemin : n8n ou direct
   const n8nWebhookBase = process.env.N8N_WEBHOOK_BASE_URL;
   const n8nSecret = process.env.N8N_SHARED_SECRET;
 
@@ -132,20 +132,13 @@ export async function POST(req: NextRequest) {
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
       };
 
-      // Pour Instagram, ajouter l'image_url si présente (obligatoire pour IG)
-      if (platform === "instagram") {
-        const imageUrl = contentItem.meta?.image_url as string | undefined;
-        if (!imageUrl) {
-          return NextResponse.json(
-            { error: "Instagram requiert une image. Ajoute une image_url dans les métadonnées du contenu." },
-            { status: 400 }
-          );
-        }
-        n8nPayload.image_url = imageUrl;
+      // Pour Facebook, ajouter l'image_url si presente (optionnel)
+      if (platform === "facebook" && contentItem.meta?.image_url) {
+        n8nPayload.image_url = contentItem.meta.image_url;
       }
 
-      // Pour Facebook, ajouter l'image_url si présente (optionnel)
-      if (platform === "facebook" && contentItem.meta?.image_url) {
+      // Pour Threads, ajouter l'image_url si presente (optionnel, Threads supporte le texte seul)
+      if (platform === "threads" && contentItem.meta?.image_url) {
         n8nPayload.image_url = contentItem.meta.image_url;
       }
 
@@ -162,7 +155,7 @@ export async function POST(req: NextRequest) {
         const text = await n8nRes.text();
         console.error("n8n webhook error:", text);
         return NextResponse.json(
-          { error: "Erreur n8n. Vérifiez que n8n est démarré." },
+          { error: "Erreur n8n. Verifiez que n8n est demarre." },
           { status: 502 }
         );
       }
@@ -178,7 +171,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         mode: "n8n",
         postId: n8nResult?.postId ?? n8nResult?.postUrn,
-        message: `Post publié sur ${platformLabel} via n8n.`,
+        message: `Post publie sur ${platformLabel} via n8n.`,
       });
     } catch (err) {
       console.error("n8n publish error:", err);
@@ -186,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // --- Mode direct (fallback si n8n pas configuré) ---
+  // --- Mode direct (fallback si n8n pas configure) ---
   let result: { ok: boolean; postId?: string; postUrn?: string; error?: string; statusCode?: number };
 
   if (platform === "linkedin") {
@@ -199,17 +192,11 @@ export async function POST(req: NextRequest) {
     } else {
       result = await publishToFacebookPage(accessToken, platformUserId, contentItem.content);
     }
-  } else if (platform === "instagram") {
+  } else if (platform === "threads") {
     const imageUrl = contentItem.meta?.image_url as string | undefined;
-    if (!imageUrl) {
-      return NextResponse.json(
-        { error: "Instagram requiert une image. Ajoute une image_url dans les métadonnées du contenu." },
-        { status: 400 }
-      );
-    }
-    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, imageUrl);
+    result = await publishToThreads(accessToken, platformUserId, contentItem.content, imageUrl);
   } else {
-    return NextResponse.json({ error: "Plateforme non supportée" }, { status: 400 });
+    return NextResponse.json({ error: "Plateforme non supportee" }, { status: 400 });
   }
 
   if (!result.ok) {
@@ -220,7 +207,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Mettre à jour le statut en "published"
+  // Mettre a jour le statut en "published"
   await supabase
     .from("content_item")
     .update({ status: "published" })
@@ -230,6 +217,6 @@ export async function POST(req: NextRequest) {
     ok: true,
     mode: "direct",
     postId: result.postId ?? result.postUrn,
-    message: `Post publié sur ${platformLabel}.`,
+    message: `Post publie sur ${platformLabel}.`,
   });
 }

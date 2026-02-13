@@ -52,7 +52,7 @@ const contentTypes = [
 
 const platforms = [
   { id: "linkedin", label: "LinkedIn" },
-  { id: "instagram", label: "Instagram" },
+  { id: "threads", label: "Threads" },
   { id: "facebook", label: "Facebook" },
   { id: "twitter", label: "X (Twitter)" },
   { id: "tiktok", label: "TikTok" },

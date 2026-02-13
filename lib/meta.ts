@@ -1,18 +1,19 @@
 // lib/meta.ts
-// Helpers Meta Graph API : Facebook Pages + Instagram Business.
+// Helpers Meta Graph API : Facebook Pages + Threads.
 // Doc : https://developers.facebook.com/docs/graph-api
-// Doc IG : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/content-publishing
+// Doc Threads : https://developers.facebook.com/docs/threads/
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+const THREADS_API_BASE = "https://graph.threads.net/v1.0";
 const FB_AUTH_URL = `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`;
 
 const SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
-  "instagram_basic",
-  "instagram_content_publish",
+  "threads_basic",
+  "threads_content_publish",
 ];
 
 function getAppId(): string {
@@ -39,7 +40,7 @@ function getRedirectUri(): string {
 
 /**
  * Construit l'URL d'autorisation Facebook Login.
- * Permissions : pages_show_list, pages_manage_posts, instagram_basic, instagram_content_publish
+ * Permissions : pages_show_list, pages_manage_posts, threads_basic, threads_content_publish
  */
 export function buildAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
@@ -99,7 +100,7 @@ export async function exchangeForLongLivedToken(shortLivedToken: string): Promis
 }
 
 // ----------------------------------------------------------------
-// Pages + Instagram Discovery
+// Pages Facebook
 // ----------------------------------------------------------------
 
 export type MetaPage = {
@@ -107,13 +108,10 @@ export type MetaPage = {
   name: string;
   access_token: string;
   category: string;
-  instagram_business_account?: {
-    id: string;
-  };
 };
 
 /**
- * Récupère les Pages Facebook de l'utilisateur + détecte les comptes IG Business liés.
+ * Recupere les Pages Facebook de l'utilisateur.
  */
 export async function getUserPages(userAccessToken: string): Promise<MetaPage[]> {
   const res = await fetch(
@@ -124,27 +122,36 @@ export async function getUserPages(userAccessToken: string): Promise<MetaPage[]>
     throw new Error(`Meta pages fetch failed (${res.status}): ${text}`);
   }
   const json = await res.json();
-  const pages: MetaPage[] = json.data ?? [];
+  return json.data ?? [];
+}
 
-  // Pour chaque page, vérifier si un compte IG Business est lié
-  const pagesWithIg = await Promise.all(
-    pages.map(async (page) => {
-      try {
-        const igRes = await fetch(
-          `${GRAPH_API_BASE}/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
-        );
-        if (igRes.ok) {
-          const igJson = await igRes.json();
-          page.instagram_business_account = igJson.instagram_business_account;
-        }
-      } catch {
-        // pas d'IG lié, on continue
-      }
-      return page;
-    })
-  );
+// ----------------------------------------------------------------
+// Threads Discovery
+// ----------------------------------------------------------------
 
-  return pagesWithIg;
+export type ThreadsUserInfo = {
+  id: string;
+  username?: string;
+  name?: string;
+  threads_profile_picture_url?: string;
+};
+
+/**
+ * Detecte le compte Threads lie au user via l'API Threads.
+ * Utilise le user access token (pas le page token).
+ */
+export async function getThreadsUser(userAccessToken: string): Promise<ThreadsUserInfo | null> {
+  try {
+    const res = await fetch(
+      `${THREADS_API_BASE}/me?fields=id,username,name,threads_profile_picture_url&access_token=${userAccessToken}`
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.id) return null;
+    return json as ThreadsUserInfo;
+  } catch {
+    return null;
+  }
 }
 
 export type MetaUserInfo = {
@@ -154,7 +161,7 @@ export type MetaUserInfo = {
 };
 
 /**
- * Récupère les infos basiques du user Facebook.
+ * Recupere les infos basiques du user Facebook.
  */
 export async function getUserInfo(accessToken: string): Promise<MetaUserInfo> {
   const res = await fetch(
@@ -233,53 +240,61 @@ export async function publishPhotoToFacebookPage(
 }
 
 // ----------------------------------------------------------------
-// Instagram Publishing (2 étapes : create container → publish)
-// NOTE : Instagram requiert obligatoirement un média (image ou vidéo).
-//        Les posts texte seuls ne sont PAS supportés par l'API IG.
+// Threads Publishing (2 etapes : create container -> publish)
+// Threads supporte les posts texte seuls ET les posts avec image.
+// Doc : https://developers.facebook.com/docs/threads/posts
 // ----------------------------------------------------------------
 
 /**
- * Publie une photo sur Instagram Business (caption + image URL).
- * Processus en 2 étapes :
- *   1. POST /{ig_user_id}/media → creation_id
- *   2. POST /{ig_user_id}/media_publish → post_id
+ * Publie un post texte sur Threads.
+ * Processus en 2 etapes :
+ *   1. POST /{threads_user_id}/threads -> creation_id
+ *   2. POST /{threads_user_id}/threads_publish -> post_id
  */
-export async function publishToInstagram(
-  pageAccessToken: string,
-  igUserId: string,
-  caption: string,
-  imageUrl: string
+export async function publishToThreads(
+  userAccessToken: string,
+  threadsUserId: string,
+  text: string,
+  imageUrl?: string
 ): Promise<MetaPostResult> {
-  // Étape 1 : Créer le media container
-  const createRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media`, {
+  // Etape 1 : Creer le container
+  const containerBody: Record<string, string> = {
+    text,
+    access_token: userAccessToken,
+  };
+
+  if (imageUrl) {
+    containerBody.media_type = "IMAGE";
+    containerBody.image_url = imageUrl;
+  } else {
+    containerBody.media_type = "TEXT";
+  }
+
+  const createRes = await fetch(`${THREADS_API_BASE}/${threadsUserId}/threads`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      image_url: imageUrl,
-      caption,
-      access_token: pageAccessToken,
-    }),
+    body: JSON.stringify(containerBody),
   });
 
   if (!createRes.ok) {
-    const text = await createRes.text();
-    return { ok: false, error: `Container creation failed: ${text}`, statusCode: createRes.status };
+    const errText = await createRes.text();
+    return { ok: false, error: `Threads container creation failed: ${errText}`, statusCode: createRes.status };
   }
 
   const createJson = await createRes.json();
   const creationId = createJson.id;
 
   if (!creationId) {
-    return { ok: false, error: "No creation_id returned from Instagram", statusCode: 500 };
+    return { ok: false, error: "No creation_id returned from Threads", statusCode: 500 };
   }
 
-  // Étape 2 : Publier le container
-  const publishRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media_publish`, {
+  // Etape 2 : Publier le container
+  const publishRes = await fetch(`${THREADS_API_BASE}/${threadsUserId}/threads_publish`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       creation_id: creationId,
-      access_token: pageAccessToken,
+      access_token: userAccessToken,
     }),
   });
 
@@ -288,58 +303,6 @@ export async function publishToInstagram(
     return { ok: true, postId: publishJson.id };
   }
 
-  const text = await publishRes.text();
-  return { ok: false, error: `Media publish failed: ${text}`, statusCode: publishRes.status };
-}
-
-/**
- * Publie un Reel (vidéo) sur Instagram Business.
- */
-export async function publishReelToInstagram(
-  pageAccessToken: string,
-  igUserId: string,
-  caption: string,
-  videoUrl: string
-): Promise<MetaPostResult> {
-  // Étape 1 : Créer le container vidéo
-  const createRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      video_url: videoUrl,
-      caption,
-      media_type: "REELS",
-      access_token: pageAccessToken,
-    }),
-  });
-
-  if (!createRes.ok) {
-    const text = await createRes.text();
-    return { ok: false, error: `Reel container creation failed: ${text}`, statusCode: createRes.status };
-  }
-
-  const createJson = await createRes.json();
-  const creationId = createJson.id;
-
-  if (!creationId) {
-    return { ok: false, error: "No creation_id returned for Reel", statusCode: 500 };
-  }
-
-  // Étape 2 : Publier
-  const publishRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      creation_id: creationId,
-      access_token: pageAccessToken,
-    }),
-  });
-
-  if (publishRes.ok) {
-    const publishJson = await publishRes.json();
-    return { ok: true, postId: publishJson.id };
-  }
-
-  const text = await publishRes.text();
-  return { ok: false, error: `Reel publish failed: ${text}`, statusCode: publishRes.status };
+  const errText = await publishRes.text();
+  return { ok: false, error: `Threads publish failed: ${errText}`, statusCode: publishRes.status };
 }
