@@ -11,7 +11,7 @@ import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import SettingsTabsShell from "@/components/settings/SettingsTabsShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type TabKey = "profile" | "settings" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "ai" | "pricing";
 
 type Props = {
   searchParams?: { tab?: string };
@@ -19,7 +19,7 @@ type Props = {
 
 function normalizeTab(v: string | undefined): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "settings" || s === "ai") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "ai") return s;
   // compat ancien: tab=billing
   if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
