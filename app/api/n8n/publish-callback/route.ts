@@ -1,7 +1,7 @@
 // app/api/n8n/publish-callback/route.ts
 // POST : appelé par n8n après publication d'un post.
 // Met à jour le statut du content_item.
-// Body : { content_id, success, postUrn?, error? }
+// Body : { content_id, platform?, success, postUrn?, postId?, error? }
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -17,8 +17,10 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const contentId = body?.content_id as string | undefined;
+  const platform = body?.platform as string | undefined;
   const success = body?.success as boolean | undefined;
   const postUrn = body?.postUrn as string | undefined;
+  const postId = body?.postId as string | undefined;
   const errorMsg = body?.error as string | undefined;
 
   if (!contentId) {
@@ -26,11 +28,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (success) {
-    // Marquer comme publié + stocker l'URN du post LinkedIn dans meta
+    // Marquer comme publié + stocker les infos du post dans meta
     const meta: Record<string, string> = {
       published_at: new Date().toISOString(),
     };
+
+    // Stocker l'identifiant du post selon la plateforme
     if (postUrn) meta.linkedin_post_urn = postUrn;
+    if (postId) meta.meta_post_id = postId;
+    if (platform) meta.published_platform = platform;
 
     const { error } = await supabaseAdmin
       .from("content_item")
@@ -47,7 +53,7 @@ export async function POST(req: NextRequest) {
         .eq("id", contentId);
     }
   } else {
-    console.error(`n8n publish failed for ${contentId}: ${errorMsg}`);
+    console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
     // On ne change pas le statut pour ne pas perdre le "scheduled"
   }
 
