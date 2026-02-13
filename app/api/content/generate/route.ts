@@ -1529,6 +1529,8 @@ export async function POST(req: Request) {
     if (projectId) profileQuery.eq("project_id", projectId);
     const { data: profile } = await profileQuery.maybeSingle();
 
+    const contentLocale = ((profile as any)?.content_locale ?? "fr").trim() || "fr";
+
     const planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
     if (projectId) planQuery.eq("project_id", projectId);
     const { data: planRow } = await planQuery.maybeSingle();
@@ -1885,6 +1887,7 @@ export async function POST(req: Request) {
           tone: tone || undefined,
           targetWordCount: typeof body.targetWordCount === "number" ? body.targetWordCount : undefined,
           offerLink: safeString(body.offerLink).trim() || undefined,
+          language: contentLocale,
         } as any);
       }
 
@@ -1994,7 +1997,7 @@ export async function POST(req: Request) {
           leadMagnetFormat,
           sourceOffer: (offerMode === "from_existing" || offerMode === "improve") ? sourceOffer : null,
           improvementGoal: offerMode === "improve" ? safeString(body.improvementGoal).trim() || undefined : undefined,
-          language: "fr",
+          language: contentLocale,
         } as any);
       }
 
@@ -2063,7 +2066,7 @@ export async function POST(req: Request) {
           templateGlobalPrompt: safeString((body as any).templateGlobalPrompt).trim() || undefined,
           templatePagePrompt: safeString((body as any).templatePagePrompt).trim() || undefined,
 
-          language: "fr",
+          language: contentLocale,
         } as any);
       }
 
@@ -2094,8 +2097,17 @@ export async function POST(req: Request) {
      * Context builder
      * -------------------------- */
 
+    const LOCALE_LABELS: Record<string, string> = {
+      fr: "français", en: "English", es: "español", it: "italiano",
+      pt: "português", de: "Deutsch", nl: "Nederlands", ar: "العربية",
+      tr: "Türkçe", pl: "polski", ro: "română", ru: "русский",
+      ja: "日本語", zh: "中文", ko: "한국어", hi: "हिन्दी",
+    };
+    const langLabel = LOCALE_LABELS[contentLocale] ?? contentLocale;
+
     const userContextLines: string[] = [];
     userContextLines.push(`Type: ${type}`);
+    userContextLines.push(`LANGUE DE RÉDACTION (OBLIGATOIRE): ${langLabel}. Tout le contenu généré DOIT être rédigé en ${langLabel}.`);
     if (channel) userContextLines.push(`Canal: ${channel}`);
     if (scheduledDate) userContextLines.push(`Date planifiée: ${scheduledDate}`);
     if (tagsCsv) userContextLines.push(`Tags: ${tagsCsv}`);

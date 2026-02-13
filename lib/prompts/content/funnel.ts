@@ -47,7 +47,7 @@ export type FunnelPromptParams = {
   templateId?: string;
   templateSchemaPrompt?: string;
 
-  language?: "fr" | "en";
+  language?: string;
 };
 
 function safeString(v: unknown): string {
