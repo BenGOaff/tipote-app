@@ -48,6 +48,8 @@ const UpdateSchema = z.object({
 
   sio_user_api_key: z.string().trim().max(200).optional(),
 
+  content_locale: z.string().trim().max(10).optional(),
+
   linkedin_url: z.string().trim().max(500).optional(),
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),

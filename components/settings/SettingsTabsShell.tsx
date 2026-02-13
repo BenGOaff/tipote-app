@@ -75,6 +75,7 @@ type ProfileRow = {
   terms_url?: string | null;
   cgv_url?: string | null;
   sio_user_api_key?: string | null;
+  content_locale?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
   youtube_url?: string | null;
@@ -128,6 +129,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [sioApiKey, setSioApiKey] = useState("");
   const [pendingSio, startSioTransition] = useTransition();
 
+  const [contentLocale, setContentLocale] = useState("fr");
+  const [pendingLocale, startLocaleTransition] = useTransition();
+
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -160,6 +164,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setTermsUrl(row?.terms_url ?? "");
         setCgvUrl(row?.cgv_url ?? "");
         setSioApiKey(row?.sio_user_api_key ?? "");
+        setContentLocale(row?.content_locale ?? "fr");
         setLinkedinUrl(row?.linkedin_url ?? "");
         setInstagramUrl(row?.instagram_url ?? "");
         setYoutubeUrl(row?.youtube_url ?? "");
@@ -406,6 +411,40 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setSioApiKey(row?.sio_user_api_key ?? "");
 
         toast({ title: "Clé API Systeme.io enregistrée" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Content Locale
+  // -------------------------
+  const localeDirty = useMemo(() => {
+    return (initialProfile?.content_locale ?? "fr") !== contentLocale;
+  }, [initialProfile, contentLocale]);
+
+  const saveContentLocale = () => {
+    startLocaleTransition(async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_locale: contentLocale }),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setContentLocale(row?.content_locale ?? "fr");
+
+        toast({ title: "Langue du contenu enregistrée" });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -687,13 +726,27 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
             <div className="space-y-2">
               <Label>Langue du contenu généré</Label>
-              <Select defaultValue="fr">
+              <Select value={contentLocale} onValueChange={setContentLocale} disabled={profileLoading}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fr">Français</SelectItem>
                   <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="it">Italiano</SelectItem>
+                  <SelectItem value="pt">Português</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                  <SelectItem value="nl">Nederlands</SelectItem>
+                  <SelectItem value="ar">العربية</SelectItem>
+                  <SelectItem value="tr">Türkçe</SelectItem>
+                  <SelectItem value="pl">Polski</SelectItem>
+                  <SelectItem value="ro">Română</SelectItem>
+                  <SelectItem value="ru">Русский</SelectItem>
+                  <SelectItem value="ja">日本語</SelectItem>
+                  <SelectItem value="zh">中文</SelectItem>
+                  <SelectItem value="ko">한국어</SelectItem>
+                  <SelectItem value="hi">हिन्दी</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -711,6 +764,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               </Select>
             </div>
           </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveContentLocale} disabled={!localeDirty || pendingLocale}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingLocale ? "Enregistrement…" : "Enregistrer la langue"}
+          </Button>
         </Card>
 
         <Card className="p-6">
