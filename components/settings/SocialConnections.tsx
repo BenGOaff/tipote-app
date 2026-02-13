@@ -72,7 +72,7 @@ const PLATFORMS: PlatformConfig[] = [
     color: "bg-[#000000]",
     bgColor: "bg-[#000000]/10",
     hoverColor: "hover:bg-[#333333]",
-    oauthUrl: "/api/auth/meta", // Meme OAuth que Facebook
+    oauthUrl: "/api/auth/threads", // OAuth Threads separe de Facebook
   },
 ];
 
@@ -122,22 +122,36 @@ export default function SocialConnections() {
       });
     }
 
-    // Meta (Facebook + Threads)
-    const metaConnected = searchParams.get("meta_connected");
-    if (metaConnected) {
-      const platforms = metaConnected.split(",");
-      const labels = platforms.map((p) => p === "facebook" ? "Facebook" : p === "threads" ? "Threads" : p);
+    // Facebook
+    if (searchParams.get("meta_connected") === "facebook") {
       toast({
-        title: `${labels.join(" + ")} connecte${labels.length > 1 ? "s" : ""}`,
-        description: `${labels.join(" et ")} ${labels.length > 1 ? "sont" : "est"} maintenant lie${labels.length > 1 ? "s" : ""} a Tipote.`,
+        title: "Facebook connecte",
+        description: "Ta Page Facebook est maintenant liee a Tipote.",
       });
       fetchConnections();
     }
     const metaError = searchParams.get("meta_error");
     if (metaError) {
       toast({
-        title: "Erreur Facebook/Threads",
+        title: "Erreur Facebook",
         description: decodeURIComponent(metaError),
+        variant: "destructive",
+      });
+    }
+
+    // Threads
+    if (searchParams.get("threads_connected") === "1") {
+      toast({
+        title: "Threads connecte",
+        description: "Ton compte Threads est maintenant lie a Tipote.",
+      });
+      fetchConnections();
+    }
+    const threadsError = searchParams.get("threads_error");
+    if (threadsError) {
+      toast({
+        title: "Erreur Threads",
+        description: decodeURIComponent(threadsError),
         variant: "destructive",
       });
     }
@@ -190,12 +204,6 @@ export default function SocialConnections() {
           {PLATFORMS.map((platform) => {
             const connection = getConnection(platform.key);
 
-            // Threads est connecte via le meme OAuth que Facebook.
-            // Si Facebook est connecte mais pas Threads, on montre un message specifique.
-            const isFbConnected = !!getConnection("facebook");
-            const isThreadsMissingFromMeta =
-              platform.key === "threads" && !connection && isFbConnected;
-
             return (
               <div
                 key={platform.key}
@@ -224,10 +232,6 @@ export default function SocialConnections() {
                     {connection ? (
                       <p className="text-sm text-muted-foreground">
                         {connection.platform_username ?? "Compte connecte"}
-                      </p>
-                    ) : isThreadsMissingFromMeta ? (
-                      <p className="text-sm text-muted-foreground">
-                        Aucun compte Threads detecte. Assure-toi d'avoir un compte Threads lie a ton compte Facebook/Instagram.
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">{platform.description}</p>
