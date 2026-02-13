@@ -14,7 +14,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 type TabKey = "profile" | "connections" | "settings" | "ai" | "pricing";
 
 type Props = {
-  searchParams?: { tab?: string };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function normalizeTab(v: string | undefined): TabKey {
@@ -33,8 +33,9 @@ export default async function SettingsPage({ searchParams }: Props) {
 
   if (!authUser) redirect("/login");
 
+  const sp = await searchParams;
   const userEmail = authUser.email ?? "";
-  const activeTab = normalizeTab(searchParams?.tab);
+  const activeTab = normalizeTab(sp?.tab as string | undefined);
 
   return (
     <SidebarProvider>

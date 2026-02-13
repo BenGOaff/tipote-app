@@ -13,7 +13,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ContentGenerator } from "@/components/content/ContentGenerator";
 
 type Props = {
-  params: { type: string };
+  params: Promise<{ type: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
@@ -112,7 +112,8 @@ function buildDefaultPrompt(args: {
 }
 
 export default async function CreateTypePage(props: Props) {
-  const { params, searchParams } = props;
+  const { params: paramsPromise, searchParams } = props;
+  const params = await paramsPromise;
 
   const supabase = await getSupabaseServerClient();
   const {
