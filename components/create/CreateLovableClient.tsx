@@ -28,7 +28,7 @@ const contentTypes = [
   {
     id: "post",
     label: "Réseaux Sociaux",
-    description: "Posts LinkedIn, Instagram, X...",
+    description: "Posts LinkedIn, Threads, Facebook, X...",
     icon: MessageSquare,
     color: "bg-blue-500",
   },

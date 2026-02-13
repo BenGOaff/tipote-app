@@ -1,6 +1,6 @@
 // app/api/auth/meta/route.ts
 // Initie le flow OAuth Facebook Login : redirige vers Facebook avec state CSRF.
-// Donne accès aux Pages Facebook + Instagram Business.
+// Donne acces aux Pages Facebook + Threads.
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";

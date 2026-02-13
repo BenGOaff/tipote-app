@@ -1,6 +1,6 @@
 // app/api/auth/meta/callback/route.ts
-// Callback OAuth Facebook : échange le code, récupère les Pages + IG,
-// stocke les tokens chiffrés pour Facebook et Instagram.
+// Callback OAuth Facebook : echange le code, recupere les Pages + Threads,
+// stocke les tokens chiffres pour Facebook et Threads.
 
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -10,6 +10,7 @@ import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getUserPages,
+  getThreadsUser,
 } from "@/lib/meta";
 import { encrypt } from "@/lib/crypto";
 
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const settingsUrl = `${appUrl}/settings?tab=connections`;
 
   try {
-    // 1. Vérifier l'authentification Tipote
+    // 1. Verifier l'authentification Tipote
     const supabase = await getSupabaseServerClient();
     const {
       data: { user },
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/login`);
     }
 
-    // 2. Vérifier le state CSRF
+    // 2. Verifier le state CSRF
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
@@ -49,28 +50,28 @@ export async function GET(req: NextRequest) {
 
     if (!code || !state || state !== savedState) {
       return NextResponse.redirect(
-        `${settingsUrl}&meta_error=${encodeURIComponent("State CSRF invalide. Réessaie.")}`
+        `${settingsUrl}&meta_error=${encodeURIComponent("State CSRF invalide. Reessaie.")}`
       );
     }
 
-    // 3. Échanger le code contre un short-lived token
+    // 3. Echanger le code contre un short-lived token
     const shortLived = await exchangeCodeForToken(code);
 
-    // 4. Échanger contre un long-lived token (~60 jours)
+    // 4. Echanger contre un long-lived token (~60 jours)
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
 
-    // 5. Récupérer les Pages Facebook + comptes IG liés
+    // 5. Recuperer les Pages Facebook
     const pages = await getUserPages(longLived.access_token);
 
     if (pages.length === 0) {
       return NextResponse.redirect(
         `${settingsUrl}&meta_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvée. Assure-toi d'avoir une Page Facebook et d'avoir accordé les permissions."
+          "Aucune Page Facebook trouvee. Assure-toi d'avoir une Page Facebook et d'avoir accorde les permissions."
         )}`
       );
     }
 
-    // 6. Prendre la première page (v1 : sélection automatique)
+    // 6. Prendre la premiere page (v1 : selection automatique)
     const page = pages[0];
 
     const projectId = await getActiveProjectId(supabase, user.id);
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
     ).toISOString();
 
     // 7. Stocker la connexion Facebook (Page)
-    // Le Page Access Token hérité d'un long-lived user token est lui-même long-lived
+    // Le Page Access Token herite d'un long-lived user token est lui-meme long-lived
     const pageTokenEncrypted = encrypt(page.access_token);
 
     const { error: fbError } = await supabase
@@ -104,53 +105,42 @@ export async function GET(req: NextRequest) {
       console.error("Facebook social_connections upsert error:", fbError);
     }
 
-    // 8. Si un compte Instagram Business est lié, stocker aussi cette connexion
-    let igConnected = false;
-    if (page.instagram_business_account?.id) {
-      const igUserId = page.instagram_business_account.id;
+    // 8. Detecter le compte Threads et stocker la connexion
+    // Threads utilise le USER access token (pas le page token)
+    let threadsConnected = false;
+    const threadsUser = await getThreadsUser(longLived.access_token);
 
-      // Récupérer le username IG
-      let igUsername = page.name; // fallback : nom de la page
-      try {
-        const igInfoRes = await fetch(
-          `https://graph.facebook.com/v21.0/${igUserId}?fields=username,name&access_token=${page.access_token}`
-        );
-        if (igInfoRes.ok) {
-          const igInfo = await igInfoRes.json();
-          igUsername = igInfo.username ?? igInfo.name ?? page.name;
-        }
-      } catch {
-        // fallback au nom de la page
-      }
+    if (threadsUser) {
+      const userTokenEncrypted = encrypt(longLived.access_token);
 
-      const { error: igError } = await supabase
+      const { error: threadsError } = await supabase
         .from("social_connections")
         .upsert(
           {
             user_id: user.id,
             project_id: projectId ?? null,
-            platform: "instagram",
-            platform_user_id: igUserId, // IG Business Account ID
-            platform_username: igUsername,
-            access_token_encrypted: pageTokenEncrypted, // Même token que la Page
+            platform: "threads",
+            platform_user_id: threadsUser.id, // Threads User ID
+            platform_username: threadsUser.username ?? threadsUser.name ?? page.name,
+            access_token_encrypted: userTokenEncrypted, // User token, pas page token
             refresh_token_encrypted: null,
             token_expires_at: tokenExpiresAt,
-            scopes: "instagram_basic,instagram_content_publish",
+            scopes: "threads_basic,threads_content_publish",
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id,project_id,platform" }
         );
 
-      if (igError) {
-        console.error("Instagram social_connections upsert error:", igError);
+      if (threadsError) {
+        console.error("Threads social_connections upsert error:", threadsError);
       } else {
-        igConnected = true;
+        threadsConnected = true;
       }
     }
 
-    // 9. Rediriger vers les settings avec succès
-    const successParam = igConnected
-      ? "meta_connected=facebook,instagram"
+    // 9. Rediriger vers les settings avec succes
+    const successParam = threadsConnected
+      ? "meta_connected=facebook,threads"
       : "meta_connected=facebook";
 
     return NextResponse.redirect(`${settingsUrl}&${successParam}`);
@@ -158,7 +148,7 @@ export async function GET(req: NextRequest) {
     console.error("Meta OAuth callback error:", err);
     return NextResponse.redirect(
       `${settingsUrl}&meta_error=${encodeURIComponent(
-        "Erreur de connexion Facebook/Instagram. Réessaie."
+        "Erreur de connexion Facebook/Threads. Reessaie."
       )}`
     );
   }

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS social_connections (
   id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   project_id    UUID REFERENCES projects(id) ON DELETE CASCADE,
-  platform      TEXT NOT NULL CHECK (platform IN ('linkedin', 'instagram', 'facebook', 'twitter', 'tiktok')),
+  platform      TEXT NOT NULL CHECK (platform IN ('linkedin', 'instagram', 'facebook', 'twitter', 'tiktok', 'threads')),
 
   -- Identifiant + nom sur la plateforme (ex: LinkedIn person URN, display name)
   platform_user_id   TEXT,

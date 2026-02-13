@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Linkedin, Facebook, Instagram, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,14 +65,14 @@ const PLATFORMS: PlatformConfig[] = [
     oauthUrl: "/api/auth/meta",
   },
   {
-    key: "instagram",
-    label: "Instagram",
-    description: "Publie sur ton compte Instagram Business",
-    icon: <Instagram className="h-5 w-5 text-[#E4405F]" />,
-    color: "bg-[#E4405F]",
-    bgColor: "bg-[#E4405F]/10",
-    hoverColor: "hover:bg-[#C13584]",
-    oauthUrl: "/api/auth/meta", // Même OAuth que Facebook
+    key: "threads",
+    label: "Threads",
+    description: "Publie sur ton compte Threads",
+    icon: <AtSign className="h-5 w-5 text-[#000000]" />,
+    color: "bg-[#000000]",
+    bgColor: "bg-[#000000]/10",
+    hoverColor: "hover:bg-[#333333]",
+    oauthUrl: "/api/auth/meta", // Meme OAuth que Facebook
   },
 ];
 
@@ -122,21 +122,21 @@ export default function SocialConnections() {
       });
     }
 
-    // Meta (Facebook + Instagram)
+    // Meta (Facebook + Threads)
     const metaConnected = searchParams.get("meta_connected");
     if (metaConnected) {
       const platforms = metaConnected.split(",");
-      const labels = platforms.map((p) => p === "facebook" ? "Facebook" : p === "instagram" ? "Instagram" : p);
+      const labels = platforms.map((p) => p === "facebook" ? "Facebook" : p === "threads" ? "Threads" : p);
       toast({
-        title: `${labels.join(" + ")} connecté${labels.length > 1 ? "s" : ""}`,
-        description: `${labels.join(" et ")} ${labels.length > 1 ? "sont" : "est"} maintenant lié${labels.length > 1 ? "s" : ""} à Tipote.`,
+        title: `${labels.join(" + ")} connecte${labels.length > 1 ? "s" : ""}`,
+        description: `${labels.join(" et ")} ${labels.length > 1 ? "sont" : "est"} maintenant lie${labels.length > 1 ? "s" : ""} a Tipote.`,
       });
       fetchConnections();
     }
     const metaError = searchParams.get("meta_error");
     if (metaError) {
       toast({
-        title: "Erreur Facebook/Instagram",
+        title: "Erreur Facebook/Threads",
         description: decodeURIComponent(metaError),
         variant: "destructive",
       });
@@ -190,11 +190,11 @@ export default function SocialConnections() {
           {PLATFORMS.map((platform) => {
             const connection = getConnection(platform.key);
 
-            // Instagram est connecté via le même OAuth que Facebook.
-            // Si Facebook est connecté mais pas Instagram, on montre un message spécifique.
+            // Threads est connecte via le meme OAuth que Facebook.
+            // Si Facebook est connecte mais pas Threads, on montre un message specifique.
             const isFbConnected = !!getConnection("facebook");
-            const isIgMissingFromMeta =
-              platform.key === "instagram" && !connection && isFbConnected;
+            const isThreadsMissingFromMeta =
+              platform.key === "threads" && !connection && isFbConnected;
 
             return (
               <div
@@ -223,11 +223,11 @@ export default function SocialConnections() {
                     </div>
                     {connection ? (
                       <p className="text-sm text-muted-foreground">
-                        {connection.platform_username ?? "Compte connecté"}
+                        {connection.platform_username ?? "Compte connecte"}
                       </p>
-                    ) : isIgMissingFromMeta ? (
+                    ) : isThreadsMissingFromMeta ? (
                       <p className="text-sm text-muted-foreground">
-                        Aucun compte Instagram Business lié à ta Page Facebook
+                        Aucun compte Threads detecte. Assure-toi d'avoir un compte Threads lie a ton compte Facebook/Instagram.
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">{platform.description}</p>

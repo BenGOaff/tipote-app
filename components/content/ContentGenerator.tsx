@@ -71,7 +71,7 @@ function metaForType(type: string) {
 
   return {
     title: 'Post réseaux sociaux',
-    subtitle: 'LinkedIn, Instagram, X…',
+    subtitle: 'LinkedIn, Threads, Facebook, X…',
     placeholder:
       'Sujet, angle, cible, objectif, style…\nEx: post LinkedIn storytelling, 180–240 mots, ton direct, 1 CTA.',
     defaultChannel: 'LinkedIn',

@@ -7,7 +7,7 @@
 // - Tipote Knowledge (ressources internes via manifest xlsx)
 // ⚠️ Sortie attendue: texte brut uniquement (pas de markdown).
 
-export type SocialPlatform = "linkedin" | "instagram" | "twitter" | "facebook" | "tiktok";
+export type SocialPlatform = "linkedin" | "threads" | "twitter" | "facebook" | "tiktok";
 export type SocialTheme = "educate" | "sell" | "entertain" | "storytelling" | "social_proof";
 export type SocialTone = "professional" | "casual" | "inspirational" | "educational" | "humorous";
 
@@ -45,13 +45,13 @@ function platformGuidelines(platform: SocialPlatform): string {
         "Call-to-action: question finale simple pour déclencher des commentaires OU invitation claire à DM si vente.",
       ].join("\n");
 
-    case "instagram":
+    case "threads":
       return [
-        "Plateforme: Instagram.",
-        "Objectif: lisibilité mobile, très scannable.",
-        "Hook très court. Phrases très courtes. Sauts de lignes fréquents.",
-        "Autorisé: emojis si (et seulement si) ils renforcent l'émotion ou la compréhension.",
-        "Call-to-action: question + incitation à enregistrer/partager si éducatif.",
+        "Plateforme: Threads.",
+        "Objectif: conversation authentique, micro-contenu percutant.",
+        "Hook ultra-court. Phrases directes et concises. Limite de 500 caracteres.",
+        "Ton conversationnel et accessible. Pas de hashtags.",
+        "Call-to-action: question simple pour generer des reponses.",
       ].join("\n");
 
     case "twitter":

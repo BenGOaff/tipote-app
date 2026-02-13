@@ -25,7 +25,7 @@ interface PostFormProps {
 
 const platforms = [
   { id: "linkedin", label: "LinkedIn" },
-  { id: "instagram", label: "Instagram" },
+  { id: "threads", label: "Threads" },
   { id: "twitter", label: "X (Twitter)" },
   { id: "facebook", label: "Facebook" },
   { id: "tiktok", label: "TikTok" },
@@ -50,7 +50,7 @@ const tones = [
 const platformPublishUrls: Record<string, { label: string; getUrl: (text: string) => string }> = {
   linkedin: { label: "LinkedIn", getUrl: () => "https://www.linkedin.com/feed/" },
   facebook: { label: "Facebook", getUrl: () => "https://www.facebook.com/" },
-  instagram: { label: "Instagram", getUrl: () => "https://www.instagram.com/" },
+  threads: { label: "Threads", getUrl: () => "https://www.threads.net/" },
   twitter: { label: "X (Twitter)", getUrl: (t) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t.slice(0, 280))}` },
   tiktok: { label: "TikTok", getUrl: () => "https://www.tiktok.com/" },
 };

@@ -1,5 +1,5 @@
 {
-  "name": "Tipote - Meta (FB + IG) Publish Now",
+  "name": "Tipote - Meta (FB + Threads) Publish Now",
   "nodes": [
     {
       "parameters": {
@@ -56,7 +56,7 @@
             {
               "id": "check-platform",
               "leftValue": "={{ $json.body.platform }}",
-              "rightValue": "instagram",
+              "rightValue": "threads",
               "operator": {
                 "type": "string",
                 "operation": "equals"
@@ -67,7 +67,7 @@
         }
       },
       "id": "route-platform",
-      "name": "Is Instagram?",
+      "name": "Is Threads?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [690, 300]
@@ -165,7 +165,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/media",
+        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -177,7 +177,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"image_url\": \"{{ $('Webhook Trigger').item.json.body.image_url }}\",\n  \"caption\": {{ JSON.stringify($('Webhook Trigger').item.json.body.commentary) }},\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
+        "jsonBody": "={\n  \"media_type\": \"{{ $('Webhook Trigger').item.json.body.image_url ? 'IMAGE' : 'TEXT' }}\",\n  \"text\": {{ JSON.stringify($('Webhook Trigger').item.json.body.commentary) }},\n  {{ $('Webhook Trigger').item.json.body.image_url ? '\"image_url\": \"' + $('Webhook Trigger').item.json.body.image_url + '\",' : '' }}\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -187,8 +187,8 @@
           }
         }
       },
-      "id": "ig-create-media",
-      "name": "IG Create Media Container",
+      "id": "threads-create-container",
+      "name": "Threads Create Container",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [910, 420]
@@ -196,7 +196,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/media_publish",
+        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads_publish",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -218,8 +218,8 @@
           }
         }
       },
-      "id": "ig-publish-media",
-      "name": "IG Publish Media",
+      "id": "threads-publish",
+      "name": "Threads Publish",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1130, 420]
@@ -271,11 +271,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"instagram\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.id || '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"threads\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.id || '' }}\"\n}",
         "options": {}
       },
-      "id": "callback-success-ig",
-      "name": "Callback Success (IG)",
+      "id": "callback-success-threads",
+      "name": "Callback Success (Threads)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1350, 420]
@@ -326,8 +326,8 @@
         "responseBody": "={ \"ok\": true, \"postId\": \"{{ $json.body?.id || '' }}\" }",
         "options": {}
       },
-      "id": "respond-success-ig",
-      "name": "Respond Success (IG)",
+      "id": "respond-success-threads",
+      "name": "Respond Success (Threads)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [1570, 420]
@@ -363,7 +363,7 @@
       "main": [
         [
           {
-            "node": "Is Instagram?",
+            "node": "Is Threads?",
             "type": "main",
             "index": 0
           }
@@ -377,11 +377,11 @@
         ]
       ]
     },
-    "Is Instagram?": {
+    "Is Threads?": {
       "main": [
         [
           {
-            "node": "IG Create Media Container",
+            "node": "Threads Create Container",
             "type": "main",
             "index": 0
           }
@@ -446,33 +446,33 @@
         ]
       ]
     },
-    "IG Create Media Container": {
+    "Threads Create Container": {
       "main": [
         [
           {
-            "node": "IG Publish Media",
+            "node": "Threads Publish",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IG Publish Media": {
+    "Threads Publish": {
       "main": [
         [
           {
-            "node": "Callback Success (IG)",
+            "node": "Callback Success (Threads)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Callback Success (IG)": {
+    "Callback Success (Threads)": {
       "main": [
         [
           {
-            "node": "Respond Success (IG)",
+            "node": "Respond Success (Threads)",
             "type": "main",
             "index": 0
           }
@@ -492,5 +492,5 @@
     }
   ],
   "pinData": {},
-  "versionId": "1"
+  "versionId": "2"
 }

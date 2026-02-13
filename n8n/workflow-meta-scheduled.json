@@ -1,5 +1,5 @@
 {
-  "name": "Tipote - Meta (FB + IG) Scheduled Publisher",
+  "name": "Tipote - Meta (FB + Threads) Scheduled Publisher",
   "nodes": [
     {
       "parameters": {
@@ -42,7 +42,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=instagram",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=threads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -54,8 +54,8 @@
         },
         "options": {}
       },
-      "id": "fetch-ig-posts",
-      "name": "Fetch IG Scheduled Posts",
+      "id": "fetch-threads-posts",
+      "name": "Fetch Threads Scheduled Posts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [470, 420]
@@ -98,7 +98,7 @@
           },
           "conditions": [
             {
-              "id": "check-ig-posts",
+              "id": "check-threads-posts",
               "leftValue": "={{ $json.count }}",
               "rightValue": 0,
               "operator": {
@@ -110,8 +110,8 @@
           "combinator": "and"
         }
       },
-      "id": "has-ig-posts",
-      "name": "Has IG Posts?",
+      "id": "has-threads-posts",
+      "name": "Has Threads Posts?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [690, 420]
@@ -132,8 +132,8 @@
         "fieldToSplitOut": "posts",
         "options": {}
       },
-      "id": "split-ig-posts",
-      "name": "Split IG Posts",
+      "id": "split-threads-posts",
+      "name": "Split Threads Posts",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [910, 360]
@@ -261,7 +261,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/media",
+        "url": "=https://graph.threads.net/v1.0/{{ $json.platform_user_id }}/threads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -273,7 +273,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"image_url\": \"{{ $('Split IG Posts').item.json.image_url }}\",\n  \"caption\": {{ JSON.stringify($('Split IG Posts').item.json.commentary) }},\n  \"access_token\": \"{{ $('Split IG Posts').item.json.access_token }}\"\n}",
+        "jsonBody": "={\n  \"media_type\": \"{{ $('Split Threads Posts').item.json.image_url ? 'IMAGE' : 'TEXT' }}\",\n  \"text\": {{ JSON.stringify($('Split Threads Posts').item.json.commentary) }},\n  {{ $('Split Threads Posts').item.json.image_url ? '\"image_url\": \"' + $('Split Threads Posts').item.json.image_url + '\",' : '' }}\n  \"access_token\": \"{{ $('Split Threads Posts').item.json.access_token }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -283,8 +283,8 @@
           }
         }
       },
-      "id": "ig-create-media",
-      "name": "IG Create Media",
+      "id": "threads-create-container",
+      "name": "Threads Create Container",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1130, 360],
@@ -293,7 +293,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $('Split IG Posts').item.json.platform_user_id }}/media_publish",
+        "url": "=https://graph.threads.net/v1.0/{{ $('Split Threads Posts').item.json.platform_user_id }}/threads_publish",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -305,7 +305,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"creation_id\": \"{{ $json.body.id }}\",\n  \"access_token\": \"{{ $('Split IG Posts').item.json.access_token }}\"\n}",
+        "jsonBody": "={\n  \"creation_id\": \"{{ $json.body.id }}\",\n  \"access_token\": \"{{ $('Split Threads Posts').item.json.access_token }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -315,8 +315,8 @@
           }
         }
       },
-      "id": "ig-publish-media",
-      "name": "IG Publish Media",
+      "id": "threads-publish",
+      "name": "Threads Publish",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1350, 360],
@@ -325,7 +325,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Split IG Posts').item.json.callback_url }}",
+        "url": "={{ $('Split Threads Posts').item.json.callback_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -341,11 +341,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Split IG Posts').item.json.content_id }}\",\n  \"platform\": \"instagram\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Instagram API error') : '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Threads Posts').item.json.content_id }}\",\n  \"platform\": \"threads\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Threads API error') : '' }}\"\n}",
         "options": {}
       },
-      "id": "callback-ig",
-      "name": "Callback IG to Tipote",
+      "id": "callback-threads",
+      "name": "Callback Threads to Tipote",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1570, 360]
@@ -360,8 +360,8 @@
     },
     {
       "parameters": {},
-      "id": "no-ig-posts",
-      "name": "No IG Posts",
+      "id": "no-threads-posts",
+      "name": "No Threads Posts",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [910, 480]
@@ -377,7 +377,7 @@
             "index": 0
           },
           {
-            "node": "Fetch IG Scheduled Posts",
+            "node": "Fetch Threads Scheduled Posts",
             "type": "main",
             "index": 0
           }
@@ -395,11 +395,11 @@
         ]
       ]
     },
-    "Fetch IG Scheduled Posts": {
+    "Fetch Threads Scheduled Posts": {
       "main": [
         [
           {
-            "node": "Has IG Posts?",
+            "node": "Has Threads Posts?",
             "type": "main",
             "index": 0
           }
@@ -424,18 +424,18 @@
         ]
       ]
     },
-    "Has IG Posts?": {
+    "Has Threads Posts?": {
       "main": [
         [
           {
-            "node": "Split IG Posts",
+            "node": "Split Threads Posts",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "No IG Posts",
+            "node": "No Threads Posts",
             "type": "main",
             "index": 0
           }
@@ -493,33 +493,33 @@
         ]
       ]
     },
-    "Split IG Posts": {
+    "Split Threads Posts": {
       "main": [
         [
           {
-            "node": "IG Create Media",
+            "node": "Threads Create Container",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IG Create Media": {
+    "Threads Create Container": {
       "main": [
         [
           {
-            "node": "IG Publish Media",
+            "node": "Threads Publish",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IG Publish Media": {
+    "Threads Publish": {
       "main": [
         [
           {
-            "node": "Callback IG to Tipote",
+            "node": "Callback Threads to Tipote",
             "type": "main",
             "index": 0
           }
@@ -539,5 +539,5 @@
     }
   ],
   "pinData": {},
-  "versionId": "1"
+  "versionId": "2"
 }
