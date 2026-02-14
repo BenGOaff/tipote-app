@@ -11,16 +11,21 @@ const FB_AUTH_URL = `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`
 const THREADS_AUTH_URL = "https://threads.net/oauth/authorize";
 const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 
-// Facebook Pages + Instagram scopes (OAuth Facebook Login)
-// instagram_basic et instagram_content_publish sont necessaires pour
-// decouvrir et publier sur le compte Instagram Business/Creator
-// lie a la Page Facebook.
+// Facebook Pages scopes (OAuth Facebook Login – config "Tipote")
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
+];
+
+// Instagram scopes (OAuth Facebook Login – config "tipote-ig")
+// Utilise un config_id separe (META_IG_CONFIG_ID) car l'Instagram Graph API
+// necessite le variant "API Graph pour Instagram" dans Facebook Login for Business.
+const IG_SCOPES = [
   "instagram_basic",
   "instagram_content_publish",
+  "pages_show_list",
+  "pages_read_engagement",
 ];
 
 // Threads scopes (OAuth Threads separe)
@@ -60,6 +65,12 @@ function getRedirectUri(): string {
   return `${appUrl}/api/auth/meta/callback`;
 }
 
+export function getInstagramRedirectUri(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
+  return `${appUrl}/api/auth/instagram/callback`;
+}
+
 // ----------------------------------------------------------------
 // OAuth 2.0
 // ----------------------------------------------------------------
@@ -95,6 +106,39 @@ export function buildAuthorizationUrl(state: string): string {
     state,
   });
   console.log("[buildAuthorizationUrl] Using scope fallback (no META_CONFIG_ID)");
+  return `${FB_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Construit l'URL d'autorisation pour Instagram (via Facebook Login for Business).
+ * Utilise META_IG_CONFIG_ID (config "tipote-ig" variant "API Graph pour Instagram")
+ * qui inclut instagram_basic + pages permissions.
+ * Le redirect_uri pointe vers /api/auth/instagram/callback.
+ */
+export function buildInstagramAuthorizationUrl(state: string): string {
+  const configId = process.env.META_IG_CONFIG_ID;
+
+  if (configId) {
+    const params = new URLSearchParams({
+      client_id: getAppId(),
+      redirect_uri: getInstagramRedirectUri(),
+      response_type: "code",
+      config_id: configId,
+      state,
+    });
+    console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
+    return `${FB_AUTH_URL}?${params.toString()}`;
+  }
+
+  // Fallback classique (sans META_IG_CONFIG_ID)
+  const params = new URLSearchParams({
+    client_id: getAppId(),
+    redirect_uri: getInstagramRedirectUri(),
+    scope: IG_SCOPES.join(","),
+    response_type: "code",
+    state,
+  });
+  console.log("[buildInstagramAuthorizationUrl] Using scope fallback (no META_IG_CONFIG_ID)");
   return `${FB_AUTH_URL}?${params.toString()}`;
 }
 
