@@ -209,14 +209,16 @@ export type MetaPage = {
  * Recupere les Pages Facebook de l'utilisateur.
  */
 export async function getUserPages(userAccessToken: string): Promise<MetaPage[]> {
-  const res = await fetch(
-    `${GRAPH_API_BASE}/me/accounts?fields=id,name,access_token,category&access_token=${userAccessToken}`
-  );
+  const url = `${GRAPH_API_BASE}/me/accounts?fields=id,name,access_token,category&limit=100&access_token=${userAccessToken}`;
+  console.log("[getUserPages] Fetching:", url.replace(/access_token=[^&]+/, "access_token=***"));
+  const res = await fetch(url);
+  const text = await res.text();
+  console.log("[getUserPages] Status:", res.status, "Body:", text.substring(0, 500));
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`Meta pages fetch failed (${res.status}): ${text}`);
   }
-  const json = await res.json();
+  const json = JSON.parse(text);
+  console.log("[getUserPages] data count:", json.data?.length ?? 0);
   return json.data ?? [];
 }
 

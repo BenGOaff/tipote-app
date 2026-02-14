@@ -62,7 +62,18 @@ export async function GET(req: NextRequest) {
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
     console.log("[Facebook callback] Long-lived token OK, expires_in:", longLived.expires_in);
 
-    // 5. Recuperer les Pages Facebook
+    // 5. Debug : verifier les permissions reellement accordees
+    try {
+      const permRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/permissions?access_token=${longLived.access_token}`
+      );
+      const permJson = await permRes.json();
+      console.log("[Facebook callback] Permissions granted:", JSON.stringify(permJson));
+    } catch (permErr) {
+      console.error("[Facebook callback] Could not fetch permissions:", permErr);
+    }
+
+    // 6. Recuperer les Pages Facebook
     console.log("[Facebook callback] Fetching user pages...");
     const pages = await getUserPages(longLived.access_token);
     console.log("[Facebook callback] Pages found:", pages.length, JSON.stringify(pages.map(p => ({ id: p.id, name: p.name }))));
@@ -70,7 +81,7 @@ export async function GET(req: NextRequest) {
     if (pages.length === 0) {
       return NextResponse.redirect(
         `${settingsUrl}&meta_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvee. Assure-toi d'avoir une Page Facebook et d'avoir accorde les permissions pour cette Page pendant l'autorisation."
+          "Aucune Page Facebook trouvee. Verifie dans les logs PM2 (pm2 logs) le detail des permissions et de la reponse /me/accounts."
         )}`
       );
     }
