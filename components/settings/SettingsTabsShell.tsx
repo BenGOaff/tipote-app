@@ -22,11 +22,14 @@ import {
   Shield,
   Key,
   Plug,
+  FileText,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
 import SocialConnections from "@/components/settings/SocialConnections";
+import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
+import type { DocType } from "@/components/settings/legal/types";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -125,6 +128,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [termsUrl, setTermsUrl] = useState("");
   const [cgvUrl, setCgvUrl] = useState("");
   const [pendingLegal, startLegalTransition] = useTransition();
+  const [legalGenOpen, setLegalGenOpen] = useState(false);
+  const [legalGenDocType, setLegalGenDocType] = useState<DocType>("mentions");
 
   const [sioApiKey, setSioApiKey] = useState("");
   const [pendingSio, startSioTransition] = useTransition();
@@ -827,35 +832,72 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </div>
           <p className="text-sm text-muted-foreground mb-4">
             Ces URLs seront utilisées automatiquement dans vos quiz, tunnels et pages publiques.
+            Vous pouvez aussi générer vos documents légaux adaptés à votre pays et votre activité.
           </p>
 
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Politique de confidentialité</Label>
-              <Input
-                placeholder="https://monsite.com/politique-de-confidentialite"
-                value={privacyUrl}
-                onChange={(e) => setPrivacyUrl(e.target.value)}
-                disabled={profileLoading}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://monsite.com/politique-de-confidentialite"
+                  value={privacyUrl}
+                  onChange={(e) => setPrivacyUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("privacy"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Générer
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Mentions légales / Conditions d&apos;utilisation</Label>
-              <Input
-                placeholder="https://monsite.com/mentions-legales"
-                value={termsUrl}
-                onChange={(e) => setTermsUrl(e.target.value)}
-                disabled={profileLoading}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://monsite.com/mentions-legales"
+                  value={termsUrl}
+                  onChange={(e) => setTermsUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("mentions"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Générer
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Conditions Générales de Vente (CGV)</Label>
-              <Input
-                placeholder="https://monsite.com/cgv"
-                value={cgvUrl}
-                onChange={(e) => setCgvUrl(e.target.value)}
-                disabled={profileLoading}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://monsite.com/cgv"
+                  value={cgvUrl}
+                  onChange={(e) => setCgvUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("cgv"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Générer
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -864,6 +906,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingLegal ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </Card>
+
+        <LegalDocGenerator
+          open={legalGenOpen}
+          onOpenChange={setLegalGenOpen}
+          docType={legalGenDocType}
+        />
 
         <Card className="p-6">
           <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
