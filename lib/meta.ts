@@ -427,66 +427,11 @@ export async function publishToThreads(
 }
 
 // ----------------------------------------------------------------
-// Instagram OAuth & Discovery
+// Instagram Discovery & Publishing
 // Doc : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api
 // L'Instagram Graph API utilise le Page Access Token de la Page Facebook
 // liee au compte Instagram Business/Creator.
-// ----------------------------------------------------------------
-
-// Instagram scopes (OAuth Facebook Login for Business)
-const IG_SCOPES = [
-  "instagram_basic",
-  "instagram_content_publish",
-  "pages_show_list",
-  "pages_read_engagement",
-];
-
-function getInstagramRedirectUri(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
-  return `${appUrl}/api/auth/instagram/callback`;
-}
-
-/**
- * Construit l'URL d'autorisation Facebook Login for Business pour Instagram.
- * Utilise META_INSTAGRAM_CONFIG_ID si defini, sinon fallback sur scopes.
- */
-export function buildInstagramAuthorizationUrl(state: string): string {
-  const configId = process.env.META_INSTAGRAM_CONFIG_ID;
-
-  if (configId) {
-    const params = new URLSearchParams({
-      client_id: getAppId(),
-      redirect_uri: getInstagramRedirectUri(),
-      response_type: "code",
-      config_id: configId,
-      state,
-    });
-    console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
-    return `${FB_AUTH_URL}?${params.toString()}`;
-  }
-
-  // Fallback classique
-  const params = new URLSearchParams({
-    client_id: getAppId(),
-    redirect_uri: getInstagramRedirectUri(),
-    scope: IG_SCOPES.join(","),
-    response_type: "code",
-    state,
-  });
-  console.log("[buildInstagramAuthorizationUrl] Using scope fallback");
-  return `${FB_AUTH_URL}?${params.toString()}`;
-}
-
-/**
- * Echange le code Instagram contre un token (reutilise le meme endpoint Facebook).
- */
-export async function exchangeCodeForInstagramToken(code: string) {
-  return exchangeCodeForToken(code, getInstagramRedirectUri());
-}
-
-// ----------------------------------------------------------------
-// Instagram Business Account Discovery
+// Pas d'OAuth separe : on reutilise le token de la Page Facebook existante.
 // ----------------------------------------------------------------
 
 export type InstagramAccount = {
