@@ -1,6 +1,7 @@
 // lib/meta.ts
-// Helpers Meta Graph API : Facebook Pages + Threads.
+// Helpers Meta Graph API : Facebook Pages + Instagram + Threads.
 // Doc : https://developers.facebook.com/docs/graph-api
+// Doc Instagram : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api
 // Doc Threads : https://developers.facebook.com/docs/threads/
 
 const GRAPH_API_VERSION = "v21.0";
@@ -59,10 +60,28 @@ function getRedirectUri(): string {
 // ----------------------------------------------------------------
 
 /**
- * Construit l'URL d'autorisation Facebook Login (Pages uniquement).
- * Permissions : pages_show_list, pages_manage_posts, pages_read_engagement
+ * Construit l'URL d'autorisation Facebook Login for Business.
+ * Si META_CONFIG_ID est defini (recommande pour les apps Business),
+ * utilise le config_id qui inclut deja les permissions configurees.
+ * Sinon fallback sur le scope classique.
  */
 export function buildAuthorizationUrl(state: string): string {
+  const configId = process.env.META_CONFIG_ID;
+
+  if (configId) {
+    // Facebook Login for Business : config_id remplace le scope
+    const params = new URLSearchParams({
+      client_id: getAppId(),
+      redirect_uri: getRedirectUri(),
+      response_type: "code",
+      config_id: configId,
+      state,
+    });
+    console.log("[buildAuthorizationUrl] Using config_id:", configId);
+    return `${FB_AUTH_URL}?${params.toString()}`;
+  }
+
+  // Fallback classique (sans config_id)
   const params = new URLSearchParams({
     client_id: getAppId(),
     redirect_uri: getRedirectUri(),
@@ -70,6 +89,7 @@ export function buildAuthorizationUrl(state: string): string {
     response_type: "code",
     state,
   });
+  console.log("[buildAuthorizationUrl] Using scope fallback (no META_CONFIG_ID)");
   return `${FB_AUTH_URL}?${params.toString()}`;
 }
 
@@ -150,8 +170,10 @@ export async function exchangeThreadsForLongLivedToken(shortLivedToken: string):
 
 /**
  * Echange le code d'autorisation contre un short-lived user access token.
+ * @param redirectUri - optionnel, par defaut le redirect Facebook (/api/auth/meta/callback).
+ *   Instagram passe /api/auth/instagram/callback.
  */
-export async function exchangeCodeForToken(code: string): Promise<{
+export async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<{
   access_token: string;
   token_type: string;
   expires_in: number;
@@ -159,7 +181,7 @@ export async function exchangeCodeForToken(code: string): Promise<{
   const params = new URLSearchParams({
     client_id: getAppId(),
     client_secret: getAppSecret(),
-    redirect_uri: getRedirectUri(),
+    redirect_uri: redirectUri ?? getRedirectUri(),
     code,
   });
 
@@ -402,4 +424,155 @@ export async function publishToThreads(
 
   const errText = await publishRes.text();
   return { ok: false, error: `Threads publish failed: ${errText}`, statusCode: publishRes.status };
+}
+
+// ----------------------------------------------------------------
+// Instagram OAuth & Discovery
+// Doc : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api
+// L'Instagram Graph API utilise le Page Access Token de la Page Facebook
+// liee au compte Instagram Business/Creator.
+// ----------------------------------------------------------------
+
+// Instagram scopes (OAuth Facebook Login for Business)
+const IG_SCOPES = [
+  "instagram_basic",
+  "instagram_content_publish",
+  "pages_show_list",
+  "pages_read_engagement",
+];
+
+function getInstagramRedirectUri(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
+  return `${appUrl}/api/auth/instagram/callback`;
+}
+
+/**
+ * Construit l'URL d'autorisation Facebook Login for Business pour Instagram.
+ * Utilise META_INSTAGRAM_CONFIG_ID si defini, sinon fallback sur scopes.
+ */
+export function buildInstagramAuthorizationUrl(state: string): string {
+  const configId = process.env.META_INSTAGRAM_CONFIG_ID;
+
+  if (configId) {
+    const params = new URLSearchParams({
+      client_id: getAppId(),
+      redirect_uri: getInstagramRedirectUri(),
+      response_type: "code",
+      config_id: configId,
+      state,
+    });
+    console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
+    return `${FB_AUTH_URL}?${params.toString()}`;
+  }
+
+  // Fallback classique
+  const params = new URLSearchParams({
+    client_id: getAppId(),
+    redirect_uri: getInstagramRedirectUri(),
+    scope: IG_SCOPES.join(","),
+    response_type: "code",
+    state,
+  });
+  console.log("[buildInstagramAuthorizationUrl] Using scope fallback");
+  return `${FB_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Echange le code Instagram contre un token (reutilise le meme endpoint Facebook).
+ */
+export async function exchangeCodeForInstagramToken(code: string) {
+  return exchangeCodeForToken(code, getInstagramRedirectUri());
+}
+
+// ----------------------------------------------------------------
+// Instagram Business Account Discovery
+// ----------------------------------------------------------------
+
+export type InstagramAccount = {
+  id: string;
+  username?: string;
+  name?: string;
+  profile_picture_url?: string;
+};
+
+/**
+ * Decouvre le compte Instagram Business/Creator lie a une Page Facebook.
+ * Endpoint : GET /{page-id}?fields=instagram_business_account{id,username,name,profile_picture_url}
+ */
+export async function getInstagramBusinessAccount(
+  pageAccessToken: string,
+  pageId: string
+): Promise<InstagramAccount | null> {
+  const url = `${GRAPH_API_BASE}/${pageId}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${pageAccessToken}`;
+  console.log("[getInstagramBusinessAccount] Fetching:", url.replace(/access_token=[^&]+/, "access_token=***"));
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("[getInstagramBusinessAccount] Error:", res.status, text);
+    return null;
+  }
+  const json = await res.json();
+  console.log("[getInstagramBusinessAccount] Response:", JSON.stringify(json));
+  return json.instagram_business_account ?? null;
+}
+
+// ----------------------------------------------------------------
+// Instagram Publishing (2 etapes : create container -> publish)
+// Instagram REQUIERT une image ou video (pas de post texte seul).
+// Doc : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/content-publishing
+// ----------------------------------------------------------------
+
+/**
+ * Publie un post image sur Instagram.
+ * Processus en 2 etapes :
+ *   1. POST /{ig_user_id}/media (image_url + caption) -> creation_id
+ *   2. POST /{ig_user_id}/media_publish (creation_id) -> media_id
+ */
+export async function publishToInstagram(
+  pageAccessToken: string,
+  igUserId: string,
+  caption: string,
+  imageUrl: string
+): Promise<MetaPostResult> {
+  // Etape 1 : Creer le container media
+  const createRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image_url: imageUrl,
+      caption,
+      access_token: pageAccessToken,
+    }),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    return { ok: false, error: `Instagram container creation failed: ${errText}`, statusCode: createRes.status };
+  }
+
+  const createJson = await createRes.json();
+  const creationId = createJson.id;
+
+  if (!creationId) {
+    return { ok: false, error: "No creation_id returned from Instagram", statusCode: 500 };
+  }
+
+  // Etape 2 : Publier le container
+  const publishRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      creation_id: creationId,
+      access_token: pageAccessToken,
+    }),
+  });
+
+  if (publishRes.ok) {
+    const publishJson = await publishRes.json();
+    return { ok: true, postId: publishJson.id };
+  }
+
+  const errText = await publishRes.text();
+  return { ok: false, error: `Instagram publish failed: ${errText}`, statusCode: publishRes.status };
 }

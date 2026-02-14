@@ -7,7 +7,7 @@
 // - Tipote Knowledge (ressources internes via manifest xlsx)
 // ⚠️ Sortie attendue: texte brut uniquement (pas de markdown).
 
-export type SocialPlatform = "linkedin" | "threads" | "twitter" | "facebook" | "tiktok";
+export type SocialPlatform = "linkedin" | "threads" | "twitter" | "facebook" | "instagram" | "tiktok";
 export type SocialTheme = "educate" | "sell" | "entertain" | "storytelling" | "social_proof";
 export type SocialTone = "professional" | "casual" | "inspirational" | "educational" | "humorous";
 

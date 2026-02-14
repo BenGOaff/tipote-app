@@ -8,11 +8,11 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
-import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads } from "@/lib/meta";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads"] as const;
 type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
   const platformLabels: Record<string, string> = {
     linkedin: "LinkedIn",
     facebook: "Facebook",
+    instagram: "Instagram",
     threads: "Threads",
   };
   const platformLabel = platformLabels[platform] ?? platform;
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
   if (n8nWebhookBase && n8nSecret) {
     // --- Mode n8n : envoyer au webhook ---
     try {
-      const webhookPath = platform === "linkedin" ? "linkedin-publish" : "meta-publish";
+      const webhookPath = platform === "linkedin" ? "linkedin-publish" : "meta-publish"; // facebook, instagram, threads all go via meta-publish
       const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
 
       const n8nPayload: Record<string, unknown> = {
@@ -134,6 +135,17 @@ export async function POST(req: NextRequest) {
 
       // Pour Facebook, ajouter l'image_url si presente (optionnel)
       if (platform === "facebook" && contentItem.meta?.image_url) {
+        n8nPayload.image_url = contentItem.meta.image_url;
+      }
+
+      // Pour Instagram, l'image est REQUISE
+      if (platform === "instagram") {
+        if (!contentItem.meta?.image_url) {
+          return NextResponse.json(
+            { error: "Instagram necessite une image. Ajoute une image a ton contenu avant de publier." },
+            { status: 400 }
+          );
+        }
         n8nPayload.image_url = contentItem.meta.image_url;
       }
 
@@ -192,6 +204,15 @@ export async function POST(req: NextRequest) {
     } else {
       result = await publishToFacebookPage(accessToken, platformUserId, contentItem.content);
     }
+  } else if (platform === "instagram") {
+    const imageUrl = contentItem.meta?.image_url as string | undefined;
+    if (!imageUrl) {
+      return NextResponse.json(
+        { error: "Instagram necessite une image. Ajoute une image a ton contenu avant de publier." },
+        { status: 400 }
+      );
+    }
+    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, imageUrl);
   } else if (platform === "threads") {
     const imageUrl = contentItem.meta?.image_url as string | undefined;
     result = await publishToThreads(accessToken, platformUserId, contentItem.content, imageUrl);
