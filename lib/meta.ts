@@ -35,6 +35,19 @@ function getAppSecret(): string {
   return secret;
 }
 
+// Threads utilise un App ID / App Secret separe (visible dans Meta Developer > Threads > Settings)
+function getThreadsAppId(): string {
+  const id = process.env.THREADS_APP_ID;
+  if (!id) throw new Error("Missing env THREADS_APP_ID");
+  return id;
+}
+
+function getThreadsAppSecret(): string {
+  const secret = process.env.THREADS_APP_SECRET;
+  if (!secret) throw new Error("Missing env THREADS_APP_SECRET");
+  return secret;
+}
+
 function getRedirectUri(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
@@ -77,7 +90,7 @@ function getThreadsRedirectUri(): string {
  */
 export function buildThreadsAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
-    client_id: getAppId(),
+    client_id: getThreadsAppId(),
     redirect_uri: getThreadsRedirectUri(),
     scope: THREADS_SCOPES.join(","),
     response_type: "code",
@@ -95,8 +108,8 @@ export async function exchangeThreadsCodeForToken(code: string): Promise<{
   user_id: string;
 }> {
   const params = new URLSearchParams({
-    client_id: getAppId(),
-    client_secret: getAppSecret(),
+    client_id: getThreadsAppId(),
+    client_secret: getThreadsAppSecret(),
     redirect_uri: getThreadsRedirectUri(),
     grant_type: "authorization_code",
     code,
@@ -123,7 +136,7 @@ export async function exchangeThreadsForLongLivedToken(shortLivedToken: string):
 }> {
   const params = new URLSearchParams({
     grant_type: "th_exchange_token",
-    client_secret: getAppSecret(),
+    client_secret: getThreadsAppSecret(),
     access_token: shortLivedToken,
   });
 
