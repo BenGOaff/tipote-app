@@ -18,10 +18,12 @@ import {
   Clock,
   CalendarDays,
   ChevronRight,
+  Zap,
+  BarChart3,
+  FileText,
 } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { fetchCreditsBalance } from "@/lib/credits/client";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -38,8 +40,8 @@ type NextAction = {
 };
 
 type WeekDay = {
-  dayLabel: string; // "Lundi", "Mardi", etc.
-  dateLabel: string; // "10 fév."
+  dayLabel: string;
+  dateLabel: string;
   items: WeekDayItem[];
 };
 
@@ -49,10 +51,17 @@ type WeekDayItem = {
 };
 
 type ProgressData = {
-  strategyPercent: number;
   weekTasksDone: number;
   weekTasksTotal: number;
-  creditsRemaining: number;
+  totalTasks: number;
+  contentCounts: Record<string, number>; // { post: 3, article: 2, quiz: 1, ... }
+  totalContents: number;
+  // Business KPIs (latest month from metrics table)
+  revenue: number | null;
+  salesCount: number | null;
+  newSubscribers: number | null;
+  conversionRate: number | null;
+  hasMetrics: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -144,6 +153,10 @@ function normalizeContentTitle(row: any): string {
   return toStr(row?.title ?? row?.titre ?? row?.name ?? "Contenu").trim();
 }
 
+function normalizeContentType(row: any): string {
+  return toStr(row?.type ?? row?.content_type ?? row?.kind ?? "").trim().toLowerCase();
+}
+
 function normalizeContentStatus(row: any): string {
   return toStr(row?.status ?? row?.statut ?? row?.state ?? "draft").trim();
 }
@@ -196,6 +209,46 @@ function saveContentSchemaHint(userId: string, hint: ContentSchemaHint) {
 
 type TaskRow = Record<string, any>;
 type ContentRowAny = Record<string, any>;
+
+/** Detect if a task title suggests content creation */
+function isContentRelatedTask(title: string): boolean {
+  const t = title.toLowerCase();
+  return (
+    t.includes("post") ||
+    t.includes("contenu") ||
+    t.includes("article") ||
+    t.includes("newsletter") ||
+    t.includes("email") ||
+    t.includes("vidéo") ||
+    t.includes("video") ||
+    t.includes("reel") ||
+    t.includes("story") ||
+    t.includes("linkedin") ||
+    t.includes("instagram") ||
+    t.includes("twitter") ||
+    t.includes("tiktok") ||
+    t.includes("rédiger") ||
+    t.includes("publier") ||
+    t.includes("écrire")
+  );
+}
+
+/** Capitalize first letter */
+function ucFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Pluralize a French content type label */
+function pluralLabel(type: string, count: number): string {
+  const label = ucFirst(type);
+  if (count <= 1) return `${count} ${label}`;
+  // Simple French plural
+  if (label.endsWith("s") || label.endsWith("x") || label.endsWith("z")) {
+    return `${count} ${label}`;
+  }
+  return `${count} ${label}s`;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Day-of-week helpers                                                */
@@ -277,36 +330,6 @@ function StatusIcon({ status }: { status: WeekDayItem["status"] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Compact progress bar component                                     */
-/* ------------------------------------------------------------------ */
-
-function ProgressBarCompact({
-  label,
-  value,
-  max,
-  suffix,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  suffix?: string;
-}) {
-  const pct = max > 0 ? clampPercent((value / max) * 100) : 0;
-  const filled = Math.round(pct / 10);
-  const bar = "\u2588".repeat(filled) + "\u2591".repeat(10 - filled);
-
-  return (
-    <div className="flex items-center gap-3 text-sm font-mono">
-      <span className="w-20 text-muted-foreground truncate">{label}</span>
-      <span className="text-primary tracking-wider">{bar}</span>
-      <span className="text-foreground font-semibold">
-        {suffix ?? `${value}/${max}`}
-      </span>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -315,13 +338,18 @@ export default function TodayLovable() {
 
   const [nextAction, setNextAction] = useState<NextAction | null>(null);
   const [progress, setProgress] = useState<ProgressData>({
-    strategyPercent: 0,
     weekTasksDone: 0,
     weekTasksTotal: 0,
-    creditsRemaining: 0,
+    totalTasks: 0,
+    contentCounts: {},
+    totalContents: 0,
+    revenue: null,
+    salesCount: null,
+    newSubscribers: null,
+    conversionRate: null,
+    hasMetrics: false,
   });
   const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
-  const [hasStrategy, setHasStrategy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -422,13 +450,31 @@ export default function TodayLovable() {
           // fail-open
         }
 
-        // ------ Fetch credits ------
-        let creditsRemaining = 0;
+        // ------ Fetch latest metrics (business KPIs) ------
+        let revenue: number | null = null;
+        let salesCount: number | null = null;
+        let newSubscribers: number | null = null;
+        let conversionRate: number | null = null;
+        let hasMetrics = false;
+
         try {
-          const creditsData = await fetchCreditsBalance();
-          creditsRemaining = creditsData.total_remaining ?? 0;
+          const { data: metricsRows, error: metricsErr } = await supabase
+            .from("metrics")
+            .select("revenue,sales_count,new_subscribers,conversion_rate")
+            .eq("user_id", userId)
+            .order("month", { ascending: false })
+            .limit(1);
+
+          if (!metricsErr && metricsRows && metricsRows.length > 0) {
+            const m = metricsRows[0] as any;
+            revenue = typeof m.revenue === "number" ? m.revenue : null;
+            salesCount = typeof m.sales_count === "number" ? m.sales_count : null;
+            newSubscribers = typeof m.new_subscribers === "number" ? m.new_subscribers : null;
+            conversionRate = typeof m.conversion_rate === "number" ? m.conversion_rate : null;
+            hasMetrics = revenue !== null || salesCount !== null || newSubscribers !== null;
+          }
         } catch {
-          // fail-open
+          // fail-open — metrics table may not exist
         }
 
         if (cancelled) return;
@@ -439,23 +485,30 @@ export default function TodayLovable() {
         const endW = endOfWeekSunday(now);
 
         const tasksAll = tasks;
-        const tasksDone = tasksAll.filter((t) => isDoneStatus(normalizeTaskStatus(t))).length;
         const tasksTotal = tasksAll.length;
-        const strategyPercent = tasksTotal ? clampPercent((tasksDone / tasksTotal) * 100) : 0;
 
         // Week tasks
-        const weekTasks = tasksAll.filter((t) => {
+        const weekTasks = tasksAll.filter((t: TaskRow) => {
           const due = normalizeTaskDueDate(t);
           if (!due) return false;
           return due >= startW && due <= endW;
         });
-        const weekTasksDone = weekTasks.filter((t) => isDoneStatus(normalizeTaskStatus(t))).length;
+        const weekTasksDone = weekTasks.filter((t: TaskRow) => isDoneStatus(normalizeTaskStatus(t))).length;
         const weekTasksTotal = weekTasks.length;
+
+        // Content counts by type
+        const contentCounts: Record<string, number> = {};
+        let totalContents = 0;
+        for (const c of contentRows) {
+          totalContents++;
+          const cType = normalizeContentType(c) || "contenu";
+          contentCounts[cType] = (contentCounts[cType] || 0) + 1;
+        }
 
         // Next action — the dashboard chooses for the user
         const nextTodoTask = tasksAll
-          .filter((t) => !isDoneStatus(normalizeTaskStatus(t)))
-          .sort((a, b) => {
+          .filter((t: TaskRow) => !isDoneStatus(normalizeTaskStatus(t)))
+          .sort((a: TaskRow, b: TaskRow) => {
             const da = normalizeTaskDueDate(a)?.getTime() ?? Number.POSITIVE_INFINITY;
             const db = normalizeTaskDueDate(b)?.getTime() ?? Number.POSITIVE_INFINITY;
             if (da !== db) return da - db;
@@ -468,6 +521,7 @@ export default function TodayLovable() {
         let action: NextAction;
 
         if (nextTodoTask) {
+          const taskTitle = normalizeTaskTitle(nextTodoTask);
           const due = normalizeTaskDueDate(nextTodoTask);
           const dayLabel = due
             ? (() => {
@@ -481,25 +535,35 @@ export default function TodayLovable() {
               })()
             : "Cette semaine";
 
+          const href = isContentRelatedTask(taskTitle) ? "/create" : "/tasks";
+
           action = {
-            title: normalizeTaskTitle(nextTodoTask),
-            why: "C'est ta tâche prioritaire du moment.",
+            title: taskTitle,
+            why: "C'est ta prochaine tâche prioritaire. Concentre-toi dessus avant de passer au reste.",
             dueLabel: dayLabel,
-            href: "/tasks",
+            href,
             kind: "task",
           };
         } else if (!strategyExists) {
           action = {
             title: "Générer ma stratégie",
-            why: "Commence par poser les bases de ton business.",
+            why: "Tu n'as pas encore de plan d'action. Crée ta stratégie pour savoir exactement quoi faire.",
             dueLabel: "Maintenant",
             href: "/strategy",
             kind: "strategy",
           };
+        } else if (tasksTotal === 0) {
+          action = {
+            title: "Créer ma première tâche",
+            why: "Ta stratégie est prête. Transforme-la en actions concrètes en ajoutant tes premières tâches.",
+            dueLabel: "Maintenant",
+            href: "/tasks",
+            kind: "task",
+          };
         } else {
           action = {
-            title: "Créer mon premier contenu",
-            why: "Ta stratégie est prête. Passe à l'action.",
+            title: "Créer un nouveau contenu",
+            why: "Toutes tes tâches sont terminées. Continue sur ta lancée en créant du contenu.",
             dueLabel: "Maintenant",
             href: "/create",
             kind: "content",
@@ -512,13 +576,18 @@ export default function TodayLovable() {
         if (!cancelled) {
           setNextAction(action);
           setProgress({
-            strategyPercent,
             weekTasksDone,
             weekTasksTotal,
-            creditsRemaining,
+            totalTasks: tasksTotal,
+            contentCounts,
+            totalContents,
+            revenue,
+            salesCount,
+            newSubscribers,
+            conversionRate,
+            hasMetrics,
           });
           setWeekDays(days);
-          setHasStrategy(strategyExists);
           setLoading(false);
         }
       } catch {
@@ -533,181 +602,270 @@ export default function TodayLovable() {
     };
   }, [supabase]);
 
-  const weekHasItems = weekDays.some((d) => d.items.length > 0);
+  const weekHasItems = weekDays.some((d: WeekDay) => d.items.length > 0);
 
-  // Today index (0 = Monday .. 6 = Sunday)
   const todayIndex = useMemo(() => {
     const day = new Date().getDay();
     return day === 0 ? 6 : day - 1;
   }, []);
 
+  // Build content summary string: "7 posts, 3 articles, 1 quiz"
+  const contentSummary = useMemo(() => {
+    const entries = Object.entries(progress.contentCounts)
+      .sort((a, b) => b[1] - a[1]) // most frequent first
+      .slice(0, 4); // max 4 types shown
+    if (entries.length === 0) return null;
+    return entries.map(([type, count]) => pluralLabel(type, count)).join(", ");
+  }, [progress.contentCounts]);
+
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1">
-          <div className="p-6 md:p-8 space-y-6 max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <h1 className="text-2xl font-bold">Tableau de bord</h1>
+        <main className="flex-1 overflow-auto bg-muted/30">
+          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
+            <SidebarTrigger />
+            <div className="ml-4 flex-1">
+              <h1 className="text-xl font-display font-bold">Tableau de bord</h1>
             </div>
+          </header>
 
+          <div className="p-6 space-y-6 max-w-6xl mx-auto">
             {loading ? (
               <div className="py-20 text-center text-muted-foreground text-sm">
                 Chargement...
               </div>
             ) : (
               <>
-                {/* ============================================== */}
-                {/* BLOC 1 — Ta prochaine action (full width hero) */}
-                {/* ============================================== */}
+                {/* ================================================= */}
+                {/* BLOC 1 — Ta prochaine action (barre horizontale)   */}
+                {/* ================================================= */}
                 {nextAction && (
-                  <Card className="p-0 overflow-hidden">
-                    <div className="gradient-primary p-8 text-primary-foreground">
-                      <p className="text-sm font-medium text-primary-foreground/70 mb-2 uppercase tracking-wide">
-                        Ta prochaine action
-                      </p>
-                      <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                        {nextAction.title}
-                      </h2>
-                      <p className="text-primary-foreground/80 mb-1">
-                        {nextAction.why}
-                      </p>
-                      <p className="text-sm text-primary-foreground/60">
-                        {nextAction.dueLabel}
-                      </p>
-                    </div>
-                    <div className="p-4">
-                      <Button asChild className="w-full gap-2" size="lg">
-                        <Link href={nextAction.href}>
-                          Commencer <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      </Button>
+                  <Card className="gradient-primary text-primary-foreground overflow-hidden">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 p-5 md:p-6">
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
+                          <Zap className="w-5 h-5" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-primary-foreground/60 uppercase tracking-wide mb-0.5">
+                          Ta prochaine action
+                        </p>
+                        <h2 className="text-lg md:text-xl font-bold truncate">
+                          {nextAction.title}
+                        </h2>
+                        <p className="text-sm text-primary-foreground/70 mt-0.5 line-clamp-1">
+                          {nextAction.why}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary-foreground/15 text-primary-foreground border-0 text-xs"
+                        >
+                          {nextAction.dueLabel}
+                        </Badge>
+                        <Button asChild variant="secondary" className="gap-2 shrink-0">
+                          <Link href={nextAction.href}>
+                            Commencer <ArrowRight className="w-4 h-4" />
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 )}
 
-                {/* ============================================== */}
-                {/* BLOC 2 — Progression rapide (compact)          */}
-                {/* ============================================== */}
-                <Card className="p-5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
-                    Progression
-                  </p>
-                  <div className="space-y-2">
-                    <ProgressBarCompact
-                      label="Stratégie"
-                      value={progress.strategyPercent}
-                      max={100}
-                      suffix={`${progress.strategyPercent}%`}
-                    />
-                    <ProgressBarCompact
-                      label="Semaine"
-                      value={progress.weekTasksDone}
-                      max={Math.max(progress.weekTasksTotal, 1)}
-                      suffix={`${progress.weekTasksDone}/${progress.weekTasksTotal}`}
-                    />
-                    <ProgressBarCompact
-                      label="Crédits"
-                      value={progress.creditsRemaining}
-                      max={Math.max(progress.creditsRemaining, 1)}
-                      suffix={`${progress.creditsRemaining}`}
-                    />
-                  </div>
-                </Card>
+                {/* ================================================= */}
+                {/* BLOC 2+3 — Progression + Cette semaine (côte à côte) */}
+                {/* ================================================= */}
+                <div className="grid md:grid-cols-2 gap-6">
 
-                {/* ============================================== */}
-                {/* BLOC 3 — Cette semaine (timeline)              */}
-                {/* ============================================== */}
-                <Card className="p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Cette semaine
+                  {/* --- Progression --- */}
+                  <Card className="p-5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
+                      Progression
                     </p>
-                  </div>
 
-                  {weekHasItems ? (
-                    <div className="space-y-1">
-                      {weekDays.map((day, idx) => {
-                        const isToday = idx === todayIndex;
-                        if (day.items.length === 0 && !isToday) return null;
+                    <div className="space-y-4">
+                      {/* Tâches effectuées */}
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold">
+                            Tâches effectuées cette semaine
+                          </p>
+                          <p className="text-2xl font-bold tabular-nums">
+                            {progress.weekTasksDone}
+                            <span className="text-base font-normal text-muted-foreground">
+                              /{progress.weekTasksTotal}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
 
-                        return (
-                          <div
-                            key={idx}
-                            className={`rounded-lg p-3 ${
-                              isToday
-                                ? "bg-primary/5 border border-primary/20"
-                                : ""
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <span
-                                className={`text-sm font-semibold ${
-                                  isToday ? "text-primary" : "text-foreground"
-                                }`}
-                              >
-                                {day.dayLabel}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {day.dateLabel}
-                              </span>
-                              {isToday && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  Aujourd&apos;hui
-                                </Badge>
+                      {/* Contenus créés */}
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold">Contenus créés</p>
+                          {contentSummary ? (
+                            <p className="text-sm text-muted-foreground">{contentSummary}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Aucun contenu pour le moment</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Business KPIs */}
+                      {progress.hasMetrics ? (
+                        <div className="flex items-start gap-3">
+                          <BarChart3 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold">Résultats business</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-0.5">
+                              {progress.revenue !== null && (
+                                <span>{progress.revenue.toLocaleString("fr-FR")}€ CA</span>
+                              )}
+                              {progress.salesCount !== null && (
+                                <span>{progress.salesCount} vente{progress.salesCount > 1 ? "s" : ""}</span>
+                              )}
+                              {progress.newSubscribers !== null && (
+                                <span>{progress.newSubscribers} inscrit{progress.newSubscribers > 1 ? "s" : ""}</span>
+                              )}
+                              {progress.conversionRate !== null && (
+                                <span>{progress.conversionRate.toFixed(1)}% conversion</span>
                               )}
                             </div>
-
-                            {day.items.length > 0 ? (
-                              <div className="space-y-1 ml-1">
-                                {day.items.map((item, iIdx) => (
-                                  <div
-                                    key={iIdx}
-                                    className="flex items-center gap-2 text-sm"
-                                  >
-                                    <StatusIcon status={item.status} />
-                                    <span
-                                      className={
-                                        item.status === "done"
-                                          ? "line-through text-muted-foreground"
-                                          : "text-foreground"
-                                      }
-                                    >
-                                      {item.title}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground ml-1">
-                                Rien de planifié
-                              </p>
-                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center">
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Tu n&apos;as rien planifié cette semaine.
-                      </p>
-                      <Button asChild variant="outline" size="sm" className="gap-2">
-                        <Link href="/tasks">
-                          Planifier une tâche <ArrowRight className="w-3 h-3" />
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-3">
+                          <BarChart3 className="w-4 h-4 text-muted-foreground/50 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Pas encore de données business
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <Button asChild variant="outline" size="sm" className="w-full gap-2 mt-1">
+                        <Link href="/analytics">
+                          Mettre à jour mes statistiques <ArrowRight className="w-3 h-3" />
                         </Link>
                       </Button>
                     </div>
-                  )}
-                </Card>
+                  </Card>
 
-                {/* ============================================== */}
-                {/* BLOC 4 — Lien stratégie (discret)              */}
-                {/* ============================================== */}
-                <div className="flex items-center justify-center">
+                  {/* --- Cette semaine --- */}
+                  <Card className="p-5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Cette semaine
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Tes tâches et contenus planifiés jour par jour.
+                    </p>
+
+                    {weekHasItems ? (
+                      <div className="space-y-1 max-h-[280px] overflow-y-auto">
+                        {weekDays.map((day: WeekDay, idx: number) => {
+                          const isToday = idx === todayIndex;
+                          if (day.items.length === 0 && !isToday) return null;
+
+                          return (
+                            <div
+                              key={idx}
+                              className={`rounded-lg p-2.5 ${
+                                isToday
+                                  ? "bg-primary/5 border border-primary/20"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    isToday ? "text-primary" : "text-foreground"
+                                  }`}
+                                >
+                                  {day.dayLabel}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {day.dateLabel}
+                                </span>
+                                {isToday && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    Aujourd&apos;hui
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {day.items.length > 0 ? (
+                                <div className="space-y-0.5 ml-1">
+                                  {day.items.map((item: WeekDayItem, iIdx: number) => (
+                                    <div
+                                      key={iIdx}
+                                      className="flex items-center gap-2 text-sm"
+                                    >
+                                      <StatusIcon status={item.status} />
+                                      <span
+                                        className={
+                                          item.status === "done"
+                                            ? "line-through text-muted-foreground"
+                                            : "text-foreground"
+                                        }
+                                      >
+                                        {item.title}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground ml-1">
+                                  Rien de planifié
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center">
+                        {progress.totalTasks > 0 ? (
+                          <>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Tes tâches existent mais ne sont pas encore planifiées cette semaine.
+                            </p>
+                            <Button asChild variant="outline" size="sm" className="gap-2">
+                              <Link href="/tasks">
+                                Ajouter des dates <ArrowRight className="w-3 h-3" />
+                              </Link>
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Aucune tâche pour le moment.
+                            </p>
+                            <Button asChild variant="outline" size="sm" className="gap-2">
+                              <Link href="/tasks">
+                                Créer une tâche <ArrowRight className="w-3 h-3" />
+                              </Link>
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+
+                {/* ================================================= */}
+                {/* BLOC 4 — Lien stratégie (discret)                  */}
+                {/* ================================================= */}
+                <div className="flex items-center justify-center pt-2">
                   <Link
                     href="/strategy"
                     className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
