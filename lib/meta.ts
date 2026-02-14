@@ -18,15 +18,6 @@ const FB_SCOPES = [
   "pages_read_engagement",
 ];
 
-// Instagram scopes (OAuth Facebook Login – config "tipote-ig")
-// Utilise un config_id separe (META_IG_CONFIG_ID) car l'Instagram Graph API
-// necessite le variant "API Graph pour Instagram" dans Facebook Login for Business.
-const IG_SCOPES = [
-  "instagram_basic",
-  "instagram_content_publish",
-  "pages_show_list",
-  "pages_read_engagement",
-];
 
 // Threads scopes (OAuth Threads separe)
 const THREADS_SCOPES = [
@@ -111,34 +102,29 @@ export function buildAuthorizationUrl(state: string): string {
 
 /**
  * Construit l'URL d'autorisation pour Instagram (via Facebook Login for Business).
- * Utilise META_IG_CONFIG_ID (config "tipote-ig" variant "API Graph pour Instagram")
- * qui inclut instagram_basic + pages permissions.
- * Le redirect_uri pointe vers /api/auth/instagram/callback.
+ * REQUIERT META_IG_CONFIG_ID (config "tipote-ig" variant "API Graph pour Instagram").
+ * Les scopes Instagram ne peuvent PAS etre passes via le parametre scope sur une
+ * app Business – le config_id est obligatoire.
  */
 export function buildInstagramAuthorizationUrl(state: string): string {
   const configId = process.env.META_IG_CONFIG_ID;
+  console.log("[buildInstagramAuthorizationUrl] META_IG_CONFIG_ID =", configId ?? "(undefined)");
 
-  if (configId) {
-    const params = new URLSearchParams({
-      client_id: getAppId(),
-      redirect_uri: getInstagramRedirectUri(),
-      response_type: "code",
-      config_id: configId,
-      state,
-    });
-    console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
-    return `${FB_AUTH_URL}?${params.toString()}`;
+  if (!configId) {
+    throw new Error(
+      "META_IG_CONFIG_ID manquant. Ajoute la variable d'env META_IG_CONFIG_ID " +
+      "avec l'ID de ta configuration 'tipote-ig' (Facebook Login for Business > Configurations)."
+    );
   }
 
-  // Fallback classique (sans META_IG_CONFIG_ID)
   const params = new URLSearchParams({
     client_id: getAppId(),
     redirect_uri: getInstagramRedirectUri(),
-    scope: IG_SCOPES.join(","),
     response_type: "code",
+    config_id: configId,
     state,
   });
-  console.log("[buildInstagramAuthorizationUrl] Using scope fallback (no META_IG_CONFIG_ID)");
+  console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
   return `${FB_AUTH_URL}?${params.toString()}`;
 }
 
