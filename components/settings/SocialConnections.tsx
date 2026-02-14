@@ -77,8 +77,7 @@ const PLATFORMS: PlatformConfig[] = [
     color: "bg-[#E4405F]",
     bgColor: "bg-[#E4405F]/10",
     hoverColor: "hover:bg-[#C13584]",
-    discoverUrl: "/api/auth/instagram",
-    requiresPlatform: "facebook",
+    oauthUrl: "/api/auth/instagram",
   },
   {
     key: "threads",
