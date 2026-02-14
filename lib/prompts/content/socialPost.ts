@@ -72,6 +72,15 @@ function platformGuidelines(platform: SocialPlatform): string {
         "CTA: question simple, invitation à réagir.",
       ].join("\n");
 
+    case "instagram":
+      return [
+        "Plateforme: Instagram.",
+        "Objectif: visuel fort + caption engageante.",
+        "Caption courte et percutante. Hook dans la première ligne (avant le 'voir plus').",
+        "Ton authentique et conversationnel. Hashtags: 5 à 15 pertinents en fin de caption.",
+        "CTA: question pour encourager les commentaires ou invitation à sauvegarder le post.",
+      ].join("\n");
+
     case "tiktok":
       return [
         "Plateforme: TikTok (texte pour description / script court).",
