@@ -14,6 +14,15 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
+// Icone Reddit - SVG logo Snoo simplifie
+function RedditIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 .552-.225 1.052-.587 1.414-.363.363-.863.587-1.414.587-.552 0-1.052-.225-1.414-.587-.363-.363-.587-.863-.587-1.414 0-1.104.897-1.999 2.003-1.999zM12 6c2.379 0 4.438.86 6.042 2.165.162-.108.355-.165.558-.165.552 0 1 .448 1 1 0 .369-.2.691-.497.864C20.316 11.453 21 13.162 21 15c0 3.866-4.029 7-9 7s-9-3.134-9-7c0-1.838.684-3.547 1.897-5.136C4.6 9.691 4.4 9.369 4.4 9c0-.552.448-1 1-1 .203 0 .396.057.558.165C7.562 6.86 9.621 6 12 6zm-3.5 8c-.828 0-1.5-.672-1.5-1.5S7.672 11 8.5 11s1.5.672 1.5 1.5S9.328 14 8.5 14zm7 0c-.828 0-1.5-.672-1.5-1.5s.672-1.5 1.5-1.5 1.5.672 1.5 1.5-.672 1.5-1.5 1.5zm-7.163 3.243c.19-.236.534-.275.77-.086C9.972 17.844 10.946 18.2 12 18.2c1.054 0 2.028-.356 2.893-1.043.236-.19.58-.15.77.086.19.236.15.58-.086.77C14.54 18.864 13.32 19.3 12 19.3s-2.54-.436-3.577-1.287c-.236-.19-.275-.534-.086-.77z" />
+    </svg>
+  );
+}
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +101,16 @@ const PLATFORMS: PlatformConfig[] = [
     bgColor: "bg-[#000000]/10",
     hoverColor: "hover:bg-[#333333]",
     oauthUrl: "/api/auth/twitter",
+  },
+  {
+    key: "reddit",
+    label: "Reddit",
+    description: "Publie sur ton profil Reddit",
+    icon: <RedditIcon className="h-5 w-5 text-[#FF4500]" />,
+    color: "bg-[#FF4500]",
+    bgColor: "bg-[#FF4500]/10",
+    hoverColor: "hover:bg-[#CC3700]",
+    oauthUrl: "/api/auth/reddit",
   },
 ];
 
@@ -189,6 +208,23 @@ export default function SocialConnections() {
       toast({
         title: "Erreur X",
         description: decodeURIComponent(twitterError),
+        variant: "destructive",
+      });
+    }
+
+    // Reddit
+    if (searchParams.get("reddit_connected") === "1") {
+      toast({
+        title: "Reddit connecte",
+        description: "Ton compte Reddit est maintenant lie a Tipote.",
+      });
+      fetchConnections();
+    }
+    const redditError = searchParams.get("reddit_error");
+    if (redditError) {
+      toast({
+        title: "Erreur Reddit",
+        description: decodeURIComponent(redditError),
         variant: "destructive",
       });
     }

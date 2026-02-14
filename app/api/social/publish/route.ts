@@ -1,7 +1,7 @@
 // app/api/social/publish/route.ts
 // POST : publie un contenu sur un reseau social via n8n (ou directement).
 // Body : { contentId, platform }
-// Plateformes supportees : linkedin, facebook, threads, twitter
+// Plateformes supportees : linkedin, facebook, threads, twitter, reddit
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -10,10 +10,11 @@ import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
+import { publishPost as publishRedditPost } from "@/lib/reddit";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit"] as const;
 type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
     instagram: "Instagram",
     threads: "Threads",
     twitter: "X",
+    reddit: "Reddit",
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
@@ -126,7 +128,9 @@ export async function POST(req: NextRequest) {
         ? "linkedin-publish"
         : platform === "twitter"
           ? "twitter-publish"
-          : "meta-publish"; // facebook, instagram, threads all go via meta-publish
+          : platform === "reddit"
+            ? "reddit-publish"
+            : "meta-publish"; // facebook, instagram, threads all go via meta-publish
       const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
 
       const n8nPayload: Record<string, unknown> = {
@@ -158,6 +162,11 @@ export async function POST(req: NextRequest) {
       // Pour Threads, ajouter l'image_url si presente (optionnel, Threads supporte le texte seul)
       if (platform === "threads" && contentItem.meta?.image_url) {
         n8nPayload.image_url = contentItem.meta.image_url;
+      }
+
+      // Pour Reddit, le titre est obligatoire
+      if (platform === "reddit") {
+        n8nPayload.title = contentItem.title || "Post depuis Tipote";
       }
 
       const n8nRes = await fetch(webhookUrl, {
@@ -224,6 +233,10 @@ export async function POST(req: NextRequest) {
     result = await publishToThreads(accessToken, platformUserId, contentItem.content, imageUrl);
   } else if (platform === "twitter") {
     result = await publishTweet(accessToken, contentItem.content);
+  } else if (platform === "reddit") {
+    const title = contentItem.title || "Post depuis Tipote";
+    const rdResult = await publishRedditPost(accessToken, platformUserId, title, contentItem.content);
+    result = { ...rdResult };
   } else {
     return NextResponse.json({ error: "Plateforme non supportee" }, { status: 400 });
   }
