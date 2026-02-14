@@ -56,12 +56,6 @@ function getRedirectUri(): string {
   return `${appUrl}/api/auth/meta/callback`;
 }
 
-export function getInstagramRedirectUri(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
-  return `${appUrl}/api/auth/instagram/callback`;
-}
-
 // ----------------------------------------------------------------
 // OAuth 2.0
 // ----------------------------------------------------------------
@@ -97,34 +91,6 @@ export function buildAuthorizationUrl(state: string): string {
     state,
   });
   console.log("[buildAuthorizationUrl] Using scope fallback (no META_CONFIG_ID)");
-  return `${FB_AUTH_URL}?${params.toString()}`;
-}
-
-/**
- * Construit l'URL d'autorisation pour Instagram (via Facebook Login for Business).
- * REQUIERT META_IG_CONFIG_ID (config "tipote-ig" variant "API Graph pour Instagram").
- * Les scopes Instagram ne peuvent PAS etre passes via le parametre scope sur une
- * app Business – le config_id est obligatoire.
- */
-export function buildInstagramAuthorizationUrl(state: string): string {
-  const configId = process.env.META_IG_CONFIG_ID;
-  console.log("[buildInstagramAuthorizationUrl] META_IG_CONFIG_ID =", configId ?? "(undefined)");
-
-  if (!configId) {
-    throw new Error(
-      "META_IG_CONFIG_ID manquant. Ajoute la variable d'env META_IG_CONFIG_ID " +
-      "avec l'ID de ta configuration 'tipote-ig' (Facebook Login for Business > Configurations)."
-    );
-  }
-
-  const params = new URLSearchParams({
-    client_id: getAppId(),
-    redirect_uri: getInstagramRedirectUri(),
-    response_type: "code",
-    config_id: configId,
-    state,
-  });
-  console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
   return `${FB_AUTH_URL}?${params.toString()}`;
 }
 

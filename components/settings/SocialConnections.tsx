@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Linkedin, Facebook, AtSign, Instagram, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,12 +40,7 @@ type PlatformConfig = {
   color: string;
   bgColor: string;
   hoverColor: string;
-  /** URL pour OAuth redirect (LinkedIn, Facebook, Threads) */
-  oauthUrl?: string;
-  /** URL pour discovery via POST (Instagram) */
-  discoverUrl?: string;
-  /** Prerequis : plateforme qui doit etre connectee d'abord */
-  requiresPlatform?: string;
+  oauthUrl: string;
 };
 
 const PLATFORMS: PlatformConfig[] = [
@@ -70,16 +65,6 @@ const PLATFORMS: PlatformConfig[] = [
     oauthUrl: "/api/auth/meta",
   },
   {
-    key: "instagram",
-    label: "Instagram",
-    description: "Publie sur ton compte Instagram Business/Creator",
-    icon: <Instagram className="h-5 w-5 text-[#E4405F]" />,
-    color: "bg-[#E4405F]",
-    bgColor: "bg-[#E4405F]/10",
-    hoverColor: "hover:bg-[#C13584]",
-    oauthUrl: "/api/auth/instagram",
-  },
-  {
     key: "threads",
     label: "Threads",
     description: "Publie sur ton compte Threads",
@@ -99,7 +84,7 @@ export default function SocialConnections() {
   const [loading, setLoading] = useState(true);
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
-  const [discoveringPlatform, setDiscoveringPlatform] = useState<string | null>(null);
+
 
   // Charger les connexions
   const fetchConnections = async () => {
@@ -155,23 +140,6 @@ export default function SocialConnections() {
       });
     }
 
-    // Instagram (callback legacy – au cas ou)
-    if (searchParams.get("instagram_connected") === "1") {
-      toast({
-        title: "Instagram connecte",
-        description: "Ton compte Instagram est maintenant lie a Tipote.",
-      });
-      fetchConnections();
-    }
-    const instagramError = searchParams.get("instagram_error");
-    if (instagramError) {
-      toast({
-        title: "Erreur Instagram",
-        description: decodeURIComponent(instagramError),
-        variant: "destructive",
-      });
-    }
-
     // Threads
     if (searchParams.get("threads_connected") === "1") {
       toast({
@@ -192,52 +160,6 @@ export default function SocialConnections() {
 
   const onConnect = (oauthUrl: string) => {
     window.location.href = oauthUrl;
-  };
-
-  /** Connexion via discovery API (Instagram) : POST au lieu de redirect OAuth */
-  const onDiscover = async (platform: PlatformConfig) => {
-    if (!platform.discoverUrl) return;
-
-    // Verifier que le prerequis est connecte
-    if (platform.requiresPlatform) {
-      const required = connections.find((c) => c.platform === platform.requiresPlatform && !c.expired);
-      if (!required) {
-        toast({
-          title: `${platform.label} necessite Facebook`,
-          description: "Connecte d'abord ta Page Facebook, puis clique sur Connecter Instagram.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    setDiscoveringPlatform(platform.key);
-    try {
-      const res = await fetch(platform.discoverUrl, { method: "POST" });
-      const json = await res.json();
-
-      if (json.ok) {
-        toast({
-          title: `${platform.label} connecte`,
-          description: `Compte @${json.username ?? platform.label} lie a Tipote.`,
-        });
-        fetchConnections();
-      } else {
-        toast({
-          title: `Erreur ${platform.label}`,
-          description: json.error ?? "Erreur inconnue",
-          variant: "destructive",
-        });
-      }
-    } catch {
-      toast({
-        title: "Erreur réseau",
-        description: `Impossible de connecter ${platform.label}.`,
-        variant: "destructive",
-      });
-    } finally {
-      setDiscoveringPlatform(null);
-    }
   };
 
   const onDisconnect = (id: string) => {
@@ -282,7 +204,6 @@ export default function SocialConnections() {
         <div className="space-y-4">
           {PLATFORMS.map((platform) => {
             const connection = getConnection(platform.key);
-            const isDiscovering = discoveringPlatform === platform.key;
 
             return (
               <div
@@ -323,17 +244,10 @@ export default function SocialConnections() {
                   {connection ? (
                     <>
                       {connection.expired && (
-                        platform.oauthUrl ? (
-                          <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl!)}>
-                            <RefreshCw className="w-4 h-4 mr-1" />
-                            Reconnecter
-                          </Button>
-                        ) : (
-                          <Button variant="outline" size="sm" onClick={() => onDiscover(platform)} disabled={isDiscovering}>
-                            {isDiscovering ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-                            Reconnecter
-                          </Button>
-                        )
+                        <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Reconnecter
+                        </Button>
                       )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -371,30 +285,13 @@ export default function SocialConnections() {
                       </AlertDialog>
                     </>
                   ) : (
-                    platform.oauthUrl ? (
-                      <Button
-                        onClick={() => onConnect(platform.oauthUrl!)}
-                        className={`${platform.color} ${platform.hoverColor} text-white`}
-                      >
-                        {platform.icon}
-                        <span className="ml-2">Connecter {platform.label}</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => onDiscover(platform)}
-                        disabled={isDiscovering}
-                        className={`${platform.color} ${platform.hoverColor} text-white`}
-                      >
-                        {isDiscovering ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          platform.icon
-                        )}
-                        <span className="ml-2">
-                          {isDiscovering ? "Recherche..." : `Connecter ${platform.label}`}
-                        </span>
-                      </Button>
-                    )
+                    <Button
+                      onClick={() => onConnect(platform.oauthUrl)}
+                      className={`${platform.color} ${platform.hoverColor} text-white`}
+                    >
+                      {platform.icon}
+                      <span className="ml-2">Connecter {platform.label}</span>
+                    </Button>
                   )}
                 </div>
               </div>
