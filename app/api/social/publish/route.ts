@@ -1,7 +1,7 @@
 // app/api/social/publish/route.ts
 // POST : publie un contenu sur un reseau social via n8n (ou directement).
 // Body : { contentId, platform }
-// Plateformes supportees : linkedin, facebook, threads
+// Plateformes supportees : linkedin, facebook, threads, twitter
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -9,10 +9,11 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
+import { publishTweet } from "@/lib/twitter";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter"] as const;
 type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
     facebook: "Facebook",
     instagram: "Instagram",
     threads: "Threads",
+    twitter: "X",
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
@@ -120,7 +122,11 @@ export async function POST(req: NextRequest) {
   if (n8nWebhookBase && n8nSecret) {
     // --- Mode n8n : envoyer au webhook ---
     try {
-      const webhookPath = platform === "linkedin" ? "linkedin-publish" : "meta-publish"; // facebook, instagram, threads all go via meta-publish
+      const webhookPath = platform === "linkedin"
+        ? "linkedin-publish"
+        : platform === "twitter"
+          ? "twitter-publish"
+          : "meta-publish"; // facebook, instagram, threads all go via meta-publish
       const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
 
       const n8nPayload: Record<string, unknown> = {
@@ -216,6 +222,8 @@ export async function POST(req: NextRequest) {
   } else if (platform === "threads") {
     const imageUrl = contentItem.meta?.image_url as string | undefined;
     result = await publishToThreads(accessToken, platformUserId, contentItem.content, imageUrl);
+  } else if (platform === "twitter") {
+    result = await publishTweet(accessToken, contentItem.content);
   } else {
     return NextResponse.json({ error: "Plateforme non supportee" }, { status: 400 });
   }
