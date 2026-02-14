@@ -59,10 +59,28 @@ function getRedirectUri(): string {
 // ----------------------------------------------------------------
 
 /**
- * Construit l'URL d'autorisation Facebook Login (Pages uniquement).
- * Permissions : pages_show_list, pages_manage_posts, pages_read_engagement
+ * Construit l'URL d'autorisation Facebook Login for Business.
+ * Si META_CONFIG_ID est defini (recommande pour les apps Business),
+ * utilise le config_id qui inclut deja les permissions configurees.
+ * Sinon fallback sur le scope classique.
  */
 export function buildAuthorizationUrl(state: string): string {
+  const configId = process.env.META_CONFIG_ID;
+
+  if (configId) {
+    // Facebook Login for Business : config_id remplace le scope
+    const params = new URLSearchParams({
+      client_id: getAppId(),
+      redirect_uri: getRedirectUri(),
+      response_type: "code",
+      config_id: configId,
+      state,
+    });
+    console.log("[buildAuthorizationUrl] Using config_id:", configId);
+    return `${FB_AUTH_URL}?${params.toString()}`;
+  }
+
+  // Fallback classique (sans config_id)
   const params = new URLSearchParams({
     client_id: getAppId(),
     redirect_uri: getRedirectUri(),
@@ -70,6 +88,7 @@ export function buildAuthorizationUrl(state: string): string {
     response_type: "code",
     state,
   });
+  console.log("[buildAuthorizationUrl] Using scope fallback (no META_CONFIG_ID)");
   return `${FB_AUTH_URL}?${params.toString()}`;
 }
 
