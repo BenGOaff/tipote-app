@@ -62,15 +62,24 @@ export async function GET(req: NextRequest) {
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
     console.log("[Facebook callback] Long-lived token OK, expires_in:", longLived.expires_in);
 
-    // 5. Debug : verifier les permissions reellement accordees
+    // 5. Debug : verifier les permissions reellement accordees + identite
+    let grantedPerms: string[] = [];
+    let fbIdentity = "inconnu";
     try {
-      const permRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/permissions?access_token=${longLived.access_token}`
-      );
+      const [permRes, meRes] = await Promise.all([
+        fetch(`https://graph.facebook.com/v21.0/me/permissions?access_token=${longLived.access_token}`),
+        fetch(`https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${longLived.access_token}`),
+      ]);
       const permJson = await permRes.json();
+      const meJson = await meRes.json();
+      grantedPerms = (permJson.data ?? [])
+        .filter((p: { status: string }) => p.status === "granted")
+        .map((p: { permission: string }) => p.permission);
+      fbIdentity = meJson.name ? `${meJson.name} (${meJson.id})` : meJson.id ?? "inconnu";
       console.log("[Facebook callback] Permissions granted:", JSON.stringify(permJson));
+      console.log("[Facebook callback] FB identity:", fbIdentity);
     } catch (permErr) {
-      console.error("[Facebook callback] Could not fetch permissions:", permErr);
+      console.error("[Facebook callback] Could not fetch permissions/identity:", permErr);
     }
 
     // 6. Recuperer les Pages Facebook
@@ -79,9 +88,22 @@ export async function GET(req: NextRequest) {
     console.log("[Facebook callback] Pages found:", pages.length, JSON.stringify(pages.map(p => ({ id: p.id, name: p.name }))));
 
     if (pages.length === 0) {
+      const missingPerms = ["pages_show_list", "pages_manage_posts", "pages_read_engagement"]
+        .filter((p) => !grantedPerms.includes(p));
+      const debugInfo = [
+        `Connecte en tant que: ${fbIdentity}`,
+        `Permissions accordees: ${grantedPerms.join(", ") || "aucune"}`,
+        missingPerms.length > 0
+          ? `Permissions MANQUANTES: ${missingPerms.join(", ")}`
+          : "Toutes les permissions pages sont presentes",
+        "Verifie que ce compte Facebook est bien admin de la Page.",
+      ].join(" | ");
+
+      console.error("[Facebook callback] No pages found. Debug:", debugInfo);
+
       return NextResponse.redirect(
         `${settingsUrl}&meta_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvee. Verifie dans les logs PM2 (pm2 logs) le detail des permissions et de la reponse /me/accounts."
+          `Aucune Page Facebook trouvee. ${debugInfo}`
         )}`
       );
     }
