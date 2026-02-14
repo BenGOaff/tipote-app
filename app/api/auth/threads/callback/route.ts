@@ -55,13 +55,17 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Echanger le code contre un short-lived Threads token
+    console.log("[Threads callback] Exchanging code for token...");
     const shortLived = await exchangeThreadsCodeForToken(code);
+    console.log("[Threads callback] Short-lived token OK, user_id:", shortLived.user_id);
 
     // 4. Echanger contre un long-lived token (~60 jours)
     const longLived = await exchangeThreadsForLongLivedToken(shortLived.access_token);
+    console.log("[Threads callback] Long-lived token OK, expires_in:", longLived.expires_in);
 
     // 5. Recuperer le profil Threads
     const threadsUser = await getThreadsUser(longLived.access_token);
+    console.log("[Threads callback] Threads user:", JSON.stringify(threadsUser));
 
     if (!threadsUser) {
       return NextResponse.redirect(
@@ -73,43 +77,76 @@ export async function GET(req: NextRequest) {
 
     // 6. Stocker la connexion Threads
     const projectId = await getActiveProjectId(supabase, user.id);
+    console.log("[Threads callback] projectId:", projectId, "userId:", user.id);
+
     const tokenExpiresAt = new Date(
-      Date.now() + longLived.expires_in * 1000
+      Date.now() + (longLived.expires_in ?? 5184000) * 1000
     ).toISOString();
 
     const tokenEncrypted = encrypt(longLived.access_token);
 
-    const { error: dbError } = await supabase
+    const connectionData = {
+      user_id: user.id,
+      project_id: projectId ?? null,
+      platform: "threads" as const,
+      platform_user_id: threadsUser.id,
+      platform_username: threadsUser.username ?? threadsUser.name ?? "Threads",
+      access_token_encrypted: tokenEncrypted,
+      refresh_token_encrypted: null,
+      token_expires_at: tokenExpiresAt,
+      scopes: "threads_basic,threads_content_publish",
+      updated_at: new Date().toISOString(),
+    };
+
+    // Chercher si une connexion Threads existe deja (gere le cas project_id NULL)
+    let findQuery = supabase
       .from("social_connections")
-      .upsert(
-        {
-          user_id: user.id,
-          project_id: projectId ?? null,
-          platform: "threads",
-          platform_user_id: threadsUser.id,
-          platform_username: threadsUser.username ?? threadsUser.name ?? "Threads",
-          access_token_encrypted: tokenEncrypted,
-          refresh_token_encrypted: null,
-          token_expires_at: tokenExpiresAt,
-          scopes: "threads_basic,threads_content_publish",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,project_id,platform" }
-      );
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "threads");
+
+    if (projectId) {
+      findQuery = findQuery.eq("project_id", projectId);
+    } else {
+      findQuery = findQuery.is("project_id", null);
+    }
+
+    const { data: existing } = await findQuery.maybeSingle();
+
+    let dbError;
+    if (existing) {
+      // Update existant
+      console.log("[Threads callback] Updating existing connection:", existing.id);
+      const result = await supabase
+        .from("social_connections")
+        .update(connectionData)
+        .eq("id", existing.id);
+      dbError = result.error;
+    } else {
+      // Insert nouveau
+      console.log("[Threads callback] Inserting new connection");
+      const result = await supabase
+        .from("social_connections")
+        .insert(connectionData);
+      dbError = result.error;
+    }
 
     if (dbError) {
-      console.error("Threads social_connections upsert error:", dbError);
+      console.error("[Threads callback] DB error:", JSON.stringify(dbError));
       return NextResponse.redirect(
-        `${settingsUrl}&threads_error=${encodeURIComponent("Erreur de sauvegarde. Reessaie.")}`
+        `${settingsUrl}&threads_error=${encodeURIComponent(
+          `Erreur de sauvegarde: ${dbError.message ?? dbError.code ?? "inconnu"}. Reessaie.`
+        )}`
       );
     }
 
+    console.log("[Threads callback] Connection saved successfully!");
     return NextResponse.redirect(`${settingsUrl}&threads_connected=1`);
   } catch (err) {
-    console.error("Threads OAuth callback error:", err);
+    console.error("[Threads callback] Error:", err);
     return NextResponse.redirect(
       `${settingsUrl}&threads_error=${encodeURIComponent(
-        "Erreur de connexion Threads. Reessaie."
+        `Erreur de connexion Threads: ${err instanceof Error ? err.message : "inconnue"}. Reessaie.`
       )}`
     );
   }

@@ -54,61 +54,101 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Echanger le code contre un short-lived token
+    console.log("[Facebook callback] Exchanging code for token...");
     const shortLived = await exchangeCodeForToken(code);
+    console.log("[Facebook callback] Short-lived token OK");
 
     // 4. Echanger contre un long-lived token (~60 jours)
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
+    console.log("[Facebook callback] Long-lived token OK, expires_in:", longLived.expires_in);
 
     // 5. Recuperer les Pages Facebook
+    console.log("[Facebook callback] Fetching user pages...");
     const pages = await getUserPages(longLived.access_token);
+    console.log("[Facebook callback] Pages found:", pages.length, JSON.stringify(pages.map(p => ({ id: p.id, name: p.name }))));
 
     if (pages.length === 0) {
       return NextResponse.redirect(
         `${settingsUrl}&meta_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvee. Assure-toi d'avoir une Page Facebook et d'avoir accorde les permissions."
+          "Aucune Page Facebook trouvee. Assure-toi d'avoir une Page Facebook et d'avoir accorde les permissions pour cette Page pendant l'autorisation."
         )}`
       );
     }
 
     // 6. Prendre la premiere page (v1 : selection automatique)
     const page = pages[0];
+    console.log("[Facebook callback] Using page:", page.id, page.name);
 
     const projectId = await getActiveProjectId(supabase, user.id);
+    console.log("[Facebook callback] projectId:", projectId, "userId:", user.id);
+
     const tokenExpiresAt = new Date(
-      Date.now() + longLived.expires_in * 1000
+      Date.now() + (longLived.expires_in ?? 5184000) * 1000
     ).toISOString();
 
     // 7. Stocker la connexion Facebook (Page)
     const pageTokenEncrypted = encrypt(page.access_token);
 
-    const { error: fbError } = await supabase
-      .from("social_connections")
-      .upsert(
-        {
-          user_id: user.id,
-          project_id: projectId ?? null,
-          platform: "facebook",
-          platform_user_id: page.id,
-          platform_username: page.name,
-          access_token_encrypted: pageTokenEncrypted,
-          refresh_token_encrypted: null,
-          token_expires_at: tokenExpiresAt,
-          scopes: "pages_show_list,pages_manage_posts,pages_read_engagement",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,project_id,platform" }
-      );
+    const connectionData = {
+      user_id: user.id,
+      project_id: projectId ?? null,
+      platform: "facebook" as const,
+      platform_user_id: page.id,
+      platform_username: page.name,
+      access_token_encrypted: pageTokenEncrypted,
+      refresh_token_encrypted: null,
+      token_expires_at: tokenExpiresAt,
+      scopes: "pages_show_list,pages_manage_posts,pages_read_engagement",
+      updated_at: new Date().toISOString(),
+    };
 
-    if (fbError) {
-      console.error("Facebook social_connections upsert error:", fbError);
+    // Chercher si une connexion Facebook existe deja (gere le cas project_id NULL)
+    let findQuery = supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "facebook");
+
+    if (projectId) {
+      findQuery = findQuery.eq("project_id", projectId);
+    } else {
+      findQuery = findQuery.is("project_id", null);
     }
 
+    const { data: existing } = await findQuery.maybeSingle();
+
+    let dbError;
+    if (existing) {
+      console.log("[Facebook callback] Updating existing connection:", existing.id);
+      const result = await supabase
+        .from("social_connections")
+        .update(connectionData)
+        .eq("id", existing.id);
+      dbError = result.error;
+    } else {
+      console.log("[Facebook callback] Inserting new connection");
+      const result = await supabase
+        .from("social_connections")
+        .insert(connectionData);
+      dbError = result.error;
+    }
+
+    if (dbError) {
+      console.error("[Facebook callback] DB error:", JSON.stringify(dbError));
+      return NextResponse.redirect(
+        `${settingsUrl}&meta_error=${encodeURIComponent(
+          `Erreur de sauvegarde Facebook: ${dbError.message ?? dbError.code ?? "inconnu"}. Reessaie.`
+        )}`
+      );
+    }
+
+    console.log("[Facebook callback] Connection saved successfully!");
     return NextResponse.redirect(`${settingsUrl}&meta_connected=facebook`);
   } catch (err) {
-    console.error("Meta OAuth callback error:", err);
+    console.error("[Facebook callback] Error:", err);
     return NextResponse.redirect(
       `${settingsUrl}&meta_error=${encodeURIComponent(
-        "Erreur de connexion Facebook. Reessaie."
+        `Erreur de connexion Facebook: ${err instanceof Error ? err.message : "inconnue"}. Reessaie.`
       )}`
     );
   }
