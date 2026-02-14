@@ -5,6 +5,15 @@ import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
+// Icone X (Twitter) - SVG officiel du logo X
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +82,16 @@ const PLATFORMS: PlatformConfig[] = [
     bgColor: "bg-[#000000]/10",
     hoverColor: "hover:bg-[#333333]",
     oauthUrl: "/api/auth/threads",
+  },
+  {
+    key: "twitter",
+    label: "X (Twitter)",
+    description: "Publie sur ton compte X",
+    icon: <XIcon className="h-5 w-5 text-[#000000]" />,
+    color: "bg-[#000000]",
+    bgColor: "bg-[#000000]/10",
+    hoverColor: "hover:bg-[#333333]",
+    oauthUrl: "/api/auth/twitter",
   },
 ];
 
@@ -153,6 +172,23 @@ export default function SocialConnections() {
       toast({
         title: "Erreur Threads",
         description: decodeURIComponent(threadsError),
+        variant: "destructive",
+      });
+    }
+
+    // X (Twitter)
+    if (searchParams.get("twitter_connected") === "1") {
+      toast({
+        title: "X connecte",
+        description: "Ton compte X est maintenant lie a Tipote.",
+      });
+      fetchConnections();
+    }
+    const twitterError = searchParams.get("twitter_error");
+    if (twitterError) {
+      toast({
+        title: "Erreur X",
+        description: decodeURIComponent(twitterError),
         variant: "destructive",
       });
     }
@@ -299,7 +335,7 @@ export default function SocialConnections() {
           })}
 
           {/* Placeholder pour les futurs réseaux */}
-          {["X (Twitter)", "TikTok"].map((name) => (
+          {["TikTok"].map((name) => (
             <div
               key={name}
               className="flex items-center justify-between rounded-lg border border-dashed p-4 opacity-50"
