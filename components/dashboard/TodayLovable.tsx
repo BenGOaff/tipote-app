@@ -602,14 +602,14 @@ export default function TodayLovable() {
                 {/* ================================================= */}
                 {objective && (
                   <Card className="gradient-primary text-primary-foreground overflow-hidden">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 p-5 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-5 p-6 md:py-8 md:px-8">
                       <div className="flex items-center gap-4 shrink-0">
-                        <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-                          <Target className="w-5 h-5" />
+                        <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                          <Target className="w-6 h-6" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-2 mb-1.5">
                           <p className="text-xs font-medium text-primary-foreground/60 uppercase tracking-wide">
                             Ton objectif en ce moment
                           </p>
@@ -622,7 +622,7 @@ export default function TodayLovable() {
                             </Badge>
                           )}
                         </div>
-                        <h2 className="text-lg md:text-xl font-bold line-clamp-2">
+                        <h2 className="text-lg md:text-xl font-bold leading-snug">
                           {objective.focus}
                         </h2>
                       </div>
@@ -643,26 +643,26 @@ export default function TodayLovable() {
                 <div className="grid md:grid-cols-2 gap-6">
 
                   {/* --- Cette semaine : coaching --- */}
-                  <Card className="p-5">
+                  <Card className="p-6 flex flex-col">
                     <div className="flex items-center gap-2 mb-1">
                       <Lightbulb className="w-4 h-4 text-amber-500" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Cette semaine
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-5">
+                    <p className="text-xs text-muted-foreground mb-6">
                       {currentWeekLabel}
                     </p>
 
                     {coaching && (
-                      <div className="space-y-4">
+                      <div className="space-y-5 flex-1 flex flex-col">
                         {coaching.positive && (
-                          <p className="text-sm text-foreground font-medium">
+                          <p className="text-sm text-foreground font-medium leading-relaxed">
                             {coaching.positive}
                           </p>
                         )}
 
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 p-5">
                           <p className="text-sm text-foreground leading-relaxed">
                             {coaching.positive ? (
                               <>
@@ -676,7 +676,7 @@ export default function TodayLovable() {
                           </p>
                         </div>
 
-                        <Button asChild variant="default" className="w-full gap-2">
+                        <Button asChild variant="default" className="w-full gap-2 mt-auto">
                           <Link href={coaching.ctaHref}>
                             {coaching.ctaLabel} <ArrowRight className="w-4 h-4" />
                           </Link>
@@ -686,18 +686,18 @@ export default function TodayLovable() {
                   </Card>
 
                   {/* --- Ta progression --- */}
-                  <Card className="p-5">
+                  <Card className="p-6 flex flex-col">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="w-4 h-4 text-primary" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Ta progression
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-5">
+                    <p className="text-xs text-muted-foreground mb-6">
                       Tes résultats concrets
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-5 flex-1 flex flex-col">
                       {/* Contenus créés */}
                       <div className="flex items-start gap-3">
                         <FileText className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
@@ -749,7 +749,7 @@ export default function TodayLovable() {
                         </div>
                       )}
 
-                      <Button asChild variant="outline" size="sm" className="w-full gap-2">
+                      <Button asChild variant="outline" size="sm" className="w-full gap-2 mt-auto">
                         <Link href="/analytics">
                           {progression.hasMetrics ? "Voir mes statistiques" : "Remplir mes statistiques"} <ArrowRight className="w-3 h-3" />
                         </Link>
