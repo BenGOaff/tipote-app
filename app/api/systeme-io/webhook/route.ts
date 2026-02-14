@@ -79,11 +79,7 @@ const simpleTestSchema = z.object({
 export type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
 function normalizePlanFromOfferName(offer: { name: string; inner_name?: string | null }): StoredPlan | null {
-  // Normalise les accents (bêta → beta, élite → elite, etc.)
-  const name = `${offer.inner_name ?? ""} ${offer.name}`
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  const name = `${offer.inner_name ?? ""} ${offer.name}`.toLowerCase();
 
   if (name.includes("beta")) return "beta";
   if (name.includes("elite")) return "elite";
@@ -96,13 +92,10 @@ function normalizePlanFromOfferName(offer: { name: string; inner_name?: string |
 
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // Offre Beta lifetime (97€) => plan "beta" en DB
-  // Systeme.io peut envoyer l'ID sous différents formats (préfixé ou numérique)
   "offerprice-efbd353f": "beta",
   "offerprice-3066719": "beta",
   "offer-price-3066719": "beta",
   "offer-price-3064431": "beta",
-  "3066719": "beta",
-  "3064431": "beta",
 };
 
 function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
