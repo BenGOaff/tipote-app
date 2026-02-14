@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   ChevronRight,
-  Zap,
   BarChart3,
   FileText,
   TrendingUp,
@@ -434,29 +433,42 @@ export default function TodayLovable() {
         const userId = user.id;
         if (cancelled) return;
 
-        // ------ Fetch plan + tasks + content + metrics in parallel ------
-        const [planRes, tasksRes, metricsRes] = await Promise.all([
-          // Plan
-          supabase
-            .from("business_plan")
-            .select("plan_json, created_at")
-            .eq("user_id", userId)
-            .maybeSingle(),
-          // Tasks (from project_tasks, not /api/tasks which may differ)
-          supabase
-            .from("project_tasks")
-            .select("id, title, status, priority, due_date, source")
-            .eq("user_id", userId)
-            .order("due_date", { ascending: true, nullsFirst: false })
-            .limit(500),
-          // Metrics
-          supabase
+        // ------ Fetch plan ------
+        const planRes = await supabase
+          .from("business_plan")
+          .select("plan_json, created_at")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // ------ Fetch tasks via API (RLS-safe) ------
+        let tasks: AnyRecord[] = [];
+        try {
+          const tasksApiRes = await fetch("/api/tasks", { cache: "no-store" });
+          const tasksJson = await tasksApiRes.json().catch(() => null);
+          tasks = Array.isArray(tasksJson?.tasks)
+            ? tasksJson.tasks
+            : Array.isArray(tasksJson)
+              ? tasksJson
+              : [];
+        } catch {
+          // fail-open
+        }
+
+        // ------ Fetch metrics (may not exist) ------
+        let metricsRows: AnyRecord[] = [];
+        try {
+          const metricsRes = await supabase
             .from("metrics")
             .select("revenue,sales_count,new_subscribers,conversion_rate")
             .eq("user_id", userId)
             .order("month", { ascending: false })
-            .limit(1),
-        ]);
+            .limit(1);
+          if (!metricsRes.error && Array.isArray(metricsRes.data)) {
+            metricsRows = metricsRes.data as AnyRecord[];
+          }
+        } catch {
+          // fail-open — table may not exist
+        }
 
         // ------ Fetch content rows (with schema fallback) ------
         const contentAttempts = [
@@ -483,7 +495,7 @@ export default function TodayLovable() {
           const res = await q;
           if (!res.error && Array.isArray(res.data)) {
             saveContentSchemaHint(userId, { hasUserId: hasUid || undefined, selectIndex: i });
-            contentRows = res.data as AnyRecord[];
+            contentRows = res.data as unknown as AnyRecord[];
             break;
           }
           if (res.error && isSchemaError(res.error.message) && res.error.message.toLowerCase().includes("user_id")) {
@@ -501,7 +513,6 @@ export default function TodayLovable() {
         const planCreatedAt = toStr(planRes.data?.created_at);
         const hasStrategy = !planRes.error && !!planJson && Object.keys(planJson).length > 0;
 
-        const tasks = (tasksRes.data ?? []) as AnyRecord[];
         const categories = buildTaskCategories(tasks);
 
         // Strategic objective
@@ -517,8 +528,8 @@ export default function TodayLovable() {
         let conversionRate: number | null = null;
         let hasMetrics = false;
 
-        if (!metricsRes.error && metricsRes.data && metricsRes.data.length > 0) {
-          const m = metricsRes.data[0] as any;
+        if (metricsRows.length > 0) {
+          const m = metricsRows[0] as any;
           revenue = typeof m.revenue === "number" ? m.revenue : null;
           salesCount = typeof m.sales_count === "number" ? m.sales_count : null;
           newSubscribers = typeof m.new_subscribers === "number" ? m.new_subscribers : null;
