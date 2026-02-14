@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, AtSign, Instagram, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -63,6 +63,16 @@ const PLATFORMS: PlatformConfig[] = [
     bgColor: "bg-[#1877F2]/10",
     hoverColor: "hover:bg-[#0C5DC7]",
     oauthUrl: "/api/auth/meta",
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    description: "Publie sur ton compte Instagram Business/Creator",
+    icon: <Instagram className="h-5 w-5 text-[#E4405F]" />,
+    color: "bg-[#E4405F]",
+    bgColor: "bg-[#E4405F]/10",
+    hoverColor: "hover:bg-[#C13584]",
+    oauthUrl: "/api/auth/instagram",
   },
   {
     key: "threads",
@@ -135,6 +145,23 @@ export default function SocialConnections() {
       toast({
         title: "Erreur Facebook",
         description: decodeURIComponent(metaError),
+        variant: "destructive",
+      });
+    }
+
+    // Instagram
+    if (searchParams.get("instagram_connected") === "1") {
+      toast({
+        title: "Instagram connecte",
+        description: "Ton compte Instagram est maintenant lie a Tipote.",
+      });
+      fetchConnections();
+    }
+    const instagramError = searchParams.get("instagram_error");
+    if (instagramError) {
+      toast({
+        title: "Erreur Instagram",
+        description: decodeURIComponent(instagramError),
         variant: "destructive",
       });
     }
