@@ -156,6 +156,23 @@ export default function SocialConnections() {
       });
     }
 
+    // Instagram (callback legacy – au cas ou)
+    if (searchParams.get("instagram_connected") === "1") {
+      toast({
+        title: "Instagram connecte",
+        description: "Ton compte Instagram est maintenant lie a Tipote.",
+      });
+      fetchConnections();
+    }
+    const instagramError = searchParams.get("instagram_error");
+    if (instagramError) {
+      toast({
+        title: "Erreur Instagram",
+        description: decodeURIComponent(instagramError),
+        variant: "destructive",
+      });
+    }
+
     // Threads
     if (searchParams.get("threads_connected") === "1") {
       toast({

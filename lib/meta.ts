@@ -11,11 +11,16 @@ const FB_AUTH_URL = `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`
 const THREADS_AUTH_URL = "https://threads.net/oauth/authorize";
 const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 
-// Facebook Pages scopes (OAuth Facebook Login)
+// Facebook Pages + Instagram scopes (OAuth Facebook Login)
+// instagram_basic et instagram_content_publish sont necessaires pour
+// decouvrir et publier sur le compte Instagram Business/Creator
+// lie a la Page Facebook.
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
+  "instagram_basic",
+  "instagram_content_publish",
 ];
 
 // Threads scopes (OAuth Threads separe)
