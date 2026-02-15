@@ -21,13 +21,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=facebook",
+        "url": "={{ $vars.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=facebook",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
+              "value": "={{ $vars.N8N_SHARED_SECRET }}"
             }
           ]
         },
@@ -42,13 +42,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=threads",
+        "url": "={{ $vars.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=threads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
+              "value": "={{ $vars.N8N_SHARED_SECRET }}"
             }
           ]
         },
@@ -239,7 +239,7 @@
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
+              "value": "={{ $vars.N8N_SHARED_SECRET }}"
             },
             {
               "name": "Content-Type",
@@ -307,7 +307,7 @@
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
+              "value": "={{ $vars.N8N_SHARED_SECRET }}"
             },
             {
               "name": "Content-Type",

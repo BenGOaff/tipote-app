@@ -21,18 +21,20 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        // ✅ Base Lovable (shadcn)
+        // ✅ Lovable-style: arrows flanking month label (not at far edges)
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
+        month:
+          "grid [&>*:nth-child(-n+2)]:col-start-1 [&>*:nth-child(-n+2)]:row-start-1 gap-y-4",
+        caption: "flex justify-center pt-1 items-center h-9",
         caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
+        // v8: nav sits on top of caption via grid; arrows centered with gap for month text
+        nav: "flex items-center justify-center gap-32 h-9 pt-1 z-10",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
+        nav_button_previous: "",
+        nav_button_next: "",
         table: "w-full border-collapse space-y-1",
 
         // ✅ Lovable keys (v8)
@@ -41,6 +43,15 @@ function Calendar({
         row: "flex w-full mt-2",
 
         // ✅ Compat v9 (sinon weekday colle / layout casse)
+        month_caption: "flex justify-center pt-1 items-center h-9",
+        button_previous: cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        ),
+        button_next: cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        ),
         weekdays: "flex",
         weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         week: "flex w-full mt-2",
