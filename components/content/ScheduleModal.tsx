@@ -94,7 +94,7 @@ export function ScheduleModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-[#b042b4]" />
+                <CalendarDays className="h-5 w-5 text-primary" />
                 Programmer sur {platformLabel}
               </DialogTitle>
               <DialogDescription>
@@ -133,7 +133,7 @@ export function ScheduleModal({
               <Button
                 onClick={handleConfirm}
                 disabled={!date || saving}
-                className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
+                className=""
               >
                 {saving ? "Programmation..." : "Programmer"}
               </Button>
@@ -164,7 +164,7 @@ export function ScheduleModal({
             <DialogFooter>
               <Button
                 onClick={() => onOpenChange(false)}
-                className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
+                className=""
               >
                 Compris
               </Button>

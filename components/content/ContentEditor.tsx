@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TemplateChatPanel } from "@/components/templates/TemplateChatPanel";
 import { toast } from "@/components/ui/use-toast";
@@ -33,11 +32,9 @@ import {
   Copy,
   Save,
   Trash2,
-  CheckCircle2,
   CalendarDays,
   FileText,
   CopyPlus,
-  CalendarX,
   Download,
   Eye,
   Loader2,
@@ -90,18 +87,6 @@ function badgeVariantForStatus(status: string | null): "default" | "secondary" |
   return "outline";
 }
 
-function normalizeTags(raw: string) {
-  return (raw ?? "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .slice(0, 50);
-}
-
-function tagsToString(tags: string[] | null | undefined) {
-  return (tags ?? []).filter(Boolean).join(", ");
-}
-
 function toYmdOrEmpty(v: string | null | undefined) {
   const s = (v ?? "").trim();
   if (!s) return "";
@@ -130,8 +115,6 @@ export function ContentEditor({ initialItem }: Props) {
   const [type, setType] = useState(baseline.type ?? "");
   const [status, setStatus] = useState(normalizeStatusValue(baseline.status));
   const [scheduledDate, setScheduledDate] = useState(toYmdOrEmpty(baseline.scheduled_date ?? null));
-  const [tags, setTags] = useState(tagsToString(baseline.tags ?? []));
-  const [prompt, setPrompt] = useState(baseline.prompt ?? "");
   const [content, setContent] = useState(baseline.content ?? "");
 
   // -----------------------------
@@ -348,7 +331,6 @@ export function ContentEditor({ initialItem }: Props) {
   const statusBadgeVariant = useMemo(() => badgeVariantForStatus(status), [status]);
 
   const dirty = useMemo(() => {
-    const baseTags = tagsToString(baseline.tags ?? []);
     const baseDate = toYmdOrEmpty(baseline.scheduled_date ?? null);
     const baseStatus = normalizeStatusValue(baseline.status);
     return (
@@ -357,13 +339,9 @@ export function ContentEditor({ initialItem }: Props) {
       (type ?? "").trim() !== (baseline.type ?? "").trim() ||
       normalizeStatusValue(status) !== baseStatus ||
       (scheduledDate ?? "").trim() !== (baseDate ?? "").trim() ||
-      normalizeTags(tags).join(",") !== normalizeTags(baseTags).join(",") ||
-      (prompt ?? "").trim() !== (baseline.prompt ?? "").trim() ||
       (content ?? "").trim() !== (baseline.content ?? "").trim()
     );
-  }, [baseline, title, channel, type, status, scheduledDate, tags, prompt, content]);
-
-  const canSchedule = useMemo(() => normalizeStatusValue(status) === "scheduled", [status]);
+  }, [baseline, title, channel, type, status, scheduledDate, content]);
 
   const save = async () => {
     const nextStatus = normalizeStatusValue(status);
@@ -386,9 +364,7 @@ export function ContentEditor({ initialItem }: Props) {
         type: type.trim() || null,
         scheduledDate: nextScheduledDate, // API attend scheduledDate (YYYY-MM-DD ou null)
         status: nextStatus,
-        tags: normalizeTags(tags),
         content,
-        prompt: prompt.trim() || null,
       };
 
       // ✅ Images: stocker les images uploadées dans meta.images
@@ -551,31 +527,6 @@ export function ContentEditor({ initialItem }: Props) {
     }
   };
 
-  const setPublished = async () => {
-    setStatus("published");
-    setScheduledDate("");
-    await save();
-  };
-
-  const setScheduled = async () => {
-    setStatus("scheduled");
-    // si pas de date, on met aujourd’hui (UX simple)
-    if (!scheduledDate?.trim()) setScheduledDate(new Date().toISOString().slice(0, 10));
-    await save();
-  };
-
-  const setDraft = async () => {
-    setStatus("draft");
-    setScheduledDate("");
-    await save();
-  };
-
-  const setArchived = async () => {
-    setStatus("archived");
-    setScheduledDate("");
-    await save();
-  };
-
   // Handlers for PostActionButtons
   const handleScheduleFromButtons = async (date: string, time: string) => {
     setStatus("scheduled");
@@ -589,9 +540,7 @@ export function ContentEditor({ initialItem }: Props) {
         type: type.trim() || null,
         scheduledDate: date,
         status: "scheduled",
-        tags: normalizeTags(tags),
         content,
-        prompt: prompt.trim() || null,
         meta: {
           scheduled_time: time,
           ...(images.length > 0
@@ -749,79 +698,19 @@ export function ContentEditor({ initialItem }: Props) {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="p-4 space-y-3 lg:col-span-2">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Titre</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Canal</Label>
-              <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="Ex: LinkedIn" />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Type</Label>
-              <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Ex: post, email, funnel…" />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Statut</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionne…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="scheduled">Planifié</SelectItem>
-                  <SelectItem value="published">Publié</SelectItem>
-                  <SelectItem value="archived">Archivé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label>Date de planification</Label>
-              <Input
-                type="date"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                disabled={!canSchedule}
-              />
-              {!canSchedule ? <p className="text-xs text-muted-foreground">Disponible uniquement en statut “Planifié”.</p> : null}
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <Label>Tags</Label>
-              <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2, tag3" />
-              <p className="text-xs text-muted-foreground">Sépare par des virgules.</p>
-            </div>
+      <div className="space-y-4">
+        <Card className="p-4 space-y-3">
+          <div className="space-y-1">
+            <Label>Titre</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" />
           </div>
 
-          <div className="flex gap-2 flex-wrap pt-1">
-            <Button variant="outline" size="sm" onClick={setDraft}>
-              <CalendarX className="w-4 h-4 mr-1" /> Mettre en brouillon
-            </Button>
-            <Button variant="outline" size="sm" onClick={setScheduled}>
-              <CalendarDays className="w-4 h-4 mr-1" /> Planifier
-            </Button>
-            <Button variant="outline" size="sm" onClick={setPublished}>
-              <CheckCircle2 className="w-4 h-4 mr-1" /> Publier
-            </Button>
-            <Button variant="outline" size="sm" onClick={setArchived}>
-              <Trash2 className="w-4 h-4 mr-1" /> Archiver
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="p-4 space-y-2">
-          <div>
-            <p className="font-semibold">Prompt</p>
-            <p className="text-sm text-muted-foreground">Optionnel. Utile pour retrouver le contexte.</p>
-          </div>
-          <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Contexte / prompt utilisé" rows={5} />
+          {channel && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Canal :</span>
+              <Badge variant="secondary" className="capitalize">{channel}</Badge>
+            </div>
+          )}
         </Card>
 
         <Card className="p-4 space-y-2">
