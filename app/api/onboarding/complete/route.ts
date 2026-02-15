@@ -117,6 +117,27 @@ export async function POST(req: Request) {
       projectId = await getActiveProjectId(supabaseAuth, userId);
     }
 
+    // ✅ Validate minimum viable data before allowing completion
+    // Without at least niche or main_goal, strategy generation produces empty results
+    try {
+      let bpQuery = supabase.from("business_profiles").select("niche,main_goal,mission").eq("user_id", userId);
+      if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+      const { data: bpCheck } = await bpQuery.maybeSingle();
+
+      const hasNiche = typeof bpCheck?.niche === "string" && bpCheck.niche.trim().length > 0;
+      const hasGoal = typeof bpCheck?.main_goal === "string" && bpCheck.main_goal.trim().length > 0;
+      const hasMission = typeof bpCheck?.mission === "string" && bpCheck.mission.trim().length > 0;
+
+      if (!hasNiche && !hasGoal && !hasMission) {
+        return NextResponse.json(
+          { ok: false, error: "insufficient_data", message: "Il manque des informations essentielles pour générer ta stratégie. Reviens au diagnostic pour compléter." },
+          { status: 422 },
+        );
+      }
+    } catch {
+      // best-effort: if the check fails, allow completion anyway (fail-open)
+    }
+
     // 1) business_profiles = source de vérité UI
     // (fail-open si la colonne onboarding_version n'existe pas encore)
     // ✅ Always set diagnostic_completed=true when completing onboarding (v2 is always diagnostic-based)

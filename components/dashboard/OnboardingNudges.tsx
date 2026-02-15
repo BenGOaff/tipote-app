@@ -100,6 +100,12 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
     setIsGenerating(true);
     try {
       await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", {});
+      // ✅ Sync tasks after strategy generation so project_tasks is populated
+      await fetch("/api/tasks/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => null);
       router.push("/strategy");
     } catch (e) {
       toast({

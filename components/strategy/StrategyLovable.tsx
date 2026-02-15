@@ -178,12 +178,19 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         return;
       }
 
+      // ✅ Sync tasks after strategy generation so project_tasks is populated
+      await fetch("/api/tasks/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => null);
+
       toast({
-        title: "C’est parti ✅",
-        description: "Je prépare ton plan stratégique…",
+        title: "C'est parti ✅",
+        description: "Ton plan stratégique et tes tâches sont prêts.",
       });
 
-      // refresh immédiat + “best effort”
+      // refresh immédiat + "best effort"
       router.refresh();
       setTimeout(() => {
         try {
