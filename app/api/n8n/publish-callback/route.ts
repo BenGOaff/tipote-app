@@ -1,12 +1,60 @@
 // app/api/n8n/publish-callback/route.ts
-// POST : appelé par n8n après publication d'un post.
-// Met à jour le statut du content_item.
+// POST : appele par n8n apres publication d'un post.
+// Met a jour le statut du content_item.
 // Body : { content_id, platform?, success, postUrn?, postId?, error? }
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
+
+function isMissingColumn(msg?: string | null) {
+  const m = (msg ?? "").toLowerCase();
+  return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
+}
+
+/** Met a jour le statut du content_item (compat colonnes FR/EN) */
+async function updatePublishedStatus(contentId: string, meta: Record<string, string>) {
+  // Essai 1 : colonne EN "status"
+  const { error: err1 } = await supabaseAdmin
+    .from("content_item")
+    .update({ status: "published", meta })
+    .eq("id", contentId);
+
+  if (!err1) return;
+
+  if (isMissingColumn(err1.message)) {
+    // Essai 2 : colonne FR "statut"
+    const { error: err2 } = await supabaseAdmin
+      .from("content_item")
+      .update({ statut: "published", meta } as any)
+      .eq("id", contentId);
+
+    if (err2 && isMissingColumn(err2.message)) {
+      // Essai 3 : juste meta (si "statut" n'existe pas non plus)
+      await supabaseAdmin
+        .from("content_item")
+        .update({ meta } as any)
+        .eq("id", contentId);
+    } else if (err2) {
+      console.error("publish-callback: update error (FR)", err2);
+    }
+  } else {
+    console.error("publish-callback: update error (EN)", err1);
+    // Fallback : juste le statut sans meta
+    const { error: errFb } = await supabaseAdmin
+      .from("content_item")
+      .update({ status: "published" } as any)
+      .eq("id", contentId);
+
+    if (errFb && isMissingColumn(errFb.message)) {
+      await supabaseAdmin
+        .from("content_item")
+        .update({ statut: "published" } as any)
+        .eq("id", contentId);
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
   // Auth par header secret
@@ -28,30 +76,32 @@ export async function POST(req: NextRequest) {
   }
 
   if (success) {
-    // Marquer comme publié + stocker les infos du post dans meta
+    // Marquer comme publie + stocker les infos du post dans meta
     const meta: Record<string, string> = {
       published_at: new Date().toISOString(),
     };
 
     // Stocker l'identifiant du post selon la plateforme
     if (postUrn) meta.linkedin_post_urn = postUrn;
-    if (postId) meta.meta_post_id = postId;
+    if (postId) meta[`${platform ?? "social"}_post_id`] = postId;
     if (platform) meta.published_platform = platform;
 
-    const { error } = await supabaseAdmin
-      .from("content_item")
-      .update({ status: "published", meta })
-      .eq("id", contentId);
-
-    if (error) {
-      console.error("publish-callback update error:", error);
-
-      // Fallback : juste mettre le statut
-      await supabaseAdmin
-        .from("content_item")
-        .update({ status: "published" })
-        .eq("id", contentId);
+    // Construire l'URL du post
+    if (platform === "linkedin" && postUrn) {
+      const urn = postUrn.startsWith("urn:") ? postUrn : `urn:li:share:${postUrn}`;
+      meta.linkedin_post_url = `https://www.linkedin.com/feed/update/${urn}/`;
     }
+    if (platform === "twitter" && postId) {
+      meta.twitter_post_url = `https://twitter.com/i/status/${postId}`;
+    }
+    if (platform === "threads" && postId) {
+      meta.threads_post_url = `https://www.threads.net/t/${postId}`;
+    }
+    if (platform === "facebook" && postId) {
+      meta.facebook_post_url = `https://www.facebook.com/${postId}`;
+    }
+
+    await updatePublishedStatus(contentId, meta);
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
     // On ne change pas le statut pour ne pas perdre le "scheduled"
