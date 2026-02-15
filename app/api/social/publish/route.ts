@@ -231,6 +231,7 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         platform,
         platform_user_id: platformUserId,
+        person_id: platformUserId, // alias pour les workflows LinkedIn qui utilisent person_id
         access_token: accessToken,
         commentary: contentItem.content,
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
@@ -273,11 +274,9 @@ export async function POST(req: NextRequest) {
 
       if (!n8nRes.ok) {
         const text = await n8nRes.text();
-        console.error("n8n webhook error:", text);
-        return NextResponse.json(
-          { error: "Erreur n8n. Verifiez que n8n est demarre." },
-          { status: 502 }
-        );
+        console.error(`n8n webhook error (${n8nRes.status}) for ${webhookUrl}:`, text);
+        // Ne PAS retourner 502 — on tombe en fallback publication directe
+        throw new Error(`n8n ${n8nRes.status}: ${text.slice(0, 200)}`);
       }
 
       // Mettre le statut en "published" + stocker les infos

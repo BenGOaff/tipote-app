@@ -137,7 +137,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"success\": {{ $json.statusCode === 200 }},\n  \"postId\": \"{{ $json.body?.json?.data?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 200 ? ($json.body?.json?.errors?.[0]?.[1] || 'Reddit API error') : '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"platform\": \"reddit\",\n  \"success\": {{ $json.statusCode === 200 }},\n  \"postId\": \"{{ $json.body?.json?.data?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 200 ? ($json.body?.json?.errors?.[0]?.[1] || 'Reddit API error') : '' }}\"\n}",
         "options": {}
       },
       "id": "callback-tipote",

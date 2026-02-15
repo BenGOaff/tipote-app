@@ -75,7 +75,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.body.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.body.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.body.platform_user_id || $json.body.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.body.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
         "options": {
           "response": {
             "response": {
@@ -110,7 +110,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": true,\n  \"postUrn\": \"{{ $json.headers['x-restli-id'] || '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"linkedin\",\n  \"success\": true,\n  \"postUrn\": \"{{ $json.headers['x-restli-id'] || '' }}\"\n}",
         "options": {}
       },
       "id": "callback-success",
@@ -138,7 +138,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'LinkedIn API error' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"linkedin\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'LinkedIn API error' }}\"\n}",
         "options": {}
       },
       "id": "callback-error",

@@ -138,6 +138,7 @@ export async function GET(req: NextRequest) {
         user_id: post.user_id,
         platform,
         platform_user_id: conn.platform_user_id,
+        person_id: conn.platform_user_id, // alias pour les workflows LinkedIn qui utilisent person_id
         access_token: accessToken,
         commentary: post.content,
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
