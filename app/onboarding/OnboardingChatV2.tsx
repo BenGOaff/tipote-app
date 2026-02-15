@@ -416,18 +416,31 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
     try {
       const sid = sessionId ?? undefined;
 
-      // Step 0: complete onboarding (best-effort, 15s timeout)
+      // Step 0: complete onboarding (validates minimum data server-side)
       try {
         await withTimeout(
-          postJSON<{ ok?: boolean }>("/api/onboarding/complete", {
+          postJSON<{ ok?: boolean; error?: string }>("/api/onboarding/complete", {
             sessionId: sid,
             diagnosticCompleted: true,
           }),
           15_000,
           "onboarding/complete",
         );
-      } catch {
-        // fail-open
+      } catch (completeErr: any) {
+        // If server says insufficient data, send user back to diagnostic
+        const msg = completeErr instanceof Error ? completeErr.message : String(completeErr);
+        if (msg.includes("insufficient_data") || msg.includes("informations essentielles")) {
+          clearTimeout(safetyTimeout);
+          toast({
+            title: "Diagnostic incomplet",
+            description: "Il manque des informations essentielles. Complète le diagnostic pour continuer.",
+            variant: "destructive",
+          });
+          setIsFinalizing(false);
+          setIsDone(false);
+          return;
+        }
+        // Other errors: fail-open
       }
 
       // Step 1: créer/mettre à jour le plan (idempotent, 30s timeout)
@@ -577,7 +590,16 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
 
   const currentBoot = BOOT_STEPS[Math.min(BOOT_STEPS.length - 1, Math.max(0, bootStepIndex))];
 
-  // Recap values (best-effort — kept for potential future use)
+  // ✅ Check if recap has minimum viable data (at least some real content beyond the "no data" fallback)
+  const recapHasData = useMemo(() => {
+    if (!recapSummary) return false;
+    // The fallback message when no data was collected
+    if (recapSummary.includes("Je n'ai pas encore beaucoup d'informations")) return false;
+    // Count substantive lines (excluding header and footer)
+    const lines = recapSummary.split("\n").filter((l) => l.trim().length > 0);
+    // Need at least 3 lines (header + 1 real fact + footer) to be useful
+    return lines.length >= 3;
+  }, [recapSummary]);
 
   const offerSets = offerSetsState?.offerSets ?? [];
 
@@ -717,26 +739,32 @@ export function OnboardingChatV2(props: OnboardingChatV2Props) {
               }}
               disabled={isFinalizing}
             >
-              Modifier
+              {recapHasData ? "Modifier" : "Compléter le diagnostic"}
             </Button>
 
-            <Button
-              type="button"
-              onClick={() => {
-                setShowRecap(false);
-                void finalize();
-              }}
-              disabled={isFinalizing}
-            >
-              {isFinalizing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Finalisation…
-                </>
-              ) : (
-                "C'est bon, on continue !"
-              )}
-            </Button>
+            {recapHasData ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowRecap(false);
+                  void finalize();
+                }}
+                disabled={isFinalizing}
+              >
+                {isFinalizing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Finalisation…
+                  </>
+                ) : (
+                  "C'est bon, on continue !"
+                )}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Il me faut un peu plus d&apos;infos pour te créer une bonne stratégie.
+              </p>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

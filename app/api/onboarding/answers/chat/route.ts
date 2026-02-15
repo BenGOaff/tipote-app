@@ -247,6 +247,21 @@ function messageLooksFinished(text: string): boolean {
   );
 }
 
+/**
+ * Minimum viable data: at least 2 of the 4 essentials must be present.
+ * This is the absolute floor — even force-finish paths must not bypass this.
+ * Without this, strategy generation has nothing to work with.
+ */
+function hasMinimumViableData(knownFacts: Record<string, unknown>): boolean {
+  const hasTopic = hasNonEmptyFact(knownFacts, "main_topic") || hasNonEmptyFact(knownFacts, "primary_activity");
+  const hasModel = hasNonEmptyFact(knownFacts, "business_model");
+  const hasFocus = hasNonEmptyFact(knownFacts, "primary_focus");
+  const hasAudience = hasNonEmptyFact(knownFacts, "target_audience_short");
+
+  const count = [hasTopic, hasModel, hasFocus, hasAudience].filter(Boolean).length;
+  return count >= 2;
+}
+
 function isReadyToFinish(knownFacts: Record<string, unknown>): boolean {
   try {
     // Guard: if user listed multiple activities but hasn't picked a primary one yet, don't finish
@@ -1163,11 +1178,11 @@ export async function POST(req: NextRequest) {
 
     // EARLY_FINISH_CONFIRM: si l'assistant vient d'indiquer "tu peux passer à la suite"
     // et que l'utilisateur répond juste "ok" / "oui" => on déclenche immédiatement la fin.
-    // Guarded by MIN_EXCHANGES (3) to prevent premature finish.
+    // Guarded by MIN_EXCHANGES AND hasMinimumViableData to prevent empty-profile finishes.
     try {
       const MIN_EXCHANGES_EARLY = 7;
       const prevWasFinished = messageLooksFinished(String(prevAssistant ?? ""));
-      if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY) {
+      if (prevWasFinished && isUserConfirmingToFinish(userMsg) && exchangeCount >= MIN_EXCHANGES_EARLY && hasMinimumViableData(knownFacts)) {
         const finishMessage =
           locale === "fr"
             ? "Parfait ✅ Je te montre le récap et je lance la création de ta stratégie."
@@ -1433,7 +1448,7 @@ export async function POST(req: NextRequest) {
     // EXCHANGE LIMITS — prevent premature finish AND infinite loops
     // ═══════════════════════════════════════════════════
     const MIN_EXCHANGES = 7;  // Never finish before the user has answered 7 questions (coaching depth)
-    const MAX_EXCHANGES = 12; // Force finish after 12 exchanges to prevent loops
+    const MAX_EXCHANGES = 14; // Force finish after 14 exchanges to prevent loops (was 12, increased to give more room when data is insufficient)
 
     const collectedFactKeys = Object.keys(knownFacts).filter((k) => hasNonEmptyFact(knownFacts, k));
 
@@ -1473,7 +1488,11 @@ export async function POST(req: NextRequest) {
           `Facts importants manquants : [${missingImportant.join(", ") || "aucun"}]. ` +
           `NE POSE PAS de question sur les facts déjà collectés. ` +
           (exchangeCount >= 7 ? "Tu approches de la fin. Concentre-toi sur les facts manquants essentiels." : "") +
-          (exchangeCount >= MAX_EXCHANGES ? " TERMINE MAINTENANT avec done=true et should_finish=true. Ne pose plus de question." : ""),
+          (exchangeCount >= MAX_EXCHANGES && hasMinimumViableData(knownFacts)
+            ? " TERMINE MAINTENANT avec done=true et should_finish=true. Ne pose plus de question."
+            : exchangeCount >= MAX_EXCHANGES
+              ? " Tu es au maximum d'échanges MAIS il manque des infos essentielles. Pose UNE question directe pour obtenir au minimum main_topic et business_model. Exemple : 'Pour que je puisse t'aider, j'ai besoin de savoir au minimum : qu'est-ce que tu fais/voudrais faire, et comment tu comptes gagner de l'argent ?'"
+              : ""),
         known_facts: knownFacts,
         business_profile_snapshot: bp ?? null,
         conversation_history: (history ?? []).map((m: any) => ({ role: m.role as ChatRole, content: m.content })),
@@ -1539,17 +1558,19 @@ export async function POST(req: NextRequest) {
 
     try {
       const ready = isReadyToFinish(knownFacts);
+      const hasMinData = hasMinimumViableData(knownFacts);
 
       if (exchangeCount >= MAX_EXCHANGES) {
-        // Hard cap: force finish to prevent infinite loops regardless of facts
-        shouldFinish = true;
+        // Hard cap: force finish to prevent infinite loops, BUT only if we have minimum data.
+        // Without at least 2 essentials, strategy generation has nothing to work with.
+        shouldFinish = hasMinData;
       } else if (exchangeCount >= MIN_EXCHANGES && ready) {
         // After minimum exchanges: finish only if we have all essentials + enough important facts
         shouldFinish = true;
-      } else if (exchangeCount >= MIN_EXCHANGES && messageLooksFinished(out.message)) {
-        // Safety valve: if the AI itself says "Je te montre le récap" / "J'ai tout ce qu'il me faut"
+      } else if (exchangeCount >= MIN_EXCHANGES && messageLooksFinished(out.message) && hasMinData) {
+        // Safety valve: if the AI itself says "Je te montre le récap"
         // but isReadyToFinish() is false (e.g. some facts failed to save), force finish
-        // to avoid infinite loop where the AI keeps saying "here's the recap" forever.
+        // to avoid infinite loop. Requires minimum viable data.
         shouldFinish = true;
       }
       // Before MIN_EXCHANGES: never finish, regardless of AI or facts
