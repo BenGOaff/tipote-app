@@ -64,14 +64,13 @@ export async function GET() {
 
     let query = supabase
       .from("project_tasks")
-      .select("id, title, status, priority, due_date, source, created_at, updated_at")
+      .select("id, title, status, priority, source, created_at, updated_at")
       .eq("user_id", auth.user.id);
 
     if (projectId) query = query.eq("project_id", projectId);
 
     const { data, error } = await query
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

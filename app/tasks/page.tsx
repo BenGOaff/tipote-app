@@ -21,7 +21,6 @@ type TaskRow = {
   id: string
   title: string | null
   status: string | null
-  due_date: string | null
   priority: string | null
   source: string | null
   created_at: string | null
@@ -36,7 +35,6 @@ function toTaskItem(row: TaskRow): TaskItem {
     id: String(row.id),
     title: row.title ?? '',
     status: row.status ?? null,
-    due_date: row.due_date ?? null,
     priority: row.priority ?? null,
     source: row.source ?? null,
   }
@@ -58,10 +56,9 @@ export default async function TasksPage() {
   // On filtre STRICTEMENT par user_id de la session -> aucune fuite de données.
   const { data: tasksRaw } = await supabaseAdmin
     .from('project_tasks')
-    .select('id, title, status, due_date, priority, source, created_at')
+    .select('id, title, status, priority, source, created_at')
     .eq('user_id', session.user.id)
-    .order('due_date', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
 
   const tasks: TaskItem[] = Array.isArray(tasksRaw)
     ? (tasksRaw as TaskRow[]).map(toTaskItem).filter((t) => t.title.trim().length > 0)

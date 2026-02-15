@@ -14,18 +14,11 @@ import MarkTaskDoneButton from '@/components/dashboard/MarkTaskDoneButton'
 type Task = {
   id: string
   title: string
-  due_date?: string | null
   status?: string | null
 }
 
 type Props = {
   task: Task | null
-}
-
-function formatDateFR(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long' }).format(d)
 }
 
 export default function DailyFocus({ task }: Props) {
@@ -53,11 +46,7 @@ export default function DailyFocus({ task }: Props) {
       <p className="text-xs text-muted-foreground">Focus du jour</p>
       <p className="mt-1 text-base font-semibold text-slate-900">{task.title}</p>
 
-      {task.due_date ? (
-        <p className="mt-1 text-xs text-slate-500">À faire aujourd’hui • {formatDateFR(task.due_date)}</p>
-      ) : (
-        <p className="mt-1 text-xs text-slate-500">À faire aujourd’hui</p>
-      )}
+      <p className="mt-1 text-xs text-slate-500">Prochaine action à faire</p>
 
       <div className="mt-4 grid gap-2">
         <MarkTaskDoneButton

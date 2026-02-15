@@ -455,16 +455,18 @@ export default function TodayLovable() {
           .eq("user_id", userId)
           .maybeSingle();
 
-        // ------ Fetch tasks via API (RLS-safe) ------
+        // ------ Fetch tasks directly (no project_id filter, like strategy page) ------
         let tasks: AnyRecord[] = [];
         try {
-          const tasksApiRes = await fetch("/api/tasks", { cache: "no-store" });
-          const tasksJson = await tasksApiRes.json().catch(() => null);
-          tasks = Array.isArray(tasksJson?.tasks)
-            ? tasksJson.tasks
-            : Array.isArray(tasksJson)
-              ? tasksJson
-              : [];
+          const tasksRes = await supabase
+            .from("project_tasks")
+            .select("id, title, status, priority, source, created_at, updated_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(500);
+          if (!tasksRes.error && Array.isArray(tasksRes.data)) {
+            tasks = tasksRes.data as AnyRecord[];
+          }
         } catch {
           // fail-open
         }
