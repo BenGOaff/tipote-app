@@ -118,8 +118,8 @@ export function ContentCalendarView({
     .map((d) => d.date);
 
   return (
-    <div className="grid md:grid-cols-[350px_1fr] gap-6">
-      <Card className="p-4">
+    <div className="grid md:grid-cols-[auto_1fr] gap-6">
+      <Card className="p-4 flex flex-col items-center">
         <Calendar
           mode="single"
           selected={selectedDate}

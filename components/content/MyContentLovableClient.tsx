@@ -57,6 +57,12 @@ import {
   Eye,
   Users,
   Share2,
+  FolderOpen,
+  ChevronLeft,
+  Megaphone,
+  ShoppingBag,
+  Scroll,
+  type LucideIcon,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -83,6 +89,91 @@ type Props = {
   quizzes?: QuizListItem[];
   error?: string;
 };
+
+type ContentFolder = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  bgColor: string;
+  matchType: (type: string | null) => boolean;
+};
+
+const CONTENT_FOLDERS: ContentFolder[] = [
+  {
+    id: "posts",
+    label: "Mes Posts",
+    icon: MessageSquare,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-50 dark:bg-blue-950/50",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("post") || s.includes("réseau") || s.includes("reseau") || s.includes("social");
+    },
+  },
+  {
+    id: "funnels",
+    label: "Mes Funnels",
+    icon: Megaphone,
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-50 dark:bg-purple-950/50",
+    matchType: (t) => safeString(t).toLowerCase().includes("funnel"),
+  },
+  {
+    id: "quiz",
+    label: "Mes Quiz",
+    icon: ClipboardList,
+    color: "text-teal-600 dark:text-teal-400",
+    bgColor: "bg-teal-50 dark:bg-teal-950/50",
+    matchType: () => false, // Quiz uses separate data source
+  },
+  {
+    id: "offres",
+    label: "Mes Offres",
+    icon: ShoppingBag,
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-950/50",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("offer") || s.includes("offre");
+    },
+  },
+  {
+    id: "scripts",
+    label: "Mes Scripts",
+    icon: Scroll,
+    color: "text-rose-600 dark:text-rose-400",
+    bgColor: "bg-rose-50 dark:bg-rose-950/50",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("video") || s.includes("vidéo") || s.includes("script");
+    },
+  },
+  {
+    id: "emails",
+    label: "Mes Emails",
+    icon: Mail,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-950/50",
+    matchType: (t) => safeString(t).toLowerCase().includes("email"),
+  },
+  {
+    id: "articles",
+    label: "Mes Articles",
+    icon: FileText,
+    color: "text-indigo-600 dark:text-indigo-400",
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/50",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("article") || s.includes("blog");
+    },
+  },
+];
+
+function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[]): number {
+  if (folder.id === "quiz") return quizzes.length;
+  return items.filter((it) => folder.matchType(it.type)).length;
+}
 
 const typeIcons: Record<string, any> = {
   post: MessageSquare,
@@ -156,6 +247,7 @@ export default function MyContentLovableClient({
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
 
   const [editingContent, setEditingContent] = useState<ContentListItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ContentListItem | null>(null);
@@ -174,17 +266,30 @@ export default function MyContentLovableClient({
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return initialItems;
+    let result = initialItems;
 
-    return initialItems.filter((c) => {
-      const t = safeString(c.title).toLowerCase();
-      const body = safeString(c.content).toLowerCase();
-      const type = safeString(c.type).toLowerCase();
-      const channel = safeString(c.channel).toLowerCase();
-      return t.includes(q) || body.includes(q) || type.includes(q) || channel.includes(q);
-    });
-  }, [initialItems, search]);
+    // Filter by active folder
+    if (activeFolder && activeFolder !== "quiz") {
+      const folder = CONTENT_FOLDERS.find((f) => f.id === activeFolder);
+      if (folder) {
+        result = result.filter((c) => folder.matchType(c.type));
+      }
+    }
+
+    // Filter by search
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter((c) => {
+        const t = safeString(c.title).toLowerCase();
+        const body = safeString(c.content).toLowerCase();
+        const type = safeString(c.type).toLowerCase();
+        const channel = safeString(c.channel).toLowerCase();
+        return t.includes(q) || body.includes(q) || type.includes(q) || channel.includes(q);
+      });
+    }
+
+    return result;
+  }, [initialItems, search, activeFolder]);
 
   const stats = useMemo(() => {
     const total = initialItems.length;
@@ -497,11 +602,182 @@ export default function MyContentLovableClient({
             <div className="space-y-6">
               {view === "calendar" ? (
                 <ContentCalendarView contents={filtered} />
-              ) : (
+              ) : activeFolder === null ? (
+                /* ===== Folder Grid View ===== */
                 <div className="space-y-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {CONTENT_FOLDERS.map((folder) => {
+                      const count = countItemsForFolder(folder, initialItems, quizzes);
+                      const FIcon = folder.icon;
+                      return (
+                        <button
+                          key={folder.id}
+                          onClick={() => setActiveFolder(folder.id)}
+                          className="group text-left"
+                        >
+                          <Card className="p-5 transition-all hover:shadow-md hover:border-primary/30 cursor-pointer h-full">
+                            <div className={`w-11 h-11 rounded-xl ${folder.bgColor} flex items-center justify-center mb-3`}>
+                              <FIcon className={`w-5 h-5 ${folder.color}`} />
+                            </div>
+                            <div className="font-semibold text-sm group-hover:text-primary transition-colors">
+                              {folder.label}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {count} {count <= 1 ? "élément" : "éléments"}
+                            </div>
+                          </Card>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Recent content preview below folders */}
+                  {initialItems.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Derniers contenus
+                      </h3>
+                      <div className="space-y-3">
+                        {initialItems.slice(0, 5).map((item) => {
+                          const typeKey = normalizeKeyType(item.type);
+                          const statusKey = normalizeKeyStatus(item.status);
+                          const Icon = typeIcons[typeKey] ?? FileText;
+                          const badgeClasses = statusColors[statusKey] ?? "bg-muted text-muted-foreground";
+                          const badgeLabel = statusLabels[statusKey] ?? "—";
+
+                          return (
+                            <Card key={item.id} className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-0.5 rounded-md bg-muted p-2">
+                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <div className="font-medium truncate">
+                                        {safeString(item.title) || "Sans titre"}
+                                      </div>
+                                      <Badge className={badgeClasses}>{badgeLabel}</Badge>
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                      {safeString(item.channel) ? (
+                                        <span className="capitalize">{safeString(item.channel)}</span>
+                                      ) : null}
+                                      {statusKey === "scheduled" && item.scheduled_date ? (
+                                        <span className="inline-flex items-center gap-1">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          {formatDate(item.scheduled_date)}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/contents/${item.id}`}>Voir</Link>
+                                </Button>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : activeFolder === "quiz" ? (
+                /* ===== Quiz Folder View ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-teal-600" />
+                    Mes Quiz
+                  </h2>
+
+                  {quizzes.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucun quiz créé.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {quizzes.map((qz) => {
+                        const isActive = qz.status === "active";
+                        return (
+                          <Card key={qz.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2">
+                                  <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <div className="font-medium truncate">
+                                      {qz.title || "Quiz sans titre"}
+                                    </div>
+                                    <Badge
+                                      className={
+                                        isActive
+                                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                          : "bg-muted text-muted-foreground"
+                                      }
+                                    >
+                                      {isActive ? "Actif" : "Brouillon"}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/quiz/${qz.id}`}>Gérer</Link>
+                              </Button>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ===== Content Folder View (filtered by type) ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  {(() => {
+                    const folder = CONTENT_FOLDERS.find((f) => f.id === activeFolder);
+                    if (!folder) return null;
+                    const FIcon = folder.icon;
+                    return (
+                      <h2 className="text-lg font-bold flex items-center gap-2">
+                        <FIcon className={`w-5 h-5 ${folder.color}`} />
+                        {folder.label}
+                      </h2>
+                    );
+                  })()}
+
                   {filtered.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground">Aucun contenu trouvé.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucun contenu dans ce dossier.</p>
                     </Card>
                   ) : (
                     <div className="space-y-8">
@@ -630,61 +906,6 @@ export default function MyContentLovableClient({
                 </div>
               )}
             </div>
-
-            {/* Quiz section */}
-            {quizzes.length > 0 && view === "list" && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Quiz Lead Magnets
-                </h3>
-                <div className="space-y-3">
-                  {quizzes.map((qz) => {
-                    const isActive = qz.status === "active";
-                    return (
-                      <Card key={qz.id} className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2">
-                              <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <div className="font-medium truncate">
-                                  {qz.title || "Quiz sans titre"}
-                                </div>
-                                <Badge
-                                  className={
-                                    isActive
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                      : "bg-muted text-muted-foreground"
-                                  }
-                                >
-                                  {isActive ? "Actif" : "Brouillon"}
-                                </Badge>
-                              </div>
-                              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                <span className="inline-flex items-center gap-1">
-                                  <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/quiz/${qz.id}`}>Gérer</Link>
-                          </Button>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Edit Dialog (Lovable 1:1) */}
             <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
