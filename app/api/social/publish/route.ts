@@ -18,6 +18,25 @@ export const dynamic = "force-dynamic";
 const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit"] as const;
 
 /**
+ * Résout l'URL de la première image depuis meta.
+ * Supporte le nouveau format (meta.images[]) et l'ancien (meta.image_url).
+ */
+function resolveImageUrl(meta: any): string | undefined {
+  if (!meta) return undefined;
+  // Nouveau format : tableau d'images uploadées
+  if (Array.isArray(meta.images) && meta.images.length > 0) {
+    const first = meta.images[0];
+    if (typeof first === "string") return first;
+    if (first?.url) return first.url;
+  }
+  // Legacy : image_url simple
+  if (typeof meta.image_url === "string" && meta.image_url.trim()) {
+    return meta.image_url;
+  }
+  return undefined;
+}
+
+/**
  * Construit l'URL publique du post à partir de l'identifiant retourné par la plateforme.
  */
 function buildPostUrl(platform: string, postId?: string | null): string | null {
@@ -227,6 +246,9 @@ export async function POST(req: NextRequest) {
             : "meta-publish"; // facebook, instagram, threads all go via meta-publish
       const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
 
+      // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)
+      const resolvedImageUrl = resolveImageUrl(contentItem.meta);
+
       const n8nPayload: Record<string, unknown> = {
         content_id: contentId,
         user_id: user.id,
@@ -238,25 +260,17 @@ export async function POST(req: NextRequest) {
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
       };
 
-      // Pour Facebook, ajouter l'image_url si présente (optionnel)
-      if (platform === "facebook" && contentItem.meta?.image_url) {
-        n8nPayload.image_url = contentItem.meta.image_url;
+      // Ajouter l'image pour toutes les plateformes qui la supportent
+      if (resolvedImageUrl) {
+        n8nPayload.image_url = resolvedImageUrl;
       }
 
       // Pour Instagram, l'image est REQUISE
-      if (platform === "instagram") {
-        if (!contentItem.meta?.image_url) {
-          return NextResponse.json(
-            { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
-            { status: 400 }
-          );
-        }
-        n8nPayload.image_url = contentItem.meta.image_url;
-      }
-
-      // Pour Threads, ajouter l'image_url si présente (optionnel, Threads supporte le texte seul)
-      if (platform === "threads" && contentItem.meta?.image_url) {
-        n8nPayload.image_url = contentItem.meta.image_url;
+      if (platform === "instagram" && !resolvedImageUrl) {
+        return NextResponse.json(
+          { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
+          { status: 400 }
+        );
       }
 
       // Pour Reddit, le titre est obligatoire
@@ -307,32 +321,30 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Mode direct (fallback si n8n pas configure) ---
+  const directImageUrl = resolveImageUrl(contentItem.meta);
   let result: { ok: boolean; postId?: string; postUrn?: string; error?: string; statusCode?: number };
 
   if (platform === "linkedin") {
-    const liResult = await publishPost(accessToken, platformUserId, contentItem.content);
+    const liResult = await publishPost(accessToken, platformUserId, contentItem.content, directImageUrl);
     result = { ...liResult, postId: liResult.postUrn };
   } else if (platform === "facebook") {
-    const imageUrl = contentItem.meta?.image_url as string | undefined;
-    if (imageUrl) {
-      result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, imageUrl);
+    if (directImageUrl) {
+      result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
     } else {
       result = await publishToFacebookPage(accessToken, platformUserId, contentItem.content);
     }
   } else if (platform === "instagram") {
-    const imageUrl = contentItem.meta?.image_url as string | undefined;
-    if (!imageUrl) {
+    if (!directImageUrl) {
       return NextResponse.json(
         { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
         { status: 400 }
       );
     }
-    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, imageUrl);
+    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, directImageUrl);
   } else if (platform === "threads") {
-    const imageUrl = contentItem.meta?.image_url as string | undefined;
-    result = await publishToThreads(accessToken, platformUserId, contentItem.content, imageUrl);
+    result = await publishToThreads(accessToken, platformUserId, contentItem.content, directImageUrl);
   } else if (platform === "twitter") {
-    result = await publishTweet(accessToken, contentItem.content);
+    result = await publishTweet(accessToken, contentItem.content, directImageUrl);
   } else if (platform === "reddit") {
     const title = contentItem.title || "Post depuis Tipote";
     const rdResult = await publishRedditPost(accessToken, platformUserId, title, contentItem.content);

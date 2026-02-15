@@ -248,6 +248,23 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       ? (body.meta as any)
       : null;
 
+  // If meta is provided, merge with existing meta (don't replace entirely)
+  // This preserves existing fields like images when updating scheduled_time, and vice versa
+  let mergedMeta = metaObj;
+  if (metaObj) {
+    try {
+      const selectStr = "meta";
+      let q = supabase.from("content_item").select(selectStr).eq("id", id).eq("user_id", userId);
+      if (projectId) q = q.eq("project_id", projectId);
+      const { data: existing } = await q.maybeSingle();
+      if (existing?.meta && typeof existing.meta === "object") {
+        mergedMeta = { ...existing.meta, ...metaObj };
+      }
+    } catch {
+      // fallback: just use the provided meta
+    }
+  }
+
   // Helper to attempt update with select + retry on missing columns
   const tryUpdate = async (payload: Record<string, any>, selectStr: string) => {
     let q = supabase
@@ -272,7 +289,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   if ("tags" in body) baseV2.tags = tagsArr;
 
-  if (metaObj) baseV2.meta = metaObj;
+  if (mergedMeta) baseV2.meta = mergedMeta;
 
   // prompt: only include if the column exists (will be stripped on retry if it doesn't)
   const hasPromptInBody = "prompt" in body;
@@ -285,7 +302,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     v2 = await tryUpdate(retry, V2_SEL_WITH_PROMPT_UPDATED);
   }
 
-  if (v2.error && metaObj && isMissingColumnError(v2.error.message)) {
+  if (v2.error && mergedMeta && isMissingColumnError(v2.error.message)) {
     const { meta, ...withoutMeta } = baseV2;
     v2 = await tryUpdate(withoutMeta, V2_SEL_WITH_PROMPT_UPDATED);
   }
@@ -311,7 +328,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   if ("tags" in body) baseFR.tags = tagsArr;
 
-  if (metaObj) baseFR.meta = metaObj;
+  if (mergedMeta) baseFR.meta = mergedMeta;
 
   if (hasPromptInBody) baseFR.prompt = body.prompt;
 
@@ -322,7 +339,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     fr = await tryUpdate(retry, FR_SEL_WITH_PROMPT_UPDATED);
   }
 
-  if (fr.error && metaObj && isMissingColumnError(fr.error.message)) {
+  if (fr.error && mergedMeta && isMissingColumnError(fr.error.message)) {
     const { meta, ...withoutMeta } = baseFR;
     fr = await tryUpdate(withoutMeta, FR_SEL_WITH_PROMPT_UPDATED);
   }
