@@ -47,11 +47,20 @@ export default function StrategyAutoBootstrap() {
         if ((existingPlan as any)?.plan_json) return;
 
         // Génération idempotente (le backend skip si déjà généré)
-        await fetch("/api/strategy", {
+        const stratRes = await fetch("/api/strategy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         }).catch(() => null);
+
+        // ✅ Sync tasks after strategy generation so project_tasks is populated
+        if (stratRes?.ok && !cancelled) {
+          await fetch("/api/tasks/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => null);
+        }
       } catch {
         // fail-open
       }
