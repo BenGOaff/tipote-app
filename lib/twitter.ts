@@ -188,18 +188,38 @@ export type TwitterPostResult = {
 
 /**
  * Publie un tweet sur le compte X connecte.
+ * Supporte optionnellement une image (URL publique).
  */
 export async function publishTweet(
   accessToken: string,
-  text: string
+  text: string,
+  imageUrl?: string
 ): Promise<TwitterPostResult> {
+  let mediaId: string | undefined;
+
+  // Si une image est fournie, l'uploader via l'API media upload
+  if (imageUrl) {
+    try {
+      mediaId = await uploadMediaToTwitter(accessToken, imageUrl);
+    } catch (err) {
+      console.error("Twitter media upload failed:", err);
+      // Publier sans image en fallback
+    }
+  }
+
+  const tweetPayload: Record<string, unknown> = { text };
+
+  if (mediaId) {
+    tweetPayload.media = { media_ids: [mediaId] };
+  }
+
   const res = await fetch(TWITTER_TWEETS_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(tweetPayload),
   });
 
   if (res.status === 201) {
@@ -209,4 +229,135 @@ export async function publishTweet(
 
   const errorText = await res.text();
   return { ok: false, error: errorText, statusCode: res.status };
+}
+
+// ----------------------------------------------------------------
+// Twitter Media Upload
+// L'API v2 utilise le media upload endpoint v1.1 pour les images.
+// Doc : https://developer.x.com/en/docs/twitter-api/v1/media/upload-media/api-reference/post-media-upload
+// ----------------------------------------------------------------
+
+const TWITTER_MEDIA_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json";
+
+/**
+ * Upload une image vers Twitter depuis une URL publique.
+ * Utilise l'endpoint v1.1 media/upload (INIT + APPEND + FINALIZE pour les gros fichiers,
+ * ou simple upload pour les petits fichiers < 5MB).
+ * @returns Le media_id_string
+ */
+async function uploadMediaToTwitter(
+  accessToken: string,
+  imageUrl: string
+): Promise<string> {
+  // Télécharger l'image
+  const imgRes = await fetch(imageUrl);
+  if (!imgRes.ok) {
+    throw new Error(`Failed to fetch image from ${imageUrl}: ${imgRes.status}`);
+  }
+
+  const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+  const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+
+  // Déterminer le media_type pour Twitter
+  let mediaType = "image/jpeg";
+  if (contentType.includes("png")) mediaType = "image/png";
+  else if (contentType.includes("gif")) mediaType = "image/gif";
+  else if (contentType.includes("jpeg") || contentType.includes("jpg")) mediaType = "image/jpeg";
+
+  // Pour les fichiers < 5MB, on peut utiliser l'upload simple (base64)
+  if (imgBuffer.length < 5 * 1024 * 1024) {
+    const base64Data = imgBuffer.toString("base64");
+
+    const formData = new URLSearchParams({
+      media_data: base64Data,
+      media_category: "tweet_image",
+    });
+
+    const res = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Twitter media upload failed (${res.status}): ${text}`);
+    }
+
+    const json = await res.json();
+    return json.media_id_string;
+  }
+
+  // Pour les fichiers plus gros : chunked upload (INIT → APPEND → FINALIZE)
+  // INIT
+  const initParams = new URLSearchParams({
+    command: "INIT",
+    total_bytes: String(imgBuffer.length),
+    media_type: mediaType,
+    media_category: "tweet_image",
+  });
+
+  const initRes = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: initParams.toString(),
+  });
+
+  if (!initRes.ok) {
+    const text = await initRes.text();
+    throw new Error(`Twitter media INIT failed (${initRes.status}): ${text}`);
+  }
+
+  const initJson = await initRes.json();
+  const mediaId = initJson.media_id_string;
+
+  // APPEND (single chunk for images)
+  const appendForm = new URLSearchParams({
+    command: "APPEND",
+    media_id: mediaId,
+    segment_index: "0",
+    media_data: imgBuffer.toString("base64"),
+  });
+
+  const appendRes = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: appendForm.toString(),
+  });
+
+  if (!appendRes.ok) {
+    const text = await appendRes.text();
+    throw new Error(`Twitter media APPEND failed (${appendRes.status}): ${text}`);
+  }
+
+  // FINALIZE
+  const finalizeParams = new URLSearchParams({
+    command: "FINALIZE",
+    media_id: mediaId,
+  });
+
+  const finalizeRes = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: finalizeParams.toString(),
+  });
+
+  if (!finalizeRes.ok) {
+    const text = await finalizeRes.text();
+    throw new Error(`Twitter media FINALIZE failed (${finalizeRes.status}): ${text}`);
+  }
+
+  return mediaId;
 }
