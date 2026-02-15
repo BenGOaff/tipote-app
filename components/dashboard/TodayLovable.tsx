@@ -425,6 +425,8 @@ export default function TodayLovable() {
 
   useEffect(() => {
     let cancelled = false;
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     async function load() {
       try {
@@ -566,7 +568,50 @@ export default function TodayLovable() {
     }
 
     load();
-    return () => { cancelled = true; };
+
+    // ── Re-fetch when tab becomes visible (covers strategy → dashboard navigation) ──
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible" && !cancelled) {
+        load();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // ── Supabase Realtime: instant sync when project_tasks change ──
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || cancelled) return;
+
+        realtimeChannel = supabase
+          .channel("dashboard-tasks-sync")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "project_tasks",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              if (cancelled) return;
+              // Debounce rapid task toggles (e.g., checking multiple tasks quickly)
+              if (debounceTimer) clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(() => { load(); }, 600);
+            },
+          )
+          .subscribe();
+      } catch {
+        // fail-open: realtime may not be configured on this Supabase instance
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    };
   }, [supabase]);
 
   // Content summary string
