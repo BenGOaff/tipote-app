@@ -30,8 +30,15 @@ const platforms = [
   { id: "threads", label: "Threads" },
   { id: "twitter", label: "X (Twitter)" },
   { id: "facebook", label: "Facebook" },
-  { id: "tiktok", label: "TikTok" },
 ];
+
+/** Limites de caracteres par plateforme */
+const PLATFORM_CHAR_LIMITS: Record<string, number> = {
+  linkedin: 3000,
+  twitter: 280,
+  threads: 500,
+  facebook: 63206,
+};
 
 const themes = [
   { id: "educate", label: "Éduquer" },
@@ -54,8 +61,6 @@ const PLATFORM_LABELS: Record<string, string> = {
   facebook: "Facebook",
   threads: "Threads",
   twitter: "X (Twitter)",
-  tiktok: "TikTok",
-  instagram: "Instagram",
   reddit: "Reddit",
 };
 
@@ -89,6 +94,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const { isConnected } = useSocialConnections();
 
   const platformIsConnected = isConnected(platform);
+  const charLimit = PLATFORM_CHAR_LIMITS[platform] ?? null;
+  const charCount = generatedContent.length;
+  const isOverLimit = charLimit !== null && charCount > charLimit;
 
   useEffect(() => {
     let mounted = true;
@@ -359,7 +367,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               </Button>
             </div>
 
-            {/* ✅ Aperçu “beau” (markdown) par défaut */}
+            {/* Apercu "beau" (markdown) par defaut */}
             {!showRawEditor ? (
               <div className="rounded-xl border bg-background p-4 min-h-[260px]">
                 <AIContent content={generatedContent} mode="auto" />
@@ -369,9 +377,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 value={generatedContent}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 rows={10}
-                placeholder="Le contenu généré apparaîtra ici..."
+                placeholder="Le contenu genere apparaitra ici..."
                 className="resize-none"
               />
+            )}
+
+            {/* Compteur de caracteres */}
+            {generatedContent && charLimit !== null && (
+              <div className={`text-xs text-right ${isOverLimit ? "text-rose-600 font-medium" : "text-muted-foreground"}`}>
+                {charCount} / {charLimit} caracteres
+                {isOverLimit && ` (${charCount - charLimit} en trop)`}
+              </div>
             )}
           </div>
 
@@ -432,7 +448,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     size="sm"
                     variant="default"
                     onClick={() => setPublishModalOpen(true)}
-                    disabled={!generatedContent || !title}
+                    disabled={!generatedContent || !title || isOverLimit}
+                    title={isOverLimit ? `Le texte depasse la limite de ${charLimit} caracteres pour ${PLATFORM_LABELS[platform]}` : undefined}
                   >
                     <Send className="w-4 h-4 mr-1" />
                     Publier sur {PLATFORM_LABELS[platform]}
