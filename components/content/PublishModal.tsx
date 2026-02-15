@@ -119,7 +119,7 @@ export function PublishModal({
       setStep("error");
       setResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Erreur reseau",
+        error: e instanceof Error ? e.message : "Erreur réseau",
       });
     }
   };
@@ -143,10 +143,10 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-amber-500" />
-                {label} non connecte
+                {label} non connecté
               </DialogTitle>
               <DialogDescription>
-                Pour publier directement sur {label}, connecte d&apos;abord ton compte dans les parametres.
+                Pour publier directement sur {label}, connecte d&apos;abord ton compte dans les paramètres.
               </DialogDescription>
             </DialogHeader>
 
@@ -174,7 +174,7 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle>Publier sur {label}</DialogTitle>
               <DialogDescription>
-                Ton post va etre publie directement sur ton compte {label}. Confirmes-tu ?
+                Ton post va être publié directement sur ton compte {label}. Confirmes-tu ?
               </DialogDescription>
             </DialogHeader>
 
@@ -205,7 +205,7 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle>Publication en cours...</DialogTitle>
               <DialogDescription>
-                Envoi de ton post sur {label}. Ne ferme pas cette fenetre.
+                Envoi de ton post sur {label}. Ne ferme pas cette fenêtre.
               </DialogDescription>
             </DialogHeader>
 
@@ -222,7 +222,7 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                Publie sur {label} !
+                Publié sur {label} !
               </DialogTitle>
               <DialogDescription>
                 {result?.message ?? `Ton post est en ligne sur ${label}.`}
@@ -268,7 +268,7 @@ export function PublishModal({
                   setResult(null);
                 }}
               >
-                Reessayer
+                Réessayer
               </Button>
             </DialogFooter>
           </>

@@ -420,7 +420,25 @@ export async function publishToThreads(
 
   if (publishRes.ok) {
     const publishJson = await publishRes.json();
-    return { ok: true, postId: publishJson.id };
+    const postId = publishJson.id;
+
+    // Étape 3 : Récupérer le permalink du post (l'ID numérique ne fonctionne pas en URL)
+    let permalink: string | undefined;
+    if (postId) {
+      try {
+        const plRes = await fetch(
+          `${THREADS_API_BASE}/${postId}?fields=permalink&access_token=${userAccessToken}`
+        );
+        if (plRes.ok) {
+          const plJson = await plRes.json();
+          permalink = plJson.permalink;
+        }
+      } catch {
+        // Pas grave si le permalink échoue, on a au moins le postId
+      }
+    }
+
+    return { ok: true, postId: permalink ?? postId };
   }
 
   const errText = await publishRes.text();
