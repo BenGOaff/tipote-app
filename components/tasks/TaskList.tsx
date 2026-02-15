@@ -20,7 +20,6 @@ export type TaskItemType = {
   id: string
   title: string
   status: string | null
-  due_date?: string | null
   priority?: string | null
   source?: string | null
 }
@@ -193,7 +192,6 @@ export function TaskList({
             id={t.id}
             title={t.title}
             status={t.status}
-            dueDate={t.due_date ?? null}
             allowEdit={allowEdit}
             allowDelete={allowDelete}
           />

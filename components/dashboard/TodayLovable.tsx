@@ -460,9 +460,9 @@ export default function TodayLovable() {
         try {
           const tasksRes = await supabase
             .from("project_tasks")
-            .select("id, title, status, priority, due_date, source, created_at, updated_at")
+            .select("id, title, status, priority, source, created_at, updated_at")
             .eq("user_id", userId)
-            .order("due_date", { ascending: true, nullsFirst: false })
+            .order("created_at", { ascending: true })
             .limit(500);
           if (!tasksRes.error && Array.isArray(tasksRes.data)) {
             tasks = tasksRes.data as AnyRecord[];

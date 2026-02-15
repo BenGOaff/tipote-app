@@ -12,6 +12,10 @@ import AutoSyncTasks from "./AutoSyncTasks";
 
 type AnyRecord = Record<string, unknown>;
 
+function isRecord(x: unknown): x is AnyRecord {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
 function asString(v: unknown): string {
   if (typeof v === "string") return v;
   if (typeof v === "number") return String(v);
@@ -39,13 +43,6 @@ function parseDateOnly(raw: string): Date | null {
   if (!raw) return null;
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function bucketKey(daysFromNow: number) {
-  if (daysFromNow <= 30) return "p1";
-  if (daysFromNow <= 60) return "p2";
-  if (daysFromNow <= 90) return "p3";
-  return "p4";
 }
 
 function countPlanTasks(planJson: AnyRecord): number {
@@ -130,7 +127,6 @@ type TaskRow = {
   title: string | null;
   status: string | null;
   priority: string | null;
-  due_date: string | null;
   source: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -339,9 +335,9 @@ export default async function StrategyPage() {
   // On filtre STRICTEMENT par user_id -> aucune fuite de données.
   const tasksRes = await supabaseAdmin
     .from("project_tasks")
-    .select("id, title, status, priority, due_date, source, created_at, updated_at")
+    .select("id, title, status, priority, source, created_at, updated_at")
     .eq("user_id", user.id)
-    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
     .limit(500);
 
   const tasks = ((tasksRes.data ?? []) as unknown as TaskRow[]) ?? [];
@@ -352,16 +348,45 @@ export default async function StrategyPage() {
 
   const today = new Date();
 
+  // Build phase assignment from plan_json structure (d30/d60/d90)
+  const plan90ForPhases =
+    (isRecord((planJson as AnyRecord)?.plan_90_days) ? (planJson as AnyRecord).plan_90_days as AnyRecord : null) ||
+    (isRecord((planJson as AnyRecord)?.plan90) ? (planJson as AnyRecord).plan90 as AnyRecord : null) ||
+    (isRecord((planJson as AnyRecord)?.plan_90) ? (planJson as AnyRecord).plan_90 as AnyRecord : null);
+
+  const tbf =
+    (plan90ForPhases && isRecord(plan90ForPhases.tasks_by_timeframe) ? plan90ForPhases.tasks_by_timeframe as AnyRecord : null) ||
+    (isRecord((planJson as AnyRecord)?.tasks_by_timeframe) ? (planJson as AnyRecord).tasks_by_timeframe as AnyRecord : null);
+
+  // Map normalized task title → phase key
+  const titleToPhase = new Map<string, "p1" | "p2" | "p3">();
+  if (tbf) {
+    const phaseMapping: [string[], "p1" | "p2" | "p3"][] = [
+      [["d30", "month_1", "weeks_1_4", "phase_1"], "p1"],
+      [["d60", "month_2", "weeks_5_8", "phase_2"], "p2"],
+      [["d90", "month_3", "weeks_9_12", "phase_3"], "p3"],
+    ];
+    for (const [keys, phase] of phaseMapping) {
+      for (const k of keys) {
+        const arr = Array.isArray(tbf[k]) ? tbf[k] as unknown[] : [];
+        for (const item of arr) {
+          const title = isRecord(item)
+            ? (asString((item as AnyRecord).title) || asString((item as AnyRecord).task) || asString((item as AnyRecord).name))
+            : typeof item === "string" ? item : null;
+          if (title) {
+            titleToPhase.set(title.trim().toLowerCase().replace(/\s+/g, " "), phase);
+          }
+        }
+      }
+    }
+  }
+
   const byPhase = { p1: [] as TaskRow[], p2: [] as TaskRow[], p3: [] as TaskRow[] };
 
   for (const t of tasks) {
-    const due = t.due_date ? parseDateOnly(t.due_date) : null;
-    if (!due) continue;
-    const daysFromNow = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const key = bucketKey(daysFromNow);
-    if (key === "p1") byPhase.p1.push(t);
-    if (key === "p2") byPhase.p2.push(t);
-    if (key === "p3") byPhase.p3.push(t);
+    const normalized = (t.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    const phase = titleToPhase.get(normalized) ?? "p1"; // default to Phase 1
+    byPhase[phase].push(t);
   }
 
   // ✅ Objectif revenu :

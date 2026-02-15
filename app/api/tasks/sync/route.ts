@@ -13,7 +13,6 @@ type Status = "todo" | "in_progress" | "blocked" | "done";
 
 type TaskFromPlan = {
   title: string;
-  due_date: string | null; // YYYY-MM-DD
   priority?: Priority | null;
   source: string; // e.g. 'strategy'
 };
@@ -42,21 +41,6 @@ function normalizeTitle(title: string): string {
     .replace(/\s+/g, " ")
     .replace(/[’'"]/g, "")
     .replace(/[^\p{L}\p{N}\s-]/gu, "");
-}
-
-function parseDueDate(input: unknown): string | null {
-  const s = toStr(input)?.trim();
-  if (!s) return null;
-
-  // Accept YYYY-MM-DD or ISO
-  const iso = new Date(s);
-  if (!Number.isNaN(iso.getTime())) return iso.toISOString().slice(0, 10);
-
-  // Very safe fallback: try YYYY-MM-DD
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-
-  return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
 function normalizePriority(x: unknown): Priority | null {
@@ -107,9 +91,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
 
         out.push({
           title: clampLen(title, 180),
-          due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
           priority: normalizePriority((item as any).priority ?? (item as any).importance),
-          // IMPORTANT : on aligne le source avec le reste du produit
           source: "strategy",
         });
       }
@@ -134,7 +116,6 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
 
         out.push({
           title: clampLen(title, 180),
-          due_date: null,
           priority: null,
           source: `action_plan_30_90:${k}`,
         });
@@ -153,18 +134,17 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
 
       out.push({
         title: clampLen(title, 180),
-        due_date: parseDueDate((item as any).due_date ?? (item as any).scheduled_for ?? (item as any).date),
         priority: normalizePriority((item as any).priority ?? (item as any).importance),
         source: "tasks",
       });
     }
   }
 
-  // Dédoublonnage basique (title + due_date + source)
+  // Dédoublonnage basique (title + source)
   const seen = new Set<string>();
   const uniq: TaskFromPlan[] = [];
   for (const t of out) {
-    const key = `${normalizeTitle(t.title)}__${t.due_date ?? ""}__${t.source}`;
+    const key = `${normalizeTitle(t.title)}__${t.source}`;
     if (seen.has(key)) continue;
     seen.add(key);
     uniq.push(t);
@@ -215,7 +195,7 @@ export async function POST() {
 
     let existingQuery = supabaseAdmin
       .from("project_tasks")
-      .select("id,title,due_date,source,priority,status")
+      .select("id,title,source,priority,status")
       .eq("user_id", userId)
       .in("source", sources);
 
@@ -229,17 +209,16 @@ export async function POST() {
 
     const existingIndex = new Map<
       string,
-      { id: string; title: string; due_date: string | null; source: string; priority: Priority | null; status: Status | null }
+      { id: string; title: string; source: string; priority: Priority | null; status: Status | null }
     >();
 
     for (const row of existing ?? []) {
-      const key = `${normalizeTitle(String((row as any).title ?? ""))}__${String((row as any).due_date ?? "")}__${String(
+      const key = `${normalizeTitle(String((row as any).title ?? ""))}__${String(
         (row as any).source ?? "",
       )}`;
       existingIndex.set(key, {
         id: String((row as any).id),
         title: String((row as any).title ?? ""),
-        due_date: (row as any).due_date ? String((row as any).due_date) : null,
         source: String((row as any).source ?? ""),
         priority: (row as any).priority ? (String((row as any).priority) as Priority) : null,
         status: (row as any).status ? (String((row as any).status) as Status) : null,
@@ -250,18 +229,14 @@ export async function POST() {
     const toInsert: Record<string, any>[] = [];
 
     for (const t of tasks) {
-      const key = `${normalizeTitle(t.title)}__${t.due_date ?? ""}__${t.source}`;
+      const key = `${normalizeTitle(t.title)}__${t.source}`;
       const ex = existingIndex.get(key);
 
       if (ex) {
-        // Update soft : champs “safe” uniquement.
-        // - On met à jour title/due_date si diff
-        // - On complète priority si vide
+        // Update soft : title + priority only
         const patch: Record<string, any> = {};
 
         if (t.title && t.title !== ex.title) patch.title = t.title;
-        if ((t.due_date ?? null) !== (ex.due_date ?? null)) patch.due_date = t.due_date;
-
         if (!ex.priority && t.priority) patch.priority = t.priority;
 
         if (Object.keys(patch).length > 0) {
@@ -271,7 +246,6 @@ export async function POST() {
         const insertPayload: Record<string, unknown> = {
           user_id: userId,
           title: t.title,
-          due_date: t.due_date,
           priority: t.priority ?? null,
           status: "todo" satisfies Status,
           source: t.source,

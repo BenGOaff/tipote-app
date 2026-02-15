@@ -20,9 +20,9 @@ export default async function TasksPage() {
 
   const { data: tasks } = await supabase
     .from('project_tasks')
-    .select('id,title,status,due_date')
+    .select('id,title,status')
     .eq('user_id', session.user.id)
-    .order('due_date', { ascending: true })
+    .order('created_at', { ascending: true })
 
   return (
     <AppShell userEmail={userEmail}>

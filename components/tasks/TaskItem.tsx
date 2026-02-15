@@ -31,7 +31,6 @@ type Props = {
   id: string
   title: string
   status: string | null
-  dueDate?: string | null
   allowEdit?: boolean
   allowDelete?: boolean
 }
@@ -48,28 +47,6 @@ function cleanString(value: unknown): string | null {
   return t.length > 0 ? t : null
 }
 
-function toDateInputValue(raw: string | null | undefined): string {
-  if (!raw) return ''
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return ''
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function formatDueDate(raw: string): string {
-  const s = raw.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
 function extractErrorMessage(json: unknown, fallback: string): string {
   if (typeof json !== 'object' || json === null) return fallback
   if (!('error' in json)) return fallback
@@ -81,7 +58,6 @@ export default function TaskItem({
   id,
   title,
   status,
-  dueDate,
   allowEdit = false,
   allowDelete = false,
 }: Props) {
@@ -94,7 +70,6 @@ export default function TaskItem({
 
   const [editing, setEditing] = useState<boolean>(false)
   const [draftTitle, setDraftTitle] = useState<string>(title)
-  const [draftDueDate, setDraftDueDate] = useState<string>(toDateInputValue(dueDate))
 
   const [inlineError, setInlineError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -106,10 +81,6 @@ export default function TaskItem({
   useEffect(() => {
     setDraftTitle(title)
   }, [title])
-
-  useEffect(() => {
-    setDraftDueDate(toDateInputValue(dueDate))
-  }, [dueDate])
 
   const done = optimisticDone
 
@@ -153,8 +124,6 @@ export default function TaskItem({
       return
     }
 
-    const normalizedDueDate = draftDueDate.trim().length > 0 ? draftDueDate.trim() : null
-
     setInlineError(null)
 
     startTransition(async () => {
@@ -162,7 +131,7 @@ export default function TaskItem({
         const res = await fetch(`/api/tasks/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: t, due_date: normalizedDueDate }),
+          body: JSON.stringify({ title: t }),
         })
 
         const json: unknown = await res.json().catch(() => null)
@@ -233,30 +202,11 @@ export default function TaskItem({
                   if (e.key === 'Enter') saveEdits()
                   if (e.key === 'Escape') {
                     setDraftTitle(title)
-                    setDraftDueDate(toDateInputValue(dueDate))
                     setInlineError(null)
                     setEditing(false)
                   }
                 }}
               />
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  type="date"
-                  value={draftDueDate}
-                  onChange={(e) => setDraftDueDate(e.target.value)}
-                  disabled={isPending}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDraftDueDate('')}
-                  disabled={isPending || draftDueDate.length === 0}
-                >
-                  Effacer date
-                </Button>
-              </div>
 
               <div className="flex items-center gap-2">
                 <Button type="button" size="sm" onClick={saveEdits} disabled={isPending || !draftTitle.trim()}>
@@ -268,7 +218,6 @@ export default function TaskItem({
                   variant="outline"
                   onClick={() => {
                     setDraftTitle(title)
-                    setDraftDueDate(toDateInputValue(dueDate))
                     setInlineError(null)
                     setEditing(false)
                   }}
@@ -287,10 +236,6 @@ export default function TaskItem({
                   {title}
                 </p>
 
-                {dueDate ? (
-                  <p className="text-xs text-slate-500">Échéance : {formatDueDate(dueDate)}</p>
-                ) : null}
-
                 {inlineError ? <p className="mt-1 text-xs text-destructive">{inlineError}</p> : null}
               </div>
 
@@ -307,7 +252,6 @@ export default function TaskItem({
                         setDeleteError(null)
                         setInlineError(null)
                         setDraftTitle(title)
-                        setDraftDueDate(toDateInputValue(dueDate))
                         setEditing(true)
                       }}
                     >
@@ -372,7 +316,6 @@ export default function TaskItem({
             aria-label="Fermer l'édition"
             onClick={() => {
               setDraftTitle(title)
-              setDraftDueDate(toDateInputValue(dueDate))
               setInlineError(null)
               setEditing(false)
             }}

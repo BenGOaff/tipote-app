@@ -59,7 +59,6 @@ type TaskRow = {
   title: string | null;
   status: string | null;
   priority: string | null;
-  due_date: string | null;
   source: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -134,19 +133,6 @@ function pickFirstNonEmpty(...vals: unknown[]): string {
     if (s) return s;
   }
   return "—";
-}
-
-function addDaysISO(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function phaseIndexToDueDate(phaseIndex: number): string {
-  const today = new Date();
-  if (phaseIndex === 0) return addDaysISO(today, 7);
-  if (phaseIndex === 1) return addDaysISO(today, 37);
-  return addDaysISO(today, 67);
 }
 
 const TASKS_DISPLAY_LIMIT = 4;
@@ -387,14 +373,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const addTask = useCallback(
     async (taskName: string, phaseIndex: number) => {
       try {
-        const due_date = phaseIndexToDueDate(phaseIndex);
-
         const res = await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: taskName,
-            due_date,
             priority: "high",
             status: "todo",
           }),
@@ -489,7 +472,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const phasesForRender = isEditing ? phases : props.phases;
 
   const handleUpdatePhase = useCallback(
-    (_phaseIndex: number, _updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] }) => {
+    (phaseIndex: number, _updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] }) => {
       // Tasks are now persisted immediately via onAddTask/onDeleteTask
       // This callback just shows confirmation and refreshes
       toast({
@@ -504,14 +487,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   // Wrapper for addTask that updates modal local state + persists via API
   const handleModalAddTask = useCallback(
     async (taskName: string, phaseIndex: number) => {
-      const due_date = phaseIndexToDueDate(phaseIndex);
-
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: taskName,
-          due_date,
           priority: "high",
           status: "todo",
         }),
