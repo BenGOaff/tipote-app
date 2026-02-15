@@ -73,36 +73,67 @@ export async function POST(req: NextRequest) {
 
   const projectId = await getActiveProjectId(supabase, user.id);
 
-  // 1. Recuperer le contenu (avec fallback admin si RLS bloque)
-  let contentItem: any = null;
+  // Helper: detecte si l'erreur est due a une colonne manquante (DB en FR vs EN)
+  function isMissingColumn(msg?: string | null) {
+    const m = (msg ?? "").toLowerCase();
+    return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
+  }
 
-  const { data: item1, error: err1 } = await supabase
+  // Helper: met a jour le statut du content_item (compat FR/EN)
+  async function updateContentStatus(cId: string, meta: Record<string, unknown>) {
+    const enUpdate = { status: "published", meta };
+    const { error: upErr1 } = await supabaseAdmin
+      .from("content_item")
+      .update(enUpdate)
+      .eq("id", cId);
+    if (upErr1 && isMissingColumn(upErr1.message)) {
+      // Fallback FR
+      await supabaseAdmin
+        .from("content_item")
+        .update({ statut: "published", meta } as any)
+        .eq("id", cId);
+    }
+  }
+
+  // 1. Recuperer le contenu (avec fallback colonnes FR + fallback admin)
+  let contentItem: any = null;
+  const EN_SELECT = "id, title, content, status, type, channel, meta";
+  const FR_SELECT = "id, title:titre, content:contenu, status:statut, type, channel:canal, meta";
+
+  // Essai 1: EN + session user
+  const { data: item1, error: err1 } = await supabaseAdmin
     .from("content_item")
-    .select("id, title, content, status, type, channel, meta")
+    .select(EN_SELECT)
     .eq("id", contentId)
     .eq("user_id", user.id)
     .single();
 
   if (item1) {
     contentItem = item1;
-  } else {
-    // Fallback admin (bypass RLS) - securise par le check user_id
-    console.warn("publish: RLS fallback pour content_item", contentId, err1?.message);
+  } else if (isMissingColumn(err1?.message)) {
+    // Essai 2: colonnes FR + admin
     const { data: item2, error: err2 } = await supabaseAdmin
       .from("content_item")
-      .select("id, title, content, status, type, channel, meta")
+      .select(FR_SELECT)
       .eq("id", contentId)
       .eq("user_id", user.id)
       .single();
 
-    if (err2 || !item2) {
-      console.error("publish: contenu introuvable meme avec admin", contentId, err2?.message);
+    if (item2) {
+      contentItem = item2;
+    } else {
+      console.error("publish: contenu introuvable (FR fallback)", contentId, err2?.message);
       return NextResponse.json(
-        { error: `Contenu introuvable (${err1?.message ?? err2?.message ?? "ID invalide"})` },
+        { error: `Contenu introuvable (${err2?.message ?? "ID invalide"})` },
         { status: 404 }
       );
     }
-    contentItem = item2;
+  } else {
+    console.error("publish: contenu introuvable", contentId, err1?.message);
+    return NextResponse.json(
+      { error: `Contenu introuvable (${err1?.message ?? "ID invalide"})` },
+      { status: 404 }
+    );
   }
 
   if (!contentItem.content?.trim()) {
@@ -260,10 +291,7 @@ export async function POST(req: NextRequest) {
       if (n8nPostId) n8nMeta[`${platform}_post_id`] = n8nPostId;
       if (n8nPostUrl) n8nMeta[`${platform}_post_url`] = n8nPostUrl;
 
-      await supabaseAdmin
-        .from("content_item")
-        .update({ status: "published", meta: n8nMeta })
-        .eq("id", contentId);
+      await updateContentStatus(contentId, n8nMeta);
 
       return NextResponse.json({
         ok: true,
@@ -331,10 +359,7 @@ export async function POST(req: NextRequest) {
   if (postId) metaUpdate[`${platform}_post_id`] = postId;
   if (postUrl) metaUpdate[`${platform}_post_url`] = postUrl;
 
-  await supabaseAdmin
-    .from("content_item")
-    .update({ status: "published", meta: metaUpdate })
-    .eq("id", contentId);
+  await updateContentStatus(contentId, metaUpdate);
 
   return NextResponse.json({
     ok: true,
