@@ -1,14 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { emitCreditsUpdated } from '@/lib/credits/client'
 import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
-import { ImageUploader, type UploadedImage } from '@/components/content/ImageUploader'
-import { PostActionButtons } from '@/components/content/PostActionButtons'
-import { toast } from '@/components/ui/use-toast'
 
 type Props = {
   type: string
@@ -98,109 +95,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
   const [result, setResult] = useState<GenerateResponse | null>(null)
   const [billingSyncing, setBillingSyncing] = useState(false)
   const [billingSyncMsg, setBillingSyncMsg] = useState<string | null>(null)
-
-  // Images
-  const [images, setImages] = useState<UploadedImage[]>([])
-  const isSocialPost = useMemo(() => {
-    const t = normalizeType(type)
-    return t === 'post'
-  }, [type])
-
-  // Save images to content meta after generation
-  const saveImagesToContent = useCallback(async (contentId: string, imgs: UploadedImage[]) => {
-    if (imgs.length === 0) return
-    try {
-      await fetch(`/api/content/${contentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meta: {
-            images: imgs.map((img) => ({
-              url: img.url,
-              path: img.path,
-              filename: img.filename,
-              size: img.size,
-              type: img.type,
-            })),
-          },
-        }),
-      })
-    } catch {
-      // best-effort
-    }
-  }, [])
-
-  const handleScheduleFromGenerator = useCallback(async (date: string, time: string) => {
-    if (!result?.id) {
-      toast({ title: 'Erreur', description: 'Génère du contenu d\'abord.', variant: 'destructive' })
-      throw new Error('No content ID')
-    }
-
-    // Save images first if any
-    if (images.length > 0) {
-      await saveImagesToContent(result.id, images)
-    }
-
-    const res = await fetch(`/api/content/${result.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: 'scheduled',
-        scheduledDate: date,
-        channel: (channel ?? '').trim() || null,
-        meta: {
-          scheduled_time: time,
-          ...(images.length > 0 ? {
-            images: images.map((img) => ({
-              url: img.url, path: img.path, filename: img.filename, size: img.size, type: img.type,
-            })),
-          } : {}),
-        },
-      }),
-    })
-
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok || !json?.ok) {
-      toast({ title: 'Erreur', description: json?.error ?? 'Programmation impossible', variant: 'destructive' })
-      throw new Error(json?.error ?? 'Failed')
-    }
-  }, [result, images, channel, saveImagesToContent])
-
-  const handleBeforePublish = useCallback(async (): Promise<string | null> => {
-    if (!result?.id) return null
-    // Save images first if any
-    if (images.length > 0) {
-      await saveImagesToContent(result.id, images)
-    }
-    return result.id
-  }, [result, images, saveImagesToContent])
-
-  const handleCopy = useCallback(() => {
-    if (result?.content) {
-      navigator.clipboard.writeText(result.content).then(() => {
-        toast({ title: 'Copié', description: 'Le contenu est dans le presse-papiers.' })
-      }).catch(() => {
-        toast({ title: 'Erreur', description: 'Impossible de copier.', variant: 'destructive' })
-      })
-    }
-  }, [result])
-
-  const handleDownloadPdf = useCallback(() => {
-    if (!result?.content) return
-    try {
-      import('jspdf').then(({ jsPDF }) => {
-        const doc = new jsPDF()
-        doc.setFontSize(16)
-        doc.text(result.title || 'Post', 20, 20)
-        doc.setFontSize(11)
-        const lines = doc.splitTextToSize(result.content || '', 170)
-        doc.text(lines, 20, 35)
-        doc.save(`${(result.title || 'post').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
-      })
-    } catch {
-      // noop
-    }
-  }, [result])
 
   useEffect(() => {
     setChannel(meta.defaultChannel)
@@ -423,34 +317,6 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
                 <pre className="whitespace-pre-wrap text-sm text-slate-900">{result.content ?? ''}</pre>
               </div>
-
-              {/* Image upload pour les posts réseaux sociaux */}
-              {isSocialPost && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                  <ImageUploader
-                    images={images}
-                    onChange={setImages}
-                    contentId={result.id}
-                    maxImages={4}
-                  />
-                </div>
-              )}
-
-              {/* Actions : Publier / Programmer / Copier / PDF / Supprimer */}
-              {isSocialPost && result.id && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                  <PostActionButtons
-                    contentId={result.id}
-                    contentPreview={result.content}
-                    channel={channel}
-                    onBeforePublish={handleBeforePublish}
-                    onPublished={() => router.refresh()}
-                    onScheduled={handleScheduleFromGenerator}
-                    onCopy={handleCopy}
-                    onDownloadPdf={handleDownloadPdf}
-                  />
-                </div>
-              )}
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">

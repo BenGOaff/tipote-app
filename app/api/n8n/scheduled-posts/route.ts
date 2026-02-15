@@ -12,23 +12,6 @@ export const dynamic = "force-dynamic";
 
 const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "reddit"];
 
-/**
- * Résout l'URL de la première image depuis meta.
- * Supporte le nouveau format (meta.images[]) et l'ancien (meta.image_url).
- */
-function resolveImageUrl(meta: any): string | undefined {
-  if (!meta) return undefined;
-  if (Array.isArray(meta.images) && meta.images.length > 0) {
-    const first = meta.images[0];
-    if (typeof first === "string") return first;
-    if (first?.url) return first.url;
-  }
-  if (typeof meta.image_url === "string" && meta.image_url.trim()) {
-    return meta.image_url;
-  }
-  return undefined;
-}
-
 function isMissingColumn(msg?: string | null) {
   const m = (msg ?? "").toLowerCase();
   return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
@@ -150,9 +133,6 @@ export async function GET(req: NextRequest) {
         return null;
       }
 
-      // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)
-      const imageUrl = resolveImageUrl(post.meta);
-
       const postData: Record<string, unknown> = {
         content_id: post.id,
         user_id: post.user_id,
@@ -164,9 +144,14 @@ export async function GET(req: NextRequest) {
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/n8n/publish-callback`,
       };
 
-      // Ajouter l'image pour toutes les plateformes qui la supportent
-      if (imageUrl) {
-        postData.image_url = imageUrl;
+      // Pour Facebook, inclure l'image_url si presente
+      if (platform === "facebook" && post.meta?.image_url) {
+        postData.image_url = post.meta.image_url;
+      }
+
+      // Pour Threads, inclure l'image_url si presente
+      if (platform === "threads" && post.meta?.image_url) {
+        postData.image_url = post.meta.image_url;
       }
 
       // Pour Reddit, le titre est obligatoire

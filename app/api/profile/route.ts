@@ -50,6 +50,8 @@ const UpdateSchema = z.object({
 
   content_locale: z.string().trim().max(10).optional(),
 
+  revenue_goal_monthly: z.string().trim().max(120).optional(),
+
   linkedin_url: z.string().trim().max(500).optional(),
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),

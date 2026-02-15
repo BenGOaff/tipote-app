@@ -23,7 +23,6 @@ type ContentItem = {
   scheduled_date: string | null;
   channel: string | null;
   tags: string[] | null;
-  meta?: Record<string, any> | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -53,7 +52,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
   const v2Try = await supabase
     .from("content_item")
     .select(
-      "id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, meta, created_at, updated_at"
+      "id, user_id, type, title, prompt, content, status, scheduled_date, channel, tags, created_at, updated_at"
     )
     .eq("id", id)
     .eq("user_id", userId)
@@ -74,7 +73,6 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
       scheduled_date: row.scheduled_date ?? null,
       channel: row.channel ?? null,
       tags: normalizeTags(row.tags),
-      meta: row.meta ?? null,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
     };
@@ -91,7 +89,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
   const frTry = await supabase
     .from("content_item")
     .select(
-      "id, user_id, type, title:titre, prompt, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, meta, created_at, updated_at"
+      "id, user_id, type, title:titre, prompt, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at, updated_at"
     )
     .eq("id", id)
     .eq("user_id", userId)
@@ -112,7 +110,6 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
       scheduled_date: row.scheduled_date ?? null,
       channel: row.channel ?? null,
       tags: normalizeTags(row.tags),
-      meta: row.meta ?? null,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
     };

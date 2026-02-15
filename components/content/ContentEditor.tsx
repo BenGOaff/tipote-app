@@ -26,9 +26,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
-import { PostActionButtons } from "@/components/content/PostActionButtons";
-
 import {
   Copy,
   Save,
@@ -54,7 +51,6 @@ type ContentItem = {
   scheduled_date: string | null;
   channel: string | null;
   tags: string[] | null;
-  meta?: Record<string, any> | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -133,22 +129,6 @@ export function ContentEditor({ initialItem }: Props) {
   const [tags, setTags] = useState(tagsToString(baseline.tags ?? []));
   const [prompt, setPrompt] = useState(baseline.prompt ?? "");
   const [content, setContent] = useState(baseline.content ?? "");
-
-  // -----------------------------
-  // Images support
-  // -----------------------------
-  const [images, setImages] = useState<UploadedImage[]>(() => {
-    const metaImages = (initialItem as any)?.meta?.images;
-    if (Array.isArray(metaImages)) {
-      return metaImages.filter((img: any) => img && typeof img === "object" && img.url);
-    }
-    return [];
-  });
-
-  const isSocialPost = useMemo(() => {
-    const t = (type ?? "").toLowerCase();
-    return t === "post" || t === "";
-  }, [type]);
 
   // -----------------------------
   // Funnel (pages HTML) support
@@ -391,20 +371,6 @@ export function ContentEditor({ initialItem }: Props) {
         prompt: prompt.trim() || null,
       };
 
-      // ✅ Images: stocker les images uploadées dans meta.images
-      if (images.length > 0) {
-        payload.meta = {
-          ...(payload.meta || {}),
-          images: images.map((img) => ({
-            url: img.url,
-            path: img.path,
-            filename: img.filename,
-            size: img.size,
-            type: img.type,
-          })),
-        };
-      }
-
       // ✅ Funnel: duplique les infos structurées en meta (si la colonne existe en DB, le backend fera un best-effort)
       if (isFunnel && funnelTemplateId.trim()) {
         payload.meta = {
@@ -574,96 +540,6 @@ export function ContentEditor({ initialItem }: Props) {
     setStatus("archived");
     setScheduledDate("");
     await save();
-  };
-
-  // Handlers for PostActionButtons
-  const handleScheduleFromButtons = async (date: string, time: string) => {
-    setStatus("scheduled");
-    setScheduledDate(date);
-
-    setSaving(true);
-    try {
-      const payload: any = {
-        title: title.trim() || "Sans titre",
-        channel: channel.trim() || null,
-        type: type.trim() || null,
-        scheduledDate: date,
-        status: "scheduled",
-        tags: normalizeTags(tags),
-        content,
-        prompt: prompt.trim() || null,
-        meta: {
-          scheduled_time: time,
-          ...(images.length > 0
-            ? {
-                images: images.map((img) => ({
-                  url: img.url,
-                  path: img.path,
-                  filename: img.filename,
-                  size: img.size,
-                  type: img.type,
-                })),
-              }
-            : {}),
-        },
-      };
-
-      const res = await fetch(`/api/content/${baseline.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await res.json().catch(() => ({}))) as ApiResponse;
-
-      if (!("ok" in data) || !data.ok) {
-        toast({
-          title: "Programmation impossible",
-          description: (data as any).error ?? "Erreur",
-          variant: "destructive",
-        });
-        throw new Error((data as any).error ?? "Erreur");
-      }
-
-      setBaseline((prev) => ({
-        ...prev,
-        status: "scheduled",
-        scheduled_date: date,
-      }));
-
-      router.refresh();
-    } catch (e: any) {
-      throw e;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleBeforePublish = async (): Promise<string | null> => {
-    const saved = await save();
-    return saved ? baseline.id : null;
-  };
-
-  const handleDownloadPdf = () => {
-    try {
-      // Dynamic import to avoid loading jspdf on every page
-      import("jspdf").then(({ jsPDF }) => {
-        const doc = new jsPDF();
-        doc.setFontSize(16);
-        doc.text(title || "Sans titre", 20, 20);
-        doc.setFontSize(11);
-
-        const lines = doc.splitTextToSize(content || "", 170);
-        doc.text(lines, 20, 35);
-        doc.save(`${(title || "contenu").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
-      });
-    } catch {
-      toast({
-        title: "Erreur PDF",
-        description: "Impossible de générer le PDF.",
-        variant: "destructive",
-      });
-    }
   };
 
   // Cmd/Ctrl + S
@@ -1055,37 +931,6 @@ export function ContentEditor({ initialItem }: Props) {
             />
           )}
         </Card>
-
-        {/* Image Upload (pour les posts réseaux sociaux) */}
-        {isSocialPost && (
-          <Card className="p-4 space-y-2">
-            <ImageUploader
-              images={images}
-              onChange={setImages}
-              contentId={baseline.id}
-              maxImages={4}
-              disabled={saving}
-            />
-          </Card>
-        )}
-
-        {/* Actions de publication / programmation (pour les posts réseaux sociaux) */}
-        {isSocialPost && (
-          <Card className="p-4">
-            <PostActionButtons
-              contentId={baseline.id}
-              contentPreview={content ?? undefined}
-              channel={channel}
-              onBeforePublish={handleBeforePublish}
-              onPublished={() => router.refresh()}
-              onScheduled={handleScheduleFromButtons}
-              onDelete={remove}
-              onCopy={copy}
-              onDownloadPdf={handleDownloadPdf}
-              busy={saving || deleting}
-            />
-          </Card>
-        )}
       </div>
     </div>
   );
