@@ -315,9 +315,22 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
     };
   }
 
-  // Everything done!
+  // No tasks exist at all — don't claim "all done", encourage the user to start
+  const totalTasks = categories.reduce((sum, c) => sum + c.total, 0);
+  if (totalTasks === 0) {
+    return {
+      positive: "",
+      recommendation: "Consulte ta stratégie pour découvrir ton plan d'action",
+      why: "et commence à créer tes premiers contenus pour lancer ton business",
+      ctaLabel: "Voir ma stratégie",
+      ctaHref: "/strategy",
+    };
+  }
+
+  // Everything genuinely done (user completed real tasks)
+  const totalDone = categories.reduce((sum, c) => sum + c.done, 0);
   return {
-    positive: positive || "Toutes tes tâches sont terminées, bravo !",
+    positive: positive || `Tu as terminé ${totalDone} tâche${totalDone > 1 ? "s" : ""}, bravo !`,
     recommendation: "et si tu créais du nouveau contenu pour garder la dynamique ?",
     why: "Continue sur ta lancée pour ne pas perdre ton élan",
     ctaLabel: "Créer du contenu",
