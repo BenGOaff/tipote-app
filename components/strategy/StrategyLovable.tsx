@@ -812,7 +812,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                         }`}
                         role={!isEditing ? "button" : undefined}
                         tabIndex={!isEditing ? 0 : undefined}
-                        onClick={() => openPhase(phaseIndex)}
+                        onClick={(e) => {
+                          // Don't open modal if click was on a task checkbox row
+                          if ((e.target as HTMLElement).closest?.("[data-task-row]")) return;
+                          openPhase(phaseIndex);
+                        }}
                         onKeyDown={(e) => {
                           if (isEditing) return;
                           if (e.key === "Enter" || e.key === " ") {
@@ -905,8 +909,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                     return (
                                       <div
                                         key={item.id}
+                                        data-task-row
                                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                                         onClick={(e) => e.stopPropagation()}
+                                        onPointerDown={(e) => e.stopPropagation()}
                                       >
                                         <Checkbox
                                           checked={checked}
