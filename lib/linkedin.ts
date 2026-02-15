@@ -8,7 +8,7 @@ const LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 const LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts";
 
 // Version API LinkedIn (format YYYYMM)
-const LINKEDIN_API_VERSION = "202501";
+const LINKEDIN_API_VERSION = "202602";
 
 const SCOPES = ["openid", "profile", "email", "w_member_social"];
 

@@ -370,6 +370,9 @@ export async function publishPhotoToFacebookPage(
  * Processus en 2 etapes :
  *   1. POST /{threads_user_id}/threads -> creation_id
  *   2. POST /{threads_user_id}/threads_publish -> post_id
+ *
+ * L'API Threads utilise des query parameters (pas de JSON body).
+ * Doc : https://developers.facebook.com/docs/threads/posts
  */
 export async function publishToThreads(
   userAccessToken: string,
@@ -377,24 +380,20 @@ export async function publishToThreads(
   text: string,
   imageUrl?: string
 ): Promise<MetaPostResult> {
-  // Etape 1 : Creer le container
-  const containerBody: Record<string, string> = {
+  // Etape 1 : Creer le container (query params, pas JSON body)
+  const createParams = new URLSearchParams({
+    media_type: imageUrl ? "IMAGE" : "TEXT",
     text,
     access_token: userAccessToken,
-  };
-
+  });
   if (imageUrl) {
-    containerBody.media_type = "IMAGE";
-    containerBody.image_url = imageUrl;
-  } else {
-    containerBody.media_type = "TEXT";
+    createParams.set("image_url", imageUrl);
   }
 
-  const createRes = await fetch(`${THREADS_API_BASE}/${threadsUserId}/threads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(containerBody),
-  });
+  const createRes = await fetch(
+    `${THREADS_API_BASE}/${threadsUserId}/threads?${createParams.toString()}`,
+    { method: "POST" }
+  );
 
   if (!createRes.ok) {
     const errText = await createRes.text();
@@ -408,15 +407,16 @@ export async function publishToThreads(
     return { ok: false, error: "No creation_id returned from Threads", statusCode: 500 };
   }
 
-  // Etape 2 : Publier le container
-  const publishRes = await fetch(`${THREADS_API_BASE}/${threadsUserId}/threads_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      creation_id: creationId,
-      access_token: userAccessToken,
-    }),
+  // Etape 2 : Publier le container (query params)
+  const publishParams = new URLSearchParams({
+    creation_id: creationId,
+    access_token: userAccessToken,
   });
+
+  const publishRes = await fetch(
+    `${THREADS_API_BASE}/${threadsUserId}/threads_publish?${publishParams.toString()}`,
+    { method: "POST" }
+  );
 
   if (publishRes.ok) {
     const publishJson = await publishRes.json();
