@@ -21,7 +21,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=linkedin",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -105,7 +105,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.platform_user_id || $json.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
         "options": {
           "response": {
             "response": {
@@ -141,7 +141,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"success\": {{ $json.statusCode === 201 }},\n  \"postUrn\": \"{{ $json.headers?.['x-restli-id'] || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 201 ? ($json.body?.message || 'LinkedIn API error') : '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"platform\": \"linkedin\",\n  \"success\": {{ $json.statusCode === 201 }},\n  \"postUrn\": \"{{ $json.headers?.['x-restli-id'] || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 201 ? ($json.body?.message || 'LinkedIn API error') : '' }}\"\n}",
         "options": {}
       },
       "id": "callback-tipote",

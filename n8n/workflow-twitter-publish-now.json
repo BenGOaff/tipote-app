@@ -102,7 +102,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.data?.id || '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"twitter\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.data?.id || '' }}\"\n}",
         "options": {}
       },
       "id": "callback-success",
@@ -130,7 +130,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'X API error' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"twitter\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'X API error' }}\"\n}",
         "options": {}
       },
       "id": "callback-error",

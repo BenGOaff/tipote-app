@@ -166,13 +166,24 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {
+    // Extraire date (YYYY-MM-DD) et heure (HH:MM) du datetime-local
+    let scheduledDate: string | undefined;
+    let scheduledTime: string | undefined;
+    if (scheduledAt) {
+      // scheduledAt = "2026-02-20T14:30"
+      const [datePart, timePart] = scheduledAt.split("T");
+      if (datePart) scheduledDate = datePart;
+      if (timePart) scheduledTime = timePart.slice(0, 5); // HH:MM
+    }
+
     await onSave({
       title,
       content: generatedContent,
       type: "post",
       platform,
       status,
-      scheduled_at: scheduledAt || undefined,
+      scheduled_date: scheduledDate,
+      meta: scheduledTime ? { scheduled_time: scheduledTime } : undefined,
     });
   };
 
@@ -405,15 +416,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 </Button>
 
                 {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
+                  <Button size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
                     <Calendar className="w-4 h-4 mr-1" />
                     Planifier
                   </Button>
                 )}
-                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />
-                  Programmer
-                </Button>
 
                 <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
                   <RefreshCw className="w-4 h-4 mr-1" />

@@ -133,7 +133,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"success\": {{ $json.statusCode === 201 }},\n  \"postId\": \"{{ $json.body?.data?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 201 ? ($json.body?.detail || 'X API error') : '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Split Posts').item.json.content_id }}\",\n  \"platform\": \"twitter\",\n  \"success\": {{ $json.statusCode === 201 }},\n  \"postId\": \"{{ $json.body?.data?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode !== 201 ? ($json.body?.detail || 'X API error') : '' }}\"\n}",
         "options": {}
       },
       "id": "callback-tipote",

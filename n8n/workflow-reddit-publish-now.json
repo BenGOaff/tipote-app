@@ -106,7 +106,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.json?.data?.id || '' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"reddit\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.json?.data?.id || '' }}\"\n}",
         "options": {}
       },
       "id": "callback-success",
@@ -134,7 +134,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'Reddit API error' }}\"\n}",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"reddit\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'Reddit API error' }}\"\n}",
         "options": {}
       },
       "id": "callback-error",
