@@ -165,19 +165,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"media_type\": \"{{ $('Webhook Trigger').item.json.body.image_url ? 'IMAGE' : 'TEXT' }}\",\n  \"text\": {{ JSON.stringify($('Webhook Trigger').item.json.body.commentary) }},\n  {{ $('Webhook Trigger').item.json.body.image_url ? '\"image_url\": \"' + $('Webhook Trigger').item.json.body.image_url + '\",' : '' }}\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
+        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads?media_type={{ $('Webhook Trigger').item.json.body.image_url ? 'IMAGE' : 'TEXT' }}&text={{ encodeURIComponent($('Webhook Trigger').item.json.body.commentary) }}{{ $('Webhook Trigger').item.json.body.image_url ? '&image_url=' + encodeURIComponent($('Webhook Trigger').item.json.body.image_url) : '' }}&access_token={{ $('Webhook Trigger').item.json.body.access_token }}",
         "options": {
           "response": {
             "response": {
@@ -196,19 +184,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads_publish",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"creation_id\": \"{{ $json.body.id }}\",\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
+        "url": "=https://graph.threads.net/v1.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/threads_publish?creation_id={{ $json.body.id }}&access_token={{ $('Webhook Trigger').item.json.body.access_token }}",
         "options": {
           "response": {
             "response": {
