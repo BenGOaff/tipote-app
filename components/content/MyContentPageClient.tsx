@@ -240,6 +240,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
                                 title={safeString(item.title) || "Sans titre"}
                                 status={item.status}
                                 scheduledDate={item.scheduled_date}
+                                contentPreview={item.content ?? null}
                               />
                             </div>
                           </div>

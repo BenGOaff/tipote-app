@@ -614,14 +614,14 @@ export default function CreateLovableClient() {
     }
   };
 
-  const handleSave = async (payload: any): Promise<void> => {
+  const handleSave = async (payload: any): Promise<string | null> => {
     if (!payload?.title?.trim()) {
       toast({
         title: "Titre requis",
         description: "Entre un titre pour sauvegarder",
         variant: "destructive",
       });
-      return;
+      return null;
     }
 
     setIsSaving(true);
@@ -632,19 +632,28 @@ export default function CreateLovableClient() {
         body: JSON.stringify(payload),
       });
 
+      const json = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Impossible de sauvegarder");
+        throw new Error(json?.error || "Impossible de sauvegarder");
       }
 
-      setSelectedType(null);
-      router.push("/contents");
+      const contentId = (json?.id as string) ?? null;
+
+      // If _skipRedirect flag is set (used by publish flow), don't redirect
+      if (!payload?._skipRedirect) {
+        setSelectedType(null);
+        router.push("/contents");
+      }
+
+      return contentId;
     } catch (e: any) {
       toast({
         title: "Erreur",
         description: e?.message || "Impossible de sauvegarder",
         variant: "destructive",
       });
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -657,19 +666,21 @@ export default function CreateLovableClient() {
   const ActiveForm = useMemo(() => {
     if (!selectedType) return null;
 
+    const onClose = () => setSelectedType(null);
+    // handleSave returns string|null for PostForm (needs contentId), void-compatible for others
+    const onSaveVoid = async (data: any): Promise<void> => { await handleSave(data); };
+
     const common = {
       onGenerate: handleGenerate,
-      onSave: handleSave,
-      onClose: () => setSelectedType(null),
+      onSave: onSaveVoid,
+      onClose,
       isGenerating,
       isSaving,
     };
 
     switch (selectedType) {
       case "post":
-        // ✅ IMPORTANT: PostForm gère lui-même le chargement des offres.
-        // On ne passe pas existingOffers ici -> sinon TS2322 (prop inexistante).
-        return <PostForm {...common} />;
+        return <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onClose} isGenerating={isGenerating} isSaving={isSaving} />;
       case "email":
         return <EmailForm {...common} />;
       case "article":
