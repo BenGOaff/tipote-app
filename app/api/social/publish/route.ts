@@ -15,6 +15,34 @@ import { publishPost as publishRedditPost } from "@/lib/reddit";
 export const dynamic = "force-dynamic";
 
 const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit"] as const;
+
+/**
+ * Construit l'URL publique du post a partir de l'identifiant retourne par la plateforme.
+ */
+function buildPostUrl(platform: string, postId?: string | null): string | null {
+  if (!postId) return null;
+
+  switch (platform) {
+    case "linkedin": {
+      // postId peut etre un URN complet (urn:li:share:XXX) ou un ID brut
+      const urn = postId.startsWith("urn:") ? postId : `urn:li:share:${postId}`;
+      return `https://www.linkedin.com/feed/update/${urn}/`;
+    }
+    case "facebook":
+      return `https://www.facebook.com/${postId}`;
+    case "twitter":
+      return `https://twitter.com/i/status/${postId}`;
+    case "threads":
+      return `https://www.threads.net/t/${postId}`;
+    case "reddit":
+      // Reddit retourne deja une URL complete
+      return postId.startsWith("http") ? postId : null;
+    case "instagram":
+      return `https://www.instagram.com/p/${postId}/`;
+    default:
+      return null;
+  }
+}
 type Platform = (typeof SUPPORTED_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -187,17 +215,27 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Mettre le statut en "published"
+      // Mettre le statut en "published" + stocker les infos
+      const n8nResult = await n8nRes.json().catch(() => ({}));
+      const n8nPostId = n8nResult?.postId ?? n8nResult?.postUrn;
+      const n8nPostUrl = buildPostUrl(platform, n8nPostId);
+      const n8nMeta: Record<string, unknown> = {
+        published_at: new Date().toISOString(),
+        published_platform: platform,
+      };
+      if (n8nPostId) n8nMeta[`${platform}_post_id`] = n8nPostId;
+      if (n8nPostUrl) n8nMeta[`${platform}_post_url`] = n8nPostUrl;
+
       await supabase
         .from("content_item")
-        .update({ status: "published" })
+        .update({ status: "published", meta: n8nMeta })
         .eq("id", contentId);
 
-      const n8nResult = await n8nRes.json().catch(() => ({}));
       return NextResponse.json({
         ok: true,
         mode: "n8n",
-        postId: n8nResult?.postId ?? n8nResult?.postUrn,
+        postId: n8nPostId,
+        postUrl: n8nPostUrl,
         message: `Post publie sur ${platformLabel} via n8n.`,
       });
     } catch (err) {
@@ -249,16 +287,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Mettre a jour le statut en "published"
+  // Mettre a jour le statut en "published" + stocker les infos du post dans meta
+  const postId = result.postId ?? result.postUrn;
+  const postUrl = buildPostUrl(platform, postId);
+  const metaUpdate: Record<string, unknown> = {
+    published_at: new Date().toISOString(),
+    published_platform: platform,
+  };
+  if (postId) metaUpdate[`${platform}_post_id`] = postId;
+  if (postUrl) metaUpdate[`${platform}_post_url`] = postUrl;
+
   await supabase
     .from("content_item")
-    .update({ status: "published" })
+    .update({ status: "published", meta: metaUpdate })
     .eq("id", contentId);
 
   return NextResponse.json({
     ok: true,
     mode: "direct",
-    postId: result.postId ?? result.postUrn,
+    postId,
+    postUrl,
     message: `Post publie sur ${platformLabel}.`,
   });
 }

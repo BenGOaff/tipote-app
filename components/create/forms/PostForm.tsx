@@ -12,12 +12,14 @@ import { AIContent } from "@/components/ui/ai-content";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
+import { PublishModal } from "@/components/content/PublishModal";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 interface PostFormProps {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
@@ -47,12 +49,14 @@ const tones = [
   { id: "humorous", label: "Humoristique" },
 ];
 
-const platformPublishUrls: Record<string, { label: string; getUrl: (text: string) => string }> = {
-  linkedin: { label: "LinkedIn", getUrl: () => "https://www.linkedin.com/feed/" },
-  facebook: { label: "Facebook", getUrl: () => "https://www.facebook.com/" },
-  threads: { label: "Threads", getUrl: () => "https://www.threads.net/" },
-  twitter: { label: "X (Twitter)", getUrl: (t) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t.slice(0, 280))}` },
-  tiktok: { label: "TikTok", getUrl: () => "https://www.tiktok.com/" },
+const PLATFORM_LABELS: Record<string, string> = {
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  threads: "Threads",
+  twitter: "X (Twitter)",
+  tiktok: "TikTok",
+  instagram: "Instagram",
+  reddit: "Reddit",
 };
 
 export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {
@@ -78,6 +82,13 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Publish modal state
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [savedContentId, setSavedContentId] = useState<string | null>(null);
+  const { isConnected } = useSocialConnections();
+
+  const platformIsConnected = isConnected(platform);
 
   useEffect(() => {
     let mounted = true;
@@ -416,19 +427,15 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                   PDF
                 </Button>
 
-                {platformPublishUrls[platform] && (
+                {platformIsConnected && PLATFORM_LABELS[platform] && (
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={async () => {
-                      await copyToClipboard(generatedContent);
-                      const info = platformPublishUrls[platform];
-                      window.open(info.getUrl(generatedContent), "_blank", "noopener");
-                    }}
-                    disabled={!generatedContent}
+                    onClick={() => setPublishModalOpen(true)}
+                    disabled={!generatedContent || !title}
                   >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    Publier sur {platformPublishUrls[platform].label}
+                    <Send className="w-4 h-4 mr-1" />
+                    Publier sur {PLATFORM_LABELS[platform]}
                   </Button>
                 )}
               </div>
@@ -436,6 +443,32 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           )}
         </div>
       </div>
+
+      {/* Modale de publication directe */}
+      <PublishModal
+        open={publishModalOpen}
+        onOpenChange={setPublishModalOpen}
+        platform={platform}
+        contentId={savedContentId ?? ""}
+        contentPreview={generatedContent}
+        onBeforePublish={async () => {
+          // Save the content first, then return the ID
+          const id = await onSave({
+            title,
+            content: generatedContent,
+            type: "post",
+            platform,
+            status: "draft",
+            scheduled_at: scheduledAt || undefined,
+            _skipRedirect: true, // Don't redirect after save
+          });
+          if (id) setSavedContentId(id);
+          return id;
+        }}
+        onPublished={() => {
+          // Content was published - will be handled by modal close
+        }}
+      />
     </div>
   );
 }
