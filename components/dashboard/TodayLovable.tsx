@@ -327,12 +327,12 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
     };
   }
 
-  // Everything genuinely done (user completed real tasks)
-  const totalDone = categories.reduce((sum, c) => sum + c.done, 0);
+  // Everything genuinely done — positive always has content here
+  // because completed categories are non-empty (totalTasks > 0 and incomplete empty)
   return {
-    positive: positive || `Tu as terminé ${totalDone} tâche${totalDone > 1 ? "s" : ""}, bravo !`,
-    recommendation: "et si tu créais du nouveau contenu pour garder la dynamique ?",
-    why: "Continue sur ta lancée pour ne pas perdre ton élan",
+    positive,
+    recommendation: "tu créais du nouveau contenu pour garder cette dynamique",
+    why: "— ta base est solide, c'est le moment de passer à la vitesse supérieure",
     ctaLabel: "Créer du contenu",
     ctaHref: "/create",
   };
