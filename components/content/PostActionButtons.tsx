@@ -107,21 +107,15 @@ export function PostActionButtons({
 
   const detectedPlatform = detectPlatform(channel);
 
-  // Determine which platforms to show buttons for
+  // Only show the platform matching the content's channel (not all connected)
   const relevantPlatforms = React.useMemo(() => {
-    const socialPlatforms = ["linkedin", "facebook", "threads", "twitter"];
-    const connected = activeConnections
-      .map((c) => c.platform)
-      .filter((p) => socialPlatforms.includes(p));
-
-    // If channel matches a platform, put it first
+    const connected = activeConnections.map((c) => c.platform);
     if (detectedPlatform && connected.includes(detectedPlatform)) {
-      return [
-        detectedPlatform,
-        ...connected.filter((p) => p !== detectedPlatform),
-      ];
+      return [detectedPlatform];
     }
-    return connected;
+    // Fallback: if no specific platform detected, show all connected
+    const socialPlatforms = ["linkedin", "facebook", "threads", "twitter"];
+    return connected.filter((p) => socialPlatforms.includes(p));
   }, [activeConnections, detectedPlatform]);
 
   const openPublish = (platform: string) => {
@@ -176,7 +170,7 @@ export function PostActionButtons({
       />
 
       <div className="space-y-3">
-        {/* Publier & Programmer : boutons CTA violet */}
+        {/* Publier & Programmer */}
         {relevantPlatforms.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {relevantPlatforms.map((platform) => {
@@ -185,29 +179,20 @@ export function PostActionButtons({
 
               return (
                 <React.Fragment key={platform}>
-                  {/* Publier */}
                   <Button
                     onClick={() => openPublish(platform)}
                     disabled={busy}
-                    className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
                     size="sm"
                   >
                     {icon}
                     <span className="ml-1.5">Publier sur {label}</span>
                   </Button>
 
-                  {/* Programmer */}
                   <Button
                     onClick={() => openSchedule(platform)}
                     disabled={busy}
-                    className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
                     size="sm"
                     variant="outline"
-                    style={{
-                      borderColor: "#b042b4",
-                      color: "#b042b4",
-                      backgroundColor: "transparent",
-                    }}
                   >
                     <CalendarDays className="h-4 w-4" />
                     <span className="ml-1.5">Programmer sur {label}</span>
@@ -284,7 +269,7 @@ export function PostActionButtons({
         {relevantPlatforms.length === 0 && (
           <p className="text-xs text-slate-500">
             Connecte un réseau social dans les{" "}
-            <a href="/settings?tab=connections" className="font-semibold text-[#b042b4] hover:underline">
+            <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
               paramètres
             </a>{" "}
             pour publier ou programmer directement.

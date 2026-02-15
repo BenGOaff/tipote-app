@@ -57,11 +57,9 @@ import {
   Eye,
   Users,
   Share2,
-  FolderOpen,
   ChevronLeft,
-  Megaphone,
-  ShoppingBag,
-  Scroll,
+  Package,
+  Route,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,74 +97,75 @@ type ContentFolder = {
   matchType: (type: string | null) => boolean;
 };
 
+// Colors and icons 1:1 with Créer page (CreateLovableClient contentTypes)
 const CONTENT_FOLDERS: ContentFolder[] = [
   {
     id: "posts",
     label: "Mes Posts",
     icon: MessageSquare,
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-50 dark:bg-blue-950/50",
+    color: "text-white",
+    bgColor: "bg-blue-500",
     matchType: (t) => {
       const s = safeString(t).toLowerCase();
       return s.includes("post") || s.includes("réseau") || s.includes("reseau") || s.includes("social");
     },
   },
   {
-    id: "funnels",
-    label: "Mes Funnels",
-    icon: Megaphone,
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-purple-50 dark:bg-purple-950/50",
-    matchType: (t) => safeString(t).toLowerCase().includes("funnel"),
-  },
-  {
-    id: "quiz",
-    label: "Mes Quiz",
-    icon: ClipboardList,
-    color: "text-teal-600 dark:text-teal-400",
-    bgColor: "bg-teal-50 dark:bg-teal-950/50",
-    matchType: () => false, // Quiz uses separate data source
-  },
-  {
-    id: "offres",
-    label: "Mes Offres",
-    icon: ShoppingBag,
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-50 dark:bg-amber-950/50",
-    matchType: (t) => {
-      const s = safeString(t).toLowerCase();
-      return s.includes("offer") || s.includes("offre");
-    },
-  },
-  {
-    id: "scripts",
-    label: "Mes Scripts",
-    icon: Scroll,
-    color: "text-rose-600 dark:text-rose-400",
-    bgColor: "bg-rose-50 dark:bg-rose-950/50",
-    matchType: (t) => {
-      const s = safeString(t).toLowerCase();
-      return s.includes("video") || s.includes("vidéo") || s.includes("script");
-    },
-  },
-  {
     id: "emails",
     label: "Mes Emails",
     icon: Mail,
-    color: "text-green-600 dark:text-green-400",
-    bgColor: "bg-green-50 dark:bg-green-950/50",
+    color: "text-white",
+    bgColor: "bg-green-500",
     matchType: (t) => safeString(t).toLowerCase().includes("email"),
   },
   {
     id: "articles",
     label: "Mes Articles",
     icon: FileText,
-    color: "text-indigo-600 dark:text-indigo-400",
-    bgColor: "bg-indigo-50 dark:bg-indigo-950/50",
+    color: "text-white",
+    bgColor: "bg-purple-500",
     matchType: (t) => {
       const s = safeString(t).toLowerCase();
       return s.includes("article") || s.includes("blog");
     },
+  },
+  {
+    id: "scripts",
+    label: "Mes Scripts",
+    icon: Video,
+    color: "text-white",
+    bgColor: "bg-red-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("video") || s.includes("vidéo") || s.includes("script");
+    },
+  },
+  {
+    id: "offres",
+    label: "Mes Offres",
+    icon: Package,
+    color: "text-white",
+    bgColor: "bg-orange-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("offer") || s.includes("offre");
+    },
+  },
+  {
+    id: "funnels",
+    label: "Mes Funnels",
+    icon: Route,
+    color: "text-white",
+    bgColor: "bg-indigo-500",
+    matchType: (t) => safeString(t).toLowerCase().includes("funnel"),
+  },
+  {
+    id: "quiz",
+    label: "Mes Quiz",
+    icon: ClipboardList,
+    color: "text-white",
+    bgColor: "bg-teal-500",
+    matchType: () => false, // Quiz uses separate data source
   },
 ];
 
@@ -290,14 +289,6 @@ export default function MyContentLovableClient({
 
     return result;
   }, [initialItems, search, activeFolder]);
-
-  const stats = useMemo(() => {
-    const total = initialItems.length;
-    const published = initialItems.filter((c) => normalizeKeyStatus(c.status) === "published").length;
-    const draft = initialItems.filter((c) => normalizeKeyStatus(c.status) === "draft").length;
-    const scheduled = initialItems.filter((c) => normalizeKeyStatus(c.status) === "scheduled").length;
-    return { total, published, draft, scheduled };
-  }, [initialItems]);
 
   const openEdit = (content: ContentListItem) => {
     setEditingContent(content);
@@ -576,26 +567,6 @@ export default function MyContentLovableClient({
                   Calendrier
                 </Button>
               </div>
-            </div>
-
-            {/* Stats (on garde les mêmes cartes mais dans le bon container) */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Total</div>
-                <div className="mt-2 text-3xl font-semibold">{stats.total}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Brouillons</div>
-                <div className="mt-2 text-3xl font-semibold">{stats.draft}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Planifiés</div>
-                <div className="mt-2 text-3xl font-semibold">{stats.scheduled}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Publiés</div>
-                <div className="mt-2 text-3xl font-semibold">{stats.published}</div>
-              </Card>
             </div>
 
             {/* Content */}

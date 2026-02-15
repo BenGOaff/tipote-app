@@ -185,7 +185,7 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
             </div>
             <Link
               href="/contents"
-              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
             >
               Mes contenus
             </Link>
@@ -213,7 +213,7 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
             </div>
             <Link
               href="/contents"
-              className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
             >
               Mes contenus
             </Link>
@@ -233,7 +233,7 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
           </div>
           <Link
             href="/contents"
-            className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
           >
             Mes contenus
           </Link>

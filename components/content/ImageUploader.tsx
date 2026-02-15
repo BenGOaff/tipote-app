@@ -251,13 +251,13 @@ export function ImageUploader({
           onClick={() => !uploading && fileInputRef.current?.click()}
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors ${
             dragOver
-              ? "border-[#b042b4] bg-[#b042b4]/5"
-              : "border-slate-200 bg-slate-50 hover:border-[#b042b4]/50 hover:bg-[#b042b4]/5"
+              ? "border-primary bg-primary/5"
+              : "border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-primary/5"
           } ${uploading ? "pointer-events-none opacity-60" : ""}`}
         >
           {uploading ? (
             <>
-              <Loader2 className="h-6 w-6 animate-spin text-[#b042b4]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <p className="text-xs text-slate-600">Upload en cours...</p>
             </>
           ) : (
