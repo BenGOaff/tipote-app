@@ -10,9 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, ExternalLink, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings } from "lucide-react";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
 
-type PublishStep = "confirm" | "publishing" | "success" | "error";
+type PublishStep = "confirm" | "not_connected" | "publishing" | "success" | "error";
 
 type PublishResult = {
   ok: boolean;
@@ -63,17 +64,19 @@ export function PublishModal({
 }: Props) {
   const [step, setStep] = React.useState<PublishStep>("confirm");
   const [result, setResult] = React.useState<PublishResult | null>(null);
+  const { isConnected } = useSocialConnections();
 
   const label = PLATFORM_LABELS[platform] ?? platform;
   const color = PLATFORM_COLORS[platform] ?? "#6366F1";
+  const connected = isConnected(platform);
 
   // Reset state when modal opens
   React.useEffect(() => {
     if (open) {
-      setStep("confirm");
+      setStep(connected ? "confirm" : "not_connected");
       setResult(null);
     }
-  }, [open]);
+  }, [open, connected]);
 
   const handlePublish = async () => {
     setStep("publishing");
@@ -134,6 +137,37 @@ export function PublishModal({
   return (
     <Dialog open={open} onOpenChange={step === "publishing" ? undefined : onOpenChange}>
       <DialogContent className="sm:max-w-md">
+        {/* Not connected step */}
+        {step === "not_connected" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-500" />
+                {label} non connecte
+              </DialogTitle>
+              <DialogDescription>
+                Pour publier directement sur {label}, connecte d&apos;abord ton compte dans les parametres.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleClose}>
+                Annuler
+              </Button>
+              <Button
+                onClick={() => {
+                  window.location.href = "/settings?tab=connections";
+                }}
+                style={{ backgroundColor: color }}
+                className="text-white hover:opacity-90"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Connecter {label}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
         {/* Confirm step */}
         {step === "confirm" && (
           <>

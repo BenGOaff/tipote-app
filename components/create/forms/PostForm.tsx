@@ -443,7 +443,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                   PDF
                 </Button>
 
-                {platformIsConnected && PLATFORM_LABELS[platform] && (
+                {PLATFORM_LABELS[platform] && (
                   <Button
                     size="sm"
                     variant="default"
