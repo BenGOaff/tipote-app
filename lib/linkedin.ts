@@ -150,14 +150,28 @@ export type LinkedInPostResult = {
 };
 
 /**
- * Publie un post texte sur le profil personnel LinkedIn.
+ * Publie un post sur le profil personnel LinkedIn.
+ * Supporte optionnellement une image (URL publique).
  */
 export async function publishPost(
   accessToken: string,
   personId: string,
-  commentary: string
+  commentary: string,
+  imageUrl?: string
 ): Promise<LinkedInPostResult> {
-  const payload = {
+  let imageUrn: string | undefined;
+
+  // Si une image est fournie, l'uploader via l'API LinkedIn Images
+  if (imageUrl) {
+    try {
+      imageUrn = await uploadImageToLinkedIn(accessToken, personId, imageUrl);
+    } catch (err) {
+      console.error("LinkedIn image upload failed:", err);
+      // Publier sans image en fallback
+    }
+  }
+
+  const payload: Record<string, unknown> = {
     author: `urn:li:person:${personId}`,
     commentary,
     visibility: "PUBLIC",
@@ -169,6 +183,16 @@ export async function publishPost(
     lifecycleState: "PUBLISHED",
     isReshareDisabledByAuthor: false,
   };
+
+  // Ajouter l'image si uploadée avec succès
+  if (imageUrn) {
+    payload.content = {
+      media: {
+        title: "Image",
+        id: imageUrn,
+      },
+    };
+  }
 
   const res = await fetch(LINKEDIN_POSTS_URL, {
     method: "POST",
@@ -188,4 +212,80 @@ export async function publishPost(
 
   const text = await res.text();
   return { ok: false, error: text, statusCode: res.status };
+}
+
+// ----------------------------------------------------------------
+// LinkedIn Images API (upload en 2 étapes)
+// Doc : https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api
+// ----------------------------------------------------------------
+
+const LINKEDIN_IMAGES_URL = "https://api.linkedin.com/rest/images";
+
+/**
+ * Upload une image vers LinkedIn depuis une URL publique.
+ * Étapes :
+ *   1. POST /rest/images?action=initializeUpload → uploadUrl + image URN
+ *   2. PUT uploadUrl avec le binaire de l'image
+ * @returns L'URN de l'image (ex: urn:li:image:xxx)
+ */
+async function uploadImageToLinkedIn(
+  accessToken: string,
+  personId: string,
+  imageUrl: string
+): Promise<string> {
+  // Étape 1 : Initialiser l'upload
+  const initPayload = {
+    initializeUploadRequest: {
+      owner: `urn:li:person:${personId}`,
+    },
+  };
+
+  const initRes = await fetch(`${LINKEDIN_IMAGES_URL}?action=initializeUpload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": LINKEDIN_API_VERSION,
+    },
+    body: JSON.stringify(initPayload),
+  });
+
+  if (!initRes.ok) {
+    const text = await initRes.text();
+    throw new Error(`LinkedIn image init failed (${initRes.status}): ${text}`);
+  }
+
+  const initJson = await initRes.json();
+  const uploadUrl = initJson.value?.uploadUrl;
+  const imageUrn = initJson.value?.image;
+
+  if (!uploadUrl || !imageUrn) {
+    throw new Error("LinkedIn image init: missing uploadUrl or image URN");
+  }
+
+  // Télécharger l'image depuis l'URL publique
+  const imgRes = await fetch(imageUrl);
+  if (!imgRes.ok) {
+    throw new Error(`Failed to fetch image from ${imageUrl}: ${imgRes.status}`);
+  }
+  const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+  const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+
+  // Étape 2 : Uploader le binaire
+  const putRes = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": contentType,
+    },
+    body: imgBuffer,
+  });
+
+  if (!putRes.ok) {
+    const text = await putRes.text();
+    throw new Error(`LinkedIn image upload failed (${putRes.status}): ${text}`);
+  }
+
+  return imageUrn;
 }
