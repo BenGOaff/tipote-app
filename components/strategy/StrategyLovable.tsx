@@ -9,7 +9,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -159,38 +158,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   // ✅ NEW : génération plan (tolérant)
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-
-  // ✅ Revenue goal inline editor
-  const [localRevenueGoal, setLocalRevenueGoal] = useState(props.revenueGoal);
-  const [isEditingRevenue, setIsEditingRevenue] = useState(false);
-  const [revenueInput, setRevenueInput] = useState("");
-  const [savingRevenue, setSavingRevenue] = useState(false);
-
-  const handleSaveRevenueGoal = useCallback(async () => {
-    const trimmed = revenueInput.trim();
-    if (!trimmed || savingRevenue) return;
-    setSavingRevenue(true);
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ revenue_goal_monthly: trimmed }),
-      });
-      const json = await res.json().catch(() => null);
-      if (res.ok && json?.ok) {
-        setLocalRevenueGoal(`${trimmed} € / mois`);
-        setIsEditingRevenue(false);
-        toast({ title: "Objectif enregistré", description: `${trimmed} € / mois` });
-        router.refresh();
-      } else {
-        toast({ title: "Erreur", description: json?.error || "Impossible de sauvegarder", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Erreur réseau", variant: "destructive" });
-    } finally {
-      setSavingRevenue(false);
-    }
-  }, [revenueInput, savingRevenue, router, toast]);
 
   const handleGeneratePlan = useCallback(async () => {
     if (isGeneratingPlan) return;
@@ -708,46 +675,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   <p className="text-sm text-primary-foreground/70 mb-1">
                     Objectif revenu
                   </p>
-                  {isEditingRevenue ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        placeholder="ex: 3000"
-                        value={revenueInput}
-                        onChange={(e) => setRevenueInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveRevenueGoal(); if (e.key === "Escape") setIsEditingRevenue(false); }}
-                        className="h-8 bg-background/40 text-primary-foreground placeholder:text-primary-foreground/40 border-primary-foreground/30 text-sm w-28"
-                        autoFocus
-                        disabled={savingRevenue}
-                      />
-                      <span className="text-sm text-primary-foreground/70">€/mois</span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 text-xs px-2"
-                        onClick={handleSaveRevenueGoal}
-                        disabled={savingRevenue || !revenueInput.trim()}
-                      >
-                        {savingRevenue ? "..." : "OK"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p
-                      className={`text-2xl font-bold text-primary-foreground ${localRevenueGoal === "—" ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                      onClick={() => {
-                        if (localRevenueGoal === "—") {
-                          setRevenueInput("");
-                          setIsEditingRevenue(true);
-                        }
-                      }}
-                      title={localRevenueGoal === "—" ? "Clique pour définir ton objectif revenu" : undefined}
-                    >
-                      {localRevenueGoal}
-                      {localRevenueGoal === "—" && (
-                        <span className="text-xs font-normal text-primary-foreground/50 ml-2">Définir</span>
-                      )}
-                    </p>
-                  )}
+                  <p className="text-2xl font-bold text-primary-foreground">
+                    {props.revenueGoal}
+                  </p>
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">

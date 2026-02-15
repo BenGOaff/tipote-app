@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown, ExternalLink } from "lucide-react";
-import { AIContent } from "@/components/ui/ai-content";
+import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
 import { PublishModal } from "@/components/content/PublishModal";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
+import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -70,9 +71,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [subject, setSubject] = useState("");
   const [tone, setTone] = useState("professional");
 
-  // ✅ UX: aperçu "beau" + option "texte brut"
-  const [showRawEditor, setShowRawEditor] = useState(false);
-
   // Branchement offre existante
   const [creationMode, setCreationMode] = useState<"existing" | "manual">("existing");
   const [offers, setOffers] = useState<OfferOption[]>([]);
@@ -85,15 +83,20 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
   const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Images
+  const [images, setImages] = useState<UploadedImage[]>([]);
 
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [savedContentId, setSavedContentId] = useState<string | null>(null);
+
+  // Schedule modal state
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+
   const { isConnected } = useSocialConnections();
 
-  const platformIsConnected = isConnected(platform);
   const charLimit = PLATFORM_CHAR_LIMITS[platform] ?? null;
   const charCount = generatedContent.length;
   const isOverLimit = charLimit !== null && charCount > charLimit;
@@ -130,8 +133,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   }, [subject, isGenerating, needsOfferLink, offerLink, creationMode, offers.length, selectedOffer]);
 
   const handleGenerate = async () => {
-    setShowRawEditor(false);
-
     const payload: any = {
       type: "post",
       platform,
@@ -145,7 +146,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     };
 
     if (creationMode === "existing" && selectedOffer) {
-      // Fail-open: le backend SocialPost sait exploiter offerManual si "offer" n'est pas câblé côté API.
       payload.offerId = selectedOffer.id || undefined;
       payload.offerManual = {
         name: selectedOffer.name || undefined,
@@ -165,27 +165,37 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     }
   };
 
-  const handleSave = async (status: "draft" | "scheduled" | "published") => {
-    // Extraire date (YYYY-MM-DD) et heure (HH:MM) du datetime-local
-    let scheduledDate: string | undefined;
-    let scheduledTime: string | undefined;
-    if (scheduledAt) {
-      // scheduledAt = "2026-02-20T14:30"
-      const [datePart, timePart] = scheduledAt.split("T");
-      if (datePart) scheduledDate = datePart;
-      if (timePart) scheduledTime = timePart.slice(0, 5); // HH:MM
-    }
+  /** Save content with optional status, date, and images */
+  const handleSave = async (
+    status: "draft" | "scheduled" | "published",
+    scheduledDate?: string,
+    scheduledTime?: string,
+    opts?: { _skipRedirect?: boolean },
+  ): Promise<string | null> => {
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
+    if (images.length > 0) meta.images = images;
 
-    await onSave({
+    const id = await onSave({
       title,
       content: generatedContent,
       type: "post",
       platform,
       status,
       scheduled_date: scheduledDate,
-      meta: scheduledTime ? { scheduled_time: scheduledTime } : undefined,
+      meta: Object.keys(meta).length > 0 ? meta : undefined,
+      ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
     });
+    if (id) setSavedContentId(id);
+    return id;
   };
+
+  /** Handle schedule confirmation from ScheduleModal */
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    await handleSave("scheduled", date, time);
+  };
+
+  const platformLabel = PLATFORM_LABELS[platform] ?? platform;
 
   return (
     <div className="space-y-6">
@@ -356,7 +366,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           </Button>
         </div>
 
-        {/* Right: Preview */}
+        {/* Right: Preview + Actions */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Titre (pour sauvegarde)</Label>
@@ -364,34 +374,16 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label>Prévisualisation</Label>
+            <Label>Contenu</Label>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRawEditor((v) => !v)}
-                disabled={!generatedContent?.trim()}
-              >
-                {showRawEditor ? "Aperçu" : "Texte brut"}
-              </Button>
-            </div>
-
-            {/* Apercu "beau" (markdown) par defaut */}
-            {!showRawEditor ? (
-              <div className="rounded-xl border bg-background p-4 min-h-[260px]">
-                <AIContent content={generatedContent} mode="auto" />
-              </div>
-            ) : (
-              <Textarea
-                value={generatedContent}
-                onChange={(e) => setGeneratedContent(e.target.value)}
-                rows={10}
-                placeholder="Le contenu généré apparaîtra ici..."
-                className="resize-none"
-              />
-            )}
+            {/* Toujours éditable */}
+            <Textarea
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              rows={10}
+              placeholder="Le contenu généré apparaîtra ici... Tu peux aussi l'éditer directement."
+              className="resize-none"
+            />
 
             {/* Compteur de caractères */}
             {generatedContent && charLimit !== null && (
@@ -402,31 +394,48 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             )}
           </div>
 
+          {/* Image upload */}
+          {generatedContent && (
+            <ImageUploader
+              images={images}
+              onChange={setImages}
+              contentId={savedContentId ?? undefined}
+              maxImages={4}
+            />
+          )}
+
           {generatedContent && (
             <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Programmer (optionnel)</Label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+              {/* CTA row: Publier + Programmer (same line, same purple) */}
+              <div className="flex flex-wrap gap-2">
+                {PLATFORM_LABELS[platform] && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => setPublishModalOpen(true)}
+                      disabled={!generatedContent || !title || isOverLimit || isSaving}
+                      className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
+                      title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}` : undefined}
+                    >
+                      <Send className="w-4 h-4 mr-1" />
+                      Publier sur {platformLabel}
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      onClick={() => setScheduleModalOpen(true)}
+                      disabled={!generatedContent || !title || isOverLimit || isSaving}
+                      className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
+                    >
+                      <CalendarDays className="w-4 h-4 mr-1" />
+                      Programmer sur {platformLabel}
+                    </Button>
+                  </>
+                )}
               </div>
 
+              {/* Secondary actions: Copier | PDF */}
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
-                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                  Brouillon
-                </Button>
-
-                {scheduledAt && (
-                  <Button size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Planifier
-                  </Button>
-                )}
-
-                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Régénérer
-                </Button>
-
                 <Button
                   variant="outline"
                   size="sm"
@@ -449,19 +458,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                   <FileDown className="w-4 h-4 mr-1" />
                   PDF
                 </Button>
-
-                {PLATFORM_LABELS[platform] && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => setPublishModalOpen(true)}
-                    disabled={!generatedContent || !title || isOverLimit}
-                    title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${PLATFORM_LABELS[platform]}` : undefined}
-                  >
-                    <Send className="w-4 h-4 mr-1" />
-                    Publier sur {PLATFORM_LABELS[platform]}
-                  </Button>
-                )}
               </div>
             </div>
           )}
@@ -476,22 +472,20 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         contentId={savedContentId ?? ""}
         contentPreview={generatedContent}
         onBeforePublish={async () => {
-          // Save the content first, then return the ID
-          const id = await onSave({
-            title,
-            content: generatedContent,
-            type: "post",
-            platform,
-            status: "draft",
-            scheduled_at: scheduledAt || undefined,
-            _skipRedirect: true, // Don't redirect after save
-          });
-          if (id) setSavedContentId(id);
+          const id = await handleSave("draft", undefined, undefined, { _skipRedirect: true });
           return id;
         }}
         onPublished={() => {
-          // Content was published - will be handled by modal close
+          // Content was published
         }}
+      />
+
+      {/* Modale de programmation */}
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        platformLabel={platformLabel}
+        onConfirm={handleScheduleConfirm}
       />
     </div>
   );
