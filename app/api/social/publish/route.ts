@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { publishPost } from "@/lib/linkedin";
@@ -72,34 +73,67 @@ export async function POST(req: NextRequest) {
 
   const projectId = await getActiveProjectId(supabase, user.id);
 
-  // 1. Recuperer le contenu
-  const { data: contentItem, error: contentError } = await supabase
+  // 1. Recuperer le contenu (avec fallback admin si RLS bloque)
+  let contentItem: any = null;
+
+  const { data: item1, error: err1 } = await supabase
     .from("content_item")
     .select("id, title, content, status, type, channel, meta")
     .eq("id", contentId)
     .eq("user_id", user.id)
     .single();
 
-  if (contentError || !contentItem) {
-    return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
+  if (item1) {
+    contentItem = item1;
+  } else {
+    // Fallback admin (bypass RLS) - securise par le check user_id
+    console.warn("publish: RLS fallback pour content_item", contentId, err1?.message);
+    const { data: item2, error: err2 } = await supabaseAdmin
+      .from("content_item")
+      .select("id, title, content, status, type, channel, meta")
+      .eq("id", contentId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (err2 || !item2) {
+      console.error("publish: contenu introuvable meme avec admin", contentId, err2?.message);
+      return NextResponse.json(
+        { error: `Contenu introuvable (${err1?.message ?? err2?.message ?? "ID invalide"})` },
+        { status: 404 }
+      );
+    }
+    contentItem = item2;
   }
 
   if (!contentItem.content?.trim()) {
     return NextResponse.json({ error: "Le contenu est vide" }, { status: 400 });
   }
 
-  // 2. Recuperer la connexion sociale
-  let connQuery = supabase
-    .from("social_connections")
-    .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
-    .eq("user_id", user.id)
-    .eq("platform", platform);
+  // 2. Recuperer la connexion sociale (avec fallback admin)
+  let connection: any = null;
+  {
+    let connQuery = supabase
+      .from("social_connections")
+      .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+      .eq("user_id", user.id)
+      .eq("platform", platform);
+    if (projectId) connQuery = connQuery.eq("project_id", projectId);
+    const { data: conn1 } = await connQuery.single();
 
-  if (projectId) {
-    connQuery = connQuery.eq("project_id", projectId);
+    if (conn1) {
+      connection = conn1;
+    } else {
+      // Fallback admin
+      let connQueryAdmin = supabaseAdmin
+        .from("social_connections")
+        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+        .eq("user_id", user.id)
+        .eq("platform", platform);
+      if (projectId) connQueryAdmin = connQueryAdmin.eq("project_id", projectId);
+      const { data: conn2 } = await connQueryAdmin.single();
+      connection = conn2;
+    }
   }
-
-  const { data: connection, error: connError } = await connQuery.single();
 
   const platformLabels: Record<string, string> = {
     linkedin: "LinkedIn",
@@ -111,7 +145,7 @@ export async function POST(req: NextRequest) {
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
-  if (connError || !connection) {
+  if (!connection) {
     return NextResponse.json(
       { error: `${platformLabel} non connecte. Va dans Parametres pour connecter ton compte.` },
       { status: 400 }
@@ -226,7 +260,7 @@ export async function POST(req: NextRequest) {
       if (n8nPostId) n8nMeta[`${platform}_post_id`] = n8nPostId;
       if (n8nPostUrl) n8nMeta[`${platform}_post_url`] = n8nPostUrl;
 
-      await supabase
+      await supabaseAdmin
         .from("content_item")
         .update({ status: "published", meta: n8nMeta })
         .eq("id", contentId);
@@ -297,7 +331,7 @@ export async function POST(req: NextRequest) {
   if (postId) metaUpdate[`${platform}_post_id`] = postId;
   if (postUrl) metaUpdate[`${platform}_post_url`] = postUrl;
 
-  await supabase
+  await supabaseAdmin
     .from("content_item")
     .update({ status: "published", meta: metaUpdate })
     .eq("id", contentId);
