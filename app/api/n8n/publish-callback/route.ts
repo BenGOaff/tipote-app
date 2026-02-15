@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (success) {
-    // Marquer comme publie + stocker les infos du post dans meta
+    // Marquer comme publié + stocker les infos du post dans meta
     const meta: Record<string, string> = {
       published_at: new Date().toISOString(),
     };
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       meta.twitter_post_url = `https://twitter.com/i/status/${postId}`;
     }
     if (platform === "threads" && postId) {
-      meta.threads_post_url = `https://www.threads.net/t/${postId}`;
+      meta.threads_post_url = postId.startsWith("http") ? postId : `https://www.threads.net/t/${postId}`;
     }
     if (platform === "facebook" && postId) {
       meta.facebook_post_url = `https://www.facebook.com/${postId}`;

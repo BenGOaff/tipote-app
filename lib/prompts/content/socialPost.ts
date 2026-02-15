@@ -39,7 +39,7 @@ function platformGuidelines(platform: SocialPlatform): string {
     case "linkedin":
       return [
         "Plateforme: LinkedIn.",
-        "LIMITE STRICTE: 3000 caracteres maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS depasser.",
+        "LIMITE STRICTE: 3000 caractères maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS dépasser.",
         "Objectif: capter l'attention en 2 lignes, puis dérouler une logique simple, punchy, crédible.",
         "Hook dès la 1ère ligne. Utilise des sauts de ligne courts. Rythme rapide.",
         "Évite les hashtags inutiles. 0 à 3 hashtags max seulement si vraiment pertinents.",
@@ -49,17 +49,17 @@ function platformGuidelines(platform: SocialPlatform): string {
     case "threads":
       return [
         "Plateforme: Threads.",
-        "LIMITE STRICTE: 500 caracteres maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS depasser.",
+        "LIMITE STRICTE: 500 caractères maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS dépasser.",
         "Objectif: conversation authentique, micro-contenu percutant.",
         "Hook ultra-court. Phrases directes et concises.",
         "Ton conversationnel et accessible. Pas de hashtags.",
-        "Call-to-action: question simple pour generer des reponses.",
+        "Call-to-action: question simple pour générer des réponses.",
       ].join("\n");
 
     case "twitter":
       return [
         "Plateforme: X (Twitter).",
-        "LIMITE STRICTE: 280 caracteres maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS depasser.",
+        "LIMITE STRICTE: 280 caractères maximum (espaces, ponctuation et emojis inclus). Ne JAMAIS dépasser.",
         "Objectif: ultra-condensé, claque, direct.",
         "Phrases très courtes. Pas de blabla. 1 idée principale.",
         "Autorisé: 0-1 emoji max si utile.",
@@ -69,7 +69,7 @@ function platformGuidelines(platform: SocialPlatform): string {
     case "facebook":
       return [
         "Plateforme: Facebook.",
-        "LIMITE: 63 206 caracteres maximum. Vise 500-1500 caracteres pour un post optimal.",
+        "LIMITE: 63 206 caractères maximum. Vise 500-1500 caractères pour un post optimal.",
         "Objectif: conversation + proximité, avec clarté.",
         "Hook émotionnel ou contre-intuitif.",
         "Un peu plus narratif possible, mais toujours court et aéré.",

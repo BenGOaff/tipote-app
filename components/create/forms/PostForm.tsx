@@ -32,7 +32,7 @@ const platforms = [
   { id: "facebook", label: "Facebook" },
 ];
 
-/** Limites de caracteres par plateforme */
+/** Limites de caractères par plateforme */
 const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   linkedin: 3000,
   twitter: 280,
@@ -388,15 +388,15 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 value={generatedContent}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 rows={10}
-                placeholder="Le contenu genere apparaitra ici..."
+                placeholder="Le contenu généré apparaîtra ici..."
                 className="resize-none"
               />
             )}
 
-            {/* Compteur de caracteres */}
+            {/* Compteur de caractères */}
             {generatedContent && charLimit !== null && (
               <div className={`text-xs text-right ${isOverLimit ? "text-rose-600 font-medium" : "text-muted-foreground"}`}>
-                {charCount} / {charLimit} caracteres
+                {charCount} / {charLimit} caractères
                 {isOverLimit && ` (${charCount - charLimit} en trop)`}
               </div>
             )}
@@ -424,7 +424,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
                 <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
                   <RefreshCw className="w-4 h-4 mr-1" />
-                  Regénérer
+                  Régénérer
                 </Button>
 
                 <Button
@@ -456,7 +456,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     variant="default"
                     onClick={() => setPublishModalOpen(true)}
                     disabled={!generatedContent || !title || isOverLimit}
-                    title={isOverLimit ? `Le texte depasse la limite de ${charLimit} caracteres pour ${PLATFORM_LABELS[platform]}` : undefined}
+                    title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${PLATFORM_LABELS[platform]}` : undefined}
                   >
                     <Send className="w-4 h-4 mr-1" />
                     Publier sur {PLATFORM_LABELS[platform]}

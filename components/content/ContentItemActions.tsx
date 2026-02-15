@@ -114,7 +114,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
       }
 
       const newId = (json as any)?.id as string | undefined;
-      toast({ title: "Duplique", description: "Le contenu a ete duplique en brouillon." });
+      toast({ title: "Dupliqué", description: "Le contenu a été dupliqué en brouillon." });
 
       if (newId) {
         router.push(`/contents/${newId}`);
@@ -148,7 +148,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
         return;
       }
 
-      toast({ title: "Supprime", description: "Le contenu a ete supprime." });
+      toast({ title: "Supprimé", description: "Le contenu a été supprimé." });
       router.refresh();
     } catch (e) {
       toast({
@@ -194,7 +194,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
         return;
       }
 
-      toast({ title: "Planifie", description: "La date de publication a ete enregistree." });
+      toast({ title: "Planifié", description: "La date de publication a été enregistrée." });
       setPlanOpen(false);
       router.refresh();
     } catch (e) {
@@ -231,7 +231,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
         return;
       }
 
-      toast({ title: "Deplanifie", description: "Le contenu repasse en brouillon." });
+      toast({ title: "Déplanifié", description: "Le contenu repasse en brouillon." });
       router.refresh();
     } catch (e) {
       toast({
@@ -259,7 +259,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
           <AlertDialogHeader>
             <AlertDialogTitle>Planifier ce contenu</AlertDialogTitle>
             <AlertDialogDescription>
-              Choisis une date et une heure de publication. Le statut sera automatiquement mis sur &quot;Planifie&quot;.
+              Choisis une date et une heure de publication. Le statut sera automatiquement mis sur &quot;Planifié&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -314,7 +314,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             <DropdownMenuItem asChild>
               <Link href={`/contents/${id}`} className="flex items-center gap-2">
                 <Pencil className="w-4 h-4" />
-                Voir / editer
+                Voir / éditer
               </Link>
             </DropdownMenuItem>
 
@@ -367,7 +367,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
                 disabled={busy !== null}
               >
                 <CalendarX className="w-4 h-4" />
-                {busy === "unplan" ? "Deplanification..." : "Deplanifier"}
+                {busy === "unplan" ? "Déplanification..." : "Déplanifier"}
               </DropdownMenuItem>
             ) : null}
 
@@ -402,8 +402,8 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
             <AlertDialogDescription>
               {title?.trim()
-                ? `"${title.trim()}" sera supprime definitivement. Cette action est irreversible.`
-                : "Ce contenu sera supprime definitivement. Cette action est irreversible."}
+                ? `"${title.trim()}" sera supprimé définitivement. Cette action est irréversible.`
+                : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
