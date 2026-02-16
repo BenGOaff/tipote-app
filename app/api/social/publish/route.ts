@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
@@ -224,23 +225,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3. Vérifier l'expiration du token
-  if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
-    return NextResponse.json(
-      { error: `Token ${platformLabel} expiré. Reconnecte ton compte dans les Parametres.` },
-      { status: 401 }
-    );
-  }
-
-  // 4. Déchiffrer le token
+  // 3. Vérifier l'expiration du token — tenter un refresh si expiré
   let accessToken: string;
-  try {
-    accessToken = decrypt(connection.access_token_encrypted);
-  } catch {
-    return NextResponse.json(
-      { error: `Erreur de déchiffrement du token. Reconnecte ton compte ${platformLabel}.` },
-      { status: 500 }
+
+  if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+    // Token expired — attempt refresh
+    const refreshResult = await refreshSocialToken(
+      connection.id,
+      platform,
+      connection.refresh_token_encrypted
     );
+
+    if (!refreshResult.ok || !refreshResult.accessToken) {
+      return NextResponse.json(
+        { error: `Token ${platformLabel} expiré et impossible à rafraîchir. Reconnecte ton compte dans les Parametres.` },
+        { status: 401 }
+      );
+    }
+
+    accessToken = refreshResult.accessToken;
+  } else {
+    // 4. Déchiffrer le token
+    try {
+      accessToken = decrypt(connection.access_token_encrypted);
+    } catch {
+      return NextResponse.json(
+        { error: `Erreur de déchiffrement du token. Reconnecte ton compte ${platformLabel}.` },
+        { status: 500 }
+      );
+    }
   }
 
   const platformUserId = connection.platform_user_id;

@@ -102,7 +102,8 @@ export async function POST(req: NextRequest) {
       .eq("auto_comments_status", "before_done");
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
-    // Mark as failed — merge meta to preserve images
+    // Keep status as "scheduled" so n8n can retry on next cron cycle.
+    // Store the failure info in meta for debugging.
     const { data: existingFailed } = await supabaseAdmin
       .from("content_item")
       .select("meta")
@@ -110,22 +111,27 @@ export async function POST(req: NextRequest) {
       .single();
 
     const existingFailedMeta = (existingFailed?.meta && typeof existingFailed.meta === "object") ? existingFailed.meta as Record<string, unknown> : {};
+    const failRetryCount = typeof existingFailedMeta.fail_retry_count === "number" ? existingFailedMeta.fail_retry_count + 1 : 1;
     const failedMeta = {
       ...existingFailedMeta,
-      failed_at: new Date().toISOString(),
-      failed_error: errorMsg || "Publication échouée",
-      ...(platform ? { failed_platform: platform } : {}),
+      last_failed_at: new Date().toISOString(),
+      last_failed_error: errorMsg || "Publication échouée",
+      fail_retry_count: failRetryCount,
+      ...(platform ? { last_failed_platform: platform } : {}),
     };
+
+    // After 5 failed attempts, mark as "failed" to prevent infinite retries
+    const newStatus = failRetryCount >= 5 ? "failed" : "scheduled";
 
     const { error: upErr } = await supabaseAdmin
       .from("content_item")
-      .update({ status: "failed", meta: failedMeta })
+      .update({ status: newStatus, meta: failedMeta })
       .eq("id", contentId);
 
     if (upErr && isMissingColumn(upErr.message)) {
       await supabaseAdmin
         .from("content_item")
-        .update({ statut: "failed", meta: failedMeta } as any)
+        .update({ statut: newStatus, meta: failedMeta } as any)
         .eq("id", contentId);
     }
   }

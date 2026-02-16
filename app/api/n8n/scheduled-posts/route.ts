@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 
 export const dynamic = "force-dynamic";
 
@@ -126,7 +127,7 @@ export async function GET(req: NextRequest) {
       // Chercher la connexion pour ce user+project+platform
       let connQuery = supabaseAdmin
         .from("social_connections")
-        .select("platform_user_id, access_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", post.user_id)
         .eq("platform", platform);
 
@@ -138,16 +139,26 @@ export async function GET(req: NextRequest) {
 
       if (!conn) return null;
 
-      // Verifier expiration
-      if (conn.token_expires_at && new Date(conn.token_expires_at) < now) {
-        return null; // Token expire, skip
-      }
-
       let accessToken: string;
-      try {
-        accessToken = decrypt(conn.access_token_encrypted);
-      } catch {
-        return null;
+
+      // If token is expired, try to refresh it
+      if (conn.token_expires_at && new Date(conn.token_expires_at) < now) {
+        const refreshResult = await refreshSocialToken(
+          conn.id,
+          platform,
+          conn.refresh_token_encrypted
+        );
+        if (!refreshResult.ok || !refreshResult.accessToken) {
+          console.error(`[scheduled-posts] Token refresh failed for ${platform} user ${post.user_id}: ${refreshResult.error}`);
+          return null;
+        }
+        accessToken = refreshResult.accessToken;
+      } else {
+        try {
+          accessToken = decrypt(conn.access_token_encrypted);
+        } catch {
+          return null;
+        }
       }
 
       // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)

@@ -14,73 +14,69 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
-  // Objectif : rendu pixel-perfect Lovable (shadcn) dans Tipote,
-  // tout en étant compatible avec react-day-picker v9 (noms de clés différents).
+  // react-day-picker v9 DOM structure:
+  //   <div.months>          ← relative container
+  //     <nav.nav>           ← absolute overlay for prev/next buttons
+  //       <button.button_previous>
+  //       <button.button_next>
+  //     </nav>
+  //     <div.month>
+  //       <div.month_caption>
+  //         <span.caption_label>February 2026</span>
+  //       </div>
+  //       <table.month_grid>
+  //         <thead><tr.weekdays><th.weekday>...</th></tr></thead>
+  //         <tbody.weeks><tr.week><td.day><button.day_button>...</button></td></tr></tbody>
+  //       </table>
+  //     </div.month>
+  //   </div.months>
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        // ✅ Lovable-style: arrows flanking month label (not at far edges)
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month:
-          "grid [&>*:nth-child(-n+2)]:col-start-1 [&>*:nth-child(-n+2)]:row-start-1 gap-y-4",
-        caption: "flex justify-center pt-1 items-center h-9",
+        // Container: relative so nav can be absolute
+        months: "relative flex flex-col gap-4",
+        month: "flex flex-col gap-4",
+
+        // Caption: centered month label
+        month_caption: "flex justify-center items-center h-9",
         caption_label: "text-sm font-medium",
-        // v8: nav sits on top of caption via grid; arrows flanking month text
-        nav: "flex items-center justify-between w-full h-9 pt-1 z-10 px-1",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-        ),
-        nav_button_previous: "",
-        nav_button_next: "",
-        table: "w-full border-collapse space-y-1",
 
-        // ✅ Lovable keys (v8)
-        head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-
-        // ✅ Compat v9 (sinon weekday colle / layout casse)
-        month_caption: "flex justify-center pt-1 items-center h-9",
+        // Nav: absolute overlay, arrows flanking the month text
+        nav: "absolute inset-x-1 top-3 flex items-center justify-between z-10 pointer-events-none",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
         ),
+
+        // Date grid
+        month_grid: "w-full border-collapse",
         weekdays: "flex",
-        weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+        weekday:
+          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] flex items-center justify-center",
+        weeks: "",
         week: "flex w-full mt-2",
 
-        cell:
-          "h-9 w-9 text-center text-sm p-0 relative " +
+        // Day cell (td) + day button
+        day: "h-9 w-9 text-center text-sm p-0 relative " +
           "[&:has([aria-selected].day-range-end)]:rounded-r-md " +
           "[&:has([aria-selected].day-outside)]:bg-accent/50 " +
           "[&:has([aria-selected])]:bg-accent " +
           "first:[&:has([aria-selected])]:rounded-l-md " +
           "last:[&:has([aria-selected])]:rounded-r-md " +
           "focus-within:relative focus-within:z-20",
+        day_button: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+        ),
 
-        // ✅ day (v8) + day_button (v9)
-        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
-        day_button: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
-
-        // ✅ États Lovable (v8)
-        day_range_end: "day-range-end",
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
-
-        // ✅ Compat v9 (noms d’états)
+        // Day states
         selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         today: "bg-accent text-accent-foreground",
@@ -88,16 +84,16 @@ function Calendar({
           "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
         disabled: "text-muted-foreground opacity-50",
         range_end: "day-range-end",
-        range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        range_middle:
+          "aria-selected:bg-accent aria-selected:text-accent-foreground",
         hidden: "invisible",
 
         ...classNames,
       }}
       components={{
-        // ✅ react-day-picker v9 : un seul composant Chevron (type-safe)
         Chevron: ({ orientation, ...chevronProps }) => {
-          if (orientation === "left") return <ChevronLeft className="h-4 w-4" {...chevronProps} />;
-          if (orientation === "right") return <ChevronRight className="h-4 w-4" {...chevronProps} />;
+          if (orientation === "left")
+            return <ChevronLeft className="h-4 w-4" {...chevronProps} />;
           return <ChevronRight className="h-4 w-4" {...chevronProps} />;
         },
       }}
