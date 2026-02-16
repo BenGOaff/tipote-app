@@ -1,10 +1,10 @@
 // app/api/competitor-analysis/upload/route.ts
 // Upload an existing competitor research document (PDF, DOCX, TXT)
 // AI summarizes the document and stores it as competitor analysis
+// Uses Claude (Anthropic API) for AI analysis
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
@@ -16,6 +16,65 @@ function cleanString(v: unknown, maxLen = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
   if (!s) return "";
   return s.length > maxLen ? s.slice(0, maxLen) : s;
+}
+
+function resolveApiKey(): string {
+  return (
+    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    ""
+  );
+}
+
+function resolveModel(): string {
+  return (
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-sonnet-4-5-20250929"
+  );
+}
+
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const model = resolveModel();
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": args.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+      temperature: typeof args.temperature === "number" ? args.temperature : 0.3,
+      system: args.system,
+      messages: [{ role: "user", content: args.user }],
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  const text = parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  return text || "";
 }
 
 export async function POST(req: NextRequest) {
@@ -104,11 +163,11 @@ export async function POST(req: NextRequest) {
       textContent = textContent.slice(0, maxChars) + "\n\n[...document tronqué...]";
     }
 
-    // AI: summarize uploaded document
-    const ai = openai;
-    if (!ai) {
+    // Check API key
+    const apiKey = resolveApiKey();
+    if (!apiKey) {
       return NextResponse.json(
-        { ok: false, error: "AI client not configured" },
+        { ok: false, error: "Clé API IA non configurée. Contactez le support." },
         { status: 500 },
       );
     }
@@ -132,7 +191,7 @@ export async function POST(req: NextRequest) {
     const { data: businessProfile } = await bpQuery.maybeSingle();
 
     const summaryResult = await summarizeDocument({
-      ai,
+      apiKey,
       documentText: textContent,
       userNiche: cleanString(businessProfile?.niche, 200),
       userMission: cleanString(businessProfile?.mission, 500),
@@ -187,6 +246,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes("NO_CREDITS")) {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
+    console.error("[competitor-analysis/upload] POST error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
@@ -195,7 +255,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function summarizeDocument(params: {
-  ai: any;
+  apiKey: string;
   documentText: string;
   userNiche: string;
   userMission: string;
@@ -209,7 +269,7 @@ async function summarizeDocument(params: {
   positioning_matrix: string;
   document_summary: string;
 }> {
-  const { ai, documentText, userNiche, userMission } = params;
+  const { apiKey, documentText, userNiche, userMission } = params;
 
   const systemPrompt = `Tu es Tipote, un analyste concurrentiel expert.
 
@@ -228,7 +288,7 @@ INSTRUCTIONS :
 4. Identifie forces, faiblesses et opportunités.
 5. Fais un résumé court du document.
 
-FORMAT JSON STRICT :
+RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
 {
   "competitors_extracted": [{ "name": "string", "website": "string", "notes": "string" }],
   "competitor_details": {
@@ -253,19 +313,22 @@ FORMAT JSON STRICT :
 }`;
 
   try {
-    const resp = await ai.chat.completions.create({
-      model: "gpt-4.1",
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `DOCUMENT UPLOADÉ :\n\n${documentText}` },
-      ],
+    const raw = await callClaude({
+      apiKey,
+      system: systemPrompt,
+      user: `DOCUMENT UPLOADÉ :\n\n${documentText}`,
+      maxTokens: 4000,
       temperature: 0.3,
-      max_tokens: 4000,
     });
 
-    const raw = resp.choices?.[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw);
+    // Extract JSON from response (Claude might wrap it in markdown code blocks)
+    let jsonStr = raw;
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim();
+    }
+
+    const parsed = JSON.parse(jsonStr);
 
     return {
       competitors_extracted: Array.isArray(parsed.competitors_extracted)

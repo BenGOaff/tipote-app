@@ -3,13 +3,12 @@
 // Visible to all plans, but only interactive for PRO and ELITE.
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -94,18 +93,11 @@ export function AutoCommentPanel({
     });
   }, [enabled, nbBefore, nbAfter, creditsNeeded, hasAccess, onChange]);
 
-  // Disable if not enough credits
-  useEffect(() => {
-    if (enabled && !hasEnoughCredits && !creditsLoading) {
-      setEnabled(false);
-    }
-  }, [enabled, hasEnoughCredits, creditsLoading]);
-
   return (
     <Card
       className={`p-4 border-2 transition-all ${
         enabled && hasAccess
-          ? "border-purple-400 bg-purple-50/50 dark:bg-purple-950/20"
+          ? "border-primary bg-primary/5 dark:bg-primary/10"
           : !hasAccess
             ? "border-dashed border-muted-foreground/30 bg-muted/30"
             : "border-border"
@@ -118,12 +110,12 @@ export function AutoCommentPanel({
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 hasAccess
-                  ? "bg-purple-100 dark:bg-purple-900/40"
+                  ? "bg-primary/10 dark:bg-primary/20"
                   : "bg-muted"
               }`}
             >
               {hasAccess ? (
-                <MessageCircle className="w-4 h-4 text-purple-600" />
+                <MessageCircle className="w-4 h-4 text-primary" />
               ) : (
                 <Lock className="w-4 h-4 text-muted-foreground" />
               )}
@@ -152,8 +144,7 @@ export function AutoCommentPanel({
               if (!hasAccess) return;
               setEnabled(v);
             }}
-            disabled={disabled || !hasAccess || (!hasEnoughCredits && !enabled)}
-            className={!hasAccess ? "opacity-50 cursor-not-allowed" : ""}
+            disabled={disabled || !hasAccess}
           />
         </div>
 
@@ -258,7 +249,7 @@ export function AutoCommentPanel({
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Crédits disponibles</span>
-                <span className={`font-semibold ${hasEnoughCredits ? "text-green-600" : "text-red-500"}`}>
+                <span className={`font-semibold ${hasEnoughCredits ? "text-green-600" : "text-amber-500"}`}>
                   {creditsLoading ? "..." : automationCreditsRemaining}
                 </span>
               </div>
@@ -269,9 +260,8 @@ export function AutoCommentPanel({
                 <span>= {creditsNeeded} crédits</span>
               </div>
               {!hasEnoughCredits && !creditsLoading && (
-                <p className="text-xs text-red-500 mt-2">
-                  Crédits insuffisants. Rechargez vos crédits d&apos;automatisation pour activer
-                  cette fonctionnalité.
+                <p className="text-xs text-amber-600 mt-2">
+                  Crédits d&apos;automatisation insuffisants. L&apos;activation sera refusée au moment de la publication si les crédits ne sont pas rechargés.
                 </p>
               )}
             </div>

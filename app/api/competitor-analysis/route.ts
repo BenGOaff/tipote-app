@@ -3,11 +3,11 @@
 // - GET: fetch existing competitor analysis for user
 // - POST: save competitors list + trigger AI research (costs 1 credit)
 // - PATCH: update with user corrections or uploaded document summary
+// Uses Claude (Anthropic API) for AI research
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
@@ -21,6 +21,65 @@ function cleanString(v: unknown, maxLen = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
   if (!s) return "";
   return s.length > maxLen ? s.slice(0, maxLen) : s;
+}
+
+function resolveApiKey(): string {
+  return (
+    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    ""
+  );
+}
+
+function resolveModel(): string {
+  return (
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-sonnet-4-5-20250929"
+  );
+}
+
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const model = resolveModel();
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": args.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+      temperature: typeof args.temperature === "number" ? args.temperature : 0.4,
+      system: args.system,
+      messages: [{ role: "user", content: args.user }],
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  const text = parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  return text || "";
 }
 
 // ------------- Schemas -------------
@@ -115,15 +174,16 @@ export async function POST(req: NextRequest) {
 
     const { competitors } = parsed.data;
 
-    // Charge 1 credit for AI research
-    const ai = openai;
-    if (!ai) {
+    // Check API key
+    const apiKey = resolveApiKey();
+    if (!apiKey) {
       return NextResponse.json(
-        { ok: false, error: "AI client not configured" },
+        { ok: false, error: "Clé API IA non configurée. Contactez le support." },
         { status: 500 },
       );
     }
 
+    // Charge 1 credit for AI research
     await ensureUserCredits(user.id);
     const creditsResult = await consumeCredits(user.id, 1, { feature: "competitor_analysis" });
     if (creditsResult && typeof creditsResult === "object") {
@@ -144,7 +204,7 @@ export async function POST(req: NextRequest) {
 
     // AI research on competitors
     const researchResult = await researchCompetitors({
-      ai,
+      apiKey,
       competitors,
       userNiche: cleanString(businessProfile?.niche, 200),
       userMission: cleanString(businessProfile?.mission, 500),
@@ -197,6 +257,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes("NO_CREDITS")) {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
+    console.error("[competitor-analysis] POST error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
@@ -290,10 +351,10 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// ------------- AI Research function -------------
+// ------------- AI Research function (Claude) -------------
 
 async function researchCompetitors(params: {
-  ai: any;
+  apiKey: string;
   competitors: Array<{ name: string; website?: string; notes?: string }>;
   userNiche: string;
   userMission: string;
@@ -306,12 +367,14 @@ async function researchCompetitors(params: {
   opportunities: string[];
   positioning_matrix: string;
 }> {
-  const { ai, competitors, userNiche, userMission, userOffers } = params;
+  const { apiKey, competitors, userNiche, userMission, userOffers } = params;
 
   const systemPrompt = `Tu es Tipote, un analyste concurrentiel expert en marketing digital et stratégie business.
 
 MISSION :
 Analyser les concurrents fournis par l'utilisateur et produire un rapport concurrentiel complet et actionnable.
+Compare les différences entre l'offre de l'utilisateur et celles des concurrents en termes de fonctionnalités, tarifs, conditions, mots-clés, positionnement.
+Détermine les points à mettre en valeur sur l'offre de l'utilisateur et les axes d'amélioration pour se différencier et mieux répondre aux besoins du public cible.
 
 CONTEXTE UTILISATEUR :
 - Niche : ${userNiche || "Non spécifiée"}
@@ -327,20 +390,22 @@ INSTRUCTIONS :
    - Canaux de communication principaux
    - Audience cible
    - Stratégie de contenu observée
+   - Mots-clés et positionnement SEO probable
 
 2. Produis ensuite une synthèse comparative :
-   - Forces de l'utilisateur par rapport aux concurrents
-   - Faiblesses de l'utilisateur par rapport aux concurrents
-   - Opportunités de différenciation
-   - Matrice de positionnement (texte structuré)
+   - Forces de l'utilisateur par rapport aux concurrents (ce qui le différencie positivement)
+   - Faiblesses de l'utilisateur par rapport aux concurrents (axes d'amélioration)
+   - Opportunités de différenciation (points à mettre en valeur, niches inexploitées)
+   - Matrice de positionnement (texte structuré comparant prix, fonctionnalités, cible)
 
 IMPORTANT :
 - Sois spécifique et actionnable, pas de généralités vagues.
+- Compare les tarifs, fonctionnalités et conditions quand c'est possible.
 - Si tu manques d'informations sur un concurrent, dis-le clairement et suggère à l'utilisateur de compléter.
 - Le résumé doit donner des pistes concrètes de réflexion stratégique.
 - Tout doit être en français.
 
-FORMAT JSON STRICT :
+RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
 {
   "competitor_details": {
     "competitor_name": {
@@ -352,14 +417,15 @@ FORMAT JSON STRICT :
       "channels": ["string"],
       "target_audience": "string",
       "content_strategy": "string",
+      "keywords": ["string"],
       "missing_info": ["string (info que l'IA n'a pas trouvée)"]
     }
   },
   "summary": "string (paragraphe de synthèse comparative actionnable, 200-400 mots)",
   "strengths": ["string (forces de l'utilisateur vs concurrents)"],
   "weaknesses": ["string (faiblesses de l'utilisateur vs concurrents)"],
-  "opportunities": ["string (opportunités de différenciation)"],
-  "positioning_matrix": "string (texte structuré de la matrice de positionnement)"
+  "opportunities": ["string (opportunités de différenciation et points à mettre en valeur)"],
+  "positioning_matrix": "string (texte structuré de la matrice de positionnement avec comparaison tarifs/fonctionnalités)"
 }`;
 
   const competitorsList = competitors
@@ -378,19 +444,22 @@ ${competitorsList}
 Analyse chaque concurrent en détail et produis le rapport complet en JSON.`;
 
   try {
-    const resp = await ai.chat.completions.create({
-      model: "gpt-4.1",
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
+    const raw = await callClaude({
+      apiKey,
+      system: systemPrompt,
+      user: userPrompt,
+      maxTokens: 4000,
       temperature: 0.4,
-      max_tokens: 4000,
     });
 
-    const raw = resp.choices?.[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as AnyRecord;
+    // Extract JSON from response (Claude might wrap it in markdown code blocks)
+    let jsonStr = raw;
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim();
+    }
+
+    const parsed = JSON.parse(jsonStr) as AnyRecord;
 
     return {
       competitor_details: parsed.competitor_details ?? {},

@@ -203,9 +203,9 @@ export function AutoCommentSettings({ userPlan }: Props) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasAccess ? "bg-purple-100 dark:bg-purple-900/40" : "bg-muted"}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasAccess ? "bg-primary/10 dark:bg-primary/20" : "bg-muted"}`}>
                 {hasAccess ? (
-                  <MessageCircle className="w-5 h-5 text-purple-600" />
+                  <MessageCircle className="w-5 h-5 text-primary" />
                 ) : (
                   <Lock className="w-5 h-5 text-muted-foreground" />
                 )}
@@ -323,8 +323,8 @@ export function AutoCommentSettings({ userPlan }: Props) {
                   onClick={() => toggleObjectif(o.id)}
                   className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                     objectifs.includes(o.id)
-                      ? "bg-purple-100 border-purple-400 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
-                      : "bg-background border-border text-muted-foreground hover:border-purple-300"
+                      ? "bg-primary/10 border-primary text-primary dark:bg-primary/20"
+                      : "bg-background border-border text-muted-foreground hover:border-primary/50"
                   }`}
                 >
                   {o.label}

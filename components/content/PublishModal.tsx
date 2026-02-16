@@ -334,12 +334,12 @@ export function PublishModal({
             )}
 
             {hasAutoComments && (
-              <div className="rounded-lg border border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 p-3 text-sm">
-                <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-medium mb-1">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm">
+                <div className="flex items-center gap-2 text-primary font-medium mb-1">
                   <MessageCircle className="w-4 h-4" />
                   Auto-commentaires activés
                 </div>
-                <div className="text-xs text-purple-600 dark:text-purple-500 space-y-0.5">
+                <div className="text-xs text-primary/80 space-y-0.5">
                   {hasBefore && <p>{autoCommentConfig!.nbBefore} commentaire{autoCommentConfig!.nbBefore > 1 ? "s" : ""} avant publication</p>}
                   {hasAfter && <p>{autoCommentConfig!.nbAfter} commentaire{autoCommentConfig!.nbAfter > 1 ? "s" : ""} après publication</p>}
                 </div>
@@ -366,7 +366,7 @@ export function PublishModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-purple-600" />
+                <MessageCircle className="w-5 h-5 text-primary" />
                 Commentaires en cours...
               </DialogTitle>
               <DialogDescription>
@@ -376,7 +376,7 @@ export function PublishModal({
 
             <div className="flex flex-col items-center gap-4 py-6">
               <div className="relative">
-                <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-medium">
@@ -389,7 +389,7 @@ export function PublishModal({
               {/* Progress bar */}
               <div className="w-full max-w-[200px] h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                  className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{
                     width: acProgress.before_total > 0
                       ? `${Math.round((acProgress.before_done / acProgress.before_total) * 100)}%`
@@ -436,7 +436,7 @@ export function PublishModal({
 
             <div className="flex flex-col items-center gap-4 py-6">
               <div className="relative">
-                <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-medium">
@@ -449,7 +449,7 @@ export function PublishModal({
               {/* Progress bar */}
               <div className="w-full max-w-[200px] h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                  className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{
                     width: acProgress.after_total > 0
                       ? `${Math.round((acProgress.after_done / acProgress.after_total) * 100)}%`
