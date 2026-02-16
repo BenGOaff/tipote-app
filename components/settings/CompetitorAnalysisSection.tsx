@@ -126,19 +126,26 @@ export default function CompetitorAnalysisSection() {
     return valid.length >= 2;
   }, [competitors]);
 
-  // Launch AI research
+  // Progress message during SSE streaming
+  const [progressMsg, setProgressMsg] = useState("");
+
+  // Launch AI research (reads SSE stream to prevent 504 timeout)
   const launchResearch = () => {
     startResearchTransition(async () => {
       try {
         const cleaned = competitors.filter((c) => c.name.trim());
+        setProgressMsg("Lancement de l'analyse...");
+
         const res = await fetch("/api/competitor-analysis", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ competitors: cleaned }),
         });
-        const json = (await res.json().catch(() => null)) as any;
 
-        if (!json?.ok) {
+        // Handle non-SSE error responses (auth, validation, etc.)
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const json = await res.json();
           if (json?.error === "NO_CREDITS") {
             toast({
               title: "Credits insuffisants",
@@ -150,10 +157,69 @@ export default function CompetitorAnalysisSection() {
           throw new Error(json?.error || "Erreur");
         }
 
-        setAnalysis(json.analysis);
-        setShowResults(true);
-        toast({ title: "Analyse concurrentielle terminee" });
+        // Read SSE stream
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("Stream non disponible");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalResult: any = null;
+        let finalError: string | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? "";
+
+          for (const eventBlock of events) {
+            const lines = eventBlock.split("\n");
+            let eventType = "";
+            let eventData = "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) eventType = line.slice(7);
+              if (line.startsWith("data: ")) eventData = line.slice(6);
+            }
+            if (!eventData) continue;
+
+            try {
+              const parsed = JSON.parse(eventData);
+              if (eventType === "progress") {
+                setProgressMsg(parsed.step || "Analyse en cours...");
+              } else if (eventType === "result") {
+                finalResult = parsed;
+              } else if (eventType === "error") {
+                finalError = parsed.error || "Erreur inconnue";
+              }
+            } catch { /* skip malformed events */ }
+          }
+        }
+
+        setProgressMsg("");
+
+        if (finalError) {
+          if (finalError === "NO_CREDITS") {
+            toast({
+              title: "Credits insuffisants",
+              description: "L'analyse concurrentielle coute 1 credit.",
+              variant: "destructive",
+            });
+            return;
+          }
+          throw new Error(finalError);
+        }
+
+        if (finalResult?.ok && finalResult.analysis) {
+          setAnalysis(finalResult.analysis);
+          setShowResults(true);
+          toast({ title: "Analyse concurrentielle terminee" });
+        } else {
+          throw new Error("Aucun resultat recu");
+        }
       } catch (e: any) {
+        setProgressMsg("");
         toast({
           title: "Erreur lors de l'analyse",
           description: e?.message ?? "Erreur inconnue",
@@ -262,60 +328,64 @@ export default function CompetitorAnalysisSection() {
           pour t&apos;aider a te differencier.
         </p>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {competitors.map((comp, idx) => (
             <div key={idx} className="p-4 border rounded-lg space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="font-medium">Concurrent {idx + 1}</Label>
+                <Label className="font-medium text-sm">Concurrent {idx + 1}</Label>
                 {competitors.length > 2 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeCompetitor(idx)}
-                    className="text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </div>
-              <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-2">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Nom *</Label>
                   <Input
-                    placeholder="Ex: Jasper AI, Copy.ai..."
+                    placeholder="Ex: Jasper AI..."
                     value={comp.name}
                     onChange={(e) => updateCompetitor(idx, "name", e.target.value)}
+                    className="text-sm"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Site web (optionnel)</Label>
+                  <Label className="text-xs text-muted-foreground">Site web</Label>
                   <Input
                     placeholder="https://..."
                     value={comp.website}
                     onChange={(e) => updateCompetitor(idx, "website", e.target.value)}
+                    className="text-sm break-all"
                   />
                 </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  Notes (ce que tu sais deja sur ce concurrent)
-                </Label>
-                <Textarea
-                  placeholder="Informations complementaires..."
-                  value={comp.notes}
-                  onChange={(e) => updateCompetitor(idx, "notes", e.target.value)}
-                  rows={2}
-                  className="resize-none"
-                />
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Notes / Points forts / Points faibles
+                  </Label>
+                  <Textarea
+                    placeholder="Ce que tu sais deja..."
+                    value={comp.notes}
+                    onChange={(e) => updateCompetitor(idx, "notes", e.target.value)}
+                    rows={3}
+                    className="resize-none text-sm"
+                  />
+                </div>
               </div>
             </div>
           ))}
 
           {competitors.length < 5 && (
-            <Button variant="outline" size="sm" onClick={addCompetitor} className="gap-1">
-              <Plus className="w-4 h-4" />
-              Ajouter un concurrent
-            </Button>
+            <div className="flex items-center justify-center border border-dashed rounded-lg min-h-[200px]">
+              <Button variant="ghost" size="sm" onClick={addCompetitor} className="gap-1 text-muted-foreground">
+                <Plus className="w-4 h-4" />
+                Ajouter un concurrent
+              </Button>
+            </div>
           )}
         </div>
 
@@ -330,7 +400,7 @@ export default function CompetitorAnalysisSection() {
             ) : (
               <Search className="w-4 h-4" />
             )}
-            {researching ? "Analyse en cours..." : "Lancer l'analyse IA"}
+            {researching ? (progressMsg || "Analyse en cours...") : "Lancer l'analyse IA"}
           </Button>
 
           <div className="relative">
@@ -562,6 +632,14 @@ export default function CompetitorAnalysisSection() {
                                     </div>
                                   ))}
                                 </div>
+                              </div>
+                            )}
+                            {(d as any).differentiator && (
+                              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <Label className="text-xs text-purple-700 dark:text-purple-300 font-medium">
+                                  Difference avec ton positionnement
+                                </Label>
+                                <p className="text-sm mt-1">{(d as any).differentiator}</p>
                               </div>
                             )}
                             {d.target_audience && (

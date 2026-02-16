@@ -2,6 +2,7 @@
 // Competitor Analysis — CRUD + AI-powered research
 // - GET: fetch existing competitor analysis for user
 // - POST: save competitors list + trigger AI research (costs 1 credit)
+//         Returns SSE stream (text/event-stream) with heartbeats to prevent proxy timeout.
 // - PATCH: update with user corrections or uploaded document summary
 // Uses Claude (Anthropic API) for AI research
 
@@ -13,7 +14,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 type AnyRecord = Record<string, any>;
 
@@ -142,10 +143,17 @@ export async function GET() {
 }
 
 // ------------- POST: save competitors + trigger AI research (1 credit) -------------
+// Returns SSE stream with heartbeats to prevent proxy/hosting 504 timeouts.
 
 export async function POST(req: NextRequest) {
+  // Pre-validate synchronously before starting the stream
+  let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  let userId: string;
+  let projectId: string | null;
+  let competitors: Array<{ name: string; website?: string; notes?: string }>;
+
   try {
-    const supabase = await getSupabaseServerClient();
+    supabase = await getSupabaseServerClient();
     const {
       data: { user },
       error: userError,
@@ -154,8 +162,8 @@ export async function POST(req: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
-
-    const projectId = await getActiveProjectId(supabase, user.id);
+    userId = user.id;
+    projectId = await getActiveProjectId(supabase, userId);
 
     let body: unknown;
     try {
@@ -171,10 +179,8 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    competitors = parsed.data.competitors;
 
-    const { competitors } = parsed.data;
-
-    // Check API key
     const apiKey = resolveApiKey();
     if (!apiKey) {
       return NextResponse.json(
@@ -184,8 +190,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Charge 1 credit for AI research
-    await ensureUserCredits(user.id);
-    const creditsResult = await consumeCredits(user.id, 1, { feature: "competitor_analysis" });
+    await ensureUserCredits(userId);
+    const creditsResult = await consumeCredits(userId, 1, { feature: "competitor_analysis" });
     if (creditsResult && typeof creditsResult === "object") {
       const ok = (creditsResult as any).success;
       const err = cleanString((creditsResult as any).error, 120).toUpperCase();
@@ -193,76 +199,116 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
       }
     }
-
-    // Fetch user's business profile for context
-    let bpQuery = supabase
-      .from("business_profiles")
-      .select("niche, mission, offers")
-      .eq("user_id", user.id);
-    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
-    const { data: businessProfile } = await bpQuery.maybeSingle();
-
-    // AI research on competitors
-    const researchResult = await researchCompetitors({
-      apiKey,
-      competitors,
-      userNiche: cleanString(businessProfile?.niche, 200),
-      userMission: cleanString(businessProfile?.mission, 500),
-      userOffers: businessProfile?.offers ?? [],
-    });
-
-    const now = new Date().toISOString();
-    const row: Record<string, any> = {
-      user_id: user.id,
-      competitors: competitors,
-      competitor_details: researchResult.competitor_details,
-      summary: researchResult.summary,
-      strengths: researchResult.strengths,
-      weaknesses: researchResult.weaknesses,
-      opportunities: researchResult.opportunities,
-      positioning_matrix: researchResult.positioning_matrix,
-      status: "completed" as const,
-      updated_at: now,
-    };
-    if (projectId) row.project_id = projectId;
-
-    const { data, error } = await supabase
-      .from("competitor_analyses")
-      .upsert({ ...row, created_at: now }, { onConflict: "user_id" })
-      .select("*")
-      .maybeSingle();
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
-
-    // Update business_profiles with competitor_analysis_summary (best-effort)
-    try {
-      let bpUpdate = supabase
-        .from("business_profiles")
-        .update({
-          competitor_analysis_summary: researchResult.summary.slice(0, 2000),
-          updated_at: now,
-        })
-        .eq("user_id", user.id);
-      if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
-      await bpUpdate;
-    } catch (e) {
-      console.error("Failed to update business_profiles with competitor summary:", e);
-    }
-
-    return NextResponse.json({ ok: true, analysis: data }, { status: 200 });
   } catch (e: any) {
     const msg = (e?.message ?? "").toUpperCase();
     if (msg.includes("NO_CREDITS")) {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
-    console.error("[competitor-analysis] POST error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
     );
   }
+
+  // Start SSE stream — heartbeats keep the connection alive while Claude processes
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function sendSSE(event: string, data: any) {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      }
+
+      // Send heartbeat every 5 seconds
+      const heartbeat = setInterval(() => {
+        try {
+          sendSSE("heartbeat", { status: "analyzing" });
+        } catch { /* stream closed */ }
+      }, 5000);
+
+      try {
+        // Fetch business profile
+        let bpQuery = supabase
+          .from("business_profiles")
+          .select("niche, mission, offers")
+          .eq("user_id", userId);
+        if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+        const { data: businessProfile } = await bpQuery.maybeSingle();
+
+        sendSSE("progress", { step: "Recherche IA en cours..." });
+
+        const apiKey = resolveApiKey();
+        const researchResult = await researchCompetitors({
+          apiKey,
+          competitors,
+          userNiche: cleanString(businessProfile?.niche, 200),
+          userMission: cleanString(businessProfile?.mission, 500),
+          userOffers: businessProfile?.offers ?? [],
+        });
+
+        sendSSE("progress", { step: "Sauvegarde des résultats..." });
+
+        const now = new Date().toISOString();
+        const row: Record<string, any> = {
+          user_id: userId,
+          competitors: competitors,
+          competitor_details: researchResult.competitor_details,
+          summary: researchResult.summary,
+          strengths: researchResult.strengths,
+          weaknesses: researchResult.weaknesses,
+          opportunities: researchResult.opportunities,
+          positioning_matrix: researchResult.positioning_matrix,
+          status: "completed" as const,
+          updated_at: now,
+        };
+        if (projectId) row.project_id = projectId;
+
+        const { data, error } = await supabase
+          .from("competitor_analyses")
+          .upsert({ ...row, created_at: now }, { onConflict: "user_id" })
+          .select("*")
+          .maybeSingle();
+
+        if (error) {
+          sendSSE("error", { ok: false, error: error.message });
+        } else {
+          // Update business_profiles (best-effort)
+          try {
+            let bpUpdate = supabase
+              .from("business_profiles")
+              .update({
+                competitor_analysis_summary: researchResult.summary.slice(0, 2000),
+                updated_at: now,
+              })
+              .eq("user_id", userId);
+            if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
+            await bpUpdate;
+          } catch { /* non-blocking */ }
+
+          sendSSE("result", { ok: true, analysis: data });
+        }
+      } catch (e: any) {
+        const msg = (e?.message ?? "").toUpperCase();
+        if (msg.includes("NO_CREDITS")) {
+          sendSSE("error", { ok: false, error: "NO_CREDITS" });
+        } else {
+          console.error("[competitor-analysis] POST stream error:", e);
+          sendSSE("error", { ok: false, error: e instanceof Error ? e.message : "Unknown error" });
+        }
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // Prevent nginx proxy buffering
+    },
+  });
 }
 
 // ------------- PATCH: update with user corrections / uploaded doc -------------
@@ -387,6 +433,7 @@ INSTRUCTIONS :
    - Offres principales (produits/services) avec prix si connus
    - Points forts (ce qu'ils font bien)
    - Points faibles (ce qu'ils font moins bien)
+   - Différence avec le positionnement et le persona de l'utilisateur
    - Canaux de communication principaux
    - Audience cible
    - Stratégie de contenu observée
@@ -414,6 +461,7 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
       "main_offers": [{ "name": "string", "price": "string", "description": "string" }],
       "strengths": ["string"],
       "weaknesses": ["string"],
+      "differentiator": "string (différence clé avec le positionnement et le persona de l'utilisateur)",
       "channels": ["string"],
       "target_audience": "string",
       "content_strategy": "string",

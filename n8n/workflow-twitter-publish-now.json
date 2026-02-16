@@ -5,12 +5,9 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "twitter-publish",
+        "responseMode": "responseNode",
         "options": {
           "rawBody": false
-        },
-        "headerAuth": {
-          "name": "X-N8N-Secret",
-          "value": "={{ $env.N8N_SHARED_SECRET }}"
         }
       },
       "id": "webhook-trigger",
@@ -140,5 +137,5 @@
     }
   ],
   "pinData": {},
-  "versionId": "2"
+  "versionId": "3"
 }

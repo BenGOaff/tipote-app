@@ -27,23 +27,20 @@ export async function GET() {
   // Generer un state CSRF et le stocker en cookie HTTP-only
   const state = randomBytes(32).toString("hex");
   const cookieStore = await cookies();
-  cookieStore.set("twitter_oauth_state", state, {
+  const isHttps = (process.env.NEXT_PUBLIC_APP_URL ?? "").startsWith("https");
+  const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isHttps,
+    sameSite: "lax" as const,
     path: "/",
-    maxAge: 600, // 10 minutes
-  });
+    maxAge: 900, // 15 minutes (extra time for slow auth flows)
+  };
+
+  cookieStore.set("twitter_oauth_state", state, cookieOptions);
 
   // Generer PKCE code_verifier et le stocker en cookie
   const codeVerifier = generateCodeVerifier();
-  cookieStore.set("twitter_code_verifier", codeVerifier, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 600,
-  });
+  cookieStore.set("twitter_code_verifier", codeVerifier, cookieOptions);
 
   const codeChallenge = generateCodeChallenge(codeVerifier);
   const url = buildAuthorizationUrl(state, codeChallenge);
