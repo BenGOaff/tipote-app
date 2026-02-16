@@ -102,6 +102,15 @@ export async function POST(req: NextRequest) {
     }
 
     await updatePublishedStatus(contentId, meta);
+
+    // Advance auto_comments_status: before_done → after_pending
+    // This triggers the "after" phase of auto-comments for scheduled posts
+    await supabaseAdmin
+      .from("content_item")
+      .update({ auto_comments_status: "after_pending" })
+      .eq("id", contentId)
+      .eq("auto_comments_enabled", true)
+      .eq("auto_comments_status", "before_done");
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
     // On ne change pas le statut pour ne pas perdre le "scheduled"

@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Helper: met a jour le statut du content_item (compat FR/EN)
+  // Also advances auto_comments_status if applicable
   async function updateContentStatus(cId: string, meta: Record<string, unknown>) {
     const enUpdate = { status: "published", meta };
     const { error: upErr1 } = await supabaseAdmin
@@ -113,6 +114,15 @@ export async function POST(req: NextRequest) {
         .update({ statut: "published", meta } as any)
         .eq("id", cId);
     }
+
+    // Advance auto_comments_status: before_done → after_pending
+    // This triggers the "after" phase of auto-comments
+    await supabaseAdmin
+      .from("content_item")
+      .update({ auto_comments_status: "after_pending" })
+      .eq("id", cId)
+      .eq("auto_comments_enabled", true)
+      .eq("auto_comments_status", "before_done");
   }
 
   // 1. Récupérer le contenu (avec fallback colonnes FR + fallback admin)

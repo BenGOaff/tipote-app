@@ -62,6 +62,17 @@ const UpdateSchema = z.object({
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),
   website_url: z.string().trim().max(500).optional(),
+
+  // Auto-comments automation
+  auto_comment_style_ton: z.string().trim().max(40).optional(),
+  auto_comment_langage: z
+    .object({
+      mots_cles: z.array(z.string().max(80)).max(20).optional(),
+      emojis: z.array(z.string().max(10)).max(20).optional(),
+      expressions: z.array(z.string().max(200)).max(20).optional(),
+    })
+    .optional(),
+  auto_comment_objectifs: z.array(z.string().trim().max(80)).max(5).optional(),
 });
 
 export async function GET() {

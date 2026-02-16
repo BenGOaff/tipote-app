@@ -15,6 +15,8 @@ import { PublishModal } from "@/components/content/PublishModal";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
+import { useAutomationCredits, emitAutomationCreditsUpdated } from "@/lib/credits/useAutomationCredits";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -88,6 +90,16 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   // Images
   const [images, setImages] = useState<UploadedImage[]>([]);
 
+  // Auto-comment state
+  const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
+    enabled: false,
+    nbBefore: 0,
+    nbAfter: 0,
+    creditsNeeded: 0,
+  });
+  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const { balance: automationBalance, loading: automationCreditsLoading } = useAutomationCredits();
+
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [savedContentId, setSavedContentId] = useState<string | null>(null);
@@ -105,10 +117,25 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     let mounted = true;
     setOffersLoading(true);
 
-    loadAllOffers(getSupabaseBrowserClient())
+    const supabase = getSupabaseBrowserClient();
+
+    loadAllOffers(supabase)
       .then((result: OfferOption[]) => { if (mounted) setOffers(result); })
       .catch(() => { if (mounted) setOffers([]); })
       .finally(() => { if (mounted) setOffersLoading(false); });
+
+    // Fetch user plan for auto-comment access check
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted || !data.user) return;
+      supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", data.user.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          if (mounted && profile) setUserPlan(profile.plan ?? "free");
+        });
+    });
 
     return () => { mounted = false; };
   }, []);
@@ -176,6 +203,16 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     if (scheduledTime) meta.scheduled_time = scheduledTime;
     if (images.length > 0) meta.images = images;
 
+    // Auto-comment config in meta
+    if (autoCommentConfig.enabled) {
+      meta.auto_comments = {
+        enabled: true,
+        nb_before: autoCommentConfig.nbBefore,
+        nb_after: autoCommentConfig.nbAfter,
+        credits_needed: autoCommentConfig.creditsNeeded,
+      };
+    }
+
     const id = await onSave({
       title,
       content: generatedContent,
@@ -186,6 +223,27 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       meta: Object.keys(meta).length > 0 ? meta : undefined,
       ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
     });
+
+    // Activate auto-comments if enabled and post was saved
+    if (id && autoCommentConfig.enabled) {
+      try {
+        const res = await fetch("/api/automation/activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content_id: id,
+            nb_comments_before: autoCommentConfig.nbBefore,
+            nb_comments_after: autoCommentConfig.nbAfter,
+          }),
+        });
+        if (res.ok) {
+          emitAutomationCreditsUpdated();
+        }
+      } catch {
+        // Non-blocking — the post is already saved
+      }
+    }
+
     if (id) setSavedContentId(id);
     return id;
   };
@@ -404,6 +462,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             />
           )}
 
+          {/* Auto-comment panel */}
+          {generatedContent && (
+            <AutoCommentPanel
+              userPlan={userPlan}
+              automationCreditsRemaining={automationBalance?.credits_remaining ?? 0}
+              creditsLoading={automationCreditsLoading}
+              onChange={setAutoCommentConfig}
+              disabled={isSaving}
+            />
+          )}
+
           {generatedContent && (
             <div className="space-y-3">
               {/* CTA row: Publier + Programmer (same line, same purple) */}
@@ -471,12 +540,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         platform={platform}
         contentId={savedContentId ?? ""}
         contentPreview={generatedContent}
+        autoCommentConfig={autoCommentConfig.enabled ? {
+          enabled: true,
+          nbBefore: autoCommentConfig.nbBefore,
+          nbAfter: autoCommentConfig.nbAfter,
+        } : undefined}
         onBeforePublish={async () => {
           const id = await handleSave("draft", undefined, undefined, { _skipRedirect: true });
           return id;
         }}
         onPublished={() => {
-          // Content was published
+          emitAutomationCreditsUpdated();
         }}
       />
 

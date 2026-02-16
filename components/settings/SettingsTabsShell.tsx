@@ -46,6 +46,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
+import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 
 type TabKey = "profile" | "connections" | "settings" | "branding" | "ai" | "pricing";
 
@@ -126,6 +127,32 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     const qs = params.toString();
     router.push(qs ? `/settings?${qs}` : "/settings");
   };
+
+  // -------------------------
+  // User plan (from profiles table — for feature gating)
+  // -------------------------
+  const [userPlan, setUserPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getSupabaseBrowserClient } = await import("@/lib/supabaseBrowser");
+        const supabase = getSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled || !user) return;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!cancelled && profile) setUserPlan(profile.plan ?? "free");
+      } catch {
+        // fail-open
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // -------------------------
   // Profil (connecté à /api/profile)
@@ -1094,6 +1121,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       {/* IA & CRÉDITS */}
       <TabsContent value="ai" className="space-y-6">
         <AiCreditsPanel />
+        <AutoCommentSettings userPlan={userPlan} />
       </TabsContent>
 
       {/* ABONNEMENT */}

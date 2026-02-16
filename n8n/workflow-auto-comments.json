@@ -1,0 +1,320 @@
+{
+  "name": "Tipote - Auto Comments",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.TIPOTE_APP_URL }}/api/n8n/auto-comments/pending",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $vars.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-pending-jobs",
+      "name": "Fetch Pending Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-jobs",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-jobs",
+      "name": "Has Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "jobs",
+        "options": {}
+      },
+      "id": "split-jobs",
+      "name": "Split Jobs",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * (15 - 2 + 1) + 2) }}",
+        "unit": "minutes"
+      },
+      "id": "random-delay",
+      "name": "Random Delay (2-15 min)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1130, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Search for similar posts on the platform and select targets.\n// Uses fetch() internally so that job context is preserved in the output.\n\nconst job = $input.first().json;\nconst platform = job.platform || 'linkedin';\nconst keywords = job.post_title || job.niche || 'business';\nconst nbComments = job.nb_comments || 3;\nconst platformUserId = job.platform_user_id || '';\nconst accessToken = job.access_token || '';\n\nlet searchResults = [];\n\ntry {\n  // Platform-specific search\n  let searchUrl = '';\n  const headers = { 'Authorization': 'Bearer ' + accessToken };\n\n  if (platform === 'linkedin') {\n    searchUrl = 'https://api.linkedin.com/v2/search?q=articles&keywords=' +\n      encodeURIComponent(keywords) + '&count=' + (nbComments + 2);\n  } else if (platform === 'twitter') {\n    searchUrl = 'https://api.twitter.com/2/tweets/search/recent?query=' +\n      encodeURIComponent(keywords) + '&max_results=' + Math.min(nbComments + 2, 10);\n  } else if (platform === 'facebook') {\n    searchUrl = 'https://graph.facebook.com/v18.0/search?q=' +\n      encodeURIComponent(keywords) + '&type=post&limit=' + (nbComments + 2);\n  } else if (platform === 'threads') {\n    searchUrl = 'https://graph.threads.net/v1.0/threads?search=' +\n      encodeURIComponent(keywords) + '&limit=' + (nbComments + 2);\n  }\n\n  if (searchUrl) {\n    const resp = await fetch(searchUrl, { headers });\n    if (resp.ok) {\n      const data = await resp.json();\n      searchResults = data.elements || data.results || data.data || data.statuses || [];\n    }\n  }\n} catch (e) {\n  // Search failed — will return empty targets\n}\n\n// Filter: not own posts, recent (48h), max nbComments\nconst now = Date.now();\nconst maxAge = 48 * 60 * 60 * 1000;\n\nconst filtered = searchResults\n  .filter(post => {\n    const authorId = post.author || post.user_id || post.owner || post.author_id || '';\n    if (String(authorId) === String(platformUserId)) return false;\n    const postTime = post.created_at || post.publishedAt || post.timestamp || post.created_time;\n    if (postTime && (now - new Date(postTime).getTime()) > maxAge) return false;\n    return true;\n  })\n  .slice(0, nbComments);\n\nif (filtered.length === 0) {\n  return [{ json: { ...job, _skip: true, _reason: 'no_targets_found' } }];\n}\n\n// Build one output item per target, with full job context preserved\nconst angles = ['d_accord', 'pas_d_accord', 'approfondir', 'poser_question', 'partager_experience'];\n\nreturn filtered.map((post, i) => ({\n  json: {\n    target_post_id: post.id || post.urn || post.postId || '',\n    target_post_url: post.url || post.shareUrl || post.permalink || '',\n    target_post_text: (post.text || post.commentary || post.content || post.message || '').slice(0, 500),\n    angle: angles[i % angles.length],\n    is_last_target: i === filtered.length - 1,\n    // Carry forward the full job context\n    job: {\n      content_id: job.content_id,\n      user_id: job.user_id,\n      project_id: job.project_id,\n      platform: job.platform,\n      platform_user_id: job.platform_user_id,\n      access_token: job.access_token,\n      style_ton: job.style_ton,\n      langage: job.langage,\n      objectifs: job.objectifs,\n      brand_tone: job.brand_tone,\n      comment_type: job.comment_type,\n      callback_url: job.callback_url,\n      nb_comments: job.nb_comments\n    }\n  }\n}));"
+      },
+      "id": "search-and-select",
+      "name": "Search & Select Targets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 240],
+      "notes": "Searches for similar posts on the platform API, filters out own posts and old posts, then returns one n8n item per target with full job context preserved."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-skip",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-targets",
+      "name": "Has Targets?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1570, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate a comment using Claude (Anthropic API).\n// Uses fetch() so that all target + job context is preserved in output.\n\nconst item = $input.first().json;\nconst job = item.job;\nconst apiKey = $vars.ANTHROPIC_API_KEY || '';\nconst model = $vars.TIPOTE_CLAUDE_MODEL || 'claude-sonnet-4-5-20250929';\n\n// Build the angle instruction\nconst angleInstructions = {\n  'd_accord': \"Tu es d'accord avec le post, développe pourquoi avec un exemple ou une réflexion personnelle\",\n  'pas_d_accord': \"Tu n'es pas entièrement d'accord, explique respectueusement ton point de vue alternatif\",\n  'approfondir': 'Tu approfondis le sujet avec une perspective complémentaire ou un angle que le post ne couvre pas',\n  'poser_question': 'Tu poses une question pertinente et ouverte qui invite à la réflexion',\n  'partager_experience': 'Tu partages une expérience personnelle pertinente en lien avec le sujet du post'\n};\nconst angleText = angleInstructions[item.angle] || angleInstructions['d_accord'];\n\n// Build optional language instructions\nlet langageInstructions = '';\nif (job.langage) {\n  if (job.langage.mots_cles && job.langage.mots_cles.length > 0) {\n    langageInstructions += '- Utilise si possible ces mots-clés : ' + job.langage.mots_cles.join(', ') + '\\n';\n  }\n  if (job.langage.emojis && job.langage.emojis.length > 0) {\n    langageInstructions += '- Tu peux utiliser ces emojis (avec parcimonie) : ' + job.langage.emojis.join(' ') + '\\n';\n  }\n  if (job.langage.expressions && job.langage.expressions.length > 0) {\n    langageInstructions += '- Expressions favorites à intégrer si naturel : ' + job.langage.expressions.join(', ') + '\\n';\n  }\n}\n\nconst prompt = `Tu es un expert en réseaux sociaux. Génère UN SEUL commentaire naturel et engageant pour ce post.\n\nPost cible :\n\"${(item.target_post_text || '').replace(/\"/g, '\\\\\"')}\"\n\nConsignes :\n- Ton : ${job.style_ton || 'professionnel'}\n- Angle : ${angleText}\n- Voix de marque : ${job.brand_tone || 'authentique et engageant'}\n${langageInstructions}\nRègles anti-spam :\n- Le commentaire doit être 100% humain et naturel\n- Pas de promotion directe, pas de lien\n- Pas de phrases génériques (\"Super post !\", \"Intéressant !\")\n- Longueur : 2-4 phrases\n- Ajoute de la valeur à la conversation\n\nRéponds UNIQUEMENT avec le texte du commentaire, rien d'autre.`;\n\nlet commentText = '';\n\ntry {\n  const resp = await fetch('https://api.anthropic.com/v1/messages', {\n    method: 'POST',\n    headers: {\n      'x-api-key': apiKey,\n      'anthropic-version': '2023-06-01',\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify({\n      model: model,\n      max_tokens: 300,\n      messages: [{ role: 'user', content: prompt }]\n    })\n  });\n\n  if (resp.ok) {\n    const data = await resp.json();\n    commentText = (data.content && data.content[0] && data.content[0].text)\n      ? data.content[0].text.trim()\n      : '';\n  }\n} catch (e) {\n  // Generation failed\n}\n\nreturn [{\n  json: {\n    ...item,\n    comment_text: commentText\n  }\n}];"
+      },
+      "id": "generate-comment",
+      "name": "Generate Comment (Claude)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1790, 180],
+      "notes": "Calls Claude API via fetch() to generate a contextual comment. All target + job data is preserved in the output item."
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * (60 - 15 + 1) + 15) }}",
+        "unit": "seconds"
+      },
+      "id": "comment-delay",
+      "name": "Anti-Spam Delay (15-60s)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2010, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Publish the generated comment on the target post,\n// then log the result back to Tipote.\n// Uses fetch() so everything is handled in one step.\n\nconst item = $input.first().json;\nconst job = item.job;\nconst commentText = item.comment_text || '';\nconst sharedSecret = $vars.N8N_SHARED_SECRET || '';\n\nif (!commentText) {\n  return [{ json: { ...item, publish_success: false, publish_error: 'empty_comment' } }];\n}\n\nlet publishSuccess = false;\nlet publishError = '';\nlet publishedPostId = '';\n\ntry {\n  // --- PUBLISH COMMENT ---\n  const platform = job.platform;\n  const accessToken = job.access_token;\n  let publishUrl = '';\n  let publishBody = '';\n  const publishHeaders = {\n    'Authorization': 'Bearer ' + accessToken,\n    'Content-Type': 'application/json'\n  };\n\n  if (platform === 'linkedin') {\n    publishUrl = 'https://api.linkedin.com/v2/socialActions/' +\n      encodeURIComponent(item.target_post_id) + '/comments';\n    publishBody = JSON.stringify({\n      actor: 'urn:li:person:' + job.platform_user_id,\n      message: { text: commentText }\n    });\n  } else if (platform === 'twitter') {\n    publishUrl = 'https://api.twitter.com/2/tweets';\n    publishBody = JSON.stringify({\n      text: commentText,\n      reply: { in_reply_to_tweet_id: item.target_post_id }\n    });\n  } else if (platform === 'facebook') {\n    publishUrl = 'https://graph.facebook.com/v18.0/' +\n      item.target_post_id + '/comments';\n    publishBody = JSON.stringify({ message: commentText });\n  } else if (platform === 'threads') {\n    publishUrl = 'https://graph.threads.net/v1.0/' +\n      item.target_post_id + '/replies';\n    publishBody = JSON.stringify({ text: commentText });\n  }\n\n  if (publishUrl) {\n    const resp = await fetch(publishUrl, {\n      method: 'POST',\n      headers: publishHeaders,\n      body: publishBody\n    });\n    publishSuccess = resp.ok;\n    if (!resp.ok) {\n      const errBody = await resp.text().catch(() => '');\n      publishError = 'HTTP ' + resp.status + ': ' + errBody.slice(0, 200);\n    } else {\n      const result = await resp.json().catch(() => ({}));\n      publishedPostId = result.id || result.data?.id || '';\n    }\n  } else {\n    publishError = 'unsupported_platform: ' + platform;\n  }\n} catch (e) {\n  publishError = e.message || 'publish_exception';\n}\n\n// --- LOG CALLBACK TO TIPOTE ---\ntry {\n  await fetch(job.callback_url, {\n    method: 'POST',\n    headers: {\n      'X-N8N-Secret': sharedSecret,\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify({\n      content_id: job.content_id,\n      user_id: job.user_id,\n      project_id: job.project_id || null,\n      target_post_id: item.target_post_id,\n      target_post_url: item.target_post_url,\n      platform: job.platform,\n      comment_text: commentText,\n      comment_type: job.comment_type,\n      angle: item.angle,\n      success: publishSuccess,\n      error: publishError || undefined,\n      batch_complete: item.is_last_target === true\n    })\n  });\n} catch (e) {\n  // Log callback failed — non-blocking\n}\n\nreturn [{\n  json: {\n    content_id: job.content_id,\n    target_post_id: item.target_post_id,\n    platform: job.platform,\n    comment_type: job.comment_type,\n    angle: item.angle,\n    comment_text: commentText,\n    publish_success: publishSuccess,\n    publish_error: publishError || null\n  }\n}];"
+      },
+      "id": "publish-and-log",
+      "name": "Publish & Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2230, 180],
+      "notes": "Publishes the comment on the target platform, then logs the result back to Tipote via callback URL. Both operations use fetch() so all context is available."
+    },
+    {
+      "parameters": {},
+      "id": "no-jobs",
+      "name": "No Jobs",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// No targets found — still need to signal batch_complete\n// so the auto_comments_status advances properly.\n\nconst item = $input.first().json;\nconst job = item.job || item;\nconst sharedSecret = $vars.N8N_SHARED_SECRET || '';\n\ntry {\n  await fetch(job.callback_url, {\n    method: 'POST',\n    headers: {\n      'X-N8N-Secret': sharedSecret,\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify({\n      content_id: job.content_id,\n      user_id: job.user_id,\n      project_id: job.project_id || null,\n      platform: job.platform,\n      comment_type: job.comment_type,\n      comment_text: null,\n      success: false,\n      error: 'no_targets_found',\n      batch_complete: true\n    })\n  });\n} catch (e) {\n  // Non-blocking\n}\n\nreturn [{ json: { ...item, batch_signaled: true } }];"
+      },
+      "id": "no-targets",
+      "name": "No Targets → Signal Batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1790, 360],
+      "notes": "When no targets found, signal batch_complete to advance the auto_comments_status."
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Jobs": {
+      "main": [
+        [
+          {
+            "node": "Has Jobs?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Jobs?": {
+      "main": [
+        [
+          {
+            "node": "Split Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Jobs": {
+      "main": [
+        [
+          {
+            "node": "Random Delay (2-15 min)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random Delay (2-15 min)": {
+      "main": [
+        [
+          {
+            "node": "Search & Select Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search & Select Targets": {
+      "main": [
+        [
+          {
+            "node": "Has Targets?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Targets?": {
+      "main": [
+        [
+          {
+            "node": "Generate Comment (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Targets → Signal Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Comment (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Anti-Spam Delay (15-60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anti-Spam Delay (15-60s)": {
+      "main": [
+        [
+          {
+            "node": "Publish & Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Tipote",
+      "createdAt": "2026-02-16T00:00:00.000Z",
+      "updatedAt": "2026-02-16T00:00:00.000Z"
+    },
+    {
+      "name": "Auto-Comments",
+      "createdAt": "2026-02-16T00:00:00.000Z",
+      "updatedAt": "2026-02-16T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-16T00:00:00.000Z",
+  "versionId": "2"
+}
