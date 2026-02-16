@@ -65,6 +65,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [bonus, setBonus] = useState("");
   const [questionCount, setQuestionCount] = useState("7");
   const [resultCount, setResultCount] = useState("3");
+  const [locale, setLocale] = useState("fr");
   const [viralityEnabled, setViralityEnabled] = useState(false);
 
   // Edit step
@@ -202,6 +203,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           bonus: viralityEnabled ? bonus : undefined,
           questionCount: parseInt(questionCount),
           resultCount: parseInt(resultCount),
+          locale,
         }),
       });
 
@@ -433,6 +435,23 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 onChange={(e) => setCta(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Langue du quiz</Label>
+            <Select value={locale} onValueChange={setLocale}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fr">Français</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="es">Español</SelectItem>
+                <SelectItem value="de">Deutsch</SelectItem>
+                <SelectItem value="pt">Português</SelectItem>
+                <SelectItem value="it">Italiano</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-lg border">

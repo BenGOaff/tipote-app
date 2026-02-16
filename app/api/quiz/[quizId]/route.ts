@@ -33,9 +33,15 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
     }
 
+    // Build a lookup map for result titles (fallback if FK join fails)
+    const resultTitleMap = new Map<string, string>();
+    for (const r of (resultsRes.data ?? [])) {
+      resultTitleMap.set(r.id, r.title);
+    }
+
     const leads = (leadsRes.data ?? []).map((l: any) => ({
       ...l,
-      result_title: l.quiz_results?.title ?? null,
+      result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? null,
       quiz_results: undefined,
     }));
 

@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
       resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
       niche: profile?.niche ?? "",
       mission: profile?.mission ?? "",
+      locale: String(body.locale ?? "fr"),
     });
 
     const resp = await ai.chat.completions.create({

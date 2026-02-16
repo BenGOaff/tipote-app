@@ -236,7 +236,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
   // STEP: Intro
   if (step === "intro") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
         <Card className="p-8 max-w-lg w-full text-center space-y-6">
           <h1 className="text-2xl font-bold">{quiz.title}</h1>
           {quiz.introduction && (
@@ -308,7 +308,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
   // STEP: Email capture
   if (step === "email") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
         <Card className="p-8 max-w-lg w-full space-y-6 text-center">
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="w-8 h-8 text-primary" />
@@ -342,7 +342,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             size="lg"
             className="w-full"
             onClick={handleSubmitEmail}
-            disabled={submitting || !email.trim()}
+            disabled={submitting || !email.trim() || !consent}
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -373,7 +373,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
   // STEP: Result
   if (step === "result") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
         <Card className="p-8 max-w-lg w-full space-y-6">
           <div className="text-center space-y-3">
             <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
@@ -407,7 +407,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
 
           {/* CTA */}
           {(resultProfile?.cta_text || quiz.cta_text) && quiz.cta_url && (
-            <Button size="lg" className="w-full" asChild>
+            <Button size="lg" className="w-full h-auto py-3 whitespace-normal" asChild>
               <a href={quiz.cta_url} target="_blank" rel="noopener noreferrer">
                 {resultProfile?.cta_text || quiz.cta_text}
               </a>

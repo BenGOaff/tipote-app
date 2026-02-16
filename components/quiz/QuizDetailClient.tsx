@@ -1003,33 +1003,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </Card>
                 )}
 
-                {/* Bulk sync for leads captured before tags were configured */}
-                {leadsCount > 0 && editResults.some((r) => r.sio_tag_name?.trim()) && (
-                  <Card className="p-4 border-dashed">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Rattraper les anciens leads ?</span>{" "}
-                        Synchronise les leads existants vers Systeme.io avec le premier tag configuré.
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleBulkSync}
-                        disabled={syncing}
-                        className="flex-shrink-0"
-                      >
-                        {syncing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
-                        {syncing ? "Sync..." : "Synchroniser"}
-                      </Button>
-                    </div>
-                    {syncResult && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {syncResult.synced}/{syncResult.total} synchronisés
-                        {syncResult.errors > 0 && ` · ${syncResult.errors} erreur(s)`}
-                      </p>
-                    )}
-                  </Card>
-                )}
               </TabsContent>
             </Tabs>
           </div>

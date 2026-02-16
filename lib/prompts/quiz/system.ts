@@ -28,10 +28,23 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     resultCount = 3,
     niche = "",
     mission = "",
+    locale = "fr",
   } = params;
+
+  const localeLabels: Record<string, string> = {
+    fr: "français",
+    en: "anglais (English)",
+    es: "espagnol (Español)",
+    de: "allemand (Deutsch)",
+    pt: "portugais (Português)",
+    it: "italien (Italiano)",
+  };
+  const langLabel = localeLabels[locale] || localeLabels.fr;
 
   const system = `Tu es un expert en marketing digital, copywriting et lead generation.
 Tu crées des quiz viraux à forte conversion pour capturer des emails.
+
+LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résultats, CTA, share_message) DOIT être rédigé en ${langLabel}.
 
 PRINCIPES :
 - Chaque quiz doit donner une VRAIE valeur (insight, prise de conscience).
@@ -82,12 +95,14 @@ FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
   if (niche) userParts.push(`NICHE DU CRÉATEUR : ${niche}`);
   if (mission) userParts.push(`PERSONA CIBLE (contexte) : ${mission}`);
 
+  userParts.push(`LANGUE : ${langLabel}`);
   userParts.push(
     `\nIMPORTANT :`,
     `- Génère exactement ${questionCount} questions avec ${resultCount} options chacune (une par profil).`,
     `- Génère exactement ${resultCount} profils résultat.`,
     `- Chaque option doit avoir un result_index entre 0 et ${resultCount - 1}.`,
     `- Répartis les result_index de façon équilibrée dans les questions.`,
+    `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Réponds UNIQUEMENT en JSON valide.`,
   );
 
