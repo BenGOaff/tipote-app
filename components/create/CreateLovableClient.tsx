@@ -615,13 +615,9 @@ export default function CreateLovableClient() {
   };
 
   const handleSave = async (payload: any): Promise<string | null> => {
+    // Auto-fill title if missing
     if (!payload?.title?.trim()) {
-      toast({
-        title: "Titre requis",
-        description: "Entre un titre pour sauvegarder",
-        variant: "destructive",
-      });
-      return null;
+      payload.title = payload.subject || payload.platform || "Nouveau contenu";
     }
 
     setIsSaving(true);

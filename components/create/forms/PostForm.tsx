@@ -84,8 +84,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [offerLink, setOfferLink] = useState("");
 
   const [generatedContent, setGeneratedContent] = useState("");
-  const [title, setTitle] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Title auto-derived from subject (editable in content detail page later)
+  const title = subject.trim() || `Post ${platform}`;
 
   // Images
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -187,11 +189,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
     if (content) {
       setGeneratedContent(content);
-      if (!title) setTitle(subject || `Post ${platform}`);
     }
   };
 
-  /** Save content with optional status, date, and images */
+  /** Save content with optional status, date, and images.
+   *  If savedContentId exists, PATCH the existing record instead of creating new. */
   const handleSave = async (
     status: "draft" | "scheduled" | "published",
     scheduledDate?: string,
@@ -212,16 +214,53 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       };
     }
 
-    const id = await onSave({
-      title,
-      content: generatedContent,
-      type: "post",
-      platform,
-      status,
-      scheduled_date: scheduledDate,
-      meta: Object.keys(meta).length > 0 ? meta : undefined,
-      ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
-    });
+    let id: string | null;
+
+    // If we already saved this post, update instead of creating a duplicate
+    if (savedContentId) {
+      try {
+        const res = await fetch(`/api/content/${savedContentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            content: generatedContent,
+            status,
+            channel: platform,
+            scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
+          }),
+        });
+        if (res.ok) {
+          id = savedContentId;
+        } else {
+          // Fallback: create new if PATCH fails
+          id = await onSave({
+            title,
+            content: generatedContent,
+            type: "post",
+            platform,
+            status,
+            scheduled_date: scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
+            ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
+          });
+        }
+      } catch {
+        id = savedContentId; // If network error on PATCH, still use existing ID
+      }
+    } else {
+      id = await onSave({
+        title,
+        content: generatedContent,
+        type: "post",
+        platform,
+        status,
+        scheduled_date: scheduledDate,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
+        ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
+      });
+    }
 
     // Activate auto-comments if enabled and post was saved
     if (id && autoCommentConfig.enabled) {
@@ -426,11 +465,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         {/* Right: Preview + Actions */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre (pour sauvegarde)</Label>
-            <Input placeholder="Titre de votre contenu" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
             <Label>Contenu</Label>
 
             {/* Toujours éditable */}
@@ -479,7 +513,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
-                      disabled={!generatedContent || !title || isOverLimit || isSaving}
+                      disabled={!generatedContent || isOverLimit || isSaving}
                       title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}` : undefined}
                     >
                       <Send className="w-4 h-4 mr-1" />
@@ -489,7 +523,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
-                      disabled={!generatedContent || !title || isOverLimit || isSaving}
+                      disabled={!generatedContent || isOverLimit || isSaving}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}

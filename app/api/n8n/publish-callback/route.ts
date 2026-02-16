@@ -13,46 +13,35 @@ function isMissingColumn(msg?: string | null) {
   return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
 }
 
-/** Met a jour le statut du content_item (compat colonnes FR/EN) */
-async function updatePublishedStatus(contentId: string, meta: Record<string, string>) {
+/** Met a jour le statut du content_item (compat colonnes FR/EN).
+ *  MERGES new meta fields with existing meta (preserves images, etc.). */
+async function updatePublishedStatus(contentId: string, newMetaFields: Record<string, string>) {
+  // Fetch existing meta to merge (preserve images, etc.)
+  const { data: existing } = await supabaseAdmin
+    .from("content_item")
+    .select("meta")
+    .eq("id", contentId)
+    .single();
+
+  const existingMeta = (existing?.meta && typeof existing.meta === "object") ? existing.meta as Record<string, unknown> : {};
+  const mergedMeta = { ...existingMeta, ...newMetaFields };
+
   // Essai 1 : colonne EN "status"
   const { error: err1 } = await supabaseAdmin
     .from("content_item")
-    .update({ status: "published", meta })
+    .update({ status: "published", meta: mergedMeta })
     .eq("id", contentId);
 
   if (!err1) return;
 
   if (isMissingColumn(err1.message)) {
     // Essai 2 : colonne FR "statut"
-    const { error: err2 } = await supabaseAdmin
+    await supabaseAdmin
       .from("content_item")
-      .update({ statut: "published", meta } as any)
+      .update({ statut: "published", meta: mergedMeta } as any)
       .eq("id", contentId);
-
-    if (err2 && isMissingColumn(err2.message)) {
-      // Essai 3 : juste meta (si "statut" n'existe pas non plus)
-      await supabaseAdmin
-        .from("content_item")
-        .update({ meta } as any)
-        .eq("id", contentId);
-    } else if (err2) {
-      console.error("publish-callback: update error (FR)", err2);
-    }
   } else {
-    console.error("publish-callback: update error (EN)", err1);
-    // Fallback : juste le statut sans meta
-    const { error: errFb } = await supabaseAdmin
-      .from("content_item")
-      .update({ status: "published" } as any)
-      .eq("id", contentId);
-
-    if (errFb && isMissingColumn(errFb.message)) {
-      await supabaseAdmin
-        .from("content_item")
-        .update({ statut: "published" } as any)
-        .eq("id", contentId);
-    }
+    console.error("publish-callback: update error", err1);
   }
 }
 
@@ -113,12 +102,20 @@ export async function POST(req: NextRequest) {
       .eq("auto_comments_status", "before_done");
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
-    // Mark as failed so the user can see the error in the UI
-    const failedMeta: Record<string, string> = {
+    // Mark as failed — merge meta to preserve images
+    const { data: existingFailed } = await supabaseAdmin
+      .from("content_item")
+      .select("meta")
+      .eq("id", contentId)
+      .single();
+
+    const existingFailedMeta = (existingFailed?.meta && typeof existingFailed.meta === "object") ? existingFailed.meta as Record<string, unknown> : {};
+    const failedMeta = {
+      ...existingFailedMeta,
       failed_at: new Date().toISOString(),
       failed_error: errorMsg || "Publication échouée",
+      ...(platform ? { failed_platform: platform } : {}),
     };
-    if (platform) failedMeta.failed_platform = platform;
 
     const { error: upErr } = await supabaseAdmin
       .from("content_item")

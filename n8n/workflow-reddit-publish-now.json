@@ -10,7 +10,7 @@
         },
         "headerAuth": {
           "name": "X-N8N-Secret",
-          "value": "={{ $vars.N8N_SHARED_SECRET }}"
+          "value": "={{ $env.N8N_SHARED_SECRET }}"
         }
       },
       "id": "webhook-trigger",
@@ -32,7 +32,7 @@
             {
               "id": "check-secret",
               "leftValue": "={{ $json.headers['x-n8n-secret'] }}",
-              "rightValue": "={{ $vars.N8N_SHARED_SECRET }}",
+              "rightValue": "={{ $env.N8N_SHARED_SECRET }}",
               "operator": {
                 "type": "string",
                 "operation": "equals"
@@ -96,7 +96,7 @@
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
             },
             {
               "name": "Content-Type",
@@ -124,7 +124,7 @@
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
             },
             {
               "name": "Content-Type",

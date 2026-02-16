@@ -21,13 +21,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $vars.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=reddit",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=reddit",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
             }
           ]
         },
@@ -127,7 +127,7 @@
           "parameters": [
             {
               "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
             },
             {
               "name": "Content-Type",

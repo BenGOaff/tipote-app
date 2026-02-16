@@ -100,9 +100,20 @@ export async function POST(req: NextRequest) {
   }
 
   // Helper: met a jour le statut du content_item (compat FR/EN)
+  // MERGES new meta fields with existing meta (preserves images, etc.)
   // Also advances auto_comments_status if applicable
-  async function updateContentStatus(cId: string, meta: Record<string, unknown>) {
-    const enUpdate = { status: "published", meta };
+  async function updateContentStatus(cId: string, newMetaFields: Record<string, unknown>) {
+    // First, fetch existing meta to merge
+    const { data: existing } = await supabaseAdmin
+      .from("content_item")
+      .select("meta")
+      .eq("id", cId)
+      .single();
+
+    const existingMeta = (existing?.meta && typeof existing.meta === "object") ? existing.meta as Record<string, unknown> : {};
+    const mergedMeta = { ...existingMeta, ...newMetaFields };
+
+    const enUpdate = { status: "published", meta: mergedMeta };
     const { error: upErr1 } = await supabaseAdmin
       .from("content_item")
       .update(enUpdate)
@@ -111,7 +122,7 @@ export async function POST(req: NextRequest) {
       // Fallback FR
       await supabaseAdmin
         .from("content_item")
-        .update({ statut: "published", meta } as any)
+        .update({ statut: "published", meta: mergedMeta } as any)
         .eq("id", cId);
     }
 
