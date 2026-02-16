@@ -31,7 +31,7 @@ import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal
 
 interface ArticleFormProps {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
@@ -70,6 +70,9 @@ export function ArticleForm({
 
   // ✅ UX: afficher un aperçu "beau" par défaut, avec option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
+
+  // Track saved content to avoid duplicates
+  const [savedContentId, setSavedContentId] = useState<string | null>(null);
 
   const objectives = useMemo(
     () => [
@@ -136,14 +139,33 @@ export function ArticleForm({
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {
-    await onSave({
-      title,
-      content: generatedContent,
-      type: "article",
-      platform: "blog",
-      status,
-      scheduled_at: scheduledAt || undefined,
-    });
+    if (savedContentId) {
+      // Update existing entry instead of creating a duplicate
+      try {
+        await fetch(`/api/content/${savedContentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            content: generatedContent,
+            status,
+            scheduledDate: scheduledAt || undefined,
+          }),
+        });
+      } catch {
+        // Non-blocking
+      }
+    } else {
+      const id = await onSave({
+        title,
+        content: generatedContent,
+        type: "article",
+        platform: "blog",
+        status,
+        scheduled_at: scheduledAt || undefined,
+      });
+      if (id) setSavedContentId(id);
+    }
   };
 
   const isArticleReady =

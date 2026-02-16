@@ -17,7 +17,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 interface EmailFormProps {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
@@ -76,6 +76,8 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [showRawEditor, setShowRawEditor] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Track saved content to avoid duplicates
+  const [savedContentId, setSavedContentId] = useState<string | null>(null);
 
   const generatedContent = useMemo(() => joinEmails(emails), [emails]);
 
@@ -278,14 +280,32 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {
-    await onSave({
-      title,
-      content: generatedContent,
-      type: "email",
-      platform: "newsletter",
-      status,
-      scheduled_at: scheduledAt || undefined,
-    });
+    if (savedContentId) {
+      try {
+        await fetch(`/api/content/${savedContentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            content: generatedContent,
+            status,
+            scheduledDate: scheduledAt || undefined,
+          }),
+        });
+      } catch {
+        // Non-blocking
+      }
+    } else {
+      const id = await onSave({
+        title,
+        content: generatedContent,
+        type: "email",
+        platform: "newsletter",
+        status,
+        scheduled_at: scheduledAt || undefined,
+      });
+      if (id) setSavedContentId(id);
+    }
   };
 
   const regenerateDisabled = isGenerating || !canGenerate;

@@ -331,18 +331,27 @@ export function ContentEditor({ initialItem }: Props) {
   const statusLabel = useMemo(() => normalizeStatusLabel(status), [status]);
   const statusBadgeVariant = useMemo(() => badgeVariantForStatus(status), [status]);
 
+  const baselineImages = useMemo(() => {
+    const metaImages = (baseline as any)?.meta?.images;
+    if (Array.isArray(metaImages)) return metaImages;
+    return [];
+  }, [baseline]);
+
   const dirty = useMemo(() => {
     const baseDate = toYmdOrEmpty(baseline.scheduled_date ?? null);
     const baseStatus = normalizeStatusValue(baseline.status);
+    const imagesChanged = images.length !== baselineImages.length ||
+      images.some((img: UploadedImage, i: number) => img.url !== baselineImages[i]?.url);
     return (
       (title ?? "").trim() !== (baseline.title ?? "").trim() ||
       (channel ?? "").trim() !== (baseline.channel ?? "").trim() ||
       (type ?? "").trim() !== (baseline.type ?? "").trim() ||
       normalizeStatusValue(status) !== baseStatus ||
       (scheduledDate ?? "").trim() !== (baseDate ?? "").trim() ||
-      (content ?? "").trim() !== (baseline.content ?? "").trim()
+      (content ?? "").trim() !== (baseline.content ?? "").trim() ||
+      imagesChanged
     );
-  }, [baseline, title, channel, type, status, scheduledDate, content]);
+  }, [baseline, baselineImages, title, channel, type, status, scheduledDate, content, images]);
 
   const save = async () => {
     const nextStatus = normalizeStatusValue(status);
@@ -427,6 +436,7 @@ export function ContentEditor({ initialItem }: Props) {
           tags: Array.isArray(returned.tags) ? returned.tags : prev.tags,
           prompt: typeof returned.prompt === "string" ? returned.prompt : prev.prompt,
           content: typeof returned.content === "string" ? returned.content : prev.content,
+          meta: returned.meta ?? (payload.meta ? { ...prev.meta, ...payload.meta } : prev.meta),
           updated_at: returned.updated_at ?? prev.updated_at,
         }));
       } else {
@@ -440,6 +450,7 @@ export function ContentEditor({ initialItem }: Props) {
           tags: Array.isArray(payload.tags) ? payload.tags : prev.tags,
           prompt: payload.prompt ?? prev.prompt,
           content: payload.content ?? prev.content,
+          meta: payload.meta ? { ...(prev.meta || {}), ...payload.meta } : prev.meta,
           updated_at: new Date().toISOString(),
         }));
       }

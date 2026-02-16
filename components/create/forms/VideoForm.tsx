@@ -12,7 +12,7 @@ import { downloadAsPdf } from "@/lib/content-utils";
 
 interface VideoFormProps {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
@@ -43,6 +43,9 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Track saved content to avoid duplicates
+  const [savedContentId, setSavedContentId] = useState<string | null>(null);
+
   // ✅ UX: aperçu "beau" + option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
 
@@ -69,14 +72,32 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {
-    await onSave({
-      title,
-      content: generatedContent,
-      type: "video",
-      platform,
-      status,
-      scheduled_at: scheduledAt || undefined,
-    });
+    if (savedContentId) {
+      try {
+        await fetch(`/api/content/${savedContentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            content: generatedContent,
+            status,
+            scheduledDate: scheduledAt || undefined,
+          }),
+        });
+      } catch {
+        // Non-blocking
+      }
+    } else {
+      const id = await onSave({
+        title,
+        content: generatedContent,
+        type: "video",
+        platform,
+        status,
+        scheduled_at: scheduledAt || undefined,
+      });
+      if (id) setSavedContentId(id);
+    }
   };
 
   const handleCopy = async () => {

@@ -21,7 +21,7 @@ type OfferType = "lead_magnet" | "paid_training";
 
 export type OfferFormProps = {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;

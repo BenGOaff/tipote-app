@@ -664,7 +664,7 @@ export default function CreateLovableClient() {
 
     const onClose = () => setSelectedType(null);
     // handleSave returns string|null for PostForm (needs contentId), void-compatible for others
-    const onSaveVoid = async (data: any): Promise<void> => { await handleSave(data); };
+    const onSaveVoid = async (data: any): Promise<string | null> => { return await handleSave(data); };
 
     const common = {
       onGenerate: handleGenerate,

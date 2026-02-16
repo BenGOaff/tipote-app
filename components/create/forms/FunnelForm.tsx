@@ -79,7 +79,7 @@ function guessTitleFromOfferOrTemplate(opts: {
 
 export type FunnelFormProps = {
   onGenerate: (params: any) => Promise<string>;
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;

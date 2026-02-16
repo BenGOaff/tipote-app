@@ -231,20 +231,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             meta: Object.keys(meta).length > 0 ? meta : undefined,
           }),
         });
-        if (res.ok) {
-          id = savedContentId;
-        } else {
-          // Fallback: create new if PATCH fails
-          id = await onSave({
-            title,
-            content: generatedContent,
-            type: "post",
-            platform,
-            status,
-            scheduled_date: scheduledDate,
-            meta: Object.keys(meta).length > 0 ? meta : undefined,
-            ...(opts?._skipRedirect ? { _skipRedirect: true } : {}),
-          });
+        id = savedContentId;
+        if (!res.ok) {
+          console.error("[PostForm] PATCH failed, but keeping existing ID to avoid duplicate");
         }
       } catch {
         id = savedContentId; // If network error on PATCH, still use existing ID

@@ -621,16 +621,16 @@ export default function MyContentLovableClient({
                           return (
                             <Card key={item.id} className="p-4">
                               <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="mt-0.5 rounded-md bg-muted p-2">
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <div className="mt-0.5 rounded-md bg-muted p-2 shrink-0">
                                     <Icon className="h-4 w-4 text-muted-foreground" />
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       <div className="font-medium truncate">
                                         {safeString(item.title) || "Sans titre"}
                                       </div>
-                                      <Badge className={badgeClasses}>{badgeLabel}</Badge>
+                                      <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
                                     </div>
                                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                       {safeString(item.channel) ? (
@@ -645,7 +645,7 @@ export default function MyContentLovableClient({
                                     </div>
                                   </div>
                                 </div>
-                                <Button variant="outline" size="sm" asChild>
+                                <Button variant="outline" size="sm" asChild className="shrink-0">
                                   <Link href={`/contents/${item.id}`}>Voir</Link>
                                 </Button>
                               </div>
@@ -683,12 +683,12 @@ export default function MyContentLovableClient({
                         return (
                           <Card key={qz.id} className="p-4">
                             <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-3">
-                                <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2 shrink-0">
                                   <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex items-center gap-2">
                                     <div className="font-medium truncate">
                                       {qz.title || "Quiz sans titre"}
                                     </div>
@@ -784,17 +784,17 @@ export default function MyContentLovableClient({
                                 return (
                                   <Card key={item.id} className="p-4">
                                     <div className="flex items-start justify-between gap-4">
-                                      <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 rounded-md bg-muted p-2">
+                                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                                        <div className="mt-0.5 rounded-md bg-muted p-2 shrink-0">
                                           <Icon className="h-4 w-4 text-muted-foreground" />
                                         </div>
 
                                         <div className="min-w-0">
-                                          <div className="flex flex-wrap items-center gap-2">
+                                          <div className="flex items-center gap-2">
                                             <div className="font-medium truncate">
                                               {safeString(item.title) || "Sans titre"}
                                             </div>
-                                            <Badge className={badgeClasses}>{badgeLabel}</Badge>
+                                            <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
                                           </div>
 
                                           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -812,7 +812,7 @@ export default function MyContentLovableClient({
                                         </div>
                                       </div>
 
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2 shrink-0">
                                         <Button variant="outline" size="sm" asChild>
                                           <Link href={`/contents/${item.id}`}>Voir</Link>
                                         </Button>
