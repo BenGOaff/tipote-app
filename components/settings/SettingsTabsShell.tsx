@@ -23,9 +23,12 @@ import {
   Key,
   Plug,
   FileText,
+  Paintbrush,
 } from "lucide-react";
 
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
+import BrandingSettings from "@/components/settings/BrandingSettings";
+import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
 import SocialConnections from "@/components/settings/SocialConnections";
 import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
@@ -44,7 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 
-type TabKey = "profile" | "connections" | "settings" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "branding" | "ai" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -53,7 +56,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "ai") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "branding" || s === "ai") return s;
   // compat ancien: tab=billing
   if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
@@ -83,6 +86,15 @@ type ProfileRow = {
   instagram_url?: string | null;
   youtube_url?: string | null;
   website_url?: string | null;
+  // Branding
+  brand_font?: string | null;
+  brand_color_base?: string | null;
+  brand_color_accent?: string | null;
+  brand_logo_url?: string | null;
+  brand_author_photo_url?: string | null;
+  brand_tone_of_voice?: string | null;
+  // Onboarding tone (fallback for brand_tone_of_voice)
+  preferred_tone?: string | null;
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
@@ -577,6 +589,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <Globe className="w-4 h-4" />
           Réglages
         </TabsTrigger>
+        <TabsTrigger value="branding" className="gap-2">
+          <Paintbrush className="w-4 h-4" />
+          Branding
+        </TabsTrigger>
         <TabsTrigger value="ai" className="gap-2">
           <Brain className="w-4 h-4" />
           IA & Crédits
@@ -1062,6 +1078,17 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingOffers ? "Enregistrement…" : "Enregistrer les offres"}
           </Button>
         </Card>
+      </TabsContent>
+
+      {/* BRANDING */}
+      <TabsContent value="branding" className="space-y-6">
+        <BrandingSettings
+          initial={initialProfile as BrandingData | null}
+          loading={profileLoading}
+          onSaved={(data) => {
+            setInitialProfile((prev) => ({ ...prev, ...data }));
+          }}
+        />
       </TabsContent>
 
       {/* IA & CRÉDITS */}

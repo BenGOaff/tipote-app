@@ -148,6 +148,32 @@ export function FunnelForm({
 
   const hasPendingChanges = !!pendingContentData || !!pendingBrandTokens;
 
+  // --- Load branding data from profile ---
+  type BrandingProfile = {
+    brand_font?: string | null;
+    brand_color_base?: string | null;
+    brand_color_accent?: string | null;
+    brand_logo_url?: string | null;
+    brand_author_photo_url?: string | null;
+    first_name?: string | null;
+  };
+  const [brandingProfile, setBrandingProfile] = useState<BrandingProfile | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/profile", { method: "GET" });
+        const json = await res.json().catch(() => null);
+        if (cancelled || !json?.ok) return;
+        setBrandingProfile(json.profile ?? null);
+      } catch {
+        // fail-open
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // --- Load template schema when template changes ---
   const loadTemplateSchema = useCallback(async (template: SystemeTemplate) => {
     setIsLoadingSchema(true);
@@ -173,21 +199,50 @@ export function FunnelForm({
 
       // Initialize default choices based on source/fallback
       const choices: Record<string, "user" | "generate" | "remove"> = {};
+      // Pre-fill branding values for user fields
+      const values: Record<string, string> = {};
+      const bp = brandingProfile;
+
       for (const f of fields) {
         if (f.source === "user") {
           choices[f.key] = "user";
+          // Auto-fill from branding settings
+          if (f.key === "logo_image_url" && bp?.brand_logo_url) {
+            values[f.key] = bp.brand_logo_url;
+          } else if (f.key === "author_photo_url" && bp?.brand_author_photo_url) {
+            values[f.key] = bp.brand_author_photo_url;
+          } else if (f.key === "about_name" && bp?.first_name) {
+            values[f.key] = bp.first_name;
+          }
         } else {
           // user_or_ai: default to "generate" unless fallback is "remove" and field is not required
           choices[f.key] = "generate";
         }
       }
       setTemplateFieldChoices(choices);
+      if (Object.keys(values).length > 0) {
+        setTemplateFieldValues(values);
+      }
+
+      // Auto-generate brandTokens from branding settings (colors & font)
+      if (bp?.brand_color_base || bp?.brand_color_accent || bp?.brand_font) {
+        const autoTokens: Record<string, any> = {};
+        if (bp.brand_color_base || bp.brand_color_accent) {
+          autoTokens.colors = {};
+          if (bp.brand_color_base) autoTokens.colors.primary = bp.brand_color_base;
+          if (bp.brand_color_accent) autoTokens.colors.accent = bp.brand_color_accent;
+        }
+        if (bp.brand_font) {
+          autoTokens.typography = { fontFamily: `'${bp.brand_font}', sans-serif` };
+        }
+        setBrandTokens(autoTokens);
+      }
     } catch {
       // fail-open: template will still work, just without adaptive UI
     } finally {
       setIsLoadingSchema(false);
     }
-  }, []);
+  }, [brandingProfile]);
 
   useEffect(() => {
     // keep default title up to date before generation

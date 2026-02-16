@@ -2066,6 +2066,14 @@ export async function POST(req: Request) {
           templateGlobalPrompt: safeString((body as any).templateGlobalPrompt).trim() || undefined,
           templatePagePrompt: safeString((body as any).templatePagePrompt).trim() || undefined,
 
+          // Branding context for tone adaptation
+          branding: profile ? {
+            font: (profile as any).brand_font || null,
+            colorBase: (profile as any).brand_color_base || null,
+            colorAccent: (profile as any).brand_color_accent || null,
+            toneOfVoice: (profile as any).brand_tone_of_voice || (profile as any).preferred_tone || null,
+          } : null,
+
           language: contentLocale,
         } as any);
       }
@@ -2299,6 +2307,22 @@ export async function POST(req: Request) {
             });
 
             const contentData = coerceContentDataToSchema(schema as any, parsed);
+
+            // ✅ Inject branding defaults for user-provided fields when not already set
+            if (profile) {
+              const bp = profile as any;
+              const brandingDefaults: Record<string, string | undefined> = {
+                logo_image_url: bp.brand_logo_url || undefined,
+                author_photo_url: bp.brand_author_photo_url || undefined,
+              };
+              for (const f of (schema as any).fields ?? []) {
+                if (f.source === "user" && f.inputType === "image_url" && brandingDefaults[f.key]) {
+                  if (!contentData[f.key]) {
+                    contentData[f.key] = brandingDefaults[f.key]!;
+                  }
+                }
+              }
+            }
 
             finalContent = JSON.stringify(
               {

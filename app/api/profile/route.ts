@@ -50,6 +50,14 @@ const UpdateSchema = z.object({
 
   content_locale: z.string().trim().max(10).optional(),
 
+  // Branding
+  brand_font: z.string().trim().max(100).optional(),
+  brand_color_base: z.string().trim().max(30).optional(),
+  brand_color_accent: z.string().trim().max(30).optional(),
+  brand_logo_url: z.string().trim().max(1000).optional(),
+  brand_author_photo_url: z.string().trim().max(1000).optional(),
+  brand_tone_of_voice: z.string().trim().max(500).optional(),
+
   linkedin_url: z.string().trim().max(500).optional(),
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),

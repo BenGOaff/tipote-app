@@ -33,6 +33,13 @@ export type FunnelManual = {
   guarantee?: string | null;
 };
 
+export type FunnelBrandingContext = {
+  font?: string | null;
+  colorBase?: string | null;
+  colorAccent?: string | null;
+  toneOfVoice?: string | null;
+};
+
 export type FunnelPromptParams = {
   page: FunnelPage;
   mode: FunnelMode;
@@ -46,6 +53,9 @@ export type FunnelPromptParams = {
   templateKind?: "capture" | "vente";
   templateId?: string;
   templateSchemaPrompt?: string;
+
+  // Branding context
+  branding?: FunnelBrandingContext | null;
 
   language?: string;
 };
@@ -106,6 +116,23 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
     lines.push("OFFRE (manual) :");
     lines.push(oneLine(JSON.stringify(params.manual)));
     lines.push("");
+  }
+
+  // Branding context (if available)
+  if (params.branding) {
+    const b = params.branding;
+    const brandLines: string[] = [];
+    if (b.toneOfVoice) brandLines.push(`Ton de voix de la marque : ${b.toneOfVoice}`);
+    if (b.font) brandLines.push(`Police de la marque : ${b.font}`);
+    if (b.colorBase) brandLines.push(`Couleur de base : ${b.colorBase}`);
+    if (b.colorAccent) brandLines.push(`Couleur d'accentuation : ${b.colorAccent}`);
+    if (brandLines.length > 0) {
+      lines.push("BRANDING DE L'UTILISATEUR :");
+      lines.push("- Adapte le ton du copywriting au ton de voix de la marque si spécifié.");
+      lines.push("- Les couleurs et la police sont appliquées séparément (pas dans le JSON).");
+      brandLines.forEach((l) => lines.push(`- ${l}`));
+      lines.push("");
+    }
   }
 
   lines.push("SCHÉMA TEMPLATE À RESPECTER :");
