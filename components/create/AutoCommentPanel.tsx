@@ -35,10 +35,6 @@ export type AutoCommentConfig = {
 type AutoCommentPanelProps = {
   /** Current user plan */
   userPlan: string | null;
-  /** Available automation credits */
-  automationCreditsRemaining: number;
-  /** Whether credits are loading */
-  creditsLoading: boolean;
   /** Callback when config changes */
   onChange: (config: AutoCommentConfig) => void;
   /** Disabled state (e.g. while saving) */
@@ -61,8 +57,6 @@ function planHasAccess(plan: string): boolean {
 
 export function AutoCommentPanel({
   userPlan,
-  automationCreditsRemaining,
-  creditsLoading,
   onChange,
   disabled = false,
 }: AutoCommentPanelProps) {
@@ -76,11 +70,6 @@ export function AutoCommentPanel({
   const creditsNeeded = useMemo(
     () => (nbBefore + nbAfter) * CREDIT_PER_COMMENT,
     [nbBefore, nbAfter],
-  );
-
-  const hasEnoughCredits = useMemo(
-    () => automationCreditsRemaining >= creditsNeeded,
-    [automationCreditsRemaining, creditsNeeded],
   );
 
   // Notify parent of config changes
@@ -239,32 +228,10 @@ export function AutoCommentPanel({
               </div>
             </div>
 
-            {/* Credits summary */}
-            <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Crédits nécessaires</span>
-                <span className="font-semibold">
-                  {creditsNeeded} crédit{creditsNeeded !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Crédits disponibles</span>
-                <span className={`font-semibold ${hasEnoughCredits ? "text-green-600" : "text-amber-500"}`}>
-                  {creditsLoading ? "..." : automationCreditsRemaining}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-                <span>
-                  {nbBefore + nbAfter} commentaires x {CREDIT_PER_COMMENT} crédit
-                </span>
-                <span>= {creditsNeeded} crédits</span>
-              </div>
-              {!hasEnoughCredits && !creditsLoading && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Crédits d&apos;automatisation insuffisants. L&apos;activation sera refusée au moment de la publication si les crédits ne sont pas rechargés.
-                </p>
-              )}
-            </div>
+            {/* Credits info */}
+            <p className="text-xs text-muted-foreground">
+              0,25 crédit par commentaire
+            </p>
           </div>
         )}
       </div>

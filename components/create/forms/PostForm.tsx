@@ -16,7 +16,7 @@ import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
-import { useAutomationCredits, emitAutomationCreditsUpdated } from "@/lib/credits/useAutomationCredits";
+import { emitAutomationCreditsUpdated } from "@/lib/credits/useAutomationCredits";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -98,7 +98,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     creditsNeeded: 0,
   });
   const [userPlan, setUserPlan] = useState<string | null>(null);
-  const { balance: automationBalance, loading: automationCreditsLoading } = useAutomationCredits();
 
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -466,8 +465,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           {generatedContent && (
             <AutoCommentPanel
               userPlan={userPlan}
-              automationCreditsRemaining={automationBalance?.credits_remaining ?? 0}
-              creditsLoading={automationCreditsLoading}
               onChange={setAutoCommentConfig}
               disabled={isSaving}
             />
@@ -483,7 +480,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
                       disabled={!generatedContent || !title || isOverLimit || isSaving}
-                      className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
                       title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}` : undefined}
                     >
                       <Send className="w-4 h-4 mr-1" />
@@ -494,7 +490,6 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
                       disabled={!generatedContent || !title || isOverLimit || isSaving}
-                      className="bg-[#b042b4] text-white hover:bg-[#9a38a0]"
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}

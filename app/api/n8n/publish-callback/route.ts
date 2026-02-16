@@ -113,7 +113,24 @@ export async function POST(req: NextRequest) {
       .eq("auto_comments_status", "before_done");
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
-    // On ne change pas le statut pour ne pas perdre le "scheduled"
+    // Mark as failed so the user can see the error in the UI
+    const failedMeta: Record<string, string> = {
+      failed_at: new Date().toISOString(),
+      failed_error: errorMsg || "Publication échouée",
+    };
+    if (platform) failedMeta.failed_platform = platform;
+
+    const { error: upErr } = await supabaseAdmin
+      .from("content_item")
+      .update({ status: "failed", meta: failedMeta })
+      .eq("id", contentId);
+
+    if (upErr && isMissingColumn(upErr.message)) {
+      await supabaseAdmin
+        .from("content_item")
+        .update({ statut: "failed", meta: failedMeta } as any)
+        .eq("id", contentId);
+    }
   }
 
   return NextResponse.json({ ok: true });

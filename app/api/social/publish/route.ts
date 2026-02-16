@@ -258,6 +258,7 @@ export async function POST(req: NextRequest) {
 
       // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)
       const resolvedImageUrl = resolveImageUrl(contentItem.meta);
+      console.log(`[publish] ${platform}: image_url=${resolvedImageUrl ?? "none"}, meta.images count=${Array.isArray(contentItem.meta?.images) ? contentItem.meta.images.length : 0}`);
 
       const n8nPayload: Record<string, unknown> = {
         content_id: contentId,
@@ -332,7 +333,8 @@ export async function POST(req: NextRequest) {
 
   // --- Mode direct (fallback si n8n pas configure) ---
   const directImageUrl = resolveImageUrl(contentItem.meta);
-  let result: { ok: boolean; postId?: string; postUrn?: string; error?: string; statusCode?: number };
+  console.log(`[publish-direct] ${platform}: image_url=${directImageUrl ?? "none"}`);
+  let result: { ok: boolean; postId?: string; postUrn?: string; error?: string; warning?: string; statusCode?: number };
 
   if (platform === "linkedin") {
     const liResult = await publishPost(accessToken, platformUserId, contentItem.content, directImageUrl);
@@ -383,11 +385,18 @@ export async function POST(req: NextRequest) {
 
   await updateContentStatus(contentId, metaUpdate);
 
-  return NextResponse.json({
+  const responsePayload: Record<string, unknown> = {
     ok: true,
     mode: "direct",
     postId,
     postUrl,
     message: `Post publié sur ${platformLabel}.`,
-  });
+  };
+  if (result.warning) {
+    responsePayload.warning = result.warning;
+    responsePayload.message = `Post publié sur ${platformLabel} (sans image : ${result.warning})`;
+    console.warn(`[publish-direct] ${platform}: tweet published but image failed:`, result.warning);
+  }
+
+  return NextResponse.json(responsePayload);
 }

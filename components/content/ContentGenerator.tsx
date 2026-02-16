@@ -319,7 +319,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-slate-900">Crédits IA</p>
-            <Link href="/settings?tab=billing" className="text-xs font-semibold text-[#b042b4] hover:underline">
+            <Link href="/settings?tab=billing" className="text-xs font-semibold text-primary hover:underline">
               Gérer mes crédits
             </Link>
           </div>
@@ -342,7 +342,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             <input
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="h-10 w-44 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
+              className="h-10 w-44 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="LinkedIn, Email…"
             />
           </div>
@@ -354,7 +354,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="ex: lancement, preuve sociale"
             />
             <p className="text-[11px] text-slate-500">Sépare par des virgules.</p>
@@ -365,7 +365,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[180px] rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-[#b042b4]/30"
+              className="min-h-[180px] rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder={meta.placeholder}
             />
             <p className="text-[11px] text-slate-500">
@@ -379,7 +379,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             type="button"
             onClick={onGenerate}
             disabled={!canGenerate}
-            className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
           >
             {loading ? 'Génération…' : 'Générer'}
           </button>
@@ -462,7 +462,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                   <div className="flex flex-wrap gap-2">
                     <Link
                       href="/settings?tab=billing"
-                      className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+                      className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
                     >
                       Recharger mes crédits
                     </Link>

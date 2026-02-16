@@ -34,7 +34,7 @@ export default function DailyFocus({ task }: Props) {
             <Button variant="outline">Voir stratégie</Button>
           </Link>
           <Link href="/create">
-            <Button className="bg-[#b042b4] hover:bg-[#b042b4]/90">Créer du contenu</Button>
+            <Button className="bg-primary hover:bg-primary/90">Créer du contenu</Button>
           </Link>
         </div>
       </Card>
@@ -42,7 +42,7 @@ export default function DailyFocus({ task }: Props) {
   }
 
   return (
-    <Card className="p-5 border-[#b042b4]/30">
+    <Card className="p-5 border-primary/30">
       <p className="text-xs text-muted-foreground">Focus du jour</p>
       <p className="mt-1 text-base font-semibold text-slate-900">{task.title}</p>
 
@@ -52,7 +52,7 @@ export default function DailyFocus({ task }: Props) {
         <MarkTaskDoneButton
           taskId={task.id}
           initialStatus={task.status ?? null}
-          className="w-full bg-[#b042b4] hover:bg-[#b042b4]/90"
+          className="w-full bg-primary hover:bg-primary/90"
         />
 
         <Link href="/tasks" className="w-full">

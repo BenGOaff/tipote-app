@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   planned: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   published: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
 };
 
 const statusLabels: Record<string, string> = {
@@ -31,6 +32,7 @@ const statusLabels: Record<string, string> = {
   scheduled: "Planifié",
   planned: "Planifié",
   published: "Publié",
+  failed: "Erreur",
 };
 
 function safeString(v: unknown): string {
@@ -118,7 +120,7 @@ export function ContentCalendarView({
     .map((d) => d.date);
 
   return (
-    <div className="grid md:grid-cols-[auto_1fr] gap-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <Card className="p-4 flex flex-col items-center">
         <Calendar
           mode="single"

@@ -50,106 +50,26 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.twitter.com/2/tweets",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.body.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.body.commentary) }}\n}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "jsCode": "// Post tweet to X (Twitter) with image support.\n// Handles image upload via v1.1 media API + tweet via v2 API.\n// Also handles callback to Tipote.\n\nconst body = $input.first().json.body || $input.first().json;\nconst accessToken = body.access_token || '';\nconst text = body.commentary || '';\nconst imageUrl = body.image_url || '';\nconst callbackUrl = body.callback_url || '';\nconst contentId = body.content_id || '';\nconst sharedSecret = $vars.N8N_SHARED_SECRET || '';\n\nlet mediaId = null;\nlet imageError = '';\n\nconsole.log('[Twitter] image_url:', imageUrl ? imageUrl.substring(0, 80) : 'none');\n\n// Step 1: Upload image if present\nif (imageUrl) {\n  try {\n    const imgResp = await fetch(imageUrl);\n    if (!imgResp.ok) {\n      imageError = 'Image download failed: ' + imgResp.status + ' ' + imgResp.statusText;\n      console.log('[Twitter] ' + imageError);\n    } else {\n      const imgBuffer = await imgResp.arrayBuffer();\n      const imgBytes = new Uint8Array(imgBuffer);\n      const base64 = Buffer.from(imgBytes).toString('base64');\n      const contentType = imgResp.headers.get('content-type') || 'image/jpeg';\n      console.log('[Twitter] Image downloaded:', imgBytes.length, 'bytes,', contentType);\n\n      let mediaType = 'image/jpeg';\n      if (contentType.includes('png')) mediaType = 'image/png';\n      else if (contentType.includes('gif')) mediaType = 'image/gif';\n      else if (contentType.includes('webp')) mediaType = 'image/webp';\n\n      if (imgBytes.length < 5 * 1024 * 1024) {\n        // Simple upload for files < 5MB\n        const formBody = new URLSearchParams();\n        formBody.append('media_data', base64);\n        formBody.append('media_category', 'tweet_image');\n\n        const uploadResp = await fetch('https://upload.twitter.com/1.1/media/upload.json', {\n          method: 'POST',\n          headers: {\n            'Authorization': 'Bearer ' + accessToken,\n            'Content-Type': 'application/x-www-form-urlencoded'\n          },\n          body: formBody.toString()\n        });\n\n        if (uploadResp.ok) {\n          const uploadData = await uploadResp.json();\n          mediaId = uploadData.media_id_string || null;\n          console.log('[Twitter] Media uploaded, id:', mediaId);\n        } else {\n          const errBody = await uploadResp.text().catch(() => '');\n          imageError = 'Media upload failed (' + uploadResp.status + '): ' + errBody.substring(0, 200);\n          console.log('[Twitter] ' + imageError);\n        }\n      } else {\n        // Chunked upload for files >= 5MB\n        const initBody = new URLSearchParams();\n        initBody.append('command', 'INIT');\n        initBody.append('total_bytes', String(imgBytes.length));\n        initBody.append('media_type', mediaType);\n        initBody.append('media_category', 'tweet_image');\n\n        const initResp = await fetch('https://upload.twitter.com/1.1/media/upload.json', {\n          method: 'POST',\n          headers: {\n            'Authorization': 'Bearer ' + accessToken,\n            'Content-Type': 'application/x-www-form-urlencoded'\n          },\n          body: initBody.toString()\n        });\n\n        if (initResp.ok) {\n          const initData = await initResp.json();\n          const chunkMediaId = initData.media_id_string;\n\n          const appendBody = new URLSearchParams();\n          appendBody.append('command', 'APPEND');\n          appendBody.append('media_id', chunkMediaId);\n          appendBody.append('segment_index', '0');\n          appendBody.append('media_data', base64);\n\n          await fetch('https://upload.twitter.com/1.1/media/upload.json', {\n            method: 'POST',\n            headers: {\n              'Authorization': 'Bearer ' + accessToken,\n              'Content-Type': 'application/x-www-form-urlencoded'\n            },\n            body: appendBody.toString()\n          });\n\n          const finalBody = new URLSearchParams();\n          finalBody.append('command', 'FINALIZE');\n          finalBody.append('media_id', chunkMediaId);\n\n          const finalResp = await fetch('https://upload.twitter.com/1.1/media/upload.json', {\n            method: 'POST',\n            headers: {\n              'Authorization': 'Bearer ' + accessToken,\n              'Content-Type': 'application/x-www-form-urlencoded'\n            },\n            body: finalBody.toString()\n          });\n\n          if (finalResp.ok) {\n            mediaId = chunkMediaId;\n            console.log('[Twitter] Chunked media uploaded, id:', mediaId);\n          } else {\n            const errBody = await finalResp.text().catch(() => '');\n            imageError = 'Chunked upload FINALIZE failed (' + finalResp.status + '): ' + errBody.substring(0, 200);\n            console.log('[Twitter] ' + imageError);\n          }\n        } else {\n          const errBody = await initResp.text().catch(() => '');\n          imageError = 'Chunked upload INIT failed (' + initResp.status + '): ' + errBody.substring(0, 200);\n          console.log('[Twitter] ' + imageError);\n        }\n      }\n    }\n  } catch (e) {\n    imageError = 'Image upload exception: ' + (e.message || String(e));\n    console.log('[Twitter] ' + imageError);\n  }\n}\n\n// Step 2: Create the tweet\nlet tweetSuccess = false;\nlet tweetPostId = '';\nlet tweetError = '';\n\ntry {\n  const tweetBody = { text };\n  if (mediaId) {\n    tweetBody.media = { media_ids: [mediaId] };\n  }\n\n  const tweetResp = await fetch('https://api.twitter.com/2/tweets', {\n    method: 'POST',\n    headers: {\n      'Authorization': 'Bearer ' + accessToken,\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify(tweetBody)\n  });\n\n  tweetSuccess = tweetResp.status === 201;\n  const tweetData = await tweetResp.json().catch(() => ({}));\n  tweetPostId = tweetData?.data?.id || '';\n\n  if (!tweetSuccess) {\n    tweetError = tweetData?.detail || tweetData?.title || 'X API error ' + tweetResp.status;\n  }\n} catch (e) {\n  tweetError = e.message || 'tweet_exception';\n}\n\n// Step 3: Callback to Tipote\nif (callbackUrl) {\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'X-N8N-Secret': sharedSecret,\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({\n        content_id: contentId,\n        platform: 'twitter',\n        success: tweetSuccess,\n        postId: tweetPostId,\n        error: tweetError || undefined\n      })\n    });\n  } catch (e) {\n    // Non-blocking\n  }\n}\n\nreturn [{\n  json: {\n    ok: tweetSuccess,\n    postId: tweetPostId,\n    postUrn: tweetPostId,\n    mediaId: mediaId || null,\n    imageError: imageError || null,\n    error: tweetError || null\n  }\n}];"
       },
       "id": "twitter-post",
-      "name": "Post to X",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [690, 240]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Webhook Trigger').item.json.body.callback_url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"twitter\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.data?.id || '' }}\"\n}",
-        "options": {}
-      },
-      "id": "callback-success",
-      "name": "Callback Success",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [910, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Webhook Trigger').item.json.body.callback_url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $vars.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"twitter\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'X API error' }}\"\n}",
-        "options": {}
-      },
-      "id": "callback-error",
-      "name": "Callback Error",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [910, 360]
+      "name": "Post to X (with images)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 240],
+      "notes": "Handles image upload via Twitter v1.1 media API, then posts tweet via v2 API. Falls back to text-only if image upload fails. Also handles callback to Tipote."
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"ok\": true, \"postId\": \"{{ $('Post to X').item.json.body?.data?.id || '' }}\" }",
+        "responseBody": "={{ JSON.stringify({ ok: $json.ok, postId: $json.postId || '', postUrn: $json.postUrn || '', error: $json.error || undefined }) }}",
         "options": {}
       },
       "id": "respond-success",
-      "name": "Respond Success",
+      "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1130, 200]
+      "position": [910, 240]
     },
     {
       "parameters": {
@@ -182,7 +102,7 @@
       "main": [
         [
           {
-            "node": "Post to X",
+            "node": "Post to X (with images)",
             "type": "main",
             "index": 0
           }
@@ -196,22 +116,11 @@
         ]
       ]
     },
-    "Post to X": {
+    "Post to X (with images)": {
       "main": [
         [
           {
-            "node": "Callback Success",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Callback Success": {
-      "main": [
-        [
-          {
-            "node": "Respond Success",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -231,5 +140,5 @@
     }
   ],
   "pinData": {},
-  "versionId": "1"
+  "versionId": "2"
 }

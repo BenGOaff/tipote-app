@@ -183,6 +183,7 @@ export type TwitterPostResult = {
   ok: boolean;
   postId?: string;
   error?: string;
+  warning?: string;
   statusCode?: number;
 };
 
@@ -196,14 +197,19 @@ export async function publishTweet(
   imageUrl?: string
 ): Promise<TwitterPostResult> {
   let mediaId: string | undefined;
+  let imageWarning: string | undefined;
 
   // Si une image est fournie, l'uploader via l'API media upload
   if (imageUrl) {
     try {
+      console.log("[Twitter] Uploading image:", imageUrl.slice(0, 100));
       mediaId = await uploadMediaToTwitter(accessToken, imageUrl);
+      console.log("[Twitter] Image uploaded, media_id:", mediaId);
     } catch (err) {
-      console.error("Twitter media upload failed:", err);
-      // Publier sans image en fallback
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("[Twitter] Media upload FAILED:", errMsg);
+      imageWarning = `Image non postée: ${errMsg}`;
+      // Continue with text-only tweet
     }
   }
 
@@ -224,7 +230,9 @@ export async function publishTweet(
 
   if (res.status === 201) {
     const json = await res.json();
-    return { ok: true, postId: json.data?.id };
+    const result: TwitterPostResult = { ok: true, postId: json.data?.id };
+    if (imageWarning) result.warning = imageWarning;
+    return result;
   }
 
   const errorText = await res.text();
@@ -250,13 +258,15 @@ async function uploadMediaToTwitter(
   imageUrl: string
 ): Promise<string> {
   // Télécharger l'image
+  console.log("[Twitter] Downloading image:", imageUrl.slice(0, 120), "...");
   const imgRes = await fetch(imageUrl);
   if (!imgRes.ok) {
-    throw new Error(`Failed to fetch image from ${imageUrl}: ${imgRes.status}`);
+    throw new Error(`Failed to fetch image (${imgRes.status} ${imgRes.statusText}) from: ${imageUrl.slice(0, 120)}`);
   }
 
   const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
   const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+  console.log("[Twitter] Image downloaded:", imgBuffer.length, "bytes,", contentType);
 
   // Déterminer le media_type pour Twitter
   let mediaType = "image/jpeg";

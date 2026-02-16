@@ -183,7 +183,7 @@ export default async function CreateTypePage(props: Props) {
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">{meta.hint}</p>
 
             {templatePrompt ? (
-              <p className="mt-2 inline-flex items-center rounded-full bg-[#b042b4]/10 px-3 py-1 text-xs font-semibold text-[#b042b4]">
+              <p className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 Template rapide activé
               </p>
             ) : null}
@@ -203,7 +203,7 @@ export default async function CreateTypePage(props: Props) {
             <form action="/contents" method="get">
               <button
                 type="submit"
-                className="rounded-xl bg-[#b042b4] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
               >
                 Mes contenus
               </button>

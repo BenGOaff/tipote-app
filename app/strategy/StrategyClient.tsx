@@ -205,7 +205,7 @@ export default function StrategyClient({
             </p>
 
             {mode === "choose" && (
-              <p className="mt-2 text-xs font-semibold text-[#a855f7]">
+              <p className="mt-2 text-xs font-semibold text-primary">
                 Commence par choisir un scénario sur la page dédiée, puis
                 personnalise les offres.
               </p>
@@ -222,7 +222,7 @@ export default function StrategyClient({
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#f5f3ff] text-[11px] font-semibold text-[#7c3aed]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
               {selectedIndex !== null ? selectedIndex + 1 : "?"}
             </span>
             <div>
@@ -256,7 +256,7 @@ export default function StrategyClient({
                 Nom de tes offres
               </label>
               <input
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-[#a855f7] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 value={scenarioLabel}
                 onChange={(e) => updateName(e.target.value)}
                 placeholder="Ex : Ascension Affiliation Success"
@@ -282,7 +282,7 @@ export default function StrategyClient({
                             Nom de l&apos;offre
                           </label>
                           <input
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                             value={level.name ?? ""}
                             onChange={(e) =>
                               updateLevel(idx, "name", e.target.value)
@@ -296,7 +296,7 @@ export default function StrategyClient({
                             Description courte
                           </label>
                           <textarea
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                             rows={3}
                             value={level.description ?? ""}
                             onChange={(e) =>
@@ -312,7 +312,7 @@ export default function StrategyClient({
                               Prix indicatif
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                               value={
                                 level.price !== undefined
                                   ? String(level.price)
@@ -330,7 +330,7 @@ export default function StrategyClient({
                               Fourchette / gamme
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#a855f7]/30"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                               value={level.price_range ?? ""}
                               onChange={(e) =>
                                 updateLevel(idx, "price_range", e.target.value)
@@ -351,7 +351,7 @@ export default function StrategyClient({
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center justify-center rounded-lg bg-[#a855f7] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#9333ea] disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
               >
                 {saving ? "Sauvegarde..." : "Sauvegarder les offres"}
               </button>

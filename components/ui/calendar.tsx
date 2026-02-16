@@ -27,8 +27,8 @@ function Calendar({
           "grid [&>*:nth-child(-n+2)]:col-start-1 [&>*:nth-child(-n+2)]:row-start-1 gap-y-4",
         caption: "flex justify-center pt-1 items-center h-9",
         caption_label: "text-sm font-medium",
-        // v8: nav sits on top of caption via grid; arrows centered with gap for month text
-        nav: "flex items-center justify-center gap-32 h-9 pt-1 z-10",
+        // v8: nav sits on top of caption via grid; arrows flanking month text
+        nav: "flex items-center justify-between w-full h-9 pt-1 z-10 px-1",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
