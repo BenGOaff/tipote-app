@@ -30,7 +30,7 @@ import {
 import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
 
 interface ArticleFormProps {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -92,7 +92,7 @@ export function ArticleForm({
   const canWriteArticle = Boolean(hasPlan && !isGenerating);
 
   const handleGeneratePlan = async () => {
-    const content = await onGenerate({
+    const result = await onGenerate({
       type: "article",
       articleStep: "plan",
       objective,
@@ -102,19 +102,22 @@ export function ArticleForm({
       ctaText: ctaText || undefined,
       ctaLink: ctaLink || undefined,
     });
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
     if (content) {
       setGeneratedContent(content);
-      setArticleStep("write"); // ✅ l’étape suivante attend un plan validé
+      setArticleStep("write"); // ✅ l'étape suivante attend un plan validé
       if (!title) setTitle(subject || seoKeyword);
       setShowRawEditor(false);
     }
+    if (genId && !savedContentId) setSavedContentId(genId);
   };
 
   const handleWriteArticle = async () => {
     const plan = generatedContent;
 
-    const content = await onGenerate({
+    const result = await onGenerate({
       type: "article",
       articleStep: "write",
       objective,
@@ -123,14 +126,17 @@ export function ArticleForm({
       links: links || undefined,
       ctaText: ctaText || undefined,
       ctaLink: ctaLink || undefined,
-      approvedPlan: plan, // ✅ obligatoire pour l’étape write
+      approvedPlan: plan, // ✅ obligatoire pour l'étape write
     });
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
     if (content) {
       setGeneratedContent(content); // maintenant = article complet
       if (!title) setTitle(subject || seoKeyword);
       setShowRawEditor(false);
     }
+    if (genId && !savedContentId) setSavedContentId(genId);
   };
 
   const handleRegenerate = async () => {

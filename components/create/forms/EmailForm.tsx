@@ -16,7 +16,7 @@ import type { OfferOption } from "@/lib/offers";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 interface EmailFormProps {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -265,7 +265,9 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
       }
     }
 
-    const content = await onGenerate(payload);
+    const result = await onGenerate(payload);
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
     if (content) {
       const blocks = splitEmails(content);
@@ -277,6 +279,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
         else setTitle(onboardingSubject || "Onboarding");
       }
     }
+    if (genId && !savedContentId) setSavedContentId(genId);
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {

@@ -553,7 +553,7 @@ export default function CreateLovableClient() {
     };
   }, []);
 
-  const handleGenerate = async (params: any): Promise<string> => {
+  const handleGenerate = async (params: any): Promise<{ text: string; contentId: string | null }> => {
     setIsGenerating(true);
     try {
       const payload = ensurePrompt(params);
@@ -584,11 +584,11 @@ export default function CreateLovableClient() {
           toast({
             title: "Génération",
             description:
-              "La génération a démarré, mais aucun contenu n'a été récupéré (timeout). Va voir dans “Mes Contenus”.",
+              "La génération a démarré, mais aucun contenu n\u2019a été récupéré (timeout). Va voir dans \u00ab\u00a0Mes Contenus\u00a0\u00bb.",
             variant: "destructive",
           });
         }
-        return final || "";
+        return { text: final || "", contentId: jobId };
       }
 
       const text = extractGeneratedText(data);
@@ -601,14 +601,14 @@ export default function CreateLovableClient() {
         });
       }
 
-      return text || "";
+      return { text: text || "", contentId: null };
     } catch (e: any) {
       toast({
         title: "Erreur",
         description: e?.message || "Impossible de générer",
         variant: "destructive",
       });
-      return "";
+      return { text: "", contentId: null };
     } finally {
       setIsGenerating(false);
     }

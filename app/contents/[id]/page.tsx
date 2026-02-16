@@ -5,6 +5,8 @@
 // NOTE DB compat: certaines instances ont encore les colonnes FR (titre/contenu/statut/canal/date_planifiee)
 // -> on tente d'abord la "v2" (title/content/status/channel/scheduled_date), sinon fallback FR.
 
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -127,7 +129,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
   // retry FR sans prompt/updated_at (fréquent en prod)
   const frRetry = await supabase
     .from("content_item")
-    .select("id, user_id, type, titre, contenu, statut, date_planifiee, canal, tags, created_at")
+    .select("id, user_id, type, titre, contenu, statut, date_planifiee, canal, tags, meta, created_at")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -148,6 +150,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
     scheduled_date: row.date_planifiee ?? null,
     channel: row.canal ?? null,
     tags: normalizeTags(row.tags),
+    meta: row.meta ?? null,
     created_at: row.created_at ?? null,
     updated_at: null,
   };

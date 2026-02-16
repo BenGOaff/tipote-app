@@ -11,7 +11,7 @@ import { AIContent } from "@/components/ui/ai-content";
 import { downloadAsPdf } from "@/lib/content-utils";
 
 interface VideoFormProps {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -58,17 +58,20 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const handleGenerate = async () => {
     setShowRawEditor(false);
 
-    const content = await onGenerate({
+    const result = await onGenerate({
       type: "video",
       platform,
       subject,
       duration,
     });
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
     if (content) {
       setGeneratedContent(content);
       if (!title) setTitle(subject || `Script ${platform}`);
     }
+    if (genId && !savedContentId) setSavedContentId(genId);
   };
 
   const handleSave = async (status: "draft" | "scheduled" | "published") => {

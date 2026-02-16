@@ -78,7 +78,7 @@ function guessTitleFromOfferOrTemplate(opts: {
 }
 
 export type FunnelFormProps = {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (payload: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -466,7 +466,8 @@ export function FunnelForm({
         }
       }
 
-      const out = await onGenerate(payload);
+      const raw = await onGenerate(payload);
+      const out = typeof raw === "string" ? raw : raw.text;
 
       if (mode === "text_only") {
         setMarkdownText(out || "");

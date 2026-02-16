@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import { emitAutomationCreditsUpdated } from "@/lib/credits/useAutomationCredits
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 interface PostFormProps {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -103,6 +103,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  // Use ref for synchronous access (avoids stale closure creating duplicate entries)
+  const savedContentIdRef = useRef<string | null>(null);
   const [savedContentId, setSavedContentId] = useState<string | null>(null);
 
   // Schedule modal state
@@ -185,10 +187,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       };
     }
 
-    const content = await onGenerate(payload);
+    const result = await onGenerate(payload);
+    const text = typeof result === "string" ? result : result.text;
+    const contentId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
-    if (content) {
-      setGeneratedContent(content);
+    if (text) {
+      setGeneratedContent(text);
+    }
+    // Capture contentId from generate (placeholder row) so subsequent saves PATCH instead of POST
+    if (contentId) {
+      savedContentIdRef.current = contentId;
+      setSavedContentId(contentId);
     }
   };
 
@@ -216,10 +225,13 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
     let id: string | null;
 
+    // Read from ref (synchronous, never stale) to avoid duplicate entries
+    const existingId = savedContentIdRef.current;
+
     // If we already saved this post, update instead of creating a duplicate
-    if (savedContentId) {
+    if (existingId) {
       try {
-        const res = await fetch(`/api/content/${savedContentId}`, {
+        const res = await fetch(`/api/content/${existingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -231,12 +243,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             meta: Object.keys(meta).length > 0 ? meta : undefined,
           }),
         });
-        id = savedContentId;
+        id = existingId;
         if (!res.ok) {
           console.error("[PostForm] PATCH failed, but keeping existing ID to avoid duplicate");
         }
       } catch {
-        id = savedContentId; // If network error on PATCH, still use existing ID
+        id = existingId; // If network error on PATCH, still use existing ID
       }
     } else {
       id = await onSave({
@@ -271,7 +283,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       }
     }
 
-    if (id) setSavedContentId(id);
+    if (id) {
+      savedContentIdRef.current = id; // Sync update (immediate, no stale closure)
+      setSavedContentId(id);          // Async update (for UI/props)
+    }
     return id;
   };
 

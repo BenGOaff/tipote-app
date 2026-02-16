@@ -122,7 +122,12 @@ export function ContentEditor({ initialItem }: Props) {
   // Images support
   // -----------------------------
   const [images, setImages] = useState<UploadedImage[]>(() => {
-    const metaImages = (initialItem as any)?.meta?.images;
+    let meta = (initialItem as any)?.meta;
+    // Defensive: meta may be a JSON string instead of object
+    if (typeof meta === "string") {
+      try { meta = JSON.parse(meta); } catch { meta = null; }
+    }
+    const metaImages = meta?.images;
     if (Array.isArray(metaImages)) {
       return metaImages.filter((img: any) => img && typeof img === "object" && img.url);
     }

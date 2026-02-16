@@ -20,7 +20,7 @@ type FormMode = "create" | "improve";
 type OfferType = "lead_magnet" | "paid_training";
 
 export type OfferFormProps = {
-  onGenerate: (params: any) => Promise<string>;
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (payload: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
@@ -156,7 +156,8 @@ export function OfferForm(props: OfferFormProps) {
       };
     }
 
-    const text = await props.onGenerate(payload);
+    const raw = await props.onGenerate(payload);
+    const text = typeof raw === "string" ? raw : raw.text;
     if (!text?.trim()) return;
     setResult(text);
   };

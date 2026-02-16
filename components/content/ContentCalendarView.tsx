@@ -75,9 +75,7 @@ function parseDateMaybeLocal(v: string | null | undefined): Date | null {
 }
 
 function contentDate(content: ContentListItem) {
-  // Lovable: scheduled_at ? created_at fallback
   const raw = content.scheduled_date ? content.scheduled_date : content.created_at;
-
   const d = parseDateMaybeLocal(raw) ?? parseDateMaybeLocal(content.created_at) ?? new Date();
   return d;
 }
@@ -97,7 +95,7 @@ export function ContentCalendarView({
 
   const selectedContents = selectedDate ? getContentsForDate(selectedDate) : [];
 
-  // Create modifiers for dates with content (Lovable logic)
+  // Create modifiers for dates with content
   const datesWithContent = contents.reduce((acc, content) => {
     const date = contentDate(content);
     const dateStr = format(date, "yyyy-MM-dd");
@@ -120,93 +118,106 @@ export function ContentCalendarView({
     .map((d) => d.date);
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <Card className="p-4 flex flex-col items-center">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          locale={fr}
-          modifiers={{
-            scheduled: scheduledDays,
-            published: publishedDays,
-          }}
-          modifiersClassNames={{
-            scheduled: "bg-blue-100 dark:bg-blue-900/50 font-bold",
-            published: "bg-green-100 dark:bg-green-900/50",
-          }}
-          className="rounded-md"
-        />
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Left: Calendar */}
+      <div className="lg:w-[350px] flex-shrink-0">
+        <Card className="p-4">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            locale={fr}
+            modifiers={{
+              scheduled: scheduledDays,
+              published: publishedDays,
+            }}
+            modifiersClassNames={{
+              scheduled: "bg-blue-100 dark:bg-blue-900/50 font-bold",
+              published: "bg-green-100 dark:bg-green-900/50",
+            }}
+            className="rounded-md w-full"
+          />
 
-        <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50" />
-            <span>Planifié</span>
+          <div className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50" />
+              <span>Planifié</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50" />
+              <span>Publié</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50" />
-            <span>Publié</span>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      <Card className="p-6">
-        {selectedDate && (
-          <>
-            <h3 className="text-lg font-bold mb-4 capitalize">{format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}</h3>
+      {/* Right: Content list for selected date */}
+      <div className="flex-1 min-w-0">
+        <Card className="p-6 h-full">
+          {selectedDate && (
+            <>
+              <h3 className="text-lg font-bold mb-4 capitalize">
+                {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
+              </h3>
 
-            {selectedContents.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">Aucun contenu pour cette date</p>
-            ) : (
-              <div className="space-y-3">
-                {selectedContents.map((content) => {
-                  const Icon = typeIcons[normalizeKeyType(content.type)] || FileText;
+              {selectedContents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground text-sm">Aucun contenu pour cette date</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedContents.map((content) => {
+                    const Icon = typeIcons[normalizeKeyType(content.type)] || FileText;
 
-                  const stKey = normalizeKeyStatus(content.status);
-                  const badgeClass = statusColors[stKey] ?? statusColors.draft;
-                  const badgeLabel = statusLabels[stKey] ?? safeString(content.status) ?? "—";
+                    const stKey = normalizeKeyStatus(content.status);
+                    const badgeClass = statusColors[stKey] ?? statusColors.draft;
+                    const badgeLabel = statusLabels[stKey] ?? safeString(content.status) ?? "—";
 
-                  const scheduled = content.scheduled_date ? parseDateMaybeLocal(content.scheduled_date) : null;
-                  const showTime =
-                    !!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime());
+                    const scheduled = content.scheduled_date ? parseDateMaybeLocal(content.scheduled_date) : null;
+                    const showTime =
+                      !!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime());
 
-                  return (
-                    <div
-                      key={content.id}
-                      className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => onSelectContent?.(content)}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-muted-foreground" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
-
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {safeString(content.channel) ? <span className="capitalize">{safeString(content.channel)}</span> : null}
-
-                          {scheduled ? (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {showTime ? format(scheduled, "d MMM à HH:mm", { locale: fr }) : format(scheduled, "d MMM", { locale: fr })}
-                              </span>
-                            </>
-                          ) : null}
+                    return (
+                      <div
+                        key={content.id}
+                        className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => onSelectContent?.(content)}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-5 h-5 text-muted-foreground" />
                         </div>
-                      </div>
 
-                      <Badge className={badgeClass}>{badgeLabel}</Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </Card>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
+
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {safeString(content.channel) ? <span className="capitalize">{safeString(content.channel)}</span> : null}
+
+                            {scheduled ? (
+                              <>
+                                {safeString(content.channel) && <span>·</span>}
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {showTime ? format(scheduled, "d MMM à HH:mm", { locale: fr }) : format(scheduled, "d MMM", { locale: fr })}
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <Badge className={badgeClass}>{badgeLabel}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
