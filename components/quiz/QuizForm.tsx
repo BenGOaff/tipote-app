@@ -278,6 +278,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
+          locale,
           sio_share_tag_name: sioShareTagName || null,
           status,
           config_objective: objective,

@@ -46,6 +46,7 @@ type PublicQuizData = {
   virality_enabled: boolean;
   bonus_description: string | null;
   share_message: string | null;
+  locale: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -249,7 +250,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             Commencer <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </Card>
-        <TipoteFooter />
+        <TipoteFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -365,7 +366,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             </p>
           )}
         </Card>
-        <TipoteFooter />
+        <TipoteFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -513,7 +514,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             </p>
           )}
         </Card>
-        <TipoteFooter />
+        <TipoteFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -521,7 +522,17 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
   return null;
 }
 
-function TipoteFooter() {
+const tipoteFooterTexts: Record<string, string> = {
+  fr: "Ce quiz vous est offert par Tipote",
+  en: "This quiz is powered by Tipote",
+  es: "Este quiz es ofrecido por Tipote",
+  de: "Dieses Quiz wird Ihnen von Tipote bereitgestellt",
+  pt: "Este quiz é oferecido por Tipote",
+  it: "Questo quiz è offerto da Tipote",
+};
+
+function TipoteFooter({ locale }: { locale?: string | null }) {
+  const text = tipoteFooterTexts[locale ?? "fr"] ?? tipoteFooterTexts.fr;
   return (
     <p className="text-center text-xs text-muted-foreground/60 mt-6">
       <a
@@ -530,7 +541,7 @@ function TipoteFooter() {
         rel="noopener noreferrer"
         className="hover:text-muted-foreground transition-colors"
       >
-        Ce quiz vous est offert par Tipote
+        {text}
       </a>
     </p>
   );

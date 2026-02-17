@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
         virality_enabled: Boolean(body.virality_enabled),
         bonus_description: body.bonus_description ?? null,
         share_message: body.share_message ?? null,
+        locale: body.locale ?? "fr",
         sio_share_tag_name: body.sio_share_tag_name ?? null,
         status: body.status === "active" ? "active" : "draft",
         config_objective: body.config_objective ?? null,

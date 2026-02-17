@@ -102,7 +102,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
-      "share_message", "status", "sio_share_tag_name",
+      "share_message", "status", "sio_share_tag_name", "locale",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
