@@ -188,6 +188,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Le contenu est vide" }, { status: 400 });
   }
 
+  // Guard: prevent publishing a post that is already published or being published
+  const currentStatus = (contentItem.status ?? "").toLowerCase();
+  if (currentStatus === "published" || currentStatus === "publishing") {
+    return NextResponse.json(
+      { error: "Ce post a déjà été publié ou est en cours de publication." },
+      { status: 409 }
+    );
+  }
+
   // 2. Récupérer la connexion sociale (avec fallback admin)
   let connection: any = null;
   {

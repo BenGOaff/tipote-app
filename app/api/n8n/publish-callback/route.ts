@@ -108,8 +108,10 @@ export async function POST(req: NextRequest) {
       .eq("auto_comments_status", "before_done");
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
-    // Keep status as "scheduled" so n8n can retry on next cron cycle.
-    // Store the failure info in meta for debugging.
+
+    // Safety: check if the post was already published before resetting to "scheduled".
+    // This prevents re-queuing a post that n8n actually published successfully
+    // but reported as failed (e.g. callback timeout).
     const { data: existingFailed } = await supabaseAdmin
       .from("content_item")
       .select("meta")
@@ -117,6 +119,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     const existingFailedMeta = (existingFailed?.meta && typeof existingFailed.meta === "object") ? existingFailed.meta as Record<string, unknown> : {};
+
+    if (existingFailedMeta.published_at) {
+      // Post was already published — do NOT reset status
+      console.warn(`[publish-callback] Post ${contentId} already published (published_at=${existingFailedMeta.published_at}), ignoring failure callback`);
+      return NextResponse.json({ ok: true, note: "Already published, skipping status reset" });
+    }
+
     const failRetryCount = typeof existingFailedMeta.fail_retry_count === "number" ? existingFailedMeta.fail_retry_count + 1 : 1;
     const failedMeta = {
       ...existingFailedMeta,

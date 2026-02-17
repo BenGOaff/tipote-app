@@ -56,57 +56,87 @@ export async function GET(req: NextRequest) {
   const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
   const nowHHMM = now.toTimeString().slice(0, 5); // HH:MM
 
-  // --- Recuperer les posts scheduled avec date <= aujourd'hui ---
-  // Essai EN puis fallback FR
+  // --- Atomic claim: fetch + lock scheduled posts in one transaction ---
+  // Uses RPC claim_scheduled_posts() with FOR UPDATE SKIP LOCKED to prevent
+  // race conditions between overlapping cron runs.
+  // Falls back to non-atomic SELECT+UPDATE if the RPC doesn't exist yet.
   const EN_SELECT = "id, user_id, project_id, title, content, status, scheduled_date, channel, type, meta";
   const FR_SELECT = "id, user_id, project_id, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, type, meta";
 
   let items: any[] | null = null;
+  let usedAtomicClaim = false;
 
-  // Essai 1 : colonnes EN
-  {
-    let query = supabaseAdmin
-      .from("content_item")
-      .select(EN_SELECT)
-      .eq("status", "scheduled")
-      .lte("scheduled_date", todayStr)
-      .not("content", "is", null)
-      .order("scheduled_date", { ascending: true })
-      .limit(50);
+  // Try atomic RPC first
+  const rpcParams: Record<string, unknown> = { p_today: todayStr, p_limit: 50 };
+  if (platformFilter && SUPPORTED_PLATFORMS.includes(platformFilter)) {
+    rpcParams.p_platform = platformFilter;
+  }
 
-    if (platformFilter && SUPPORTED_PLATFORMS.includes(platformFilter)) {
-      query = query.eq("channel", platformFilter);
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc("claim_scheduled_posts", rpcParams);
+
+  if (!rpcError && rpcData) {
+    // RPC succeeded — posts are already locked as "publishing"
+    usedAtomicClaim = true;
+    // Normalize FR column names to EN for downstream code
+    items = (rpcData as any[]).map((row: any) => ({
+      ...row,
+      title: row.titre ?? row.title,
+      content: row.contenu ?? row.content,
+      status: row.statut ?? row.status,
+      scheduled_date: row.date_planifiee ?? row.scheduled_date,
+      channel: row.canal ?? row.channel,
+    }));
+  } else {
+    // RPC not available — fallback to non-atomic SELECT (+ lock after)
+    if (rpcError) {
+      console.warn("[scheduled-posts] claim_scheduled_posts RPC unavailable, using fallback:", rpcError.message);
     }
 
-    const { data, error } = await query;
-
-    if (!error) {
-      items = data;
-    } else if (isMissingColumn(error.message)) {
-      // Essai 2 : colonnes FR
-      let queryFR = supabaseAdmin
+    // Essai 1 : colonnes EN
+    {
+      let query = supabaseAdmin
         .from("content_item")
-        .select(FR_SELECT)
-        .eq("statut", "scheduled")
-        .lte("date_planifiee", todayStr)
-        .not("contenu", "is", null)
-        .order("date_planifiee", { ascending: true })
+        .select(EN_SELECT)
+        .eq("status", "scheduled")
+        .lte("scheduled_date", todayStr)
+        .not("content", "is", null)
+        .order("scheduled_date", { ascending: true })
         .limit(50);
 
       if (platformFilter && SUPPORTED_PLATFORMS.includes(platformFilter)) {
-        queryFR = queryFR.eq("canal", platformFilter);
+        query = query.eq("channel", platformFilter);
       }
 
-      const { data: dataFR, error: errorFR } = await queryFR;
+      const { data, error } = await query;
 
-      if (errorFR) {
-        console.error("scheduled-posts query error (FR fallback):", errorFR);
+      if (!error) {
+        items = data;
+      } else if (isMissingColumn(error.message)) {
+        // Essai 2 : colonnes FR
+        let queryFR = supabaseAdmin
+          .from("content_item")
+          .select(FR_SELECT)
+          .eq("statut", "scheduled")
+          .lte("date_planifiee", todayStr)
+          .not("contenu", "is", null)
+          .order("date_planifiee", { ascending: true })
+          .limit(50);
+
+        if (platformFilter && SUPPORTED_PLATFORMS.includes(platformFilter)) {
+          queryFR = queryFR.eq("canal", platformFilter);
+        }
+
+        const { data: dataFR, error: errorFR } = await queryFR;
+
+        if (errorFR) {
+          console.error("scheduled-posts query error (FR fallback):", errorFR);
+          return NextResponse.json({ error: "DB error" }, { status: 500 });
+        }
+        items = dataFR;
+      } else {
+        console.error("scheduled-posts query error:", error);
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
-      items = dataFR;
-    } else {
-      console.error("scheduled-posts query error:", error);
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
   }
 
@@ -197,8 +227,8 @@ export async function GET(req: NextRequest) {
 
   const validPosts = postsWithTokens.filter(Boolean);
 
-  // ── Lock: mark returned posts as "publishing" to prevent re-fetch by next cron ──
-  if (validPosts.length > 0) {
+  // ── Lock: mark returned posts as "publishing" (only if RPC was not used) ──
+  if (!usedAtomicClaim && validPosts.length > 0) {
     const ids = validPosts.map((p: any) => p.content_id).filter(Boolean);
     if (ids.length > 0) {
       // Try EN column first, then FR fallback
