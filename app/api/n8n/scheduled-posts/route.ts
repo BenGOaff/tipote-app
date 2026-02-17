@@ -52,9 +52,13 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const platformFilter = url.searchParams.get("platform");
 
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
-  const nowHHMM = now.toTimeString().slice(0, 5); // HH:MM
+  // ── Use Europe/Paris timezone (users set times in their local tz) ──
+  const parisNow = new Date();
+  const parisDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(parisNow); // YYYY-MM-DD
+  const parisTime = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", hour12: false }).format(parisNow); // HH:MM
+
+  const todayStr = parisDate;
+  const nowHHMM = parisTime;
 
   // --- Atomic claim: fetch + lock scheduled posts in one transaction ---
   // Uses RPC claim_scheduled_posts() with FOR UPDATE SKIP LOCKED to prevent
@@ -151,6 +155,49 @@ export async function GET(req: NextRequest) {
     }
     return true;
   });
+
+  // ── Fix: Release posts that were claimed by the RPC but are not yet due ──
+  // The atomic RPC claims all posts for today regardless of time. Posts whose
+  // scheduled_time hasn't been reached yet must be reset back to "scheduled"
+  // so they'll be picked up on the next cron run when the time is right.
+  if (usedAtomicClaim && items && duePosts.length < items.length) {
+    const dueIds = new Set(duePosts.map((p: any) => p.id));
+    const notDueIds = (items as any[]).filter((p: any) => !dueIds.has(p.id)).map((p: any) => p.id);
+    if (notDueIds.length > 0) {
+      console.log(`[scheduled-posts] Releasing ${notDueIds.length} post(s) not yet due (time not reached)`);
+      const { error: releaseErr } = await supabaseAdmin
+        .from("content_item")
+        .update({ status: "scheduled" })
+        .in("id", notDueIds);
+      if (releaseErr && isMissingColumn(releaseErr.message)) {
+        await supabaseAdmin
+          .from("content_item")
+          .update({ statut: "scheduled" } as any)
+          .in("id", notDueIds);
+      }
+    }
+  }
+
+  // ── Cleanup: Reset posts stuck in "publishing" for over 30 minutes ──
+  // If n8n crashes after claiming a post but before calling the callback,
+  // the post stays at "publishing" forever. Reset them to "scheduled".
+  try {
+    const thirtyMinAgo = new Date(parisNow.getTime() - 30 * 60 * 1000).toISOString();
+    const { error: stuckErr } = await supabaseAdmin
+      .from("content_item")
+      .update({ status: "scheduled" })
+      .eq("status", "publishing")
+      .lt("updated_at", thirtyMinAgo);
+    if (stuckErr && isMissingColumn(stuckErr.message)) {
+      await supabaseAdmin
+        .from("content_item")
+        .update({ statut: "scheduled" } as any)
+        .eq("statut", "publishing")
+        .lt("updated_at", thirtyMinAgo);
+    }
+  } catch (err) {
+    console.warn("[scheduled-posts] Stuck cleanup error:", err);
+  }
 
   // Pour chaque post, recuperer le token de la plateforme correspondante
   const postsWithTokens = await Promise.all(

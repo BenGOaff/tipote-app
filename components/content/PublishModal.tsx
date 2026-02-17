@@ -18,7 +18,6 @@ type PublishStep =
   | "not_connected"
   | "auto_commenting_before"
   | "publishing"
-  | "auto_commenting_after"
   | "success"
   | "error";
 
@@ -234,24 +233,7 @@ export function PublishModal({
         return;
       }
 
-      if (hasAfter) {
-        // Phase 3: Wait for after-comments
-        setStep("auto_commenting_after");
-
-        await Promise.race([
-          new Promise<void>((resolve) => {
-            startPolling(idToPublish, autoCommentConfig?.nbBefore ?? 0, autoCommentConfig?.nbAfter ?? 0, (status) => {
-              if (status === "completed") {
-                stopPolling();
-                resolve();
-              }
-            });
-          }),
-          new Promise<void>((resolve) => setTimeout(() => { stopPolling(); resolve(); }, 300_000)),
-        ]);
-      }
-
-      // Done!
+      // Done! After-comments run in background on the server — no need to wait.
       setStep("success");
       onPublished?.();
       return;
@@ -286,7 +268,7 @@ export function PublishModal({
     onOpenChange(false);
   };
 
-  const isBlocking = step === "publishing" || step === "auto_commenting_before" || step === "auto_commenting_after";
+  const isBlocking = step === "publishing" || step === "auto_commenting_before";
 
   const truncatedPreview = contentPreview
     ? contentPreview.length > 200
@@ -434,79 +416,17 @@ export function PublishModal({
           </>
         )}
 
-        {/* Auto-commenting after step */}
-        {step === "auto_commenting_after" && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                Post publié ! Commentaires en cours...
-              </DialogTitle>
-              <DialogDescription>
-                Ton post est en ligne sur {label}. Tipote continue de commenter des posts similaires.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex flex-col items-center gap-4 py-6">
-              <div className="relative">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-medium">
-                  Commentaires après publication
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {acProgress.after_done} / {acProgress.after_total} commentaires postés
-                </p>
-              </div>
-              {/* Progress bar */}
-              <div className="w-full max-w-[200px] h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{
-                    width: acProgress.after_total > 0
-                      ? `${Math.round((acProgress.after_done / acProgress.after_total) * 100)}%`
-                      : "0%",
-                  }}
-                />
-              </div>
-
-              {result?.postUrl && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => window.open(result.postUrl!, "_blank", "noopener")}
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  Voir sur {label}
-                </Button>
-              )}
-
-              <p className="text-[10px] text-muted-foreground">
-                Tu peux fermer cette fenêtre, les commentaires continueront en arrière-plan.
-              </p>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                Fermer
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
         {/* Success step */}
         {step === "success" && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                {hasAutoComments ? "Tout est terminé !" : `Publié sur ${label} !`}
+                Publié sur {label} !
               </DialogTitle>
               <DialogDescription>
-                {hasAutoComments
-                  ? `Ton post est en ligne sur ${label} et les auto-commentaires sont terminés.`
+                {hasAfter
+                  ? `Ton post est en ligne sur ${label}. Tipote continue de commenter en arrière-plan.`
                   : (result?.message ?? `Ton post est en ligne sur ${label}.`)}
               </DialogDescription>
             </DialogHeader>

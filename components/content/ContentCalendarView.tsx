@@ -177,8 +177,11 @@ export function ContentCalendarView({
                     const badgeLabel = statusLabels[stKey] ?? safeString(content.status) ?? "—";
 
                     const scheduled = content.scheduled_date ? parseDateMaybeLocal(content.scheduled_date) : null;
+                    // Show time from meta.scheduled_time (HH:MM) or from ISO timestamp
+                    const metaTime = (content.meta as any)?.scheduled_time as string | undefined;
                     const showTime =
-                      !!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime());
+                      !!metaTime ||
+                      (!!content.scheduled_date?.includes("T") && scheduled && !Number.isNaN(scheduled.getTime()));
 
                     return (
                       <div
@@ -201,7 +204,11 @@ export function ContentCalendarView({
                                 {safeString(content.channel) && <span>·</span>}
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {showTime ? format(scheduled, "d MMM à HH:mm", { locale: fr }) : format(scheduled, "d MMM", { locale: fr })}
+                                  {showTime && metaTime
+                                    ? `${format(scheduled, "d MMM", { locale: fr })} à ${metaTime}`
+                                    : showTime
+                                      ? format(scheduled, "d MMM à HH:mm", { locale: fr })
+                                      : format(scheduled, "d MMM", { locale: fr })}
                                 </span>
                               </>
                             ) : null}

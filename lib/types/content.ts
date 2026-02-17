@@ -18,4 +18,6 @@ export type ContentListItem = {
   channel: string | null;
   tags: string[] | string | null;
   created_at: string;
+  /** Optional meta (JSONB) — includes scheduled_time, images, etc. */
+  meta?: Record<string, unknown> | null;
 };

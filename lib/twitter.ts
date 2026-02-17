@@ -228,15 +228,20 @@ export async function publishTweet(
     body: JSON.stringify(tweetPayload),
   });
 
-  if (res.status === 201) {
+  console.log(`[Twitter] Tweet API response status: ${res.status}`);
+
+  if (res.status === 201 || res.status === 200) {
     const json = await res.json();
-    const result: TwitterPostResult = { ok: true, postId: json.data?.id };
+    const tweetId = json.data?.id;
+    console.log(`[Twitter] Tweet posted successfully, id: ${tweetId}`);
+    const result: TwitterPostResult = { ok: true, postId: tweetId };
     if (imageWarning) result.warning = imageWarning;
     return result;
   }
 
   const errorText = await res.text();
-  return { ok: false, error: errorText, statusCode: res.status };
+  console.error(`[Twitter] Tweet API error (${res.status}):`, errorText.slice(0, 500));
+  return { ok: false, error: `Twitter API error (${res.status}): ${errorText.slice(0, 300)}`, statusCode: res.status };
 }
 
 // ----------------------------------------------------------------

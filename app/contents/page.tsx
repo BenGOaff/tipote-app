@@ -48,7 +48,7 @@ async function fetchContentsForUser(
   // V2 (colonnes EN)
   let v2 = supabase
     .from("content_item")
-    .select("id, type, title, content, status, scheduled_date, channel, tags, created_at")
+    .select("id, type, title, content, status, scheduled_date, channel, tags, created_at, meta")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -71,6 +71,7 @@ async function fetchContentsForUser(
       channel: r.channel ?? null,
       tags: r.tags ?? null,
       created_at: String(r.created_at),
+      meta: r.meta ?? null,
     })) as ContentListItem[];
 
     return { data: mapped };
@@ -84,7 +85,7 @@ async function fetchContentsForUser(
   let fb = supabase
     .from("content_item")
     .select(
-      "id, type, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at"
+      "id, type, title:titre, content:contenu, status:statut, scheduled_date:date_planifiee, channel:canal, tags, created_at, meta"
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -111,6 +112,7 @@ async function fetchContentsForUser(
     channel: r.channel ?? null,
     tags: r.tags ?? null,
     created_at: String(r.created_at),
+    meta: r.meta ?? null,
   })) as ContentListItem[];
 
   return { data: mapped };
