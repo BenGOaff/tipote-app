@@ -3,7 +3,7 @@
 // - Verifies plan access (PRO/ELITE/BETA)
 // - Consumes AI credits (0.25 per comment) from the standard user_credits pool
 // - Updates content_item with auto-comment settings
-// - Triggers auto-comment execution directly (+ n8n webhook as fallback)
+// - Triggers before-comments execution immediately (fire-and-forget)
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -19,14 +19,7 @@ import {
   MAX_COMMENTS_AFTER,
   CREDIT_PER_COMMENT,
 } from "@/lib/automationCredits";
-import {
-  searchRelevantPosts,
-  generateComment,
-  likePost,
-  postCommentOnPost,
-  randomDelay,
-  type CommentAngleId,
-} from "@/lib/autoCommentEngine";
+import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
 
@@ -200,13 +193,12 @@ export async function POST(req: NextRequest) {
   // 7. Trigger auto-comment execution directly (fire-and-forget)
   // Get social connection for executing comments
   if (nb_comments_before > 0) {
-    triggerExecution({
+    triggerBeforeExecution({
       content_id,
       user_id: userId,
       project_id: content.project_id,
       platform,
       post_text: content.content || "",
-      comment_type: "before",
       nb_comments: nb_comments_before,
     });
   }
@@ -224,34 +216,24 @@ export async function POST(req: NextRequest) {
   });
 }
 
-// ─── Execute auto-comments directly (no self-fetch) ──────────────────────────
+// ─── Fire-and-forget before-comments execution ──────────────────────────────
 
-const ANGLES: CommentAngleId[] = ["question", "agree", "congrats", "deeper", "experience"];
-const DELAY_BETWEEN_COMMENTS_MIN = 30_000;  // 30 seconds
-const DELAY_BETWEEN_COMMENTS_MAX = 120_000; // 2 minutes
-
-function triggerExecution(opts: {
+function triggerBeforeExecution(opts: {
   content_id: string;
   user_id: string;
   project_id?: string;
   platform: string;
   post_text: string;
-  comment_type: "before" | "after";
   nb_comments: number;
 }) {
-  // Run in background — don't await
   void (async () => {
     try {
-      // Get social connection
       let connQuery = supabaseAdmin
         .from("social_connections")
         .select("platform_user_id, access_token_encrypted")
         .eq("user_id", opts.user_id)
         .eq("platform", opts.platform);
-
-      if (opts.project_id) {
-        connQuery = connQuery.eq("project_id", opts.project_id);
-      }
+      if (opts.project_id) connQuery = connQuery.eq("project_id", opts.project_id);
 
       const { data: conn } = await connQuery.maybeSingle();
       if (!conn?.access_token_encrypted) {
@@ -261,129 +243,36 @@ function triggerExecution(opts: {
       }
 
       let accessToken: string;
-      try {
-        accessToken = decrypt(conn.access_token_encrypted);
-      } catch {
-        console.error("[activate] Failed to decrypt token");
+      try { accessToken = decrypt(conn.access_token_encrypted); } catch {
         await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
         return;
       }
 
-      // Get user's style preferences
       const { data: profile } = await supabaseAdmin
         .from("business_profiles")
-        .select("auto_comment_style_ton, auto_comment_langage, auto_comment_objectifs, brand_tone_of_voice, niche")
+        .select("auto_comment_style_ton, auto_comment_langage, brand_tone_of_voice, niche")
         .eq("user_id", opts.user_id)
         .maybeSingle();
 
-      const styleTon = profile?.auto_comment_style_ton || "professionnel";
-      const niche = profile?.niche || "";
-      const brandTone = profile?.brand_tone_of_voice || "";
-      const langage = profile?.auto_comment_langage || {};
-
-      // 1. Search for relevant posts
-      console.log(`[activate] Starting ${opts.comment_type} phase: ${opts.nb_comments} comments for ${opts.platform}`);
-
-      const relevantPosts = await searchRelevantPosts(
-        opts.platform,
+      await runAutoCommentBatch({
+        supabaseAdmin,
+        contentId: opts.content_id,
+        userId: opts.user_id,
+        platform: opts.platform,
         accessToken,
-        conn.platform_user_id,
-        niche,
-        opts.post_text,
-        opts.nb_comments + 5,
-      );
-
-      console.log(`[activate] Found ${relevantPosts.length} relevant posts on ${opts.platform}`);
-
-      const postsToComment = relevantPosts.slice(0, opts.nb_comments);
-
-      // 2. For each comment: generate, like, comment
-      for (let i = 0; i < postsToComment.length; i++) {
-        const targetPost = postsToComment[i];
-        const angle = ANGLES[i % ANGLES.length];
-
-        try {
-          // Human-like delay between comments (skip for first)
-          if (i > 0) {
-            await randomDelay(DELAY_BETWEEN_COMMENTS_MIN, DELAY_BETWEEN_COMMENTS_MAX);
-          }
-
-          // Generate AI comment
-          const commentText = await generateComment({
-            targetPostText: targetPost.text,
-            angle,
-            styleTon: styleTon,
-            niche,
-            brandTone: brandTone,
-            platform: opts.platform,
-            langage,
-          });
-
-          if (!commentText) {
-            console.warn(`[activate] Empty comment generated for post ${targetPost.id}`);
-            continue;
-          }
-
-          // Like the post first (natural behavior)
-          await likePost(opts.platform, accessToken, conn.platform_user_id, targetPost.id);
-
-          // Small delay between like and comment
-          await randomDelay(3_000, 8_000);
-
-          // Post the comment
-          const commentResult = await postCommentOnPost(
-            opts.platform,
-            accessToken,
-            conn.platform_user_id,
-            targetPost.id,
-            commentText,
-          );
-
-          // Log the comment
-          try {
-            await supabaseAdmin.from("auto_comment_logs").insert({
-              user_id: opts.user_id,
-              post_tipote_id: opts.content_id,
-              target_post_id: targetPost.id || null,
-              target_post_url: targetPost.url || null,
-              platform: opts.platform,
-              comment_text: commentText,
-              comment_type: opts.comment_type,
-              angle,
-              status: commentResult.ok ? "published" : "failed",
-              error_message: commentResult.ok ? null : (commentResult.error || "Unknown error"),
-              published_at: commentResult.ok ? new Date().toISOString() : null,
-            });
-          } catch (logErr) {
-            console.error("[activate] Failed to log comment:", logErr);
-          }
-
-          if (commentResult.ok) {
-            console.log(`[activate] Comment ${i + 1}/${postsToComment.length} posted on ${opts.platform}`);
-          } else {
-            console.error(`[activate] Comment ${i + 1} failed:`, commentResult.error);
-          }
-        } catch (err) {
-          console.error(`[activate] Error on comment ${i + 1}:`, err);
-        }
-      }
-
-      // 3. Mark batch as complete
-      const newStatus = opts.comment_type === "before" ? "before_done" : "completed";
-      await supabaseAdmin
-        .from("content_item")
-        .update({ auto_comments_status: newStatus })
-        .eq("id", opts.content_id);
-
-      console.log(`[activate] ${opts.comment_type} phase complete for ${opts.content_id}. Status → ${newStatus}`);
+        platformUserId: conn.platform_user_id,
+        postText: opts.post_text,
+        commentType: "before",
+        nbComments: opts.nb_comments,
+        styleTon: profile?.auto_comment_style_ton || "professionnel",
+        niche: profile?.niche || "",
+        brandTone: profile?.brand_tone_of_voice || "",
+        langage: profile?.auto_comment_langage || {},
+      });
     } catch (err) {
-      console.error("[activate] triggerExecution error:", err);
-      // On failure, still mark as before_done so the publish flow isn't blocked forever
+      console.error("[activate] triggerBeforeExecution error:", err);
       try {
-        await supabaseAdmin
-          .from("content_item")
-          .update({ auto_comments_status: opts.comment_type === "before" ? "before_done" : "completed" })
-          .eq("id", opts.content_id);
+        await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
       } catch { /* ignore */ }
     }
   })();

@@ -6,14 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
-import {
-  searchRelevantPosts,
-  generateComment,
-  likePost,
-  postCommentOnPost,
-  randomDelay,
-  type CommentAngleId,
-} from "@/lib/autoCommentEngine";
+import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
 
@@ -172,9 +165,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// ─── Execute after-comments directly (inline, no self-fetch) ─────────────────
-
-const AFTER_ANGLES: CommentAngleId[] = ["question", "agree", "congrats", "deeper", "experience"];
+// ─── Fire-and-forget: run after-comments via shared engine ───────────────────
 
 async function triggerAfterExecution(
   contentId: string,
@@ -210,54 +201,21 @@ async function triggerAfterExecution(
       .eq("user_id", userId)
       .maybeSingle();
 
-    const styleTon = profile?.auto_comment_style_ton || "professionnel";
-    const niche = profile?.niche || "";
-    const brandTone = profile?.brand_tone_of_voice || "";
-    const langage = profile?.auto_comment_langage || {};
-
-    console.log(`[publish-callback] Starting after phase: ${nbAfter} comments for ${platform}`);
-
-    const relevantPosts = await searchRelevantPosts(
-      platform, accessToken, conn.platform_user_id, niche, postText, nbAfter + 5,
-    );
-
-    const postsToComment = relevantPosts.slice(0, nbAfter);
-
-    for (let i = 0; i < postsToComment.length; i++) {
-      const targetPost = postsToComment[i];
-      const angle = AFTER_ANGLES[i % AFTER_ANGLES.length];
-      try {
-        if (i > 0) await randomDelay(30_000, 120_000);
-
-        const commentText = await generateComment({
-          targetPostText: targetPost.text, angle, styleTon, niche, brandTone, platform, langage,
-        });
-        if (!commentText) continue;
-
-        await likePost(platform, accessToken, conn.platform_user_id, targetPost.id);
-        await randomDelay(3_000, 8_000);
-
-        const commentResult = await postCommentOnPost(platform, accessToken, conn.platform_user_id, targetPost.id, commentText);
-
-        try {
-          await supabaseAdmin.from("auto_comment_logs").insert({
-            user_id: userId, post_tipote_id: contentId,
-            target_post_id: targetPost.id || null, target_post_url: targetPost.url || null,
-            platform, comment_text: commentText, comment_type: "after", angle,
-            status: commentResult.ok ? "published" : "failed",
-            error_message: commentResult.ok ? null : (commentResult.error || "Unknown error"),
-            published_at: commentResult.ok ? new Date().toISOString() : null,
-          });
-        } catch { /* ignore log errors */ }
-
-        console.log(`[publish-callback] After comment ${i + 1}/${postsToComment.length} ${commentResult.ok ? "posted" : "failed"}`);
-      } catch (err) {
-        console.error(`[publish-callback] Error on after comment ${i + 1}:`, err);
-      }
-    }
-
-    await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);
-    console.log(`[publish-callback] After phase complete for ${contentId}`);
+    await runAutoCommentBatch({
+      supabaseAdmin,
+      contentId,
+      userId,
+      platform,
+      accessToken,
+      platformUserId: conn.platform_user_id,
+      postText,
+      commentType: "after",
+      nbComments: nbAfter,
+      styleTon: profile?.auto_comment_style_ton || "professionnel",
+      niche: profile?.niche || "",
+      brandTone: profile?.brand_tone_of_voice || "",
+      langage: profile?.auto_comment_langage || {},
+    });
   } catch (err) {
     console.error("[publish-callback] triggerAfterExecution error:", err);
     try {

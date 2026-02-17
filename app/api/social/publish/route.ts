@@ -13,14 +13,7 @@ import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { publishPost as publishRedditPost } from "@/lib/reddit";
-import {
-  searchRelevantPosts,
-  generateComment,
-  likePost as likeTargetPost,
-  postCommentOnPost,
-  randomDelay,
-  type CommentAngleId,
-} from "@/lib/autoCommentEngine";
+import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
 
@@ -158,9 +151,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Execute after-comments directly (inline, no self-fetch)
-  const AFTER_ANGLES: CommentAngleId[] = ["question", "agree", "congrats", "deeper", "experience"];
-
+  // Fire-and-forget: run after-comments via shared engine
   function triggerAfterExecution(item: any) {
     void (async () => {
       try {
@@ -178,8 +169,8 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        let itemAccessToken: string;
-        try { itemAccessToken = decrypt(conn.access_token_encrypted); } catch {
+        let accessToken: string;
+        try { accessToken = decrypt(conn.access_token_encrypted); } catch {
           await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", item.id);
           return;
         }
@@ -190,54 +181,21 @@ export async function POST(req: NextRequest) {
           .eq("user_id", item.user_id)
           .maybeSingle();
 
-        const styleTon = profile?.auto_comment_style_ton || "professionnel";
-        const niche = profile?.niche || "";
-        const brandTone = profile?.brand_tone_of_voice || "";
-        const langage = profile?.auto_comment_langage || {};
-
-        console.log(`[publish] Starting after phase: ${item.nb_comments_after} comments for ${itemPlatform}`);
-
-        const relevantPosts = await searchRelevantPosts(
-          itemPlatform, itemAccessToken, conn.platform_user_id, niche, item.content || "", item.nb_comments_after + 5,
-        );
-
-        const postsToComment = relevantPosts.slice(0, item.nb_comments_after);
-
-        for (let i = 0; i < postsToComment.length; i++) {
-          const targetPost = postsToComment[i];
-          const angle = AFTER_ANGLES[i % AFTER_ANGLES.length];
-          try {
-            if (i > 0) await randomDelay(30_000, 120_000);
-
-            const commentText = await generateComment({
-              targetPostText: targetPost.text, angle, styleTon, niche, brandTone, platform: itemPlatform, langage,
-            });
-            if (!commentText) continue;
-
-            await likeTargetPost(itemPlatform, itemAccessToken, conn.platform_user_id, targetPost.id);
-            await randomDelay(3_000, 8_000);
-
-            const commentResult = await postCommentOnPost(itemPlatform, itemAccessToken, conn.platform_user_id, targetPost.id, commentText);
-
-            try {
-              await supabaseAdmin.from("auto_comment_logs").insert({
-                user_id: item.user_id, post_tipote_id: item.id,
-                target_post_id: targetPost.id || null, target_post_url: targetPost.url || null,
-                platform: itemPlatform, comment_text: commentText, comment_type: "after", angle,
-                status: commentResult.ok ? "published" : "failed",
-                error_message: commentResult.ok ? null : (commentResult.error || "Unknown error"),
-                published_at: commentResult.ok ? new Date().toISOString() : null,
-              });
-            } catch { /* ignore log errors */ }
-
-            console.log(`[publish] After comment ${i + 1}/${postsToComment.length} ${commentResult.ok ? "posted" : "failed"}`);
-          } catch (err) {
-            console.error(`[publish] Error on after comment ${i + 1}:`, err);
-          }
-        }
-
-        await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", item.id);
-        console.log(`[publish] After phase complete for ${item.id}`);
+        await runAutoCommentBatch({
+          supabaseAdmin,
+          contentId: item.id,
+          userId: item.user_id,
+          platform: itemPlatform,
+          accessToken,
+          platformUserId: conn.platform_user_id,
+          postText: item.content || "",
+          commentType: "after",
+          nbComments: item.nb_comments_after,
+          styleTon: profile?.auto_comment_style_ton || "professionnel",
+          niche: profile?.niche || "",
+          brandTone: profile?.brand_tone_of_voice || "",
+          langage: profile?.auto_comment_langage || {},
+        });
       } catch (err) {
         console.error("[publish] triggerAfterExecution error:", err);
         try {

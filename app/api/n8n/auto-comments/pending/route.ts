@@ -3,12 +3,10 @@
 // Called by n8n cron workflow every 5 minutes
 // Secured via X-N8N-Secret header
 //
-// Smart timing logic:
-// - "before" phase (auto_comments_status = 'pending'):
-//     - status = 'draft' → immediate publish, return now
-//     - status = 'scheduled' → only return if scheduled_date/time is within ~25 min
-// - "after" phase (auto_comments_status = 'after_pending'):
-//     - Always return (post is already published)
+// IMPORTANT: n8n only handles the "after_pending" rescue case.
+// The "before" phase (status = "pending") is handled INLINE by
+// the activate endpoint — n8n must NOT pick those up to avoid
+// double-execution.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -48,27 +46,6 @@ function decrypt(encrypted: string): string {
   }
 }
 
-/** Check if a scheduled post is due within the next `windowMinutes` minutes */
-function isWithinWindow(post: any, windowMinutes: number): boolean {
-  if (!post.scheduled_date) return false;
-
-  const now = new Date();
-  const scheduledTime = post.meta?.scheduled_time as string | undefined;
-
-  // Build full scheduled datetime
-  let scheduledDate: Date;
-  if (scheduledTime) {
-    scheduledDate = new Date(`${post.scheduled_date}T${scheduledTime}:00`);
-  } else {
-    // No specific time → assume start of day, always within window if date is today or past
-    scheduledDate = new Date(`${post.scheduled_date}T00:00:00`);
-  }
-
-  // Check if scheduled time is within [now, now + windowMinutes]
-  const windowEnd = new Date(now.getTime() + windowMinutes * 60 * 1000);
-  return scheduledDate <= windowEnd;
-}
-
 export async function GET(req: NextRequest) {
   // Auth check
   const secret = req.headers.get("x-n8n-secret") || "";
@@ -84,7 +61,7 @@ export async function GET(req: NextRequest) {
       .from("content_item")
       .select(EN_SELECT)
       .eq("auto_comments_enabled", true)
-      .in("auto_comments_status", ["pending", "after_pending"])
+      .eq("auto_comments_status", "after_pending")
       .order("created_at", { ascending: true })
       .limit(20);
 
@@ -93,7 +70,7 @@ export async function GET(req: NextRequest) {
         .from("content_item")
         .select(FR_SELECT)
         .eq("auto_comments_enabled", true)
-        .in("auto_comments_status", ["pending", "after_pending"])
+        .eq("auto_comments_status", "after_pending")
         .order("created_at", { ascending: true })
         .limit(20);
 
@@ -116,33 +93,10 @@ export async function GET(req: NextRequest) {
     const jobs: any[] = [];
 
     for (const post of posts) {
-      const acStatus = post.auto_comments_status;
-
-      // Determine phase and apply timing logic
-      let commentType: "before" | "after";
-      let nbComments: number;
-
-      if (acStatus === "pending") {
-        // BEFORE phase
-        if (post.nb_comments_before <= 0) continue;
-
-        // Smart timing for scheduled posts
-        if (post.status === "scheduled") {
-          // Only return if scheduled time is within ~25 min
-          if (!isWithinWindow(post, 25)) continue;
-        }
-        // For draft (immediate publish): return now
-
-        commentType = "before";
-        nbComments = post.nb_comments_before;
-      } else if (acStatus === "after_pending") {
-        // AFTER phase — post is already published
-        if (post.nb_comments_after <= 0) continue;
-        commentType = "after";
-        nbComments = post.nb_comments_after;
-      } else {
-        continue;
-      }
+      // Only "after_pending" items reach here (post is already published)
+      if (post.nb_comments_after <= 0) continue;
+      const commentType = "after" as const;
+      const nbComments = post.nb_comments_after;
 
       // Get user's auto-comment style preferences
       const { data: profile } = await supabaseAdmin

@@ -423,3 +423,162 @@ export function randomDelay(minMs: number, maxMs: number): Promise<void> {
   const ms = Math.floor(Math.random() * (maxMs - minMs) + minMs);
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// ─── High-level batch runner ────────────────────────────────────────────────
+// Single source of truth for the search → generate → like → comment loop.
+// Used by activate (before), publish (after), publish-callback (after), and
+// the n8n execute endpoint.
+
+const BATCH_ANGLES: CommentAngleId[] = ["question", "agree", "congrats", "deeper", "experience"];
+const DELAY_MIN = 30_000;  // 30s between comments
+const DELAY_MAX = 120_000; // 2min between comments
+
+export type AutoCommentResult = {
+  success: boolean;
+  targetPostId?: string;
+  targetPostUrl?: string;
+  commentText?: string;
+  angle?: string;
+  error?: string;
+};
+
+export type BatchResult = {
+  commentsPosted: number;
+  commentsFailed: number;
+  postsFound: number;
+  results: AutoCommentResult[];
+};
+
+/**
+ * Run a full batch of auto-comments: search → generate → like → comment → log.
+ * Updates auto_comments_status in DB when done.
+ *
+ * @param supabaseAdmin - Supabase admin client (passed to avoid circular imports)
+ */
+export async function runAutoCommentBatch(opts: {
+  supabaseAdmin: any;
+  contentId: string;
+  userId: string;
+  platform: string;
+  accessToken: string;
+  platformUserId: string;
+  postText: string;
+  commentType: "before" | "after";
+  nbComments: number;
+  styleTon?: string;
+  niche?: string;
+  brandTone?: string;
+  langage?: Record<string, unknown>;
+}): Promise<BatchResult> {
+  const {
+    supabaseAdmin: sb,
+    contentId,
+    userId,
+    platform,
+    accessToken,
+    platformUserId,
+    postText,
+    commentType,
+    nbComments,
+    styleTon = "professionnel",
+    niche = "",
+    brandTone = "",
+    langage,
+  } = opts;
+
+  const tag = `[auto-comments/${commentType}]`;
+  const results: AutoCommentResult[] = [];
+
+  try {
+    console.log(`${tag} Starting: ${nbComments} comments for ${platform}, content ${contentId}`);
+
+    // 1. Search for relevant posts
+    const relevantPosts = await searchRelevantPosts(platform, accessToken, platformUserId, niche, postText, nbComments + 5);
+    console.log(`${tag} Found ${relevantPosts.length} relevant posts on ${platform}`);
+
+    const postsToComment = relevantPosts.slice(0, nbComments);
+
+    // 2. For each: generate → like → comment → log
+    for (let i = 0; i < postsToComment.length; i++) {
+      const targetPost = postsToComment[i];
+      const angle = BATCH_ANGLES[i % BATCH_ANGLES.length];
+
+      try {
+        // Human-like delay (skip first)
+        if (i > 0) await randomDelay(DELAY_MIN, DELAY_MAX);
+
+        const commentText = await generateComment({
+          targetPostText: targetPost.text,
+          angle,
+          styleTon,
+          niche,
+          brandTone,
+          platform,
+          langage,
+        });
+
+        if (!commentText) {
+          results.push({ success: false, targetPostId: targetPost.id, error: "Empty comment generated" });
+          continue;
+        }
+
+        // Like first (natural behavior)
+        await likePost(platform, accessToken, platformUserId, targetPost.id);
+        await randomDelay(3_000, 8_000);
+
+        // Comment
+        const commentResult = await postCommentOnPost(platform, accessToken, platformUserId, targetPost.id, commentText);
+
+        results.push({
+          success: commentResult.ok,
+          targetPostId: targetPost.id,
+          targetPostUrl: targetPost.url,
+          commentText,
+          angle,
+          error: commentResult.ok ? undefined : commentResult.error,
+        });
+
+        // Log to DB
+        try {
+          await sb.from("auto_comment_logs").insert({
+            user_id: userId,
+            post_tipote_id: contentId,
+            target_post_id: targetPost.id || null,
+            target_post_url: targetPost.url || null,
+            platform,
+            comment_text: commentText,
+            comment_type: commentType,
+            angle,
+            status: commentResult.ok ? "published" : "failed",
+            error_message: commentResult.ok ? null : (commentResult.error || "Unknown error"),
+            published_at: commentResult.ok ? new Date().toISOString() : null,
+          });
+        } catch { /* log errors are non-fatal */ }
+
+        console.log(`${tag} Comment ${i + 1}/${postsToComment.length} ${commentResult.ok ? "posted" : "FAILED"}`);
+      } catch (err) {
+        console.error(`${tag} Error on comment ${i + 1}:`, err);
+        results.push({ success: false, targetPostId: targetPost.id, error: err instanceof Error ? err.message : "Unknown" });
+      }
+    }
+
+    // 3. Advance status
+    const newStatus = commentType === "before" ? "before_done" : "completed";
+    await sb.from("content_item").update({ auto_comments_status: newStatus }).eq("id", contentId);
+    console.log(`${tag} Complete for ${contentId}. Status → ${newStatus}`);
+  } catch (err) {
+    console.error(`${tag} Fatal error:`, err);
+    // Still advance status so the flow isn't stuck
+    try {
+      const fallbackStatus = commentType === "before" ? "before_done" : "completed";
+      await sb.from("content_item").update({ auto_comments_status: fallbackStatus }).eq("id", contentId);
+    } catch { /* ignore */ }
+  }
+
+  return {
+    commentsPosted: results.filter((r) => r.success).length,
+    commentsFailed: results.filter((r) => !r.success).length,
+    postsFound: results.length,
+    results,
+  };
+}
