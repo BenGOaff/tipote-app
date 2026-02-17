@@ -32,6 +32,7 @@ type QuizResult = {
   insight: string | null;
   projection: string | null;
   cta_text: string | null;
+  cta_url: string | null;
   sort_order: number;
 };
 
@@ -406,14 +407,18 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
             </div>
           )}
 
-          {/* CTA */}
-          {(resultProfile?.cta_text || quiz.cta_text) && quiz.cta_url && (
-            <Button size="lg" className="w-full h-auto py-3 whitespace-normal" asChild>
-              <a href={quiz.cta_url} target="_blank" rel="noopener noreferrer">
-                {resultProfile?.cta_text || quiz.cta_text}
-              </a>
-            </Button>
-          )}
+          {/* CTA — per-result URL takes priority over global */}
+          {(() => {
+            const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
+            const ctaText = resultProfile?.cta_text || quiz.cta_text;
+            return ctaText && ctaUrl ? (
+              <Button size="lg" className="w-full h-auto py-3 whitespace-normal" asChild>
+                <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+                  {ctaText}
+                </a>
+              </Button>
+            ) : null;
+          })()}
 
           {/* Virality */}
           {quiz.virality_enabled && (

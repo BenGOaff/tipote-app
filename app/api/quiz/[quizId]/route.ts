@@ -144,6 +144,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             insight: r.insight ?? null,
             projection: r.projection ?? null,
             cta_text: r.cta_text ?? null,
+            cta_url: r.cta_url ?? null,
             sio_tag_name: r.sio_tag_name ?? null,
             sort_order: i,
           })),

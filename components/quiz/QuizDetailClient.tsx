@@ -72,6 +72,7 @@ type QuizResult = {
   insight: string | null;
   projection: string | null;
   cta_text: string | null;
+  cta_url: string | null;
   sio_tag_name: string | null;
   sort_order: number;
 };
@@ -149,6 +150,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [shareMessage, setShareMessage] = useState("");
   const [status, setStatus] = useState("draft");
 
+  // CTA mode: per-result or global
+  const [ctaPerResult, setCtaPerResult] = useState(false);
+
   // Editable questions & results
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
@@ -180,6 +184,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setSioShareTagName(q.sio_share_tag_name ?? "");
         setEditQuestions(q.questions ?? []);
         setEditResults(q.results ?? []);
+        setCtaPerResult((q.results ?? []).some((r: QuizResult) => r.cta_url?.trim()));
       } catch {
         toast({ title: "Erreur de chargement", variant: "destructive" });
       } finally {
@@ -216,7 +221,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             description: r.description,
             insight: r.insight,
             projection: r.projection,
-            cta_text: r.cta_text,
+            cta_text: ctaPerResult ? r.cta_text : null,
+            cta_url: ctaPerResult ? r.cta_url : null,
             sio_tag_name: r.sio_tag_name || null,
             sort_order: i,
           })),
@@ -659,6 +665,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       Profils résultat ({editResults.length})
                     </h3>
                   </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium text-sm">CTA par résultat</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ctaPerResult
+                          ? "Chaque profil a son propre bouton CTA et lien"
+                          : "Un seul CTA global pour tous les résultats (configurable dans Paramètres)"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={ctaPerResult}
+                      onCheckedChange={setCtaPerResult}
+                    />
+                  </div>
                   {editResults.map((r, ri) => (
                     <Card key={r.id || ri} className="p-4 space-y-3">
                       <div className="flex items-center gap-2">
@@ -714,19 +734,31 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             className="text-sm"
                           />
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">CTA personnalisé</Label>
-                          <Input
-                            value={r.cta_text ?? ""}
-                            onChange={(e) => {
-                              const next = [...editResults];
-                              next[ri] = { ...next[ri], cta_text: e.target.value || null };
-                              setEditResults(next);
-                            }}
-                            className="text-sm"
-                            placeholder="Texte du bouton CTA (optionnel)"
-                          />
-                        </div>
+                        {ctaPerResult && (
+                          <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-dashed">
+                            <Label className="text-xs text-muted-foreground font-medium">CTA pour ce profil</Label>
+                            <Input
+                              value={r.cta_text ?? ""}
+                              onChange={(e) => {
+                                const next = [...editResults];
+                                next[ri] = { ...next[ri], cta_text: e.target.value || null };
+                                setEditResults(next);
+                              }}
+                              className="text-sm"
+                              placeholder="Texte du bouton (ex: Réserve ton appel)"
+                            />
+                            <Input
+                              value={r.cta_url ?? ""}
+                              onChange={(e) => {
+                                const next = [...editResults];
+                                next[ri] = { ...next[ri], cta_url: e.target.value || null };
+                                setEditResults(next);
+                              }}
+                              className="text-sm"
+                              placeholder="URL du lien (https://...)"
+                            />
+                          </div>
+                        )}
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground flex items-center gap-1">
                             Tag Systeme.io
@@ -817,20 +849,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="font-bold">Paramètres</h3>
                   <div className="grid gap-4 max-w-md">
-                    <div className="space-y-2">
-                      <Label>CTA (texte)</Label>
-                      <Input
-                        value={ctaText}
-                        onChange={(e) => setCtaText(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>CTA (URL)</Label>
-                      <Input
-                        value={ctaUrl}
-                        onChange={(e) => setCtaUrl(e.target.value)}
-                      />
-                    </div>
+                    {!ctaPerResult && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>CTA (texte)</Label>
+                          <Input
+                            value={ctaText}
+                            onChange={(e) => setCtaText(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CTA (URL)</Label>
+                          <Input
+                            value={ctaUrl}
+                            onChange={(e) => setCtaUrl(e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+                    {ctaPerResult && (
+                      <p className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/50 border">
+                        Les CTA sont configurés individuellement sur chaque profil résultat ci-dessus.
+                      </p>
+                    )}
                     <div className="space-y-2">
                       <Label>Texte de consentement</Label>
                       <Textarea

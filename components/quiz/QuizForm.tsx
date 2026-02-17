@@ -41,6 +41,7 @@ type QuizResult = {
   insight: string | null;
   projection: string | null;
   cta_text: string | null;
+  cta_url: string | null;
   sio_tag_name: string | null;
   sort_order: number;
 };
@@ -81,6 +82,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
+  const [ctaPerResult, setCtaPerResult] = useState(false);
 
   // Systeme.io tags
   const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
@@ -241,6 +243,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           insight: r.insight ?? null,
           projection: r.projection ?? null,
           cta_text: r.cta_text ?? null,
+          cta_url: null,
           sio_tag_name: null,
           sort_order: i,
         })),
@@ -289,6 +292,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
           questions,
           results: results.map((r) => ({
             ...r,
+            cta_text: ctaPerResult ? r.cta_text : null,
+            cta_url: ctaPerResult ? r.cta_url : null,
             sio_tag_name: r.sio_tag_name || null,
           })),
         }),
@@ -616,6 +621,20 @@ export function QuizForm({ onClose }: QuizFormProps) {
         </TabsContent>
 
         <TabsContent value="results" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="font-medium text-sm">CTA par résultat</p>
+              <p className="text-xs text-muted-foreground">
+                {ctaPerResult
+                  ? "Chaque profil a son propre bouton CTA et lien"
+                  : "Un seul CTA global pour tous les résultats (configurable dans Paramètres)"}
+              </p>
+            </div>
+            <Switch
+              checked={ctaPerResult}
+              onCheckedChange={setCtaPerResult}
+            />
+          </div>
           {results.map((r, ri) => (
             <Card key={ri} className="p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -651,13 +670,21 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   rows={2}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">CTA personnalisé</Label>
-                <Input
-                  value={r.cta_text || ""}
-                  onChange={(e) => updateResult(ri, "cta_text", e.target.value)}
-                />
-              </div>
+              {ctaPerResult && (
+                <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-dashed">
+                  <Label className="text-xs text-muted-foreground font-medium">CTA pour ce profil</Label>
+                  <Input
+                    value={r.cta_text || ""}
+                    onChange={(e) => updateResult(ri, "cta_text", e.target.value)}
+                    placeholder="Texte du bouton (ex: Réserve ton appel)"
+                  />
+                  <Input
+                    value={r.cta_url || ""}
+                    onChange={(e) => updateResult(ri, "cta_url", e.target.value)}
+                    placeholder="URL du lien (https://...)"
+                  />
+                </div>
+              )}
               <div className="space-y-1 pt-2 border-t">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   Tag Systeme.io
@@ -724,18 +751,26 @@ export function QuizForm({ onClose }: QuizFormProps) {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label>CTA principal (texte du bouton)</Label>
-            <Input
-              value={ctaText}
-              onChange={(e) => setCtaText(e.target.value)}
-              placeholder="Ex: Réserve ton appel"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>URL du CTA</Label>
-            <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://..." />
-          </div>
+          {!ctaPerResult ? (
+            <>
+              <div className="space-y-2">
+                <Label>CTA principal (texte du bouton)</Label>
+                <Input
+                  value={ctaText}
+                  onChange={(e) => setCtaText(e.target.value)}
+                  placeholder="Ex: Réserve ton appel"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>URL du CTA</Label>
+                <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://..." />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/50 border">
+              Les CTA sont configurés individuellement sur chaque profil résultat dans l&apos;onglet Résultats.
+            </p>
+          )}
           <div className="space-y-2">
             <Label>Texte de consentement</Label>
             <Textarea value={consentText} onChange={(e) => setConsentText(e.target.value)} rows={2} />
