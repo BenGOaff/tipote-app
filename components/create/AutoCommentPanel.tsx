@@ -187,10 +187,6 @@ export function AutoCommentPanel({
                 onValueChange={(vals: number[]) => setNbBefore(vals[0])}
                 disabled={disabled}
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>0</span>
-                <span>5</span>
-              </div>
             </div>
 
             {/* After comments */}
@@ -222,10 +218,6 @@ export function AutoCommentPanel({
                 onValueChange={(vals: number[]) => setNbAfter(vals[0])}
                 disabled={disabled}
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>0</span>
-                <span>5</span>
-              </div>
             </div>
 
             {/* Credits info */}

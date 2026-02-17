@@ -135,12 +135,72 @@ export async function POST(req: NextRequest) {
 
     // Advance auto_comments_status: before_done → after_pending
     // This triggers the "after" phase of auto-comments
-    await supabaseAdmin
+    const { data: advancedRows } = await supabaseAdmin
       .from("content_item")
       .update({ auto_comments_status: "after_pending" })
       .eq("id", cId)
       .eq("auto_comments_enabled", true)
-      .eq("auto_comments_status", "before_done");
+      .eq("auto_comments_status", "before_done")
+      .select("id, user_id, project_id, content, channel, nb_comments_after, auto_comments_status")
+      .maybeSingle();
+
+    // If status was advanced, trigger the "after" execution
+    if (advancedRows && advancedRows.nb_comments_after > 0) {
+      triggerAfterExecution(advancedRows);
+    }
+  }
+
+  // Trigger after-comments execution asynchronously
+  function triggerAfterExecution(item: any) {
+    void (async () => {
+      try {
+        const platform = item.channel || "";
+        let connQuery = supabaseAdmin
+          .from("social_connections")
+          .select("platform_user_id, access_token_encrypted")
+          .eq("user_id", item.user_id)
+          .eq("platform", platform);
+        if (item.project_id) connQuery = connQuery.eq("project_id", item.project_id);
+
+        const { data: conn } = await connQuery.maybeSingle();
+        if (!conn?.access_token_encrypted) return;
+
+        const { decrypt } = await import("@/lib/crypto");
+        let accessToken: string;
+        try { accessToken = decrypt(conn.access_token_encrypted); } catch { return; }
+
+        const { data: profile } = await supabaseAdmin
+          .from("business_profiles")
+          .select("auto_comment_style_ton, auto_comment_langage, brand_tone_of_voice, niche")
+          .eq("user_id", item.user_id)
+          .maybeSingle();
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "http://localhost:3000";
+        await fetch(`${appUrl}/api/n8n/auto-comments/execute`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Internal-Key": process.env.INTERNAL_API_KEY || process.env.N8N_SHARED_SECRET || "",
+          },
+          body: JSON.stringify({
+            content_id: item.id,
+            user_id: item.user_id,
+            platform,
+            platform_user_id: conn.platform_user_id,
+            access_token: accessToken,
+            post_text: item.content || "",
+            comment_type: "after",
+            nb_comments: item.nb_comments_after,
+            style_ton: profile?.auto_comment_style_ton || "professionnel",
+            niche: profile?.niche || "",
+            brand_tone: profile?.brand_tone_of_voice || "",
+            langage: profile?.auto_comment_langage || {},
+          }),
+        });
+      } catch (err) {
+        console.error("[publish] triggerAfterExecution error:", err);
+      }
+    })();
   }
 
   // 1. Récupérer le contenu (avec fallback colonnes FR + fallback admin)

@@ -123,7 +123,7 @@ export function PublishModal({
   }, [open, connected, contentId]);
 
   /** Poll auto-comment status and call onStatusChange when status changes */
-  const startPolling = React.useCallback((cId: string, onStatusChange: (status: string, progress: AutoCommentProgress) => void) => {
+  const startPolling = React.useCallback((cId: string, expectedBefore: number, expectedAfter: number, onStatusChange: (status: string, progress: AutoCommentProgress) => void) => {
     if (pollRef.current) clearInterval(pollRef.current);
 
     const poll = async () => {
@@ -132,7 +132,14 @@ export function PublishModal({
         if (!res.ok) return;
         const json = await res.json();
         if (!json.ok) return;
-        const progress: AutoCommentProgress = json.progress;
+        const rawProgress: AutoCommentProgress = json.progress;
+        // Always use the requested totals from the config (DB might be 0 if activation failed)
+        const progress: AutoCommentProgress = {
+          before_done: rawProgress.before_done,
+          before_total: expectedBefore,
+          after_done: rawProgress.after_done,
+          after_total: expectedAfter,
+        };
         setAcProgress(progress);
         onStatusChange(json.auto_comments_status, progress);
       } catch {
@@ -197,15 +204,18 @@ export function PublishModal({
           after_total: autoCommentConfig?.nbAfter ?? 0,
         });
 
-        // Poll until before_done
-        await new Promise<void>((resolve) => {
-          startPolling(idToPublish, (status) => {
-            if (status === "before_done" || status === "after_pending" || status === "completed") {
-              stopPolling();
-              resolve();
-            }
-          });
-        });
+        // Poll until before_done (timeout after 5 min)
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            startPolling(idToPublish, autoCommentConfig?.nbBefore ?? 0, autoCommentConfig?.nbAfter ?? 0, (status) => {
+              if (status === "before_done" || status === "after_pending" || status === "completed") {
+                stopPolling();
+                resolve();
+              }
+            });
+          }),
+          new Promise<void>((resolve) => setTimeout(() => { stopPolling(); resolve(); }, 300_000)),
+        ]);
       }
 
       // Phase 2: Publish the post
@@ -228,14 +238,17 @@ export function PublishModal({
         // Phase 3: Wait for after-comments
         setStep("auto_commenting_after");
 
-        await new Promise<void>((resolve) => {
-          startPolling(idToPublish, (status) => {
-            if (status === "completed") {
-              stopPolling();
-              resolve();
-            }
-          });
-        });
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            startPolling(idToPublish, autoCommentConfig?.nbBefore ?? 0, autoCommentConfig?.nbAfter ?? 0, (status) => {
+              if (status === "completed") {
+                stopPolling();
+                resolve();
+              }
+            });
+          }),
+          new Promise<void>((resolve) => setTimeout(() => { stopPolling(); resolve(); }, 300_000)),
+        ]);
       }
 
       // Done!

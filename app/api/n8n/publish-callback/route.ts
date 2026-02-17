@@ -99,13 +99,22 @@ export async function POST(req: NextRequest) {
     await updatePublishedStatus(contentId, meta);
 
     // Advance auto_comments_status: before_done → after_pending
-    // This triggers the "after" phase of auto-comments for scheduled posts
-    await supabaseAdmin
+    // Also triggers the "after" execution directly
+    const { data: advancedItem } = await supabaseAdmin
       .from("content_item")
       .update({ auto_comments_status: "after_pending" })
       .eq("id", contentId)
       .eq("auto_comments_enabled", true)
-      .eq("auto_comments_status", "before_done");
+      .eq("auto_comments_status", "before_done")
+      .select("id, user_id, project_id, content, contenu, channel, canal, nb_comments_after")
+      .maybeSingle();
+
+    // Trigger after-comment execution if there are after-comments to do
+    if (advancedItem && advancedItem.nb_comments_after > 0) {
+      const itemPlatform = advancedItem.channel || advancedItem.canal || platform || "";
+      const itemContent = advancedItem.content || advancedItem.contenu || "";
+      void triggerAfterExecution(advancedItem.id, advancedItem.user_id, advancedItem.project_id, itemPlatform, itemContent, advancedItem.nb_comments_after);
+    }
   } else {
     console.error(`n8n publish failed for ${contentId} (${platform ?? "unknown"}): ${errorMsg}`);
 
@@ -152,4 +161,63 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+// ─── Trigger after-comments execution ────────────────────────────────────────
+
+async function triggerAfterExecution(
+  contentId: string,
+  userId: string,
+  projectId: string | null,
+  platform: string,
+  postText: string,
+  nbAfter: number,
+) {
+  try {
+    const { decrypt } = await import("@/lib/crypto");
+
+    let connQuery = supabaseAdmin
+      .from("social_connections")
+      .select("platform_user_id, access_token_encrypted")
+      .eq("user_id", userId)
+      .eq("platform", platform);
+    if (projectId) connQuery = connQuery.eq("project_id", projectId);
+
+    const { data: conn } = await connQuery.maybeSingle();
+    if (!conn?.access_token_encrypted) return;
+
+    let accessToken: string;
+    try { accessToken = decrypt(conn.access_token_encrypted); } catch { return; }
+
+    const { data: profile } = await supabaseAdmin
+      .from("business_profiles")
+      .select("auto_comment_style_ton, auto_comment_langage, brand_tone_of_voice, niche")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "http://localhost:3000";
+    await fetch(`${appUrl}/api/n8n/auto-comments/execute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Key": process.env.INTERNAL_API_KEY || process.env.N8N_SHARED_SECRET || "",
+      },
+      body: JSON.stringify({
+        content_id: contentId,
+        user_id: userId,
+        platform,
+        platform_user_id: conn.platform_user_id,
+        access_token: accessToken,
+        post_text: postText,
+        comment_type: "after",
+        nb_comments: nbAfter,
+        style_ton: profile?.auto_comment_style_ton || "professionnel",
+        niche: profile?.niche || "",
+        brand_tone: profile?.brand_tone_of_voice || "",
+        langage: profile?.auto_comment_langage || {},
+      }),
+    });
+  } catch (err) {
+    console.error("[publish-callback] triggerAfterExecution error:", err);
+  }
 }
