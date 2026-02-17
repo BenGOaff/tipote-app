@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { MAX_DAILY_COMMENTS_PER_PLATFORM } from "@/lib/automationCredits";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 
 export const dynamic = "force-dynamic";
 
@@ -150,25 +151,42 @@ export async function GET(req: NextRequest) {
         .eq("user_id", post.user_id)
         .maybeSingle();
 
-      // Get social connection for the platform
+      // Get social connection for the platform (scoped by project if available)
       const postPlatform = post.channel || "";
-      const { data: connection } = await supabaseAdmin
+      if (!postPlatform) continue;
+
+      let connQuery = supabaseAdmin
         .from("social_connections")
-        .select("platform_user_id, access_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", post.user_id)
-        .eq("platform", postPlatform)
-        .maybeSingle();
+        .eq("platform", postPlatform);
+
+      if (post.project_id) {
+        connQuery = connQuery.eq("project_id", post.project_id);
+      }
+
+      const { data: connection } = await connQuery.maybeSingle();
 
       if (!connection?.access_token_encrypted) continue;
 
-      // Check token expiry
-      if (connection.token_expires_at) {
-        const expiresAt = new Date(connection.token_expires_at);
-        if (expiresAt < new Date()) continue;
-      }
+      let accessToken: string;
 
-      const accessToken = decrypt(connection.access_token_encrypted);
-      if (!accessToken) continue;
+      // Check token expiry — try to refresh if expired
+      if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+        const refreshResult = await refreshSocialToken(
+          connection.id,
+          postPlatform,
+          connection.refresh_token_encrypted,
+        );
+        if (!refreshResult.ok || !refreshResult.accessToken) {
+          console.error(`[auto-comments/pending] Token refresh failed for ${postPlatform} user ${post.user_id}: ${refreshResult.error}`);
+          continue;
+        }
+        accessToken = refreshResult.accessToken;
+      } else {
+        accessToken = decrypt(connection.access_token_encrypted);
+        if (!accessToken) continue;
+      }
 
       jobs.push({
         content_id: post.id,

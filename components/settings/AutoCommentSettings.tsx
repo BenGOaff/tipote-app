@@ -30,10 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  useAutomationCredits,
-  emitAutomationCreditsUpdated,
-} from "@/lib/credits/useAutomationCredits";
+import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
 const STYLE_TONS = [
   { id: "amical", label: "Amical" },
@@ -88,7 +85,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
   const hasAccess = planHasAccess(plan);
   const { toast } = useToast();
 
-  const { balance: automationCredits, loading: creditsLoading } = useAutomationCredits();
+  const { balance: aiCredits, loading: creditsLoading } = useCreditsBalance();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -228,9 +225,9 @@ export function AutoCommentSettings({ userPlan }: Props) {
 
             {hasAccess && (
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Crédits automation</p>
+                <p className="text-xs text-muted-foreground">Crédits IA</p>
                 <p className="text-lg font-bold">
-                  {creditsLoading ? "..." : automationCredits?.credits_remaining ?? 0}
+                  {creditsLoading ? "..." : aiCredits?.total_remaining ?? 0}
                 </p>
               </div>
             )}

@@ -1,22 +1,10 @@
 // lib/automationCredits.ts
-// Server-side helpers for automation credits (auto-comments).
-// Uses Supabase RPC functions for atomic credit operations.
+// Constants and helpers for auto-comments feature.
+// Credits are consumed from the standard AI credits pool (user_credits table).
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export type AutomationCreditsRow = {
-  user_id: string;
-  credits_total: number;
-  credits_used: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type AutomationCreditsSnapshot = AutomationCreditsRow & {
-  credits_remaining: number;
-};
-
-/** Credit cost per auto-comment */
+/** AI credit cost per auto-comment */
 export const CREDIT_PER_COMMENT = 0.25;
 
 /** Max comments before/after a post */
@@ -60,92 +48,11 @@ export const OBJECTIFS = [
 
 export type Objectif = (typeof OBJECTIFS)[number];
 
-function toNum(v: unknown, fallback = 0): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-export function computeSnapshot(row: AutomationCreditsRow): AutomationCreditsSnapshot {
-  const total = toNum(row.credits_total, 0);
-  const used = toNum(row.credits_used, 0);
-  return {
-    ...row,
-    credits_total: total,
-    credits_used: used,
-    credits_remaining: Math.max(0, total - used),
-  };
-}
-
 /**
- * Calculate total credits needed for a given auto-comment config.
+ * Calculate total AI credits needed for a given auto-comment config.
  */
 export function calculateCreditsNeeded(nbBefore: number, nbAfter: number): number {
   return (nbBefore + nbAfter) * CREDIT_PER_COMMENT;
-}
-
-/**
- * Ensure automation credits row exists for user.
- */
-export async function ensureAutomationCredits(userId: string): Promise<AutomationCreditsSnapshot> {
-  const { data, error } = await supabaseAdmin.rpc("ensure_automation_credits", {
-    p_user_id: userId,
-  });
-
-  if (error || !data) {
-    throw new Error(error?.message || "Failed to ensure_automation_credits");
-  }
-
-  return computeSnapshot(data as AutomationCreditsRow);
-}
-
-/**
- * Consume automation credits (atomic, row-locked).
- */
-export async function consumeAutomationCredits(
-  userId: string,
-  amount: number,
-  context: Record<string, unknown> = {},
-): Promise<AutomationCreditsSnapshot> {
-  const { data, error } = await supabaseAdmin.rpc("consume_automation_credits", {
-    p_user_id: userId,
-    p_amount: amount,
-    p_context: context,
-  });
-
-  if (error || !data) {
-    const msg = error?.message || "Failed to consume_automation_credits";
-    if (msg.includes("INSUFFICIENT") || msg.includes("NO_AUTOMATION")) {
-      const e = new Error("INSUFFICIENT_AUTOMATION_CREDITS");
-      (e as any).code = "INSUFFICIENT_AUTOMATION_CREDITS";
-      throw e;
-    }
-    throw new Error(msg);
-  }
-
-  return computeSnapshot(data as AutomationCreditsRow);
-}
-
-/**
- * Add automation credits for a user (admin action).
- */
-export async function addAutomationCredits(
-  userId: string,
-  amount: number,
-): Promise<AutomationCreditsSnapshot> {
-  const { data, error } = await supabaseAdmin.rpc("admin_add_automation_credits", {
-    p_user_id: userId,
-    p_amount: amount,
-  });
-
-  if (error) {
-    throw new Error(error.message || "Failed to add automation credits");
-  }
-
-  if (data && typeof data === "object" && "credits_total" in data) {
-    return computeSnapshot(data as AutomationCreditsRow);
-  }
-
-  return ensureAutomationCredits(userId);
 }
 
 /**

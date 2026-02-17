@@ -16,7 +16,7 @@ import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
-import { emitAutomationCreditsUpdated } from "@/lib/credits/useAutomationCredits";
+import { emitCreditsUpdated } from "@/lib/credits/client";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -276,7 +276,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           }),
         });
         if (res.ok) {
-          emitAutomationCreditsUpdated();
+          emitCreditsUpdated();
         }
       } catch {
         // Non-blocking — the post is already saved
@@ -583,7 +583,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           return id;
         }}
         onPublished={() => {
-          emitAutomationCreditsUpdated();
+          emitCreditsUpdated();
         }}
       />
 

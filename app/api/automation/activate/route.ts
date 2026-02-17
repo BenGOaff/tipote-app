@@ -1,8 +1,7 @@
 // app/api/automation/activate/route.ts
 // POST: activate auto-comments for a post
-// - Verifies plan access (PRO/ELITE)
-// - Verifies sufficient automation credits
-// - Consumes credits
+// - Verifies plan access (PRO/ELITE/BETA)
+// - Consumes AI credits (0.25 per comment) from the standard user_credits pool
 // - Updates content_item with auto-comment settings
 // - Triggers n8n webhook for auto-comment workflow
 
@@ -10,12 +9,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import {
   getUserPlan,
   planHasAutoComments,
   calculateCreditsNeeded,
-  ensureAutomationCredits,
-  consumeAutomationCredits,
   MAX_COMMENTS_BEFORE,
   MAX_COMMENTS_AFTER,
   CREDIT_PER_COMMENT,
@@ -122,26 +120,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Calculate credits needed
+    // 4. Calculate AI credits needed (0.25 per comment)
     const creditsNeeded = calculateCreditsNeeded(nb_comments_before, nb_comments_after);
 
-    // 5. Check automation credits
-    const creditsSnapshot = await ensureAutomationCredits(userId);
-    if (creditsSnapshot.credits_remaining < creditsNeeded) {
+    // 5. Check AI credits balance
+    const balance = await ensureUserCredits(userId);
+    if (balance.total_remaining < creditsNeeded) {
       return NextResponse.json(
         {
           ok: false,
-          error: "INSUFFICIENT_CREDITS",
-          message: `Crédits insuffisants. ${creditsNeeded} crédits requis, ${creditsSnapshot.credits_remaining} disponibles.`,
+          error: "NO_CREDITS",
+          message: `Crédits insuffisants. ${creditsNeeded} crédits requis, ${balance.total_remaining} disponibles.`,
           credits_needed: creditsNeeded,
-          credits_remaining: creditsSnapshot.credits_remaining,
+          credits_remaining: balance.total_remaining,
         },
         { status: 402 },
       );
     }
 
-    // 6. Consume credits
-    const newSnapshot = await consumeAutomationCredits(userId, creditsNeeded, {
+    // 6. Consume AI credits upfront
+    const newBalance = await consumeCredits(userId, creditsNeeded, {
+      kind: "auto_comments",
       content_id,
       nb_before: nb_comments_before,
       nb_after: nb_comments_after,
@@ -165,7 +164,6 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       console.error("[activate auto-comments] DB update error:", updateError);
-      // Don't fail the request — credits are consumed, we can retry the update
     }
 
     // 8. Notify n8n webhook (fire-and-forget)
@@ -193,7 +191,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       credits_consumed: creditsNeeded,
-      credits_remaining: newSnapshot.credits_remaining,
+      credits_remaining: newBalance.total_remaining,
       auto_comments: {
         enabled: true,
         nb_before: nb_comments_before,
@@ -205,12 +203,12 @@ export async function POST(req: NextRequest) {
     console.error("[POST /api/automation/activate] error:", err);
 
     const message = err instanceof Error ? err.message : "Unknown error";
-    if (message.includes("INSUFFICIENT") || message.includes("NO_AUTOMATION")) {
+    if (message.includes("NO_CREDITS")) {
       return NextResponse.json(
         {
           ok: false,
-          error: "INSUFFICIENT_CREDITS",
-          message: "Crédits d'automatisation insuffisants. Rechargez vos crédits.",
+          error: "NO_CREDITS",
+          message: "Crédits IA insuffisants.",
         },
         { status: 402 },
       );

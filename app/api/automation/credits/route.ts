@@ -1,10 +1,10 @@
 // app/api/automation/credits/route.ts
-// GET: fetch automation credit balance
-// Used by the UI to display automation credits separately from AI credits
+// GET: fetch AI credit balance for auto-comments
+// Returns the same credits as the rest of the app (user_credits table)
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { ensureAutomationCredits } from "@/lib/automationCredits";
+import { ensureUserCredits } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +17,14 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const snapshot = await ensureAutomationCredits(session.user.id);
+    const snapshot = await ensureUserCredits(session.user.id);
 
     return NextResponse.json({
       ok: true,
       balance: {
-        credits_total: snapshot.credits_total,
-        credits_used: snapshot.credits_used,
-        credits_remaining: snapshot.credits_remaining,
+        credits_total: snapshot.monthly_remaining + snapshot.bonus_remaining,
+        credits_used: snapshot.monthly_credits_used + snapshot.bonus_credits_used,
+        credits_remaining: snapshot.total_remaining,
       },
     });
   } catch (err) {
