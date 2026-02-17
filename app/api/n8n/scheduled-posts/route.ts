@@ -32,7 +32,13 @@ function resolveImageUrl(meta: any): string | undefined {
 
 function isMissingColumn(msg?: string | null) {
   const m = (msg ?? "").toLowerCase();
-  return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
+  return (
+    m.includes("does not exist") ||
+    m.includes("could not find the '") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -190,6 +196,25 @@ export async function GET(req: NextRequest) {
   );
 
   const validPosts = postsWithTokens.filter(Boolean);
+
+  // ── Lock: mark returned posts as "publishing" to prevent re-fetch by next cron ──
+  if (validPosts.length > 0) {
+    const ids = validPosts.map((p: any) => p.content_id).filter(Boolean);
+    if (ids.length > 0) {
+      // Try EN column first, then FR fallback
+      const { error: lockErr } = await supabaseAdmin
+        .from("content_item")
+        .update({ status: "publishing" })
+        .in("id", ids);
+
+      if (lockErr && isMissingColumn(lockErr.message)) {
+        await supabaseAdmin
+          .from("content_item")
+          .update({ statut: "publishing" } as any)
+          .in("id", ids);
+      }
+    }
+  }
 
   return NextResponse.json({
     ok: true,

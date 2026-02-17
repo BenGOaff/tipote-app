@@ -9,6 +9,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
+function isMissingColumn(msg?: string | null) {
+  const m = (msg ?? "").toLowerCase();
+  return m.includes("does not exist") || (m.includes("column") && m.includes("unknown"));
+}
+
+const EN_SEL = "id, user_id, status, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status";
+const FR_SEL = "id, user_id, status:statut, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status";
+
 export async function GET(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const {
@@ -24,14 +32,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "content_id required" }, { status: 400 });
   }
 
-  // Fetch content item
-  const { data: content, error } = await supabaseAdmin
+  // Fetch content item (EN/FR schema compat)
+  let content: any = null;
+  const enRes = await supabaseAdmin
     .from("content_item")
-    .select("id, user_id, status, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status")
+    .select(EN_SEL)
     .eq("id", contentId)
     .maybeSingle();
 
-  if (error || !content) {
+  if (enRes.error && isMissingColumn(enRes.error.message)) {
+    const frRes = await supabaseAdmin
+      .from("content_item")
+      .select(FR_SEL)
+      .eq("id", contentId)
+      .maybeSingle();
+    content = frRes.data;
+  } else {
+    content = enRes.data;
+  }
+
+  if (!content) {
     return NextResponse.json({ ok: false, error: "Content not found" }, { status: 404 });
   }
 

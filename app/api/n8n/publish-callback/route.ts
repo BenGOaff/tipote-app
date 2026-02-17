@@ -10,7 +10,13 @@ export const dynamic = "force-dynamic";
 
 function isMissingColumn(msg?: string | null) {
   const m = (msg ?? "").toLowerCase();
-  return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
+  return (
+    m.includes("does not exist") ||
+    m.includes("could not find the '") ||
+    m.includes("schema cache") ||
+    m.includes("pgrst") ||
+    (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
+  );
 }
 
 /** Met a jour le statut du content_item (compat colonnes FR/EN).

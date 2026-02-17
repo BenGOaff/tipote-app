@@ -97,7 +97,13 @@ export async function POST(req: NextRequest) {
   // Helper: détecte si l'erreur est due à une colonne manquante (DB en FR vs EN)
   function isMissingColumn(msg?: string | null) {
     const m = (msg ?? "").toLowerCase();
-    return m.includes("column") && (m.includes("does not exist") || m.includes("unknown"));
+    return (
+      m.includes("does not exist") ||
+      m.includes("could not find the '") ||
+      m.includes("schema cache") ||
+      m.includes("pgrst") ||
+      (m.includes("column") && (m.includes("exist") || m.includes("unknown")))
+    );
   }
 
   // Helper: met a jour le statut du content_item (compat FR/EN)

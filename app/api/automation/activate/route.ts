@@ -23,6 +23,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function isMissingColumn(msg?: string | null) {
+  const m = (msg ?? "").toLowerCase();
+  return m.includes("does not exist") || (m.includes("column") && m.includes("unknown"));
+}
+
+const EN_CONTENT_SEL = "id, user_id, type, status, channel, auto_comments_enabled";
+const FR_CONTENT_SEL = "id, user_id, type, status:statut, channel:canal, auto_comments_enabled";
+
 const ActivateSchema = z.object({
   content_id: z.string().uuid(),
   nb_comments_before: z.number().int().min(0).max(MAX_COMMENTS_BEFORE),
@@ -80,14 +88,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Verify content belongs to user
-    const { data: content, error: contentError } = await supabaseAdmin
+    // 3. Verify content belongs to user (EN/FR schema compat)
+    let content: any = null;
+    const enRes = await supabaseAdmin
       .from("content_item")
-      .select("id, user_id, type, status, channel, auto_comments_enabled")
+      .select(EN_CONTENT_SEL)
       .eq("id", content_id)
       .maybeSingle();
 
-    if (contentError || !content) {
+    if (enRes.error && isMissingColumn(enRes.error.message)) {
+      const frRes = await supabaseAdmin
+        .from("content_item")
+        .select(FR_CONTENT_SEL)
+        .eq("id", content_id)
+        .maybeSingle();
+      content = frRes.data;
+    } else {
+      content = enRes.data;
+    }
+
+    if (!content) {
       return NextResponse.json({ ok: false, error: "Contenu introuvable." }, { status: 404 });
     }
 

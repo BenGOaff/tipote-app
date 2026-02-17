@@ -16,6 +16,16 @@ import { MAX_DAILY_COMMENTS_PER_PLATFORM } from "@/lib/automationCredits";
 
 export const dynamic = "force-dynamic";
 
+function isMissingColumn(msg?: string | null) {
+  const m = (msg ?? "").toLowerCase();
+  return m.includes("does not exist") || (m.includes("column") && m.includes("unknown"));
+}
+
+const EN_SELECT =
+  "id, user_id, project_id, type, title, content, status, channel, scheduled_date, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status, meta";
+const FR_SELECT =
+  "id, user_id, project_id, type, title:titre, content:contenu, status:statut, channel:canal, scheduled_date:date_planifiee, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status, meta";
+
 function decrypt(encrypted: string): string {
   if (!encrypted) return "";
   const crypto = require("crypto");
@@ -66,18 +76,36 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch posts with active auto-comments in any actionable phase
-    const { data: posts, error } = await supabaseAdmin
+    // Fetch posts with active auto-comments in any actionable phase (EN/FR schema compat)
+    let posts: any[] | null = null;
+
+    const enRes = await supabaseAdmin
       .from("content_item")
-      .select("id, user_id, project_id, type, title, content, status, channel, scheduled_date, auto_comments_enabled, nb_comments_before, nb_comments_after, auto_comments_status, meta")
+      .select(EN_SELECT)
       .eq("auto_comments_enabled", true)
       .in("auto_comments_status", ["pending", "after_pending"])
       .order("created_at", { ascending: true })
       .limit(20);
 
-    if (error) {
-      console.error("[n8n/auto-comments/pending] query error:", error);
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    if (enRes.error && isMissingColumn(enRes.error.message)) {
+      const frRes = await supabaseAdmin
+        .from("content_item")
+        .select(FR_SELECT)
+        .eq("auto_comments_enabled", true)
+        .in("auto_comments_status", ["pending", "after_pending"])
+        .order("created_at", { ascending: true })
+        .limit(20);
+
+      if (frRes.error) {
+        console.error("[n8n/auto-comments/pending] query error (FR fallback):", frRes.error);
+        return NextResponse.json({ ok: false, error: frRes.error.message }, { status: 500 });
+      }
+      posts = frRes.data;
+    } else if (enRes.error) {
+      console.error("[n8n/auto-comments/pending] query error:", enRes.error);
+      return NextResponse.json({ ok: false, error: enRes.error.message }, { status: 500 });
+    } else {
+      posts = enRes.data;
     }
 
     if (!posts || posts.length === 0) {
