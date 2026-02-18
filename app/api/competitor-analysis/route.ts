@@ -226,13 +226,25 @@ export async function POST(req: NextRequest) {
       }, 5000);
 
       try {
-        // Fetch business profile
+        // Fetch business profile + existing document context in parallel
         let bpQuery = supabase
           .from("business_profiles")
           .select("niche, mission, offers")
           .eq("user_id", userId);
         if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
-        const { data: businessProfile } = await bpQuery.maybeSingle();
+
+        let docQuery = supabase
+          .from("competitor_analyses")
+          .select("uploaded_document_summary")
+          .eq("user_id", userId);
+        if (projectId) docQuery = docQuery.eq("project_id", projectId);
+
+        const [{ data: businessProfile }, { data: existingAnalysis }] = await Promise.all([
+          bpQuery.maybeSingle(),
+          docQuery.maybeSingle(),
+        ]);
+
+        const uploadedDocContext = cleanString(existingAnalysis?.uploaded_document_summary, 5000);
 
         sendSSE("progress", { step: "Recherche IA en cours..." });
 
@@ -243,6 +255,7 @@ export async function POST(req: NextRequest) {
           userNiche: cleanString(businessProfile?.niche, 200),
           userMission: cleanString(businessProfile?.mission, 500),
           userOffers: businessProfile?.offers ?? [],
+          uploadedDocContext,
         });
 
         sendSSE("progress", { step: "Sauvegarde des résultats..." });
@@ -405,6 +418,7 @@ async function researchCompetitors(params: {
   userNiche: string;
   userMission: string;
   userOffers: any[];
+  uploadedDocContext?: string;
 }): Promise<{
   competitor_details: AnyRecord;
   summary: string;
@@ -413,43 +427,54 @@ async function researchCompetitors(params: {
   opportunities: string[];
   positioning_matrix: string;
 }> {
-  const { apiKey, competitors, userNiche, userMission, userOffers } = params;
+  const { apiKey, competitors, userNiche, userMission, userOffers, uploadedDocContext } = params;
 
   const systemPrompt = `Tu es Tipote, un analyste concurrentiel expert en marketing digital et stratégie business.
 
 MISSION :
 Analyser les concurrents fournis par l'utilisateur et produire un rapport concurrentiel complet et actionnable.
 Compare les différences entre l'offre de l'utilisateur et celles des concurrents en termes de fonctionnalités, tarifs, conditions, mots-clés, positionnement.
-Détermine les points à mettre en valeur sur l'offre de l'utilisateur et les axes d'amélioration pour se différencier et mieux répondre aux besoins du public cible.
+Pour chaque concurrent, identifie CONCRÈTEMENT ce que l'utilisateur fait mieux, moins bien, et comment il peut se différencier.
 
 CONTEXTE UTILISATEUR :
 - Niche : ${userNiche || "Non spécifiée"}
 - Positionnement : ${userMission || "Non spécifié"}
-- Offres : ${JSON.stringify(userOffers ?? [], null, 2)}
+- Offres : ${JSON.stringify(userOffers ?? [], null, 2)}${uploadedDocContext ? `\n\nDOCUMENT IMPORTÉ PAR L'UTILISATEUR :\nL'utilisateur a fourni un document d'analyse concurrentielle. Voici les points clés extraits — utilise-les pour enrichir et affiner ton analyse :
+${uploadedDocContext}` : ""}
 
 INSTRUCTIONS :
-1. Pour chaque concurrent, analyse (même si tu ne connais pas tout, fais de ton mieux avec ce que tu sais) :
+1. Pour chaque concurrent, analyse en détail :
    - Positionnement et proposition de valeur
    - Offres principales (produits/services) avec prix si connus
    - Points forts (ce qu'ils font bien)
    - Points faibles (ce qu'ils font moins bien)
-   - Différence avec le positionnement et le persona de l'utilisateur
    - Canaux de communication principaux
    - Audience cible
    - Stratégie de contenu observée
    - Mots-clés et positionnement SEO probable
+   - Infos manquantes (ce que tu n'as pas trouvé)
 
-2. Produis ensuite une synthèse comparative :
-   - Forces de l'utilisateur par rapport aux concurrents (ce qui le différencie positivement)
-   - Faiblesses de l'utilisateur par rapport aux concurrents (axes d'amélioration)
-   - Opportunités de différenciation (points à mettre en valeur, niches inexploitées)
-   - Matrice de positionnement (texte structuré comparant prix, fonctionnalités, cible)
+2. Pour chaque concurrent, produis une section "face-à-face" vs l'utilisateur :
+   - user_advantages : liste des avantages CONCRETS de l'utilisateur face à ce concurrent (ce que l'utilisateur fait mieux ou propose que le concurrent n'a pas)
+   - user_disadvantages : liste des faiblesses CONCRÈTES de l'utilisateur face à ce concurrent (ce que le concurrent fait mieux ou propose que l'utilisateur n'a pas)
+   - key_differences_summary : résumé court (2-3 phrases) des différences clés entre l'utilisateur et ce concurrent
+
+3. Pour chaque concurrent, produis une section "actions recommandées" :
+   - differentiation_strategy : stratégie précise de différenciation (comment se positionner différemment de ce concurrent, avec exemples concrets)
+   - communication_focus : 2-4 messages/arguments clés à mettre en avant dans la communication pour convaincre les clients qui considèrent ce concurrent
+   - offer_improvements : 2-3 améliorations concrètes à apporter à l'offre pour mieux rivaliser avec ce concurrent
+
+4. Produis une synthèse globale comparative :
+   - Forces globales de l'utilisateur par rapport à l'ensemble des concurrents
+   - Faiblesses globales à corriger en priorité
+   - Opportunités de différenciation (niches inexploitées, angles uniques)
+   - Matrice de positionnement comparant prix/fonctionnalités/cibles
 
 IMPORTANT :
-- Sois spécifique et actionnable, pas de généralités vagues.
+- Sois SPÉCIFIQUE et ACTIONNABLE, pas de généralités vagues.
+- Les recommandations doivent être directement exploitables (exemples : "Mets en avant ton accompagnement 1-to-1 contrairement à X qui ne propose que des formations en ligne").
 - Compare les tarifs, fonctionnalités et conditions quand c'est possible.
-- Si tu manques d'informations sur un concurrent, dis-le clairement et suggère à l'utilisateur de compléter.
-- Le résumé doit donner des pistes concrètes de réflexion stratégique.
+- Si tu manques d'informations sur un concurrent, dis-le clairement dans missing_info.
 - Tout doit être en français.
 
 RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
@@ -461,19 +486,24 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
       "main_offers": [{ "name": "string", "price": "string", "description": "string" }],
       "strengths": ["string"],
       "weaknesses": ["string"],
-      "differentiator": "string (différence clé avec le positionnement et le persona de l'utilisateur)",
       "channels": ["string"],
       "target_audience": "string",
       "content_strategy": "string",
       "keywords": ["string"],
-      "missing_info": ["string (info que l'IA n'a pas trouvée)"]
+      "missing_info": ["string"],
+      "user_advantages": ["string (avantage concret de l'utilisateur face à ce concurrent)"],
+      "user_disadvantages": ["string (faiblesse concrète de l'utilisateur face à ce concurrent)"],
+      "key_differences_summary": "string (résumé 2-3 phrases des différences clés)",
+      "differentiation_strategy": "string (stratégie précise de différenciation avec exemples)",
+      "communication_focus": ["string (message/argument clé à mettre en avant)"],
+      "offer_improvements": ["string (amélioration concrète à apporter à l'offre)"]
     }
   },
-  "summary": "string (paragraphe de synthèse comparative actionnable, 200-400 mots)",
-  "strengths": ["string (forces de l'utilisateur vs concurrents)"],
-  "weaknesses": ["string (faiblesses de l'utilisateur vs concurrents)"],
-  "opportunities": ["string (opportunités de différenciation et points à mettre en valeur)"],
-  "positioning_matrix": "string (texte structuré de la matrice de positionnement avec comparaison tarifs/fonctionnalités)"
+  "summary": "string (synthèse comparative actionnable, 200-400 mots)",
+  "strengths": ["string (forces globales de l'utilisateur vs tous les concurrents)"],
+  "weaknesses": ["string (faiblesses globales à corriger en priorité)"],
+  "opportunities": ["string (opportunités de différenciation et niches inexploitées)"],
+  "positioning_matrix": "string (matrice de positionnement avec comparaison tarifs/fonctionnalités/cibles)"
 }`;
 
   const competitorsList = competitors
@@ -496,7 +526,7 @@ Analyse chaque concurrent en détail et produis le rapport complet en JSON.`;
       apiKey,
       system: systemPrompt,
       user: userPrompt,
-      maxTokens: 4000,
+      maxTokens: 8000,
       temperature: 0.4,
     });
 

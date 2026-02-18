@@ -43,7 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
@@ -662,6 +662,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <DialogContent className="sm:max-w-[520px]">
                     <DialogHeader>
                       <DialogTitle>Modifier le mot de passe</DialogTitle>
+                      <DialogDescription className="sr-only">
+                        Modifier votre mot de passe Tipote
+                      </DialogDescription>
                     </DialogHeader>
 
                     <SetPasswordForm mode="reset" />

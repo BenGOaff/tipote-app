@@ -10,7 +10,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 function cleanString(v: unknown, maxLen = 240): string {
   const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
@@ -190,26 +190,30 @@ export async function POST(req: NextRequest) {
     if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
     const { data: businessProfile } = await bpQuery.maybeSingle();
 
-    const summaryResult = await summarizeDocument({
+    // Extract competitors from document (no full analysis — user will launch that separately)
+    const extractResult = await extractFromDocument({
       apiKey,
       documentText: textContent,
       userNiche: cleanString(businessProfile?.niche, 200),
       userMission: cleanString(businessProfile?.mission, 500),
     });
 
-    // Upsert competitor analysis
+    // Upsert: save extracted competitors + document key points.
+    // Full analysis fields are cleared so the user knows they need to run "Lancer l'analyse IA".
     const now = new Date().toISOString();
     const upsertPayload: Record<string, any> = {
       user_id: user.id,
-      competitors: summaryResult.competitors_extracted,
-      competitor_details: summaryResult.competitor_details,
-      summary: summaryResult.summary,
-      strengths: summaryResult.strengths,
-      weaknesses: summaryResult.weaknesses,
-      opportunities: summaryResult.opportunities,
-      positioning_matrix: summaryResult.positioning_matrix,
-      uploaded_document_summary: summaryResult.document_summary,
-      status: "completed",
+      competitors: extractResult.competitors_extracted,
+      // Save rich key points so the main analysis route can use them as context
+      uploaded_document_summary: extractResult.document_key_points,
+      // Clear stale analysis data from any previous run
+      competitor_details: null,
+      summary: null,
+      strengths: null,
+      weaknesses: null,
+      opportunities: null,
+      positioning_matrix: null,
+      status: "draft",
       updated_at: now,
       created_at: now,
     };
@@ -225,22 +229,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    // Update business_profiles (best-effort)
-    try {
-      let bpUpdate = supabase
-        .from("business_profiles")
-        .update({
-          competitor_analysis_summary: summaryResult.summary.slice(0, 2000),
-          updated_at: now,
-        })
-        .eq("user_id", user.id);
-      if (projectId) bpUpdate = bpUpdate.eq("project_id", projectId);
-      await bpUpdate;
-    } catch (e) {
-      console.error("Failed to update business_profiles with competitor summary:", e);
-    }
-
-    return NextResponse.json({ ok: true, analysis: data }, { status: 200 });
+    return NextResponse.json({
+      ok: true,
+      analysis: data,
+      document_summary: extractResult.document_summary,
+    }, { status: 200 });
   } catch (e: any) {
     const msg = (e?.message ?? "").toUpperCase();
     if (msg.includes("NO_CREDITS")) {
@@ -254,62 +247,49 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function summarizeDocument(params: {
+// Lightweight extraction: identify competitors + save document key points.
+// No full competitive analysis — that's done later by the main POST route.
+async function extractFromDocument(params: {
   apiKey: string;
   documentText: string;
   userNiche: string;
   userMission: string;
 }): Promise<{
   competitors_extracted: Array<{ name: string; website?: string; notes?: string }>;
-  competitor_details: Record<string, any>;
-  summary: string;
-  strengths: string[];
-  weaknesses: string[];
-  opportunities: string[];
-  positioning_matrix: string;
+  document_key_points: string;
   document_summary: string;
 }> {
   const { apiKey, documentText, userNiche, userMission } = params;
 
-  const systemPrompt = `Tu es Tipote, un analyste concurrentiel expert.
+  const systemPrompt = `Tu es Tipote, un assistant d'analyse concurrentielle.
 
 MISSION :
-L'utilisateur a uploadé un document contenant une analyse concurrentielle déjà réalisée.
-Tu dois extraire et structurer les informations clés en JSON.
+L'utilisateur a uploadé un document (analyse concurrentielle, benchmark, notes, etc.).
+Tu dois :
+1. Identifier les concurrents mentionnés dans le document.
+2. Extraire les informations clés sur chaque concurrent pour pré-remplir le formulaire.
+3. Produire un résumé structuré des points clés du document (pour enrichir l'analyse IA ensuite).
 
 CONTEXTE UTILISATEUR :
 - Niche : ${userNiche || "Non spécifiée"}
 - Positionnement : ${userMission || "Non spécifié"}
 
-INSTRUCTIONS :
-1. Identifie les concurrents mentionnés dans le document.
-2. Extrais les informations clés pour chaque concurrent.
-3. Produis une synthèse comparative par rapport à l'utilisateur.
-4. Identifie forces, faiblesses et opportunités.
-5. Fais un résumé court du document.
+IMPORTANT :
+- Le champ "notes" de chaque concurrent doit contenir toutes les informations pertinentes extraites du document sur ce concurrent (prix, forces, faiblesses, positionnement, etc.) en quelques phrases concises.
+- Le champ "document_key_points" doit être un résumé structuré et détaillé (300-500 mots) des insights concurrentiels du document — il sera utilisé comme contexte supplémentaire pour l'analyse IA.
+- Tout en français.
 
 RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
 {
-  "competitors_extracted": [{ "name": "string", "website": "string", "notes": "string" }],
-  "competitor_details": {
-    "competitor_name": {
-      "positioning": "string",
-      "value_proposition": "string",
-      "main_offers": [{ "name": "string", "price": "string", "description": "string" }],
-      "strengths": ["string"],
-      "weaknesses": ["string"],
-      "channels": ["string"],
-      "target_audience": "string",
-      "content_strategy": "string",
-      "missing_info": []
+  "competitors_extracted": [
+    {
+      "name": "string (nom du concurrent)",
+      "website": "string (URL si mentionnée, sinon vide)",
+      "notes": "string (toutes les infos clés sur ce concurrent extraites du document)"
     }
-  },
-  "summary": "string (synthèse comparative actionnable, 200-400 mots)",
-  "strengths": ["string"],
-  "weaknesses": ["string"],
-  "opportunities": ["string"],
-  "positioning_matrix": "string",
-  "document_summary": "string (résumé court du document uploadé, 2-3 phrases)"
+  ],
+  "document_key_points": "string (résumé structuré 300-500 mots des insights concurrentiels du document)",
+  "document_summary": "string (résumé très court 2-3 phrases de ce que contient le document)"
 }`;
 
   try {
@@ -317,11 +297,10 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
       apiKey,
       system: systemPrompt,
       user: `DOCUMENT UPLOADÉ :\n\n${documentText}`,
-      maxTokens: 4000,
-      temperature: 0.3,
+      maxTokens: 2000,
+      temperature: 0.2,
     });
 
-    // Extract JSON from response (Claude might wrap it in markdown code blocks)
     let jsonStr = raw;
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -338,31 +317,15 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
             notes: cleanString(c?.notes, 2000),
           }))
         : [],
-      competitor_details: parsed.competitor_details ?? {},
-      summary: cleanString(parsed.summary, 5000) || "Résumé du document importé.",
-      strengths: Array.isArray(parsed.strengths)
-        ? parsed.strengths.map((s: any) => cleanString(s, 500)).filter(Boolean)
-        : [],
-      weaknesses: Array.isArray(parsed.weaknesses)
-        ? parsed.weaknesses.map((s: any) => cleanString(s, 500)).filter(Boolean)
-        : [],
-      opportunities: Array.isArray(parsed.opportunities)
-        ? parsed.opportunities.map((s: any) => cleanString(s, 500)).filter(Boolean)
-        : [],
-      positioning_matrix: cleanString(parsed.positioning_matrix, 5000),
-      document_summary: cleanString(parsed.document_summary, 2000) || "Document importé et analysé.",
+      document_key_points: cleanString(parsed.document_key_points, 5000) || "",
+      document_summary: cleanString(parsed.document_summary, 500) || "Document importé.",
     };
   } catch (e) {
-    console.error("AI document summarization failed:", e);
+    console.error("AI document extraction failed:", e);
     return {
       competitors_extracted: [],
-      competitor_details: {},
-      summary: "Erreur lors de l'analyse du document. Complétez manuellement.",
-      strengths: [],
-      weaknesses: [],
-      opportunities: [],
-      positioning_matrix: "",
-      document_summary: "Erreur de traitement.",
+      document_key_points: "",
+      document_summary: "Erreur de traitement du document.",
     };
   }
 }

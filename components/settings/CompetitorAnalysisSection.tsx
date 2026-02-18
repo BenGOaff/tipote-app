@@ -17,6 +17,12 @@ import {
   FileText,
   Loader2,
   AlertCircle,
+  Zap,
+  MessageSquare,
+  ShoppingBag,
+  Users,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
@@ -34,6 +40,7 @@ type CompetitorInput = {
 };
 
 type CompetitorDetail = {
+  // Profile
   positioning?: string;
   value_proposition?: string;
   main_offers?: Array<{ name: string; price: string; description: string }>;
@@ -42,7 +49,16 @@ type CompetitorDetail = {
   channels?: string[];
   target_audience?: string;
   content_strategy?: string;
+  keywords?: string[];
   missing_info?: string[];
+  // Face-à-face
+  user_advantages?: string[];
+  user_disadvantages?: string[];
+  key_differences_summary?: string;
+  // Actions
+  differentiation_strategy?: string;
+  communication_focus?: string[];
+  offer_improvements?: string[];
 };
 
 type AnalysisData = {
@@ -148,8 +164,8 @@ export default function CompetitorAnalysisSection() {
           const json = await res.json();
           if (json?.error === "NO_CREDITS") {
             toast({
-              title: "Credits insuffisants",
-              description: "L'analyse concurrentielle coute 1 credit. Rechargez vos credits.",
+              title: "Crédits insuffisants",
+              description: "L'analyse concurrentielle coûte 1 crédit. Rechargez vos crédits.",
               variant: "destructive",
             });
             return;
@@ -202,8 +218,8 @@ export default function CompetitorAnalysisSection() {
         if (finalError) {
           if (finalError === "NO_CREDITS") {
             toast({
-              title: "Credits insuffisants",
-              description: "L'analyse concurrentielle coute 1 credit.",
+              title: "Crédits insuffisants",
+              description: "L'analyse concurrentielle coûte 1 crédit.",
               variant: "destructive",
             });
             return;
@@ -214,9 +230,9 @@ export default function CompetitorAnalysisSection() {
         if (finalResult?.ok && finalResult.analysis) {
           setAnalysis(finalResult.analysis);
           setShowResults(true);
-          toast({ title: "Analyse concurrentielle terminee" });
+          toast({ title: "Analyse concurrentielle terminée ✓" });
         } else {
-          throw new Error("Aucun resultat recu");
+          throw new Error("Aucun résultat reçu");
         }
       } catch (e: any) {
         setProgressMsg("");
@@ -249,8 +265,8 @@ export default function CompetitorAnalysisSection() {
         if (!json?.ok) {
           if (json?.error === "NO_CREDITS") {
             toast({
-              title: "Credits insuffisants",
-              description: "L'import de document coute 1 credit.",
+              title: "Crédits insuffisants",
+              description: "L'import de document coûte 1 crédit.",
               variant: "destructive",
             });
             return;
@@ -259,11 +275,15 @@ export default function CompetitorAnalysisSection() {
         }
 
         setAnalysis(json.analysis);
-        if (Array.isArray(json.analysis.competitors) && json.analysis.competitors.length >= 2) {
+        if (Array.isArray(json.analysis?.competitors) && json.analysis.competitors.length >= 2) {
           setCompetitors(json.analysis.competitors);
         }
-        setShowResults(true);
-        toast({ title: "Document importe et analyse" });
+        // Don't show results yet — user must click "Lancer l'analyse IA" to get the full report
+        setShowResults(false);
+        toast({
+          title: "Document importé ✓",
+          description: "Concurrents pré-remplis depuis le doc. Lance l'analyse IA pour obtenir ton rapport.",
+        });
       } catch (err: any) {
         toast({
           title: "Erreur lors de l'import",
@@ -272,7 +292,6 @@ export default function CompetitorAnalysisSection() {
         });
       } finally {
         setUploading(false);
-        // Reset input
         e.target.value = "";
       }
     },
@@ -293,7 +312,7 @@ export default function CompetitorAnalysisSection() {
 
         setAnalysis((prev) => (prev ? { ...prev, summary: editedSummary } : prev));
         setEditingSummary(false);
-        toast({ title: "Resume mis a jour" });
+        toast({ title: "Résumé mis à jour" });
       } catch (e: any) {
         toast({
           title: "Erreur",
@@ -324,8 +343,8 @@ export default function CompetitorAnalysisSection() {
           <h3 className="text-lg font-bold">Analyse des concurrents</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          Renseigne de 2 a 5 concurrents. L&apos;IA analysera leur positionnement, offres et strategie
-          pour t&apos;aider a te differencier.
+          Renseigne de 2 à 5 concurrents. L&apos;IA analysera leur positionnement, offres et stratégie
+          pour t&apos;aider à te différencier et identifier tes avantages concurrentiels.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -368,7 +387,7 @@ export default function CompetitorAnalysisSection() {
                     Notes / Points forts / Points faibles
                   </Label>
                   <Textarea
-                    placeholder="Ce que tu sais deja..."
+                    placeholder="Ce que tu sais déjà sur ce concurrent..."
                     value={comp.notes}
                     onChange={(e) => updateCompetitor(idx, "notes", e.target.value)}
                     rows={3}
@@ -388,6 +407,21 @@ export default function CompetitorAnalysisSection() {
             </div>
           )}
         </div>
+
+        {/* Document imported indicator */}
+        {analysis?.uploaded_document_summary && analysis?.status === "draft" && (
+          <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <FileText className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                Document importé — contexte chargé ✓
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-300 mt-0.5">
+                L&apos;analyse IA utilisera le contenu de ton document en plus des informations saisies ci-dessus.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 mt-6">
           <Button
@@ -423,7 +457,7 @@ export default function CompetitorAnalysisSection() {
         </div>
 
         <p className="text-xs text-muted-foreground mt-2">
-          Cout : 1 credit par analyse. Formats acceptes : TXT, PDF, DOCX, MD (max 5 Mo).
+          Coût : 1 crédit par analyse. Formats acceptés : TXT, PDF, DOCX, MD (max 5 Mo).
         </p>
       </Card>
 
@@ -435,11 +469,11 @@ export default function CompetitorAnalysisSection() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-bold">Synthese concurrentielle</h3>
+                <h3 className="text-lg font-bold">Synthèse concurrentielle</h3>
               </div>
               {analysis.updated_at && (
                 <span className="text-xs text-muted-foreground">
-                  Mis a jour le{" "}
+                  Mis à jour le{" "}
                   {new Date(analysis.updated_at).toLocaleDateString("fr-FR", {
                     day: "numeric",
                     month: "long",
@@ -474,7 +508,7 @@ export default function CompetitorAnalysisSection() {
             ) : (
               <div>
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {analysis.summary || "Aucune synthese disponible."}
+                  {analysis.summary || "Aucune synthèse disponible."}
                 </p>
                 <Button
                   variant="ghost"
@@ -485,7 +519,7 @@ export default function CompetitorAnalysisSection() {
                     setEditingSummary(true);
                   }}
                 >
-                  Modifier la synthese
+                  Modifier la synthèse
                 </Button>
               </div>
             )}
@@ -493,7 +527,7 @@ export default function CompetitorAnalysisSection() {
             {analysis.uploaded_document_summary && (
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Document importe :
+                  Document importé :
                 </p>
                 <p className="text-sm">{analysis.uploaded_document_summary}</p>
               </div>
@@ -502,7 +536,6 @@ export default function CompetitorAnalysisSection() {
 
           {/* SWOT-style cards */}
           <div className="grid md:grid-cols-3 gap-4">
-            {/* Strengths */}
             {analysis.strengths && analysis.strengths.length > 0 && (
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -520,12 +553,11 @@ export default function CompetitorAnalysisSection() {
               </Card>
             )}
 
-            {/* Weaknesses */}
             {analysis.weaknesses && analysis.weaknesses.length > 0 && (
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingDown className="w-4 h-4 text-orange-600" />
-                  <h4 className="font-semibold text-orange-700">A ameliorer</h4>
+                  <h4 className="font-semibold text-orange-700">À améliorer</h4>
                 </div>
                 <ul className="space-y-2">
                   {analysis.weaknesses.map((w, i) => (
@@ -538,12 +570,11 @@ export default function CompetitorAnalysisSection() {
               </Card>
             )}
 
-            {/* Opportunities */}
             {analysis.opportunities && analysis.opportunities.length > 0 && (
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb className="w-4 h-4 text-blue-600" />
-                  <h4 className="font-semibold text-blue-700">Opportunites</h4>
+                  <h4 className="font-semibold text-blue-700">Opportunités</h4>
                 </div>
                 <ul className="space-y-2">
                   {analysis.opportunities.map((o, i) => (
@@ -567,95 +598,130 @@ export default function CompetitorAnalysisSection() {
             </Card>
           )}
 
-          {/* Competitor Details (expandable) */}
+          {/* Per-Competitor Detail Cards */}
           {analysis.competitor_details &&
             Object.keys(analysis.competitor_details).length > 0 && (
-              <Card className="p-6">
-                <h4 className="font-semibold mb-4">Detail par concurrent</h4>
-                <div className="space-y-3">
-                  {Object.entries(analysis.competitor_details).map(([name, detail]) => {
-                    const d = detail as CompetitorDetail;
-                    const isExpanded = expandedCompetitor === name;
-                    return (
-                      <div key={name} className="border rounded-lg">
-                        <button
-                          className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
-                          onClick={() =>
-                            setExpandedCompetitor(isExpanded ? null : name)
-                          }
-                        >
-                          <span className="font-medium">{name}</span>
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <div className="space-y-4">
+                <h4 className="font-semibold text-base px-1">Analyse par concurrent</h4>
+                {Object.entries(analysis.competitor_details).map(([name, detail]) => {
+                  const d = detail as CompetitorDetail;
+                  const isExpanded = expandedCompetitor === name;
+                  return (
+                    <Card key={name} className="overflow-hidden">
+                      {/* Card Header */}
+                      <button
+                        className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors"
+                        onClick={() => setExpandedCompetitor(isExpanded ? null : name)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-primary">
+                              {name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-semibold">{name}</span>
+                            {d.target_audience && (
+                              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {d.target_audience}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {d.user_advantages && d.user_advantages.length > 0 && (
+                            <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 text-xs hidden sm:flex">
+                              +{d.user_advantages.length} avantages
+                            </Badge>
                           )}
-                        </button>
-                        {isExpanded && (
-                          <div className="px-4 pb-4 space-y-3">
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t">
+                          {/* Section 1 — Leur profil */}
+                          <div className="p-5 space-y-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Target className="w-4 h-4 text-muted-foreground" />
+                              <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                Leur profil
+                              </h5>
+                            </div>
+
                             {d.positioning && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Positionnement
-                                </Label>
-                                <p className="text-sm">{d.positioning}</p>
+                                <Label className="text-xs text-muted-foreground">Positionnement</Label>
+                                <p className="text-sm mt-1">{d.positioning}</p>
                               </div>
                             )}
+
                             {d.value_proposition && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Proposition de valeur
-                                </Label>
-                                <p className="text-sm">{d.value_proposition}</p>
+                                <Label className="text-xs text-muted-foreground">Proposition de valeur</Label>
+                                <p className="text-sm mt-1">{d.value_proposition}</p>
                               </div>
                             )}
+
                             {d.main_offers && d.main_offers.length > 0 && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Offres principales
-                                </Label>
-                                <div className="space-y-1 mt-1">
+                                <Label className="text-xs text-muted-foreground">Offres principales</Label>
+                                <div className="space-y-1.5 mt-1">
                                   {d.main_offers.map((offer, i) => (
-                                    <div
-                                      key={i}
-                                      className="text-sm flex items-center gap-2"
-                                    >
-                                      <Badge variant="outline" className="text-xs">
+                                    <div key={i} className="text-sm flex items-start gap-2">
+                                      <Badge variant="outline" className="text-xs mt-0.5 flex-shrink-0">
                                         {offer.price || "?"}
                                       </Badge>
-                                      <span className="font-medium">{offer.name}</span>
-                                      {offer.description && (
-                                        <span className="text-muted-foreground">
-                                          — {offer.description}
-                                        </span>
-                                      )}
+                                      <div>
+                                        <span className="font-medium">{offer.name}</span>
+                                        {offer.description && (
+                                          <span className="text-muted-foreground"> — {offer.description}</span>
+                                        )}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
                               </div>
                             )}
-                            {(d as any).differentiator && (
-                              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                                <Label className="text-xs text-purple-700 dark:text-purple-300 font-medium">
-                                  Difference avec ton positionnement
-                                </Label>
-                                <p className="text-sm mt-1">{(d as any).differentiator}</p>
-                              </div>
-                            )}
-                            {d.target_audience && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Audience cible
-                                </Label>
-                                <p className="text-sm">{d.target_audience}</p>
-                              </div>
-                            )}
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              {d.strengths && d.strengths.length > 0 && (
+                                <div>
+                                  <Label className="text-xs text-green-600">Points forts</Label>
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {d.strengths.map((s, i) => (
+                                      <li key={i} className="flex gap-1.5">
+                                        <span className="text-green-500 flex-shrink-0">+</span>
+                                        <span>{s}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {d.weaknesses && d.weaknesses.length > 0 && (
+                                <div>
+                                  <Label className="text-xs text-orange-600">Points faibles</Label>
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {d.weaknesses.map((w, i) => (
+                                      <li key={i} className="flex gap-1.5">
+                                        <span className="text-orange-500 flex-shrink-0">-</span>
+                                        <span>{w}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+
                             {d.channels && d.channels.length > 0 && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Canaux
-                                </Label>
-                                <div className="flex flex-wrap gap-1 mt-1">
+                                <Label className="text-xs text-muted-foreground">Canaux</Label>
+                                <div className="flex flex-wrap gap-1.5 mt-1">
                                   {d.channels.map((ch, i) => (
                                     <Badge key={i} variant="secondary" className="text-xs">
                                       {ch}
@@ -664,41 +730,19 @@ export default function CompetitorAnalysisSection() {
                                 </div>
                               </div>
                             )}
-                            {d.strengths && d.strengths.length > 0 && (
-                              <div>
-                                <Label className="text-xs text-green-600">Points forts</Label>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {d.strengths.map((s, i) => (
-                                    <li key={i}>+ {s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {d.weaknesses && d.weaknesses.length > 0 && (
-                              <div>
-                                <Label className="text-xs text-orange-600">
-                                  Points faibles
-                                </Label>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {d.weaknesses.map((w, i) => (
-                                    <li key={i}>- {w}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+
                             {d.content_strategy && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  Strategie de contenu
-                                </Label>
-                                <p className="text-sm">{d.content_strategy}</p>
+                                <Label className="text-xs text-muted-foreground">Stratégie de contenu</Label>
+                                <p className="text-sm mt-1">{d.content_strategy}</p>
                               </div>
                             )}
+
                             {d.missing_info && d.missing_info.length > 0 && (
                               <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <div className="flex items-center gap-1 mb-1">
-                                  <AlertCircle className="w-3 h-3 text-yellow-600" />
-                                  <Label className="text-xs text-yellow-700">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <AlertCircle className="w-3.5 h-3.5 text-yellow-600" />
+                                  <Label className="text-xs text-yellow-700 font-medium">
                                     Informations manquantes
                                   </Label>
                                 </div>
@@ -708,18 +752,137 @@ export default function CompetitorAnalysisSection() {
                                   ))}
                                 </ul>
                                 <p className="text-xs text-yellow-600 mt-2">
-                                  Tu peux completer ces infos dans les notes du concurrent
-                                  ci-dessus et relancer l&apos;analyse.
+                                  Complète ces infos dans les notes ci-dessus et relance l&apos;analyse.
                                 </p>
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
+
+                          {/* Section 2 — Face-à-face */}
+                          {(d.user_advantages?.length || d.user_disadvantages?.length || d.key_differences_summary) && (
+                            <div className="p-5 space-y-4 border-t bg-slate-50/50 dark:bg-slate-900/30">
+                              <div className="flex items-center gap-2 mb-3">
+                                <TrendingUp className="w-4 h-4 text-primary" />
+                                <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                  Face-à-face vs toi
+                                </h5>
+                              </div>
+
+                              {d.key_differences_summary && (
+                                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border text-sm leading-relaxed">
+                                  {d.key_differences_summary}
+                                </div>
+                              )}
+
+                              <div className="grid sm:grid-cols-2 gap-4">
+                                {d.user_advantages && d.user_advantages.length > 0 && (
+                                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      <Label className="text-xs font-semibold text-green-700 dark:text-green-400">
+                                        Tu fais mieux
+                                      </Label>
+                                    </div>
+                                    <ul className="space-y-1.5">
+                                      {d.user_advantages.map((adv, i) => (
+                                        <li key={i} className="text-sm text-green-800 dark:text-green-300 flex gap-1.5">
+                                          <span className="flex-shrink-0 mt-0.5">✓</span>
+                                          <span>{adv}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {d.user_disadvantages && d.user_disadvantages.length > 0 && (
+                                  <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <XCircle className="w-4 h-4 text-orange-600" />
+                                      <Label className="text-xs font-semibold text-orange-700 dark:text-orange-400">
+                                        Ils font mieux
+                                      </Label>
+                                    </div>
+                                    <ul className="space-y-1.5">
+                                      {d.user_disadvantages.map((dis, i) => (
+                                        <li key={i} className="text-sm text-orange-800 dark:text-orange-300 flex gap-1.5">
+                                          <span className="flex-shrink-0 mt-0.5">!</span>
+                                          <span>{dis}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Section 3 — Mes actions */}
+                          {(d.differentiation_strategy || d.communication_focus?.length || d.offer_improvements?.length) && (
+                            <div className="p-5 space-y-4 border-t bg-primary/5">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Zap className="w-4 h-4 text-primary" />
+                                <h5 className="font-semibold text-sm text-primary uppercase tracking-wide">
+                                  Mes actions
+                                </h5>
+                              </div>
+
+                              {d.differentiation_strategy && (
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <Target className="w-3.5 h-3.5 text-primary" />
+                                    <Label className="text-xs font-semibold text-primary">
+                                      Stratégie de différenciation
+                                    </Label>
+                                  </div>
+                                  <p className="text-sm leading-relaxed">{d.differentiation_strategy}</p>
+                                </div>
+                              )}
+
+                              {d.communication_focus && d.communication_focus.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                                    <Label className="text-xs font-semibold text-primary">
+                                      Ce que je dois mettre en avant
+                                    </Label>
+                                  </div>
+                                  <ul className="space-y-1.5">
+                                    {d.communication_focus.map((msg, i) => (
+                                      <li key={i} className="text-sm flex gap-2 p-2 bg-white dark:bg-slate-900 rounded border">
+                                        <span className="text-primary font-bold flex-shrink-0">{i + 1}.</span>
+                                        <span>{msg}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {d.offer_improvements && d.offer_improvements.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <ShoppingBag className="w-3.5 h-3.5 text-primary" />
+                                    <Label className="text-xs font-semibold text-primary">
+                                      Améliorations à apporter à mon offre
+                                    </Label>
+                                  </div>
+                                  <ul className="space-y-1.5">
+                                    {d.offer_improvements.map((imp, i) => (
+                                      <li key={i} className="text-sm flex gap-2">
+                                        <span className="text-primary flex-shrink-0 mt-0.5">→</span>
+                                        <span>{imp}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
             )}
         </>
       )}
