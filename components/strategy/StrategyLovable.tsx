@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -36,17 +35,12 @@ import { AddTaskDialog } from "@/components/strategy/AddTaskDialog";
 import {
   Target,
   CheckCircle2,
-  Layers,
   Clock,
   Plus,
-  Users,
   Pencil,
   X,
   Save,
   ChevronRight,
-  Gift,
-  Zap,
-  Crown,
 } from "lucide-react";
 
 import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
@@ -692,18 +686,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               </div>
             </Card>
 
-            {/* Tabs for different views */}
-            <Tabs defaultValue="plan" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="plan">{t("tabs.plan")}</TabsTrigger>
-                <TabsTrigger value="offers">
-                  {t("tabs.offers")}
-                </TabsTrigger>
-                <TabsTrigger value="persona">{t("tabs.persona")}</TabsTrigger>
-              </TabsList>
-
-              {/* Plan d'action Tab */}
-              <TabsContent value="plan" className="space-y-6">
+            {/* Plan d'action */}
+            <div className="space-y-6">
                 {/* Edit Mode Banner */}
                 {isEditing && (
                   <Card className="p-4 bg-primary/5 border-primary/20">
@@ -951,193 +935,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     );
                   })}
                 </div>
-              </TabsContent>
-
-              {/* Tes offres Tab */}
-              <TabsContent value="offers" className="space-y-6">
-                <Card className="p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                      <Layers className="w-5 h-5 text-primary-foreground" />
-                    </div>
-                    <h3 className="text-xl font-bold">{t("offers.title")}</h3>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div
-                      className="p-5 rounded-lg border-2 border-success bg-success/5 cursor-pointer"
-                      onClick={() => setSelectedOfferType("high_ticket")}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-success">
-                            High Ticket
-                          </p>
-                          <p className="text-3xl font-bold mt-1">
-                            {pickFirstNonEmpty(
-                              high?.price,
-                              (high as any)?.pricing?.price,
-                              (high as any)?.tarif,
-                            )}
-                          </p>
-                        </div>
-                        <Crown className="w-5 h-5 text-success" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">
-                        {pickFirstNonEmpty(
-                          high?.title,
-                          (high as any)?.name,
-                          (high as any)?.description,
-                        )}
-                      </p>
-                    </div>
-
-                    <div
-                      className="p-5 rounded-lg border-2 border-primary bg-primary/5 cursor-pointer"
-                      onClick={() => setSelectedOfferType("low_ticket")}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-primary">
-                            Middle Ticket
-                          </p>
-                          <p className="text-3xl font-bold mt-1">
-                            {pickFirstNonEmpty(
-                              mid?.price,
-                              (mid as any)?.pricing?.price,
-                              (mid as any)?.tarif,
-                            )}
-                          </p>
-                        </div>
-                        <Zap className="w-5 h-5 text-primary" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">
-                        {pickFirstNonEmpty(
-                          mid?.title,
-                          (mid as any)?.name,
-                          (mid as any)?.description,
-                        )}
-                      </p>
-                    </div>
-
-                    <div
-                      className="p-5 rounded-lg border-2 border-secondary bg-secondary/5 cursor-pointer"
-                      onClick={() => setSelectedOfferType("lead_magnet")}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-secondary">
-                            Lead Magnet
-                          </p>
-                          <p className="text-3xl font-bold mt-1">
-                            {pickFirstNonEmpty(
-                              lead?.price,
-                              (lead as any)?.pricing?.price,
-                              (lead as any)?.tarif,
-                              t("offers.free"),
-                            )}
-                          </p>
-                        </div>
-                        <Gift className="w-5 h-5 text-secondary" />
-                      </div>
-                      <p className="text-muted-foreground mt-2">
-                        {pickFirstNonEmpty(
-                          lead?.title,
-                          (lead as any)?.name,
-                          (lead as any)?.description,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button variant="outline" className="w-full mt-6">
-                    {t("offers.addOffer")}
-                  </Button>
-                </Card>
-              </TabsContent>
-
-              {/* Persona Tab */}
-              <TabsContent value="persona" className="space-y-6">
-                <Card className="p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center">
-                      <Users className="w-5 h-5 text-secondary-foreground" />
-                    </div>
-                    <h3 className="text-xl font-bold">{t("persona.title")}</h3>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {t("persona.profile")}
-                        </p>
-                        <p className="font-semibold text-lg">{personaTitle}</p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {t("persona.pains")}
-                        </p>
-                        <ul className="space-y-2">
-                          {(personaPains.length ? personaPains : ["—"]).map(
-                            (p, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <span className="w-2 h-2 rounded-full bg-destructive mt-2 flex-shrink-0" />
-                                <span>{p}</span>
-                              </li>
-                            ),
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {t("persona.goals")}
-                        </p>
-                        <ul className="space-y-2">
-                          {(personaGoals.length ? personaGoals : ["—"]).map(
-                            (g, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <span className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
-                                <span>{g}</span>
-                              </li>
-                            ),
-                          )}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {t("persona.channels")}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(personaChannels.length
-                            ? personaChannels
-                            : ["—"]
-                          ).map((c, i) => (
-                            <Badge key={i} variant="outline">
-                              {c}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="w-full mt-6"
-                    onClick={() => setIsPersonaEditOpen(true)}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    {t("persona.edit")}
-                  </Button>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            </div>
           </div>
 
           {selectedPhaseIndex !== null &&

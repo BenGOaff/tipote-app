@@ -158,8 +158,9 @@ export default async function StrategyPage() {
     redirect("/onboarding");
   }
 
-  // ✅ business_profiles : on lit ce qui est utile même si le plan n'est pas encore prêt
-  const profileRes = await supabase
+  // ✅ business_profiles : lecture via supabaseAdmin pour contourner tout problème RLS
+  // (même logique que les tasks — on filtre strictement par user_id)
+  const profileRes = await supabaseAdmin
     .from("business_profiles")
     .select(
       [
@@ -396,10 +397,15 @@ export default async function StrategyPage() {
   }
 
   // ✅ Objectif revenu :
-  // 1) priorité à plan_json.revenue_goal
-  // 2) fallback à business_profiles.revenue_goal_monthly (onboarding)
-  // 3) sinon "—"
-  const fromPlan = normalizeRevenueGoalText((planJson as AnyRecord)?.revenue_goal);
+  // 1) priorité à plan_json.revenue_goal (label texte)
+  // 2) fallback à plan_json.target_monthly_rev (valeur numérique)
+  // 3) fallback à business_profiles.revenue_goal_monthly (onboarding)
+  // 4) sinon "—"
+  const planRevGoal =
+    (planJson as AnyRecord)?.revenue_goal ||
+    (planJson as AnyRecord)?.target_monthly_rev ||
+    (planJson as AnyRecord)?.target_monthly_revenue;
+  const fromPlan = normalizeRevenueGoalText(planRevGoal);
   const fromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
 
   const picked = fromPlan.value ? fromPlan : fromProfile;
