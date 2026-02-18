@@ -238,7 +238,16 @@ function triggerBeforeExecution(opts: {
 
       const { data: conn } = await connQuery.maybeSingle();
       if (!conn?.access_token_encrypted) {
-        console.error("[activate] No social connection for", opts.platform);
+        const errMsg = `Aucune connexion sociale trouvée pour ${opts.platform}. Connectez votre compte dans Paramètres > Connexions.`;
+        console.error("[activate]", errMsg);
+        await supabaseAdmin.from("auto_comment_logs").insert({
+          user_id: opts.user_id,
+          post_tipote_id: opts.content_id,
+          platform: opts.platform,
+          comment_type: "before",
+          status: "failed",
+          error_message: errMsg,
+        }).then(() => {}).catch(() => {});
         await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
         return;
       }
@@ -251,13 +260,33 @@ function triggerBeforeExecution(opts: {
       if (isExpired) {
         const refreshResult = await refreshSocialToken(conn.id, opts.platform, conn.refresh_token_encrypted ?? null);
         if (!refreshResult.ok || !refreshResult.accessToken) {
-          console.error("[activate] Token refresh failed for", opts.platform, refreshResult.error);
+          const errMsg = `Token ${opts.platform} expiré et renouvellement échoué: ${refreshResult.error ?? "inconnu"}. Reconnectez votre compte.`;
+          console.error("[activate]", errMsg);
+          await supabaseAdmin.from("auto_comment_logs").insert({
+            user_id: opts.user_id,
+            post_tipote_id: opts.content_id,
+            platform: opts.platform,
+            comment_type: "before",
+            status: "failed",
+            error_message: errMsg,
+          }).then(() => {}).catch(() => {});
           await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
           return;
         }
         accessToken = refreshResult.accessToken;
       } else {
-        try { accessToken = decrypt(conn.access_token_encrypted); } catch {
+        try {
+          accessToken = decrypt(conn.access_token_encrypted);
+        } catch {
+          const errMsg = `Impossible de déchiffrer le token ${opts.platform}. Reconnectez votre compte.`;
+          await supabaseAdmin.from("auto_comment_logs").insert({
+            user_id: opts.user_id,
+            post_tipote_id: opts.content_id,
+            platform: opts.platform,
+            comment_type: "before",
+            status: "failed",
+            error_message: errMsg,
+          }).then(() => {}).catch(() => {});
           await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
           return;
         }

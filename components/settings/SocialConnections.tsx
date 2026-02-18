@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 // Icone X (Twitter) - SVG officiel du logo X
@@ -53,7 +54,6 @@ type Connection = {
 type PlatformConfig = {
   key: string;
   label: string;
-  description: string;
   icon: React.ReactNode;
   color: string;
   bgColor: string;
@@ -65,7 +65,6 @@ const PLATFORMS: PlatformConfig[] = [
   {
     key: "linkedin",
     label: "LinkedIn",
-    description: "Publie sur ton profil personnel LinkedIn",
     icon: <Linkedin className="h-5 w-5 text-[#0A66C2]" />,
     color: "bg-[#0A66C2]",
     bgColor: "bg-[#0A66C2]/10",
@@ -75,7 +74,6 @@ const PLATFORMS: PlatformConfig[] = [
   {
     key: "facebook",
     label: "Facebook",
-    description: "Publie sur ta Page Facebook",
     icon: <Facebook className="h-5 w-5 text-[#1877F2]" />,
     color: "bg-[#1877F2]",
     bgColor: "bg-[#1877F2]/10",
@@ -85,7 +83,6 @@ const PLATFORMS: PlatformConfig[] = [
   {
     key: "threads",
     label: "Threads",
-    description: "Publie sur ton compte Threads",
     icon: <AtSign className="h-5 w-5 text-[#000000]" />,
     color: "bg-[#000000]",
     bgColor: "bg-[#000000]/10",
@@ -95,7 +92,6 @@ const PLATFORMS: PlatformConfig[] = [
   {
     key: "twitter",
     label: "X (Twitter)",
-    description: "Publie sur ton compte X",
     icon: <XIcon className="h-5 w-5 text-[#000000]" />,
     color: "bg-[#000000]",
     bgColor: "bg-[#000000]/10",
@@ -105,7 +101,6 @@ const PLATFORMS: PlatformConfig[] = [
   {
     key: "reddit",
     label: "Reddit",
-    description: "Publie sur ton profil Reddit",
     icon: <RedditIcon className="h-5 w-5 text-[#FF4500]" />,
     color: "bg-[#FF4500]",
     bgColor: "bg-[#FF4500]/10",
@@ -117,6 +112,8 @@ const PLATFORMS: PlatformConfig[] = [
 export default function SocialConnections() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const t = useTranslations("social");
+  const tc = useTranslations("common");
 
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,16 +143,13 @@ export default function SocialConnections() {
   useEffect(() => {
     // LinkedIn
     if (searchParams.get("linkedin_connected") === "1") {
-      toast({
-        title: "LinkedIn connecté",
-        description: "Ton compte LinkedIn est maintenant lié à Tipote.",
-      });
+      toast({ title: t("toast.linkedinOk"), description: t("toast.linkedinOkDesc") });
       fetchConnections();
     }
     const linkedinError = searchParams.get("linkedin_error");
     if (linkedinError) {
       toast({
-        title: "Erreur LinkedIn",
+        title: `${t("toast.errorTitle")} LinkedIn`,
         description: decodeURIComponent(linkedinError),
         variant: "destructive",
       });
@@ -163,16 +157,13 @@ export default function SocialConnections() {
 
     // Facebook
     if (searchParams.get("meta_connected") === "facebook") {
-      toast({
-        title: "Facebook connecte",
-        description: "Ta Page Facebook est maintenant liee a Tipote.",
-      });
+      toast({ title: t("toast.facebookOk"), description: t("toast.facebookOkDesc") });
       fetchConnections();
     }
     const metaError = searchParams.get("meta_error");
     if (metaError) {
       toast({
-        title: "Erreur Facebook",
+        title: `${t("toast.errorTitle")} Facebook`,
         description: decodeURIComponent(metaError),
         variant: "destructive",
       });
@@ -180,16 +171,13 @@ export default function SocialConnections() {
 
     // Threads
     if (searchParams.get("threads_connected") === "1") {
-      toast({
-        title: "Threads connecte",
-        description: "Ton compte Threads est maintenant lie a Tipote.",
-      });
+      toast({ title: t("toast.threadsOk"), description: t("toast.threadsOkDesc") });
       fetchConnections();
     }
     const threadsError = searchParams.get("threads_error");
     if (threadsError) {
       toast({
-        title: "Erreur Threads",
+        title: `${t("toast.errorTitle")} Threads`,
         description: decodeURIComponent(threadsError),
         variant: "destructive",
       });
@@ -197,16 +185,13 @@ export default function SocialConnections() {
 
     // X (Twitter)
     if (searchParams.get("twitter_connected") === "1") {
-      toast({
-        title: "X connecte",
-        description: "Ton compte X est maintenant lie a Tipote.",
-      });
+      toast({ title: t("toast.twitterOk"), description: t("toast.twitterOkDesc") });
       fetchConnections();
     }
     const twitterError = searchParams.get("twitter_error");
     if (twitterError) {
       toast({
-        title: "Erreur X",
+        title: `${t("toast.errorTitle")} X`,
         description: decodeURIComponent(twitterError),
         variant: "destructive",
       });
@@ -214,21 +199,18 @@ export default function SocialConnections() {
 
     // Reddit
     if (searchParams.get("reddit_connected") === "1") {
-      toast({
-        title: "Reddit connecte",
-        description: "Ton compte Reddit est maintenant lie a Tipote.",
-      });
+      toast({ title: t("toast.redditOk"), description: t("toast.redditOkDesc") });
       fetchConnections();
     }
     const redditError = searchParams.get("reddit_error");
     if (redditError) {
       toast({
-        title: "Erreur Reddit",
+        title: `${t("toast.errorTitle")} Reddit`,
         description: decodeURIComponent(redditError),
         variant: "destructive",
       });
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, t]);
 
   const onConnect = (oauthUrl: string) => {
     window.location.href = oauthUrl;
@@ -245,13 +227,13 @@ export default function SocialConnections() {
         });
         const json = await res.json();
         if (json.ok) {
-          toast({ title: "Compte déconnecté", description: "La connexion a été supprimée." });
+          toast({ title: t("toast.disconnected"), description: t("toast.disconnectedDesc") });
           setConnections((prev) => prev.filter((c) => c.id !== id));
         } else {
-          toast({ title: "Erreur", description: json.error ?? "Erreur inconnue", variant: "destructive" });
+          toast({ title: t("toast.errorTitle"), description: json.error ?? t("toast.errorUnknown"), variant: "destructive" });
         }
       } catch {
-        toast({ title: "Erreur", description: "Erreur réseau", variant: "destructive" });
+        toast({ title: t("toast.errorTitle"), description: t("toast.errorNetwork"), variant: "destructive" });
       } finally {
         setDisconnectingId(null);
       }
@@ -262,15 +244,13 @@ export default function SocialConnections() {
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-bold mb-2">Comptes sociaux</h3>
-      <p className="text-sm text-muted-foreground mb-6">
-        Connecte tes réseaux sociaux pour publier directement depuis Tipote.
-      </p>
+      <h3 className="text-lg font-bold mb-2">{t("title")}</h3>
+      <p className="text-sm text-muted-foreground mb-6">{t("subtitle")}</p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground py-4">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Chargement...
+          {t("loading")}
         </div>
       ) : (
         <div className="space-y-4">
@@ -292,22 +272,22 @@ export default function SocialConnections() {
                       {connection && !connection.expired && (
                         <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Connecté
+                          {t("connected")}
                         </Badge>
                       )}
                       {connection?.expired && (
                         <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
                           <AlertCircle className="w-3 h-3 mr-1" />
-                          Expiré
+                          {t("expired")}
                         </Badge>
                       )}
                     </div>
                     {connection ? (
                       <p className="text-sm text-muted-foreground">
-                        {connection.platform_username ?? "Compte connecte"}
+                        {connection.platform_username ?? t("connectedFallback")}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground">{platform.description}</p>
+                      <p className="text-sm text-muted-foreground">{t(`platforms.${platform.key}`)}</p>
                     )}
                   </div>
                 </div>
@@ -318,7 +298,7 @@ export default function SocialConnections() {
                       {connection.expired && (
                         <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
                           <RefreshCw className="w-4 h-4 mr-1" />
-                          Reconnecter
+                          {t("reconnect")}
                         </Button>
                       )}
                       <AlertDialog>
@@ -330,19 +310,18 @@ export default function SocialConnections() {
                             disabled={pendingDisconnect && disconnectingId === connection.id}
                           >
                             <Unplug className="w-4 h-4 mr-1" />
-                            Déconnecter
+                            {t("disconnect")}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Déconnecter {platform.label} ?</AlertDialogTitle>
+                            <AlertDialogTitle>{t("disconnectTitle", { platform: platform.label })}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tu ne pourras plus publier sur {platform.label} depuis Tipote.
-                              Tu peux reconnecter ton compte à tout moment.
+                              {t("disconnectDesc", { platform: platform.label })}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={(e) => {
                                 e.preventDefault();
@@ -350,7 +329,7 @@ export default function SocialConnections() {
                               }}
                               className="bg-rose-600 hover:bg-rose-700"
                             >
-                              Déconnecter
+                              {t("disconnectConfirm")}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -362,7 +341,7 @@ export default function SocialConnections() {
                       className={`${platform.color} ${platform.hoverColor} text-white`}
                     >
                       {platform.icon}
-                      <span className="ml-2">Connecter {platform.label}</span>
+                      <span className="ml-2">{t("connect", { platform: platform.label })}</span>
                     </Button>
                   )}
                 </div>
@@ -384,10 +363,10 @@ export default function SocialConnections() {
                 </div>
                 <div>
                   <span className="font-medium">{name}</span>
-                  <p className="text-sm text-muted-foreground">Bientôt disponible</p>
+                  <p className="text-sm text-muted-foreground">{t("comingSoon")}</p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-xs">Prochainement</Badge>
+              <Badge variant="outline" className="text-xs">{t("comingSoonBadge")}</Badge>
             </div>
           ))}
         </div>

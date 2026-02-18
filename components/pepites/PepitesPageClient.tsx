@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Sparkles, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,10 +37,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function formatDateFR(iso: string) {
+function formatDate(iso: string, locale: string) {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("fr-FR", {
+    return d.toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -80,8 +81,10 @@ function PepiteCard(props: {
 }) {
   const { item, highlight, onSeen } = props;
   const [open, setOpen] = useState(false);
+  const t = useTranslations("pepites");
+  const locale = useLocale();
 
-  const title = item.pepite?.title ?? "Pépite";
+  const title = item.pepite?.title ?? t("cardDefault");
   const body = item.pepite?.body ?? "";
 
   useEffect(() => {
@@ -108,13 +111,19 @@ function PepiteCard(props: {
     }
   }
 
+  const footerText = open
+    ? t("clickClose")
+    : item.seenAt
+    ? t("alreadyOpen")
+    : t("clickOpen");
+
   return (
     <button
       type="button"
       onClick={handleToggle}
       className="text-left w-full focus:outline-none"
-      aria-label="Ouvrir la pépite"
-      title={open ? "Cliquer pour refermer" : "Cliquer pour découvrir"}
+      aria-label={t("ariaOpen")}
+      title={open ? t("clickClose") : t("clickOpen")}
     >
       <Card
         className={cx(
@@ -125,7 +134,7 @@ function PepiteCard(props: {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{formatDateFR(item.assignedAt)}</p>
+            <p className="text-xs text-muted-foreground">{formatDate(item.assignedAt, locale)}</p>
 
             {/* ✅ pas de truncation */}
             <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
@@ -161,9 +170,7 @@ function PepiteCard(props: {
 
         {/* Footer / CTA */}
         <div className="flex items-center justify-between gap-3 mt-4">
-          <p className="text-sm text-muted-foreground">
-            {open ? "Cliquer pour refermer" : item.seenAt ? "Déjà ouverte" : "Cliquer pour découvrir"}
-          </p>
+          <p className="text-sm text-muted-foreground">{footerText}</p>
           <span
             className={cx(
               "text-xs text-muted-foreground shrink-0 transition-transform duration-300",
@@ -180,6 +187,8 @@ function PepiteCard(props: {
 }
 
 export default function PepitesPageClient() {
+  const t = useTranslations("pepites");
+
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<PepiteItem[]>([]);
   const [current, setCurrent] = useState<PepiteItem | null>(null);
@@ -300,17 +309,15 @@ export default function PepitesPageClient() {
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Ta collection de pépites</h2>
-            <p className="text-sm text-muted-foreground">
-              Une nouvelle arrive de temps en temps… et tu ne sais jamais exactement quand 😄
-            </p>
+            <h2 className="text-xl font-semibold">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={refreshAll} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Rafraîchir
+            {t("refresh")}
           </Button>
 
           {isAdmin ? (
@@ -318,13 +325,13 @@ export default function PepitesPageClient() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Ajouter
+                  {t("add")}
                 </Button>
               </DialogTrigger>
 
               <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                  <DialogTitle>Ajouter une pépite</DialogTitle>
+                  <DialogTitle>{t("addTitle")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-3">
@@ -335,29 +342,27 @@ export default function PepitesPageClient() {
                   ) : null}
 
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Titre (exact)</label>
-                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Titre…" />
+                    <label className="text-sm font-medium">{t("labelTitle")}</label>
+                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder={t("placeholderTitle")} />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Texte (exact)</label>
+                    <label className="text-sm font-medium">{t("labelText")}</label>
                     <Textarea
                       value={newBody}
                       onChange={(e) => setNewBody(e.target.value)}
-                      placeholder="Colle ici ton texte…"
+                      placeholder={t("placeholderText")}
                       className="min-h-[200px]"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Rien n’est reformulé. Le fun (gras) est uniquement visuel côté UI.
-                    </p>
+                    <p className="text-xs text-muted-foreground">{t("hint")}</p>
                   </div>
 
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="outline" onClick={() => setAdminOpen(false)}>
-                      Annuler
+                      {t("cancel")}
                     </Button>
                     <Button onClick={handleCreatePepite} disabled={saving || !newTitle.trim() || !newBody.trim()}>
-                      {saving ? "Enregistrement…" : "Publier"}
+                      {saving ? t("saving") : t("publish")}
                     </Button>
                   </div>
                 </div>
@@ -380,10 +385,8 @@ export default function PepitesPageClient() {
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Aucune pépite reçue pour l’instant</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Reviens plus tard… la première arrive automatiquement ✨
-              </p>
+              <h3 className="text-base font-semibold">{t("emptyTitle")}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t("emptyBody")}</p>
             </div>
           </div>
         </Card>

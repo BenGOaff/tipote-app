@@ -103,6 +103,7 @@ type ProfileRow = {
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const tSettings = useTranslations("settings");
+  const tSP = useTranslations("settingsPage");
   const router = useRouter();
   const sp = useSearchParams();
   const { toast } = useToast();
@@ -688,7 +689,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </TabsTrigger>
         <TabsTrigger value="positioning" className="gap-2">
           <Target className="w-4 h-4" />
-          Positionnement
+          {tSP("positioning")}
         </TabsTrigger>
         <TabsTrigger value="branding" className="gap-2">
           <Paintbrush className="w-4 h-4" />
@@ -707,34 +708,34 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       {/* PROFIL */}
       <TabsContent value="profile" className="space-y-6">
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-6">Informations personnelles</h3>
+          <h3 className="text-lg font-bold mb-6">{tSP("profile.title")}</h3>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tSP("profile.email")}</Label>
               <Input id="email" type="email" value={userEmail} disabled />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Prénom</Label>
+              <Label htmlFor="name">{tSP("profile.firstName")}</Label>
               <Input id="name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={profileLoading} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">{tSP("profile.password")}</Label>
               <div className="flex gap-2">
                 <Input id="password" type="password" value="••••••••" disabled className="flex-1" />
 
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline">Modifier</Button>
+                    <Button variant="outline">{tSP("profile.changePassword")}</Button>
                   </DialogTrigger>
 
                   <DialogContent className="sm:max-w-[520px]">
                     <DialogHeader>
-                      <DialogTitle>Modifier le mot de passe</DialogTitle>
+                      <DialogTitle>{tSP("profile.password")}</DialogTitle>
                       <DialogDescription className="sr-only">
-                        Modifier votre mot de passe Tipote
+                        {tSP("profile.passwordDialog.description")}
                       </DialogDescription>
                     </DialogHeader>
 
@@ -745,7 +746,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="timezone">Fuseau horaire</Label>
+              <Label htmlFor="timezone">{tSP("profile.timezoneLabel")}</Label>
               <Select defaultValue="europe-paris">
                 <SelectTrigger id="timezone">
                   <SelectValue />
@@ -761,7 +762,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button className="mt-6" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingProfile ? "Enregistrement…" : "Enregistrer"}
+            {pendingProfile ? tSP("profile.saving") : tSP("profile.save")}
           </Button>
         </Card>
 
@@ -772,21 +773,18 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-red-700">Zone danger</h3>
-              <p className="text-sm font-medium text-red-700/90">Réinitialiser mon Tipote</p>
+              <h3 className="text-lg font-bold text-red-700">{tSP("profile.danger.title")}</h3>
+              <p className="text-sm font-medium text-red-700/90">{tSP("profile.danger.subtitle")}</p>
             </div>
           </div>
 
           <p className="text-sm text-red-700/80">
-            Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le lancer
-            dans une autre direction ? Clique sur ce bouton. <b>Attention</b> : tous les contenus, toutes les tâches et toutes
-            les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C&apos;est définitif, tu ne
-            pourras pas revenir en arrière.
+            {tSP("profile.danger.desc")}
           </p>
 
           <Button variant="destructive" className="mt-4 gap-2" onClick={onResetAccount} disabled={resetting}>
             <RotateCcw className="h-4 h-4" />
-            {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
+            {resetting ? tSP("profile.danger.resetting") : tSP("profile.danger.reset")}
           </Button>
         </Card>
       </TabsContent>
@@ -801,22 +799,22 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <h3 className="text-lg font-bold">Systeme.io</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Connecte ton compte Systeme.io pour exporter automatiquement les leads de tes quiz avec des tags.{" "}
+            {tSP("connections.sioDesc")}{" "}
             <a
               href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
               target="_blank"
               rel="noopener noreferrer"
               className="underline text-primary hover:text-primary/80"
             >
-              Comment trouver ma clé API ?
+              {tSP("connections.sioApiHelp")}
             </a>
           </p>
 
           <div className="space-y-2">
-            <Label>Clé API Systeme.io</Label>
+            <Label>{tSP("connections.sioLabel")}</Label>
             <Input
               type="password"
-              placeholder="Colle ta clé API ici..."
+              placeholder={tSP("connections.sioPlaceholder")}
               value={sioApiKey}
               onChange={(e) => setSioApiKey(e.target.value)}
               disabled={profileLoading}
@@ -825,7 +823,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingSio ? "Enregistrement…" : "Enregistrer"}
+            {pendingSio ? tSP("connections.saving") : tSP("connections.save")}
           </Button>
         </Card>
       </TabsContent>
@@ -833,17 +831,17 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       {/* RÉGLAGES */}
       <TabsContent value="settings" className="space-y-6">
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-6">Langue et contenu</h3>
+          <h3 className="text-lg font-bold mb-6">{tSP("reglages.langTitle")}</h3>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Langue de l&apos;interface</Label>
-              <p className="text-xs text-muted-foreground">Langue d&apos;affichage de Tipote — le changement s&apos;applique immédiatement.</p>
+              <Label>{tSP("reglages.uiLangLabel")}</Label>
+              <p className="text-xs text-muted-foreground">{tSP("reglages.uiLangDesc")}</p>
               <LanguageSwitcher variant="settings" />
             </div>
 
             <div className="space-y-2">
-              <Label>Langue du contenu généré</Label>
+              <Label>{tSP("reglages.contentLangLabel")}</Label>
               <Select value={contentLocale} onValueChange={setContentLocale} disabled={profileLoading}>
                 <SelectTrigger>
                   <SelectValue />
@@ -870,14 +868,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>Forme d&apos;adresse par défaut</Label>
+              <Label>{tSP("reglages.addressLabel")}</Label>
               <Select defaultValue="tu">
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tu">Tutoiement (Tu)</SelectItem>
-                  <SelectItem value="vous">Vouvoiement (Vous)</SelectItem>
+                  <SelectItem value="tu">{tSP("reglages.tu")}</SelectItem>
+                  <SelectItem value="vous">{tSP("reglages.vous")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -885,26 +883,25 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button variant="outline" className="mt-4" onClick={saveContentLocale} disabled={!localeDirty || pendingLocale}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingLocale ? "Enregistrement…" : "Enregistrer la langue"}
+            {pendingLocale ? tSP("reglages.saving") : tSP("reglages.saveLang")}
           </Button>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-lg font-bold">Mentions légales & CGV</h3>
+            <h3 className="text-lg font-bold">{tSP("reglages.legalTitle")}</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Ces URLs seront utilisées automatiquement dans vos quiz, tunnels et pages publiques.
-            Vous pouvez aussi générer vos documents légaux adaptés à votre pays et votre activité.
+            {tSP("reglages.legalDesc")}
           </p>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Politique de confidentialité</Label>
+              <Label>{tSP("reglages.privacy")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="https://monsite.com/politique-de-confidentialite"
+                  placeholder={tSP("reglages.privacyPlaceholder")}
                   value={privacyUrl}
                   onChange={(e) => setPrivacyUrl(e.target.value)}
                   disabled={profileLoading}
@@ -917,15 +914,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   onClick={() => { setLegalGenDocType("privacy"); setLegalGenOpen(true); }}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  Générer
+                  {tSP("reglages.generate")}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Mentions légales / Conditions d&apos;utilisation</Label>
+              <Label>{tSP("reglages.mentions")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="https://monsite.com/mentions-legales"
+                  placeholder={tSP("reglages.mentionsPlaceholder")}
                   value={termsUrl}
                   onChange={(e) => setTermsUrl(e.target.value)}
                   disabled={profileLoading}
@@ -938,15 +935,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   onClick={() => { setLegalGenDocType("mentions"); setLegalGenOpen(true); }}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  Générer
+                  {tSP("reglages.generate")}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Conditions Générales de Vente (CGV)</Label>
+              <Label>{tSP("reglages.cgv")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="https://monsite.com/cgv"
+                  placeholder={tSP("reglages.cgvPlaceholder")}
                   value={cgvUrl}
                   onChange={(e) => setCgvUrl(e.target.value)}
                   disabled={profileLoading}
@@ -959,7 +956,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   onClick={() => { setLegalGenDocType("cgv"); setLegalGenOpen(true); }}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  Générer
+                  {tSP("reglages.generate")}
                 </Button>
               </div>
             </div>
@@ -967,7 +964,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button variant="outline" className="mt-4" onClick={saveLegalUrls} disabled={!legalDirty || pendingLegal}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingLegal ? "Enregistrement…" : "Enregistrer"}
+            {pendingLegal ? tSP("reglages.saving") : tSP("reglages.save")}
           </Button>
         </Card>
 
@@ -978,7 +975,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         />
 
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-6">Liens et réseaux</h3>
+          <h3 className="text-lg font-bold mb-6">{tSP("reglages.linksTitle")}</h3>
 
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -1025,39 +1022,39 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button variant="outline" className="mt-4" onClick={saveLinks} disabled={!linksDirty || pendingLinks}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingLinks ? "Enregistrement…" : "Enregistrer les liens"}
+            {pendingLinks ? tSP("reglages.saving") : tSP("reglages.save")}
           </Button>
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-4">Liste des offres</h3>
+          <h3 className="text-lg font-bold mb-4">{tSP("reglages.offersTitle")}</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Ajoutez vos offres avec leurs détails pour que l'IA puisse créer du contenu pertinent.
+            {tSP("reglages.offersDesc")}
           </p>
 
           <div className="space-y-4">
             {offers.map((offer, idx) => (
               <div key={idx} className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Offre {idx + 1}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{tSP("reglages.offerN", { n: idx + 1 })}</span>
                   <Button variant="ghost" size="icon" onClick={() => removeOffer(idx)} disabled={profileLoading}>
                     <Trash2 className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Nom de l'offre *</Label>
+                    <Label className="text-xs">{tSP("reglages.offerName")}</Label>
                     <Input
-                      placeholder="Ex: Formation Copywriting"
+                      placeholder={tSP("reglages.offerNamePlaceholder")}
                       value={offer.name}
                       onChange={(e) => updateOffer(idx, "name", e.target.value)}
                       disabled={profileLoading}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Prix</Label>
+                    <Label className="text-xs">{tSP("reglages.offerPrice")}</Label>
                     <Input
-                      placeholder="Ex: 297€"
+                      placeholder={tSP("reglages.offerPricePlaceholder")}
                       value={offer.price}
                       onChange={(e) => updateOffer(idx, "price", e.target.value)}
                       disabled={profileLoading}
@@ -1065,27 +1062,27 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Promesse principale</Label>
+                  <Label className="text-xs">{tSP("reglages.offerPromise")}</Label>
                   <Input
-                    placeholder="Ex: Apprends à écrire des textes qui vendent en 30 jours"
+                    placeholder={tSP("reglages.offerPromisePlaceholder")}
                     value={offer.promise}
                     onChange={(e) => updateOffer(idx, "promise", e.target.value)}
                     disabled={profileLoading}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Public cible</Label>
+                  <Label className="text-xs">{tSP("reglages.offerTarget")}</Label>
                   <Input
-                    placeholder="Ex: Entrepreneurs et freelances qui veulent vendre en ligne"
+                    placeholder={tSP("reglages.offerTargetPlaceholder")}
                     value={offer.target}
                     onChange={(e) => updateOffer(idx, "target", e.target.value)}
                     disabled={profileLoading}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Description courte</Label>
+                  <Label className="text-xs">{tSP("reglages.offerDesc")}</Label>
                   <Textarea
-                    placeholder="En 2-3 phrases, décris ce que contient ton offre et le résultat attendu"
+                    placeholder={tSP("reglages.offerDescPlaceholder")}
                     value={offer.description}
                     onChange={(e) => updateOffer(idx, "description", e.target.value)}
                     disabled={profileLoading}
@@ -1094,16 +1091,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Format</Label>
+                    <Label className="text-xs">{tSP("reglages.offerFormat")}</Label>
                     <Input
-                      placeholder="Ex: Vidéo, PDF, coaching, ebook..."
+                      placeholder={tSP("reglages.offerFormatPlaceholder")}
                       value={offer.format}
                       onChange={(e) => updateOffer(idx, "format", e.target.value)}
                       disabled={profileLoading}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Lien</Label>
+                    <Label className="text-xs">{tSP("reglages.offerLink")}</Label>
                     <Input
                       placeholder="https://..."
                       value={offer.link}
@@ -1117,13 +1114,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
             <Button variant="outline" size="sm" onClick={addOffer} disabled={profileLoading} className="gap-1">
               <Plus className="w-4 h-4" />
-              Ajouter une offre
+              {tSP("reglages.addOffer")}
             </Button>
           </div>
 
           <Button variant="outline" className="mt-4" onClick={saveOffers} disabled={!offersDirty || pendingOffers}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingOffers ? "Enregistrement…" : "Enregistrer les offres"}
+            {pendingOffers ? tSP("reglages.saving") : tSP("reglages.saveOffers")}
           </Button>
         </Card>
       </TabsContent>
@@ -1134,10 +1131,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-lg font-bold">Ma formule de niche</h3>
+            <h3 className="text-lg font-bold">{tSP("positioningTab.nicheTitle")}</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-5">
-            Remplis les 4 éléments pour définir ta niche de façon claire et différenciante.
+            {tSP("positioningTab.nicheDesc")}
           </p>
 
           <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-5 text-sm font-medium">
@@ -1153,36 +1150,36 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cible</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.cible")}</Label>
               <Input
-                placeholder="ex : entrepreneurs solo, managers RH..."
+                placeholder={tSP("positioningTab.ciblePlaceholder")}
                 value={nicheTarget}
                 onChange={(e) => setNicheTarget(e.target.value)}
                 disabled={profileLoading}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Objectif de la cible</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.objectif")}</Label>
               <Input
-                placeholder="ex : trouver leurs 3 premiers clients..."
+                placeholder={tSP("positioningTab.objectifPlaceholder")}
                 value={nicheObjective}
                 onChange={(e) => setNicheObjective(e.target.value)}
                 disabled={profileLoading}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Mécanisme unique</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.mecanisme")}</Label>
               <Input
-                placeholder="ex : ma méthode Magnetic Content..."
+                placeholder={tSP("positioningTab.mecanismePlaceholder")}
                 value={nicheMechanism}
                 onChange={(e) => setNicheMechanism(e.target.value)}
                 disabled={profileLoading}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Marqueur temporel</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.marqueur")}</Label>
               <Input
-                placeholder="ex : 90 jours, sans publicité payante..."
+                placeholder={tSP("positioningTab.marqueurPlaceholder")}
                 value={nicheMarker}
                 onChange={(e) => setNicheMarker(e.target.value)}
                 disabled={profileLoading}
@@ -1192,15 +1189,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <Button variant="outline" className="mt-5" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingPositioning ? "Enregistrement…" : "Enregistrer"}
+            {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
           </Button>
         </Card>
 
         {/* Persona */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-2">Mon persona détaillé</h3>
+          <h3 className="text-lg font-bold mb-2">{tSP("positioningTab.personaTitle")}</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Généré après l&apos;onboarding et enrichissable avec l&apos;IA. Utilisé dans tous les contenus générés.
+            {tSP("positioningTab.personaDesc")}
           </p>
 
           <div className="space-y-2">
@@ -1210,14 +1207,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               rows={5}
               className="resize-none"
               disabled={profileLoading}
-              placeholder="Décris ton persona cible en détail..."
+              placeholder={tSP("positioningTab.personaPlaceholder")}
             />
           </div>
 
           <div className="flex flex-wrap gap-3 mt-4">
             <Button variant="outline" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
               <Save className="w-4 h-4 mr-2" />
-              {pendingPositioning ? "Enregistrement…" : "Enregistrer"}
+              {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
             </Button>
             <Button variant="outline" onClick={enrichPersona} disabled={enriching}>
               {enriching ? (
@@ -1225,11 +1222,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              {enriching ? "Enrichissement…" : "Enrichir avec l'IA"}
+              {enriching ? tSP("positioningTab.enriching") : tSP("positioningTab.enrich")}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            L&apos;enrichissement IA utilise vos données d&apos;onboarding, l&apos;analyse concurrentielle et les conversations avec le coach pour améliorer votre persona. Coût : 1 crédit.
+            {tSP("positioningTab.enrichDesc")}
           </p>
         </Card>
 

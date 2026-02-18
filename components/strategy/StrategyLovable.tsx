@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -138,6 +139,7 @@ function pickFirstNonEmpty(...vals: unknown[]): string {
 const TASKS_DISPLAY_LIMIT = 4;
 
 export default function StrategyLovable(props: StrategyLovableProps) {
+  const t = useTranslations("strategy");
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -156,7 +158,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         const data = await res.json().catch(() => ({}));
         const msg = (data && (data.error || data.message)) || `Erreur (${res.status})`;
         toast({
-          title: "Impossible de générer le plan",
+          title: t("toast.planError"),
           description: String(msg),
           variant: "destructive",
         });
@@ -172,8 +174,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       }).catch(() => null);
 
       toast({
-        title: "C'est parti ✅",
-        description: "Ton plan stratégique et tes tâches sont prêts.",
+        title: t("toast.planReady"),
+        description: t("toast.planReadyDesc"),
       });
 
       // refresh immédiat + "best effort"
@@ -185,8 +187,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       }, 1200);
     } catch (e) {
       toast({
-        title: "Oups",
-        description: e instanceof Error ? e.message : "Une erreur est survenue.",
+        title: t("toast.oops"),
+        description: e instanceof Error ? e.message : t("toast.planError"),
         variant: "destructive",
       });
       setIsGeneratingPlan(false);
@@ -323,8 +325,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     setSavedPhases(phases);
     setIsEditing(false);
     toast({
-      title: "Modifications enregistrées",
-      description: "Ta stratégie a été mise à jour avec succès",
+      title: t("toast.saved"),
+      description: t("toast.savedDesc"),
     });
   }, [phases, toast]);
 
@@ -334,7 +336,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       setPhases((prev) =>
         prev.map((ph) => ({
           ...ph,
-          tasks: (ph.tasks || []).filter((t) => String(t.id) !== String(taskId)),
+          tasks: (ph.tasks || []).filter((task) => String(task.id) !== String(taskId)),
         })),
       );
 
@@ -348,26 +350,26 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
         if (!res.ok || !json?.ok) {
           toast({
-            title: "Erreur",
-            description: json?.error || "Impossible de supprimer la tâche.",
+            title: t("toast.error"),
+            description: json?.error || t("toast.taskDeleteError"),
             variant: "destructive",
           });
           return;
         }
 
         toast({
-          title: "Tâche supprimée",
-          description: "La tâche a bien été supprimée.",
+          title: t("toast.taskDeleted"),
+          description: t("toast.taskDeletedDesc"),
         });
       } catch {
         toast({
-          title: "Erreur",
-          description: "Impossible de supprimer la tâche.",
+          title: t("toast.error"),
+          description: t("toast.taskDeleteError"),
           variant: "destructive",
         });
       }
     },
-    [toast],
+    [toast, t],
   );
 
   const addTask = useCallback(
@@ -389,8 +391,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
         if (!res.ok || !json?.ok || !json?.task?.id) {
           toast({
-            title: "Erreur",
-            description: json?.error || "Impossible d'ajouter la tâche.",
+            title: t("toast.error"),
+            description: json?.error || t("toast.taskAddError"),
             variant: "destructive",
           });
           return;
@@ -409,18 +411,18 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         });
 
         toast({
-          title: "Tâche ajoutée",
-          description: "La tâche a bien été créée.",
+          title: t("toast.taskAdded"),
+          description: t("toast.taskAddedDesc"),
         });
       } catch {
         toast({
-          title: "Erreur",
-          description: "Impossible d'ajouter la tâche.",
+          title: t("toast.error"),
+          description: t("toast.taskAddError"),
           variant: "destructive",
         });
       }
     },
-    [toast],
+    [toast, t],
   );
 
   const toggleTask = useCallback(
@@ -476,8 +478,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       // Tasks are now persisted immediately via onAddTask/onDeleteTask
       // This callback just shows confirmation and refreshes
       toast({
-        title: "Phase mise à jour",
-        description: "Les modifications ont été enregistrées",
+        title: t("toast.phaseUpdated"),
+        description: t("toast.phaseUpdatedDesc"),
       });
       router.refresh();
     },
@@ -503,8 +505,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
       if (!res.ok || !json?.ok || !json?.task?.id) {
         toast({
-          title: "Erreur",
-          description: json?.error || "Impossible d'ajouter la tâche.",
+          title: t("toast.error"),
+          description: json?.error || t("toast.taskAddError"),
           variant: "destructive",
         });
         throw new Error("Failed to add task");
@@ -526,7 +528,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       // Refresh to sync server data
       router.refresh();
     },
-    [toast, router],
+    [toast, router, t],
   );
 
   // Wrapper for deleteTask that persists via API
@@ -536,7 +538,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       setPhases((prev) =>
         prev.map((ph) => ({
           ...ph,
-          tasks: (ph.tasks || []).filter((t) => String(t.id) !== String(taskId)),
+          tasks: (ph.tasks || []).filter((task) => String(task.id) !== String(taskId)),
         })),
       );
 
@@ -550,22 +552,22 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
         if (!res.ok || !json?.ok) {
           toast({
-            title: "Erreur",
-            description: json?.error || "Impossible de supprimer la tâche.",
+            title: t("toast.error"),
+            description: json?.error || t("toast.taskDeleteError"),
             variant: "destructive",
           });
         }
       } catch {
         toast({
-          title: "Erreur",
-          description: "Impossible de supprimer la tâche.",
+          title: t("toast.error"),
+          description: t("toast.taskDeleteError"),
           variant: "destructive",
         });
       }
 
       router.refresh();
     },
-    [toast, router],
+    [toast, router, t],
   );
 
   const openPhase = useCallback(
@@ -585,24 +587,24 @@ export default function StrategyLovable(props: StrategyLovableProps) {
           <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Ma Stratégie</h1>
+              <h1 className="text-xl font-display font-bold">{t("title")}</h1>
             </div>
 
             {isEditing ? (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={handleCancelEditing}>
                   <X className="w-4 h-4 mr-2" />
-                  Annuler
+                  {t("cancel")}
                 </Button>
                 <Button onClick={handleSaveChanges}>
                   <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
+                  {t("save")}
                 </Button>
               </div>
             ) : (
               <Button variant="outline" onClick={handleStartEditing}>
                 <Pencil className="w-4 h-4 mr-2" />
-                Personnaliser
+                {t("customize")}
               </Button>
             )}
           </header>
@@ -616,11 +618,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-primary">
-                      Ton plan est en cours de préparation
+                      {t("generatingBanner.title")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Si tu viens de terminer l’onboarding, c’est normal. Tu peux
-                      lancer la génération maintenant.
+                      {t("generatingBanner.desc")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -629,14 +630,14 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       disabled={isGeneratingPlan}
                       size="sm"
                     >
-                      {isGeneratingPlan ? "Génération…" : "Générer mon plan"}
+                      {isGeneratingPlan ? t("generatingBanner.generating") : t("generatingBanner.generate")}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => router.refresh()}
                     >
-                      Rafraîchir
+                      {t("generatingBanner.refresh")}
                     </Button>
                   </div>
                 </div>
@@ -648,11 +649,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
-                    Ta vision stratégique
+                    {t("overview.title")}
                   </h2>
                   <p className="text-primary-foreground/90 text-lg max-w-2xl">
-                    Plan personnalisé généré par l&apos;IA pour atteindre tes
-                    objectifs business
+                    {t("overview.subtitle")}
                   </p>
                 </div>
                 <Target className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
@@ -660,7 +660,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">
-                    Objectif revenu
+                    {t("overview.revenueGoal")}
                   </p>
                   <p className="text-2xl font-bold text-primary-foreground">
                     {props.revenueGoal}
@@ -668,7 +668,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">
-                    Horizon
+                    {t("overview.horizon")}
                   </p>
                   <p className="text-2xl font-bold text-primary-foreground">
                     {props.horizon}
@@ -676,7 +676,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">
-                    Progression
+                    {t("overview.progression")}
                   </p>
                   <p className="text-2xl font-bold text-primary-foreground">
                     {props.progressionPercent}%
@@ -688,11 +688,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             {/* Tabs for different views */}
             <Tabs defaultValue="plan" className="w-full">
               <TabsList className="mb-6">
-                <TabsTrigger value="plan">Plan d&apos;action</TabsTrigger>
+                <TabsTrigger value="plan">{t("tabs.plan")}</TabsTrigger>
                 <TabsTrigger value="offers">
-                  Tes offres
+                  {t("tabs.offers")}
                 </TabsTrigger>
-                <TabsTrigger value="persona">Persona cible</TabsTrigger>
+                <TabsTrigger value="persona">{t("tabs.persona")}</TabsTrigger>
               </TabsList>
 
               {/* Plan d'action Tab */}
@@ -704,16 +704,15 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       <Pencil className="w-5 h-5 text-primary" />
                       <div className="flex-1">
                         <p className="font-medium text-primary">
-                          Mode personnalisation
+                          {t("editBanner.title")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Glisse les tâches pour les réorganiser, supprime celles
-                          qui ne te conviennent pas, ou ajoute-en de nouvelles
+                          {t("editBanner.desc")}
                         </p>
                       </div>
                       <Button onClick={() => setIsAddTaskOpen(true)} size="sm">
                         <Plus className="w-4 h-4 mr-2" />
-                        Ajouter une tâche
+                        {t("editBanner.addTask")}
                       </Button>
                     </div>
                   </Card>
@@ -733,7 +732,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       <div className="p-2 rounded-lg bg-primary/10">
                         <CheckCircle2 className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">Tâches complétées</span>
+                      <span className="font-semibold">{t("progress.tasksCompleted")}</span>
                     </div>
                     <p className="text-3xl font-bold">
                       {props.totalDone}/{props.totalAll}
@@ -749,11 +748,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       <div className="p-2 rounded-lg bg-primary/10">
                         <Clock className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">Jours restants</span>
+                      <span className="font-semibold">{t("progress.daysRemaining")}</span>
                     </div>
                     <p className="text-3xl font-bold">{props.daysRemaining}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Sur 90 jours
+                      {t("progress.outOf90")}
                     </p>
                   </Card>
 
@@ -762,7 +761,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       <div className="p-2 rounded-lg bg-primary/10">
                         <Target className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">Phase actuelle</span>
+                      <span className="font-semibold">{t("progress.currentPhase")}</span>
                     </div>
                     <p className="text-3xl font-bold">{props.currentPhase}</p>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -775,8 +774,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 <div className="space-y-6">
                   {(phasesForRender || []).map((phase, phaseIndex) => {
                     const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
-                    const doneInPhase = tasks.filter((t) =>
-                      isDoneStatus(statusById[String(t.id)] ?? t.status),
+                    const doneInPhase = tasks.filter((task) =>
+                      isDoneStatus(statusById[String(task.id)] ?? task.status),
                     ).length;
                     const phaseProgress = tasks.length
                       ? Math.round((doneInPhase / tasks.length) * 100)
@@ -872,7 +871,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                               </DndContext>
                             ) : (
                               <div className="text-sm text-muted-foreground md:col-span-2">
-                                Aucune tâche dans cette phase pour l&apos;instant.
+                                {t("noTasks")}
                               </div>
                             )}
                           </div>
@@ -926,9 +925,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       openPhase(phaseIndex);
                                     }}
                                   >
-                                    Voir les{" "}
-                                    {tasks.length - TASKS_DISPLAY_LIMIT} autres
-                                    tâches
+                                    {t("moreTasks", { count: tasks.length - TASKS_DISPLAY_LIMIT })}
                                     <ChevronRight className="w-4 h-4" />
                                   </button>
                                 )}
@@ -938,7 +935,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                 className="text-sm text-muted-foreground"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                Aucune tâche dans cette phase pour l&apos;instant.
+                                {t("noTasks")}
                               </div>
                             )}
                           </div>
@@ -956,7 +953,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                       <Layers className="w-5 h-5 text-primary-foreground" />
                     </div>
-                    <h3 className="text-xl font-bold">Tes offres</h3>
+                    <h3 className="text-xl font-bold">{t("offers.title")}</h3>
                   </div>
 
                   <div className="space-y-4">
@@ -1030,7 +1027,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                               lead?.price,
                               (lead as any)?.pricing?.price,
                               (lead as any)?.tarif,
-                              "Gratuit",
+                              t("offers.free"),
                             )}
                           </p>
                         </div>
@@ -1047,7 +1044,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   </div>
 
                   <Button variant="outline" className="w-full mt-6">
-                    Ajouter une offre
+                    {t("offers.addOffer")}
                   </Button>
                 </Card>
               </TabsContent>
@@ -1059,21 +1056,21 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center">
                       <Users className="w-5 h-5 text-secondary-foreground" />
                     </div>
-                    <h3 className="text-xl font-bold">Persona cible</h3>
+                    <h3 className="text-xl font-bold">{t("persona.title")}</h3>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Profil principal
+                          {t("persona.profile")}
                         </p>
                         <p className="font-semibold text-lg">{personaTitle}</p>
                       </div>
 
                       <div>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Problèmes principaux
+                          {t("persona.pains")}
                         </p>
                         <ul className="space-y-2">
                           {(personaPains.length ? personaPains : ["—"]).map(
@@ -1091,7 +1088,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="space-y-4">
                       <div>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Objectifs
+                          {t("persona.goals")}
                         </p>
                         <ul className="space-y-2">
                           {(personaGoals.length ? personaGoals : ["—"]).map(
@@ -1107,7 +1104,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
                       <div>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Canaux préférés
+                          {t("persona.channels")}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {(personaChannels.length
@@ -1129,7 +1126,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     onClick={() => setIsPersonaEditOpen(true)}
                   >
                     <Pencil className="w-4 h-4 mr-2" />
-                    Modifier le persona
+                    {t("persona.edit")}
                   </Button>
                 </Card>
               </TabsContent>
@@ -1141,8 +1138,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             (() => {
               const ph = phasesForRender[selectedPhaseIndex] as Phase;
               const tasks = Array.isArray(ph.tasks) ? ph.tasks : [];
-              const completed = tasks.filter((t) =>
-                isDoneStatus(statusById[String(t.id)] ?? t.status),
+              const completed = tasks.filter((task) =>
+                isDoneStatus(statusById[String(task.id)] ?? task.status),
               ).length;
               const progress = tasks.length
                 ? Math.round((completed / tasks.length) * 100)
@@ -1187,7 +1184,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                         lead?.price,
                         (lead as any)?.pricing?.price,
                         (lead as any)?.tarif,
-                        "Gratuit",
+                        t("offers.free"),
                       ),
                       description: pickFirstNonEmpty(
                         lead?.composition,
@@ -1260,8 +1257,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             onSaved={(updated) => {
               setLocalPersona(updated);
               toast({
-                title: "Persona mis à jour",
-                description: "Les modifications ont été enregistrées",
+                title: t("toast.personaUpdated"),
+                description: t("toast.personaUpdatedDesc"),
               });
               // Delay refresh to ensure local state is committed first
               setTimeout(() => router.refresh(), 500);

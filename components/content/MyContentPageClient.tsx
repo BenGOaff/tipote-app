@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -36,15 +37,13 @@ function safeString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function normalizeStatusForLabel(status: string | null): string {
-  const s = safeString(status).trim();
-  if (!s) return "—";
-  const low = s.toLowerCase();
-  if (low === "published") return "Publié";
-  if (low === "draft") return "Brouillon";
-  if (low === "planned" || low === "scheduled") return "Planifié";
-  if (low === "archived") return "Archivé";
-  return s;
+function normalizeStatusKey(status: string | null): "published" | "draft" | "scheduled" | "archived" | null {
+  const s = safeString(status).trim().toLowerCase();
+  if (s === "published") return "published";
+  if (s === "draft") return "draft";
+  if (s === "planned" || s === "scheduled") return "scheduled";
+  if (s === "archived") return "archived";
+  return null;
 }
 
 function statusBadgeVariant(status: string | null): "secondary" | "outline" {
@@ -72,9 +71,16 @@ function tabForType(type: string | null): ListTab {
 }
 
 export default function MyContentPageClient({ userEmail, initialView, items, error, initialFilters }: Props) {
+  const t = useTranslations("contents");
   const router = useRouter();
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [listTab, setListTab] = useState<ListTab>("all");
+
+  const normalizeStatusForLabel = (status: string | null): string => {
+    const key = normalizeStatusKey(status);
+    if (!key) return safeString(status) || "—";
+    return t(`status.${key}`);
+  };
 
   const stats = useMemo(() => {
     const total = items.length;
@@ -104,7 +110,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
   return (
     <AppShell
       userEmail={userEmail}
-      headerTitle="Mes Contenus"
+      headerTitle={t("title")}
       headerRight={
         <div className="flex items-center gap-3">
           {/* View Toggle (Lovable) */}
@@ -119,7 +125,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
                 }}
               >
                 <List className="w-4 h-4 mr-2" />
-                Liste
+                {t("viewList")}
               </Link>
             </Button>
 
@@ -133,7 +139,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
                 }}
               >
                 <CalendarDays className="w-4 h-4 mr-2" />
-                Calendrier
+                {t("viewCalendar")}
               </Link>
             </Button>
           </div>
@@ -141,7 +147,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
           <Link href="/create">
             <Button variant="hero">
               <Plus className="w-4 h-4 mr-2" />
-              Créer
+              {t("createBtn")}
             </Button>
           </Link>
         </div>
@@ -152,10 +158,10 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
         {/* Stats Cards (Lovable) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total", value: String(stats.total), icon: FileText, color: "gradient-primary" },
-            { label: "Publiés", value: String(stats.published), icon: ImageIcon, color: "gradient-secondary" },
-            { label: "Planifiés", value: String(stats.scheduled), icon: Video, color: "gradient-primary" },
-            { label: "Brouillons", value: String(stats.draft), icon: Mail, color: "gradient-secondary" },
+            { label: t("stats.total"), value: String(stats.total), icon: FileText, color: "gradient-primary" },
+            { label: t("stats.published"), value: String(stats.published), icon: ImageIcon, color: "gradient-secondary" },
+            { label: t("stats.scheduled"), value: String(stats.scheduled), icon: Video, color: "gradient-primary" },
+            { label: t("stats.draft"), value: String(stats.draft), icon: Mail, color: "gradient-secondary" },
           ].map((stat, i) => (
             <Card key={i} className="p-4">
               <div className="flex items-center justify-between">
@@ -173,31 +179,31 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
 
         {error ? (
           <Card className="p-6">
-            <p className="text-sm text-destructive">Erreur : {error}</p>
+            <p className="text-sm text-destructive">{t("errorPrefix")}{error}</p>
           </Card>
         ) : view === "list" ? (
           // List View (Lovable)
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Tous vos contenus</h2>
+              <h2 className="text-xl font-bold">{t("allContent")}</h2>
               <Button variant="outline" size="sm" disabled>
                 <Filter className="w-4 h-4 mr-2" />
-                Filtrer
+                {t("filter")}
               </Button>
             </div>
 
             <Tabs value={listTab} onValueChange={(v) => setListTab(v as ListTab)} className="w-full">
               <TabsList className="mb-6">
-                <TabsTrigger value="all">Tous</TabsTrigger>
-                <TabsTrigger value="posts">Posts</TabsTrigger>
-                <TabsTrigger value="emails">Emails</TabsTrigger>
-                <TabsTrigger value="articles">Articles</TabsTrigger>
-                <TabsTrigger value="videos">Vidéos</TabsTrigger>
+                <TabsTrigger value="all">{t("tabs.all")}</TabsTrigger>
+                <TabsTrigger value="posts">{t("tabs.posts")}</TabsTrigger>
+                <TabsTrigger value="emails">{t("tabs.emails")}</TabsTrigger>
+                <TabsTrigger value="articles">{t("tabs.articles")}</TabsTrigger>
+                <TabsTrigger value="videos">{t("tabs.videos")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value={listTab} className="space-y-4">
                 {listItems.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-12">Aucun contenu.</div>
+                  <div className="text-center text-muted-foreground py-12">{t("empty")}</div>
                 ) : (
                   listItems.map((item) => {
                     const Icon = iconForType(item.type);
@@ -212,7 +218,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
 
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <h3 className="font-semibold">{safeString(item.title) || "Sans titre"}</h3>
+                                  <h3 className="font-semibold">{safeString(item.title) || t("untitled")}</h3>
                                   <Badge variant={statusBadgeVariant(item.status)} className="text-xs">
                                     {normalizeStatusForLabel(item.status)}
                                   </Badge>
@@ -237,7 +243,7 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
                             >
                               <ContentItemActions
                                 id={item.id}
-                                title={safeString(item.title) || "Sans titre"}
+                                title={safeString(item.title) || t("untitled")}
                                 status={item.status}
                                 scheduledDate={item.scheduled_date}
                                 contentPreview={item.content ?? null}

@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   MessageSquare,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,8 +85,6 @@ const FONT_GROUPS: FontGroup[] = [
   },
 ];
 
-const ALL_FONTS = FONT_GROUPS.flatMap((g) => g.fonts);
-
 // ---------- Color picker helper ----------
 
 function ColorInput({
@@ -143,6 +142,7 @@ function ImageUpload({
   description: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("branding");
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -160,21 +160,21 @@ function ImageUpload({
           body: fd,
         });
         const json = await res.json().catch(() => null);
-        if (!json?.ok) throw new Error(json?.error || "Erreur d'upload");
+        if (!json?.ok) throw new Error(json?.error || t("upload.errorTitle"));
 
         onChange(json.url);
-        toast({ title: "Image uploadée" });
+        toast({ title: t("upload.success") });
       } catch (e: any) {
         toast({
-          title: "Erreur d'upload",
-          description: e?.message ?? "Erreur inconnue",
+          title: t("upload.errorTitle"),
+          description: e?.message ?? t("upload.errorUnknown"),
           variant: "destructive",
         });
       } finally {
         setUploading(false);
       }
     },
-    [onChange, toast],
+    [onChange, toast, t],
   );
 
   return (
@@ -194,7 +194,7 @@ function ImageUpload({
             className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow hover:bg-destructive/90"
             onClick={() => onChange("")}
             disabled={disabled}
-            aria-label="Supprimer"
+            aria-label={t("upload.deleteAria")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -236,7 +236,7 @@ function ImageUpload({
           disabled={disabled || uploading}
         >
           <Upload className="h-3.5 w-3.5" />
-          {uploading ? "Upload en cours..." : "Choisir un fichier"}
+          {uploading ? t("upload.uploading") : t("upload.choose")}
         </Button>
       )}
     </div>
@@ -265,6 +265,7 @@ type Props = {
 // ---------- Component ----------
 
 export default function BrandingSettings({ initial, loading, onSaved }: Props) {
+  const t = useTranslations("branding");
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
 
@@ -316,14 +317,14 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || t("errorUnknown"));
 
-        toast({ title: "Branding enregistré" });
+        toast({ title: t("saved") });
         onSaved?.(json.profile ?? null);
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
-          description: e?.message ?? "Erreur inconnue",
+          title: t("errorTitle"),
+          description: e?.message ?? t("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -336,17 +337,17 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <Type className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-bold">Typographie</h3>
+          <h3 className="text-lg font-bold">{t("typography.title")}</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Choisis la police principale de ta marque. Elle sera utilisée dans les tunnels de vente et les pages générées.
+          {t("typography.desc")}
         </p>
 
         <div className="space-y-2 max-w-sm">
-          <Label htmlFor="brand-font">Police principale</Label>
+          <Label htmlFor="brand-font">{t("typography.fontLabel")}</Label>
           <Select value={font} onValueChange={setFont} disabled={loading}>
             <SelectTrigger id="brand-font">
-              <SelectValue placeholder="Sélectionner une police..." />
+              <SelectValue placeholder={t("typography.fontPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {FONT_GROUPS.map((group) => (
@@ -367,16 +368,16 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
 
         {font && (
           <div className="mt-4 rounded-lg border bg-muted/20 p-4">
-            <p className="text-xs text-muted-foreground mb-2">Aperçu :</p>
+            <p className="text-xs text-muted-foreground mb-2">{t("preview")}</p>
             <link
               href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;700&display=swap`}
               rel="stylesheet"
             />
             <p style={{ fontFamily: `'${font}', sans-serif` }} className="text-2xl font-bold">
-              Votre marque avec {font}
+              {t("brandWith", { font })}
             </p>
             <p style={{ fontFamily: `'${font}', sans-serif` }} className="text-base mt-1">
-              Un texte de paragraphe pour visualiser le rendu de la police sur du contenu courant.
+              {t("brandParagraph")}
             </p>
           </div>
         )}
@@ -386,23 +387,23 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <Palette className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-bold">Palette de couleurs</h3>
+          <h3 className="text-lg font-bold">{t("colors.title")}</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Définis les couleurs principales de ta marque. Elles seront injectées automatiquement dans les templates de tunnels.
+          {t("colors.desc")}
         </p>
 
         <div className="grid md:grid-cols-2 gap-6">
           <ColorInput
             id="brand-color-base"
-            label="Couleur de base"
+            label={t("colors.base")}
             value={colorBase}
             onChange={setColorBase}
             disabled={loading}
           />
           <ColorInput
             id="brand-color-accent"
-            label="Couleur d'accentuation"
+            label={t("colors.accent")}
             value={colorAccent}
             onChange={setColorAccent}
             disabled={loading}
@@ -411,35 +412,35 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
 
         {/* Preview swatch */}
         <div className="mt-4 rounded-lg border bg-muted/20 p-4">
-          <p className="text-xs text-muted-foreground mb-2">Aperçu :</p>
+          <p className="text-xs text-muted-foreground mb-2">{t("preview")}</p>
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-12 w-12 rounded-lg border shadow-sm"
                 style={{ backgroundColor: colorBase }}
               />
-              <span className="text-xs text-muted-foreground">Base</span>
+              <span className="text-xs text-muted-foreground">{t("previewBase")}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-12 w-12 rounded-lg border shadow-sm"
                 style={{ backgroundColor: colorAccent }}
               />
-              <span className="text-xs text-muted-foreground">Accent</span>
+              <span className="text-xs text-muted-foreground">{t("previewAccent")}</span>
             </div>
             <div className="ml-4 flex-1 rounded-lg overflow-hidden border">
               <div
                 className="px-4 py-2 text-sm font-bold"
                 style={{ backgroundColor: colorBase, color: "#fff" }}
               >
-                Titre de section
+                {t("previewSection")}
               </div>
               <div className="px-4 py-3 bg-white">
                 <span
                   className="inline-block rounded px-3 py-1.5 text-sm font-semibold text-white"
                   style={{ backgroundColor: colorAccent }}
                 >
-                  Bouton CTA
+                  {t("previewButton")}
                 </span>
               </div>
             </div>
@@ -451,25 +452,25 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <ImageIcon className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-bold">Images de marque</h3>
+          <h3 className="text-lg font-bold">{t("images.title")}</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Upload ton logo et ta photo pour les intégrer automatiquement dans les tunnels. Tu pourras toujours les remplacer manuellement au cas par cas.
+          {t("images.desc")}
         </p>
 
         <div className="grid md:grid-cols-2 gap-6">
           <ImageUpload
             id="brand-logo"
-            label="Logo de la marque"
-            description="PNG ou JPG, fond transparent recommandé, min 200px de large"
+            label={t("images.logoLabel")}
+            description={t("images.logoDesc")}
             value={logoUrl}
             onChange={setLogoUrl}
             disabled={loading}
           />
           <ImageUpload
             id="brand-author-photo"
-            label="Photo de l'auteur"
-            description="Photo portrait carrée, min 300x300px"
+            label={t("images.photoLabel")}
+            description={t("images.photoDesc")}
             value={authorPhotoUrl}
             onChange={setAuthorPhotoUrl}
             disabled={loading}
@@ -481,26 +482,26 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-bold">Ton de voix</h3>
+          <h3 className="text-lg font-bold">{t("tone.title")}</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Décris le ton que tu veux donner à ta communication (prérempli depuis l&apos;onboarding si disponible). Ce ton sera utilisé pour guider l&apos;IA dans la génération de contenu.
+          {t("tone.desc")}
         </p>
 
         <div className="space-y-2">
-          <Label htmlFor="brand-tone">Style de communication</Label>
+          <Label htmlFor="brand-tone">{t("tone.label")}</Label>
           <Textarea
             id="brand-tone"
             value={toneOfVoice}
             onChange={(e) => setToneOfVoice(e.target.value)}
-            placeholder="Ex: Professionnel mais décontracté, inspirant, éducatif avec une touche d'humour. J'utilise le tutoiement et un langage direct."
+            placeholder={t("tone.placeholder")}
             rows={3}
             className="resize-none"
             disabled={loading}
             maxLength={500}
           />
           <p className="text-xs text-muted-foreground">
-            {toneOfVoice.length}/500 caractères
+            {t("tone.chars", { n: toneOfVoice.length })}
           </p>
         </div>
       </Card>
@@ -509,7 +510,7 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       <div className="flex justify-end">
         <Button onClick={save} disabled={!dirty || pending || loading} className="gap-2">
           <Save className="w-4 h-4" />
-          {pending ? "Enregistrement..." : "Enregistrer le branding"}
+          {pending ? t("saving") : t("save")}
         </Button>
       </div>
     </div>

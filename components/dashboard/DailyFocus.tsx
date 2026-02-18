@@ -7,6 +7,7 @@
 // ✅ Aucune dépendance externe
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import MarkTaskDoneButton from '@/components/dashboard/MarkTaskDoneButton'
@@ -22,19 +23,19 @@ type Props = {
 }
 
 export default function DailyFocus({ task }: Props) {
+  const t = useTranslations('dashboard')
+
   if (!task) {
     return (
       <Card className="p-5">
-        <p className="text-xs text-muted-foreground">Focus du jour</p>
-        <p className="mt-1 text-sm text-slate-700">
-          Tu es à jour 🎉 Tu peux avancer sur ta stratégie ou créer du contenu.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('focusTitle')}</p>
+        <p className="mt-1 text-sm text-slate-700">{t('upToDate')}</p>
         <div className="mt-4 flex gap-2">
           <Link href="/strategy">
-            <Button variant="outline">Voir stratégie</Button>
+            <Button variant="outline">{t('seeStrategy')}</Button>
           </Link>
           <Link href="/create">
-            <Button className="bg-primary hover:bg-primary/90">Créer du contenu</Button>
+            <Button className="bg-primary hover:bg-primary/90">{t('createContent')}</Button>
           </Link>
         </div>
       </Card>
@@ -43,10 +44,10 @@ export default function DailyFocus({ task }: Props) {
 
   return (
     <Card className="p-5 border-primary/30">
-      <p className="text-xs text-muted-foreground">Focus du jour</p>
+      <p className="text-xs text-muted-foreground">{t('focusTitle')}</p>
       <p className="mt-1 text-base font-semibold text-slate-900">{task.title}</p>
 
-      <p className="mt-1 text-xs text-slate-500">Prochaine action à faire</p>
+      <p className="mt-1 text-xs text-slate-500">{t('nextAction')}</p>
 
       <div className="mt-4 grid gap-2">
         <MarkTaskDoneButton
@@ -57,7 +58,7 @@ export default function DailyFocus({ task }: Props) {
 
         <Link href="/tasks" className="w-full">
           <Button variant="outline" className="w-full">
-            Voir toutes les tâches
+            {t('allTasks')}
           </Button>
         </Link>
       </div>

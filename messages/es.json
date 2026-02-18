@@ -165,5 +165,517 @@
     "unauthorized": "No autorizado.",
     "notFound": "Página no encontrada.",
     "network": "Error de red. Comprueba tu conexión."
+  },
+  "dashboard": {
+    "focusTitle": "Foco del día",
+    "upToDate": "¡Estás al día! 🎉 Puedes avanzar en tu estrategia o crear contenido.",
+    "seeStrategy": "Ver estrategia",
+    "createContent": "Crear contenido",
+    "nextAction": "Próxima acción a realizar",
+    "allTasks": "Ver todas las tareas"
+  },
+  "contents": {
+    "title": "Mis Contenidos",
+    "viewList": "Lista",
+    "viewCalendar": "Calendario",
+    "createBtn": "Crear contenido",
+    "stats": {
+      "total": "Total",
+      "published": "Publicados",
+      "scheduled": "Programados",
+      "draft": "Borradores"
+    },
+    "allContent": "Todo el contenido",
+    "filter": "Filtrar",
+    "tabs": {
+      "all": "Todo",
+      "posts": "Posts",
+      "emails": "Emails",
+      "articles": "Artículos",
+      "videos": "Vídeos"
+    },
+    "empty": "Aún no tienes contenido. ¡Crea tu primer contenido!",
+    "status": {
+      "published": "Publicado",
+      "draft": "Borrador",
+      "scheduled": "Programado",
+      "archived": "Archivado"
+    },
+    "untitled": "Sin título",
+    "errorPrefix": "Error"
+  },
+  "analytics": {
+    "title": "Análisis",
+    "subtitle": "Sigue el rendimiento de tu negocio",
+    "description": "Introduce tus datos para visualizar tu evolución y tomar mejores decisiones.",
+    "tabs": {
+      "enter": "Introducir datos",
+      "history": "Historial"
+    },
+    "tooltipUpdate": "Última actualización",
+    "tooltipFirst": "Primera entrada",
+    "metrics": {
+      "revenue": "Ingresos",
+      "sales": "Ventas",
+      "conversion": "Conversión",
+      "subscribers": "Suscriptores"
+    },
+    "seeAnalysis": "Ver análisis",
+    "emptyTitle": "Aún no hay datos",
+    "emptyBody": "Introduce tus primeros datos para empezar a visualizar tu progreso.",
+    "enterData": "Introducir mis datos"
+  },
+  "pepites": {
+    "title": "Mi colección de joyas",
+    "subtitle": "Guarda tus mejores ideas, frases e inspiraciones",
+    "refresh": "Actualizar",
+    "add": "Añadir",
+    "addTitle": "Añadir una joya",
+    "labelTitle": "Título",
+    "placeholderTitle": "Dale un título a tu joya…",
+    "labelText": "Contenido",
+    "placeholderText": "Escribe tu idea, frase o inspiración…",
+    "hint": "Las joyas son fragmentos de contenido reutilizables que puedes usar en tus creaciones.",
+    "cancel": "Cancelar",
+    "saving": "Guardando…",
+    "publish": "Guardar",
+    "emptyTitle": "Aún no tienes joyas",
+    "emptyBody": "Guarda tus mejores ideas para reutilizarlas fácilmente en tu contenido.",
+    "cardDefault": "Haz clic para ver",
+    "clickOpen": "Haz clic para expandir",
+    "clickClose": "Haz clic para cerrar",
+    "alreadyOpen": "Ya abierto",
+    "ariaOpen": "Abrir joya"
+  },
+  "templates": {
+    "title": "Plantillas Systeme.io",
+    "description": "Usa estas plantillas listas para usar y lanza tu negocio más rápido.",
+    "tabs": {
+      "all": "Todas",
+      "capture": "Captación",
+      "sales": "Ventas",
+      "blog": "Blog"
+    }
+  },
+  "social": {
+    "title": "Cuentas sociales",
+    "subtitle": "Conecta tus redes sociales para publicar directamente desde Tipote.",
+    "loading": "Cargando…",
+    "connected": "Conectado",
+    "expired": "Sesión expirada",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "connect": "Conectar",
+    "comingSoon": "Próximamente",
+    "comingSoonBadge": "Próximamente",
+    "connectedFallback": "Cuenta conectada",
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "threads": "Threads",
+      "twitter": "X (Twitter)",
+      "reddit": "Reddit"
+    },
+    "disconnectTitle": "¿Desconectar esta cuenta?",
+    "disconnectDesc": "Perderás la posibilidad de publicar en esta red desde Tipote.",
+    "disconnectConfirm": "Sí, desconectar",
+    "toast": {
+      "connectSuccess": "Cuenta conectada correctamente.",
+      "connectError": "Error al conectar la cuenta.",
+      "disconnectSuccess": "Cuenta desconectada correctamente.",
+      "disconnectError": "Error al desconectar la cuenta."
+    }
+  },
+  "aiCredits": {
+    "title": "Créditos IA",
+    "desc1": "Los créditos IA se usan cada vez que generas contenido con Tipote.",
+    "desc2": "Recarga tu saldo cuando lo necesites o suscríbete para obtener créditos mensuales.",
+    "refreshAria": "Actualizar saldo",
+    "balance": "Saldo disponible",
+    "loading": "Cargando…",
+    "error": "Error al cargar los créditos",
+    "available": "disponibles",
+    "badgeError": "Error",
+    "badgeZero": "Sin créditos",
+    "unit": "créditos",
+    "recharge": "Recargar créditos",
+    "seeSubscription": "Ver mi suscripción",
+    "purchased": "Créditos adquiridos",
+    "consumed": "Créditos consumidos"
+  },
+  "autoComments": {
+    "title": "Auto-comentarios",
+    "description": "Genera automáticamente comentarios personalizados para tus publicaciones en redes sociales.",
+    "badge": "Beta",
+    "creditsLabel": "Créditos por comentario",
+    "loading": "Cargando…",
+    "upsell": {
+      "title": "Función premium",
+      "body": "Los auto-comentarios están disponibles a partir del plan Pro.",
+      "cta": "Ver planes"
+    },
+    "styleTitle": "Estilo de comentario",
+    "styleDesc": "Elige cómo quieres que suenen tus comentarios.",
+    "tonLabel": "Tono",
+    "tons": {
+      "professional": "Profesional",
+      "friendly": "Cercano",
+      "humorous": "Humorístico",
+      "inspirational": "Inspirador",
+      "direct": "Directo"
+    },
+    "objectifsTitle": "Objetivos",
+    "objectifsDesc": "¿Qué quieres conseguir con tus comentarios?",
+    "objectifs": {
+      "engagement": "Generar interacción",
+      "visibility": "Aumentar visibilidad",
+      "authority": "Demostrar autoridad",
+      "network": "Ampliar red"
+    },
+    "langageTitle": "Idioma",
+    "langageDesc": "Idioma en el que se generarán los comentarios.",
+    "keywordsLabel": "Palabras clave",
+    "keywordsPlaceholder": "marketing, emprendimiento, productividad…",
+    "emojisLabel": "Emojis a usar",
+    "emojisPlaceholder": "🚀 💡 🎯",
+    "expressionsLabel": "Expresiones habituales",
+    "expressionsPlaceholder": "¡Totalmente de acuerdo!, Gran punto…",
+    "saving": "Guardando…",
+    "save": "Guardar preferencias",
+    "toast": {
+      "saveSuccess": "Preferencias guardadas correctamente.",
+      "saveError": "Error al guardar las preferencias."
+    }
+  },
+  "settingsPage": {
+    "positioning": "Posicionamiento",
+    "profile": {
+      "title": "Perfil",
+      "firstName": "Nombre",
+      "lastName": "Apellidos",
+      "email": "Correo electrónico",
+      "save": "Guardar perfil",
+      "saving": "Guardando…",
+      "saveSuccess": "Perfil actualizado correctamente.",
+      "saveError": "Error al guardar el perfil."
+    },
+    "connections": {
+      "title": "Conexiones",
+      "description": "Gestiona tus integraciones y cuentas conectadas."
+    },
+    "reglages": {
+      "title": "Preferencias",
+      "notifications": "Notificaciones",
+      "notificationsDesc": "Recibe alertas sobre tus contenidos y actividad.",
+      "theme": "Tema",
+      "themeLight": "Claro",
+      "themeDark": "Oscuro",
+      "themeSystem": "Sistema"
+    },
+    "positioningTab": {
+      "title": "Mi posicionamiento",
+      "description": "Define tu posicionamiento para que Tipote adapte todo el contenido generado a tu voz y tu audiencia.",
+      "save": "Guardar posicionamiento",
+      "saving": "Guardando…",
+      "saveSuccess": "Posicionamiento guardado correctamente.",
+      "saveError": "Error al guardar el posicionamiento."
+    }
+  },
+  "today": {
+    "title": "Panel de control",
+    "loading": "Cargando...",
+    "objectiveLabel": "Tu objetivo ahora",
+    "thisWeek": "Esta semana",
+    "progressionTitle": "Tu progreso",
+    "progressionSub": "Tus resultados concretos",
+    "contentsCreated": "Contenidos creados",
+    "noContent": "Sin contenido por el momento",
+    "businessResults": "Resultados de negocio",
+    "fillStats": "Rellena tus estadísticas",
+    "fillStatsSub": "Para medir tu progreso: leads capturados, ventas, vistas de embudo...",
+    "viewStats": "Ver mis estadísticas",
+    "fillStatsBtn": "Rellenar mis estadísticas",
+    "viewStrategy": "Ver mi estrategia completa",
+    "objective": {
+      "labelStartup": "Inicio",
+      "labelFoundations": "Fundaciones",
+      "labelGrowth": "Crecimiento",
+      "labelScale": "Escala",
+      "strategyFocus": "Genera tu estrategia para comenzar tu negocio."
+    },
+    "ctas": {
+      "seeStrategy": "Ver mi estrategia",
+      "createContent": "Crear contenido",
+      "createContents": "Crear contenidos",
+      "generateStrategy": "Generar mi estrategia",
+      "seeTasks": "Ver mis tareas"
+    },
+    "positive": {
+      "persona": "definido tu persona",
+      "offre": "clarificado tu oferta",
+      "lead_magnet": "creado tu lead magnet",
+      "page_vente": "redactado tu página de ventas",
+      "email": "preparado tus emails",
+      "contenu": "planificado tu contenido",
+      "other": "avanzado en {label}",
+      "one": "Has {item}, ¡genial!",
+      "two": "Has {item1} y {item2}, ¡genial!",
+      "many": "Has {items} y {last}, ¡bravo!"
+    },
+    "coaching": {
+      "noStrategy": {
+        "recommendation": "Debes generar tu estrategia",
+        "why": "para tener un plan de acción claro y saber exactamente qué hacer cada semana"
+      },
+      "noTasks": {
+        "recommendation": "Consulta tu estrategia para descubrir tu plan de acción",
+        "why": "y empieza a crear tus primeros contenidos para lanzar tu negocio"
+      },
+      "allDone": {
+        "recommendation": "crearas nuevo contenido para mantener este impulso",
+        "why": "— tu base es sólida, es momento de subir de nivel"
+      },
+      "autre": {
+        "recommendation": "debes continuar avanzando en tus tareas en curso",
+        "why": "para mantener el ritmo y alcanzar tus objetivos"
+      },
+      "persona": {
+        "recommendation": "debes definir a tu cliente ideal",
+        "why": "para saber exactamente a quién le hablas y adaptar tu mensaje"
+      },
+      "offre": {
+        "recommendation": "debes clarificar tu oferta",
+        "why": "para hablar de ella con confianza y convertir a tus prospectos"
+      },
+      "lead_magnet": {
+        "recommendation": "debes crear tu lead magnet",
+        "why": "para capturar emails y construir una audiencia cualificada"
+      },
+      "page_vente": {
+        "recommendation": "debes redactar tu página de ventas",
+        "why": "para lanzar ventas rápidamente y empezar a generar ingresos"
+      },
+      "email": {
+        "recommendation": "debes redactar tu secuencia de email de bienvenida",
+        "why": "para fidelizar a tu audiencia desde el primer contacto"
+      },
+      "contenu": {
+        "recommendation": "debes planificar y crear tus próximos contenidos",
+        "why": "para aumentar tu visibilidad y atraer nuevos prospectos"
+      }
+    }
+  },
+  "create": {
+    "title": "Crear contenido",
+    "contentType": "Tipo de contenido",
+    "platform": "Plataforma",
+    "tone": "Tono",
+    "subject": "Tema",
+    "generate": "Generar",
+    "draft": "Guardar borrador",
+    "schedule": "Programar",
+    "publish": "Publicar",
+    "tones": {
+      "professional": "Profesional",
+      "friendly": "Cercano",
+      "humorous": "Humorístico",
+      "inspirational": "Inspirador",
+      "educational": "Educativo",
+      "storytelling": "Narrativo",
+      "direct": "Directo",
+      "provocative": "Provocador"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "twitter": "X (Twitter)",
+      "threads": "Threads",
+      "tiktok": "TikTok",
+      "youtube": "YouTube",
+      "blog": "Blog"
+    },
+    "contentTypes": {
+      "post": "Post",
+      "email": "Email",
+      "article": "Artículo",
+      "video": "Guión de vídeo",
+      "carousel": "Carrusel",
+      "story": "Story"
+    }
+  },
+  "branding": {
+    "typography": {
+      "title": "Tipografía",
+      "desc": "Elige la fuente principal de tu marca. Se utilizará en tus embudos de venta y páginas generadas.",
+      "fontLabel": "Fuente principal",
+      "fontPlaceholder": "Seleccionar una fuente..."
+    },
+    "preview": "Vista previa:",
+    "brandWith": "Tu marca con {font}",
+    "brandParagraph": "Un párrafo de ejemplo para visualizar el aspecto de la fuente en contenido habitual.",
+    "colors": {
+      "title": "Paleta de colores",
+      "desc": "Define los colores principales de tu marca. Se inyectarán automáticamente en tus plantillas de embudos.",
+      "base": "Color base",
+      "accent": "Color de acento"
+    },
+    "previewBase": "Base",
+    "previewAccent": "Acento",
+    "previewSection": "Título de sección",
+    "previewButton": "Botón CTA",
+    "images": {
+      "title": "Imágenes de marca",
+      "desc": "Sube tu logo y foto para incluirlos automáticamente en tus embudos. Siempre puedes reemplazarlos manualmente según el caso.",
+      "logoLabel": "Logo de la marca",
+      "logoDesc": "PNG o JPG, fondo transparente recomendado, mín. 200px de ancho",
+      "photoLabel": "Foto del autor",
+      "photoDesc": "Foto de retrato cuadrada, mín. 300×300px"
+    },
+    "tone": {
+      "title": "Tono de voz",
+      "desc": "Describe el tono que quieres para tu comunicación (precargado desde el onboarding si está disponible). Este tono guiará a la IA al generar contenido.",
+      "label": "Estilo de comunicación",
+      "placeholder": "Ej. Profesional pero relajado, inspirador, educativo con un toque de humor. Uso un lenguaje cercano y directo.",
+      "chars": "{n}/500 caracteres"
+    },
+    "upload": {
+      "deleteAria": "Eliminar",
+      "uploading": "Subiendo...",
+      "choose": "Elegir un archivo",
+      "success": "Imagen subida",
+      "errorTitle": "Error al subir",
+      "errorUnknown": "Error desconocido"
+    },
+    "save": "Guardar branding",
+    "saving": "Guardando...",
+    "saved": "Branding guardado",
+    "errorTitle": "No se puede guardar",
+    "errorUnknown": "Error desconocido"
+  },
+  "billing": {
+    "loading": "Cargando…",
+    "currentPlanBadge": "Plan actual",
+    "perMonth": "/mes",
+    "credits": {
+      "title": "Créditos IA",
+      "desc": "Saldo disponible para generar contenido. 1 generación = 1 crédito.",
+      "unit": "créditos",
+      "recharge": "Recargar",
+      "purchased": "Adquiridos: ",
+      "consumed": " • Consumidos: "
+    },
+    "refreshAria": "Actualizar",
+    "plan": {
+      "free": { "desc": "Acceso limitado" },
+      "beta": { "desc": "Acceso Pro de por vida (beta)" },
+      "basic": { "desc": "1 módulo • Content Hub" },
+      "pro": { "desc": "3 módulos • Coach IA • Content Hub" },
+      "elite": { "desc": "Módulos ilimitados • Soporte prioritario" }
+    },
+    "current": "Actual",
+    "currentLabel": "Plan actual",
+    "downgrade": "Reducir plan",
+    "upgrade": "Mejorar plan",
+    "plans": {
+      "basic": {
+        "f1": "Plan estratégico IA",
+        "f2": "1 módulo activable",
+        "f3": "Contenido ilimitado",
+        "f4": "Content Hub + Calendario",
+        "f5": "Sin coach IA"
+      },
+      "pro": {
+        "f1": "Plan estratégico IA",
+        "f2": "3 módulos activables",
+        "f3": "Contenido ilimitado",
+        "f4": "Content Hub + Calendario",
+        "f5": "Coach IA"
+      },
+      "elite": {
+        "f1": "Todo lo de Pro +",
+        "f2": "Módulos ilimitados",
+        "f3": "Acceso anticipado a nuevas funciones",
+        "f4": "Automatizaciones n8n (V2)",
+        "f5": "Soporte prioritario"
+      }
+    },
+    "manage": {
+      "title": "Gestionar tu suscripción",
+      "desc": "Modificar, mejorar o cancelar a través de Systeme.io",
+      "cta": "Gestionar en Systeme.io"
+    },
+    "errorTitle": "No se puede cargar la suscripción",
+    "errorDesc": "Se ha producido un error."
+  },
+  "strategy": {
+    "title": "Mi Estrategia",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "customize": "Personalizar",
+    "generatingBanner": {
+      "title": "Tu plan está siendo preparado",
+      "desc": "Si acabas de completar el onboarding, es normal. Puedes generar tu plan ahora.",
+      "generate": "Generar mi plan",
+      "generating": "Generando…",
+      "refresh": "Actualizar"
+    },
+    "overview": {
+      "title": "Tu visión estratégica",
+      "subtitle": "Plan personalizado generado por IA para alcanzar tus objetivos de negocio",
+      "revenueGoal": "Objetivo de ingresos",
+      "horizon": "Horizonte",
+      "progression": "Progresión"
+    },
+    "tabs": {
+      "plan": "Plan de acción",
+      "offers": "Tus ofertas",
+      "persona": "Persona objetivo"
+    },
+    "editBanner": {
+      "title": "Modo personalización",
+      "desc": "Arrastra las tareas para reorganizarlas, elimina las que no te convengan, o añade nuevas",
+      "addTask": "Añadir una tarea"
+    },
+    "progress": {
+      "tasksCompleted": "Tareas completadas",
+      "daysRemaining": "Días restantes",
+      "outOf90": "De 90 días",
+      "currentPhase": "Fase actual"
+    },
+    "noTasks": "No hay tareas en esta fase todavía.",
+    "moreTasks": "Ver {count} tareas más",
+    "offers": {
+      "title": "Tus ofertas",
+      "addOffer": "Añadir una oferta",
+      "free": "Gratis"
+    },
+    "persona": {
+      "title": "Persona objetivo",
+      "profile": "Perfil principal",
+      "pains": "Problemas principales",
+      "goals": "Objetivos",
+      "channels": "Canales preferidos",
+      "edit": "Editar persona"
+    },
+    "toast": {
+      "planReady": "¡Listo! ✅",
+      "planReadyDesc": "Tu plan estratégico y tus tareas están listos.",
+      "planError": "No se puede generar el plan",
+      "oops": "Vaya",
+      "saved": "Cambios guardados",
+      "savedDesc": "Tu estrategia se ha actualizado con éxito",
+      "taskDeleted": "Tarea eliminada",
+      "taskDeletedDesc": "La tarea ha sido eliminada.",
+      "taskAdded": "Tarea añadida",
+      "taskAddedDesc": "La tarea ha sido creada.",
+      "error": "Error",
+      "taskDeleteError": "No se puede eliminar la tarea.",
+      "taskAddError": "No se puede añadir la tarea.",
+      "phaseUpdated": "Fase actualizada",
+      "phaseUpdatedDesc": "Los cambios han sido guardados",
+      "personaUpdated": "Persona actualizada",
+      "personaUpdatedDesc": "Los cambios han sido guardados"
+    }
   }
 }

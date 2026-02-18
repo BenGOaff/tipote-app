@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 
 import { Card } from "@/components/ui/card";
@@ -20,9 +21,14 @@ import { MetricsChart } from "@/components/analytics/MetricsChart";
 import { AnalysisCard } from "@/components/analytics/AnalysisCard";
 
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS, es, it, ar } from "date-fns/locale";
+
+const DATE_FNS_LOCALES: Record<string, Locale> = { fr, en: enUS, es, it, ar };
 
 export default function AnalyticsLovableClient() {
+  const t = useTranslations("analytics");
+  const locale = useLocale();
+  const dateFnsLocale = DATE_FNS_LOCALES[locale] ?? fr;
   const { hasSeenContext } = useTutorial();
   const {
     metrics,
@@ -39,16 +45,14 @@ export default function AnalyticsLovableClient() {
 
   return (
     <DashboardLayout
-      title="Analytics"
+      title={t("title")}
       showAnalyticsLink={false}
       contentClassName="p-6 space-y-6 max-w-5xl mx-auto"
     >
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-display font-bold">Ton tableau de bord</h2>
-        <p className="text-muted-foreground">
-          Saisis tes métriques mensuelles et obtiens un diagnostic personnalisé
-        </p>
+        <h2 className="text-2xl font-display font-bold">{t("subtitle")}</h2>
+        <p className="text-muted-foreground">{t("description")}</p>
       </div>
 
       {/* Summary Cards */}
@@ -77,11 +81,11 @@ export default function AnalyticsLovableClient() {
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="saisie" className="gap-2">
             <BarChart3 className="w-4 h-4" />
-            Saisir mes données
+            {t("tabs.enter")}
           </TabsTrigger>
           <TabsTrigger value="historique" className="gap-2">
             <History className="w-4 h-4" />
-            Historique
+            {t("tabs.history")}
           </TabsTrigger>
         </TabsList>
 
@@ -90,8 +94,8 @@ export default function AnalyticsLovableClient() {
             contextKey="first_analytics_visit"
             message={
               hasSeenContext("first_analytics_visit")
-                ? "Pense à mettre à jour tes métriques chaque mois pour suivre ta progression."
-                : "Commence par saisir tes métriques du mois en cours. Tipote te donnera un diagnostic IA."
+                ? t("tooltipUpdate")
+                : t("tooltipFirst")
             }
             position="top"
           >
@@ -124,15 +128,9 @@ export default function AnalyticsLovableClient() {
           ) : metrics.length === 0 ? (
             <Card className="p-12 text-center">
               <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                Aucune donnée enregistrée
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Commence par saisir tes métriques du mois en cours
-              </p>
-              <Button onClick={() => setActiveTab("saisie")}>
-                Saisir mes données
-              </Button>
+              <h3 className="text-lg font-medium mb-2">{t("emptyTitle")}</h3>
+              <p className="text-muted-foreground mb-4">{t("emptyBody")}</p>
+              <Button onClick={() => setActiveTab("saisie")}>{t("enterData")}</Button>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -142,33 +140,29 @@ export default function AnalyticsLovableClient() {
                     <div>
                       <h4 className="font-bold capitalize">
                         {format(new Date(metric.month), "MMMM yyyy", {
-                          locale: fr,
+                          locale: dateFnsLocale,
                         })}
                       </h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
                         <div>
-                          <p className="text-muted-foreground">CA</p>
+                          <p className="text-muted-foreground">{t("metrics.revenue")}</p>
                           <p className="font-medium">
-                            {(metric.revenue || 0).toLocaleString("fr-FR")}€
+                            {(metric.revenue || 0).toLocaleString()}€
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Ventes</p>
-                          <p className="font-medium">
-                            {metric.sales_count || 0}
-                          </p>
+                          <p className="text-muted-foreground">{t("metrics.sales")}</p>
+                          <p className="font-medium">{metric.sales_count || 0}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Conversion</p>
+                          <p className="text-muted-foreground">{t("metrics.conversion")}</p>
                           <p className="font-medium">
                             {(metric.conversion_rate || 0).toFixed(1)}%
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Inscrits</p>
-                          <p className="font-medium">
-                            {metric.new_subscribers || 0}
-                          </p>
+                          <p className="text-muted-foreground">{t("metrics.subscribers")}</p>
+                          <p className="font-medium">{metric.new_subscribers || 0}</p>
                         </div>
                       </div>
                     </div>
@@ -182,7 +176,7 @@ export default function AnalyticsLovableClient() {
                           // En bêta, on garde simple.
                         }}
                       >
-                        Voir l&apos;analyse
+                        {t("seeAnalysis")}
                       </Button>
                     )}
                   </div>

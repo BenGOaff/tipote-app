@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, Lock, Coins, RefreshCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,15 +93,15 @@ function isAnnualSubscription(sub: any): boolean {
 function planMeta(plan: Exclude<PlanKey, "essential">) {
   switch (plan) {
     case "basic":
-      return { label: "Basic", price: 19, desc: "1 module • Content Hub" };
+      return { label: "Basic", price: 19 };
     case "beta":
-      return { label: "Beta", price: 0, desc: "Accès Pro lifetime (beta)" };
+      return { label: "Beta", price: 0 };
     case "pro":
-      return { label: "Pro", price: 49, desc: "3 modules • Coach IA • Content Hub" };
+      return { label: "Pro", price: 49 };
     case "elite":
-      return { label: "Elite", price: 99, desc: "Modules illimités • Support prioritaire" };
+      return { label: "Elite", price: 99 };
     default:
-      return { label: "Free", price: 0, desc: "Accès limité" };
+      return { label: "Free", price: 0 };
   }
 }
 
@@ -158,6 +159,7 @@ function useAnimatedNumber(value: number, durationMs = 900) {
 }
 
 export default function BillingSection({ email }: Props) {
+  const t = useTranslations("billing");
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -206,15 +208,15 @@ export default function BillingSection({ email }: Props) {
         const json = (await res.json().catch(() => null)) as any;
         if (cancelled) return;
 
-        if (!res.ok || !json) throw new Error("Erreur de récupération de l'abonnement");
+        if (!res.ok || !json) throw new Error(t("errorDesc"));
         if (json?.error) throw new Error(String(json.error));
 
         setData(json as SubscriptionPayload);
       } catch (e) {
         if (!cancelled) {
           toast({
-            title: "Impossible de charger l'abonnement",
-            description: e instanceof Error ? e.message : "Une erreur est survenue.",
+            title: t("errorTitle"),
+            description: e instanceof Error ? e.message : t("errorDesc"),
             variant: "destructive",
           });
         }
@@ -227,18 +229,13 @@ export default function BillingSection({ email }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [email, toast]);
+  }, [email, toast, t]);
 
   const openOrderForm = (plan: "basic" | "pro" | "elite") => {
     const url = isAnnual ? ORDER_FORMS[plan].annual : ORDER_FORMS[plan].monthly;
     window.location.href = url;
   };
 
-  /**
-   * ✅ Prefill Systeme.io via query params
-   * Variables attendues:
-   * email, first_name, surname, street_address, postcode, city, country
-   */
   const openCreditsPack = () => {
     const qs = new URLSearchParams();
 
@@ -246,7 +243,6 @@ export default function BillingSection({ email }: Props) {
 
     const firstName = safeString(data?.profile?.first_name) ?? safeString((data?.profile as any)?.firstName) ?? null;
 
-    // Systeme.io attend "surname"
     const surname =
       safeString((data?.profile as any)?.surname) ??
       safeString((data?.profile as any)?.last_name) ??
@@ -294,13 +290,13 @@ export default function BillingSection({ email }: Props) {
       <Card className="p-6 gradient-hero border-border/50">
         <div className="flex items-start justify-between">
           <div>
-            <Badge className="mb-2 bg-background/20 text-primary-foreground">Plan actuel</Badge>
+            <Badge className="mb-2 bg-background/20 text-primary-foreground">{t("currentPlanBadge")}</Badge>
             <h2 className="text-2xl font-bold text-primary-foreground mb-1">{loading ? "—" : currentMeta.label}</h2>
-            <p className="text-primary-foreground/80">{loading ? "Chargement…" : currentMeta.desc}</p>
+            <p className="text-primary-foreground/80">{loading ? t("loading") : t(`plan.${currentPlan}.desc`)}</p>
           </div>
           <p className="text-3xl font-bold text-primary-foreground">
             {loading ? "—" : `${currentMeta.price}€`}
-            <span className="text-lg font-normal">/mois</span>
+            <span className="text-lg font-normal">{t("perMonth")}</span>
           </p>
         </div>
       </Card>
@@ -313,9 +309,9 @@ export default function BillingSection({ email }: Props) {
             </div>
 
             <div>
-              <p className="font-bold text-base mb-1">Crédits IA</p>
+              <p className="font-bold text-base mb-1">{t("credits.title")}</p>
               <p className="text-sm text-muted-foreground">
-                Solde disponible pour générer du contenu. 1 génération = 1 crédit.
+                {t("credits.desc")}
               </p>
             </div>
           </div>
@@ -325,8 +321,8 @@ export default function BillingSection({ email }: Props) {
             size="icon"
             onClick={refreshCredits}
             disabled={creditsLoading}
-            title="Rafraîchir"
-            aria-label="Rafraîchir"
+            title={t("refreshAria")}
+            aria-label={t("refreshAria")}
           >
             <RefreshCcw className={`h-4 w-4 ${creditsLoading ? "animate-spin" : ""}`} />
           </Button>
@@ -335,126 +331,127 @@ export default function BillingSection({ email }: Props) {
         <div className="mt-4 flex items-end justify-between gap-4">
           <div className="text-3xl font-bold tabular-nums">
             {creditsLoading ? "—" : creditsError ? "—" : animatedRemainingCredits}
-            <span className="text-base font-medium text-muted-foreground ml-2">crédits</span>
+            <span className="text-base font-medium text-muted-foreground ml-2">{t("credits.unit")}</span>
           </div>
 
-          <Button onClick={openCreditsPack}>Recharger</Button>
+          <Button onClick={openCreditsPack}>{t("credits.recharge")}</Button>
         </div>
 
         {creditsError ? <p className="text-sm text-destructive mt-3">{creditsError}</p> : null}
 
         {!creditsLoading && !creditsError && credits ? (
           <p className="text-xs text-muted-foreground mt-3">
-            Achetés : <span className="tabular-nums">{credits.total_purchased}</span> • Consommés :{" "}
-            <span className="tabular-nums">{credits.total_consumed}</span>
+            {t("credits.purchased")}<span className="tabular-nums">{credits.total_purchased}</span>{t("credits.consumed")}<span className="tabular-nums">{credits.total_consumed}</span>
           </p>
         ) : null}
       </Card>
 
       <div className="grid md:grid-cols-3 gap-6">
         <Card className={basicIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {basicIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
+          {basicIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">{t("current")}</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Basic</h3>
           <p className="text-3xl font-bold mb-4">
-            19€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+            19€<span className="text-sm font-normal text-muted-foreground">{t("perMonth")}</span>
           </p>
 
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Plan stratégique IA
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />1 module activable
+              {t("plans.basic.f1")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Contenus illimités
+              {t("plans.basic.f2")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Content Hub + Calendrier
+              {t("plans.basic.f3")}
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              {t("plans.basic.f4")}
             </li>
             <li className="flex items-center gap-2 text-muted-foreground">
               <Lock className="w-4 h-4" />
-              Pas de coach IA
+              {t("plans.basic.f5")}
             </li>
           </ul>
 
           <Button variant="outline" className="w-full" onClick={() => openOrderForm("basic")} disabled={loading || basicIsCurrent}>
-            {basicIsCurrent ? "Plan actuel" : "Downgrader"}
+            {basicIsCurrent ? t("currentLabel") : t("downgrade")}
           </Button>
         </Card>
 
         <Card className={proIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {proIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
+          {proIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">{t("current")}</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Pro</h3>
           <p className="text-3xl font-bold mb-4">
-            49€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+            49€<span className="text-sm font-normal text-muted-foreground">{t("perMonth")}</span>
           </p>
 
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Plan stratégique IA
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />3 modules activables
+              {t("plans.pro.f1")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Contenus illimités
+              {t("plans.pro.f2")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Content Hub + Calendrier
+              {t("plans.pro.f3")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Coach IA
+              {t("plans.pro.f4")}
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              {t("plans.pro.f5")}
             </li>
           </ul>
 
           <Button variant="outline" className="w-full" onClick={() => openOrderForm("pro")} disabled={loading || proIsCurrent}>
-            {proIsCurrent ? "Plan actuel" : currentPlan === "elite" ? "Downgrader" : "Upgrader"}
+            {proIsCurrent ? t("currentLabel") : currentPlan === "elite" ? t("downgrade") : t("upgrade")}
           </Button>
         </Card>
 
         <Card className={eliteIsCurrent ? "p-6 border-2 border-primary relative" : "p-6"}>
-          {eliteIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Actuel</Badge> : null}
+          {eliteIsCurrent ? <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">{t("current")}</Badge> : null}
 
           <h3 className="font-bold text-lg mb-2">Elite</h3>
           <p className="text-3xl font-bold mb-4">
-            99€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+            99€<span className="text-sm font-normal text-muted-foreground">{t("perMonth")}</span>
           </p>
 
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Tout Pro +
+              {t("plans.elite.f1")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Modules illimités
+              {t("plans.elite.f2")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Accès nouveautés en avant-première
+              {t("plans.elite.f3")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Automatisations n8n (V2)
+              {t("plans.elite.f4")}
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              Support prioritaire
+              {t("plans.elite.f5")}
             </li>
           </ul>
 
           <Button variant="hero" className="w-full" onClick={() => openOrderForm("elite")} disabled={loading || eliteIsCurrent}>
-            {eliteIsCurrent ? "Plan actuel" : "Upgrader"}
+            {eliteIsCurrent ? t("currentLabel") : t("upgrade")}
           </Button>
         </Card>
       </div>
@@ -462,14 +459,14 @@ export default function BillingSection({ email }: Props) {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Gérer votre abonnement</p>
-            <p className="text-sm text-muted-foreground">Modifier, upgrader ou annuler via Systeme.io</p>
+            <p className="font-medium">{t("manage.title")}</p>
+            <p className="text-sm text-muted-foreground">{t("manage.desc")}</p>
           </div>
 
           <Button variant="outline" asChild>
             <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
-              Gérer sur Systeme.io
+              {t("manage.cta")}
             </a>
           </Button>
         </div>

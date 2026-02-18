@@ -248,11 +248,61 @@ export async function linkedinSearchPosts(
   query: string,
   maxResults = 10,
 ): Promise<Array<{ urn: string; text: string; authorUrn: string }>> {
-  // LinkedIn doesn't have a public search API for regular OAuth apps.
-  // We use the feed endpoint to get recent posts and filter by relevance.
-  // This is limited but is the best we can do with w_member_social scope.
-  // For now, return empty — n8n or future scopes will handle LinkedIn search.
-  return [];
+  // LinkedIn restricts post search to Marketing Developer Program partners.
+  // With standard w_member_social scope, we can use the network feed endpoint
+  // to fetch recent posts from the user's network and filter by keyword.
+  try {
+    const url = new URL("https://api.linkedin.com/rest/posts");
+    url.searchParams.set("q", "memberNetworkFeed");
+    url.searchParams.set("count", "50");
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "LinkedIn-Version": "202602",
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.error(`[linkedinSearchPosts] API error ${res.status}: ${errorText.slice(0, 300)}`);
+      // 403 = scope not granted (r_member_social or MDP required)
+      // Return a sentinel error so the caller can log it
+      throw new Error(`LinkedIn feed API error (${res.status}): scope insuffisant ou accès MDP requis`);
+    }
+
+    const data = (await res.json()) as any;
+    const elements: any[] = data.elements ?? [];
+    if (!elements.length) return [];
+
+    const keywords = query.toLowerCase().split(" ").filter((w) => w.length > 3);
+
+    const relevant = elements
+      .filter((post: any) => {
+        const text = (
+          post.commentary ??
+          post.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text ??
+          ""
+        ).toLowerCase();
+        return keywords.length === 0 || keywords.some((kw) => text.includes(kw));
+      })
+      .slice(0, maxResults)
+      .map((post: any) => ({
+        urn: post.id ?? "",
+        text:
+          post.commentary ??
+          post.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text ??
+          "",
+        authorUrn: post.author ?? "",
+      }))
+      .filter((p) => p.urn && p.text);
+
+    return relevant;
+  } catch (err) {
+    // Re-throw so the caller can log the real reason to auto_comment_logs
+    throw err;
+  }
 }
 
 export async function linkedinCommentOnPost(
@@ -339,12 +389,11 @@ export async function searchRelevantPosts(
       }));
     }
     case "linkedin": {
-      return linkedinSearchPosts(accessToken, query, maxResults).then((posts) =>
-        posts.map((p) => ({ id: p.urn, text: p.text })),
-      );
+      const posts = await linkedinSearchPosts(accessToken, query, maxResults);
+      return posts.map((p) => ({ id: p.urn, text: p.text }));
     }
     default:
-      return [];
+      throw new Error(`Plateforme "${platform}" non supportée pour l'auto-commentaire (recherche de posts)`);
   }
 }
 
@@ -493,10 +542,49 @@ export async function runAutoCommentBatch(opts: {
     console.log(`${tag} Starting: ${nbComments} comments for ${platform}, content ${contentId}`);
 
     // 1. Search for relevant posts
-    const relevantPosts = await searchRelevantPosts(platform, accessToken, platformUserId, niche, postText, nbComments + 5);
-    console.log(`${tag} Found ${relevantPosts.length} relevant posts on ${platform}`);
+    let relevantPosts: Array<{ id: string; text: string; url?: string }> = [];
+    try {
+      relevantPosts = await searchRelevantPosts(platform, accessToken, platformUserId, niche, postText, nbComments + 5);
+      console.log(`${tag} Found ${relevantPosts.length} relevant posts on ${platform}`);
+    } catch (searchErr) {
+      const searchErrMsg = searchErr instanceof Error ? searchErr.message : "Erreur de recherche inconnue";
+      console.error(`${tag} Search failed on ${platform}:`, searchErrMsg);
+      // Log the search failure so admin can see it in Supabase
+      try {
+        await sb.from("auto_comment_logs").insert({
+          user_id: userId,
+          post_tipote_id: contentId,
+          platform,
+          comment_type: commentType,
+          status: "failed",
+          error_message: `Recherche de posts échouée sur ${platform}: ${searchErrMsg}`,
+          published_at: null,
+        });
+      } catch { /* non-fatal */ }
+      // Advance status and return
+      const fallbackStatus = commentType === "before" ? "before_done" : "completed";
+      await sb.from("content_item").update({ auto_comments_status: fallbackStatus }).eq("id", contentId);
+      return { commentsPosted: 0, commentsFailed: 0, postsFound: 0, results: [] };
+    }
 
     const postsToComment = relevantPosts.slice(0, nbComments);
+
+    // Log if no posts found (so admin can see it in Supabase)
+    if (postsToComment.length === 0) {
+      const keywords = extractKeywords(niche, postText).slice(0, 5).join(", ");
+      console.warn(`${tag} No posts found on ${platform} for keywords: ${keywords}`);
+      try {
+        await sb.from("auto_comment_logs").insert({
+          user_id: userId,
+          post_tipote_id: contentId,
+          platform,
+          comment_type: commentType,
+          status: "failed",
+          error_message: `Aucun post trouvé sur ${platform} pour les mots-clés: ${keywords || "(vide — niche manquante ?)"}. Vérifiez votre connexion sociale et votre niche.`,
+          published_at: null,
+        });
+      } catch { /* non-fatal */ }
+    }
 
     // 2. For each: generate → like → comment → log
     for (let i = 0; i < postsToComment.length; i++) {

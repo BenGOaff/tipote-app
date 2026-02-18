@@ -6,6 +6,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -32,21 +33,28 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 
-const STYLE_TONS = [
-  { id: "amical", label: "Amical" },
-  { id: "professionnel", label: "Professionnel" },
-  { id: "provocateur", label: "Provocateur" },
-  { id: "storytelling", label: "Storytelling" },
-  { id: "humoristique", label: "Humoristique" },
-  { id: "sérieux", label: "Sérieux" },
+// Ton IDs (stored values in DB)
+const STYLE_TON_IDS = [
+  "amical",
+  "professionnel",
+  "provocateur",
+  "storytelling",
+  "humoristique",
+  "sérieux",
 ];
 
-const OBJECTIFS = [
-  { id: "éduquer", label: "Éduquer" },
-  { id: "vendre", label: "Vendre" },
-  { id: "divertir", label: "Divertir" },
-  { id: "inspirer", label: "Inspirer" },
-  { id: "construire_communaute", label: "Construire communauté" },
+// Normalize accented ton id to translation key (e.g. "sérieux" → "serieux")
+function normalizeTonKey(id: string): string {
+  return id.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
+}
+
+// Objectif IDs and their translation keys
+const OBJECTIF_ENTRIES: { id: string; key: string }[] = [
+  { id: "éduquer", key: "eduquer" },
+  { id: "vendre", key: "vendre" },
+  { id: "divertir", key: "divertir" },
+  { id: "inspirer", key: "inspirer" },
+  { id: "construire_communaute", key: "community" },
 ];
 
 type AutoCommentLangage = {
@@ -84,6 +92,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
   const plan = normalizePlan(userPlan);
   const hasAccess = planHasAccess(plan);
   const { toast } = useToast();
+  const t = useTranslations("autoComments");
 
   const { balance: aiCredits, loading: creditsLoading } = useCreditsBalance();
 
@@ -153,17 +162,17 @@ export function AutoCommentSettings({ userPlan }: Props) {
         throw new Error(json.error || "Erreur de sauvegarde");
       }
 
-      toast({ title: "Paramètres sauvegardés", description: "Vos préférences d'auto-commentaire ont été mises à jour." });
+      toast({ title: t("toast.ok"), description: t("toast.okDesc") });
     } catch (e: any) {
       toast({
-        title: "Erreur",
-        description: e.message || "Impossible de sauvegarder",
+        title: t("toast.error"),
+        description: e.message || t("toast.errorDesc"),
         variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
-  }, [styleTon, objectifs, motsCles, emojis, expressions, toast]);
+  }, [styleTon, objectifs, motsCles, emojis, expressions, toast, t]);
 
   const addItem = (list: string[], setList: (v: string[]) => void, value: string, setInput: (v: string) => void) => {
     const v = value.trim();
@@ -187,7 +196,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
       <Card className="p-8">
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Chargement...</span>
+          <span className="text-sm">{t("loading")}</span>
         </div>
       </Card>
     );
@@ -209,23 +218,23 @@ export function AutoCommentSettings({ userPlan }: Props) {
               </div>
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  Auto-commentaires
+                  {t("title")}
                   {!hasAccess && (
                     <Badge variant="outline" className="text-xs border-amber-400 text-amber-600">
                       <Crown className="w-3 h-3 mr-1" />
-                      PRO / ELITE
+                      {t("badge")}
                     </Badge>
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Configurez le style et le ton des commentaires automatiques
+                  {t("description")}
                 </CardDescription>
               </div>
             </div>
 
             {hasAccess && (
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Crédits IA</p>
+                <p className="text-xs text-muted-foreground">{t("creditsLabel")}</p>
                 <p className="text-lg font-bold">
                   {creditsLoading ? "..." : aiCredits?.total_remaining ?? 0}
                 </p>
@@ -242,18 +251,16 @@ export function AutoCommentSettings({ userPlan }: Props) {
                 <Zap className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium text-sm text-amber-700 dark:text-amber-400 mb-1">
-                    Boostez votre engagement automatiquement
+                    {t("upsell.title")}
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-500 mb-3">
-                    L&apos;auto-commentaire permet à Tipote de commenter automatiquement des posts
-                    similaires au vôtre pour augmenter votre visibilité et attirer de nouveaux
-                    abonnés. Les commentaires sont générés par IA avec votre ton et votre style.
+                    {t("upsell.body")}
                   </p>
                   <ul className="text-xs text-amber-600 dark:text-amber-500 space-y-1 list-disc list-inside mb-3">
-                    <li>2-5 commentaires avant et après chaque publication</li>
-                    <li>Style et ton personnalisés selon votre profil</li>
-                    <li>Angles variés : accord, débat, question, approfondissement</li>
-                    <li>Protection anti-spam intégrée</li>
+                    <li>{t("upsell.bullet1")}</li>
+                    <li>{t("upsell.bullet2")}</li>
+                    <li>{t("upsell.bullet3")}</li>
+                    <li>{t("upsell.bullet4")}</li>
                   </ul>
                   <Button
                     size="sm"
@@ -265,7 +272,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
                     }}
                   >
                     <Crown className="w-3 h-3 mr-1" />
-                    Voir les plans Pro & Elite
+                    {t("upsell.cta")}
                   </Button>
                 </div>
               </div>
@@ -279,22 +286,22 @@ export function AutoCommentSettings({ userPlan }: Props) {
         {/* Style / Ton */}
         <Card className="mb-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Style & Ton</CardTitle>
+            <CardTitle className="text-base">{t("styleTitle")}</CardTitle>
             <CardDescription>
-              Comment vos commentaires automatiques doivent sonner
+              {t("styleDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label>Ton principal</Label>
+              <Label>{t("tonLabel")}</Label>
               <Select value={styleTon} onValueChange={setStyleTon}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STYLE_TONS.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.label}
+                  {STYLE_TON_IDS.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {t(`tons.${normalizeTonKey(id)}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -306,14 +313,14 @@ export function AutoCommentSettings({ userPlan }: Props) {
         {/* Objectifs */}
         <Card className="mb-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Objectifs</CardTitle>
+            <CardTitle className="text-base">{t("objectifsTitle")}</CardTitle>
             <CardDescription>
-              Que souhaitez-vous accomplir avec les auto-commentaires ?
+              {t("objectifsDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {OBJECTIFS.map((o) => (
+              {OBJECTIF_ENTRIES.map((o) => (
                 <button
                   key={o.id}
                   type="button"
@@ -324,7 +331,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
                       : "bg-background border-border text-muted-foreground hover:border-primary/50"
                   }`}
                 >
-                  {o.label}
+                  {t(`objectifs.${o.key}`)}
                 </button>
               ))}
             </div>
@@ -334,18 +341,18 @@ export function AutoCommentSettings({ userPlan }: Props) {
         {/* Langage */}
         <Card className="mb-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Langage & Vocabulaire</CardTitle>
+            <CardTitle className="text-base">{t("langageTitle")}</CardTitle>
             <CardDescription>
-              Personnalisez le vocabulaire utilisé dans vos commentaires
+              {t("langageDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Mots clés */}
             <div className="space-y-2">
-              <Label className="text-sm">Mots-clés préférés</Label>
+              <Label className="text-sm">{t("keywordsLabel")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ajouter un mot-clé..."
+                  placeholder={t("keywordsPlaceholder")}
                   value={newMotCle}
                   onChange={(e) => setNewMotCle(e.target.value)}
                   onKeyDown={(e) => {
@@ -384,10 +391,10 @@ export function AutoCommentSettings({ userPlan }: Props) {
 
             {/* Emojis */}
             <div className="space-y-2">
-              <Label className="text-sm">Emojis préférés</Label>
+              <Label className="text-sm">{t("emojisLabel")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ajouter un emoji..."
+                  placeholder={t("emojisPlaceholder")}
                   value={newEmoji}
                   onChange={(e) => setNewEmoji(e.target.value)}
                   onKeyDown={(e) => {
@@ -426,10 +433,10 @@ export function AutoCommentSettings({ userPlan }: Props) {
 
             {/* Expressions */}
             <div className="space-y-2">
-              <Label className="text-sm">Expressions favorites</Label>
+              <Label className="text-sm">{t("expressionsLabel")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ajouter une expression..."
+                  placeholder={t("expressionsPlaceholder")}
                   value={newExpression}
                   onChange={(e) => setNewExpression(e.target.value)}
                   onKeyDown={(e) => {
@@ -472,12 +479,12 @@ export function AutoCommentSettings({ userPlan }: Props) {
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Sauvegarde...
+                {t("saving")}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Sauvegarder les préférences
+                {t("save")}
               </>
             )}
           </Button>

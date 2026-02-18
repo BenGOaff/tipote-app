@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TemplateCard } from "@/components/templates/TemplateCard";
@@ -13,6 +14,7 @@ import { FileText, ShoppingCart, LayoutGrid as Layout } from "lucide-react";
 type TabValue = "all" | TemplateType;
 
 export default function TemplatesLovableClient() {
+  const t = useTranslations("templates");
   const [activeTab, setActiveTab] = useState<TabValue>("all");
 
   const filteredTemplates: Template[] = useMemo(() => {
@@ -42,13 +44,8 @@ export default function TemplatesLovableClient() {
           <div className="p-6 md:p-8 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-display font-bold mb-2">
-                Templates Systeme.io
-              </h1>
-              <p className="text-muted-foreground max-w-2xl">
-                Lance ton tunnel de vente rapidement grâce à ces templates personnalisables.
-                Un clic suffit pour importer le template dans ton compte Systeme.io.
-              </p>
+              <h1 className="text-3xl font-display font-bold mb-2">{t("title")}</h1>
+              <p className="text-muted-foreground max-w-2xl">{t("description")}</p>
             </div>
 
             {/* Tabs */}
@@ -56,34 +53,26 @@ export default function TemplatesLovableClient() {
               <TabsList className="grid w-full max-w-md grid-cols-4">
                 <TabsTrigger value="all" className="flex items-center gap-2">
                   <Layout className="w-4 h-4" />
-                  <span className="hidden sm:inline">Tous</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({templates.length})
-                  </span>
+                  <span className="hidden sm:inline">{t("tabs.all")}</span>
+                  <span className="text-xs text-muted-foreground">({templates.length})</span>
                 </TabsTrigger>
 
                 <TabsTrigger value="capture" className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  <span className="hidden sm:inline">Capture</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({captureCount})
-                  </span>
+                  <span className="hidden sm:inline">{t("tabs.capture")}</span>
+                  <span className="text-xs text-muted-foreground">({captureCount})</span>
                 </TabsTrigger>
 
                 <TabsTrigger value="sales" className="flex items-center gap-2">
                   <ShoppingCart className="w-4 h-4" />
-                  <span className="hidden sm:inline">Vente</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({salesCount})
-                  </span>
+                  <span className="hidden sm:inline">{t("tabs.sales")}</span>
+                  <span className="text-xs text-muted-foreground">({salesCount})</span>
                 </TabsTrigger>
 
                 <TabsTrigger value="blog" className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  <span className="hidden sm:inline">Blog</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({blogCount})
-                  </span>
+                  <span className="hidden sm:inline">{t("tabs.blog")}</span>
+                  <span className="text-xs text-muted-foreground">({blogCount})</span>
                 </TabsTrigger>
               </TabsList>
 

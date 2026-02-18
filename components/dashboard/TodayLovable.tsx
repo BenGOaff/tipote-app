@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 
 import Link from "next/link";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -30,18 +31,23 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 type AnyRecord = Record<string, unknown>;
 
 type StrategicObjective = {
-  phaseLabel: string;  // "Fondations" / "Croissance" / "Scale"
-  phaseNumber: number; // 1, 2, 3
-  focus: string;       // plan_90_days.focus
-  ctaLabel: string;    // "Créer tes premiers contenus"
+  phaseKey: string;    // "startup" | "foundations" | "growth" | "scale"
+  phaseNumber: number; // 0, 1, 2, 3
+  focus: string;       // plan_90_days.focus (raw, may be empty)
+  ctaLabelKey: string; // translation key under today.ctas
   ctaHref: string;     // "/create"
 };
 
+type PositiveMessage = {
+  format: "none" | "one" | "two" | "many";
+  actionKeys: string[];  // e.g. ["persona", "offre"]
+  otherLabel?: string;   // for "autre" category
+};
+
 type CoachingInsight = {
-  positive: string;    // "Tu as défini ton persona et planifié tes posts, c'est top !"
-  recommendation: string; // "Et si tu créais ta page de capture maintenant ?"
-  why: string;         // "pour capturer des emails"
-  ctaLabel: string;
+  positive: PositiveMessage;
+  recommendationKey: string; // key under today.coaching
+  ctaLabelKey: string;       // key under today.ctas
   ctaHref: string;
 };
 
@@ -202,82 +208,41 @@ function buildTaskCategories(tasks: AnyRecord[]): TaskCategory[] {
 /* ------------------------------------------------------------------ */
 
 type CoachingReco = {
-  key: string;
-  label: string;
-  positive: string;
-  recommendation: string;
-  why: string;
-  ctaLabel: string;
+  recommendationKey: string;
+  ctaLabelKey: string;
   ctaHref: string;
 };
 
-const COACHING_RECOS: Record<string, Omit<CoachingReco, "key" | "label" | "positive">> = {
-  persona: {
-    recommendation: "tu dois définir ton client idéal",
-    why: "pour savoir exactement à qui tu parles et adapter ton message",
-    ctaLabel: "Voir ma stratégie",
-    ctaHref: "/strategy",
-  },
-  offre: {
-    recommendation: "tu dois mettre le paquet sur la clarification de ton offre",
-    why: "pour commencer à en parler avec confiance et convertir tes prospects",
-    ctaLabel: "Voir ma stratégie",
-    ctaHref: "/strategy",
-  },
-  lead_magnet: {
-    recommendation: "tu dois créer ton lead magnet",
-    why: "pour capturer des emails et construire une audience qualifiée",
-    ctaLabel: "Créer du contenu",
-    ctaHref: "/create",
-  },
-  page_vente: {
-    recommendation: "tu dois rédiger ta page de vente",
-    why: "pour lancer tes ventes rapidement et commencer à générer du chiffre",
-    ctaLabel: "Voir ma stratégie",
-    ctaHref: "/strategy",
-  },
-  email: {
-    recommendation: "tu dois rédiger ta séquence email de bienvenue",
-    why: "pour fidéliser ton audience dès le premier contact",
-    ctaLabel: "Créer du contenu",
-    ctaHref: "/create",
-  },
-  contenu: {
-    recommendation: "tu dois planifier et créer tes prochains contenus",
-    why: "pour booster ta visibilité et attirer de nouveaux prospects",
-    ctaLabel: "Créer du contenu",
-    ctaHref: "/create",
-  },
+const COACHING_RECOS: Record<string, CoachingReco> = {
+  persona: { recommendationKey: "persona", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  offre: { recommendationKey: "offre", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  lead_magnet: { recommendationKey: "lead_magnet", ctaLabelKey: "createContent", ctaHref: "/create" },
+  page_vente: { recommendationKey: "page_vente", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  email: { recommendationKey: "email", ctaLabelKey: "createContent", ctaHref: "/create" },
+  contenu: { recommendationKey: "contenu", ctaLabelKey: "createContent", ctaHref: "/create" },
 };
 
 // Priority order for recommendations
 const RECO_PRIORITY = ["persona", "offre", "lead_magnet", "page_vente", "email", "contenu"];
 
-function buildPositiveMessage(completedCategories: TaskCategory[]): string {
-  if (completedCategories.length === 0) return "";
+function buildPositiveData(completedCategories: TaskCategory[]): PositiveMessage {
+  if (completedCategories.length === 0) return { format: "none", actionKeys: [] };
 
-  const labels = completedCategories.slice(0, 3).map((c) => {
-    if (c.key === "persona") return "défini ton persona";
-    if (c.key === "offre") return "clarifié ton offre";
-    if (c.key === "lead_magnet") return "créé ton lead magnet";
-    if (c.key === "page_vente") return "rédigé ta page de vente";
-    if (c.key === "email") return "préparé tes emails";
-    if (c.key === "contenu") return "planifié tes contenus";
-    return `avancé sur ${c.label}`;
-  });
+  const slice = completedCategories.slice(0, 3);
+  const actionKeys = slice.map((c) => c.key);
+  const otherLabel = slice.find((c) => c.key === "autre")?.label;
 
-  if (labels.length === 1) return `Tu as ${labels[0]}, c'est top !`;
-  if (labels.length === 2) return `Tu as ${labels[0]} et ${labels[1]}, c'est top !`;
-  return `Tu as ${labels.slice(0, -1).join(", ")} et ${labels[labels.length - 1]}, bravo !`;
+  if (slice.length === 1) return { format: "one", actionKeys, otherLabel };
+  if (slice.length === 2) return { format: "two", actionKeys, otherLabel };
+  return { format: "many", actionKeys, otherLabel };
 }
 
 function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean): CoachingInsight {
   if (!hasStrategy) {
     return {
-      positive: "",
-      recommendation: "Tu dois générer ta stratégie",
-      why: "pour avoir un plan d'action clair et savoir exactement quoi faire chaque semaine",
-      ctaLabel: "Générer ma stratégie",
+      positive: { format: "none", actionKeys: [] },
+      recommendationKey: "noStrategy",
+      ctaLabelKey: "generateStrategy",
       ctaHref: "/strategy",
     };
   }
@@ -285,7 +250,7 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
   // Find completed and incomplete categories
   const completed = categories.filter((c) => c.total > 0 && c.done >= c.total);
   const incomplete = categories.filter((c) => c.total > 0 && c.done < c.total);
-  const positive = buildPositiveMessage(completed);
+  const positive = buildPositiveData(completed);
 
   // Find highest-priority incomplete category
   for (const key of RECO_PRIORITY) {
@@ -295,9 +260,8 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
       if (reco) {
         return {
           positive,
-          recommendation: reco.recommendation,
-          why: reco.why,
-          ctaLabel: reco.ctaLabel,
+          recommendationKey: reco.recommendationKey,
+          ctaLabelKey: reco.ctaLabelKey,
           ctaHref: reco.ctaHref,
         };
       }
@@ -308,9 +272,8 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
   if (incomplete.length > 0) {
     return {
       positive,
-      recommendation: "tu dois continuer à avancer sur tes tâches en cours",
-      why: "pour garder le rythme et atteindre tes objectifs",
-      ctaLabel: "Voir mes tâches",
+      recommendationKey: "autre",
+      ctaLabelKey: "seeTasks",
       ctaHref: "/tasks",
     };
   }
@@ -319,21 +282,18 @@ function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean):
   const totalTasks = categories.reduce((sum, c) => sum + c.total, 0);
   if (totalTasks === 0) {
     return {
-      positive: "",
-      recommendation: "Consulte ta stratégie pour découvrir ton plan d'action",
-      why: "et commence à créer tes premiers contenus pour lancer ton business",
-      ctaLabel: "Voir ma stratégie",
+      positive: { format: "none", actionKeys: [] },
+      recommendationKey: "noTasks",
+      ctaLabelKey: "seeStrategy",
       ctaHref: "/strategy",
     };
   }
 
-  // Everything genuinely done — positive always has content here
-  // because completed categories are non-empty (totalTasks > 0 and incomplete empty)
+  // Everything genuinely done
   return {
     positive,
-    recommendation: "tu créais du nouveau contenu pour garder cette dynamique",
-    why: "— ta base est solide, c'est le moment de passer à la vitesse supérieure",
-    ctaLabel: "Créer du contenu",
+    recommendationKey: "allDone",
+    ctaLabelKey: "createContent",
     ctaHref: "/create",
   };
 }
@@ -350,10 +310,10 @@ function buildStrategicObjective(
 ): StrategicObjective {
   if (!hasStrategy || !planJson) {
     return {
-      phaseLabel: "Démarrage",
+      phaseKey: "startup",
       phaseNumber: 0,
-      focus: "Génère ta stratégie pour démarrer ton business.",
-      ctaLabel: "Générer ma stratégie",
+      focus: "",  // component will use today.objective.strategyFocus
+      ctaLabelKey: "generateStrategy",
       ctaHref: "/strategy",
     };
   }
@@ -368,39 +328,43 @@ function buildStrategicObjective(
   }
 
   let phaseNumber = 1;
-  let phaseLabel = "Fondations";
-  if (daysElapsed > 60) { phaseNumber = 3; phaseLabel = "Scale"; }
-  else if (daysElapsed > 30) { phaseNumber = 2; phaseLabel = "Croissance"; }
+  let phaseKey = "foundations";
+  if (daysElapsed > 60) { phaseNumber = 3; phaseKey = "scale"; }
+  else if (daysElapsed > 30) { phaseNumber = 2; phaseKey = "growth"; }
 
   // Get focus from plan
   const plan90 = (planJson.plan_90_days ?? planJson.plan90 ?? planJson.plan_90) as AnyRecord | null;
   const focusRaw = toStr(plan90?.focus ?? planJson.focus ?? "");
-  const focus = focusRaw || `Phase ${phaseNumber} — ${phaseLabel}`;
+  const focus = focusRaw; // if empty, component falls back to phase label
 
   // Smart CTA based on what's incomplete
   const incomplete = categories.filter((c) => c.total > 0 && c.done < c.total);
   const hasIncompleteContent = incomplete.some((c) => c.key === "contenu");
   const hasIncompleteOffer = incomplete.some((c) => c.key === "offre" || c.key === "lead_magnet" || c.key === "page_vente");
 
-  let ctaLabel = "Voir ma stratégie";
+  let ctaLabelKey = "seeStrategy";
   let ctaHref = "/strategy";
 
   if (hasIncompleteContent && !hasIncompleteOffer) {
-    ctaLabel = "Créer tes contenus";
+    ctaLabelKey = "createContents";
     ctaHref = "/create";
   } else if (incomplete.length === 0) {
-    ctaLabel = "Créer du contenu";
+    ctaLabelKey = "createContent";
     ctaHref = "/create";
   }
 
-  return { phaseLabel, phaseNumber, focus, ctaLabel, ctaHref };
+  return { phaseKey, phaseNumber, focus, ctaLabelKey, ctaHref };
 }
 
 /* ------------------------------------------------------------------ */
 /*  Week label                                                         */
 /* ------------------------------------------------------------------ */
 
-function weekLabel(): string {
+const INTL_LOCALES: Record<string, string> = {
+  fr: "fr-FR", en: "en-US", es: "es-ES", it: "it-IT", ar: "ar-SA",
+};
+
+function weekLabel(locale = "fr-FR"): string {
   const now = new Date();
   const day = now.getDay();
   const diffMon = day === 0 ? -6 : 1 - day;
@@ -410,8 +374,8 @@ function weekLabel(): string {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
 
-  const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" });
-  return `${fmt.format(monday)} au ${fmt.format(sunday)}`;
+  const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
+  return `${fmt.format(monday)} – ${fmt.format(sunday)}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -419,6 +383,8 @@ function weekLabel(): string {
 /* ------------------------------------------------------------------ */
 
 export default function TodayLovable() {
+  const t = useTranslations("today");
+  const locale = useLocale();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [objective, setObjective] = useState<StrategicObjective | null>(null);
@@ -434,7 +400,23 @@ export default function TodayLovable() {
   });
   const [loading, setLoading] = useState(true);
 
-  const currentWeekLabel = useMemo(() => weekLabel(), []);
+  const currentWeekLabel = useMemo(() => weekLabel(INTL_LOCALES[locale] ?? "fr-FR"), [locale]);
+
+  // Resolve translated positive coaching message
+  const positiveText = useMemo(() => {
+    if (!coaching) return "";
+    const { positive } = coaching;
+    if (positive.format === "none") return "";
+    const labels = positive.actionKeys.map((key) => {
+      if (key === "autre") return t(`positive.other`, { label: positive.otherLabel ?? key });
+      return t(`positive.${key}`);
+    });
+    if (positive.format === "one") return t("positive.one", { item: labels[0] });
+    if (positive.format === "two") return t("positive.two", { item1: labels[0], item2: labels[1] });
+    const last = labels[labels.length - 1];
+    const items = labels.slice(0, -1).join(", ");
+    return t("positive.many", { items, last });
+  }, [coaching, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -646,14 +628,14 @@ export default function TodayLovable() {
           <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Tableau de bord</h1>
+              <h1 className="text-xl font-display font-bold">{t("title")}</h1>
             </div>
           </header>
 
           <div className="p-6 space-y-6 max-w-6xl mx-auto">
             {loading ? (
               <div className="py-20 text-center text-muted-foreground text-sm">
-                Chargement...
+                {t("loading")}
               </div>
             ) : (
               <>
@@ -671,25 +653,25 @@ export default function TodayLovable() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5">
                           <p className="text-xs font-medium text-primary-foreground/60 uppercase tracking-wide">
-                            Ton objectif en ce moment
+                            {t("objectiveLabel")}
                           </p>
                           {objective.phaseNumber > 0 && (
                             <Badge
                               variant="secondary"
                               className="bg-primary-foreground/15 text-primary-foreground border-0 text-[10px]"
                             >
-                              Phase {objective.phaseNumber} — {objective.phaseLabel}
+                              {t(`objective.label${ucFirst(objective.phaseKey)}`)}
                             </Badge>
                           )}
                         </div>
                         <h2 className="text-lg md:text-xl font-bold leading-snug">
-                          {objective.focus}
+                          {objective.focus || t("objective.strategyFocus")}
                         </h2>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <Button asChild variant="secondary" className="gap-2 shrink-0">
                           <Link href={objective.ctaHref}>
-                            {objective.ctaLabel} <ArrowRight className="w-4 h-4" />
+                            {t(`ctas.${objective.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
                           </Link>
                         </Button>
                       </div>
@@ -707,7 +689,7 @@ export default function TodayLovable() {
                     <div className="flex items-center gap-2 mb-1">
                       <Lightbulb className="w-4 h-4 text-amber-500" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Cette semaine
+                        {t("thisWeek")}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground mb-6">
@@ -716,29 +698,21 @@ export default function TodayLovable() {
 
                     {coaching && (
                       <div className="space-y-5 flex-1 flex flex-col">
-                        {coaching.positive && (
+                        {positiveText && (
                           <p className="text-sm text-foreground font-medium leading-relaxed">
-                            {coaching.positive}
+                            {positiveText}
                           </p>
                         )}
 
                         <div className="rounded-lg bg-primary/5 border border-primary/15 p-5">
                           <p className="text-sm text-foreground leading-relaxed">
-                            {coaching.positive ? (
-                              <>
-                                Et si maintenant {coaching.recommendation} {coaching.why} ?
-                              </>
-                            ) : (
-                              <>
-                                {ucFirst(coaching.recommendation)} {coaching.why}.
-                              </>
-                            )}
+                            {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
                           </p>
                         </div>
 
                         <Button asChild variant="default" className="w-full gap-2 mt-auto">
                           <Link href={coaching.ctaHref}>
-                            {coaching.ctaLabel} <ArrowRight className="w-4 h-4" />
+                            {t(`ctas.${coaching.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
                           </Link>
                         </Button>
                       </div>
@@ -750,11 +724,11 @@ export default function TodayLovable() {
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="w-4 h-4 text-primary" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Ta progression
+                        {t("progressionTitle")}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground mb-6">
-                      Tes résultats concrets
+                      {t("progressionSub")}
                     </p>
 
                     <div className="space-y-5 flex-1 flex flex-col">
@@ -762,11 +736,11 @@ export default function TodayLovable() {
                       <div className="flex items-start gap-3">
                         <FileText className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-sm font-semibold">Contenus créés</p>
+                          <p className="text-sm font-semibold">{t("contentsCreated")}</p>
                           {contentSummary ? (
                             <p className="text-sm text-muted-foreground">{contentSummary}</p>
                           ) : (
-                            <p className="text-sm text-muted-foreground">Aucun contenu pour le moment</p>
+                            <p className="text-sm text-muted-foreground">{t("noContent")}</p>
                           )}
                         </div>
                       </div>
@@ -776,19 +750,19 @@ export default function TodayLovable() {
                         <div className="flex items-start gap-3">
                           <BarChart3 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-sm font-semibold">Résultats business</p>
+                            <p className="text-sm font-semibold">{t("businessResults")}</p>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-0.5">
                               {progression.revenue !== null && (
-                                <span>{progression.revenue.toLocaleString("fr-FR")}€ CA</span>
+                                <span>{progression.revenue.toLocaleString()}€</span>
                               )}
                               {progression.salesCount !== null && (
-                                <span>{progression.salesCount} vente{progression.salesCount > 1 ? "s" : ""}</span>
+                                <span>{progression.salesCount}</span>
                               )}
                               {progression.newSubscribers !== null && (
-                                <span>{progression.newSubscribers} inscrit{progression.newSubscribers > 1 ? "s" : ""}</span>
+                                <span>{progression.newSubscribers}</span>
                               )}
                               {progression.conversionRate !== null && (
-                                <span>{progression.conversionRate.toFixed(1)}% conversion</span>
+                                <span>{progression.conversionRate.toFixed(1)}%</span>
                               )}
                             </div>
                           </div>
@@ -799,10 +773,10 @@ export default function TodayLovable() {
                             <BarChart3 className="w-4 h-4 text-muted-foreground/60 mt-0.5 shrink-0" />
                             <div>
                               <p className="text-sm font-medium text-foreground">
-                                Remplis tes statistiques
+                                {t("fillStats")}
                               </p>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                Pour mesurer tes avancées : leads capturés, ventes, vues de tunnel...
+                                {t("fillStatsSub")}
                               </p>
                             </div>
                           </div>
@@ -811,7 +785,7 @@ export default function TodayLovable() {
 
                       <Button asChild variant="outline" size="sm" className="w-full gap-2 mt-auto">
                         <Link href="/analytics">
-                          {progression.hasMetrics ? "Voir mes statistiques" : "Remplir mes statistiques"} <ArrowRight className="w-3 h-3" />
+                          {progression.hasMetrics ? t("viewStats") : t("fillStatsBtn")} <ArrowRight className="w-3 h-3" />
                         </Link>
                       </Button>
                     </div>
@@ -826,7 +800,7 @@ export default function TodayLovable() {
                     href="/strategy"
                     className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Voir ma stratégie complète
+                    {t("viewStrategy")}
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
