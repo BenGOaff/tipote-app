@@ -20,7 +20,7 @@ import { MetricsSummary } from "@/components/analytics/MetricsSummary";
 import { MetricsChart } from "@/components/analytics/MetricsChart";
 import { AnalysisCard } from "@/components/analytics/AnalysisCard";
 
-import { format } from "date-fns";
+import { format, Locale } from "date-fns";
 import { fr, enUS, es, it, ar } from "date-fns/locale";
 
 const DATE_FNS_LOCALES: Record<string, Locale> = { fr, en: enUS, es, it, ar };
