@@ -6,6 +6,7 @@
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -176,26 +177,36 @@ export default async function StrategyPage() {
     redirect("/onboarding");
   }
 
-  // ✅ business_profiles : lecture via supabaseAdmin pour contourner tout problème RLS
-  // (même logique que les tasks — on filtre strictement par user_id)
-  const profileRes = await supabaseAdmin
-    .from("business_profiles")
-    .select(
-      [
-        "first_name",
-        "content_preference",
-        "revenue_goal_monthly",
-        "offers",
-        "has_offers",
-        "is_affiliate",
-        "created_at",
-        "updated_at",
-      ].join(","),
-    )
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // ✅ business_profiles : lecture via supabaseAdmin, scopée par project_id actif
+  // Le questionnaire écrit avec (user_id + project_id) → il faut lire avec le même filtre
+  // pour éviter que .maybeSingle() plante si plusieurs projets existent.
+  const projectId = await getActiveProjectId(supabase, user.id);
 
-  const profileRow = (profileRes.data ?? null) as AnyRecord | null;
+  const profileColumns = [
+    "first_name",
+    "content_preference",
+    "revenue_goal_monthly",
+    "offers",
+    "has_offers",
+    "is_affiliate",
+    "created_at",
+    "updated_at",
+  ].join(",");
+
+  let profileQuery = supabaseAdmin
+    .from("business_profiles")
+    .select(profileColumns)
+    .eq("user_id", user.id);
+
+  if (projectId) {
+    profileQuery = profileQuery.eq("project_id", projectId) as typeof profileQuery;
+  }
+
+  const profileRes = await profileQuery
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  const profileRow = (profileRes.data?.[0] ?? null) as AnyRecord | null;
   const firstName = asString(profileRow?.first_name);
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
 
@@ -207,10 +218,11 @@ export default async function StrategyPage() {
     // Update optimistic local value immediately
     if (profileRow) (profileRow as Record<string, unknown>).revenue_goal_monthly = fixedLabel;
     // Persist to DB (best-effort, fire-and-forget)
-    void supabaseAdmin
+    const migQ = supabaseAdmin
       .from("business_profiles")
       .update({ revenue_goal_monthly: fixedLabel })
       .eq("user_id", user.id);
+    void (projectId ? migQ.eq("project_id", projectId) : migQ);
   }
 
   // Offres : UNIQUEMENT pour les users SANS offres et NON affilies (sinon: jamais de /strategy/pyramids)
