@@ -79,6 +79,21 @@ function hasCurrencyOrPeriodHints(s: string): boolean {
   );
 }
 
+/** Map onboarding i18n choice keys to human-readable revenue labels */
+const REVENUE_GOAL_KEY_LABELS: Record<string, string> = {
+  lt500: "moins de 500 €/mois",
+  "500_1k": "500 – 1 000 €/mois",
+  "1k_3k": "1 000 – 3 000 €/mois",
+  "3k_5k": "3 000 – 5 000 €/mois",
+  "5k_10k": "5 000 – 10 000 €/mois",
+  gt10k: "plus de 10 000 €/mois",
+};
+
+function resolveRevenueGoalValue(raw: unknown): unknown {
+  const s = asString(raw).trim();
+  return REVENUE_GOAL_KEY_LABELS[s] ?? raw;
+}
+
 /**
  * Normalise un objectif revenu *texte* venant du plan_json OU onboarding.
  * - supporte: "10k", "10K€/mois", "15 000", "2000-5000", "10000+"
@@ -218,7 +233,7 @@ export default async function StrategyPage() {
 
   // ✅ Si le plan n'existe pas (ou pas encore prêt) => afficher état “génération”
   if (!planExistsAndReadable || !planJsonHasContent) {
-    const fromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
+    const fromProfile = normalizeRevenueGoalText(resolveRevenueGoalValue(profileRow?.revenue_goal_monthly));
     const picked = fromProfile.value ? fromProfile : { kind: "text", value: "" as string };
 
     const revenueGoal =
@@ -406,7 +421,7 @@ export default async function StrategyPage() {
     (planJson as AnyRecord)?.target_monthly_rev ||
     (planJson as AnyRecord)?.target_monthly_revenue;
   const fromPlan = normalizeRevenueGoalText(planRevGoal);
-  const fromProfile = normalizeRevenueGoalText(profileRow?.revenue_goal_monthly);
+  const fromProfile = normalizeRevenueGoalText(resolveRevenueGoalValue(profileRow?.revenue_goal_monthly));
 
   const picked = fromPlan.value ? fromPlan : fromProfile;
 
