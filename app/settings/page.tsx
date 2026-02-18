@@ -4,6 +4,7 @@
 // - UI SettingsTabsShell (client) : mêmes classes/DOM Lovable, sans casser les connexions Tipote
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -26,7 +27,10 @@ function normalizeTab(v: string | undefined): TabKey {
 }
 
 export default async function SettingsPage({ searchParams }: Props) {
-  const supabase = await getSupabaseServerClient();
+  const [supabase, t] = await Promise.all([
+    getSupabaseServerClient(),
+    getTranslations("settings"),
+  ]);
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
@@ -49,7 +53,7 @@ export default async function SettingsPage({ searchParams }: Props) {
               <ProjectSwitcher />
             </div>
             <div className="ml-4">
-              <h1 className="text-xl font-display font-bold">Paramètres</h1>
+              <h1 className="text-xl font-display font-bold">{t("title")}</h1>
             </div>
           </header>
 

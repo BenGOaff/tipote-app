@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,23 +49,27 @@ function isLikelyExpiredOrInvalidLink(msg: string) {
   );
 }
 
-function normalizeCallbackErrorMessage(raw: string) {
+function normalizeCallbackErrorMessage(
+  raw: string,
+  t: (key: string) => string,
+) {
   const msg = (raw || "").trim();
-  if (!msg) return "Erreur inconnue";
+  if (!msg) return t("errUnknown");
 
   if (isLikelyExpiredOrInvalidLink(msg)) {
-    return "Ce lien n’est plus valide. Il a peut-être déjà été utilisé ou a expiré.";
+    return t("errExpired");
   }
 
   const m = msg.toLowerCase();
   if (m.includes("not authenticated") || m.includes("not_authenticated")) {
-    return "Tu n’es pas connectée. Merci de relancer le lien depuis ton email.";
+    return t("errNotAuth");
   }
 
   return msg;
 }
 
 export default function CallbackClient() {
+  const t = useTranslations("callbackPage");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -266,10 +271,10 @@ export default function CallbackClient() {
         router.replace("/?auth_error=missing_callback_params");
       } catch (e) {
         if (cancelled) return;
-        const msg = e instanceof Error ? e.message : "Erreur inconnue";
+        const msg = e instanceof Error ? e.message : t("errUnknown");
         setRawErrorMsg(msg);
         setStatus("error");
-        setErrorMsg(normalizeCallbackErrorMessage(msg));
+        setErrorMsg(normalizeCallbackErrorMessage(msg, t));
       }
     })();
 
@@ -286,7 +291,7 @@ export default function CallbackClient() {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
       setResendStatus("failed");
-      setResendMsg("Merci de saisir un email valide.");
+      setResendMsg(t("errInvalidEmail"));
       return;
     }
 
@@ -299,16 +304,16 @@ export default function CallbackClient() {
       if (error) {
         console.error("[callback] resetPasswordForEmail error", error);
         setResendStatus("failed");
-        setResendMsg("Impossible d’envoyer le lien. Réessaie dans quelques minutes.");
+        setResendMsg(t("errResendFailed"));
         return;
       }
 
       setResendStatus("sent");
-      setResendMsg("C’est envoyé ! Vérifie ta boîte mail (et les spams).");
+      setResendMsg(t("successResent"));
     } catch (err) {
       console.error("[callback] handleResend catch", err);
       setResendStatus("failed");
-      setResendMsg("Impossible d’envoyer le lien. Réessaie dans quelques minutes.");
+      setResendMsg(t("errResendFailed"));
     }
   }
 
@@ -321,23 +326,22 @@ export default function CallbackClient() {
               <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
               <span className="text-2xl font-bold text-gray-900">Tipote™</span>
             </div>
-            <p className="text-gray-600">Connexion en cours…</p>
+            <p className="text-gray-600">{t("loadingTitle")}</p>
           </div>
 
           <div className="mt-4 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full w-2/3 bg-gray-300 rounded-full animate-pulse" />
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-500">© {new Date().getFullYear()} Tipote™.</div>
+          <div className="mt-8 text-center text-sm text-gray-500">
+            {t("copyright", { year: new Date().getFullYear() })}
+          </div>
         </div>
       </main>
     );
   }
 
-  const showResend =
-    isLikelyExpiredOrInvalidLink(rawErrorMsg) ||
-    (errorMsg || "").toLowerCase().includes("n’est plus valide") ||
-    (errorMsg || "").toLowerCase().includes("expire");
+  const showResend = isLikelyExpiredOrInvalidLink(rawErrorMsg);
 
   return (
     <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
@@ -347,27 +351,27 @@ export default function CallbackClient() {
             <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
             <span className="text-2xl font-bold text-gray-900">Tipote™</span>
           </div>
-          <p className="text-gray-600">Oups, ça n’a pas marché</p>
+          <p className="text-gray-600">{t("errorHeading")}</p>
         </div>
 
-        <p className="text-sm text-gray-600 text-center break-words">{errorMsg || "Erreur inconnue"}</p>
+        <p className="text-sm text-gray-600 text-center break-words">{errorMsg || t("errUnknown")}</p>
 
         {showResend && (
           <div className="mt-6">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm text-gray-700 mb-3">
-                Pas de panique : tu peux recevoir un nouveau lien pour définir ton mot de passe.
+                {t("resendInfo")}
               </p>
 
               <form onSubmit={handleResend} className="space-y-3">
                 <div className="space-y-1">
-                  <Label htmlFor="resend-email">Ton email</Label>
+                  <Label htmlFor="resend-email">{t("labelEmail")}</Label>
                   <Input
                     id="resend-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nom@domaine.com"
+                    placeholder={t("placeholderEmail")}
                     autoComplete="email"
                   />
                 </div>
@@ -388,7 +392,7 @@ export default function CallbackClient() {
                 )}
 
                 <Button className="w-full" type="submit" disabled={resendStatus === "sending"}>
-                  {resendStatus === "sending" ? "Envoi…" : "Recevoir un nouveau lien"}
+                  {resendStatus === "sending" ? t("sending") : t("sendLink")}
                 </Button>
               </form>
             </div>
@@ -396,10 +400,12 @@ export default function CallbackClient() {
         )}
 
         <Button className="mt-6 w-full" type="button" variant="outline" onClick={() => router.replace("/")}>
-          Revenir à la connexion
+          {t("backToLogin")}
         </Button>
 
-        <div className="mt-8 text-center text-sm text-gray-500">© {new Date().getFullYear()} Tipote™.</div>
+        <div className="mt-8 text-center text-sm text-gray-500">
+          {t("copyright", { year: new Date().getFullYear() })}
+        </div>
       </div>
     </main>
   );

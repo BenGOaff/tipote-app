@@ -7,10 +7,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useTranslations } from "next-intl";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SetPasswordPage() {
+  const t = useTranslations("setPasswordPage");
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
@@ -68,14 +70,14 @@ export default function SetPasswordPage() {
           <h1 className="text-4xl font-bold text-foreground">
             Tipote<span className="text-primary">™</span>
           </h1>
-          <p className="text-muted-foreground mt-2">Ton assistant stratégique intelligent</p>
+          <p className="text-muted-foreground mt-2">{t("tagline")}</p>
         </div>
 
         <Card className="border-border shadow-lg">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold text-center">Créer ton mot de passe</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">{t("title")}</CardTitle>
             <CardDescription className="text-center">
-              C’est ta première connexion à Tipote. Choisis un mot de passe pour tes prochaines connexions.
+              {t("description")}
             </CardDescription>
           </CardHeader>
 
@@ -84,14 +86,14 @@ export default function SetPasswordPage() {
               <SetPasswordForm mode="first" />
             ) : (
               <div className="min-h-[120px] flex items-center justify-center">
-                <p className="text-muted-foreground">Chargement...</p>
+                <p className="text-muted-foreground">{t("loading")}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          © {new Date().getFullYear()} Tipote™. Tous droits réservés.
+          {t("copyright", { year: new Date().getFullYear() })}
         </p>
       </div>
     </div>

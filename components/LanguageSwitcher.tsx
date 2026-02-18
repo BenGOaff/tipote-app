@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/request";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/config";
 
 const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
   fr: "Français",

@@ -9,6 +9,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { useTranslations } from "next-intl";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 
@@ -132,6 +133,7 @@ function writeSeenContexts(map: SeenMap) {
 }
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
+  const tTutorial = useTranslations("tutorial");
   const [isLoading, setIsLoading] = useState(true);
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -391,17 +393,17 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
     switch (phase) {
       case "tour_today":
-        return "Ta page d'accueil. Tu y trouveras toujours ta prochaine action prioritaire. 🏠";
+        return tTutorial("tooltipToday");
       case "tour_create":
-        return "Le cœur de Tipote : génère posts, emails, articles... en quelques clics. ✨";
+        return tTutorial("tooltipCreate");
       case "tour_strategy":
-        return "Ton plan personnalisé et tes offres. Tout s'adapte à toi. 🎯";
+        return tTutorial("tooltipStrategy");
       case "tour_complete":
-        return "C'est bon ! Tu peux explorer. Je suis là si tu as besoin. 🚀";
+        return tTutorial("tooltipComplete");
       default:
         return null;
     }
-  }, [phase, tutorialOptOut]);
+  }, [phase, tutorialOptOut, tTutorial]);
 
   const value = useMemo<TutorialContextType>(
     () => ({

@@ -5,11 +5,13 @@
 
 import { useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
+import { useTranslations } from 'next-intl';
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tipote.com';
 
 export default function ForgotPasswordForm() {
+  const t = useTranslations('forgotPasswordPage');
   const supabase = getSupabaseBrowserClient();
 
   const [email, setEmail] = useState('');
@@ -23,7 +25,7 @@ export default function ForgotPasswordForm() {
     setSuccessMsg(null);
 
     if (!email) {
-      setErrorMsg('Merci de renseigner ton email.');
+      setErrorMsg(t('errFillEmail'));
       return;
     }
 
@@ -39,19 +41,15 @@ export default function ForgotPasswordForm() {
           '[ForgotPasswordForm] resetPasswordForEmail error',
           error,
         );
-        setErrorMsg(
-          "Impossible d'envoyer l'email de réinitialisation. Vérifie l'adresse.",
-        );
+        setErrorMsg(t('errSendFailed'));
         setLoading(false);
         return;
       }
 
-      setSuccessMsg(
-        'Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.',
-      );
+      setSuccessMsg(t('successSent'));
     } catch (err) {
       console.error('[ForgotPasswordForm] unexpected error', err);
-      setErrorMsg('Erreur inattendue. Merci de réessayer.');
+      setErrorMsg(t('errUnexpected'));
     } finally {
       setLoading(false);
     }
@@ -61,7 +59,7 @@ export default function ForgotPasswordForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-200">
-          Email
+          {t('labelEmail')}
         </label>
         <input
           type="email"
@@ -89,7 +87,7 @@ export default function ForgotPasswordForm() {
         disabled={loading}
         className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium text-slate-950 py-2 transition-colors"
       >
-        {loading ? 'Envoi...' : 'Envoyer le lien'}
+        {loading ? t('sending') : t('sendLink')}
       </button>
     </form>
   );

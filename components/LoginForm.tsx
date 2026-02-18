@@ -8,6 +8,7 @@ import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
+import { useTranslations } from 'next-intl';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ function parseHashParams(hash: string): Record<string, string> {
 }
 
 export default function LoginForm() {
+  const t = useTranslations('loginPage');
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
@@ -58,15 +60,15 @@ export default function LoginForm() {
 
   const bannerMessage = useMemo(() => {
     return authError === 'missing_code'
-      ? 'Lien de connexion invalide. Merci de recommencer.'
+      ? t('bannerMissingCode')
       : authError === 'invalid_code'
-        ? 'Lien de connexion invalide ou expiré. Merci de recommencer.'
+        ? t('bannerInvalidCode')
         : authError === 'unexpected'
-          ? 'Erreur de connexion. Merci de réessayer.'
+          ? t('bannerUnexpected')
           : authError === 'not_authenticated'
-            ? 'Tu dois être connecté pour accéder à cette page.'
+            ? t('bannerNotAuth')
             : null;
-  }, [authError]);
+  }, [authError, t]);
 
   // ✅ FIX CRITIQUE : si Supabase redirige sur "/" avec #access_token=...
   // on renvoie automatiquement vers /auth/callback qui consomme le hash et crée la session.
@@ -97,8 +99,8 @@ export default function LoginForm() {
   // Si l'utilisateur arrive avec "type=recovery" ou "type=magiclink" (legacy Lovable),
   // on le bascule sur le mode magic pour éviter une page "vide".
   useEffect(() => {
-    const t = searchParams.get('type');
-    if (t === 'magiclink') setMode('magic');
+    const ty = searchParams.get('type');
+    if (ty === 'magiclink') setMode('magic');
   }, [searchParams]);
 
   // --- Submit : login par mot de passe ---
@@ -107,7 +109,7 @@ export default function LoginForm() {
     setErrorPassword(null);
 
     if (!emailPassword || !password) {
-      setErrorPassword('Merci de remplir ton email et ton mot de passe.');
+      setErrorPassword(t('errFillCredentials'));
       return;
     }
 
@@ -121,7 +123,7 @@ export default function LoginForm() {
 
       if (error) {
         console.error('[LoginForm] signInWithPassword error', error);
-        setErrorPassword('Email ou mot de passe incorrect.');
+        setErrorPassword(t('errInvalidCredentials'));
         setLoadingPassword(false);
         return;
       }
@@ -129,7 +131,7 @@ export default function LoginForm() {
       router.push('/app');
     } catch (err) {
       console.error('[LoginForm] unexpected error (password login)', err);
-      setErrorPassword('Erreur inattendue. Merci de réessayer.');
+      setErrorPassword(t('errUnexpected'));
       setLoadingPassword(false);
     }
   }
@@ -141,7 +143,7 @@ export default function LoginForm() {
     setSuccessMagic(null);
 
     if (!emailMagic) {
-      setErrorMagic('Merci de renseigner ton email.');
+      setErrorMagic(t('errFillEmail'));
       return;
     }
 
@@ -158,15 +160,15 @@ export default function LoginForm() {
 
       if (error) {
         console.error('[LoginForm] signInWithOtp error', error);
-        setErrorMagic("Impossible d'envoyer le lien de connexion.");
+        setErrorMagic(t('errSendFailed'));
         setLoadingMagic(false);
         return;
       }
 
-      setSuccessMagic('Un lien de connexion t’a été envoyé. Pense à vérifier tes spams.');
+      setSuccessMagic(t('successMagic'));
     } catch (err) {
       console.error('[LoginForm] unexpected error (magic link)', err);
-      setErrorMagic('Erreur inattendue. Merci de réessayer.');
+      setErrorMagic(t('errUnexpected'));
     } finally {
       setLoadingMagic(false);
     }
@@ -175,23 +177,21 @@ export default function LoginForm() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo (Lovable) */}
+        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground">
             Tipote<span className="text-primary">™</span>
           </h1>
-          <p className="text-muted-foreground mt-2">Ton assistant stratégique intelligent</p>
+          <p className="text-muted-foreground mt-2">{t('tagline')}</p>
         </div>
 
         <Card className="border-border shadow-lg">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl font-bold text-center">
-              {mode === 'password' ? 'Connexion' : 'Lien magique'}
+              {mode === 'password' ? t('titlePassword') : t('titleMagic')}
             </CardTitle>
             <CardDescription className="text-center">
-              {mode === 'password'
-                ? 'Entre tes identifiants pour accéder à ton compte'
-                : 'Entre ton email pour recevoir un lien de connexion'}
+              {mode === 'password' ? t('descPassword') : t('descMagic')}
             </CardDescription>
 
             {bannerMessage && (
@@ -213,13 +213,13 @@ export default function LoginForm() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="emailPassword">Email</Label>
+                  <Label htmlFor="emailPassword">{t('labelEmail')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="emailPassword"
                       type="email"
-                      placeholder="vous@exemple.com"
+                      placeholder={t('placeholderEmail')}
                       className="pl-10"
                       value={emailPassword}
                       onChange={(e) => setEmailPassword(e.target.value)}
@@ -231,9 +231,9 @@ export default function LoginForm() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Mot de passe</Label>
+                    <Label htmlFor="password">{t('labelPassword')}</Label>
                     <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                      Mot de passe oublié ?
+                      {t('forgotPassword')}
                     </Link>
                   </div>
 
@@ -253,7 +253,7 @@ export default function LoginForm() {
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      aria-label={showPassword ? t('ariaHide') : t('ariaShow')}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -262,17 +262,17 @@ export default function LoginForm() {
 
                 <Button type="submit" className="w-full" disabled={loadingPassword}>
                   {loadingPassword ? (
-                    'Connexion...'
+                    t('signingIn')
                   ) : (
                     <>
-                      Se connecter
+                      {t('signIn')}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
 
                 <Button type="button" variant="ghost" className="w-full" onClick={() => setMode('magic')}>
-                  Recevoir un lien magique
+                  {t('magicLink')}
                 </Button>
               </form>
             )}
@@ -292,13 +292,13 @@ export default function LoginForm() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="emailMagic">Email</Label>
+                  <Label htmlFor="emailMagic">{t('labelEmail')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="emailMagic"
                       type="email"
-                      placeholder="vous@exemple.com"
+                      placeholder={t('placeholderEmail')}
                       className="pl-10"
                       value={emailMagic}
                       onChange={(e) => setEmailMagic(e.target.value)}
@@ -310,32 +310,32 @@ export default function LoginForm() {
 
                 <Button type="submit" className="w-full" disabled={loadingMagic}>
                   {loadingMagic ? (
-                    'Envoi en cours...'
+                    t('sending')
                   ) : (
                     <>
-                      Envoyer le lien
+                      {t('sendLink')}
                       <Mail className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
 
                 <Button type="button" variant="ghost" className="w-full" onClick={() => setMode('password')}>
-                  Retour à la connexion
+                  {t('backToLogin')}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  Le lien te redirigera automatiquement vers l’app.
+                  {t('magicLinkInfo')}
                 </p>
               </form>
             )}
 
-            {/* Signup CTA (Lovable) */}
+            {/* Signup CTA */}
             {mode === 'password' && (
               <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-center text-sm text-muted-foreground mb-3">Pas encore de compte ?</p>
+                <p className="text-center text-sm text-muted-foreground mb-3">{t('noAccount')}</p>
                 <Button variant="outline" className="w-full" asChild>
                   <a href="https://www.tipote.com/" target="_blank" rel="noopener noreferrer">
-                    Créer un compte sur Tipote.com
+                    {t('createAccount')}
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
@@ -345,7 +345,7 @@ export default function LoginForm() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          © {new Date().getFullYear()} Tipote™. Tous droits réservés.
+          {t('copyright', { year: new Date().getFullYear() })}
         </p>
       </div>
     </div>

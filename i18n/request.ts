@@ -2,14 +2,15 @@
 // next-intl server-side locale detection.
 // Locale comes from the ui_locale cookie (set by LanguageSwitcher or first-visit middleware).
 // Falls back to 'fr' if the cookie is missing or the locale is unsupported.
+// NOTE: this file is server-only (uses next/headers). Import constants from ./config instead.
 
 import { getRequestConfig } from "next-intl/server";
 import { cookies } from "next/headers";
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale } from "./config";
 
-export const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"] as const;
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
-export const DEFAULT_LOCALE: SupportedLocale = "fr";
-export const RTL_LOCALES: SupportedLocale[] = ["ar"];
+export type { SupportedLocale };
+export { SUPPORTED_LOCALES, DEFAULT_LOCALE } from "./config";
+export { RTL_LOCALES } from "./config";
 
 function isSupportedLocale(v: string): v is SupportedLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(v);

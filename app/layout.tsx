@@ -5,7 +5,7 @@ import Providers from "@/components/Providers";
 import { HotjarTracker } from "@/components/HotjarTracker";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { RTL_LOCALES } from "@/i18n/request";
+import { RTL_LOCALES } from "@/i18n/config";
 
 export const metadata: Metadata = {
   title: "Tipote",
