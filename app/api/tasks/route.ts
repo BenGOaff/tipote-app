@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { ensureDefaultProject } from "@/lib/projects/ensureDefaultProject";
 
 type CreateBody = {
   title?: unknown;
@@ -110,10 +111,14 @@ export async function POST(req: Request) {
     const status = st ? st : "todo";
 
     if (!projectId) {
-      return NextResponse.json(
-        { ok: false, error: "Aucun projet actif. Sélectionne un projet avant de créer une tâche." },
-        { status: 400 },
-      );
+      // Auto-heal: create a default project for beta users who don't have one yet
+      projectId = await ensureDefaultProject(auth.user.id);
+      if (!projectId) {
+        return NextResponse.json(
+          { ok: false, error: "Impossible de déterminer le projet actif. Recharge la page." },
+          { status: 400 },
+        );
+      }
     }
 
     const insertPayload: Record<string, unknown> = {

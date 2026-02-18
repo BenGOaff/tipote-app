@@ -677,5 +677,110 @@
       "personaUpdated": "تم تحديث الشخصية",
       "personaUpdatedDesc": "تم حفظ التغييرات"
     }
+  },
+  "onboarding": {
+    "title": "مرحباً بك في Tipote",
+    "subtitle": "بضعة أسئلة لبناء استراتيجيتك الشخصية.",
+    "continue": "متابعة",
+    "back": "رجوع",
+    "skip": "تخطي",
+    "finish": "إنشاء استراتيجيتي",
+    "pressEnter": "اضغط Enter ↵",
+    "multipleChoice": "اختر كل ما ينطبق",
+    "singleChoice": "اختر إجابة واحدة",
+    "textPlaceholder": "اكتب إجابتك هنا…",
+    "optional": "(اختياري)",
+    "stepOf": "{current} / {total}",
+    "addOffer": "إضافة عرض",
+    "removeOffer": "حذف",
+    "offerName": "اسم العرض",
+    "offerPrice": "السعر (€)",
+    "offerFormat": "الشكل",
+    "offerSalesCount": "عدد المبيعات (تقريبي)",
+    "offerFormatPlaceholder": "مثال: دورة تدريبية، كوتشينج، SaaS…",
+    "steps": {
+      "firstName": { "question": "مرحباً! ما اسمك؟", "placeholder": "اسمك الأول" },
+      "revenueGoal": {
+        "question": "ما هو هدفك من الإيرادات الشهرية؟",
+        "options": { "lt500": "أقل من 500 €", "500_1k": "500 – 1,000 €", "1k_3k": "1,000 – 3,000 €", "3k_5k": "3,000 – 5,000 €", "5k_10k": "5,000 – 10,000 €", "gt10k": "أكثر من 10,000 €" }
+      },
+      "primaryGoal": {
+        "question": "بعيداً عن المال، ما الأهم بالنسبة لك؟",
+        "options": { "freedom": "حرية الوقت", "recognition": "الاعتراف في مجالي", "impact": "إحداث تأثير حقيقي", "security": "الأمان المالي", "passion": "العيش من شغفي", "independence": "الاستقلالية التامة" }
+      },
+      "businessObjectives": {
+        "question": "ما الذي تريد تحقيقه أولاً في عملك؟",
+        "description": "اختر كل ما ينطبق.",
+        "options": { "sell_more": "البيع أكثر", "clarify_position": "توضيح موقعي في السوق", "build_audience": "بناء جمهور", "automate": "أتمتة ما يعمل" }
+      },
+      "niche": {
+        "question": "صف مجالك بإكمال هذه الجملة:",
+        "description": "لا تقلق إذا كانت غامضة، يمكنك تحسينها لاحقاً.",
+        "targetLabel": "أساعد", "targetPlaceholder": "مثال: المدربين المبتدئين، رجال الأعمال…",
+        "objectiveLabel": "على", "objectivePlaceholder": "مثال: إطلاق أول منتج رقمي…",
+        "mechanismLabel": "من خلال", "mechanismPlaceholder": "مثال: منهج بسيط من 5 خطوات…",
+        "timeframeLabel": "في", "timeframePlaceholder": "مثال: 90 يوماً، 3 أسابيع…"
+      },
+      "clientProfile": {
+        "question": "أخبرني عن عميلك المثالي.",
+        "problemLabel": "أكبر مشكلة لديه", "problemPlaceholder": "مثال: لا يعرف من أين يبدأ…",
+        "prevAttemptsLabel": "ما جربه من قبل", "prevAttemptsPlaceholder": "مثال: دورات تدريبية، فيديوهات يوتيوب…",
+        "failuresLabel": "ما لم ينجح", "failuresPlaceholder": "مثال: عام جداً، غير مناسب لوضعه…",
+        "futureLifeLabel": "حياته بعد تحقيق هدفه", "futurePlaceholder": "مثال: أصبح لديه وقت لعائلته…"
+      },
+      "timeAvailable": {
+        "question": "كم ساعة أسبوعياً يمكنك تخصيصها لعملك؟",
+        "options": { "lt5": "أقل من 5 ساعات", "5_10": "5 – 10 ساعات", "10_20": "10 – 20 ساعة", "20_30": "20 – 30 ساعة", "gt30": "أكثر من 30 ساعة" }
+      },
+      "biggestBlocker": {
+        "question": "ما أكبر عقبة تواجهها الآن؟",
+        "description": "اختر كل ما ينطبق.",
+        "options": { "knowledge": "نقص المعرفة", "time": "نقص الوقت", "money": "نقص الميزانية", "fear": "الخوف من الفشل", "clarity": "غياب الوضوح / التوجه", "tech": "عقبات تقنية", "motivation": "مشاكل في التحفيز / الانتظام" }
+      },
+      "contentPreference": {
+        "question": "ما نوع المحتوى الذي تفضل إنشاءه؟",
+        "description": "اختر كل ما ينطبق.",
+        "options": { "short_written": "كتابة قصيرة (منشورات، نشرات إخبارية)", "long_written": "كتابة طويلة (مقالات، دراسات حالة)", "short_video": "فيديو قصير (Reels، TikTok)", "long_video": "فيديو طويل (يوتيوب، دورات)", "visuals": "محتوى بصري (إنفوغرافيك، كاروسيل)", "audio": "صوت (بودكاست)" }
+      },
+      "preferredTone": {
+        "question": "ما النبرة التي تمثلك أكثر؟",
+        "description": "اختر كل ما ينطبق.",
+        "options": { "casual": "غير رسمي", "professional": "احترافي", "humorous": "فكاهي", "caring": "رعاية", "authoritative": "سلطوي / خبير", "provocative": "استفزازي", "direct": "مباشر", "warm": "دافئ", "empathetic": "متعاطف", "educational": "تعليمي" }
+      },
+      "platforms": {
+        "question": "على أي منصات أنت موجود بالفعل؟",
+        "description": "اختر كل ما ينطبق.",
+        "options": { "website": "موقع إلكتروني", "blog": "مدونة", "youtube": "يوتيوب", "instagram": "انستغرام", "linkedin": "لينكد إن", "facebook": "فيسبوك", "x": "X (تويتر)", "reddit": "ريديت", "pinterest": "بينتريست", "threads": "ثريدز", "medium": "ميديوم", "none": "لا شيء حتى الآن" }
+      },
+      "businessStatus": {
+        "question": "أين أنت في مسيرتك التجارية؟",
+        "options": { "has_offers": "لدي عروض للبيع", "affiliation": "أعمل بالتسويق بالعمولة", "none": "أبدأ من الصفر" }
+      },
+      "hasAlreadySold": {
+        "question": "هل أجريت مبيعات (أو تلقيت عمولات) من قبل؟",
+        "options": { "yes": "نعم", "no": "لا، ليس بعد" }
+      },
+      "satisfiedWithOffers": {
+        "question": "هل أنت راضٍ عن عروضك الحالية؟",
+        "options": { "yes": "نعم، مناسبة لي", "improve": "أريد تحسينها", "rethink": "أريد إعادة التفكير فيها بالكامل" }
+      },
+      "currentMonthlyRevenue": {
+        "question": "ما هو رقم أعمالك الشهري الحالي؟",
+        "options": { "0": "0 € (لا مبيعات)", "lt500": "أقل من 500 €", "500_1k": "500 – 1,000 €", "1k_3k": "1,000 – 3,000 €", "3k_5k": "3,000 – 5,000 €", "gt5k": "أكثر من 5,000 €" }
+      },
+      "clientTestimonials": { "question": "شارك 2-3 شهادات من العملاء.", "placeholder": "مثال: «بفضلك أطلقت دورتي أخيراً!» — ماريا" },
+      "offers": { "question": "ما هي عروضك الحالية؟", "description": "أضف ما يصل إلى 3 عروض مع تفاصيلها." },
+      "salesPageUrls": { "question": "هل لديك صفحات بيع؟ شارك الروابط.", "placeholder": "https://…" },
+      "commissionRate": { "question": "ما هو متوسط معدل عمولتك؟", "placeholder": "مثال: 30%" },
+      "monthlyCommissions": { "question": "كم عمولة تتلقى في المتوسط شهرياً؟", "placeholder": "مثال: 5 عمولات" },
+      "audienceEmail": { "question": "هل لديك قائمة بريد إلكتروني؟", "options": { "yes": "نعم", "no": "لا" }, "countPlaceholder": "عدد المشتركين" },
+      "audienceSocial": { "question": "هل لديك جمهور على وسائل التواصل الاجتماعي؟", "options": { "yes": "نعم", "no": "لا" }, "countPlaceholder": "إجمالي المتابعين (جميع المنصات)" },
+      "refusals": {
+        "question": "هل هناك أشياء ترفض رفضاً قاطعاً القيام بها؟",
+        "description": "لن أدرج أي شيء من هذا في استراتيجيتك.",
+        "options": { "no_dm": "لا تواصل عبر الرسائل المباشرة", "no_video": "لا فيديوهات", "no_articles": "لا مقالات / مدونة", "no_social": "لا وسائل تواصل اجتماعي", "no_course": "لا إنشاء دورات", "no_coaching": "لا كوتشينج فردي", "no_personal_branding": "لا بناء علامة شخصية", "none": "لا قيود" }
+      }
+    },
+    "finalize": { "title": "بناء استراتيجيتك…", "step0": "حفظ إجاباتك…", "step1": "بناء استراتيجيتك الشخصية…", "step2": "إنشاء مهامك الأولى…", "step3": "إعداد مساحتك…", "done": "كل شيء جاهز!" }
   }
 }

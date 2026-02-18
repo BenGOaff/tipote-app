@@ -677,5 +677,110 @@
       "personaUpdated": "Persona aggiornata",
       "personaUpdatedDesc": "Le modifiche sono state salvate"
     }
+  },
+  "onboarding": {
+    "title": "Benvenuto/a su Tipote",
+    "subtitle": "Alcune domande per creare la tua strategia personalizzata.",
+    "continue": "Continua",
+    "back": "Indietro",
+    "skip": "Salta",
+    "finish": "Genera la mia strategia",
+    "pressEnter": "Premi Invio ↵",
+    "multipleChoice": "Seleziona tutto ciò che si applica",
+    "singleChoice": "Scegli una risposta",
+    "textPlaceholder": "Scrivi la tua risposta qui…",
+    "optional": "(opzionale)",
+    "stepOf": "{current} / {total}",
+    "addOffer": "Aggiungi un'offerta",
+    "removeOffer": "Rimuovi",
+    "offerName": "Nome dell'offerta",
+    "offerPrice": "Prezzo (€)",
+    "offerFormat": "Formato",
+    "offerSalesCount": "N. di vendite (appross.)",
+    "offerFormatPlaceholder": "es. corso online, coaching, SaaS…",
+    "steps": {
+      "firstName": { "question": "Benvenuto/a! Come ti chiami?", "placeholder": "Il tuo nome" },
+      "revenueGoal": {
+        "question": "Qual è il tuo obiettivo di reddito mensile?",
+        "options": { "lt500": "Meno di 500 €", "500_1k": "500 – 1.000 €", "1k_3k": "1.000 – 3.000 €", "3k_5k": "3.000 – 5.000 €", "5k_10k": "5.000 – 10.000 €", "gt10k": "Più di 10.000 €" }
+      },
+      "primaryGoal": {
+        "question": "Al di là del denaro, cosa conta di più per te?",
+        "options": { "freedom": "Libertà di tempo", "recognition": "Riconoscimento nel mio settore", "impact": "Avere un impatto reale", "security": "Sicurezza finanziaria", "passion": "Vivere della mia passione", "independence": "Indipendenza totale" }
+      },
+      "businessObjectives": {
+        "question": "Cosa vuoi ottenere prima di tutto con il tuo business?",
+        "description": "Seleziona tutto ciò che si applica.",
+        "options": { "sell_more": "Vendere di più", "clarify_position": "Chiarire il mio posizionamento", "build_audience": "Costruire un pubblico", "automate": "Automatizzare ciò che funziona" }
+      },
+      "niche": {
+        "question": "Descrivi la tua nicchia completando questa frase:",
+        "description": "Non preoccuparti se è vago, potrai affinarlo dopo.",
+        "targetLabel": "Aiuto", "targetPlaceholder": "es. coach principianti, mamme imprenditrici…",
+        "objectiveLabel": "a", "objectivePlaceholder": "es. lanciare il loro primo prodotto digitale…",
+        "mechanismLabel": "attraverso", "mechanismPlaceholder": "es. un metodo semplice in 5 passi…",
+        "timeframeLabel": "in", "timeframePlaceholder": "es. 90 giorni, 3 settimane…"
+      },
+      "clientProfile": {
+        "question": "Parlami del tuo cliente ideale.",
+        "problemLabel": "Il suo problema più grande", "problemPlaceholder": "es. non sa da dove iniziare…",
+        "prevAttemptsLabel": "Cosa ha già provato", "prevAttemptsPlaceholder": "es. corsi online, video YouTube…",
+        "failuresLabel": "Cosa non ha funzionato", "failuresPlaceholder": "es. troppo generico…",
+        "futureLifeLabel": "La sua vita dopo aver raggiunto l'obiettivo", "futurePlaceholder": "es. ha finalmente tempo per la famiglia…"
+      },
+      "timeAvailable": {
+        "question": "Quante ore a settimana puoi dedicare al tuo business?",
+        "options": { "lt5": "Meno di 5h", "5_10": "5 – 10h", "10_20": "10 – 20h", "20_30": "20 – 30h", "gt30": "Più di 30h" }
+      },
+      "biggestBlocker": {
+        "question": "Qual è il tuo ostacolo più grande in questo momento?",
+        "description": "Seleziona tutto ciò che si applica.",
+        "options": { "knowledge": "Mancanza di conoscenze", "time": "Mancanza di tempo", "money": "Mancanza di budget", "fear": "Paura del fallimento", "clarity": "Mancanza di chiarezza / direzione", "tech": "Blocchi tecnici", "motivation": "Problemi di motivazione / costanza" }
+      },
+      "contentPreference": {
+        "question": "Che tipo di contenuto preferisci creare?",
+        "description": "Seleziona tutto ciò che si applica.",
+        "options": { "short_written": "Testi brevi (post, newsletter)", "long_written": "Testi lunghi (articoli, casi studio)", "short_video": "Video brevi (Reels, TikTok)", "long_video": "Video lunghi (YouTube, corsi)", "visuals": "Contenuti visivi (infografiche, caroselli)", "audio": "Audio (podcast)" }
+      },
+      "preferredTone": {
+        "question": "Quale tono ti rappresenta meglio?",
+        "description": "Seleziona tutto ciò che si applica.",
+        "options": { "casual": "Informale", "professional": "Professionale", "humorous": "Umoristico", "caring": "Premuroso", "authoritative": "Autorevole / Esperto", "provocative": "Provocatorio", "direct": "Diretto", "warm": "Caldo", "empathetic": "Empatico", "educational": "Educativo" }
+      },
+      "platforms": {
+        "question": "Su quali piattaforme sei già presente?",
+        "description": "Seleziona tutto ciò che si applica.",
+        "options": { "website": "Sito web", "blog": "Blog", "youtube": "YouTube", "instagram": "Instagram", "linkedin": "LinkedIn", "facebook": "Facebook", "x": "X (Twitter)", "reddit": "Reddit", "pinterest": "Pinterest", "threads": "Threads", "medium": "Medium", "none": "Nessuna per ora" }
+      },
+      "businessStatus": {
+        "question": "A che punto sei con il tuo business?",
+        "options": { "has_offers": "Ho già offerte in vendita", "affiliation": "Faccio affiliate marketing", "none": "Parto da zero" }
+      },
+      "hasAlreadySold": {
+        "question": "Hai già effettuato vendite (o ricevuto commissioni)?",
+        "options": { "yes": "Sì", "no": "No, non ancora" }
+      },
+      "satisfiedWithOffers": {
+        "question": "Sei soddisfatto/a delle tue offerte attuali?",
+        "options": { "yes": "Sì, mi si addicono bene", "improve": "Voglio migliorarle", "rethink": "Voglio ripensarle completamente" }
+      },
+      "currentMonthlyRevenue": {
+        "question": "Qual è il tuo fatturato mensile attuale?",
+        "options": { "0": "0 € (nessuna vendita)", "lt500": "Meno di 500 €", "500_1k": "500 – 1.000 €", "1k_3k": "1.000 – 3.000 €", "3k_5k": "3.000 – 5.000 €", "gt5k": "Più di 5.000 €" }
+      },
+      "clientTestimonials": { "question": "Condividi 2-3 testimonianze di clienti.", "placeholder": "es. «Grazie a te ho finalmente lanciato il mio corso!» — Maria" },
+      "offers": { "question": "Quali sono le tue offerte attuali?", "description": "Aggiungi fino a 3 offerte con i loro dettagli." },
+      "salesPageUrls": { "question": "Hai pagine di vendita? Condividi i link.", "placeholder": "https://…" },
+      "commissionRate": { "question": "Qual è la tua commissione media?", "placeholder": "es. 30%" },
+      "monthlyCommissions": { "question": "Quante commissioni ricevi in media al mese?", "placeholder": "es. 5 commissioni" },
+      "audienceEmail": { "question": "Hai una lista email?", "options": { "yes": "Sì", "no": "No" }, "countPlaceholder": "Numero di iscritti" },
+      "audienceSocial": { "question": "Hai un pubblico sui social?", "options": { "yes": "Sì", "no": "No" }, "countPlaceholder": "Follower totali (tutte le piattaforme)" },
+      "refusals": {
+        "question": "C'è qualcosa che rifiuti categoricamente di fare?",
+        "description": "Non includerò nulla di questo nella tua strategia.",
+        "options": { "no_dm": "Niente prospezione via DM", "no_video": "Niente video", "no_articles": "Niente articoli / blog", "no_social": "Niente social media", "no_course": "Niente creazione di corsi", "no_coaching": "Niente coaching individuale", "no_personal_branding": "Niente personal branding", "none": "Nessuna restrizione" }
+      }
+    },
+    "finalize": { "title": "Costruendo la tua strategia…", "step0": "Salvataggio delle risposte…", "step1": "Costruendo la tua strategia personalizzata…", "step2": "Generando i tuoi primi compiti…", "step3": "Configurando il tuo spazio…", "done": "Tutto pronto!" }
   }
 }

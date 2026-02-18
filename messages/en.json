@@ -756,5 +756,248 @@
       "personaUpdated": "Persona updated",
       "personaUpdatedDesc": "Changes have been saved"
     }
+  },
+  "onboarding": {
+    "title": "Welcome to Tipote",
+    "subtitle": "A few questions to build your personalized strategy.",
+    "continue": "Continue",
+    "back": "Back",
+    "skip": "Skip",
+    "finish": "Generate my strategy",
+    "pressEnter": "Press Enter ↵",
+    "multipleChoice": "Select all that apply",
+    "singleChoice": "Choose one answer",
+    "textPlaceholder": "Type your answer here…",
+    "optional": "(optional)",
+    "stepOf": "{current} / {total}",
+    "addOffer": "Add an offer",
+    "removeOffer": "Remove",
+    "offerName": "Offer name",
+    "offerPrice": "Price (€)",
+    "offerFormat": "Format",
+    "offerSalesCount": "Approx. number of sales",
+    "offerFormatPlaceholder": "e.g. online course, coaching, SaaS…",
+    "steps": {
+      "firstName": {
+        "question": "Welcome! What's your name?",
+        "placeholder": "Your first name"
+      },
+      "revenueGoal": {
+        "question": "What's your monthly revenue goal?",
+        "options": {
+          "lt500": "Less than €500",
+          "500_1k": "€500 – €1,000",
+          "1k_3k": "€1,000 – €3,000",
+          "3k_5k": "€3,000 – €5,000",
+          "5k_10k": "€5,000 – €10,000",
+          "gt10k": "More than €10,000"
+        }
+      },
+      "primaryGoal": {
+        "question": "Beyond money, what matters most to you?",
+        "options": {
+          "freedom": "Time freedom",
+          "recognition": "Recognition in my field",
+          "impact": "Making a real impact",
+          "security": "Financial security",
+          "passion": "Living from my passion",
+          "independence": "Total independence"
+        }
+      },
+      "businessObjectives": {
+        "question": "What do you want to achieve with your business first?",
+        "description": "Select all that apply.",
+        "options": {
+          "sell_more": "Sell more",
+          "clarify_position": "Clarify my positioning",
+          "build_audience": "Build an audience",
+          "automate": "Automate what works"
+        }
+      },
+      "niche": {
+        "question": "Describe your niche by completing this sentence:",
+        "description": "Don't stress if it's vague, you can refine it later.",
+        "targetLabel": "I help",
+        "targetPlaceholder": "e.g. beginner coaches, entrepreneur moms…",
+        "objectiveLabel": "to",
+        "objectivePlaceholder": "e.g. launch their first digital product…",
+        "mechanismLabel": "through",
+        "mechanismPlaceholder": "e.g. a simple 5-step method…",
+        "timeframeLabel": "in",
+        "timeframePlaceholder": "e.g. 90 days, 3 weeks…"
+      },
+      "clientProfile": {
+        "question": "Tell me about your ideal client.",
+        "problemLabel": "Their biggest problem",
+        "problemPlaceholder": "e.g. they don't know where to start, they lack visibility…",
+        "prevAttemptsLabel": "What they've already tried",
+        "prevAttemptsPlaceholder": "e.g. online courses, YouTube videos…",
+        "failuresLabel": "What didn't work",
+        "failuresPlaceholder": "e.g. too generic, not adapted to their situation…",
+        "futureLifeLabel": "Their life after achieving their goal",
+        "futurePlaceholder": "e.g. they finally have time for their family, they live from their activity…"
+      },
+      "timeAvailable": {
+        "question": "How many hours per week can you dedicate to your business?",
+        "options": {
+          "lt5": "Less than 5h",
+          "5_10": "5 – 10h",
+          "10_20": "10 – 20h",
+          "20_30": "20 – 30h",
+          "gt30": "More than 30h"
+        }
+      },
+      "biggestBlocker": {
+        "question": "What's your biggest obstacle right now?",
+        "description": "Select all that apply.",
+        "options": {
+          "knowledge": "Lack of knowledge",
+          "time": "Lack of time",
+          "money": "Lack of budget",
+          "fear": "Fear of failure",
+          "clarity": "Lack of clarity / direction",
+          "tech": "Technical blockers",
+          "motivation": "Motivation / consistency issues"
+        }
+      },
+      "contentPreference": {
+        "question": "Which types of content do you prefer creating?",
+        "description": "Select all that apply.",
+        "options": {
+          "short_written": "Short written content (posts, short newsletters)",
+          "long_written": "Long written content (articles, case studies)",
+          "short_video": "Short videos (Reels, TikTok, Shorts)",
+          "long_video": "Long videos (YouTube, courses)",
+          "visuals": "Visual content (infographics, carousels)",
+          "audio": "Audio (podcasts, voice notes)"
+        }
+      },
+      "preferredTone": {
+        "question": "Which tone fits you best?",
+        "description": "Select all that apply.",
+        "options": {
+          "casual": "Casual",
+          "professional": "Professional",
+          "humorous": "Humorous",
+          "caring": "Caring",
+          "authoritative": "Authoritative / Expert",
+          "provocative": "Provocative",
+          "direct": "Direct",
+          "warm": "Warm",
+          "empathetic": "Empathetic",
+          "educational": "Educational"
+        }
+      },
+      "platforms": {
+        "question": "Which platforms are you already on?",
+        "description": "Select all that apply.",
+        "options": {
+          "website": "Website",
+          "blog": "Blog",
+          "youtube": "YouTube",
+          "instagram": "Instagram",
+          "linkedin": "LinkedIn",
+          "facebook": "Facebook",
+          "x": "X (Twitter)",
+          "reddit": "Reddit",
+          "pinterest": "Pinterest",
+          "threads": "Threads",
+          "medium": "Medium",
+          "none": "None yet"
+        }
+      },
+      "businessStatus": {
+        "question": "Where are you with your business?",
+        "options": {
+          "has_offers": "I already have offers for sale",
+          "affiliation": "I do affiliate marketing",
+          "none": "I'm starting from scratch"
+        }
+      },
+      "hasAlreadySold": {
+        "question": "Have you already made sales (or received commissions)?",
+        "options": {
+          "yes": "Yes",
+          "no": "No, not yet"
+        }
+      },
+      "satisfiedWithOffers": {
+        "question": "Are you satisfied with your current offers?",
+        "options": {
+          "yes": "Yes, they suit me well",
+          "improve": "I want to improve them",
+          "rethink": "I want to rethink them completely"
+        }
+      },
+      "currentMonthlyRevenue": {
+        "question": "What's your current monthly revenue?",
+        "options": {
+          "0": "€0 (no sales yet)",
+          "lt500": "Less than €500",
+          "500_1k": "€500 – €1,000",
+          "1k_3k": "€1,000 – €3,000",
+          "3k_5k": "€3,000 – €5,000",
+          "gt5k": "More than €5,000"
+        }
+      },
+      "clientTestimonials": {
+        "question": "Share 2-3 client testimonials (what they said or felt).",
+        "placeholder": "e.g. \"Thanks to you I finally launched my course!\" — Marie"
+      },
+      "offers": {
+        "question": "What are your current offers?",
+        "description": "Add up to 3 offers with their details."
+      },
+      "salesPageUrls": {
+        "question": "Do you have sales pages? Share the links.",
+        "placeholder": "https://…"
+      },
+      "commissionRate": {
+        "question": "What's your average commission rate?",
+        "placeholder": "e.g. 30%"
+      },
+      "monthlyCommissions": {
+        "question": "How many commissions do you receive on average per month?",
+        "placeholder": "e.g. 5 commissions"
+      },
+      "audienceEmail": {
+        "question": "Do you have an email list?",
+        "options": {
+          "yes": "Yes",
+          "no": "No"
+        },
+        "countPlaceholder": "Number of subscribers"
+      },
+      "audienceSocial": {
+        "question": "Do you have a social media audience?",
+        "options": {
+          "yes": "Yes",
+          "no": "No"
+        },
+        "countPlaceholder": "Total followers (all platforms)"
+      },
+      "refusals": {
+        "question": "Is there anything you absolutely refuse to do?",
+        "description": "I won't include any of this in your strategy.",
+        "options": {
+          "no_dm": "No DM outreach",
+          "no_video": "No videos",
+          "no_articles": "No articles / blog",
+          "no_social": "No social media",
+          "no_course": "No course creation",
+          "no_coaching": "No individual coaching",
+          "no_personal_branding": "No personal branding (don't want to show myself)",
+          "none": "No restrictions"
+        }
+      }
+    },
+    "finalize": {
+      "title": "Building your strategy…",
+      "step0": "Saving your answers…",
+      "step1": "Building your personalized strategy…",
+      "step2": "Generating your first tasks…",
+      "step3": "Setting up your space…",
+      "done": "All done!"
+    }
   }
 }
