@@ -25,6 +25,7 @@ import {
   Plug,
   FileText,
   Paintbrush,
+  Target,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -50,7 +51,7 @@ import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 
-type TabKey = "profile" | "connections" | "settings" | "branding" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -59,7 +60,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "branding" || s === "ai") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "ai") return s;
   // compat ancien: tab=billing
   if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
@@ -162,9 +163,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   // -------------------------
   const [profileLoading, setProfileLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
-  const [niche, setNiche] = useState("");
   const [mission, setMission] = useState("");
+  // Niche formula broken into 4 fields
+  const [nicheTarget, setNicheTarget] = useState("");
+  const [nicheObjective, setNicheObjective] = useState("");
+  const [nicheMechanism, setNicheMechanism] = useState("");
+  const [nicheMarker, setNicheMarker] = useState("");
   const [pendingProfile, startProfileTransition] = useTransition();
+  const [pendingPositioning, startPositioningTransition] = useTransition();
 
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [termsUrl, setTermsUrl] = useState("");
@@ -205,8 +211,21 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
         setFirstName(row?.first_name ?? "");
-        setNiche(row?.niche ?? "");
         setMission(row?.mission ?? "");
+        // Parse niche formula into 4 sub-fields
+        const nicheStr = row?.niche ?? "";
+        const nicheMatch = nicheStr.match(/j'aide les (.+?) à (.+?) avec (.+?) en (.+)/i);
+        if (nicheMatch) {
+          setNicheTarget(nicheMatch[1]);
+          setNicheObjective(nicheMatch[2]);
+          setNicheMechanism(nicheMatch[3]);
+          setNicheMarker(nicheMatch[4]);
+        } else {
+          setNicheTarget(nicheStr);
+          setNicheObjective("");
+          setNicheMechanism("");
+          setNicheMarker("");
+        }
         setPrivacyUrl(row?.privacy_url ?? "");
         setTermsUrl(row?.terms_url ?? "");
         setCgvUrl(row?.cgv_url ?? "");
@@ -251,16 +270,24 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const profileDirty = useMemo(() => {
     const i = initialProfile;
-    return (i?.first_name ?? "") !== firstName || (i?.niche ?? "") !== niche || (i?.mission ?? "") !== mission;
-  }, [initialProfile, firstName, niche, mission]);
+    return (i?.first_name ?? "") !== firstName;
+  }, [initialProfile, firstName]);
+
+  const assembledNiche = useMemo(() => {
+    if (!nicheTarget && !nicheObjective && !nicheMechanism && !nicheMarker) return "";
+    return `J'aide les ${nicheTarget} à ${nicheObjective} avec ${nicheMechanism} en ${nicheMarker}`;
+  }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker]);
+
+  const positioningDirty = useMemo(() => {
+    const i = initialProfile;
+    return assembledNiche !== (i?.niche ?? "") || mission !== (i?.mission ?? "");
+  }, [initialProfile, assembledNiche, mission]);
 
   const saveProfile = () => {
     startProfileTransition(async () => {
       try {
         const body: any = {};
         if ((initialProfile?.first_name ?? "") !== firstName) body.first_name = firstName;
-        if ((initialProfile?.niche ?? "") !== niche) body.niche = niche;
-        if ((initialProfile?.mission ?? "") !== mission) body.mission = mission;
 
         const res = await fetch("/api/profile", {
           method: "PATCH",
@@ -275,6 +302,34 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInitialProfile(row);
 
         toast({ title: "Profil mis à jour" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const savePositioning = () => {
+    startPositioningTransition(async () => {
+      try {
+        const body: any = { niche: assembledNiche, mission };
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+
+        toast({ title: "Positionnement enregistré" });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -370,7 +425,19 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setMission(json.persona_summary);
       }
       if (json.niche_summary) {
-        setNiche(json.niche_summary);
+        const newNiche: string = json.niche_summary;
+        const nicheMatch = newNiche.match(/j'aide les (.+?) à (.+?) avec (.+?) en (.+)/i);
+        if (nicheMatch) {
+          setNicheTarget(nicheMatch[1]);
+          setNicheObjective(nicheMatch[2]);
+          setNicheMechanism(nicheMatch[3]);
+          setNicheMarker(nicheMatch[4]);
+        } else {
+          setNicheTarget(newNiche);
+          setNicheObjective("");
+          setNicheMechanism("");
+          setNicheMarker("");
+        }
       }
 
       // Update initialProfile to reflect new values
@@ -619,6 +686,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <Globe className="w-4 h-4" />
           {tSettings("tabs.settings")}
         </TabsTrigger>
+        <TabsTrigger value="positioning" className="gap-2">
+          <Target className="w-4 h-4" />
+          Positionnement
+        </TabsTrigger>
         <TabsTrigger value="branding" className="gap-2">
           <Paintbrush className="w-4 h-4" />
           {tSettings("tabs.branding")}
@@ -817,55 +888,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingLocale ? "Enregistrement…" : "Enregistrer la langue"}
           </Button>
         </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-bold mb-6">Niche et Persona</h3>
-          <p className="text-sm text-muted-foreground mb-4">Généré automatiquement après l&apos;onboarding. Vous pouvez le modifier ici.</p>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Résumé de votre niche</Label>
-              <Textarea
-                value={niche}
-                onChange={(e) => setNiche(e.target.value)}
-                rows={2}
-                className="resize-none"
-                disabled={profileLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Résumé de votre persona</Label>
-              <Textarea
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                rows={3}
-                className="resize-none"
-                disabled={profileLoading}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-4">
-            <Button variant="outline" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
-              <Save className="w-4 h-4 mr-2" />
-              {pendingProfile ? "Mise à jour…" : "Mettre à jour"}
-            </Button>
-            <Button variant="outline" onClick={enrichPersona} disabled={enriching}>
-              {enriching ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-2" />
-              )}
-              {enriching ? "Enrichissement…" : "Enrichir avec l'IA"}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            L&apos;enrichissement IA utilise vos données d&apos;onboarding, l&apos;analyse concurrentielle et les conversations avec le coach pour améliorer votre persona. Coût : 1 crédit.
-          </p>
-        </Card>
-
-        <CompetitorAnalysisSection />
 
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
@@ -1104,6 +1126,115 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingOffers ? "Enregistrement…" : "Enregistrer les offres"}
           </Button>
         </Card>
+      </TabsContent>
+
+      {/* POSITIONNEMENT */}
+      <TabsContent value="positioning" className="space-y-6">
+        {/* Niche formula */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Ma formule de niche</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            Remplis les 4 éléments pour définir ta niche de façon claire et différenciante.
+          </p>
+
+          <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-5 text-sm font-medium">
+            J&apos;aide les{" "}
+            <span className="font-semibold text-primary">{nicheTarget || "[cible]"}</span>{" "}
+            à{" "}
+            <span className="font-semibold text-primary">{nicheObjective || "[objectif]"}</span>{" "}
+            avec{" "}
+            <span className="font-semibold text-primary">{nicheMechanism || "[mécanisme unique]"}</span>{" "}
+            en{" "}
+            <span className="font-semibold text-primary">{nicheMarker || "[marqueur temporel]"}</span>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cible</Label>
+              <Input
+                placeholder="ex : entrepreneurs solo, managers RH..."
+                value={nicheTarget}
+                onChange={(e) => setNicheTarget(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Objectif de la cible</Label>
+              <Input
+                placeholder="ex : trouver leurs 3 premiers clients..."
+                value={nicheObjective}
+                onChange={(e) => setNicheObjective(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Mécanisme unique</Label>
+              <Input
+                placeholder="ex : ma méthode Magnetic Content..."
+                value={nicheMechanism}
+                onChange={(e) => setNicheMechanism(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Marqueur temporel</Label>
+              <Input
+                placeholder="ex : 90 jours, sans publicité payante..."
+                value={nicheMarker}
+                onChange={(e) => setNicheMarker(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-5" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingPositioning ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </Card>
+
+        {/* Persona */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-2">Mon persona détaillé</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Généré après l&apos;onboarding et enrichissable avec l&apos;IA. Utilisé dans tous les contenus générés.
+          </p>
+
+          <div className="space-y-2">
+            <Textarea
+              value={mission}
+              onChange={(e) => setMission(e.target.value)}
+              rows={5}
+              className="resize-none"
+              disabled={profileLoading}
+              placeholder="Décris ton persona cible en détail..."
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Button variant="outline" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+              <Save className="w-4 h-4 mr-2" />
+              {pendingPositioning ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+            <Button variant="outline" onClick={enrichPersona} disabled={enriching}>
+              {enriching ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              {enriching ? "Enrichissement…" : "Enrichir avec l'IA"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            L&apos;enrichissement IA utilise vos données d&apos;onboarding, l&apos;analyse concurrentielle et les conversations avec le coach pour améliorer votre persona. Coût : 1 crédit.
+          </p>
+        </Card>
+
+        {/* Analyse concurrentielle */}
+        <CompetitorAnalysisSection />
       </TabsContent>
 
       {/* BRANDING */}

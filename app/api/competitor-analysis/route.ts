@@ -465,7 +465,7 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure (sans texte avant ni apr
       "offer_improvements": ["string (amélioration concrète à apporter à l'offre)"]
     }
   },
-  "summary": "string (synthèse comparative actionnable, 200-400 mots)",
+  "summary": "string (synthèse en MARKDOWN : ## titres de sections, **mots clés en gras**, listes - pour chaque point. Sections : ## Vue d'ensemble, ## Ce que font bien tes concurrents, ## Tes avantages distinctifs, ## Priorités stratégiques. 250-400 mots, actionnable.)",
   "strengths": ["string (forces globales de l'utilisateur vs tous les concurrents)"],
   "weaknesses": ["string (faiblesses globales à corriger en priorité)"],
   "opportunities": ["string (opportunités de différenciation et niches inexploitées)"],
