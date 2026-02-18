@@ -70,12 +70,14 @@ export async function POST(req: Request) {
     const platforms = Array.isArray(body.platforms) ? body.platforms : [];
     const socialLinks = platforms.length > 0 ? platforms.join(", ") : null;
 
-    // Audience
-    const audienceEmail = typeof body.audienceEmail === "string" ? body.audienceEmail : null;
-    const audienceSocial = typeof body.audienceSocial === "string" ? body.audienceSocial : null;
+    // Audience — columns are INTEGER, parse string values to numbers
+    const audienceEmailRaw = typeof body.audienceEmail === "string" ? body.audienceEmail : null;
+    const audienceSocialRaw = typeof body.audienceSocial === "string" ? body.audienceSocial : null;
+    const audienceEmailInt = parseAudienceCount(audienceEmailRaw);
+    const audienceSocialInt = parseAudienceCount(audienceSocialRaw);
 
-    // Offers
-    const offersRaw = Array.isArray(body.offers) ? body.offers : null;
+    // Offers — normalize to full schema expected by settings page
+    const offersRaw = Array.isArray(body.offers) ? normalizeOffers(body.offers) : null;
 
     // Extra diagnostic data stored as JSON
     const diagnosticAnswers: Record<string, unknown> = {
@@ -108,9 +110,9 @@ export async function POST(req: Request) {
       commissionRate: body.commissionRate ?? null,
       monthlyCommissions: body.monthlyCommissions ?? null,
 
-      // Audience
-      audienceEmail,
-      audienceSocial,
+      // Audience (raw string values for diagnostic context)
+      audienceEmail: audienceEmailRaw,
+      audienceSocial: audienceSocialRaw,
 
       // Refusals
       refusals: body.refusals ?? null,
@@ -145,8 +147,8 @@ export async function POST(req: Request) {
     if (mainGoal) patch.main_goal = mainGoal;
     if (mainGoals) patch.main_goals = mainGoals;
     if (socialLinks) patch.social_links = socialLinks;
-    if (audienceEmail) patch.audience_email = audienceEmail;
-    if (audienceSocial) patch.audience_social = audienceSocial;
+    if (typeof audienceEmailInt === "number") patch.audience_email = audienceEmailInt;
+    if (typeof audienceSocialInt === "number") patch.audience_social = audienceSocialInt;
     if (offersRaw) patch.offers = offersRaw;
     if (hasAlreadySold) patch.business_maturity = hasAlreadySold === "yes" ? "selling" : "pre-revenue";
     if (isAffiliate) patch.business_maturity = hasAlreadySold === "yes" ? "affiliate-active" : "affiliate-starting";
@@ -229,6 +231,35 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+}
+
+/** Parse audience count string to integer. Returns number or null. */
+function parseAudienceCount(val: string | null): number | null {
+  if (!val) return null;
+  // "non" / "no" → 0
+  if (/^(non|no)$/i.test(val.trim())) return 0;
+  // "oui" / "yes" without a count → 1 (has audience, unknown size)
+  if (/^(oui|yes|si|sì)$/i.test(val.trim())) return 1;
+  // Try to parse as number
+  const n = parseInt(val.replace(/\s/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Normalize offers to include all fields expected by settings page (OfferItemSchema) */
+function normalizeOffers(offers: unknown[]): Record<string, unknown>[] {
+  return offers
+    .filter((o): o is Record<string, unknown> => typeof o === "object" && o !== null)
+    .map((o) => ({
+      name: typeof o.name === "string" ? o.name.trim() : "",
+      type: typeof o.type === "string" ? o.type.trim() : "",
+      price: typeof o.price === "string" || typeof o.price === "number" ? String(o.price) : "",
+      salesCount: typeof o.salesCount === "string" || typeof o.salesCount === "number" ? String(o.salesCount) : "",
+      link: typeof o.link === "string" ? o.link.trim() : "",
+      promise: typeof o.promise === "string" ? o.promise.trim() : "",
+      description: typeof o.description === "string" ? o.description.trim() : "",
+      target: typeof o.target === "string" ? o.target.trim() : "",
+      format: typeof o.format === "string" ? o.format.trim() : "",
+    }));
 }
 
 /** Build the niche string from fill-in components */

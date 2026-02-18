@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = await getActiveProjectId(supabase, auth.user.id);
+    let projectId = await getActiveProjectId(supabase, auth.user.id);
 
     const raw = (await req.json()) as CreateBody;
 
