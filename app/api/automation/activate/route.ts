@@ -247,7 +247,7 @@ function triggerBeforeExecution(opts: {
           comment_type: "before",
           status: "failed",
           error_message: errMsg,
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
         await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
         return;
       }
@@ -269,7 +269,7 @@ function triggerBeforeExecution(opts: {
             comment_type: "before",
             status: "failed",
             error_message: errMsg,
-          }).then(() => {}).catch(() => {});
+          }).then(() => {}, () => {});
           await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
           return;
         }
@@ -286,7 +286,7 @@ function triggerBeforeExecution(opts: {
             comment_type: "before",
             status: "failed",
             error_message: errMsg,
-          }).then(() => {}).catch(() => {});
+          }).then(() => {}, () => {});
           await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
           return;
         }
