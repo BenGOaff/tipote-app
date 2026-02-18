@@ -38,7 +38,19 @@ export async function POST(req: Request) {
 
     // Core profile fields
     const firstName = typeof body.firstName === "string" ? body.firstName.trim() : null;
-    const revenueGoalMonthly = typeof body.revenueGoalMonthly === "string" ? body.revenueGoalMonthly : null;
+    const revenueGoalRaw = typeof body.revenueGoalMonthly === "string" ? body.revenueGoalMonthly : null;
+    // Map choice keys to human-readable labels (stored keys come from i18n single-choice step)
+    const REVENUE_GOAL_LABELS: Record<string, string> = {
+      lt500: "moins de 500 €/mois",
+      "500_1k": "500 – 1 000 €/mois",
+      "1k_3k": "1 000 – 3 000 €/mois",
+      "3k_5k": "3 000 – 5 000 €/mois",
+      "5k_10k": "5 000 – 10 000 €/mois",
+      gt10k: "plus de 10 000 €/mois",
+    };
+    const revenueGoalMonthly = revenueGoalRaw
+      ? (REVENUE_GOAL_LABELS[revenueGoalRaw] ?? revenueGoalRaw)
+      : null;
     const niche = buildNiche(body);
     const mission = typeof body.mission === "string" ? body.mission.trim() : null;
     const timeAvailable = typeof body.timeAvailable === "string" ? body.timeAvailable : null;

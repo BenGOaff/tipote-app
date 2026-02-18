@@ -90,6 +90,12 @@ function normalizeRevenueGoalText(raw: unknown): { kind: "numeric" | "text"; val
 
   const s = s0.replace(/\s+/g, " ").trim();
 
+  // If the value already has currency/period markers (e.g., stored label "1 000 – 3 000 €/mois"),
+  // return it as-is so it displays correctly without mangling.
+  if (hasCurrencyOrPeriodHints(s)) {
+    return { kind: "text", value: s };
+  }
+
   const kmMatch = s.match(/(\d+(?:[.,]\d+)?)\s*([kKmM])\b/);
   if (kmMatch) {
     const numRaw = kmMatch[1].replace(",", ".");

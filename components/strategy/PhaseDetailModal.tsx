@@ -64,7 +64,7 @@ interface PhaseDetailModalProps {
   phaseIndex: number;
   onUpdatePhase: (phaseIndex: number, phase: Phase) => void;
   onToggleTask?: (taskId: string, nextChecked: boolean) => void;
-  onAddTask?: (taskName: string, phaseIndex: number) => Promise<void>;
+  onAddTask?: (taskName: string, phaseIndex: number) => Promise<Task | undefined>;
   onDeleteTask?: (taskId: string) => Promise<void>;
 }
 
@@ -274,10 +274,18 @@ export const PhaseDetailModal = ({
     setNewTaskName("");
 
     if (onAddTask) {
-      // Persist via API and let parent handle state
+      // Persist via API — parent handles DB + phases state
       setIsSaving(true);
       try {
-        await onAddTask(name, phaseIndex);
+        const newTask = await onAddTask(name, phaseIndex);
+        // Update localPhase immediately so the task appears without closing the modal
+        if (newTask) {
+          setLocalPhase((prev) => {
+            const tasks = [...(prev.tasks || []), newTask];
+            const progress = calculateProgress(tasks);
+            return { ...prev, tasks, progress };
+          });
+        }
       } catch {
         // Error handled by parent
       } finally {

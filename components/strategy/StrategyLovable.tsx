@@ -488,7 +488,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   // Wrapper for addTask that updates modal local state + persists via API
   const handleModalAddTask = useCallback(
-    async (taskName: string, phaseIndex: number) => {
+    async (taskName: string, phaseIndex: number): Promise<{ id: string; task: string; done: boolean } | undefined> => {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -512,7 +512,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         throw new Error("Failed to add task");
       }
 
-      // Update local phases state immediately so the modal reflects the change
+      // Update local phases state immediately
       setPhases((prev) => {
         const next = [...prev];
         const ph = next[phaseIndex] ?? null;
@@ -527,6 +527,13 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
       // Refresh to sync server data
       router.refresh();
+
+      // Return task in modal format so the modal can update localPhase immediately
+      return {
+        id: String(json.task!.id),
+        task: json.task!.title || "—",
+        done: false,
+      };
     },
     [toast, router, t],
   );

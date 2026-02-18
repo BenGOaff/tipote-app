@@ -18,7 +18,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120; // monte à 180/300 si besoin
+export const maxDuration = 300;
 
 type AnyRecord = Record<string, any>;
 
@@ -67,12 +67,25 @@ function parseMoneyFromText(raw: unknown): number | null {
   return Math.round(n);
 }
 
+// Map onboarding choice keys to human-readable revenue labels
+const REVENUE_GOAL_KEY_MAP: Record<string, string> = {
+  lt500: "moins de 500 €/mois",
+  "500_1k": "500 – 1 000 €/mois",
+  "1k_3k": "1 000 – 3 000 €/mois",
+  "3k_5k": "3 000 – 5 000 €/mois",
+  "5k_10k": "5 000 – 10 000 €/mois",
+  gt10k: "plus de 10 000 €/mois",
+};
+
 function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
-  const direct =
+  const raw =
     cleanString(businessProfile.target_monthly_revenue, 64) ||
     cleanString(businessProfile.revenue_goal, 240) ||
     cleanString(businessProfile.revenue_goal_monthly, 240) ||
     cleanString(businessProfile.revenueGoalMonthly, 240);
+
+  // Convert legacy choice keys (e.g. "1k_3k") to readable labels
+  const direct = raw ? (REVENUE_GOAL_KEY_MAP[raw] ?? raw) : "";
 
   if (direct) return direct;
 
@@ -474,11 +487,8 @@ async function enrichBusinessProfileMissionBestEffort(params: {
     const summary = parts.join("\n");
     if (!summary.trim()) return;
 
-    // Also extract niche from planJson if richer than current
+    // Only update mission — never overwrite niche (user may have set it via questionnaire)
     const patch: AnyRecord = { mission: summary, updated_at: new Date().toISOString() };
-
-    const positioning = cleanString(planJson?.positioning, 300);
-    if (positioning) patch.niche = positioning;
 
     let bpUpdateQuery = supabase.from("business_profiles").update(patch).eq("user_id", userId);
     if (projectId) bpUpdateQuery = bpUpdateQuery.eq("project_id", projectId);
