@@ -4,13 +4,14 @@
 // - POST: save competitors list + trigger AI research (costs 1 credit)
 //         Returns SSE stream (text/event-stream) with heartbeats to prevent proxy timeout.
 // - PATCH: update with user corrections or uploaded document summary
-// Uses Claude (Anthropic API) for AI research
+// Uses OpenAI API for AI research
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { getOwnerOpenAI } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,63 +25,31 @@ function cleanString(v: unknown, maxLen = 240): string {
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
-function resolveApiKey(): string {
-  return (
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    ""
-  );
-}
+const OPENAI_MODEL =
+  process.env.TIPOTE_OPENAI_MODEL?.trim() ||
+  process.env.OPENAI_MODEL?.trim() ||
+  "gpt-4.1";
 
-function resolveModel(): string {
-  return (
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-5-20250929"
-  );
-}
-
-async function callClaude(args: {
-  apiKey: string;
+async function callOpenAI(args: {
   system: string;
   user: string;
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
-  const model = resolveModel();
+  const client = getOwnerOpenAI();
+  if (!client) throw new Error("Clé API OpenAI non configurée. Contactez le support.");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": args.apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-      temperature: typeof args.temperature === "number" ? args.temperature : 0.4,
-      system: args.system,
-      messages: [{ role: "user", content: args.user }],
-    }),
+  const completion = await client.chat.completions.create({
+    model: OPENAI_MODEL,
+    max_tokens: args.maxTokens ?? 4000,
+    temperature: args.temperature ?? 0.4,
+    messages: [
+      { role: "system", content: args.system },
+      { role: "user", content: args.user },
+    ],
   });
 
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
-  }
-
-  const json = (await res.json()) as any;
-  const parts = Array.isArray(json?.content) ? json.content : [];
-  const text = parts
-    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-
-  return text || "";
+  return completion.choices[0]?.message?.content?.trim() ?? "";
 }
 
 // ------------- Schemas -------------
@@ -181,10 +150,9 @@ export async function POST(req: NextRequest) {
     }
     competitors = parsed.data.competitors;
 
-    const apiKey = resolveApiKey();
-    if (!apiKey) {
+    if (!getOwnerOpenAI()) {
       return NextResponse.json(
-        { ok: false, error: "Clé API IA non configurée. Contactez le support." },
+        { ok: false, error: "Clé API OpenAI non configurée. Contactez le support." },
         { status: 500 },
       );
     }
@@ -248,9 +216,7 @@ export async function POST(req: NextRequest) {
 
         sendSSE("progress", { step: "Recherche IA en cours..." });
 
-        const apiKey = resolveApiKey();
         const researchResult = await researchCompetitors({
-          apiKey,
           competitors,
           userNiche: cleanString(businessProfile?.niche, 200),
           userMission: cleanString(businessProfile?.mission, 500),
@@ -413,7 +379,6 @@ export async function PATCH(req: NextRequest) {
 // ------------- AI Research function (Claude) -------------
 
 async function researchCompetitors(params: {
-  apiKey: string;
   competitors: Array<{ name: string; website?: string; notes?: string }>;
   userNiche: string;
   userMission: string;
@@ -427,7 +392,7 @@ async function researchCompetitors(params: {
   opportunities: string[];
   positioning_matrix: string;
 }> {
-  const { apiKey, competitors, userNiche, userMission, userOffers, uploadedDocContext } = params;
+  const { competitors, userNiche, userMission, userOffers, uploadedDocContext } = params;
 
   const systemPrompt = `Tu es Tipote, un analyste concurrentiel expert en marketing digital et stratégie business.
 
@@ -476,8 +441,9 @@ IMPORTANT :
 - Compare les tarifs, fonctionnalités et conditions quand c'est possible.
 - Si tu manques d'informations sur un concurrent, dis-le clairement dans missing_info.
 - Tout doit être en français.
+- CONCISION OBLIGATOIRE : chaque champ texte = 1-2 phrases max. Chaque item de liste = 1 phrase max. Le JSON complet doit rester compact.
 
-RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
+RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure (sans texte avant ni après le JSON) :
 {
   "competitor_details": {
     "competitor_name": {
@@ -522,22 +488,35 @@ ${competitorsList}
 Analyse chaque concurrent en détail et produis le rapport complet en JSON.`;
 
   try {
-    const raw = await callClaude({
-      apiKey,
+    const raw = await callOpenAI({
       system: systemPrompt,
       user: userPrompt,
-      maxTokens: 8000,
+      maxTokens: 12000,
       temperature: 0.4,
     });
 
-    // Extract JSON from response (Claude might wrap it in markdown code blocks)
-    let jsonStr = raw;
-    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
+    // Robust JSON extraction:
+    // 1. Try markdown code blocks  ```json ... ```
+    // 2. Try outermost { ... } (handles preamble/postamble text from Claude)
+    // 3. Raw parse as last resort
+    let parsed: AnyRecord;
+    try {
+      const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        parsed = JSON.parse(codeBlockMatch[1].trim());
+      } else {
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start !== -1 && end !== -1 && end > start) {
+          parsed = JSON.parse(raw.slice(start, end + 1));
+        } else {
+          parsed = JSON.parse(raw);
+        }
+      }
+    } catch (parseErr) {
+      console.error("[competitor-analysis] JSON parse failed. Raw response (first 500 chars):", raw.slice(0, 500));
+      throw parseErr;
     }
-
-    const parsed = JSON.parse(jsonStr) as AnyRecord;
 
     return {
       competitor_details: parsed.competitor_details ?? {},
@@ -555,13 +534,7 @@ Analyse chaque concurrent en détail et produis le rapport complet en JSON.`;
     };
   } catch (e) {
     console.error("AI competitor research failed:", e);
-    return {
-      competitor_details: {},
-      summary: "L'analyse IA a rencontré une erreur. Vous pouvez compléter manuellement les informations.",
-      strengths: [],
-      weaknesses: [],
-      opportunities: [],
-      positioning_matrix: "",
-    };
+    // Rethrow so the SSE stream sends an error event (instead of silently saving a broken result)
+    throw e;
   }
 }

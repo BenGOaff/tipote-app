@@ -1,12 +1,13 @@
 // app/api/competitor-analysis/upload/route.ts
 // Upload an existing competitor research document (PDF, DOCX, TXT)
-// AI summarizes the document and stores it as competitor analysis
-// Uses Claude (Anthropic API) for AI analysis
+// AI extracts competitors from the document to pre-fill the analysis form
+// Uses OpenAI API for AI extraction
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { getOwnerOpenAI } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,63 +19,31 @@ function cleanString(v: unknown, maxLen = 240): string {
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
-function resolveApiKey(): string {
-  return (
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    ""
-  );
-}
+const OPENAI_MODEL =
+  process.env.TIPOTE_OPENAI_MODEL?.trim() ||
+  process.env.OPENAI_MODEL?.trim() ||
+  "gpt-4.1";
 
-function resolveModel(): string {
-  return (
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-5-20250929"
-  );
-}
-
-async function callClaude(args: {
-  apiKey: string;
+async function callOpenAI(args: {
   system: string;
   user: string;
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
-  const model = resolveModel();
+  const client = getOwnerOpenAI();
+  if (!client) throw new Error("Clé API OpenAI non configurée. Contactez le support.");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": args.apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-      temperature: typeof args.temperature === "number" ? args.temperature : 0.3,
-      system: args.system,
-      messages: [{ role: "user", content: args.user }],
-    }),
+  const completion = await client.chat.completions.create({
+    model: OPENAI_MODEL,
+    max_tokens: args.maxTokens ?? 4000,
+    temperature: args.temperature ?? 0.3,
+    messages: [
+      { role: "system", content: args.system },
+      { role: "user", content: args.user },
+    ],
   });
 
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
-  }
-
-  const json = (await res.json()) as any;
-  const parts = Array.isArray(json?.content) ? json.content : [];
-  const text = parts
-    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-
-  return text || "";
+  return completion.choices[0]?.message?.content?.trim() ?? "";
 }
 
 export async function POST(req: NextRequest) {
@@ -164,10 +133,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Check API key
-    const apiKey = resolveApiKey();
-    if (!apiKey) {
+    if (!getOwnerOpenAI()) {
       return NextResponse.json(
-        { ok: false, error: "Clé API IA non configurée. Contactez le support." },
+        { ok: false, error: "Clé API OpenAI non configurée. Contactez le support." },
         { status: 500 },
       );
     }
@@ -192,7 +160,6 @@ export async function POST(req: NextRequest) {
 
     // Extract competitors from document (no full analysis — user will launch that separately)
     const extractResult = await extractFromDocument({
-      apiKey,
       documentText: textContent,
       userNiche: cleanString(businessProfile?.niche, 200),
       userMission: cleanString(businessProfile?.mission, 500),
@@ -250,7 +217,6 @@ export async function POST(req: NextRequest) {
 // Lightweight extraction: identify competitors + save document key points.
 // No full competitive analysis — that's done later by the main POST route.
 async function extractFromDocument(params: {
-  apiKey: string;
   documentText: string;
   userNiche: string;
   userMission: string;
@@ -259,7 +225,7 @@ async function extractFromDocument(params: {
   document_key_points: string;
   document_summary: string;
 }> {
-  const { apiKey, documentText, userNiche, userMission } = params;
+  const { documentText, userNiche, userMission } = params;
 
   const systemPrompt = `Tu es Tipote, un assistant d'analyse concurrentielle.
 
@@ -293,8 +259,7 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
 }`;
 
   try {
-    const raw = await callClaude({
-      apiKey,
+    const raw = await callOpenAI({
       system: systemPrompt,
       user: `DOCUMENT UPLOADÉ :\n\n${documentText}`,
       maxTokens: 2000,
