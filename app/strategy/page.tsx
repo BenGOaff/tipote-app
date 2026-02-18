@@ -7,6 +7,9 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import StrategyLovable from "@/components/strategy/StrategyLovable";
 import AutoSyncTasks from "./AutoSyncTasks";
 
@@ -195,6 +198,20 @@ export default async function StrategyPage() {
   const profileRow = (profileRes.data ?? null) as AnyRecord | null;
   const firstName = asString(profileRow?.first_name);
   const preferredContentTypes = asStringArray(profileRow?.content_preference);
+
+  // ✅ Migration automatique : si revenue_goal_monthly est une clé i18n legacy (ex: "gt10k"),
+  // on la normalise en libellé lisible directement en base pour les prochaines lectures.
+  const rawRevenueKey = asString(profileRow?.revenue_goal_monthly);
+  if (rawRevenueKey && REVENUE_GOAL_KEY_LABELS[rawRevenueKey]) {
+    const fixedLabel = REVENUE_GOAL_KEY_LABELS[rawRevenueKey];
+    // Update optimistic local value immediately
+    if (profileRow) (profileRow as Record<string, unknown>).revenue_goal_monthly = fixedLabel;
+    // Persist to DB (best-effort, fire-and-forget)
+    void supabaseAdmin
+      .from("business_profiles")
+      .update({ revenue_goal_monthly: fixedLabel })
+      .eq("user_id", user.id);
+  }
 
   // Offres : UNIQUEMENT pour les users SANS offres et NON affilies (sinon: jamais de /strategy/pyramids)
   let isAffiliate = Boolean((profileRow as AnyRecord | null)?.is_affiliate);
