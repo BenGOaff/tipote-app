@@ -1594,7 +1594,7 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt =
-      "Tu es un expert francophone en copywriting, marketing et stratégie de contenu. " +
+      "Tu es un expert en copywriting, marketing et stratégie de contenu. " +
       "Tu dois produire des contenus très actionnables, concrets, et de haute qualité. " +
       "Retourne uniquement le contenu final, sans explication, sans markdown." +
       (competitorSummary
@@ -1817,6 +1817,7 @@ export async function POST(req: Request) {
           batchCount,
           promoKind,
           offerLink,
+          language: contentLocale,
         } as any);
 
         // ✅ Ajout contexte offre (existante ou manual)
@@ -1951,6 +1952,7 @@ export async function POST(req: Request) {
                 }
               : undefined,
           formality,
+          language: contentLocale,
         } as any);
       }
 
@@ -1978,6 +1980,7 @@ export async function POST(req: Request) {
           ctaText,
           ctaLink,
           approvedPlan: step === "write" ? approvedPlan : null,
+          language: contentLocale,
         } as any);
       }
 

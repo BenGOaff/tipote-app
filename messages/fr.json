@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "today": "Aujourd'hui",
+    "strategy": "Ma Stratégie",
+    "create": "Créer",
+    "contents": "Mes Contenus",
+    "templates": "Templates",
+    "analytics": "Analytics",
+    "pepites": "Pépites",
+    "settings": "Paramètres"
+  },
+  "sidebar": {
+    "tagline": "Ton compagnon malin",
+    "credits": "Crédits",
+    "seeCredits": "Voir mes crédits IA",
+    "newPepite": "Nouvelle pépite"
+  },
+  "languageSwitcher": {
+    "label": "Langue de l'interface",
+    "languages": {
+      "fr": "Français",
+      "en": "English",
+      "es": "Español",
+      "it": "Italiano",
+      "ar": "العربية"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "tabs": {
+      "profile": "Profil",
+      "connections": "Connexions",
+      "settings": "Réglages",
+      "branding": "Branding",
+      "ai": "IA & Crédits",
+      "pricing": "Abonnement"
+    },
+    "language": {
+      "uiTitle": "Langue de l'interface",
+      "uiDescription": "Choisissez la langue d'affichage de Tipote.",
+      "contentTitle": "Langue du contenu généré",
+      "contentDescription": "Langue dans laquelle Tipote génère tes contenus IA.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Langue mise à jour",
+      "error": "Erreur lors de la sauvegarde"
+    }
+  },
+  "common": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "success": "Succès",
+    "yes": "Oui",
+    "no": "Non",
+    "required": "Requis",
+    "optional": "Optionnel",
+    "copied": "Copié !",
+    "copy": "Copier"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "noAccount": "Pas encore de compte ?",
+    "signup": "S'inscrire"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue. Veuillez réessayer.",
+    "unauthorized": "Non autorisé.",
+    "notFound": "Page introuvable.",
+    "network": "Erreur réseau. Vérifiez votre connexion."
+  }
+}

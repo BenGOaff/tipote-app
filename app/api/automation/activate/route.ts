@@ -11,6 +11,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { decrypt } from "@/lib/crypto";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import {
   getUserPlan,
   planHasAutoComments,
@@ -230,7 +231,7 @@ function triggerBeforeExecution(opts: {
     try {
       let connQuery = supabaseAdmin
         .from("social_connections")
-        .select("platform_user_id, access_token_encrypted")
+        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", opts.user_id)
         .eq("platform", opts.platform);
       if (opts.project_id) connQuery = connQuery.eq("project_id", opts.project_id);
@@ -243,9 +244,23 @@ function triggerBeforeExecution(opts: {
       }
 
       let accessToken: string;
-      try { accessToken = decrypt(conn.access_token_encrypted); } catch {
-        await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
-        return;
+
+      // Check token expiry and refresh if needed (5-minute buffer)
+      const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+      const isExpired = conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS);
+      if (isExpired) {
+        const refreshResult = await refreshSocialToken(conn.id, opts.platform, conn.refresh_token_encrypted ?? null);
+        if (!refreshResult.ok || !refreshResult.accessToken) {
+          console.error("[activate] Token refresh failed for", opts.platform, refreshResult.error);
+          await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
+          return;
+        }
+        accessToken = refreshResult.accessToken;
+      } else {
+        try { accessToken = decrypt(conn.access_token_encrypted); } catch {
+          await supabaseAdmin.from("content_item").update({ auto_comments_status: "before_done" }).eq("id", opts.content_id);
+          return;
+        }
       }
 
       const { data: profile } = await supabaseAdmin

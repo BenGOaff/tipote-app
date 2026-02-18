@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Sun,
   Target,
@@ -28,6 +29,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 import { usePepitesUnread } from "@/lib/pepites/usePepitesUnread";
 
@@ -62,28 +64,14 @@ function NavLink(props: {
   );
 }
 
-const mainItems = [
-  { title: "Aujourd'hui", url: "/app", icon: Sun, spotlightId: "today" },
-  {
-    title: "Ma Stratégie",
-    url: "/strategy",
-    icon: Target,
-    spotlightId: "strategy",
-  },
-  { title: "Créer", url: "/create", icon: Sparkles, spotlightId: "create" },
-  {
-    title: "Mes Contenus",
-    url: "/contents",
-    icon: FolderOpen,
-    spotlightId: null,
-  },
-  {
-    title: "Templates",
-    url: "/templates",
-    icon: Layout,
-    spotlightId: null,
-  },
-] as const;
+// mainItems titles are translated inside AppSidebar (see useTranslations("nav"))
+const MAIN_ITEM_CONFIG = [
+  { key: "today" as const, url: "/app", icon: Sun, spotlightId: "today" },
+  { key: "strategy" as const, url: "/strategy", icon: Target, spotlightId: "strategy" },
+  { key: "create" as const, url: "/create", icon: Sparkles, spotlightId: "create" },
+  { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: null },
+  { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: null },
+];
 
 function useAnimatedNumber(value: number, durationMs = 900) {
   const [display, setDisplay] = useState<number>(value);
@@ -121,7 +109,7 @@ function useAnimatedNumber(value: number, durationMs = 900) {
 }
 
 function CreditsSidebarBadge() {
-  // ✅ Plus besoin de dupliquer fetch/event/focus/visibility : centralisé dans le hook
+  const t = useTranslations("sidebar");
   const { loading, balance, error } = useCreditsBalance();
 
   const remaining = useMemo(() => balance?.total_remaining ?? 0, [balance]);
@@ -131,8 +119,8 @@ function CreditsSidebarBadge() {
     <Link
       href="/settings?tab=billing"
       className="mx-3 mb-3 block rounded-lg border border-primary/15 bg-primary/10 hover:bg-primary/15 transition-colors"
-      aria-label="Voir mes crédits IA"
-      title="Voir mes crédits IA"
+      aria-label={t("seeCredits")}
+      title={t("seeCredits")}
     >
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
@@ -140,14 +128,13 @@ function CreditsSidebarBadge() {
             <Coins className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <p className="text-xs text-muted-foreground">Crédits</p>
+            <p className="text-xs text-muted-foreground">{t("credits")}</p>
             <p className="text-sm font-medium text-foreground">
               {loading ? "…" : error ? "—" : `${animatedRemaining}`}
-              <span className="text-xs font-normal text-muted-foreground"> crédits</span>
+              <span className="text-xs font-normal text-muted-foreground"> {t("credits").toLowerCase()}</span>
             </p>
           </div>
         </div>
-
         <div className="text-xs text-muted-foreground">{loading ? "" : error ? "" : ">"}</div>
       </div>
     </Link>
@@ -155,6 +142,8 @@ function CreditsSidebarBadge() {
 }
 
 function PepitesSidebarItem() {
+  const t = useTranslations("nav");
+  const ts = useTranslations("sidebar");
   const { loading, hasUnread } = usePepitesUnread();
 
   return (
@@ -170,12 +159,12 @@ function PepitesSidebarItem() {
             {!loading && hasUnread ? (
               <span
                 className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-sidebar"
-                aria-label="Nouvelle pépite"
-                title="Nouvelle pépite ✨"
+                aria-label={ts("newPepite")}
+                title={ts("newPepite") + " ✨"}
               />
             ) : null}
           </div>
-          <span>Pépites</span>
+          <span>{t("pepites")}</span>
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -183,7 +172,16 @@ function PepitesSidebarItem() {
 }
 
 export function AppSidebar() {
+  const t = useTranslations("nav");
+  const ts = useTranslations("sidebar");
   const { phase, nextPhase } = useTutorial();
+
+  const mainItems = MAIN_ITEM_CONFIG.map((cfg) => ({
+    title: t(cfg.key),
+    url: cfg.url,
+    icon: cfg.icon,
+    spotlightId: cfg.spotlightId,
+  }));
 
   const handleItemClick = (spotlightId: string | null) => {
     // Si on clique sur l'élément qui est actuellement en spotlight, passer au suivant
@@ -210,7 +208,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h2 className="text-lg font-display font-bold">Tipote™</h2>
-            <p className="text-xs text-muted-foreground">Ton compagnon malin</p>
+            <p className="text-xs text-muted-foreground">{ts("tagline")}</p>
           </div>
         </div>
       </SidebarHeader>
@@ -276,7 +274,7 @@ export function AppSidebar() {
                 activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
               >
                 <BarChart3 className="w-5 h-5" />
-                <span>Analytics</span>
+                <span>{t("analytics")}</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -294,12 +292,17 @@ export function AppSidebar() {
                   onClick={() => handleItemClick("settings")}
                 >
                   <Settings className="w-5 h-5" />
-                  <span>Paramètres</span>
+                  <span>{t("settings")}</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </TutorialSpotlight>
         </SidebarMenu>
+
+        {/* Language switcher — compact in sidebar footer */}
+        <div className="px-1 pt-1">
+          <LanguageSwitcher variant="sidebar" />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

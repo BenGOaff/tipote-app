@@ -139,6 +139,11 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   lines.push(params.templateSchemaPrompt || "");
   lines.push("");
 
+  if (params.language && params.language !== "fr") {
+    lines.push(`LANGUE OBLIGATOIRE: ${params.language}. Tout le texte du JSON doit être rédigé dans cette langue.`);
+    lines.push("");
+  }
+
   lines.push("IMPORTANT :");
   lines.push("- Respecte maxLength / minItems / maxItems / itemMaxLength.");
   lines.push("- Remplis tous les champs requis.");
@@ -155,6 +160,9 @@ function buildLegacyTextPrompt(params: FunnelPromptParams): string {
 
   lines.push(`${pageName} — Copywriting premium.`);
   lines.push("IMPORTANT: Retourne uniquement le contenu final, sans explication, sans markdown.");
+  if (params.language && params.language !== "fr") {
+    lines.push(`LANGUE OBLIGATOIRE: ${params.language}. Tout le contenu doit être rédigé dans cette langue.`);
+  }
   lines.push("");
 
   if ((params.mode === "from_offer" || params.mode === "from_existing") && params.offer) {

@@ -54,10 +54,17 @@ export async function refreshSocialToken(
       updateData.refresh_token_encrypted = encrypt(tokens.refresh_token);
     }
 
-    await supabaseAdmin
+    const { error: dbError } = await supabaseAdmin
       .from("social_connections")
       .update(updateData)
       .eq("id", connectionId);
+
+    if (dbError) {
+      // The new rotating refresh token was not persisted — returning ok here would leave
+      // the old (now-invalid) refresh token in DB, causing permanent disconnection next cycle.
+      console.error(`[refreshSocialToken] CRITICAL: DB update failed for ${platform} connection ${connectionId}:`, dbError.message);
+      return { ok: false, error: "Token rafraîchi mais impossible de sauvegarder en base. Reconnecte ton compte." };
+    }
 
     return { ok: true, accessToken: tokens.access_token };
   } catch (err: any) {

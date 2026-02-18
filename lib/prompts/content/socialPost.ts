@@ -18,6 +18,7 @@ export type SocialPostPromptParams = {
 
   tone?: SocialTone | string;
   batchCount?: number;
+  language?: string;
 
   // pour les posts de vente / lead magnet
   promoKind?: "paid" | "free";
@@ -185,11 +186,12 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
 
   const promoKind = (params.promoKind ?? "paid") as "paid" | "free";
   const offerLink = safeStr(params.offerLink);
+  const language = safeStr(params.language) || "fr";
 
   const roleBlock = [
     "Tu es un créateur de contenus viraux pour les réseaux sociaux avec 15 ans d'expérience réussie.",
     "Tu es aussi un copywriter senior orienté conversion (psychologie, clarté, persuasion).",
-    "Tu écris en français pour des entrepreneurs qui veulent démarrer un business en ligne et générer leurs premiers revenus automatisés et scalables.",
+    `LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT le contenu généré dans cette langue.`,
   ].join("\n");
 
   const hardRules = [

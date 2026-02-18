@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "today": "اليوم",
+    "strategy": "استراتيجيتي",
+    "create": "إنشاء",
+    "contents": "محتوياتي",
+    "templates": "القوالب",
+    "analytics": "التحليلات",
+    "pepites": "الجواهر",
+    "settings": "الإعدادات"
+  },
+  "sidebar": {
+    "tagline": "رفيقك الذكي",
+    "credits": "الاعتمادات",
+    "seeCredits": "عرض رصيد الذكاء الاصطناعي",
+    "newPepite": "جوهرة جديدة"
+  },
+  "languageSwitcher": {
+    "label": "لغة الواجهة",
+    "languages": {
+      "fr": "Français",
+      "en": "English",
+      "es": "Español",
+      "it": "Italiano",
+      "ar": "العربية"
+    }
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "tabs": {
+      "profile": "الملف الشخصي",
+      "connections": "الاتصالات",
+      "settings": "التفضيلات",
+      "branding": "العلامة التجارية",
+      "ai": "الذكاء الاصطناعي والاعتمادات",
+      "pricing": "الاشتراك"
+    },
+    "language": {
+      "uiTitle": "لغة الواجهة",
+      "uiDescription": "اختر لغة عرض تطبيق Tipote.",
+      "contentTitle": "لغة المحتوى المُولَّد بالذكاء الاصطناعي",
+      "contentDescription": "اللغة التي يستخدمها Tipote لإنشاء محتوياتك.",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم تحديث اللغة",
+      "error": "خطأ في الحفظ"
+    }
+  },
+  "common": {
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "previous": "السابق",
+    "search": "بحث",
+    "loading": "جارٍ التحميل…",
+    "error": "خطأ",
+    "success": "نجاح",
+    "yes": "نعم",
+    "no": "لا",
+    "required": "مطلوب",
+    "optional": "اختياري",
+    "copied": "تم النسخ!",
+    "copy": "نسخ"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "noAccount": "ليس لديك حساب؟",
+    "signup": "إنشاء حساب"
+  },
+  "errors": {
+    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "unauthorized": "غير مصرح.",
+    "notFound": "الصفحة غير موجودة.",
+    "network": "خطأ في الشبكة. تحقق من اتصالك."
+  }
+}

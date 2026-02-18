@@ -20,6 +20,15 @@ import { isAdminEmail } from "@/lib/adminEmails";
  */
 
 const ACTIVE_PROJECT_COOKIE = "tipote_active_project";
+const UI_LOCALE_COOKIE = "ui_locale";
+const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
+
+/** Detect preferred locale from Accept-Language header (falls back to 'fr'). */
+function detectLocaleFromHeader(req: NextRequest): string {
+  const acceptLang = req.headers.get("accept-language") ?? "";
+  const langs = acceptLang.split(",").map((l) => l.split(";")[0].trim().slice(0, 2).toLowerCase());
+  return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? "fr";
+}
 
 const PUBLIC_PREFIXES = [
   "/", // ✅ page login du repo
@@ -57,6 +66,14 @@ export async function middleware(req: NextRequest) {
   // ✅ Route publique exacte "/" (page login)
   if (pathname === "/") return NextResponse.next();
 
+  // Locale detection: set ui_locale cookie on first visit from Accept-Language header.
+  // Protected-route middleware already has the correct response object below,
+  // so we propagate locale through a header and set the cookie on `res` later.
+  const hasLocaleCookie = !!req.cookies.get(UI_LOCALE_COOKIE)?.value;
+  const detectedLocale = hasLocaleCookie
+    ? req.cookies.get(UI_LOCALE_COOKIE)!.value
+    : detectLocaleFromHeader(req);
+
   // 1) Toujours laisser passer les routes publiques
   if (startsWithAny(pathname, PUBLIC_PREFIXES)) {
     return NextResponse.next();
@@ -69,6 +86,15 @@ export async function middleware(req: NextRequest) {
 
   // 3) Réponse mutable pour cookies Supabase SSR
   const res = NextResponse.next();
+
+  // Persist detected locale (first-visit or existing) on all protected responses.
+  if (!hasLocaleCookie) {
+    res.cookies.set(UI_LOCALE_COOKIE, detectedLocale, {
+      path: "/",
+      maxAge: 365 * 24 * 60 * 60, // 1 year
+      sameSite: "lax",
+    });
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,11 +163,21 @@ export async function middleware(req: NextRequest) {
     // Fallback : vérifier par user_id seul (ancien comportement / compat)
     const { data: bp, error } = await supabase
       .from("business_profiles")
-      .select("onboarding_completed")
+      .select("onboarding_completed, ui_locale")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (error) return res; // fail-open DB
+
+    // Cross-device locale sync: if DB has a saved ui_locale, apply it to cookie.
+    const dbLocale = (bp as any)?.ui_locale;
+    if (dbLocale && SUPPORTED_LOCALES.includes(dbLocale)) {
+      res.cookies.set(UI_LOCALE_COOKIE, dbLocale, {
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: "lax",
+      });
+    }
 
     if (!bp?.onboarding_completed) {
       const url = req.nextUrl.clone();

@@ -40,6 +40,7 @@ export type OfferContext = {
 export type EmailPromptParams = {
   type: emailType;
   formality?: "tu" | "vous";
+  language?: string;
 
   // Newsletter
   theme?: string;
@@ -173,10 +174,12 @@ export function buildEmailPrompt(params: EmailPromptParams): string {
 
   const lines: string[] = [];
 
+  const language = clean(params.language, 20) || "fr";
+
   // System-style instructions (strict plain text)
-  lines.push("Tu es un copywriter senior spécialisé en email marketing pour entrepreneurs francophones.");
+  lines.push("Tu es un copywriter senior spécialisé en email marketing.");
   lines.push("Tu maîtrises les meilleures pratiques 2025 (angles, hooks, CTA, psychologie, clarté, rythme).");
-  lines.push("Tu écris en français, en texte brut uniquement.");
+  lines.push(`LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT le contenu en ${language}, en texte brut uniquement.`);
   lines.push("Phrases courtes. Pas de blabla. Pas de markdown. Pas de gras. Pas de titres.");
   lines.push("Mise en page: retour à la ligne après chaque phrase (emails faciles à lire).");
   lines.push("Tu t'appuies sur le persona + l'offre + les ressources internes (triggers, structures) fournis dans le contexte.");

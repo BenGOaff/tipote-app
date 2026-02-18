@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "today": "Hoy",
+    "strategy": "Mi Estrategia",
+    "create": "Crear",
+    "contents": "Mis Contenidos",
+    "templates": "Plantillas",
+    "analytics": "Analíticas",
+    "pepites": "Joyas",
+    "settings": "Ajustes"
+  },
+  "sidebar": {
+    "tagline": "Tu compañero inteligente",
+    "credits": "Créditos",
+    "seeCredits": "Ver mis créditos IA",
+    "newPepite": "Nueva joya"
+  },
+  "languageSwitcher": {
+    "label": "Idioma de la interfaz",
+    "languages": {
+      "fr": "Français",
+      "en": "English",
+      "es": "Español",
+      "it": "Italiano",
+      "ar": "العربية"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "tabs": {
+      "profile": "Perfil",
+      "connections": "Conexiones",
+      "settings": "Preferencias",
+      "branding": "Branding",
+      "ai": "IA & Créditos",
+      "pricing": "Suscripción"
+    },
+    "language": {
+      "uiTitle": "Idioma de la interfaz",
+      "uiDescription": "Elige el idioma de visualización de Tipote.",
+      "contentTitle": "Idioma del contenido IA",
+      "contentDescription": "El idioma que usa Tipote para generar tus contenidos IA.",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Idioma actualizado",
+      "error": "Error al guardar"
+    }
+  },
+  "common": {
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "add": "Añadir",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "search": "Buscar",
+    "loading": "Cargando…",
+    "error": "Error",
+    "success": "Éxito",
+    "yes": "Sí",
+    "no": "No",
+    "required": "Requerido",
+    "optional": "Opcional",
+    "copied": "¡Copiado!",
+    "copy": "Copiar"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "resetPassword": "Restablecer contraseña",
+    "noAccount": "¿No tienes cuenta?",
+    "signup": "Registrarse"
+  },
+  "errors": {
+    "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "unauthorized": "No autorizado.",
+    "notFound": "Página no encontrada.",
+    "network": "Error de red. Comprueba tu conexión."
+  }
+}

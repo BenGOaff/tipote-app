@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
@@ -26,6 +27,7 @@ import {
   Paintbrush,
 } from "lucide-react";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
@@ -99,6 +101,7 @@ type ProfileRow = {
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
+  const tSettings = useTranslations("settings");
   const router = useRouter();
   const sp = useSearchParams();
   const { toast } = useToast();
@@ -606,27 +609,27 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       <TabsList className="mb-6 flex-wrap h-auto gap-1">
         <TabsTrigger value="profile" className="gap-2">
           <User className="w-4 h-4" />
-          Profil
+          {tSettings("tabs.profile")}
         </TabsTrigger>
         <TabsTrigger value="connections" className="gap-2">
           <Plug className="w-4 h-4" />
-          Connexions
+          {tSettings("tabs.connections")}
         </TabsTrigger>
         <TabsTrigger value="settings" className="gap-2">
           <Globe className="w-4 h-4" />
-          Réglages
+          {tSettings("tabs.settings")}
         </TabsTrigger>
         <TabsTrigger value="branding" className="gap-2">
           <Paintbrush className="w-4 h-4" />
-          Branding
+          {tSettings("tabs.branding")}
         </TabsTrigger>
         <TabsTrigger value="ai" className="gap-2">
           <Brain className="w-4 h-4" />
-          IA & Crédits
+          {tSettings("tabs.ai")}
         </TabsTrigger>
         <TabsTrigger value="pricing" className="gap-2">
           <CreditCard className="w-4 h-4" />
-          Abonnement
+          {tSettings("tabs.pricing")}
         </TabsTrigger>
       </TabsList>
 
@@ -760,16 +763,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Langue de l&apos;application</Label>
-              <Select defaultValue="fr">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Langue de l&apos;interface</Label>
+              <p className="text-xs text-muted-foreground">Langue d&apos;affichage de Tipote — le changement s&apos;applique immédiatement.</p>
+              <LanguageSwitcher variant="settings" />
             </div>
 
             <div className="space-y-2">

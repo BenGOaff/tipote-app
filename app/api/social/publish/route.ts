@@ -305,8 +305,10 @@ export async function POST(req: NextRequest) {
   // 3. Vérifier l'expiration du token — tenter un refresh si expiré
   let accessToken: string;
 
-  if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
-    // Token expired — attempt refresh
+  // Refresh 5 minutes before actual expiry to avoid expiry-during-publish edge cases
+  const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+  if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS)) {
+    // Token expired or about to expire — attempt refresh
     const refreshResult = await refreshSocialToken(
       connection.id,
       platform,

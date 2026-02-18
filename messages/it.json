@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "today": "Oggi",
+    "strategy": "La Mia Strategia",
+    "create": "Crea",
+    "contents": "I Miei Contenuti",
+    "templates": "Template",
+    "analytics": "Analisi",
+    "pepites": "Gemme",
+    "settings": "Impostazioni"
+  },
+  "sidebar": {
+    "tagline": "Il tuo compagno intelligente",
+    "credits": "Crediti",
+    "seeCredits": "Vedi i miei crediti IA",
+    "newPepite": "Nuova gemma"
+  },
+  "languageSwitcher": {
+    "label": "Lingua dell'interfaccia",
+    "languages": {
+      "fr": "Français",
+      "en": "English",
+      "es": "Español",
+      "it": "Italiano",
+      "ar": "العربية"
+    }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "tabs": {
+      "profile": "Profilo",
+      "connections": "Connessioni",
+      "settings": "Preferenze",
+      "branding": "Branding",
+      "ai": "IA & Crediti",
+      "pricing": "Abbonamento"
+    },
+    "language": {
+      "uiTitle": "Lingua dell'interfaccia",
+      "uiDescription": "Scegli la lingua di visualizzazione di Tipote.",
+      "contentTitle": "Lingua del contenuto IA",
+      "contentDescription": "La lingua che Tipote usa per generare i tuoi contenuti IA.",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "saved": "Lingua aggiornata",
+      "error": "Errore durante il salvataggio"
+    }
+  },
+  "common": {
+    "save": "Salva",
+    "saving": "Salvataggio…",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "add": "Aggiungi",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "search": "Cerca",
+    "loading": "Caricamento…",
+    "error": "Errore",
+    "success": "Successo",
+    "yes": "Sì",
+    "no": "No",
+    "required": "Obbligatorio",
+    "optional": "Facoltativo",
+    "copied": "Copiato!",
+    "copy": "Copia"
+  },
+  "auth": {
+    "login": "Accedi",
+    "logout": "Esci",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "resetPassword": "Reimposta password",
+    "noAccount": "Non hai un account?",
+    "signup": "Registrati"
+  },
+  "errors": {
+    "generic": "Si è verificato un errore. Riprova.",
+    "unauthorized": "Non autorizzato.",
+    "notFound": "Pagina non trovata.",
+    "network": "Errore di rete. Controlla la tua connessione."
+  }
+}

@@ -11,6 +11,7 @@ export type ArticlePromptParams = {
   // Obligatoire
   subject: string;
   objective: ArticleObjective;
+  language?: string;
 
   // SEO
   primaryKeyword?: string;
@@ -96,15 +97,18 @@ export function buildArticlePrompt(params: ArticlePromptParams): string {
 
   const lines: string[] = [];
 
-  lines.push("Tu es un rédacteur web senior francophone (copywriting + SEO).");
+  const language = clean(params.language, 20) || "fr";
+
+  lines.push("Tu es un rédacteur web senior expert en copywriting et SEO.");
   lines.push("Tu écris comme un humain : fluide, vivant, concret, sans jargon inutile.");
   lines.push("Tu utilises le persona + business profile + business plan + ressources internes fournis dans le contexte.");
   lines.push("Objectif: produire un article très utile, très lisible, et optimisé SEO.");
+  lines.push(`LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT l'article dans cette langue.`);
   lines.push("");
 
   // Format rules
   lines.push("Règles de format (STRICT):");
-  lines.push("- Texte en français.");
+  lines.push(`- Texte en ${language}.`);
   lines.push("- Mets UNE ligne vide après chaque paragraphe.");
   lines.push("- Intertitres autorisés (ex: 'Partie 1 — ...').");
   lines.push("- Tu n'utilises PAS de markdown, sauf UNE exception: tu mets les mots-clés SEO en gras avec **mot clé**.");

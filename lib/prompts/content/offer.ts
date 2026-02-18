@@ -99,6 +99,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
   const outputRules = [
     "CONTRAINTES DE SORTIE :",
     "- Sortie = TEXTE BRUT (plain text).",
+    `- LANGUE OBLIGATOIRE: ${lang}. Tout le contenu généré DOIT être rédigé en ${lang}.`,
     "- Interdit: markdown, titres avec #, emojis excessifs, disclaimers, meta-explications.",
     "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
     "- Ton: clair, pro, actionnable, précis.",

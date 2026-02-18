@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "today": "Today",
+    "strategy": "My Strategy",
+    "create": "Create",
+    "contents": "My Content",
+    "templates": "Templates",
+    "analytics": "Analytics",
+    "pepites": "Gems",
+    "settings": "Settings"
+  },
+  "sidebar": {
+    "tagline": "Your smart companion",
+    "credits": "Credits",
+    "seeCredits": "View my AI credits",
+    "newPepite": "New gem"
+  },
+  "languageSwitcher": {
+    "label": "Interface language",
+    "languages": {
+      "fr": "Français",
+      "en": "English",
+      "es": "Español",
+      "it": "Italiano",
+      "ar": "العربية"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "connections": "Connections",
+      "settings": "Preferences",
+      "branding": "Branding",
+      "ai": "AI & Credits",
+      "pricing": "Subscription"
+    },
+    "language": {
+      "uiTitle": "Interface language",
+      "uiDescription": "Choose the display language for Tipote.",
+      "contentTitle": "AI content language",
+      "contentDescription": "The language Tipote uses to generate your AI content.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Language updated",
+      "error": "Failed to save"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "loading": "Loading…",
+    "error": "Error",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No",
+    "required": "Required",
+    "optional": "Optional",
+    "copied": "Copied!",
+    "copy": "Copy"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot your password?",
+    "resetPassword": "Reset password",
+    "noAccount": "Don't have an account?",
+    "signup": "Sign up"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "unauthorized": "Unauthorized.",
+    "notFound": "Page not found.",
+    "network": "Network error. Check your connection."
+  }
+}
