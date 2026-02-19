@@ -503,6 +503,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           {generatedContent && (
             <AutoCommentPanel
               userPlan={userPlan}
+              platform={platform}
               onChange={setAutoCommentConfig}
               disabled={isSaving}
             />
