@@ -91,6 +91,7 @@ function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
   const result: React.ReactNode[] = [];
   let listItems: string[] = [];
+  let tableLines: string[] = [];
   let key = 0;
 
   const flushList = () => {
@@ -108,9 +109,61 @@ function renderMarkdown(text: string): React.ReactNode {
     listItems = [];
   };
 
+  const flushTable = () => {
+    if (tableLines.length === 0) return;
+    // Filter out separator rows (|---|---|) and parse header + data rows
+    const rows = tableLines
+      .filter((l) => !/^\s*\|[\s\-:]+\|/.test(l))
+      .map((l) =>
+        l
+          .replace(/^\s*\|/, "")
+          .replace(/\|\s*$/, "")
+          .split("|")
+          .map((cell) => cell.trim()),
+      );
+
+    if (rows.length > 0) {
+      const [headerRow, ...dataRows] = rows;
+      result.push(
+        <div key={key++} className="overflow-x-auto mb-4">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-muted/60">
+                {headerRow.map((cell, ci) => (
+                  <th
+                    key={ci}
+                    className="border border-border px-3 py-2 text-left font-semibold text-foreground"
+                  >
+                    {renderInline(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dataRows.map((row, ri) => (
+                <tr key={ri} className={ri % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="border border-border px-3 py-2 text-muted-foreground">
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+    }
+    tableLines = [];
+  };
+
   for (const line of lines) {
-    if (line.startsWith("## ")) {
+    if (line.trim().startsWith("|")) {
       flushList();
+      tableLines.push(line);
+    } else if (line.startsWith("## ")) {
+      flushList();
+      flushTable();
       result.push(
         <h4 key={key++} className="font-bold text-sm mt-5 mb-1.5 first:mt-0 text-foreground border-b pb-1">
           {line.slice(3)}
@@ -118,17 +171,21 @@ function renderMarkdown(text: string): React.ReactNode {
       );
     } else if (line.startsWith("# ")) {
       flushList();
+      flushTable();
       result.push(
         <h3 key={key++} className="font-bold text-base mt-4 mb-2 first:mt-0">
           {line.slice(2)}
         </h3>,
       );
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      flushTable();
       listItems.push(line.slice(2));
     } else if (line.trim() === "") {
       flushList();
+      flushTable();
     } else {
       flushList();
+      flushTable();
       result.push(
         <p key={key++} className="text-sm leading-relaxed mb-2">
           {renderInline(line)}
@@ -137,6 +194,7 @@ function renderMarkdown(text: string): React.ReactNode {
     }
   }
   flushList();
+  flushTable();
   return <div className="space-y-0">{result}</div>;
 }
 
