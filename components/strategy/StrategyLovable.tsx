@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -41,6 +42,7 @@ import {
   X,
   Save,
   ChevronRight,
+  Check,
 } from "lucide-react";
 
 import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
@@ -239,6 +241,37 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   // Persona edit modal state
   const [isPersonaEditOpen, setIsPersonaEditOpen] = useState(false);
   const [localPersona, setLocalPersona] = useState(props.persona);
+
+  // Revenue goal inline edit
+  const [revenueGoalLocal, setRevenueGoalLocal] = useState(props.revenueGoal);
+  const [isEditingRevGoal, setIsEditingRevGoal] = useState(false);
+  const [revGoalInput, setRevGoalInput] = useState("");
+  const [savingRevGoal, setSavingRevGoal] = useState(false);
+
+  const handleSaveRevGoal = useCallback(async () => {
+    const val = revGoalInput.trim();
+    if (!val) return;
+    setSavingRevGoal(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revenue_goal_monthly: val }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        toast({ title: t("toast.error"), description: json?.error || t("toast.planError"), variant: "destructive" });
+        return;
+      }
+      setRevenueGoalLocal(val);
+      setIsEditingRevGoal(false);
+      toast({ title: t("toast.saved"), description: t("toast.savedDesc") });
+    } catch {
+      toast({ title: t("toast.error"), description: t("toast.planError"), variant: "destructive" });
+    } finally {
+      setSavingRevGoal(false);
+    }
+  }, [revGoalInput, toast, t]);
 
   // --- Persona derived values ---
   const personaTitle = localPersona?.title || "—";
@@ -663,9 +696,51 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   <p className="text-sm text-primary-foreground/70 mb-1">
                     {t("overview.revenueGoal")}
                   </p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {props.revenueGoal}
-                  </p>
+                  {isEditingRevGoal ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        autoFocus
+                        value={revGoalInput}
+                        onChange={(e) => setRevGoalInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveRevGoal();
+                          if (e.key === "Escape") setIsEditingRevGoal(false);
+                        }}
+                        placeholder="ex: 3000 €/mois"
+                        className="h-8 text-sm bg-white/10 border-white/30 text-primary-foreground placeholder:text-primary-foreground/40 focus-visible:ring-white/50"
+                        disabled={savingRevGoal}
+                      />
+                      <button
+                        onClick={handleSaveRevGoal}
+                        disabled={savingRevGoal || !revGoalInput.trim()}
+                        className="text-primary-foreground/80 hover:text-primary-foreground disabled:opacity-40 shrink-0"
+                        aria-label="Enregistrer"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setIsEditingRevGoal(false)}
+                        className="text-primary-foreground/60 hover:text-primary-foreground shrink-0"
+                        aria-label="Annuler"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-2xl font-bold text-primary-foreground">
+                        {revenueGoalLocal}
+                      </p>
+                      <button
+                        onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }}
+                        className="text-primary-foreground/40 hover:text-primary-foreground/80 transition-colors"
+                        aria-label="Modifier l'objectif de revenu"
+                        title="Modifier"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">
@@ -1049,7 +1124,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               offerType={selectedOfferType}
               profileData={{
                 firstName: props.firstName,
-                revenueGoal: props.revenueGoal,
+                revenueGoal: revenueGoalLocal,
                 horizon: props.horizon,
               }}
             />
