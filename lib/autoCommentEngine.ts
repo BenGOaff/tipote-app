@@ -476,21 +476,36 @@ export async function threadsReplyToPost(
     return { ok: false, error: "Threads create reply: no creation_id returned" };
   }
 
-  // Step 2 — Publish the reply
+  // Attendre que Meta traite le container avant de publier (évite l'erreur 4279009)
+  await new Promise((r) => setTimeout(r, 2000));
+
+  // Step 2 — Publish the reply (avec retry si container pas encore prêt)
   const publishParams = new URLSearchParams({
     creation_id: creationId,
     access_token: accessToken,
   });
 
-  const publishRes = await fetch(`${THREADS_BASE}/${userId}/threads_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: publishParams,
-  });
+  const doPublishReply = () =>
+    fetch(`${THREADS_BASE}/${userId}/threads_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: publishParams,
+    });
+
+  let publishRes = await doPublishReply();
 
   if (!publishRes.ok) {
     const t = await publishRes.text().catch(() => "");
-    return { ok: false, error: `Threads publish reply error (${publishRes.status}): ${t.slice(0, 300)}` };
+    if (t.includes("4279009")) {
+      await new Promise((r) => setTimeout(r, 5000));
+      publishRes = await doPublishReply();
+      if (!publishRes.ok) {
+        const retryErr = await publishRes.text().catch(() => "");
+        return { ok: false, error: `Threads publish reply error (${publishRes.status}): ${retryErr.slice(0, 300)}` };
+      }
+    } else {
+      return { ok: false, error: `Threads publish reply error (${publishRes.status}): ${t.slice(0, 300)}` };
+    }
   }
 
   const publishJson = (await publishRes.json()) as any;
@@ -605,6 +620,7 @@ export async function searchRelevantPosts(
   niche: string,
   postText: string,
   maxResults: number,
+  platformUsername?: string,
 ): Promise<Array<{ id: string; text: string; url?: string }>> {
   // Build search query from niche + post content keywords
   const keywords = extractKeywords(niche, postText);
@@ -680,6 +696,7 @@ export async function searchRelevantPosts(
       }
       return aggregated
         .filter((p) => isRelevantPost(p.text))
+        .filter((p) => !platformUsername || p.username.toLowerCase() !== platformUsername.toLowerCase())
         .slice(0, maxResults * 2)
         .map((p) => ({
           id: p.id,
@@ -872,6 +889,7 @@ export async function runAutoCommentBatch(opts: {
   niche?: string;
   brandTone?: string;
   langage?: Record<string, unknown>;
+  platformUsername?: string;
 }): Promise<BatchResult> {
   const {
     supabaseAdmin: sb,
@@ -887,6 +905,7 @@ export async function runAutoCommentBatch(opts: {
     niche = "",
     brandTone = "",
     langage,
+    platformUsername,
   } = opts;
 
   const tag = `[auto-comments/${commentType}]`;
@@ -898,7 +917,7 @@ export async function runAutoCommentBatch(opts: {
     // 1. Search for relevant posts
     let relevantPosts: Array<{ id: string; text: string; url?: string }> = [];
     try {
-      relevantPosts = await searchRelevantPosts(platform, accessToken, platformUserId, niche, postText, nbComments + 5);
+      relevantPosts = await searchRelevantPosts(platform, accessToken, platformUserId, niche, postText, nbComments + 5, platformUsername);
       console.log(`${tag} Found ${relevantPosts.length} relevant posts on ${platform}`);
     } catch (searchErr) {
       const searchErrMsg = searchErr instanceof Error ? searchErr.message : "Erreur de recherche inconnue";

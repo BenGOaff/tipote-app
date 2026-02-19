@@ -232,7 +232,7 @@ function triggerBeforeExecution(opts: {
       // Try with project_id first, then fallback without (connection may have no project_id set)
       let connQuery = supabaseAdmin
         .from("social_connections")
-        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", opts.user_id)
         .eq("platform", opts.platform);
       if (opts.project_id) connQuery = connQuery.eq("project_id", opts.project_id);
@@ -243,7 +243,7 @@ function triggerBeforeExecution(opts: {
       if (!conn?.access_token_encrypted && opts.project_id) {
         const { data: connFallback } = await supabaseAdmin
           .from("social_connections")
-          .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
           .eq("user_id", opts.user_id)
           .eq("platform", opts.platform)
           .maybeSingle();
@@ -320,6 +320,7 @@ function triggerBeforeExecution(opts: {
         platform: opts.platform,
         accessToken,
         platformUserId: conn.platform_user_id,
+        platformUsername: conn.platform_username ?? undefined,
         postText: opts.post_text,
         commentType: "before",
         nbComments: opts.nb_comments,
