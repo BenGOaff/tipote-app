@@ -20,9 +20,11 @@ const FB_SCOPES = [
 
 
 // Threads scopes (OAuth Threads separe)
+// threads_keyword_search : added by Meta Dec 2024, required for GET /v1.0/search?q=...
 const THREADS_SCOPES = [
   "threads_basic",
   "threads_content_publish",
+  "threads_keyword_search",
 ];
 
 function getAppId(): string {

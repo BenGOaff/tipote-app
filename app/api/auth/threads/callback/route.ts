@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       access_token_encrypted: tokenEncrypted,
       refresh_token_encrypted: null,
       token_expires_at: tokenExpiresAt,
-      scopes: "threads_basic,threads_content_publish",
+      scopes: "threads_basic,threads_content_publish,threads_keyword_search",
       updated_at: new Date().toISOString(),
     };
 
