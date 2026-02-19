@@ -121,9 +121,16 @@ export async function twitterSearchTweets(
   query: string,
   maxResults = 10,
 ): Promise<Array<{ id: string; text: string; authorId: string }>> {
+  // Build a broader query: use OR between top 3 keywords (AND is too restrictive),
+  // no lang filter (many francophone users post in mixed languages).
+  const keywords = query.trim().split(/\s+/).filter(Boolean).slice(0, 3);
+  const twitterQuery = keywords.length > 1
+    ? `(${keywords.join(" OR ")}) -is:retweet -is:reply`
+    : `${query} -is:retweet -is:reply`;
+
   const params = new URLSearchParams({
-    query: `${query} -is:retweet -is:reply lang:fr`,
-    max_results: String(Math.min(maxResults, 100)),
+    query: twitterQuery,
+    max_results: String(Math.min(Math.max(maxResults, 10), 100)),
     "tweet.fields": "author_id,text,public_metrics",
   });
 
@@ -131,7 +138,10 @@ export async function twitterSearchTweets(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Twitter search error (${res.status}): ${t.slice(0, 300)}`);
+  }
 
   const json = (await res.json()) as any;
   return (json.data ?? []).map((t: any) => ({
@@ -248,61 +258,77 @@ export async function linkedinSearchPosts(
   query: string,
   maxResults = 10,
 ): Promise<Array<{ urn: string; text: string; authorUrn: string }>> {
-  // LinkedIn restricts post search to Marketing Developer Program partners.
-  // With standard w_member_social scope, we can use the network feed endpoint
-  // to fetch recent posts from the user's network and filter by keyword.
-  try {
-    const url = new URL("https://api.linkedin.com/rest/posts");
-    url.searchParams.set("q", "memberNetworkFeed");
-    url.searchParams.set("count", "50");
+  // LinkedIn's public API does not expose a feed search endpoint to standard apps.
+  // We attempt two known endpoints in order:
+  //   1. REST v1  : GET /rest/posts?q=memberNetworkFeed  (new API, requires MDP)
+  //   2. v2 API   : GET /v2/shares?q=memberNetworkFeed   (older API, may work)
+  // Both require r_member_social scope or Marketing Developer Program access.
+  // If either returns data, we filter client-side by keyword.
 
-    const res = await fetch(url.toString(), {
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "LinkedIn-Version": "202602",
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-    });
+  const keywords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => "");
-      console.error(`[linkedinSearchPosts] API error ${res.status}: ${errorText.slice(0, 300)}`);
-      // 403 = scope not granted (r_member_social or MDP required)
-      // Return a sentinel error so the caller can log it
-      throw new Error(`LinkedIn feed API error (${res.status}): scope insuffisant ou accès MDP requis`);
-    }
-
-    const data = (await res.json()) as any;
-    const elements: any[] = data.elements ?? [];
-    if (!elements.length) return [];
-
-    const keywords = query.toLowerCase().split(" ").filter((w) => w.length > 3);
-
-    const relevant = elements
-      .filter((post: any) => {
-        const text = (
-          post.commentary ??
-          post.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text ??
-          ""
-        ).toLowerCase();
-        return keywords.length === 0 || keywords.some((kw) => text.includes(kw));
-      })
-      .slice(0, maxResults)
-      .map((post: any) => ({
-        urn: post.id ?? "",
-        text:
-          post.commentary ??
-          post.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text ??
-          "",
-        authorUrn: post.author ?? "",
-      }))
-      .filter((p) => p.urn && p.text);
-
-    return relevant;
-  } catch (err) {
-    // Re-throw so the caller can log the real reason to auto_comment_logs
-    throw err;
+  async function tryFetch(url: string, headers: Record<string, string>) {
+    const res = await fetch(url, { headers });
+    if (!res.ok) return null;
+    const json = (await res.json()) as any;
+    return json;
   }
+
+  function extractElements(json: any): any[] {
+    // REST v1 format: { elements: [...] }
+    // v2 format: { elements: [...] } with slightly different post shape
+    return json?.elements ?? [];
+  }
+
+  function extractText(post: any): string {
+    return (
+      post.commentary ??
+      post.text?.text ??
+      post.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text ??
+      ""
+    );
+  }
+
+  // Attempt 1: REST v1 API
+  const restUrl = "https://api.linkedin.com/rest/posts?q=memberNetworkFeed&count=50";
+  const restHeaders = {
+    "Authorization": `Bearer ${accessToken}`,
+    "LinkedIn-Version": "202602",
+    "X-Restli-Protocol-Version": "2.0.0",
+  };
+  const restJson = await tryFetch(restUrl, restHeaders);
+
+  // Attempt 2: v2 API fallback if REST returned nothing/404
+  const v2Json = restJson
+    ? null
+    : await tryFetch(
+        "https://api.linkedin.com/v2/shares?q=memberNetworkFeed&count=50",
+        { "Authorization": `Bearer ${accessToken}`, "X-Restli-Protocol-Version": "2.0.0" },
+      );
+
+  const elements = extractElements(restJson ?? v2Json ?? {});
+
+  if (!elements.length) {
+    throw new Error(
+      "LinkedIn feed inaccessible (HTTP 404 sur les deux endpoints) : " +
+      "la recherche de posts requiert le programme partenaire LinkedIn (MDP) " +
+      "ou le scope r_member_social. " +
+      "Les auto-commentaires LinkedIn ne sont pas disponibles sans cet accès."
+    );
+  }
+
+  return elements
+    .filter((post: any) => {
+      const text = extractText(post).toLowerCase();
+      return keywords.length === 0 || keywords.some((kw) => text.includes(kw));
+    })
+    .slice(0, maxResults)
+    .map((post: any) => ({
+      urn: post.id ?? "",
+      text: extractText(post),
+      authorUrn: post.author ?? "",
+    }))
+    .filter((p) => p.urn && p.text);
 }
 
 export async function linkedinCommentOnPost(
@@ -360,9 +386,46 @@ export async function linkedinReactToPost(
 const THREADS_BASE = "https://graph.threads.net/v1.0";
 
 /**
+ * Search public Threads posts matching a keyword query.
+ * Endpoint added by Meta in December 2024.
+ * Correct path: GET /v1.0/search?q=... (NOT /v1.0/threads/search)
+ * Required scope: threads_keyword_search (+ threads_basic)
+ * Rate limit: 500 queries per 7-day rolling window.
+ */
+export async function threadsSearchPosts(
+  accessToken: string,
+  query: string,
+  maxResults = 10,
+): Promise<Array<{ id: string; text: string; username: string }>> {
+  const params = new URLSearchParams({
+    q: query,
+    fields: "id,text,username,timestamp,media_type",
+    access_token: accessToken,
+  });
+
+  const res = await fetch(`${THREADS_BASE}/search?${params}`);
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Threads search error (${res.status}): ${t.slice(0, 300)}`);
+  }
+
+  const json = (await res.json()) as any;
+  const data: any[] = json?.data ?? [];
+
+  return data
+    .filter((post: any) => post.text && post.text.trim().length > 0)
+    .slice(0, maxResults)
+    .map((post: any) => ({
+      id: String(post.id ?? ""),
+      text: String(post.text ?? ""),
+      username: String(post.username ?? ""),
+    }))
+    .filter((p) => p.id && p.text);
+}
+
+/**
  * Reply to a Threads post (2-step: create container → publish).
- * Note: Threads Graph API does not expose a public post-search endpoint,
- * so auto-comments on Threads are not supported for the "search" phase.
  */
 export async function threadsReplyToPost(
   accessToken: string,
@@ -453,13 +516,19 @@ export async function searchRelevantPosts(
       const posts = await linkedinSearchPosts(accessToken, query, maxResults);
       return posts.map((p) => ({ id: p.urn, text: p.text }));
     }
-    case "threads":
+    case "threads": {
+      const posts = await threadsSearchPosts(accessToken, query, maxResults * 2);
+      return posts.map((p) => ({
+        id: p.id,
+        text: p.text,
+        url: `https://www.threads.net/@${p.username}/post/${p.id}`,
+      }));
+    }
     case "facebook":
     case "instagram":
       throw new Error(
         `Les auto-commentaires ne sont pas disponibles sur ${platform} : ` +
-        `l'API officielle n'expose pas de recherche de posts publics. ` +
-        `Utilisez LinkedIn, Twitter/X ou Reddit.`
+        `l'API Meta ne permet pas la recherche de posts publics.`
       );
     default:
       throw new Error(`Plateforme "${platform}" non supportée pour l'auto-commentaire (recherche de posts)`);

@@ -33,7 +33,8 @@ export type AutoCommentConfig = {
 };
 
 // Platforms that support auto-comments (have a public post-search API)
-const SUPPORTED_PLATFORMS = ["linkedin", "twitter", "reddit"];
+// Threads supported since Dec 2024 via GET /v1.0/search (requires threads_keyword_search scope — reconnect needed)
+const SUPPORTED_PLATFORMS = ["linkedin", "twitter", "reddit", "threads"];
 
 type AutoCommentPanelProps = {
   /** Current user plan */
@@ -92,16 +93,28 @@ export function AutoCommentPanel({
     });
   }, [enabled, nbBefore, nbAfter, creditsNeeded, hasAccess, platformSupported, onChange]);
 
+  // Plateforme sans API de recherche publique → petit message discret, pas de Card
+  if (!platformSupported) {
+    const platformLabel =
+      platform === "facebook" ? "Facebook"
+      : platform === "instagram" ? "Instagram"
+      : platform ?? "Cette plateforme";
+    return (
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Info className="w-3.5 h-3.5 shrink-0" />
+        {platformLabel} n&apos;autorise pas les auto-commentaires à l&apos;heure actuelle.
+      </p>
+    );
+  }
+
   return (
     <Card
       className={`p-4 border-2 transition-all ${
-        !platformSupported
-          ? "border-dashed border-muted-foreground/20 bg-muted/20"
-          : enabled && hasAccess
-            ? "border-primary bg-primary/5 dark:bg-primary/10"
-            : !hasAccess
-              ? "border-dashed border-muted-foreground/30 bg-muted/30"
-              : "border-border"
+        enabled && hasAccess
+          ? "border-primary bg-primary/5 dark:bg-primary/10"
+          : !hasAccess
+            ? "border-dashed border-muted-foreground/30 bg-muted/30"
+            : "border-border"
       }`}
     >
       <div className="space-y-4">
@@ -110,23 +123,19 @@ export function AutoCommentPanel({
           <div className="flex items-center gap-2 flex-1">
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                !platformSupported
-                  ? "bg-muted"
-                  : hasAccess
-                    ? "bg-primary/10 dark:bg-primary/20"
-                    : "bg-muted"
+                hasAccess ? "bg-primary/10 dark:bg-primary/20" : "bg-muted"
               }`}
             >
-              {!platformSupported || !hasAccess ? (
-                <Lock className="w-4 h-4 text-muted-foreground" />
-              ) : (
+              {hasAccess ? (
                 <MessageCircle className="w-4 h-4 text-primary" />
+              ) : (
+                <Lock className="w-4 h-4 text-muted-foreground" />
               )}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm">Auto-commentaires</span>
-                {!hasAccess && platformSupported && (
+                {!hasAccess && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600">
                     <Crown className="w-3 h-3 mr-0.5" />
                     PRO
@@ -134,40 +143,25 @@ export function AutoCommentPanel({
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {!platformSupported
-                  ? `Non disponible sur ${platform ?? "cette plateforme"} — LinkedIn, Twitter/X et Reddit uniquement`
-                  : hasAccess
-                    ? "Commentez automatiquement des posts similaires pour booster votre visibilité"
-                    : "Passez au plan Pro ou Elite pour débloquer cette fonctionnalité"}
+                {hasAccess
+                  ? "Commentez automatiquement des posts similaires pour booster votre visibilité"
+                  : "Passez au plan Pro ou Elite pour débloquer cette fonctionnalité"}
               </p>
             </div>
           </div>
 
           <Switch
-            checked={enabled && hasAccess && platformSupported}
+            checked={enabled && hasAccess}
             onCheckedChange={(v) => {
-              if (!hasAccess || !platformSupported) return;
+              if (!hasAccess) return;
               setEnabled(v);
             }}
-            disabled={disabled || !hasAccess || !platformSupported}
+            disabled={disabled || !hasAccess}
           />
         </div>
 
-        {/* Not supported by platform API */}
-        {!platformSupported && (
-          <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-3">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-xs text-muted-foreground">
-                L&apos;API de {platform ?? "cette plateforme"} ne permet pas de rechercher des posts publics.
-                Les auto-commentaires fonctionnent sur <strong>LinkedIn</strong>, <strong>Twitter/X</strong> et <strong>Reddit</strong>.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Locked overlay for FREE/BASIC */}
-        {platformSupported && !hasAccess && (
+        {!hasAccess && (
           <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3">
             <div className="flex items-start gap-2">
               <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
@@ -184,8 +178,8 @@ export function AutoCommentPanel({
           </div>
         )}
 
-        {/* Config controls (shown when enabled, has access, and platform is supported) */}
-        {hasAccess && enabled && platformSupported && (
+        {/* Config controls (shown when enabled and has access) */}
+        {hasAccess && enabled && (
           <div className="space-y-4 pt-2 border-t">
             {/* Before comments */}
             <div className="space-y-2">
