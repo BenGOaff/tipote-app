@@ -659,9 +659,28 @@ export async function searchRelevantPosts(
         "non disponible sans approbation LinkedIn. Les auto-commentaires LinkedIn sont désactivés."
       );
     case "threads": {
-      const posts = await threadsSearchPosts(accessToken, query, maxResults * 2);
-      return posts
+      // Threads /keyword_search ne supporte qu'un seul mot-clé par requête.
+      // On itère sur les 3 premiers mots-clés individuellement et on agrège.
+      // Rate limit : 500 requêtes / 7 jours — on limite à 3 mots-clés max.
+      const seen = new Set<string>();
+      const aggregated: Array<{ id: string; text: string; username: string }> = [];
+      for (const kw of keywords.slice(0, 3)) {
+        if (aggregated.length >= maxResults * 2) break;
+        try {
+          const kwPosts = await threadsSearchPosts(accessToken, kw, maxResults);
+          for (const p of kwPosts) {
+            if (!seen.has(p.id)) {
+              seen.add(p.id);
+              aggregated.push(p);
+            }
+          }
+        } catch {
+          // Continuer avec le mot-clé suivant si celui-ci échoue
+        }
+      }
+      return aggregated
         .filter((p) => isRelevantPost(p.text))
+        .slice(0, maxResults * 2)
         .map((p) => ({
           id: p.id,
           text: p.text,
