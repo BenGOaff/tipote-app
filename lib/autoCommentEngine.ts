@@ -479,6 +479,105 @@ export async function threadsReplyToPost(
   return { ok: true, replyId: publishJson?.id as string | undefined };
 }
 
+// ─── Instagram API Functions ─────────────────────────────────────────────────
+
+const IG_GRAPH_BASE = "https://graph.facebook.com/v21.0";
+
+/**
+ * Search Instagram posts via the Hashtag Search API.
+ * Flow: keyword → hashtag ID → recent_media (filtered by caption keywords).
+ * Required permissions: instagram_manage_hashtags, instagram_basic
+ * Rate limit: 30 unique hashtags per 7-day rolling window per IG user.
+ */
+export async function instagramHashtagSearchPosts(
+  accessToken: string,
+  igUserId: string,
+  keywords: string[],
+  maxResults = 10,
+): Promise<Array<{ id: string; text: string; url: string }>> {
+  const results: Array<{ id: string; text: string; url: string }> = [];
+
+  // Use top 2 keywords as hashtags (avoid burning the 30-hashtag rate limit)
+  const hashtags = keywords
+    .slice(0, 2)
+    .map((kw) => kw.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, "").toLowerCase())
+    .filter((h) => h.length >= 3);
+
+  if (!hashtags.length) return results;
+
+  for (const hashtag of hashtags) {
+    if (results.length >= maxResults) break;
+
+    // Step 1: get the hashtag ID
+    const searchParams = new URLSearchParams({
+      user_id: igUserId,
+      q: hashtag,
+      access_token: accessToken,
+    });
+    const hashtagRes = await fetch(`${IG_GRAPH_BASE}/ig_hashtag_search?${searchParams}`);
+    if (!hashtagRes.ok) {
+      const t = await hashtagRes.text().catch(() => "");
+      throw new Error(`Instagram hashtag search error (${hashtagRes.status}): ${t.slice(0, 300)}`);
+    }
+    const hashtagJson = (await hashtagRes.json()) as any;
+    const hashtagId = hashtagJson?.data?.[0]?.id as string | undefined;
+    if (!hashtagId) continue;
+
+    // Step 2: get recent media for that hashtag
+    const mediaParams = new URLSearchParams({
+      user_id: igUserId,
+      fields: "id,caption,permalink,timestamp,media_type",
+      access_token: accessToken,
+    });
+    const mediaRes = await fetch(`${IG_GRAPH_BASE}/${hashtagId}/recent_media?${mediaParams}`);
+    if (!mediaRes.ok) continue;
+    const mediaJson = (await mediaRes.json()) as any;
+    const posts: any[] = mediaJson?.data ?? [];
+
+    // Filter posts that have a caption mentioning at least one keyword
+    const keywordSet = new Set(keywords.map((k) => k.toLowerCase()));
+    for (const post of posts) {
+      if (results.length >= maxResults) break;
+      const caption: string = post.caption ?? "";
+      if (!caption.trim()) continue;
+      const captionLower = caption.toLowerCase();
+      const matches = keywords.some((kw) => captionLower.includes(kw.toLowerCase()));
+      if (!matches && keywordSet.size > 0) continue;
+      results.push({
+        id: String(post.id ?? ""),
+        text: caption.slice(0, 1000),
+        url: String(post.permalink ?? `https://www.instagram.com/p/${post.id}/`),
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Comment on a public Instagram post.
+ * Required permission: instagram_manage_comments
+ */
+export async function instagramCommentOnPost(
+  accessToken: string,
+  mediaId: string,
+  text: string,
+): Promise<{ ok: boolean; commentId?: string; error?: string }> {
+  const res = await fetch(`${IG_GRAPH_BASE}/${mediaId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, access_token: accessToken }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    return { ok: false, error: `Instagram comment error (${res.status}): ${t.slice(0, 300)}` };
+  }
+
+  const json = (await res.json()) as any;
+  return { ok: true, commentId: json?.id as string | undefined };
+}
+
 // ─── Search dispatcher ───────────────────────────────────────────────────────
 
 export async function searchRelevantPosts(
@@ -524,10 +623,14 @@ export async function searchRelevantPosts(
         url: `https://www.threads.net/@${p.username}/post/${p.id}`,
       }));
     }
+    case "instagram": {
+      const igKeywords = keywords.slice(0, 5);
+      const posts = await instagramHashtagSearchPosts(accessToken, platformUserId, igKeywords, maxResults);
+      return posts;
+    }
     case "facebook":
-    case "instagram":
       throw new Error(
-        `Les auto-commentaires ne sont pas disponibles sur ${platform} : ` +
+        `Les auto-commentaires ne sont pas disponibles sur Facebook : ` +
         `l'API Meta ne permet pas la recherche de posts publics.`
       );
     default:
@@ -553,6 +656,8 @@ export async function postCommentOnPost(
       return linkedinCommentOnPost(accessToken, postId, `urn:li:person:${platformUserId}`, commentText);
     case "threads":
       return threadsReplyToPost(accessToken, platformUserId, postId, commentText);
+    case "instagram":
+      return instagramCommentOnPost(accessToken, postId, commentText);
     default:
       return { ok: false, error: `Platform ${platform} not supported for auto-comments` };
   }
@@ -572,7 +677,8 @@ export async function likePost(
     case "linkedin":
       return linkedinReactToPost(accessToken, postId, `urn:li:person:${platformUserId}`);
     case "threads":
-      // Threads public API does not expose a like endpoint — skip silently
+    case "instagram":
+      // No public like endpoint available — skip silently
       return false;
     default:
       return false;
