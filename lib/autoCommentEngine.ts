@@ -65,12 +65,14 @@ RÈGLES ABSOLUES :
 - Pas de formules génériques type "Super post !" ou "Très intéressant"
 - Apporte de la VALEUR dans le commentaire
 - Adapte le registre à ${opts.platform}
+- TOUJOURS écrire en français, quelle que soit la langue du post cible
+- INTERDICTION ABSOLUE d'exprimer une hésitation, une difficulté ou un doute dans le commentaire : ne jamais écrire "j'ai du mal à", "je ne sais pas si", "pas de point de connexion", "hors sujet", "difficile de commenter", ni aucune formule équivalente — si le post est éloigné de ta niche, connecte-le à ta niche de façon créative
 ${opts.styleTon ? `- Ton/style : ${opts.styleTon}` : ""}
 ${opts.niche ? `- Tu es dans la niche : ${opts.niche}` : ""}
 ${opts.brandTone ? `- Ton de voix de l'utilisateur : ${opts.brandTone}` : ""}
 ${opts.langage && Object.keys(opts.langage).length > 0 ? `- Éléments de langage : ${JSON.stringify(opts.langage)}` : ""}
 
-Réponds UNIQUEMENT avec le texte du commentaire, sans guillemets, sans explications.`;
+Réponds UNIQUEMENT avec le texte du commentaire final prêt à être publié, sans guillemets, sans explications, sans méta-commentaire.`;
 
   const user = `Post à commenter :
 """
@@ -79,7 +81,7 @@ ${opts.targetPostText.slice(0, 1500)}
 
 Angle du commentaire : ${angleObj.instruction}
 
-Génère le commentaire :`;
+Écris directement le commentaire (en français) :`;
 
   const res = await fetch(CLAUDE_API_URL, {
     method: "POST",
@@ -111,6 +113,21 @@ Génère le commentaire :`;
     .trim()
     .replace(/^["']|["']$/g, ""); // Remove wrapping quotes
 
+  // Reject meta-commentary / hesitation leaks (e.g. "J'ai du mal à trouver un angle...")
+  const hesitationPatterns = [
+    /j['\u2019]ai du mal/i,
+    /je ne (sais|trouve|vois|peux)/i,
+    /pas de point de connexion/i,
+    /hors (de ma |)niche/i,
+    /difficile (de|d['\u2019])/i,
+    /pas pertinent/i,
+    /n['\u2019]est pas (dans|lié|relié)/i,
+    /angle pertinent/i,
+  ];
+  if (hesitationPatterns.some((re) => re.test(text))) {
+    return ""; // Caller will skip this post
+  }
+
   return text.slice(0, maxChars);
 }
 
@@ -120,13 +137,13 @@ export async function twitterSearchTweets(
   accessToken: string,
   query: string,
   maxResults = 10,
+  lang?: string,
 ): Promise<Array<{ id: string; text: string; authorId: string }>> {
-  // Build a broader query: use OR between top 3 keywords (AND is too restrictive),
-  // no lang filter (many francophone users post in mixed languages).
   const keywords = query.trim().split(/\s+/).filter(Boolean).slice(0, 3);
+  const langFilter = lang ? ` lang:${lang}` : "";
   const twitterQuery = keywords.length > 1
-    ? `(${keywords.join(" OR ")}) -is:retweet -is:reply`
-    : `${query} -is:retweet -is:reply`;
+    ? `(${keywords.join(" OR ")}) -is:retweet -is:reply${langFilter}`
+    : `${query} -is:retweet -is:reply${langFilter}`;
 
   const params = new URLSearchParams({
     query: twitterQuery,
@@ -403,7 +420,8 @@ export async function threadsSearchPosts(
     access_token: accessToken,
   });
 
-  const res = await fetch(`${THREADS_BASE}/search?${params}`);
+  // Correct endpoint as of Dec 2024: /keyword_search (not /search which returns 400)
+  const res = await fetch(`${THREADS_BASE}/keyword_search?${params}`);
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -594,34 +612,61 @@ export async function searchRelevantPosts(
 
   if (!query) return [];
 
+  // Detect the language of the user's content to filter search results
+  const userLang = detectContentLanguage(`${niche} ${postText}`);
+
+  /**
+   * Post-fetch relevance filter:
+   * - If language detected, skip posts clearly in a different language
+   * - Always ensure at least one keyword appears in the post text
+   */
+  function isRelevantPost(text: string): boolean {
+    const lower = text.toLowerCase();
+    const hasKeyword = keywords.some((kw) => lower.includes(kw.toLowerCase()));
+    if (!hasKeyword) return false;
+    if (userLang) {
+      const postLang = detectContentLanguage(text);
+      // Accept post if detected language matches OR if detection is uncertain (null)
+      if (postLang && postLang !== userLang) return false;
+    }
+    return true;
+  }
+
   switch (platform) {
     case "twitter": {
-      const tweets = await twitterSearchTweets(accessToken, query, maxResults * 2);
-      return tweets.map((t) => ({
-        id: t.id,
-        text: t.text,
-        url: `https://twitter.com/i/web/status/${t.id}`,
-      }));
+      const tweets = await twitterSearchTweets(accessToken, query, maxResults * 2, userLang ?? undefined);
+      return tweets
+        .filter((t) => isRelevantPost(t.text))
+        .map((t) => ({
+          id: t.id,
+          text: t.text,
+          url: `https://twitter.com/i/web/status/${t.id}`,
+        }));
     }
     case "reddit": {
       const posts = await redditSearchPosts(accessToken, query, maxResults * 2);
-      return posts.map((p) => ({
-        id: p.id,
-        text: `${p.title}\n${p.selftext}`.trim(),
-        url: p.url,
-      }));
+      return posts
+        .filter((p) => isRelevantPost(`${p.title} ${p.selftext}`))
+        .map((p) => ({
+          id: p.id,
+          text: `${p.title}\n${p.selftext}`.trim(),
+          url: p.url,
+        }));
     }
-    case "linkedin": {
-      const posts = await linkedinSearchPosts(accessToken, query, maxResults);
-      return posts.map((p) => ({ id: p.urn, text: p.text }));
-    }
+    case "linkedin":
+      throw new Error(
+        "LinkedIn feed search requiert le programme partenaire LinkedIn (MDP) ou le scope r_member_social — " +
+        "non disponible sans approbation LinkedIn. Les auto-commentaires LinkedIn sont désactivés."
+      );
     case "threads": {
       const posts = await threadsSearchPosts(accessToken, query, maxResults * 2);
-      return posts.map((p) => ({
-        id: p.id,
-        text: p.text,
-        url: `https://www.threads.net/@${p.username}/post/${p.id}`,
-      }));
+      return posts
+        .filter((p) => isRelevantPost(p.text))
+        .map((p) => ({
+          id: p.id,
+          text: p.text,
+          url: `https://www.threads.net/@${p.username}/post/${p.id}`,
+        }));
     }
     case "instagram": {
       const igKeywords = keywords.slice(0, 5);
@@ -686,6 +731,47 @@ export async function likePost(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Detect the primary language of a text using simple heuristics.
+ * Returns an ISO 639-1 code (e.g. "fr", "es", "de", "en") or null if unknown.
+ */
+function detectContentLanguage(text: string): string | null {
+  const sample = text.slice(0, 600).toLowerCase();
+  const words = sample.split(/\s+/);
+  const total = words.length || 1;
+
+  type LangProfile = { stopWords: string[]; accents: RegExp };
+  const profiles: Record<string, LangProfile> = {
+    fr: {
+      stopWords: ["le", "la", "les", "de", "du", "des", "est", "sont", "pour", "avec", "dans", "sur", "que", "qui", "et", "ou", "une", "un", "je", "tu", "nous", "vous", "ils", "elles", "mon", "ton", "son", "pas", "ne", "se", "au", "aux"],
+      accents: /[àâäéèêëîïôöùûüç]/g,
+    },
+    es: {
+      stopWords: ["el", "los", "las", "del", "que", "es", "son", "para", "con", "una", "por", "como", "pero", "este", "esta", "esto", "también", "más", "muy"],
+      accents: /[áéíóúñ¿¡]/g,
+    },
+    de: {
+      stopWords: ["der", "die", "das", "den", "dem", "ein", "eine", "ist", "sind", "und", "oder", "mit", "für", "bei", "von", "zum", "zur", "auf", "nicht", "ich", "du", "wir"],
+      accents: /[äöüß]/g,
+    },
+    pt: {
+      stopWords: ["que", "para", "com", "uma", "são", "por", "como", "mas", "mais", "muito", "também", "isso", "este"],
+      accents: /[ãõáéíóúâêôà]/g,
+    },
+  };
+
+  const scores: Record<string, number> = {};
+  for (const [lang, { stopWords, accents }] of Object.entries(profiles)) {
+    const stopScore = words.filter((w) => stopWords.includes(w)).length / total;
+    const accentScore = (sample.match(accents)?.length ?? 0) / total;
+    scores[lang] = stopScore * 3 + accentScore * 2;
+  }
+
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  // Only return a language if the signal is strong enough
+  return best && best[1] > 0.05 ? best[0] : null;
+}
 
 function extractKeywords(niche: string, postText: string): string[] {
   const stopWords = new Set([
