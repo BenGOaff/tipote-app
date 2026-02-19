@@ -34,7 +34,7 @@ export type AutoCommentConfig = {
 
 // Platforms that support auto-comments (have a public post-search API)
 // Threads supported since Dec 2024 via GET /v1.0/search (requires threads_keyword_search scope — reconnect needed)
-const SUPPORTED_PLATFORMS = ["linkedin", "twitter", "reddit", "threads"];
+const SUPPORTED_PLATFORMS = ["linkedin", "twitter", "reddit", "threads", "instagram"];
 
 type AutoCommentPanelProps = {
   /** Current user plan */

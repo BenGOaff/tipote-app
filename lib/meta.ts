@@ -12,10 +12,15 @@ const THREADS_AUTH_URL = "https://threads.net/oauth/authorize";
 const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 
 // Facebook Pages scopes (OAuth Facebook Login – config "Tipote")
+// instagram_manage_hashtags : required for hashtag search (GET /ig_hashtag_search + recent_media)
+// instagram_manage_comments : required for commenting on public media (POST /{media-id}/comments)
+// Both require Meta Business Verification + App Review if not already approved.
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
+  "instagram_manage_hashtags",
+  "instagram_manage_comments",
 ];
 
 
