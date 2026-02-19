@@ -49,6 +49,7 @@ const UpdateSchema = z.object({
   sio_user_api_key: z.string().trim().max(200).optional(),
 
   content_locale: z.string().trim().max(10).optional(),
+  revenue_goal_monthly: z.string().trim().max(200).optional(),
 
   // Branding
   brand_font: z.string().trim().max(100).optional(),
@@ -171,8 +172,20 @@ export async function PATCH(req: NextRequest) {
         .eq("project_id", projectId)
         .select("*")
         .maybeSingle();
-      data = upd.data;
-      error = upd.error;
+      // If no row matched (legacy profile has project_id=null), fall back to upsert by user_id
+      if (!upd.error && upd.data) {
+        data = upd.data;
+      } else if (!upd.error) {
+        const ups = await supabase
+          .from("business_profiles")
+          .upsert(row, { onConflict: "user_id" })
+          .select("*")
+          .maybeSingle();
+        data = ups.data;
+        error = ups.error;
+      } else {
+        error = upd.error;
+      }
     } else {
       const ups = await supabase
         .from("business_profiles")
