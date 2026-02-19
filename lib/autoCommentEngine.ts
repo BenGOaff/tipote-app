@@ -360,43 +360,9 @@ export async function linkedinReactToPost(
 const THREADS_BASE = "https://graph.threads.net/v1.0";
 
 /**
- * Search public Threads posts matching a keyword query.
- * Uses the Threads Search API (accessible with standard user_profile + threads_basic scopes).
- */
-export async function threadsSearchPosts(
-  accessToken: string,
-  query: string,
-  maxResults = 10,
-): Promise<Array<{ id: string; text: string; username: string }>> {
-  const params = new URLSearchParams({
-    q: query,
-    fields: "id,text,username,timestamp,media_type",
-    access_token: accessToken,
-  });
-
-  const res = await fetch(`${THREADS_BASE}/threads/search?${params}`);
-
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Threads search error (${res.status}): ${t.slice(0, 300)}`);
-  }
-
-  const json = (await res.json()) as any;
-  const data: any[] = json?.data ?? [];
-
-  return data
-    .filter((post: any) => post.text && post.text.trim().length > 0)
-    .slice(0, maxResults)
-    .map((post: any) => ({
-      id: String(post.id ?? ""),
-      text: String(post.text ?? ""),
-      username: String(post.username ?? ""),
-    }))
-    .filter((p) => p.id && p.text);
-}
-
-/**
  * Reply to a Threads post (2-step: create container → publish).
+ * Note: Threads Graph API does not expose a public post-search endpoint,
+ * so auto-comments on Threads are not supported for the "search" phase.
  */
 export async function threadsReplyToPost(
   accessToken: string,
@@ -487,14 +453,14 @@ export async function searchRelevantPosts(
       const posts = await linkedinSearchPosts(accessToken, query, maxResults);
       return posts.map((p) => ({ id: p.urn, text: p.text }));
     }
-    case "threads": {
-      const posts = await threadsSearchPosts(accessToken, query, maxResults * 2);
-      return posts.map((p) => ({
-        id: p.id,
-        text: p.text,
-        url: `https://www.threads.net/@${p.username}/post/${p.id}`,
-      }));
-    }
+    case "threads":
+    case "facebook":
+    case "instagram":
+      throw new Error(
+        `Les auto-commentaires ne sont pas disponibles sur ${platform} : ` +
+        `l'API officielle n'expose pas de recherche de posts publics. ` +
+        `Utilisez LinkedIn, Twitter/X ou Reddit.`
+      );
     default:
       throw new Error(`Plateforme "${platform}" non supportée pour l'auto-commentaire (recherche de posts)`);
   }
