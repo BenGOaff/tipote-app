@@ -107,7 +107,7 @@ export function WelcomeModal() {
               <h3 className="text-lg font-semibold text-primary-foreground">Petit tour guidé ?</h3>
             </div>
             <p className="text-primary-foreground/80 leading-relaxed">
-              En 30 secondes, je te montre où cliquer pour avancer vite (Aujourd&apos;hui → Créer → Stratégie).
+              En quelques minutes, je te présente chaque outil et t&apos;emmène dans les paramètres pour que tu sois prêt(e) à te lancer.
             </p>
 
             <div className="mt-4 flex items-start gap-3 text-left">
