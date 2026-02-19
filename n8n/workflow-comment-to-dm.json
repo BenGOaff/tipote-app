@@ -1,0 +1,226 @@
+{
+  "name": "Tipote — Auto DM Commentaire (Instagram + Facebook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tipote-comment-webhook",
+        "options": { "rawBody": false }
+      },
+      "id": "facebook-trigger",
+      "name": "Meta Webhook (Comments)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "tipote-comment-webhook",
+      "notes": "Configure cette URL dans ta Meta App comme callback URL pour les webhooks 'comments' et 'feed'. Ce nœud reçoit tous les événements Meta (commentaires Instagram + Facebook)."
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "tipote-comment-webhook",
+        "options": { "rawBody": false }
+      },
+      "id": "meta-verify",
+      "name": "Meta Webhook Verify (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 150],
+      "webhookId": "tipote-comment-webhook",
+      "notes": "Même URL, method GET — répond au hub.challenge de vérification Meta."
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "id": "respond-challenge",
+      "name": "Respond hub.challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [500, 150]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "check-comment-facebook",
+              "leftValue": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.item }}",
+              "rightValue": "comment",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "filter-facebook-comments",
+      "name": "Is Facebook Comment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 350],
+      "notes": "Filtre les événements pour ne garder que les nouveaux commentaires (item=comment, verb=add)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "check-instagram-comment",
+              "leftValue": "={{ $json.body.entry?.[0]?.changes?.[0]?.field }}",
+              "rightValue": "comments",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "filter-instagram-comments",
+      "name": "Is Instagram Comment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 550],
+      "notes": "Alternative path pour les commentaires Instagram (field=comments)."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "platform", "name": "platform", "value": "facebook", "type": "string" },
+            { "id": "page_id", "name": "page_id", "value": "={{ $json.body.entry?.[0]?.id }}", "type": "string" },
+            { "id": "sender_id", "name": "sender_id", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.from?.id }}", "type": "string" },
+            { "id": "sender_name", "name": "sender_name", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.from?.name }}", "type": "string" },
+            { "id": "comment_text", "name": "comment_text", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.message }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-facebook-data",
+      "name": "Extract Facebook Comment Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [750, 350]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "platform", "name": "platform", "value": "instagram", "type": "string" },
+            { "id": "page_id", "name": "page_id", "value": "={{ $json.body.entry?.[0]?.id }}", "type": "string" },
+            { "id": "sender_id", "name": "sender_id", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.from?.id }}", "type": "string" },
+            { "id": "sender_name", "name": "sender_name", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.from?.username ?? $json.body.entry?.[0]?.changes?.[0]?.value?.from?.name }}", "type": "string" },
+            { "id": "comment_text", "name": "comment_text", "value": "={{ $json.body.entry?.[0]?.changes?.[0]?.value?.text }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-instagram-data",
+      "name": "Extract Instagram Comment Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [750, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/automations/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_SHARED_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"platform\": \"{{ $json.platform }}\",\n  \"page_id\": \"{{ $json.page_id }}\",\n  \"sender_id\": \"{{ $json.sender_id }}\",\n  \"sender_name\": \"{{ $json.sender_name }}\",\n  \"comment_text\": \"{{ $json.comment_text }}\",\n  \"page_access_token\": \"{{ $env.META_PAGE_ACCESS_TOKEN }}\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "call-tipote-api-facebook",
+      "name": "Call Tipote API (Facebook)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1000, 350],
+      "notes": "Envoie les données du commentaire à l'API Tipote. Tipote cherche les automatisations correspondantes et envoie le DM via Meta Graph API."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/automations/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_SHARED_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"platform\": \"{{ $json.platform }}\",\n  \"page_id\": \"{{ $json.page_id }}\",\n  \"sender_id\": \"{{ $json.sender_id }}\",\n  \"sender_name\": \"{{ $json.sender_name }}\",\n  \"comment_text\": \"{{ $json.comment_text }}\",\n  \"page_access_token\": \"{{ $env.META_PAGE_ACCESS_TOKEN }}\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "call-tipote-api-instagram",
+      "name": "Call Tipote API (Instagram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1000, 550],
+      "notes": "Identique au nœud Facebook — même endpoint Tipote, même logique."
+    }
+  ],
+  "connections": {
+    "Meta Webhook (Comments)": {
+      "main": [
+        [
+          { "node": "Is Facebook Comment?", "type": "main", "index": 0 },
+          { "node": "Is Instagram Comment?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Meta Webhook Verify (GET)": {
+      "main": [
+        [{ "node": "Respond hub.challenge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Facebook Comment?": {
+      "main": [
+        [{ "node": "Extract Facebook Comment Data", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Is Instagram Comment?": {
+      "main": [
+        [{ "node": "Extract Instagram Comment Data", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Extract Facebook Comment Data": {
+      "main": [
+        [{ "node": "Call Tipote API (Facebook)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Instagram Comment Data": {
+      "main": [
+        [{ "node": "Call Tipote API (Instagram)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [{ "name": "tipote" }, { "name": "automations" }, { "name": "social-media" }],
+  "triggerCount": 2,
+  "updatedAt": "2026-02-19T00:00:00.000Z",
+  "versionId": "1",
+  "meta": {
+    "notes": "## Variables d'environnement requises dans n8n\n\n- `TIPOTE_APP_URL` : ex. https://app.tipote.com\n- `N8N_SHARED_SECRET` : même valeur que dans le .env Tipote\n- `META_PAGE_ACCESS_TOKEN` : Page Access Token Meta (long-lived) de ta page Facebook/Instagram\n\n## Configuration Meta App\n\n1. Meta for Developers → ton App → Webhooks\n2. Callback URL : l'URL du webhook n8n (node 'Meta Webhook')\n3. Verify Token : la valeur de `META_WEBHOOK_VERIFY_TOKEN` dans le .env Tipote\n4. Champs à activer : `feed` (Facebook) et `comments` (Instagram)\n5. Activer App Review pour les permissions : `instagram_manage_comments`, `instagram_manage_messages`, `pages_messaging`\n\n## Architecture\n\n```\nUser commente 'PDF' sur ton post\n  → Meta envoie webhook à n8n\n  → n8n filtre (commentaire uniquement)\n  → n8n appelle /api/automations/webhook (Tipote)\n  → Tipote cherche l'automatisation correspondante\n  → Tipote envoie le DM via Meta Graph API\n  → DM reçu par l'user en <5 secondes\n```"
+  }
+}

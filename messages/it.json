@@ -5,6 +5,7 @@
     "create": "Crea",
     "contents": "I Miei Contenuti",
     "templates": "Template",
+    "automations": "Automazioni",
     "analytics": "Statistiche",
     "pepites": "Gemme",
     "settings": "Impostazioni"
@@ -795,5 +796,35 @@
       }
     },
     "finalize": { "title": "Costruendo la tua strategia…", "step0": "Salvataggio delle risposte…", "step1": "Costruendo la tua strategia personalizzata…", "step2": "Generando i tuoi primi compiti…", "step3": "Configurando il tuo spazio…", "done": "Tutto pronto!" }
+  },
+  "automations": {
+    "title": "Automazioni",
+    "createBtn": "Crea automazione",
+    "copied": "Copiato!",
+    "copy": "Copia SQL",
+    "savedCreated": "Automazione creata!",
+    "savedUpdated": "Automazione aggiornata!",
+    "deleted": "Automazione eliminata",
+    "deleteConfirm": "Eliminare questa automazione?",
+    "statusActive": "Attivo",
+    "statusInactive": "Inattivo",
+    "enable": "Attiva",
+    "disable": "Disattiva",
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "statsTriggers": "{count} attivazioni",
+    "statsDms": "{count} DM inviati",
+    "hero": { "title": "Automazioni social — Stile ManyChat", "description": "Rileva parole chiave nei commenti e invia automaticamente un DM personalizzato su Instagram e Facebook. Cattura email, invia risorse gratuite — in automatico." },
+    "platformsTitle": "Disponibilità per piattaforma",
+    "status": { "available": "Disponibile", "soon": "Prossimamente", "unavailable": "Non disponibile" },
+    "xNote": "X/Twitter: l'API DM richiede un piano Pro da 5.000$/mese — non fattibile. Threads: l'API DM non è ancora disponibile per gli sviluppatori.",
+    "setup": { "title": "Configurazione richiesta — Tabella Supabase mancante", "description": "Copia questo SQL ed eseguilo nell'editor SQL di Supabase per creare la tabella delle automazioni.", "instructions": "Supabase → SQL Editor → New Query → Incolla → Run" },
+    "guide": { "title": "Guida alla configurazione n8n + Meta", "intro": "Ecco i 4 passaggi per attivare le tue automazioni su Instagram e Facebook.", "step1": { "title": "Crea una Meta App", "desc": "In Meta for Developers, crea un'app di tipo Business. Abilita i prodotti Webhooks e Messenger/Instagram Messaging." }, "step2": { "title": "Configura i webhook Meta", "desc": "Iscriviti ai campi 'comments' e 'messages' sul tuo oggetto Page/Instagram. Punta la URL di callback al tuo n8n (nodo Facebook Trigger)." }, "step3": { "title": "Importa il workflow n8n", "desc": "Importa n8n/workflow-comment-to-dm.json nella tua istanza n8n. Configura le tue credenziali Meta e la URL del webhook dell'app Tipote." }, "step4": { "title": "Supera la Meta App Review", "desc": "Richiedi i permessi instagram_manage_comments, instagram_manage_messages e pages_messaging. Tempi: 1-4 settimane." } },
+    "rgpd": { "title": "Conformità GDPR — cosa facciamo", "description": "L'utente avvia il contatto commentando → consenso implicito. Ogni DM include automaticamente 'Rispondi STOP per annullare'. La finestra di 24h di Meta limita naturalmente i messaggi non richiesti." },
+    "listTitle": "Le mie automazioni",
+    "empty": { "title": "Nessuna automazione", "description": "Crea la tua prima automazione per rispondere automaticamente ai commenti su Instagram e Facebook.", "ctaDm": "Auto DM sui commenti", "ctaEmail": "Auto Email sui commenti", "emailName": "Raccolta email sui commenti" },
+    "templates": { "title": "Template pronti all'uso", "useBtn": "Usa questo template", "dm": { "title": "Auto DM sui Commenti", "description": "Pubblica 'Commenta PDF per ricevere la tua guida'. Quando qualcuno commenta 'PDF', riceve automaticamente il tuo link via DM.", "example": "Post: 'Commenta PDF 👇' → Commento 'PDF ottimo' → DM automatico con il link", "badge": "Instagram + Facebook", "defaultMessage": "Ciao {{nome}}! Grazie per il tuo commento 🙌 Ecco la tua guida gratuita: [IL_TUO_LINK]\n\nRispondi STOP per annullare." }, "email": { "title": "Auto Email sui Commenti", "description": "L'utente commenta una parola chiave, riceve un DM che chiede la sua email, poi riceve la guida nella sua casella di posta via systeme.io.", "example": "Commento 'GUIDA' → DM 'Inviami la tua email' → Email inviata → Aggiunto a systeme.io", "badge": "Instagram + Facebook + systeme.io", "defaultMessage": "Ciao {{nome}}! Per ricevere la tua guida gratuita, rispondi a questo messaggio con la tua email 👇\n\nRispondi STOP per annullare.", "defaultEmailDm": "Ottimo! Ti invio la guida a {{email}} nei prossimi minuti. Controlla la cartella spam se non la vedi 📬" } },
+    "form": { "createTitle": "Crea automazione", "editTitle": "Modifica automazione", "name": "Nome dell'automazione", "namePlaceholder": "Es.: Guida PDF Instagram", "type": "Tipo di automazione", "type_comment_to_dm": "Auto DM", "type_comment_to_dm_desc": "Invia un DM con un link o messaggio", "type_comment_to_email": "Auto Email", "type_comment_to_email_desc": "Cattura l'email e invia a systeme.io", "platforms": "Piattaforme", "keyword": "Parola chiave di attivazione", "keywordPlaceholder": "Es.: PDF", "keywordHint": "Non sensibile alle maiuscole — qualsiasi commento contenente questa parola attiverà l'automazione.", "dmMessage": "Messaggio DM", "firstDmMessage": "Primo messaggio DM", "dmMessagePlaceholder": "Ciao {{nome}}! Ecco la tua guida: [link]\n\nRispondi STOP per annullare.", "dmMessageHint": "Usa {{nome}} per personalizzare. STOP verrà aggiunto automaticamente se lo dimentichi.", "emailCapture": "Raccolta email", "emailCaptureHint": "Dopo il primo DM, il bot aspetta una risposta con l'email e la invia a systeme.io", "emailDmMessage": "Messaggio DM per richiedere l'email", "emailDmPlaceholder": "Rispondi a questo messaggio con la tua email per ricevere la tua guida 📧", "systemeioTag": "Tag systeme.io", "systemeioTagPlaceholder": "Es.: lead-guida-pdf", "systemeioTagHint": "Questo tag verrà assegnato al contatto in systeme.io per attivare le tue automazioni email.", "rgpdNote": "Ogni DM includerà automaticamente una menzione STOP. L'utente ha avviato il contatto commentando — è il consenso implicito conforme al GDPR e alle policy Meta.", "cancel": "Annulla", "save": "Salva", "saving": "Salvataggio…", "errorName": "Dai un nome all'automazione", "errorKeyword": "Inserisci una parola chiave di attivazione", "errorMessage": "Scrivi il messaggio DM", "errorPlatform": "Seleziona almeno una piattaforma" },
+    "errors": { "tableNotReady": "La tabella Supabase non esiste ancora. Segui la guida di configurazione sopra.", "saveFailed": "Errore durante il salvataggio" }
   }
 }

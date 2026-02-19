@@ -5,6 +5,7 @@
     "create": "Créer",
     "contents": "Mes Contenus",
     "templates": "Templates",
+    "automations": "Automatisations",
     "analytics": "Analytics",
     "pepites": "Pépites",
     "settings": "Paramètres"
@@ -1011,6 +1012,129 @@
       "step2": "Je génère tes premières tâches…",
       "step3": "Je peaufine ton espace…",
       "done": "Tout est prêt !"
+    }
+  },
+  "automations": {
+    "title": "Automatisations",
+    "createBtn": "Créer une automatisation",
+    "copied": "Copié !",
+    "copy": "Copier le SQL",
+    "savedCreated": "Automatisation créée !",
+    "savedUpdated": "Automatisation mise à jour !",
+    "deleted": "Automatisation supprimée",
+    "deleteConfirm": "Supprimer cette automatisation ?",
+    "statusActive": "Actif",
+    "statusInactive": "Inactif",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "statsTriggers": "{count} déclenchements",
+    "statsDms": "{count} DMs envoyés",
+    "hero": {
+      "title": "Automatisations sociales — Style ManyChat",
+      "description": "Détecte les mots-clés dans les commentaires et envoie automatiquement un DM personnalisé sur Instagram et Facebook. Capte des emails, envoie des ressources gratuites — sans lever le petit doigt."
+    },
+    "platformsTitle": "Disponibilité par plateforme",
+    "status": {
+      "available": "Disponible",
+      "soon": "Bientôt",
+      "unavailable": "Non disponible"
+    },
+    "xNote": "X/Twitter : API DM requiert un abonnement Pro à 5 000$/mois — non viable. Threads : l'API DM n'est pas encore ouverte aux développeurs.",
+    "setup": {
+      "title": "Configuration requise — Table Supabase manquante",
+      "description": "Copiez ce SQL et exécutez-le dans l'éditeur SQL de Supabase pour créer la table des automatisations.",
+      "instructions": "Supabase → SQL Editor → New Query → Coller → Run"
+    },
+    "guide": {
+      "title": "Guide de configuration n8n + Meta",
+      "intro": "Voici les 4 étapes pour activer tes automatisations Instagram et Facebook.",
+      "step1": {
+        "title": "Créer une Meta App",
+        "desc": "Dans Meta for Developers, crée une app de type Business. Active les produits Webhooks et Messenger/Instagram Messaging."
+      },
+      "step2": {
+        "title": "Configurer les webhooks Meta",
+        "desc": "Abonne-toi aux champs 'comments' et 'messages' sur ton objet Page/Instagram. Pointe le callback URL vers ton n8n (node Facebook Trigger)."
+      },
+      "step3": {
+        "title": "Importer le workflow n8n",
+        "desc": "Importe le fichier n8n/workflow-comment-to-dm.json dans ton instance n8n. Configure tes credentials Meta et le webhook URL de l'app Tipote."
+      },
+      "step4": {
+        "title": "Passer la Meta App Review",
+        "desc": "Demande les permissions instagram_manage_comments, instagram_manage_messages et pages_messaging. Délai : 1 à 4 semaines."
+      }
+    },
+    "rgpd": {
+      "title": "Conformité RGPD — ce qu'on fait",
+      "description": "L'user initie le contact en commentant → consentement implicite. Chaque DM inclut automatiquement 'Réponds STOP pour ne plus recevoir de messages'. La fenêtre 24h de Meta limite naturellement les envois non sollicités."
+    },
+    "listTitle": "Mes automatisations",
+    "empty": {
+      "title": "Aucune automatisation",
+      "description": "Crée ta première automatisation pour répondre automatiquement aux commentaires sur Instagram et Facebook.",
+      "ctaDm": "Auto DM commentaire",
+      "ctaEmail": "Auto Email commentaire",
+      "emailName": "Capture email commentaire"
+    },
+    "templates": {
+      "title": "Templates prêts à l'emploi",
+      "useBtn": "Utiliser ce template",
+      "dm": {
+        "title": "Auto DM Commentaire",
+        "description": "Poste 'Commente PDF pour recevoir ton guide'. Dès qu'un user commente 'PDF', il reçoit ton lien en DM.",
+        "example": "Post : 'Commente PDF 👇' → Commentaire 'PDF blabla' → DM automatique avec le lien",
+        "badge": "Instagram + Facebook",
+        "defaultMessage": "Salut {{prenom}} ! Merci pour ton commentaire 🙌 Voici ton guide gratuit : [TON_LIEN]\n\nRéponds STOP pour ne plus recevoir de messages."
+      },
+      "email": {
+        "title": "Auto Email Commentaire",
+        "description": "L'user commente un mot-clé, reçoit un DM lui demandant son email, puis son guide arrive dans sa boîte mail via systeme.io.",
+        "example": "Commentaire 'GUIDE' → DM 'Envoie ton email ici' → Email envoyé → Ajout à systeme.io",
+        "badge": "Instagram + Facebook + systeme.io",
+        "defaultMessage": "Salut {{prenom}} ! Pour recevoir ton guide gratuit, envoie-moi ton email en réponse à ce message 👇\n\nRéponds STOP pour ne plus recevoir de messages.",
+        "defaultEmailDm": "Super ! Je t'envoie ton guide sur {{email}} dans les prochaines minutes. Vérifie tes spams si tu ne le vois pas 📬"
+      }
+    },
+    "form": {
+      "createTitle": "Créer une automatisation",
+      "editTitle": "Modifier l'automatisation",
+      "name": "Nom de l'automatisation",
+      "namePlaceholder": "Ex : Guide PDF Instagram",
+      "type": "Type d'automatisation",
+      "type_comment_to_dm": "Auto DM",
+      "type_comment_to_dm_desc": "Envoie un DM avec un lien ou message",
+      "type_comment_to_email": "Auto Email",
+      "type_comment_to_email_desc": "Capture l'email et envoie vers systeme.io",
+      "platforms": "Plateformes",
+      "keyword": "Mot-clé déclencheur",
+      "keywordPlaceholder": "Ex : PDF",
+      "keywordHint": "Insensible à la casse — tout commentaire contenant ce mot déclenchera l'automatisation.",
+      "dmMessage": "Message DM",
+      "firstDmMessage": "Premier message DM",
+      "dmMessagePlaceholder": "Salut {{prenom}} ! Voici ton guide : [lien]\n\nRéponds STOP pour ne plus recevoir de messages.",
+      "dmMessageHint": "Utilise {{prenom}} pour personnaliser. Le STOP sera ajouté automatiquement si tu l'oublies.",
+      "emailCapture": "Capture d'email",
+      "emailCaptureHint": "Après le premier DM, le bot attend une réponse avec l'email et l'envoie à systeme.io",
+      "emailDmMessage": "Message DM pour demander l'email",
+      "emailDmPlaceholder": "Envoie-moi ton email en réponse pour recevoir ton guide 📧",
+      "systemeioTag": "Tag systeme.io",
+      "systemeioTagPlaceholder": "Ex : lead-guide-pdf",
+      "systemeioTagHint": "Ce tag sera assigné au contact créé dans systeme.io pour déclencher tes automatisations email.",
+      "rgpdNote": "Chaque DM inclura automatiquement une mention STOP. L'user a initié le contact en commentant — c'est le consentement implicite conforme RGPD et aux politiques Meta.",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "errorName": "Donne un nom à l'automatisation",
+      "errorKeyword": "Renseigne un mot-clé déclencheur",
+      "errorMessage": "Rédige le message DM",
+      "errorPlatform": "Sélectionne au moins une plateforme"
+    },
+    "errors": {
+      "tableNotReady": "La table Supabase n'est pas encore créée. Suis le guide de configuration ci-dessus.",
+      "saveFailed": "Erreur lors de l'enregistrement"
     }
   }
 }

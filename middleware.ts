@@ -54,6 +54,7 @@ const PROTECTED_PREFIXES = [
   "/settings",
   "/analytics",
   "/admin",
+  "/automations",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
@@ -204,5 +205,6 @@ export const config = {
     "/settings/:path*",
     "/analytics/:path*",
     "/admin/:path*",
+    "/automations/:path*",
   ],
 };

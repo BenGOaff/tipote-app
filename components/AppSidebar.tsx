@@ -13,6 +13,7 @@ import {
   BarChart3,
   Coins,
   Layout,
+  Zap,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -71,6 +72,7 @@ const MAIN_ITEM_CONFIG = [
   { key: "create" as const, url: "/create", icon: Sparkles, spotlightId: "create" },
   { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: "contents" },
   { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: "templates" },
+  { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
 ];
 
 function useAnimatedNumber(value: number, durationMs = 900) {
@@ -191,6 +193,7 @@ export function AppSidebar() {
       create: "tour_create",
       contents: "tour_contents",
       templates: "tour_templates",
+      automations: "tour_automations",
       credits: "tour_credits",
       analytics: "tour_analytics",
       pepites: "tour_pepites",
