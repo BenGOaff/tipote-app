@@ -355,6 +355,101 @@ export async function linkedinReactToPost(
   return res.ok;
 }
 
+// ─── Threads API Functions ───────────────────────────────────────────────────
+
+const THREADS_BASE = "https://graph.threads.net/v1.0";
+
+/**
+ * Search public Threads posts matching a keyword query.
+ * Uses the Threads Search API (accessible with standard user_profile + threads_basic scopes).
+ */
+export async function threadsSearchPosts(
+  accessToken: string,
+  query: string,
+  maxResults = 10,
+): Promise<Array<{ id: string; text: string; username: string }>> {
+  const params = new URLSearchParams({
+    q: query,
+    fields: "id,text,username,timestamp,media_type",
+    access_token: accessToken,
+  });
+
+  const res = await fetch(`${THREADS_BASE}/threads/search?${params}`);
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Threads search error (${res.status}): ${t.slice(0, 300)}`);
+  }
+
+  const json = (await res.json()) as any;
+  const data: any[] = json?.data ?? [];
+
+  return data
+    .filter((post: any) => post.text && post.text.trim().length > 0)
+    .slice(0, maxResults)
+    .map((post: any) => ({
+      id: String(post.id ?? ""),
+      text: String(post.text ?? ""),
+      username: String(post.username ?? ""),
+    }))
+    .filter((p) => p.id && p.text);
+}
+
+/**
+ * Reply to a Threads post (2-step: create container → publish).
+ */
+export async function threadsReplyToPost(
+  accessToken: string,
+  userId: string,
+  postId: string,
+  text: string,
+): Promise<{ ok: boolean; replyId?: string; error?: string }> {
+  // Step 1 — Create the reply media container
+  const createParams = new URLSearchParams({
+    media_type: "TEXT",
+    text,
+    reply_to_id: postId,
+    access_token: accessToken,
+  });
+
+  const createRes = await fetch(`${THREADS_BASE}/${userId}/threads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: createParams,
+  });
+
+  if (!createRes.ok) {
+    const t = await createRes.text().catch(() => "");
+    return { ok: false, error: `Threads create reply error (${createRes.status}): ${t.slice(0, 300)}` };
+  }
+
+  const createJson = (await createRes.json()) as any;
+  const creationId = createJson?.id as string | undefined;
+  if (!creationId) {
+    return { ok: false, error: "Threads create reply: no creation_id returned" };
+  }
+
+  // Step 2 — Publish the reply
+  const publishParams = new URLSearchParams({
+    creation_id: creationId,
+    access_token: accessToken,
+  });
+
+  const publishRes = await fetch(`${THREADS_BASE}/${userId}/threads_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: publishParams,
+  });
+
+  if (!publishRes.ok) {
+    const t = await publishRes.text().catch(() => "");
+    return { ok: false, error: `Threads publish reply error (${publishRes.status}): ${t.slice(0, 300)}` };
+  }
+
+  const publishJson = (await publishRes.json()) as any;
+  return { ok: true, replyId: publishJson?.id as string | undefined };
+}
+
 // ─── Search dispatcher ───────────────────────────────────────────────────────
 
 export async function searchRelevantPosts(
@@ -392,6 +487,14 @@ export async function searchRelevantPosts(
       const posts = await linkedinSearchPosts(accessToken, query, maxResults);
       return posts.map((p) => ({ id: p.urn, text: p.text }));
     }
+    case "threads": {
+      const posts = await threadsSearchPosts(accessToken, query, maxResults * 2);
+      return posts.map((p) => ({
+        id: p.id,
+        text: p.text,
+        url: `https://www.threads.net/@${p.username}/post/${p.id}`,
+      }));
+    }
     default:
       throw new Error(`Plateforme "${platform}" non supportée pour l'auto-commentaire (recherche de posts)`);
   }
@@ -413,6 +516,8 @@ export async function postCommentOnPost(
       return redditCommentOnPost(accessToken, postId, commentText);
     case "linkedin":
       return linkedinCommentOnPost(accessToken, postId, `urn:li:person:${platformUserId}`, commentText);
+    case "threads":
+      return threadsReplyToPost(accessToken, platformUserId, postId, commentText);
     default:
       return { ok: false, error: `Platform ${platform} not supported for auto-comments` };
   }
@@ -431,6 +536,9 @@ export async function likePost(
       return twitterLikeTweet(accessToken, platformUserId, postId);
     case "linkedin":
       return linkedinReactToPost(accessToken, postId, `urn:li:person:${platformUserId}`);
+    case "threads":
+      // Threads public API does not expose a like endpoint — skip silently
+      return false;
     default:
       return false;
   }
