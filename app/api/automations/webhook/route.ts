@@ -232,7 +232,7 @@ async function addToSystemeIo(params: {
   firstName: string;
   tag: string;
 }) {
-  const apiKey = process.env.SYSTEMEIO_API_KEY;
+  const apiKey = process.env.SYSTEME_IO_API_KEY;
   if (!apiKey) return;
 
   // 1. Create or update contact
