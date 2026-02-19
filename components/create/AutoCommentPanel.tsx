@@ -33,8 +33,10 @@ export type AutoCommentConfig = {
 };
 
 // Platforms that support auto-comments (have a public post-search API)
-// Threads supported since Dec 2024 via GET /v1.0/search (requires threads_keyword_search scope — reconnect needed)
-const SUPPORTED_PLATFORMS = ["linkedin", "twitter", "reddit", "threads", "instagram"];
+// Threads: requires threads_keyword_search scope (reconnect needed)
+// LinkedIn: requires LinkedIn MDP approval — disabled until then
+// Facebook: search API removed in 2018 — permanently disabled
+const SUPPORTED_PLATFORMS = ["twitter", "reddit", "threads", "instagram"];
 
 type AutoCommentPanelProps = {
   /** Current user plan */
@@ -95,14 +97,16 @@ export function AutoCommentPanel({
 
   // Plateforme sans API de recherche publique → petit message discret, pas de Card
   if (!platformSupported) {
-    const platformLabel =
-      platform === "facebook" ? "Facebook"
-      : platform === "instagram" ? "Instagram"
-      : platform ?? "Cette plateforme";
+    const unsupportedMsg =
+      platform === "linkedin"
+        ? "LinkedIn requiert une approbation partenaire (MDP) pour accéder aux posts — les auto-commentaires ne sont pas disponibles pour l'instant."
+        : platform === "facebook"
+        ? "Facebook a supprimé son API de recherche de posts en 2018 — les auto-commentaires ne sont pas disponibles."
+        : "Cette plateforme ne supporte pas les auto-commentaires à l'heure actuelle.";
     return (
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Info className="w-3.5 h-3.5 shrink-0" />
-        {platformLabel} n&apos;autorise pas les auto-commentaires à l&apos;heure actuelle.
+        {unsupportedMsg}
       </p>
     );
   }
