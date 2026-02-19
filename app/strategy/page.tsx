@@ -193,16 +193,12 @@ export default async function StrategyPage() {
     "updated_at",
   ].join(",");
 
-  let profileQuery = supabaseAdmin
+  // ⚠️ On ne filtre PAS par project_id : les profils legacy ont project_id = null.
+  // On prend le plus récemment mis à jour pour cet user.
+  const profileRes = await supabaseAdmin
     .from("business_profiles")
     .select(profileColumns)
-    .eq("user_id", user.id);
-
-  if (projectId) {
-    profileQuery = profileQuery.eq("project_id", projectId) as typeof profileQuery;
-  }
-
-  const profileRes = await profileQuery
+    .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(1);
 

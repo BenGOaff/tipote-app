@@ -16,7 +16,6 @@ import {
   ArrowRight,
   ChevronRight,
   BarChart3,
-  FileText,
   TrendingUp,
   Target,
   Lightbulb,
@@ -66,6 +65,10 @@ type ProgressionData = {
   conversionRate: number | null;
   contentCounts: Record<string, number>;
   totalContents: number;
+  // mois précédent pour calcul de tendance
+  prevRevenue: number | null;
+  prevNewSubscribers: number | null;
+  prevConversionRate: number | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -106,13 +109,6 @@ function isSchemaError(msg: string) {
 
 function ucFirst(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-}
-
-function pluralLabel(type: string, count: number): string {
-  const label = ucFirst(type);
-  if (count <= 1) return `${count} ${label}`;
-  if (label.endsWith("s") || label.endsWith("x") || label.endsWith("z")) return `${count} ${label}`;
-  return `${count} ${label}s`;
 }
 
 type ContentSchemaHint = { hasUserId?: boolean; selectIndex?: number };
@@ -357,6 +353,73 @@ function buildStrategicObjective(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Progression summary                                               */
+/* ------------------------------------------------------------------ */
+
+function buildProgressionSummary(p: ProgressionData): string | null {
+  if (!p.hasMetrics) return null;
+
+  const hasPrev =
+    p.prevRevenue !== null || p.prevNewSubscribers !== null || p.prevConversionRate !== null;
+
+  const trends: string[] = [];
+  const neutrals: string[] = [];
+
+  if (p.revenue !== null) {
+    if (hasPrev && p.prevRevenue !== null && p.prevRevenue > 0) {
+      const pct = Math.round(((p.revenue - p.prevRevenue) / p.prevRevenue) * 100);
+      if (pct >= 5) trends.push(`CA +${pct}% 📈`);
+      else if (pct <= -5) trends.push(`CA ${pct}% ⚠️`);
+      else neutrals.push(`CA ${p.revenue.toLocaleString("fr-FR")}€ (stable)`);
+    } else {
+      neutrals.push(`${p.revenue.toLocaleString("fr-FR")}€ de CA`);
+    }
+  }
+
+  if (p.newSubscribers !== null) {
+    if (hasPrev && p.prevNewSubscribers !== null && p.prevNewSubscribers > 0) {
+      const pct = Math.round(((p.newSubscribers - p.prevNewSubscribers) / p.prevNewSubscribers) * 100);
+      if (pct >= 10) trends.push(`visibilité +${pct}% 🚀`);
+      else if (pct <= -10) trends.push(`inscriptions ${pct}%`);
+      else neutrals.push(`${p.newSubscribers} inscrits (stable)`);
+    } else {
+      neutrals.push(`${p.newSubscribers} nouveaux inscrits`);
+    }
+  }
+
+  if (p.conversionRate !== null) {
+    if (hasPrev && p.prevConversionRate !== null) {
+      const diff = +(p.conversionRate - p.prevConversionRate).toFixed(1);
+      if (diff >= 0.5) trends.push(`conversion +${diff}pts ✅`);
+      else if (diff <= -0.5) trends.push(`conversion ${diff}pts — revoir tes CTA ?`);
+      else neutrals.push(`conversion ${p.conversionRate.toFixed(1)}% (stable)`);
+    } else {
+      neutrals.push(`conversion ${p.conversionRate.toFixed(1)}%`);
+    }
+  }
+
+  // Positive trends → bonne nouvelle
+  const positiveTrends = trends.filter((t) => t.includes("+") || t.includes("📈") || t.includes("🚀") || t.includes("✅"));
+  const negativeTrends = trends.filter((t) => !positiveTrends.includes(t));
+
+  if (positiveTrends.length > 0 && negativeTrends.length === 0) {
+    return `Super dynamique ! ${positiveTrends.join(" · ")}${neutrals.length ? ` · ${neutrals.join(", ")}` : ""}.`;
+  }
+
+  if (negativeTrends.length > 0) {
+    const positiveStr = positiveTrends.length ? ` ${positiveTrends.join(" · ")} ·` : "";
+    return `Attention :${positiveStr} ${negativeTrends.join(" · ")}.`;
+  }
+
+  // Pas assez de recul (1 seul mois ou tout stable)
+  if (!hasPrev) {
+    return `📊 Ce mois : ${neutrals.join(", ")}.`;
+  }
+
+  return `📊 Résultats stables : ${neutrals.join(", ")}.`;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Week label                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -389,6 +452,8 @@ export default function TodayLovable() {
 
   const [objective, setObjective] = useState<StrategicObjective | null>(null);
   const [coaching, setCoaching] = useState<CoachingInsight | null>(null);
+  const [lastDoneTask, setLastDoneTask] = useState<string | null>(null);
+  const [nextTask, setNextTask] = useState<string | null>(null);
   const [progression, setProgression] = useState<ProgressionData>({
     hasMetrics: false,
     revenue: null,
@@ -397,6 +462,9 @@ export default function TodayLovable() {
     conversionRate: null,
     contentCounts: {},
     totalContents: 0,
+    prevRevenue: null,
+    prevNewSubscribers: null,
+    prevConversionRate: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -453,7 +521,7 @@ export default function TodayLovable() {
           // fail-open
         }
 
-        // ------ Fetch metrics (may not exist) ------
+        // ------ Fetch metrics (may not exist) — 2 mois pour calculer les tendances ------
         let metricsRows: AnyRecord[] = [];
         try {
           const metricsRes = await supabase
@@ -461,7 +529,7 @@ export default function TodayLovable() {
             .select("revenue,sales_count,new_subscribers,conversion_rate")
             .eq("user_id", userId)
             .order("month", { ascending: false })
-            .limit(1);
+            .limit(2);
           if (!metricsRes.error && Array.isArray(metricsRes.data)) {
             metricsRows = metricsRes.data as AnyRecord[];
           }
@@ -520,11 +588,14 @@ export default function TodayLovable() {
         // Coaching insight
         const coach = buildCoachingInsight(categories, hasStrategy);
 
-        // Metrics
+        // Metrics (mois courant + mois précédent pour tendances)
         let revenue: number | null = null;
         let salesCount: number | null = null;
         let newSubscribers: number | null = null;
         let conversionRate: number | null = null;
+        let prevRevenue: number | null = null;
+        let prevNewSubscribers: number | null = null;
+        let prevConversionRate: number | null = null;
         let hasMetrics = false;
 
         if (metricsRows.length > 0) {
@@ -535,6 +606,29 @@ export default function TodayLovable() {
           conversionRate = typeof m.conversion_rate === "number" ? m.conversion_rate : null;
           hasMetrics = revenue !== null || salesCount !== null || newSubscribers !== null;
         }
+        if (metricsRows.length > 1) {
+          const p = metricsRows[1] as any;
+          prevRevenue = typeof p.revenue === "number" ? p.revenue : null;
+          prevNewSubscribers = typeof p.new_subscribers === "number" ? p.new_subscribers : null;
+          prevConversionRate = typeof p.conversion_rate === "number" ? p.conversion_rate : null;
+        }
+
+        // Dernière tâche réalisée + prochaine tâche à faire
+        const sortedByUpdated = [...tasks].sort(
+          (a, b) => new Date(toStr(b.updated_at)).getTime() - new Date(toStr(a.updated_at)).getTime(),
+        );
+        const lastDone = sortedByUpdated.find((t) => isDoneStatus(toStr(t.status)));
+        const nextIncomplete = tasks
+          .filter((t) => {
+            const s = toStr(t.status).toLowerCase().trim();
+            return !isDoneStatus(s) && s !== "cancelled" && s !== "annulé";
+          })
+          .sort((a, b) => {
+            const pa = Number(a.priority) || 99;
+            const pb = Number(b.priority) || 99;
+            if (pa !== pb) return pa - pb;
+            return new Date(toStr(a.created_at)).getTime() - new Date(toStr(b.created_at)).getTime();
+          })[0];
 
         // Content counts
         const contentCounts: Record<string, number> = {};
@@ -548,6 +642,8 @@ export default function TodayLovable() {
         if (!cancelled) {
           setObjective(obj);
           setCoaching(coach);
+          setLastDoneTask(toStr(lastDone?.title) || null);
+          setNextTask(toStr(nextIncomplete?.title) || null);
           setProgression({
             hasMetrics,
             revenue,
@@ -556,6 +652,9 @@ export default function TodayLovable() {
             conversionRate,
             contentCounts,
             totalContents,
+            prevRevenue,
+            prevNewSubscribers,
+            prevConversionRate,
           });
           setLoading(false);
         }
@@ -611,14 +710,8 @@ export default function TodayLovable() {
     };
   }, [supabase]);
 
-  // Content summary string
-  const contentSummary = useMemo(() => {
-    const entries = Object.entries(progression.contentCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4);
-    if (entries.length === 0) return null;
-    return entries.map(([type, count]) => pluralLabel(type, count)).join(", ");
-  }, [progression.contentCounts]);
+  // Résumé intelligent de la progression analytics
+  const progressionSummary = useMemo(() => buildProgressionSummary(progression), [progression]);
 
   return (
     <SidebarProvider>
@@ -696,27 +789,53 @@ export default function TodayLovable() {
                       {currentWeekLabel}
                     </p>
 
-                    {coaching && (
-                      <div className="space-y-5 flex-1 flex flex-col">
-                        {positiveText && (
-                          <p className="text-sm text-foreground font-medium leading-relaxed">
-                            {positiveText}
-                          </p>
-                        )}
+                    <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Dernière tâche réalisée */}
+                      {lastDoneTask ? (
+                        <div className="flex items-start gap-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 p-4">
+                          <span className="text-green-600 dark:text-green-400 text-base shrink-0 mt-0.5">✓</span>
+                          <div>
+                            <p className="text-xs font-medium text-green-700 dark:text-green-400 uppercase tracking-wide mb-0.5">
+                              Dernière action
+                            </p>
+                            <p className="text-sm font-medium text-foreground leading-snug">
+                              {lastDoneTask}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        positiveText ? (
+                          <p className="text-sm text-foreground font-medium leading-relaxed">{positiveText}</p>
+                        ) : null
+                      )}
 
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 p-5">
+                      {/* Prochaine tâche */}
+                      {nextTask ? (
+                        <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/15 p-4">
+                          <span className="text-primary text-base shrink-0 mt-0.5">→</span>
+                          <div>
+                            <p className="text-xs font-medium text-primary/70 uppercase tracking-wide mb-0.5">
+                              Prochaine étape
+                            </p>
+                            <p className="text-sm font-medium text-foreground leading-snug">
+                              {nextTask}
+                            </p>
+                          </div>
+                        </div>
+                      ) : coaching ? (
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <p className="text-sm text-foreground leading-relaxed">
                             {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
                           </p>
                         </div>
+                      ) : null}
 
-                        <Button asChild variant="default" className="w-full gap-2 mt-auto">
-                          <Link href={coaching.ctaHref}>
-                            {t(`ctas.${coaching.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
+                      <Button asChild variant="default" className="w-full gap-2 mt-auto">
+                        <Link href={coaching?.ctaHref ?? "/strategy"}>
+                          {t(`ctas.${coaching?.ctaLabelKey ?? "seeStrategy"}`)} <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                    </div>
                   </Card>
 
                   {/* --- Ta progression --- */}
@@ -731,41 +850,12 @@ export default function TodayLovable() {
                       {t("progressionSub")}
                     </p>
 
-                    <div className="space-y-5 flex-1 flex flex-col">
-                      {/* Contenus créés */}
-                      <div className="flex items-start gap-3">
-                        <FileText className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold">{t("contentsCreated")}</p>
-                          {contentSummary ? (
-                            <p className="text-sm text-muted-foreground">{contentSummary}</p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">{t("noContent")}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Business KPIs */}
-                      {progression.hasMetrics ? (
-                        <div className="flex items-start gap-3">
-                          <BarChart3 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-sm font-semibold">{t("businessResults")}</p>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-0.5">
-                              {progression.revenue !== null && (
-                                <span>{progression.revenue.toLocaleString()}€</span>
-                              )}
-                              {progression.salesCount !== null && (
-                                <span>{progression.salesCount}</span>
-                              )}
-                              {progression.newSubscribers !== null && (
-                                <span>{progression.newSubscribers}</span>
-                              )}
-                              {progression.conversionRate !== null && (
-                                <span>{progression.conversionRate.toFixed(1)}%</span>
-                              )}
-                            </div>
-                          </div>
+                    <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Analyse intelligente des stats analytics */}
+                      {progression.hasMetrics && progressionSummary ? (
+                        <div className="flex items-start gap-3 rounded-lg bg-muted/40 border border-border/60 p-4">
+                          <BarChart3 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                          <p className="text-sm text-foreground leading-relaxed">{progressionSummary}</p>
                         </div>
                       ) : (
                         <div className="rounded-lg bg-muted/50 border border-border/50 p-4">
