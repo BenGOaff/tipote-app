@@ -3,6 +3,7 @@
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,8 @@ export function TutorialSpotlight(props: {
     showNextButton,
   } = props;
 
-  const { shouldHighlight, currentTooltip, nextPhase, phase } = useTutorial();
+  const { shouldHighlight, currentTooltip, nextPhase, nextPhaseUrl, phase } = useTutorial();
+  const router = useRouter();
 
   const isActive = shouldHighlight(elementId);
   const shouldShow = isActive && Boolean(currentTooltip);
@@ -118,6 +120,7 @@ export function TutorialSpotlight(props: {
 
   const handleNext = () => {
     nextPhase();
+    if (nextPhaseUrl) router.push(nextPhaseUrl);
   };
 
   return (

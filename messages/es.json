@@ -155,10 +155,23 @@
     "copyright": "© {year} Tipote™. Todos los derechos reservados."
   },
   "tutorial": {
-    "tooltipToday": "Tu página de inicio. Aquí siempre encontrarás tu próxima acción prioritaria. 🏠",
-    "tooltipCreate": "El corazón de Tipote: genera posts, emails, artículos... en pocos clics. ✨",
-    "tooltipStrategy": "Tu plan personalizado y tus ofertas. Todo se adapta a ti. 🎯",
-    "tooltipComplete": "¡Todo listo! Siéntete libre de explorar. Estoy aquí si me necesitas. 🚀"
+    "tooltipToday": "Hoy 🏠 Tu página de inicio: encuentra aquí tus tareas importantes y el resumen de tus avances.",
+    "tooltipStrategy": "Estrategia 🎯 Tipote te sugiere la estrategia a seguir y las tareas para alcanzar tus objetivos. Puedes modificar todo en cualquier momento.",
+    "tooltipCreate": "Crear ✨ Aquí generas todos tus contenidos: posts, emails, artículos... ¡Explora todas las posibilidades! Principalmente aquí usas tus créditos IA.",
+    "tooltipContents": "Mis contenidos 📁 Encuentra todo lo que has creado y consulta tu calendario de publicaciones. También puedes seguir los resultados de tus quizzes.",
+    "tooltipTemplates": "Templates 🎨 Descarga templates en un clic en tu cuenta Systeme.io, de forma ilimitada. Atención: son de uso personal 😜",
+    "tooltipCredits": "Créditos IA ⚡ Sigue en tiempo real el número de créditos que te quedan. Haz clic para ver el detalle y recargarlos si es necesario.",
+    "tooltipAnalytics": "Analytics 📊 Te recomendamos completar estos datos una vez por semana o por mes. Tipote los usa para afinar tu estrategia.",
+    "tooltipPepites": "Pepitas 💎 Consejos, ideas e insights que aparecen de vez en cuando para abrirte nuevos horizontes. ¡Vigila el punto rojo!",
+    "tooltipSettingsProfile": "Ajustes — Perfil 👤 Tu información personal. También puedes reiniciar tu Tipote aquí si cambias de proyecto.",
+    "tooltipSettingsConnections": "Ajustes — Conexión 🔌 Conecta tus redes sociales. Si usas Systeme.io, introduce tu clave API para importar tus leads desde tus quizzes.",
+    "tooltipSettingsReglages": "Ajustes — Configuración ⚙️ Elige el idioma de tu contenido y completa la información clave. ¡Personaliza tus ofertas para ir más rápido!",
+    "tooltipSettingsPositioning": "Ajustes — Posicionamiento 🧲 ¡El motor de copywriting de Tipote! Todo está pre-rellenado, pero afina estos datos para contenidos más personales y convincentes. También puedes analizar a tu competencia 🤩",
+    "tooltipSettingsBranding": "Ajustes — Branding 🎨 Personaliza el contenido generado añadiendo tus colores, tipografías y logotipo.",
+    "tooltipSettingsAi": "Ajustes — IA y créditos 🤖 Sigue tu consumo de créditos y recárgalos si es necesario. También puedes personalizar el estilo de los auto-comentarios.",
+    "tooltipSettingsPricing": "Ajustes — Suscripción 💳 Cancela o mejora tu suscripción de forma autónoma desde esta pestaña.",
+    "tooltipCoach": "Tu coach IA 🧠 Disponible en los planes PRO y ELITE, te ayuda a tomar decisiones y afinar tus estrategias. ¡Ya no necesitas formaciones!",
+    "tooltipComplete": "¡Ya está! 🚀 Ahora conoces todas las herramientas. ¡Lánzate, estoy aquí si me necesitas!"
   },
   "errors": {
     "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",

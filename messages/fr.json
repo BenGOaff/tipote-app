@@ -155,10 +155,23 @@
     "copyright": "© {year} Tipote™. Tous droits réservés."
   },
   "tutorial": {
-    "tooltipToday": "Ta page d'accueil. Tu y trouveras toujours ta prochaine action prioritaire. 🏠",
-    "tooltipCreate": "Le cœur de Tipote : génère posts, emails, articles... en quelques clics. ✨",
-    "tooltipStrategy": "Ton plan personnalisé et tes offres. Tout s'adapte à toi. 🎯",
-    "tooltipComplete": "C'est bon ! Tu peux explorer. Je suis là si tu as besoin. 🚀"
+    "tooltipToday": "Aujourd'hui 🏠 C'est ta page d'accueil : retrouve ici tes tâches importantes et le résumé de tes avancées quand tu coches tes cases et complètes tes stats.",
+    "tooltipStrategy": "Stratégie 🎯 Tipote te conseille la stratégie à suivre et les tâches à accomplir pour atteindre tes objectifs. Tu peux tout modifier à tout moment.",
+    "tooltipCreate": "Créer ✨ C'est ici que tu génères tous tes contenus : posts, emails, articles... N'hésite pas à explorer toutes les possibilités ! C'est principalement ici que tu utilises tes crédits IA.",
+    "tooltipContents": "Mes contenus 📁 Retrouve tout ce que tu as créé et consulte ton calendrier de publications. Tu peux aussi suivre les résultats de tes quiz depuis cette page.",
+    "tooltipTemplates": "Templates 🎨 Ta bibliothèque de templates à télécharger en un clic sur ton compte Systeme.io, en illimité. Attention : ils sont réservés à ton usage personnel 😜",
+    "tooltipCredits": "Crédits IA ⚡ Suis en live le nombre de crédits qu'il te reste. Clique pour accéder au détail et les recharger si besoin.",
+    "tooltipAnalytics": "Analytics 📊 Complète ces infos une fois par semaine ou par mois pour suivre tes évolutions. Tipote s'en sert pour affiner ta stratégie.",
+    "tooltipPepites": "Pépites 💎 Des conseils, idées et insights qui popent de temps en temps pour t'ouvrir de nouveaux horizons. Surveille la pastille rouge !",
+    "tooltipSettingsProfile": "Paramètres — Profil 👤 Tes infos personnelles. Tu peux aussi réinitialiser ton Tipote ici si tu changes de projet ou que tu veux repartir de zéro.",
+    "tooltipSettingsConnections": "Paramètres — Connexion 🔌 Connecte tes réseaux sociaux. Si tu utilises Systeme.io, entre ta clé API pour importer tes leads directement depuis tes quiz.",
+    "tooltipSettingsReglages": "Paramètres — Réglages ⚙️ Choisis la langue de ton contenu et complète les infos clés. Utilise le générateur de pages légales si besoin, et personnalise tes offres pour aller plus vite !",
+    "tooltipSettingsPositioning": "Paramètres — Positionnement 🧲 Le moteur copywriting de Tipote ! Tout est pré-rempli mais affine ces infos pour des contenus encore plus personnels et convaincants. Tu peux aussi analyser tes concurrents 🤩",
+    "tooltipSettingsBranding": "Paramètres — Branding 🎨 Personnalise le contenu généré (pages de vente, de capture...) en ajoutant tes couleurs, polices et logo.",
+    "tooltipSettingsAi": "Paramètres — IA et crédits 🤖 Suis ta consommation de crédits et recharge-les si besoin. Tu peux aussi personnaliser le style des auto-commentaires de posts.",
+    "tooltipSettingsPricing": "Paramètres — Abonnement 💳 Annule ou upgrade ton abonnement en toute autonomie depuis cet onglet.",
+    "tooltipCoach": "Ton coach IA 🧠 Disponible aux plans PRO et ELITE, il est là pour t'aider à prendre des décisions et affiner tes stratégies. Il te connaît et connaît ton projet — plus besoin de formations !",
+    "tooltipComplete": "C'est tout ! 🚀 Tu connais maintenant tous les outils. Lance-toi, je suis là si tu as besoin."
   },
   "errors": {
     "generic": "Une erreur est survenue. Veuillez réessayer.",

@@ -69,8 +69,8 @@ const MAIN_ITEM_CONFIG = [
   { key: "today" as const, url: "/app", icon: Sun, spotlightId: "today" },
   { key: "strategy" as const, url: "/strategy", icon: Target, spotlightId: "strategy" },
   { key: "create" as const, url: "/create", icon: Sparkles, spotlightId: "create" },
-  { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: null },
-  { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: null },
+  { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: "contents" },
+  { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: "templates" },
 ];
 
 function useAnimatedNumber(value: number, durationMs = 900) {
@@ -184,12 +184,19 @@ export function AppSidebar() {
   }));
 
   const handleItemClick = (spotlightId: string | null) => {
-    // Si on clique sur l'élément qui est actuellement en spotlight, passer au suivant
-    if (spotlightId === "today" && phase === "tour_today") {
-      nextPhase();
-    } else if (spotlightId === "create" && phase === "tour_create") {
-      nextPhase();
-    } else if (spotlightId === "strategy" && phase === "tour_strategy") {
+    // Si on clique sur l'élément actuellement en spotlight, passer au suivant
+    const phaseMap: Record<string, string> = {
+      today: "tour_today",
+      strategy: "tour_strategy",
+      create: "tour_create",
+      contents: "tour_contents",
+      templates: "tour_templates",
+      credits: "tour_credits",
+      analytics: "tour_analytics",
+      pepites: "tour_pepites",
+      settings: "tour_settings",
+    };
+    if (spotlightId && phaseMap[spotlightId] === phase) {
       nextPhase();
     }
   };
@@ -262,25 +269,32 @@ export function AppSidebar() {
             ✅ Dès qu'il coche "ne me montre plus", ce bloc disparaît définitivement. */}
         <TutorialNudge />
 
-        {/* ✅ Crédit visible en bas à gauche, au-dessus d'Analytics */}
-        <CreditsSidebarBadge />
+        {/* Crédits IA — spotlight tour */}
+        <TutorialSpotlight elementId="credits" tooltipPosition="right" showNextButton>
+          <CreditsSidebarBadge />
+        </TutorialSpotlight>
 
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/analytics"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
-                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span>{t("analytics")}</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <TutorialSpotlight elementId="analytics" tooltipPosition="right" showNextButton>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to="/analytics"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  onClick={() => handleItemClick("analytics")}
+                >
+                  <BarChart3 className="w-5 h-5" />
+                  <span>{t("analytics")}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </TutorialSpotlight>
 
-          {/* ✅ Nouveau : Pépites juste au-dessus de Paramètres */}
-          <PepitesSidebarItem />
+          {/* Pépites juste au-dessus de Paramètres */}
+          <TutorialSpotlight elementId="pepites" tooltipPosition="right" showNextButton>
+            <PepitesSidebarItem />
+          </TutorialSpotlight>
 
           <TutorialSpotlight elementId="settings" tooltipPosition="right" showNextButton>
             <SidebarMenuItem>

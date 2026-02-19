@@ -155,10 +155,23 @@
     "copyright": "© {year} Tipote™. All rights reserved."
   },
   "tutorial": {
-    "tooltipToday": "Your home page. You'll always find your next priority action here. 🏠",
-    "tooltipCreate": "The heart of Tipote: generate posts, emails, articles... in a few clicks. ✨",
-    "tooltipStrategy": "Your personalised plan and your offers. Everything adapts to you. 🎯",
-    "tooltipComplete": "You're all set! Feel free to explore. I'm here if you need me. 🚀"
+    "tooltipToday": "Today 🏠 Your home page — find your important tasks and a summary of your progress as you tick boxes and fill in your stats.",
+    "tooltipStrategy": "Strategy 🎯 Tipote suggests the strategy to follow and tasks to reach your goals. You can edit everything at any time.",
+    "tooltipCreate": "Create ✨ This is where you generate all your content: posts, emails, articles... Explore all the possibilities! Your AI credits are mainly used here.",
+    "tooltipContents": "My Content 📁 Find everything you've created and browse your publication calendar. You can also track your quiz results here.",
+    "tooltipTemplates": "Templates 🎨 Download templates in one click directly to your Systeme.io account, unlimited. Note: they are for your personal use only 😜",
+    "tooltipCredits": "AI Credits ⚡ Track your remaining credits in real time. Click to see details and recharge if needed.",
+    "tooltipAnalytics": "Analytics 📊 We recommend filling this in once a week or month to track your progress. Tipote uses it to refine your strategy.",
+    "tooltipPepites": "Gems 💎 Tips, ideas and insights that pop up from time to time to open new horizons. Watch for the red badge!",
+    "tooltipSettingsProfile": "Settings — Profile 👤 Your personal info. You can also reset your Tipote here if you switch projects or want to start fresh.",
+    "tooltipSettingsConnections": "Settings — Connections 🔌 Connect your social networks. If you use Systeme.io, enter your API key to import leads directly from your quizzes.",
+    "tooltipSettingsReglages": "Settings — Settings ⚙️ Choose your content language and fill in key info. Use the legal page generator if needed, and customise your offers to go faster!",
+    "tooltipSettingsPositioning": "Settings — Positioning 🧲 Tipote's copywriting engine! Everything is pre-filled but refine these details for even more personal and convincing content. You can also analyse your competitors 🤩",
+    "tooltipSettingsBranding": "Settings — Branding 🎨 Personalise generated content (sales pages, landing pages...) by adding your colours, fonts and logo.",
+    "tooltipSettingsAi": "Settings — AI & Credits 🤖 Track your credit usage and recharge if needed. You can also customise the style of auto-comments on posts.",
+    "tooltipSettingsPricing": "Settings — Subscription 💳 Cancel or upgrade your subscription independently from this tab.",
+    "tooltipCoach": "Your AI Coach 🧠 Available on PRO and ELITE plans, here to help you make decisions and refine your strategies. It knows you and your project — no more buying courses!",
+    "tooltipComplete": "That's it! 🚀 You now know all the tools. Get started — I'm here if you need me."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

@@ -20,8 +20,21 @@ export type TutorialPhase =
   | "api_fields"
   | "api_validated"
   | "tour_today"
-  | "tour_create"
   | "tour_strategy"
+  | "tour_create"
+  | "tour_contents"
+  | "tour_templates"
+  | "tour_credits"
+  | "tour_analytics"
+  | "tour_pepites"
+  | "tour_settings"
+  | "tour_settings_connections"
+  | "tour_settings_reglages"
+  | "tour_settings_positioning"
+  | "tour_settings_branding"
+  | "tour_settings_ai"
+  | "tour_settings_pricing"
+  | "tour_coach"
   | "tour_complete"
   | "completed";
 
@@ -57,6 +70,7 @@ interface TutorialContextType {
 
   shouldHighlight: (element: string) => boolean;
   currentTooltip: string | null;
+  nextPhaseUrl: string | null;
 
   tutorialOptOut: boolean;
   setTutorialOptOut: (value: boolean) => void;
@@ -80,11 +94,46 @@ const FIRST_DAYS_WINDOW = 7;
 const PHASE_ORDER: TutorialPhase[] = [
   "welcome",
   "tour_today",
-  "tour_create",
   "tour_strategy",
+  "tour_create",
+  "tour_contents",
+  "tour_templates",
+  "tour_credits",
+  "tour_analytics",
+  "tour_pepites",
+  "tour_settings",
+  "tour_settings_connections",
+  "tour_settings_reglages",
+  "tour_settings_positioning",
+  "tour_settings_branding",
+  "tour_settings_ai",
+  "tour_settings_pricing",
+  "tour_coach",
   "tour_complete",
   "completed",
 ];
+
+// URL cible à atteindre quand on ENTRE dans chaque phase
+// (utilisé par TutorialSpotlight pour naviguer au clic "Suivant")
+export const PHASE_TO_URL: Partial<Record<TutorialPhase, string>> = {
+  tour_today: "/app",
+  tour_strategy: "/strategy",
+  tour_create: "/create",
+  tour_contents: "/contents",
+  tour_templates: "/templates",
+  tour_credits: "/app",
+  tour_analytics: "/analytics",
+  tour_pepites: "/pepites",
+  tour_settings: "/settings?tab=profile",
+  tour_settings_connections: "/settings?tab=connections",
+  tour_settings_reglages: "/settings?tab=settings",
+  tour_settings_positioning: "/settings?tab=positioning",
+  tour_settings_branding: "/settings?tab=branding",
+  tour_settings_ai: "/settings?tab=ai",
+  tour_settings_pricing: "/settings?tab=billing",
+  tour_coach: "/app",
+  tour_complete: "/app",
+};
 
 const TUTORIAL_VERSION = "v1";
 
@@ -379,10 +428,25 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (phase === "completed" || phase === "welcome") return false;
 
       if (phase === "tour_today") return element === "today";
-      if (phase === "tour_create") return element === "create";
       if (phase === "tour_strategy") return element === "strategy";
+      if (phase === "tour_create") return element === "create";
+      if (phase === "tour_contents") return element === "contents";
+      if (phase === "tour_templates") return element === "templates";
+      if (phase === "tour_credits") return element === "credits";
+      if (phase === "tour_analytics") return element === "analytics";
+      if (phase === "tour_pepites") return element === "pepites";
+      // Toutes les phases settings highlighting le nav item "settings" dans la sidebar
+      if (
+        phase === "tour_settings" ||
+        phase === "tour_settings_connections" ||
+        phase === "tour_settings_reglages" ||
+        phase === "tour_settings_positioning" ||
+        phase === "tour_settings_branding" ||
+        phase === "tour_settings_ai" ||
+        phase === "tour_settings_pricing"
+      ) return element === "settings";
+      if (phase === "tour_coach") return element === "coach";
 
-      // settings spotlight existe côté UI, mais pas dans le tour principal
       return false;
     },
     [phase, tutorialOptOut],
@@ -392,18 +456,34 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (tutorialOptOut) return null;
 
     switch (phase) {
-      case "tour_today":
-        return tTutorial("tooltipToday");
-      case "tour_create":
-        return tTutorial("tooltipCreate");
-      case "tour_strategy":
-        return tTutorial("tooltipStrategy");
-      case "tour_complete":
-        return tTutorial("tooltipComplete");
-      default:
-        return null;
+      case "tour_today":                  return tTutorial("tooltipToday");
+      case "tour_strategy":               return tTutorial("tooltipStrategy");
+      case "tour_create":                 return tTutorial("tooltipCreate");
+      case "tour_contents":               return tTutorial("tooltipContents");
+      case "tour_templates":              return tTutorial("tooltipTemplates");
+      case "tour_credits":                return tTutorial("tooltipCredits");
+      case "tour_analytics":              return tTutorial("tooltipAnalytics");
+      case "tour_pepites":                return tTutorial("tooltipPepites");
+      case "tour_settings":               return tTutorial("tooltipSettingsProfile");
+      case "tour_settings_connections":   return tTutorial("tooltipSettingsConnections");
+      case "tour_settings_reglages":      return tTutorial("tooltipSettingsReglages");
+      case "tour_settings_positioning":   return tTutorial("tooltipSettingsPositioning");
+      case "tour_settings_branding":      return tTutorial("tooltipSettingsBranding");
+      case "tour_settings_ai":            return tTutorial("tooltipSettingsAi");
+      case "tour_settings_pricing":       return tTutorial("tooltipSettingsPricing");
+      case "tour_coach":                  return tTutorial("tooltipCoach");
+      case "tour_complete":               return tTutorial("tooltipComplete");
+      default:                            return null;
     }
   }, [phase, tutorialOptOut, tTutorial]);
+
+  // URL vers laquelle naviguer lors du prochain "Suivant"
+  const nextPhaseUrl = useMemo<string | null>(() => {
+    const idx = PHASE_ORDER.indexOf(phase);
+    if (idx < 0 || idx >= PHASE_ORDER.length - 1) return null;
+    const next = PHASE_ORDER[idx + 1];
+    return PHASE_TO_URL[next] ?? null;
+  }, [phase]);
 
   const value = useMemo<TutorialContextType>(
     () => ({
@@ -418,6 +498,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       shouldHighlight,
       currentTooltip,
+      nextPhaseUrl,
       tutorialOptOut,
       setTutorialOptOut,
       firstSeenAt,
@@ -435,6 +516,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       shouldHighlight,
       currentTooltip,
+      nextPhaseUrl,
       tutorialOptOut,
       setTutorialOptOut,
       firstSeenAt,
