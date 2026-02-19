@@ -229,6 +229,7 @@ function triggerBeforeExecution(opts: {
 }) {
   void (async () => {
     try {
+      // Try with project_id first, then fallback without (connection may have no project_id set)
       let connQuery = supabaseAdmin
         .from("social_connections")
         .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
@@ -236,7 +237,18 @@ function triggerBeforeExecution(opts: {
         .eq("platform", opts.platform);
       if (opts.project_id) connQuery = connQuery.eq("project_id", opts.project_id);
 
-      const { data: conn } = await connQuery.maybeSingle();
+      let { data: conn } = await connQuery.maybeSingle();
+
+      // Fallback: try without project_id filter if not found
+      if (!conn?.access_token_encrypted && opts.project_id) {
+        const { data: connFallback } = await supabaseAdmin
+          .from("social_connections")
+          .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .eq("user_id", opts.user_id)
+          .eq("platform", opts.platform)
+          .maybeSingle();
+        conn = connFallback;
+      }
       if (!conn?.access_token_encrypted) {
         const errMsg = `Aucune connexion sociale trouvée pour ${opts.platform}. Connectez votre compte dans Paramètres > Connexions.`;
         console.error("[activate]", errMsg);
@@ -244,6 +256,7 @@ function triggerBeforeExecution(opts: {
           user_id: opts.user_id,
           post_tipote_id: opts.content_id,
           platform: opts.platform,
+          comment_text: "",
           comment_type: "before",
           status: "failed",
           error_message: errMsg,
@@ -266,6 +279,7 @@ function triggerBeforeExecution(opts: {
             user_id: opts.user_id,
             post_tipote_id: opts.content_id,
             platform: opts.platform,
+            comment_text: "",
             comment_type: "before",
             status: "failed",
             error_message: errMsg,
@@ -283,6 +297,7 @@ function triggerBeforeExecution(opts: {
             user_id: opts.user_id,
             post_tipote_id: opts.content_id,
             platform: opts.platform,
+            comment_text: "",
             comment_type: "before",
             status: "failed",
             error_message: errMsg,
