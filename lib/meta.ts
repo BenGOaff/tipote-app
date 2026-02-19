@@ -414,42 +414,59 @@ export async function publishToThreads(
     return { ok: false, error: "No creation_id returned from Threads", statusCode: 500 };
   }
 
-  // Etape 2 : Publier le container (query params)
+  // Attendre que Meta traite le container avant de publier.
+  // Sans ce délai, Threads renvoie parfois l'erreur 4279009 ("resource does not exist").
+  await new Promise((r) => setTimeout(r, 2000));
+
+  // Etape 2 : Publier le container (avec retry automatique si container pas encore prêt)
   const publishParams = new URLSearchParams({
     creation_id: creationId,
     access_token: userAccessToken,
   });
 
-  const publishRes = await fetch(
-    `${THREADS_API_BASE}/${threadsUserId}/threads_publish?${publishParams.toString()}`,
-    { method: "POST" }
-  );
+  const doPublish = () =>
+    fetch(
+      `${THREADS_API_BASE}/${threadsUserId}/threads_publish?${publishParams.toString()}`,
+      { method: "POST" }
+    );
 
-  if (publishRes.ok) {
-    const publishJson = await publishRes.json();
-    const postId = publishJson.id;
+  let publishRes = await doPublish();
 
-    // Étape 3 : Récupérer le permalink du post (l'ID numérique ne fonctionne pas en URL)
-    let permalink: string | undefined;
-    if (postId) {
-      try {
-        const plRes = await fetch(
-          `${THREADS_API_BASE}/${postId}?fields=permalink&access_token=${userAccessToken}`
-        );
-        if (plRes.ok) {
-          const plJson = await plRes.json();
-          permalink = plJson.permalink;
-        }
-      } catch {
-        // Pas grave si le permalink échoue, on a au moins le postId
+  if (!publishRes.ok) {
+    const errBody = await publishRes.text();
+    // Retry une fois si le container n'est pas encore prêt (erreur 4279009)
+    if (errBody.includes("4279009")) {
+      await new Promise((r) => setTimeout(r, 5000));
+      publishRes = await doPublish();
+      if (!publishRes.ok) {
+        const retryErr = await publishRes.text();
+        return { ok: false, error: `Threads publish failed: ${retryErr}`, statusCode: publishRes.status };
       }
+    } else {
+      return { ok: false, error: `Threads publish failed: ${errBody}`, statusCode: publishRes.status };
     }
-
-    return { ok: true, postId: permalink ?? postId };
   }
 
-  const errText = await publishRes.text();
-  return { ok: false, error: `Threads publish failed: ${errText}`, statusCode: publishRes.status };
+  const publishJson = await publishRes.json();
+  const postId = publishJson.id;
+
+  // Étape 3 : Récupérer le permalink du post (l'ID numérique ne fonctionne pas en URL)
+  let permalink: string | undefined;
+  if (postId) {
+    try {
+      const plRes = await fetch(
+        `${THREADS_API_BASE}/${postId}?fields=permalink&access_token=${userAccessToken}`
+      );
+      if (plRes.ok) {
+        const plJson = await plRes.json();
+        permalink = plJson.permalink;
+      }
+    } catch {
+      // Pas grave si le permalink échoue, on a au moins le postId
+    }
+  }
+
+  return { ok: true, postId: permalink ?? postId };
 }
 
 // ----------------------------------------------------------------
