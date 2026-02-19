@@ -5,6 +5,7 @@
     "create": "Create",
     "contents": "My Content",
     "templates": "Templates",
+    "automations": "Automations",
     "analytics": "Analytics",
     "pepites": "Gems",
     "settings": "Settings"
@@ -1011,6 +1012,117 @@
       "step2": "Generating your first tasks…",
       "step3": "Setting up your space…",
       "done": "All done!"
+    }
+  },
+  "automations": {
+    "title": "Automations",
+    "createBtn": "Create automation",
+    "copied": "Copied!",
+    "copy": "Copy SQL",
+    "savedCreated": "Automation created!",
+    "savedUpdated": "Automation updated!",
+    "deleted": "Automation deleted",
+    "deleteConfirm": "Delete this automation?",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "delete": "Delete",
+    "statsTriggers": "{count} triggers",
+    "statsDms": "{count} DMs sent",
+    "hero": {
+      "title": "Social Automations — ManyChat Style",
+      "description": "Detect keywords in comments and automatically send a personalized DM on Instagram and Facebook. Capture emails, send free resources — on autopilot."
+    },
+    "platformsTitle": "Platform availability",
+    "status": {
+      "available": "Available",
+      "soon": "Coming soon",
+      "unavailable": "Not available"
+    },
+    "xNote": "X/Twitter: DM API requires a Pro plan at $5,000/month — not viable. Threads: DM API is not yet available for developers.",
+    "setup": {
+      "title": "Setup required — Missing Supabase table",
+      "description": "Copy this SQL and run it in the Supabase SQL editor to create the automations table.",
+      "instructions": "Supabase → SQL Editor → New Query → Paste → Run"
+    },
+    "guide": {
+      "title": "n8n + Meta setup guide",
+      "intro": "Here are the 4 steps to activate your Instagram and Facebook automations.",
+      "step1": { "title": "Create a Meta App", "desc": "In Meta for Developers, create a Business app. Enable the Webhooks and Messenger/Instagram Messaging products." },
+      "step2": { "title": "Configure Meta webhooks", "desc": "Subscribe to 'comments' and 'messages' fields on your Page/Instagram object. Point the callback URL to your n8n (Facebook Trigger node)." },
+      "step3": { "title": "Import the n8n workflow", "desc": "Import n8n/workflow-comment-to-dm.json into your n8n instance. Configure your Meta credentials and the Tipote app webhook URL." },
+      "step4": { "title": "Pass Meta App Review", "desc": "Request instagram_manage_comments, instagram_manage_messages and pages_messaging permissions. Timeline: 1–4 weeks." }
+    },
+    "rgpd": {
+      "title": "GDPR compliance — what we do",
+      "description": "The user initiates contact by commenting → implicit consent. Every DM automatically includes 'Reply STOP to unsubscribe'. Meta's 24h window naturally limits unsolicited messages."
+    },
+    "listTitle": "My automations",
+    "empty": {
+      "title": "No automations yet",
+      "description": "Create your first automation to automatically reply to comments on Instagram and Facebook.",
+      "ctaDm": "Auto DM on comment",
+      "ctaEmail": "Auto Email on comment",
+      "emailName": "Email capture on comment"
+    },
+    "templates": {
+      "title": "Ready-to-use templates",
+      "useBtn": "Use this template",
+      "dm": {
+        "title": "Auto DM on Comment",
+        "description": "Post 'Comment PDF to get your free guide'. When someone comments 'PDF', they automatically receive your link via DM.",
+        "example": "Post: 'Comment PDF 👇' → Comment 'PDF awesome' → Auto DM with the link",
+        "badge": "Instagram + Facebook",
+        "defaultMessage": "Hey {{firstname}}! Thanks for your comment 🙌 Here's your free guide: [YOUR_LINK]\n\nReply STOP to unsubscribe."
+      },
+      "email": {
+        "title": "Auto Email on Comment",
+        "description": "The user comments a keyword, receives a DM asking for their email, then gets the guide delivered to their inbox via systeme.io.",
+        "example": "Comment 'GUIDE' → DM 'Send me your email' → Email sent → Added to systeme.io",
+        "badge": "Instagram + Facebook + systeme.io",
+        "defaultMessage": "Hey {{firstname}}! To receive your free guide, reply to this message with your email 👇\n\nReply STOP to unsubscribe.",
+        "defaultEmailDm": "Got it! I'm sending your guide to {{email}} within the next few minutes. Check your spam folder if you don't see it 📬"
+      }
+    },
+    "form": {
+      "createTitle": "Create automation",
+      "editTitle": "Edit automation",
+      "name": "Automation name",
+      "namePlaceholder": "E.g.: Instagram PDF Guide",
+      "type": "Automation type",
+      "type_comment_to_dm": "Auto DM",
+      "type_comment_to_dm_desc": "Send a DM with a link or message",
+      "type_comment_to_email": "Auto Email",
+      "type_comment_to_email_desc": "Capture the email and send to systeme.io",
+      "platforms": "Platforms",
+      "keyword": "Trigger keyword",
+      "keywordPlaceholder": "E.g.: PDF",
+      "keywordHint": "Case-insensitive — any comment containing this word will trigger the automation.",
+      "dmMessage": "DM message",
+      "firstDmMessage": "First DM message",
+      "dmMessagePlaceholder": "Hey {{firstname}}! Here's your guide: [link]\n\nReply STOP to unsubscribe.",
+      "dmMessageHint": "Use {{firstname}} to personalize. STOP will be added automatically if you forget.",
+      "emailCapture": "Email capture",
+      "emailCaptureHint": "After the first DM, the bot waits for a reply with the email and sends it to systeme.io",
+      "emailDmMessage": "DM message to request the email",
+      "emailDmPlaceholder": "Reply to this message with your email to receive your guide 📧",
+      "systemeioTag": "systeme.io tag",
+      "systemeioTagPlaceholder": "E.g.: lead-pdf-guide",
+      "systemeioTagHint": "This tag will be assigned to the contact in systeme.io to trigger your email automations.",
+      "rgpdNote": "Every DM will automatically include a STOP mention. The user initiated contact by commenting — this is the implicit consent compliant with GDPR and Meta policies.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "errorName": "Give the automation a name",
+      "errorKeyword": "Enter a trigger keyword",
+      "errorMessage": "Write the DM message",
+      "errorPlatform": "Select at least one platform"
+    },
+    "errors": {
+      "tableNotReady": "The Supabase table doesn't exist yet. Follow the setup guide above.",
+      "saveFailed": "Failed to save"
     }
   }
 }
