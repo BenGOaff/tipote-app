@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
@@ -178,21 +179,46 @@ async function triggerAfterExecution(
   try {
     let connQuery = supabaseAdmin
       .from("social_connections")
-      .select("platform_user_id, access_token_encrypted")
+      .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
       .eq("user_id", userId)
       .eq("platform", platform);
     if (projectId) connQuery = connQuery.eq("project_id", projectId);
 
-    const { data: conn } = await connQuery.maybeSingle();
+    let { data: conn } = await connQuery.maybeSingle();
+
+    // Fallback: try without project_id filter if not found
+    if (!conn?.access_token_encrypted && projectId) {
+      const { data: connFallback } = await supabaseAdmin
+        .from("social_connections")
+        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+        .eq("user_id", userId)
+        .eq("platform", platform)
+        .maybeSingle();
+      conn = connFallback;
+    }
+
     if (!conn?.access_token_encrypted) {
       await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);
       return;
     }
 
     let accessToken: string;
-    try { accessToken = decrypt(conn.access_token_encrypted); } catch {
-      await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);
-      return;
+    // Check token expiry and refresh if needed (5-minute buffer)
+    const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+    const isExpired = conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS);
+    if (isExpired) {
+      const refreshResult = await refreshSocialToken(conn.id, platform, conn.refresh_token_encrypted ?? null);
+      if (!refreshResult.ok || !refreshResult.accessToken) {
+        console.error("[publish-callback] after-comments: token refresh failed for", platform);
+        await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);
+        return;
+      }
+      accessToken = refreshResult.accessToken;
+    } else {
+      try { accessToken = decrypt(conn.access_token_encrypted); } catch {
+        await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);
+        return;
+      }
     }
 
     const { data: profile } = await supabaseAdmin
