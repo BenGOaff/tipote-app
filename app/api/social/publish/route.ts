@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
         const itemPlatform = item.channel || "";
         let connQuery = supabaseAdmin
           .from("social_connections")
-          .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
           .eq("user_id", item.user_id)
           .eq("platform", itemPlatform);
         if (item.project_id) connQuery = connQuery.eq("project_id", item.project_id);
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         if (!conn?.access_token_encrypted && item.project_id) {
           const { data: connFallback } = await supabaseAdmin
             .from("social_connections")
-            .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+            .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
             .eq("user_id", item.user_id)
             .eq("platform", itemPlatform)
             .maybeSingle();
@@ -214,6 +214,7 @@ export async function POST(req: NextRequest) {
           platform: itemPlatform,
           accessToken,
           platformUserId: conn.platform_user_id,
+          platformUsername: conn.platform_username ?? undefined,
           postText: item.content || "",
           commentType: "after",
           nbComments: item.nb_comments_after,
@@ -290,7 +291,7 @@ export async function POST(req: NextRequest) {
   {
     let connQuery = supabase
       .from("social_connections")
-      .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+      .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
       .eq("user_id", user.id)
       .eq("platform", platform);
     if (projectId) connQuery = connQuery.eq("project_id", projectId);
@@ -302,7 +303,7 @@ export async function POST(req: NextRequest) {
       // Fallback admin
       let connQueryAdmin = supabaseAdmin
         .from("social_connections")
-        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", user.id)
         .eq("platform", platform);
       if (projectId) connQueryAdmin = connQueryAdmin.eq("project_id", projectId);

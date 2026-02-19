@@ -179,7 +179,7 @@ async function triggerAfterExecution(
   try {
     let connQuery = supabaseAdmin
       .from("social_connections")
-      .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+      .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
       .eq("user_id", userId)
       .eq("platform", platform);
     if (projectId) connQuery = connQuery.eq("project_id", projectId);
@@ -190,7 +190,7 @@ async function triggerAfterExecution(
     if (!conn?.access_token_encrypted && projectId) {
       const { data: connFallback } = await supabaseAdmin
         .from("social_connections")
-        .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", userId)
         .eq("platform", platform)
         .maybeSingle();
@@ -234,6 +234,7 @@ async function triggerAfterExecution(
       platform,
       accessToken,
       platformUserId: conn.platform_user_id,
+      platformUsername: conn.platform_username ?? undefined,
       postText,
       commentType: "after",
       nbComments: nbAfter,
