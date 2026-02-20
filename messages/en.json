@@ -1159,7 +1159,18 @@
       "errorName": "Give the automation a name",
       "errorKeyword": "Enter a trigger keyword",
       "errorMessage": "Write the DM message",
-      "errorPlatform": "Select at least one platform"
+      "errorPlatform": "Select at least one platform",
+      "optional": "optional",
+      "targetPost": "Targeted post",
+      "targetPostPlaceholder": "https://www.facebook.com/photo?fbid=...",
+      "targetPostHint": "Optional — paste a post URL to trigger this automation only on that specific post.",
+      "commentReplies": "Automatic comment reply",
+      "commentRepliesPlaceholder": "It's in your DMs!\nLet me know if you received it 👌\nCheck your private messages\nGreat, sending it in 2 min ✉️\nCheck your DMs!",
+      "commentRepliesHint": "One variant per line. A random reply will be posted as a comment before sending the DM."
+    },
+    "card": {
+      "postTargeted": "Targeted post",
+      "replyVariants": "{count} reply variants"
     },
     "errors": {
       "tableNotReady": "The Supabase table doesn't exist yet. Follow the setup guide above.",

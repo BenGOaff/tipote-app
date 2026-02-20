@@ -1,7 +1,7 @@
 // app/api/automations/webhook/route.ts
 // Gère les webhooks Meta (commentaires Instagram/Facebook)
 // GET : vérification du webhook Meta (hub.challenge)
-// POST : traitement d'un commentaire → envoi DM + capture email
+// POST : traitement d'un commentaire → envoi DM + réponse commentaire + capture email
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -39,7 +39,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { platform, page_id, sender_id, sender_name, comment_text, page_access_token, user_id } = body;
+  const {
+    platform,
+    page_id,
+    sender_id,
+    sender_name,
+    comment_text,
+    comment_id,
+    post_id,
+    page_access_token,
+    user_id,
+  } = body;
 
   if (!platform || !page_id || !sender_id || !comment_text || !page_access_token) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -64,19 +74,36 @@ export async function POST(req: NextRequest) {
     }
 
     // Find the first automation whose keyword appears in the comment
-    const matched = automations.find((auto) =>
-      commentUpper.includes(auto.trigger_keyword.toUpperCase())
-    );
+    // Also filter by target_post_url if set: the post_id must appear in the stored URL
+    const matched = automations.find((auto) => {
+      if (!commentUpper.includes(auto.trigger_keyword.toUpperCase())) return false;
+      if (auto.target_post_url && post_id) {
+        return auto.target_post_url.includes(post_id);
+      }
+      // If automation has target_post_url but no post_id provided, skip
+      if (auto.target_post_url && !post_id) return false;
+      return true;
+    });
 
     if (!matched) {
       return NextResponse.json({ ok: true, matched: 0 });
     }
 
-    // Personalize the DM message
     const firstName = extractFirstName(sender_name);
+
+    // 1. Reply to the comment with a random variant (non-blocking)
+    if (matched.comment_reply_variants?.length && comment_id) {
+      const variants: string[] = matched.comment_reply_variants;
+      const replyText = variants[Math.floor(Math.random() * variants.length)];
+      replyToComment(page_access_token, comment_id, replyText).catch((err) => {
+        console.error("[automations/webhook] Failed to reply to comment:", err);
+      });
+    }
+
+    // 2. Personalize the DM message
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
 
-    // Send DM via Meta Graph API
+    // 3. Send DM via Meta Graph API
     const dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
 
     if (!dmResult.ok) {
@@ -84,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "DM send failed", detail: dmResult.error }, { status: 502 });
     }
 
-    // Update automation stats
+    // 4. Update automation stats
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
     await supabaseAdmin
       .from("social_automations")
@@ -174,6 +201,8 @@ interface CommentWebhookPayload {
   sender_id: string;
   sender_name: string;
   comment_text: string;
+  comment_id?: string;
+  post_id?: string;
   page_access_token: string;
   user_id?: string;
 }
@@ -224,6 +253,29 @@ async function sendMetaDM(
     return { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };
+  }
+}
+
+async function replyToComment(
+  pageAccessToken: string,
+  commentId: string,
+  text: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/${commentId}/comments`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${pageAccessToken}`,
+      },
+      body: JSON.stringify({ message: text }),
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Comment reply failed: ${errBody}`);
   }
 }
 

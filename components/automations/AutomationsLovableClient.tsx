@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -36,6 +37,8 @@ import {
   XCircle,
   Info,
   Copy,
+  Link2,
+  MessageSquare,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { toast } from "sonner";
@@ -55,6 +58,8 @@ interface SocialAutomation {
   include_email_capture: boolean;
   email_dm_message: string | null;
   systemeio_tag: string | null;
+  target_post_url: string | null;
+  comment_reply_variants: string[] | null;
   enabled: boolean;
   stats: { triggers: number; dms_sent: number };
   created_at: string;
@@ -69,30 +74,34 @@ interface FormState {
   include_email_capture: boolean;
   email_dm_message: string;
   systemeio_tag: string;
+  target_post_url: string;
+  comment_reply_variants: string; // newline-separated in form
 }
+
+const DEFAULT_COMMENT_REPLIES = [
+  "C'est dans tes DMs ! 📩",
+  "RDV en message privé 😊",
+  "Dis-moi si tu as bien reçu !",
+  "Je t'envoie ça dans 2mn ⚡",
+  "Super, c'est dans tes messages !",
+].join("\n");
 
 const DEFAULT_FORM: FormState = {
   name: "",
   type: "comment_to_dm",
-  platforms: ["instagram", "facebook"],
+  platforms: ["facebook"],
   trigger_keyword: "",
   dm_message: "",
   include_email_capture: false,
   email_dm_message: "",
   systemeio_tag: "",
+  target_post_url: "",
+  comment_reply_variants: DEFAULT_COMMENT_REPLIES,
 };
 
-/* ─────────────────────────────── Platform status config ─── */
+/* ─────────────────────────── Platform status config ─── */
 
 const PLATFORM_STATUS = [
-  {
-    id: "instagram",
-    label: "Instagram",
-    icon: Instagram,
-    status: "available" as const,
-    color: "text-pink-500",
-    bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
-  },
   {
     id: "facebook",
     label: "Facebook",
@@ -100,6 +109,14 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-blue-500",
     bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: Instagram,
+    status: "soon" as const,
+    color: "text-pink-500",
+    bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
   },
   {
     id: "linkedin",
@@ -135,6 +152,14 @@ function getActiveProjectId(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+/** Convert newline-separated string → array, filter blanks */
+function parseVariants(raw: string): string[] {
+  return raw
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /* ─────────────────────────────────────────── Main component ─── */
 
 export default function AutomationsLovableClient() {
@@ -167,13 +192,19 @@ export default function AutomationsLovableClient() {
 
       if (projectId) query = query.eq("project_id", projectId);
 
-      const { data, error } = await query;
+      const { data, error, status } = await query;
 
-      if (error) {
-        // table doesn't exist yet — show setup guide
-        if (error.code === "42P01" || error.message?.includes("does not exist")) {
-          setTableReady(false);
-        }
+      if (error || status === 404) {
+        // Table doesn't exist yet → show Supabase setup guide
+        // Detect via: PostgreSQL code 42P01, PostgREST 404, or message
+        const isTableMissing =
+          status === 404 ||
+          error?.code === "42P01" ||
+          error?.code === "PGRST116" ||
+          error?.message?.toLowerCase().includes("does not exist") ||
+          error?.message?.toLowerCase().includes("not found");
+
+        if (isTableMissing) setTableReady(false);
         setAutomations([]);
       } else {
         setAutomations((data as SocialAutomation[]) ?? []);
@@ -205,6 +236,8 @@ export default function AutomationsLovableClient() {
       include_email_capture: auto.include_email_capture,
       email_dm_message: auto.email_dm_message ?? "",
       systemeio_tag: auto.systemeio_tag ?? "",
+      target_post_url: auto.target_post_url ?? "",
+      comment_reply_variants: (auto.comment_reply_variants ?? []).join("\n"),
     });
     setEditingId(auto.id);
     setShowModal(true);
@@ -223,6 +256,7 @@ export default function AutomationsLovableClient() {
     if (!user) { setIsSaving(false); return; }
 
     const projectId = getActiveProjectId();
+    const variants = parseVariants(form.comment_reply_variants);
 
     const payload = {
       user_id: user.id,
@@ -235,25 +269,38 @@ export default function AutomationsLovableClient() {
       include_email_capture: form.include_email_capture,
       email_dm_message: form.include_email_capture ? form.email_dm_message.trim() : null,
       systemeio_tag: form.include_email_capture ? form.systemeio_tag.trim() : null,
+      target_post_url: form.target_post_url.trim() || null,
+      comment_reply_variants: variants.length > 0 ? variants : null,
       stats: { triggers: 0, dms_sent: 0 },
     };
 
     try {
       let error;
+      let status: number | undefined;
       if (editingId) {
-        ({ error } = await supabase
+        const res = await supabase
           .from("social_automations")
           .update({ ...payload, updated_at: new Date().toISOString() })
           .eq("id", editingId)
-          .eq("user_id", user.id));
+          .eq("user_id", user.id);
+        error = res.error;
+        status = res.status;
       } else {
-        ({ error } = await supabase
+        const res = await supabase
           .from("social_automations")
-          .insert(payload));
+          .insert(payload);
+        error = res.error;
+        status = res.status;
       }
 
-      if (error) {
-        if (error.code === "42P01") {
+      if (error || status === 404) {
+        const isTableMissing =
+          status === 404 ||
+          error?.code === "42P01" ||
+          error?.code === "PGRST116" ||
+          error?.message?.toLowerCase().includes("does not exist");
+
+        if (isTableMissing) {
           setTableReady(false);
           toast.error(t("errors.tableNotReady"));
         } else {
@@ -309,7 +356,7 @@ export default function AutomationsLovableClient() {
     }
   }
 
-  /* ── Platform toggle helper ── */
+  /* ── Platform toggle helper (Facebook only for now) ── */
   function togglePlatform(p: Platform) {
     setForm((f) => ({
       ...f,
@@ -339,6 +386,8 @@ CREATE TABLE IF NOT EXISTS public.social_automations (
   include_email_capture BOOLEAN DEFAULT FALSE,
   email_dm_message TEXT,
   systemeio_tag TEXT,
+  target_post_url TEXT,
+  comment_reply_variants TEXT[],
   enabled BOOLEAN DEFAULT TRUE,
   stats JSONB DEFAULT '{"triggers": 0, "dms_sent": 0}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -347,7 +396,12 @@ CREATE TABLE IF NOT EXISTS public.social_automations (
 ALTER TABLE public.social_automations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users manage their own automations"
   ON public.social_automations FOR ALL
-  USING (auth.uid() = user_id);`;
+  USING (auth.uid() = user_id);
+
+-- Si la table existe déjà, ajouter les nouvelles colonnes :
+ALTER TABLE public.social_automations
+  ADD COLUMN IF NOT EXISTS target_post_url TEXT,
+  ADD COLUMN IF NOT EXISTS comment_reply_variants TEXT[];`;
 
   /* ─── Status icon helper ─── */
   function StatusIcon({ status }: { status: "available" | "soon" | "unavailable" }) {
@@ -412,7 +466,6 @@ CREATE POLICY "Users manage their own automations"
             );
           })}
         </div>
-
       </div>
 
       {/* ── DB not ready: setup guide ── */}
@@ -595,12 +648,15 @@ CREATE POLICY "Users manage their own automations"
 
       {/* ── Create / Edit Modal ── */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="automation-form-desc">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
               {editingId ? t("form.editTitle") : t("form.createTitle")}
             </DialogTitle>
+            <DialogDescription id="automation-form-desc" className="sr-only">
+              {editingId ? t("form.editTitle") : t("form.createTitle")}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
@@ -641,12 +697,12 @@ CREATE POLICY "Users manage their own automations"
               </div>
             </div>
 
-            {/* Platforms */}
+            {/* Platforms — Facebook only for now */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.platforms")}</label>
               <div className="flex gap-3">
-                {(["instagram", "facebook"] as Platform[]).map((p) => {
-                  const PIcon = p === "instagram" ? Instagram : Facebook;
+                {(["facebook"] as Platform[]).map((p) => {
+                  const PIcon = Facebook;
                   return (
                     <label
                       key={p}
@@ -660,11 +716,17 @@ CREATE POLICY "Users manage their own automations"
                         checked={form.platforms.includes(p)}
                         onCheckedChange={() => togglePlatform(p)}
                       />
-                      <PIcon className="w-4 h-4" />
+                      <PIcon className="w-4 h-4 text-blue-500" />
                       <span className="text-sm capitalize">{p}</span>
                     </label>
                   );
                 })}
+                {/* Instagram coming soon badge */}
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 opacity-50 cursor-not-allowed select-none">
+                  <Instagram className="w-4 h-4 text-pink-500" />
+                  <span className="text-sm">Instagram</span>
+                  <Badge variant="secondary" className="text-xs">{t("status.soon")}</Badge>
+                </div>
               </div>
             </div>
 
@@ -680,6 +742,21 @@ CREATE POLICY "Users manage their own automations"
               <p className="text-xs text-muted-foreground">{t("form.keywordHint")}</p>
             </div>
 
+            {/* Target post URL (optional) */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
+                {t("form.targetPost")}
+                <span className="text-xs text-muted-foreground font-normal">({t("form.optional")})</span>
+              </label>
+              <Input
+                placeholder={t("form.targetPostPlaceholder")}
+                value={form.target_post_url}
+                onChange={(e) => setForm((f) => ({ ...f, target_post_url: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">{t("form.targetPostHint")}</p>
+            </div>
+
             {/* DM Message */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
@@ -692,6 +769,22 @@ CREATE POLICY "Users manage their own automations"
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">{t("form.dmMessageHint")}</p>
+            </div>
+
+            {/* Comment reply variants */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                {t("form.commentReplies")}
+              </label>
+              <Textarea
+                placeholder={t("form.commentRepliesPlaceholder")}
+                value={form.comment_reply_variants}
+                onChange={(e) => setForm((f) => ({ ...f, comment_reply_variants: e.target.value }))}
+                rows={5}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">{t("form.commentRepliesHint")}</p>
             </div>
 
             {/* Email capture (only for comment_to_email) */}
@@ -782,6 +875,9 @@ function AutomationCard({
     facebook: "text-blue-500",
   };
 
+  const hasPostTarget = Boolean(auto.target_post_url?.trim());
+  const replyCount = auto.comment_reply_variants?.length ?? 0;
+
   return (
     <Card className={`transition-opacity ${auto.enabled ? "" : "opacity-60"}`}>
       <CardContent className="p-4">
@@ -811,6 +907,12 @@ function AutomationCard({
               <Badge variant={auto.enabled ? "default" : "secondary"} className="text-xs">
                 {auto.enabled ? t("statusActive") : t("statusInactive")}
               </Badge>
+              {hasPostTarget && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Link2 className="w-2.5 h-2.5" />
+                  {t("card.postTargeted")}
+                </Badge>
+              )}
             </div>
 
             <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
@@ -822,6 +924,14 @@ function AutomationCard({
               <span>→</span>
               <span className="truncate max-w-xs">{auto.dm_message}</span>
             </div>
+
+            {/* Reply variants info */}
+            {replyCount > 0 && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <MessageSquare className="w-3 h-3" />
+                <span>{t("card.replyVariants", { count: replyCount })}</span>
+              </div>
+            )}
 
             {/* Stats */}
             <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">

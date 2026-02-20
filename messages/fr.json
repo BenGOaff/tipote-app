@@ -1159,7 +1159,18 @@
       "errorName": "Donne un nom à l'automatisation",
       "errorKeyword": "Renseigne un mot-clé déclencheur",
       "errorMessage": "Rédige le message DM",
-      "errorPlatform": "Sélectionne au moins une plateforme"
+      "errorPlatform": "Sélectionne au moins une plateforme",
+      "optional": "optionnel",
+      "targetPost": "Post ciblé",
+      "targetPostPlaceholder": "https://www.facebook.com/photo?fbid=...",
+      "targetPostHint": "Optionnel — colle l'URL d'un post pour déclencher l'automatisation uniquement sur ce post.",
+      "commentReplies": "Réponse automatique au commentaire",
+      "commentRepliesPlaceholder": "C'est dans tes DM !\nDis-moi si tu as bien reçu 👌\nRDV en message privé\nSuper, je t'envoie ça dans 2mn ✉️\nCheck tes DMs !",
+      "commentRepliesHint": "Une variante par ligne. Une réponse aléatoire sera postée en commentaire avant l'envoi du DM."
+    },
+    "card": {
+      "postTargeted": "Post ciblé",
+      "replyVariants": "{count} variantes de réponse"
     },
     "errors": {
       "tableNotReady": "La table Supabase n'est pas encore créée. Suis le guide de configuration ci-dessus.",
