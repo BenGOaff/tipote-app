@@ -361,7 +361,6 @@ CREATE POLICY "Users manage their own automations"
     <DashboardLayout
       title={t("title")}
       showAnalyticsLink={false}
-      contentClassName="p-6 space-y-6 max-w-5xl mx-auto"
     >
       {/* ── Hero header card ── */}
       <Card className="gradient-primary text-primary-foreground overflow-hidden">
@@ -414,11 +413,6 @@ CREATE POLICY "Users manage their own automations"
           })}
         </div>
 
-        {/* X note */}
-        <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
-          <Info className="w-3 h-3 shrink-0" />
-          {t("xNote")}
-        </p>
       </div>
 
       {/* ── DB not ready: setup guide ── */}
@@ -453,7 +447,7 @@ CREATE POLICY "Users manage their own automations"
         </Card>
       )}
 
-      {/* ── n8n + Meta setup guide (collapsible) ── */}
+      {/* ── Setup guide (collapsible) ── */}
       <Card>
         <CardHeader
           className="pb-2 cursor-pointer select-none"

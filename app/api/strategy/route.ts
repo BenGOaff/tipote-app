@@ -656,37 +656,66 @@ function addDaysISO(base: Date, days: number): string {
 
 function buildFallbackTasksByTimeframe(
   base: Date,
-  context: { niche?: string; mainGoal?: string } = {},
+  context: { niche?: string; mainGoal?: string; isAbsoluteBeginner?: boolean } = {},
 ): { d30: AnyRecord[]; d60: AnyRecord[]; d90: AnyRecord[] } {
   const niche = cleanString(context.niche, 80) || "votre business";
   const goal = cleanString(context.mainGoal, 120) || "atteindre vos objectifs";
+  const isAbsoluteBeginner = Boolean(context.isAbsoluteBeginner);
 
-  const d30Titles = [
-    `Clarifier la promesse et le positionnement pour ${niche}`,
-    `Définir l'offre lead magnet (titre, format, bénéfice, livrables)`,
-    `Créer la page de capture + séquence email de bienvenue`,
-    `Lister 30 idées de contenus alignées sur ${goal}`,
-    `Mettre en place un calendrier de contenu (2-3 posts/sem)`,
-    `Suivre les métriques de base (leads, trafic, conversion)`,
-  ];
+  // Beginner path: starts from absolute zero (no niche, no offers, no audience)
+  const d30Titles = isAbsoluteBeginner
+    ? [
+        `Identifier 3 domaines où tu pourrais aider des gens (passions, compétences, expériences)`,
+        `Choisir ta niche en finissant cette phrase : "J'aide les [X] à [Y] grâce à [Z]"`,
+        `Interviewer 5 personnes ciblées pour valider le problème et la demande`,
+        `Créer un profil professionnel sur 1 réseau social (bio optimisée + photo pro)`,
+        `Publier 10 contenus de valeur pour tester l'attractivité de ton sujet`,
+        `Définir ton client idéal : problème n°1, désirs profonds, objections courantes`,
+      ]
+    : [
+        `Clarifier la promesse et le positionnement pour ${niche}`,
+        `Définir l'offre lead magnet (titre, format, bénéfice, livrables)`,
+        `Créer la page de capture + séquence email de bienvenue`,
+        `Lister 30 idées de contenus alignées sur ${goal}`,
+        `Mettre en place un calendrier de contenu (2-3 posts/sem)`,
+        `Suivre les métriques de base (leads, trafic, conversion)`,
+      ];
 
-  const d60Titles = [
-    `Construire l'offre low-ticket (structure + prix + valeur)`,
-    `Rédiger la page de vente low-ticket (problème → solution → preuves)`,
-    `Lancer 1 campagne d'acquisition (social / email / partenariats)`,
-    `Collecter 5 retours clients et ajuster l'offre`,
-    `Mettre en place un process de production de contenu récurrent`,
-    `Optimiser le tunnel (conversion page, emails, CTA)`,
-  ];
+  const d60Titles = isAbsoluteBeginner
+    ? [
+        `Créer ta première offre minimale : service ou produit simple à 0€ (test de demande)`,
+        `Proposer cette offre test à 5 personnes de ton réseau et collecter des retours`,
+        `Fixer ton prix en te basant sur la valeur perçue (pas tes coûts)`,
+        `Créer une page de capture simple et collecter tes 50 premiers emails`,
+        `Publier 3 contenus par semaine de façon régulière sur ton réseau principal`,
+        `Rejoindre 2-3 communautés en ligne où vit ton client idéal et être utile`,
+      ]
+    : [
+        `Construire l'offre low-ticket (structure + prix + valeur)`,
+        `Rédiger la page de vente low-ticket (problème → solution → preuves)`,
+        `Lancer 1 campagne d'acquisition (social / email / partenariats)`,
+        `Collecter 5 retours clients et ajuster l'offre`,
+        `Mettre en place un process de production de contenu récurrent`,
+        `Optimiser le tunnel (conversion page, emails, CTA)`,
+      ];
 
-  const d90Titles = [
-    `Structurer l'offre high-ticket (programme / coaching / service)`,
-    `Créer le process de vente (script, qualification, call)`,
-    `Produire 3 études de cas / témoignages`,
-    `Automatiser les étapes clés (CRM, email, suivi)`,
-    `Standardiser l'onboarding client et la delivery`,
-    `Planifier le trimestre suivant (objectifs + priorités)`,
-  ];
+  const d90Titles = isAbsoluteBeginner
+    ? [
+        `Créer un lead magnet irrésistible (guide PDF, template ou mini-formation gratuite)`,
+        `Mettre en place une séquence email de bienvenue automatisée (5 emails)`,
+        `Développer ta première offre payante structurée basée sur les besoins découverts`,
+        `Lancer ta première vente : 1 client payant = preuve de concept validée`,
+        `Collecter 3 témoignages et les utiliser dans ton contenu et tes offres`,
+        `Planifier le trimestre suivant : objectifs chiffrés, canaux prioritaires, KPIs`,
+      ]
+    : [
+        `Structurer l'offre high-ticket (programme / coaching / service)`,
+        `Créer le process de vente (script, qualification, call)`,
+        `Produire 3 études de cas / témoignages`,
+        `Automatiser les étapes clés (CRM, email, suivi)`,
+        `Standardiser l'onboarding client et la delivery`,
+        `Planifier le trimestre suivant (objectifs + priorités)`,
+      ];
 
   function withDueDates(titles: string[], startDay: number, span: number): AnyRecord[] {
     const step = Math.max(1, Math.floor(span / Math.max(1, titles.length)));
@@ -1579,6 +1608,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
               cleanString((businessProfile as any)?.main_goal, 120) ||
               cleanString((businessProfile as any)?.goal, 120) ||
               cleanString((businessProfile as any)?.revenue_goal, 120),
+            isAbsoluteBeginner: !isAffiliate && !hasOffersEffective,
           });
 
       const safePersona = personaLooksUseful(persona) ? persona : normalizePersona(asRecord(basePlan.persona)) ?? persona;
@@ -1686,12 +1716,14 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
       throw e;
     }
 
+    const isBeginnerPath = !isAffiliate && !hasOffersEffective;
+
     const fullSystemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) ET un stratège opérateur.
 
 MISSION :
 À partir du business_profile (onboarding), du diagnostic_profile (si présent) et de l'offre choisie, tu produis :
 1) stratégie claire (mission, promesse, positionnement, résumé),
-2) persona “terrain” (pains, désirs, objections, déclencheurs, phrases exactes),
+2) persona "terrain" (pains, désirs, objections, déclencheurs, phrases exactes),
 3) plan 90 jours exécutable (focus unique + milestones + tâches datées).
 
 RÈGLES COACH-LEVEL :
@@ -1700,6 +1732,14 @@ RÈGLES COACH-LEVEL :
 - Cohérence totale avec l'offre choisie.
 - 1 levier principal (focus).
 - Min 6 tâches par timeframe, due_date valides.
+${isBeginnerPath ? `
+CONTEXTE DÉBUTANT (IMPORTANT) :
+L'utilisateur part de ZÉRO. Il n'a pas encore de clients ni de preuve sociale.
+- Phase 1 (d30) : tâches de validation et construction des bases (niche, persona, présence, premiers contenus). PAS encore de vente forcée.
+- Phase 2 (d60) : premières actions de monétisation simples (offre test, premiers clients).
+- Phase 3 (d90) : structuration et mise à l'échelle à partir des premières preuves.
+- Chaque tâche doit être faisable par quelqu'un qui débute, sans équipe ni budget.
+- Commence par "Comment valider rapidement que des gens veulent payer pour ça ?"` : ""}
 
 FORMAT JSON STRICT UNIQUEMENT :
 {
@@ -1812,6 +1852,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
     const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
 
+    const isBeginnerOfferMode = cleanString(basePlan?.offer_mode, 32) === "none";
     const fallbackTasksByTf = hasUsefulTasks
       ? null
       : buildFallbackTasksByTimeframe(new Date(), {
@@ -1823,6 +1864,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
             cleanString((businessProfile as any)?.main_goal, 120) ||
             cleanString((businessProfile as any)?.goal, 120) ||
             cleanString((businessProfile as any)?.revenue_goal, 120),
+          isAbsoluteBeginner: isBeginnerOfferMode,
         });
 
     const safePersona = personaLooksUseful(persona) ? persona : normalizePersona(asRecord(basePlan.persona)) ?? persona;

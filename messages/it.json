@@ -172,7 +172,8 @@
     "tooltipSettingsAi": "Impostazioni — IA e crediti 🤖 Segui il tuo consumo di crediti e ricaricali se necessario. Puoi anche personalizzare lo stile degli auto-commenti.",
     "tooltipSettingsPricing": "Impostazioni — Abbonamento 💳 Cancella o aggiorna il tuo abbonamento in autonomia da questa scheda.",
     "tooltipCoach": "Il tuo coach IA 🧠 Disponibile nei piani PRO ed ELITE, è qui per aiutarti a prendere decisioni e affinare le tue strategie. Conosce te e il tuo progetto!",
-    "tooltipComplete": "Fatto! 🚀 Ora conosci tutti gli strumenti. Lanciati — sono qui se hai bisogno."
+    "tooltipComplete": "Fatto! 🚀 Ora conosci tutti gli strumenti. Lanciati — sono qui se hai bisogno.",
+    "next": "Avanti"
   },
   "errors": {
     "generic": "Qualcosa è andato storto. Riprova.",
@@ -581,11 +582,21 @@
     },
     "refreshAria": "Aggiorna",
     "plan": {
-      "free": { "desc": "Accesso limitato" },
-      "beta": { "desc": "Accesso Pro a vita (beta)" },
-      "basic": { "desc": "1 modulo • Content Hub" },
-      "pro": { "desc": "3 moduli • Coach IA • Content Hub" },
-      "elite": { "desc": "Moduli illimitati • Supporto prioritario" }
+      "free": {
+        "desc": "Accesso limitato"
+      },
+      "beta": {
+        "desc": "Accesso Pro a vita (beta)"
+      },
+      "basic": {
+        "desc": "1 modulo • Content Hub"
+      },
+      "pro": {
+        "desc": "3 moduli • Coach IA • Content Hub"
+      },
+      "elite": {
+        "desc": "Moduli illimitati • Supporto prioritario"
+      }
     },
     "current": "Attuale",
     "currentLabel": "Piano attuale",
@@ -713,89 +724,245 @@
     "offerSalesCount": "N. di vendite (appross.)",
     "offerFormatPlaceholder": "es. corso online, coaching, SaaS…",
     "steps": {
-      "firstName": { "question": "Benvenuto/a! Come ti chiami?", "placeholder": "Il tuo nome" },
+      "firstName": {
+        "question": "Benvenuto/a! Come ti chiami?",
+        "placeholder": "Il tuo nome"
+      },
       "revenueGoal": {
         "question": "Qual è il tuo obiettivo di reddito mensile?",
-        "options": { "lt500": "Meno di 500 €", "500_1k": "500 – 1.000 €", "1k_3k": "1.000 – 3.000 €", "3k_5k": "3.000 – 5.000 €", "5k_10k": "5.000 – 10.000 €", "gt10k": "Più di 10.000 €" }
+        "options": {
+          "lt500": "Meno di 500 €",
+          "500_1k": "500 – 1.000 €",
+          "1k_3k": "1.000 – 3.000 €",
+          "3k_5k": "3.000 – 5.000 €",
+          "5k_10k": "5.000 – 10.000 €",
+          "gt10k": "Più di 10.000 €"
+        }
       },
       "primaryGoal": {
         "question": "Al di là del denaro, cosa conta di più per te?",
-        "options": { "freedom": "Libertà di tempo", "recognition": "Riconoscimento nel mio settore", "impact": "Avere un impatto reale", "security": "Sicurezza finanziaria", "passion": "Vivere della mia passione", "independence": "Indipendenza totale" }
+        "options": {
+          "freedom": "Libertà di tempo",
+          "recognition": "Riconoscimento nel mio settore",
+          "impact": "Avere un impatto reale",
+          "security": "Sicurezza finanziaria",
+          "passion": "Vivere della mia passione",
+          "independence": "Indipendenza totale"
+        }
       },
       "businessObjectives": {
         "question": "Cosa vuoi ottenere prima di tutto con il tuo business?",
         "description": "Seleziona tutto ciò che si applica.",
-        "options": { "sell_more": "Vendere di più", "clarify_position": "Chiarire il mio posizionamento", "build_audience": "Costruire un pubblico", "automate": "Automatizzare ciò che funziona" }
+        "options": {
+          "sell_more": "Vendere di più",
+          "clarify_position": "Chiarire il mio posizionamento",
+          "build_audience": "Costruire un pubblico",
+          "automate": "Automatizzare ciò che funziona"
+        }
       },
       "niche": {
         "question": "Descrivi la tua nicchia completando questa frase:",
         "description": "Non preoccuparti se è vago, potrai affinarlo dopo.",
-        "targetLabel": "Aiuto", "targetPlaceholder": "es. coach principianti, mamme imprenditrici…",
-        "objectiveLabel": "a", "objectivePlaceholder": "es. lanciare il loro primo prodotto digitale…",
-        "mechanismLabel": "attraverso", "mechanismPlaceholder": "es. un metodo semplice in 5 passi…",
-        "timeframeLabel": "in", "timeframePlaceholder": "es. 90 giorni, 3 settimane…"
+        "targetLabel": "Aiuto",
+        "targetPlaceholder": "es. coach principianti, mamme imprenditrici…",
+        "objectiveLabel": "a",
+        "objectivePlaceholder": "es. lanciare il loro primo prodotto digitale…",
+        "mechanismLabel": "attraverso",
+        "mechanismPlaceholder": "es. un metodo semplice in 5 passi…",
+        "timeframeLabel": "in",
+        "timeframePlaceholder": "es. 90 giorni, 3 settimane…"
       },
       "clientProfile": {
         "question": "Parlami del tuo cliente ideale.",
-        "problemLabel": "Il suo problema più grande", "problemPlaceholder": "es. non sa da dove iniziare…",
-        "prevAttemptsLabel": "Cosa ha già provato", "prevAttemptsPlaceholder": "es. corsi online, video YouTube…",
-        "failuresLabel": "Cosa non ha funzionato", "failuresPlaceholder": "es. troppo generico…",
-        "futureLifeLabel": "La sua vita dopo aver raggiunto l'obiettivo", "futurePlaceholder": "es. ha finalmente tempo per la famiglia…"
+        "problemLabel": "Il suo problema più grande",
+        "problemPlaceholder": "es. non sa da dove iniziare…",
+        "prevAttemptsLabel": "Cosa ha già provato",
+        "prevAttemptsPlaceholder": "es. corsi online, video YouTube…",
+        "failuresLabel": "Cosa non ha funzionato",
+        "failuresPlaceholder": "es. troppo generico…",
+        "futureLifeLabel": "La sua vita dopo aver raggiunto l'obiettivo",
+        "futurePlaceholder": "es. ha finalmente tempo per la famiglia…"
       },
       "timeAvailable": {
         "question": "Quante ore a settimana puoi dedicare al tuo business?",
-        "options": { "lt5": "Meno di 5h", "5_10": "5 – 10h", "10_20": "10 – 20h", "20_30": "20 – 30h", "gt30": "Più di 30h" }
+        "options": {
+          "lt5": "Meno di 5h",
+          "5_10": "5 – 10h",
+          "10_20": "10 – 20h",
+          "20_30": "20 – 30h",
+          "gt30": "Più di 30h"
+        }
       },
       "biggestBlocker": {
         "question": "Qual è il tuo ostacolo più grande in questo momento?",
         "description": "Seleziona tutto ciò che si applica.",
-        "options": { "knowledge": "Mancanza di conoscenze", "time": "Mancanza di tempo", "money": "Mancanza di budget", "fear": "Paura del fallimento", "clarity": "Mancanza di chiarezza / direzione", "tech": "Blocchi tecnici", "motivation": "Problemi di motivazione / costanza" }
+        "options": {
+          "knowledge": "Mancanza di conoscenze",
+          "time": "Mancanza di tempo",
+          "money": "Mancanza di budget",
+          "fear": "Paura del fallimento",
+          "clarity": "Mancanza di chiarezza / direzione",
+          "tech": "Blocchi tecnici",
+          "motivation": "Problemi di motivazione / costanza"
+        }
       },
       "contentPreference": {
         "question": "Che tipo di contenuto preferisci creare?",
         "description": "Seleziona tutto ciò che si applica.",
-        "options": { "short_written": "Testi brevi (post, newsletter)", "long_written": "Testi lunghi (articoli, casi studio)", "short_video": "Video brevi (Reels, TikTok)", "long_video": "Video lunghi (YouTube, corsi)", "visuals": "Contenuti visivi (infografiche, caroselli)", "audio": "Audio (podcast)" }
+        "options": {
+          "short_written": "Testi brevi (post, newsletter)",
+          "long_written": "Testi lunghi (articoli, casi studio)",
+          "short_video": "Video brevi (Reels, TikTok)",
+          "long_video": "Video lunghi (YouTube, corsi)",
+          "visuals": "Contenuti visivi (infografiche, caroselli)",
+          "audio": "Audio (podcast)"
+        }
       },
       "preferredTone": {
         "question": "Quale tono ti rappresenta meglio?",
         "description": "Seleziona tutto ciò che si applica.",
-        "options": { "casual": "Informale", "professional": "Professionale", "humorous": "Umoristico", "caring": "Premuroso", "authoritative": "Autorevole / Esperto", "provocative": "Provocatorio", "direct": "Diretto", "warm": "Caldo", "empathetic": "Empatico", "educational": "Educativo" }
+        "options": {
+          "casual": "Informale",
+          "professional": "Professionale",
+          "humorous": "Umoristico",
+          "caring": "Premuroso",
+          "authoritative": "Autorevole / Esperto",
+          "provocative": "Provocatorio",
+          "direct": "Diretto",
+          "warm": "Caldo",
+          "empathetic": "Empatico",
+          "educational": "Educativo"
+        }
       },
       "platforms": {
         "question": "Su quali piattaforme sei già presente?",
         "description": "Seleziona tutto ciò che si applica.",
-        "options": { "website": "Sito web", "blog": "Blog", "youtube": "YouTube", "instagram": "Instagram", "linkedin": "LinkedIn", "facebook": "Facebook", "x": "X (Twitter)", "reddit": "Reddit", "pinterest": "Pinterest", "threads": "Threads", "medium": "Medium", "none": "Nessuna per ora" }
+        "options": {
+          "website": "Sito web",
+          "blog": "Blog",
+          "youtube": "YouTube",
+          "instagram": "Instagram",
+          "linkedin": "LinkedIn",
+          "facebook": "Facebook",
+          "x": "X (Twitter)",
+          "reddit": "Reddit",
+          "pinterest": "Pinterest",
+          "threads": "Threads",
+          "medium": "Medium",
+          "none": "Nessuna per ora"
+        }
       },
       "businessStatus": {
         "question": "A che punto sei con il tuo business?",
-        "options": { "has_offers": "Ho già offerte in vendita", "affiliation": "Faccio affiliate marketing", "none": "Parto da zero" }
+        "options": {
+          "has_offers": "Ho già offerte in vendita",
+          "affiliation": "Faccio affiliate marketing",
+          "none": "Parto da zero"
+        }
       },
       "hasAlreadySold": {
         "question": "Hai già effettuato vendite (o ricevuto commissioni)?",
-        "options": { "yes": "Sì", "no": "No, non ancora" }
+        "options": {
+          "yes": "Sì",
+          "no": "No, non ancora"
+        }
       },
       "satisfiedWithOffers": {
         "question": "Sei soddisfatto/a delle tue offerte attuali?",
-        "options": { "yes": "Sì, mi si addicono bene", "improve": "Voglio migliorarle", "rethink": "Voglio ripensarle completamente" }
+        "options": {
+          "yes": "Sì, mi si addicono bene",
+          "improve": "Voglio migliorarle",
+          "rethink": "Voglio ripensarle completamente"
+        }
       },
       "currentMonthlyRevenue": {
         "question": "Qual è il tuo fatturato mensile attuale?",
-        "options": { "0": "0 € (nessuna vendita)", "lt500": "Meno di 500 €", "500_1k": "500 – 1.000 €", "1k_3k": "1.000 – 3.000 €", "3k_5k": "3.000 – 5.000 €", "gt5k": "Più di 5.000 €" }
+        "options": {
+          "0": "0 € (nessuna vendita)",
+          "lt500": "Meno di 500 €",
+          "500_1k": "500 – 1.000 €",
+          "1k_3k": "1.000 – 3.000 €",
+          "3k_5k": "3.000 – 5.000 €",
+          "gt5k": "Più di 5.000 €"
+        }
       },
-      "clientTestimonials": { "question": "Condividi 2-3 testimonianze di clienti.", "placeholder": "es. «Grazie a te ho finalmente lanciato il mio corso!» — Maria" },
-      "offers": { "question": "Quali sono le tue offerte attuali?", "description": "Aggiungi fino a 3 offerte con i loro dettagli." },
-      "salesPageUrls": { "question": "Hai pagine di vendita? Condividi i link.", "placeholder": "https://…" },
-      "commissionRate": { "question": "Qual è la tua commissione media?", "placeholder": "es. 30%" },
-      "monthlyCommissions": { "question": "Quante commissioni ricevi in media al mese?", "placeholder": "es. 5 commissioni" },
-      "audienceEmail": { "question": "Hai una lista email?", "options": { "yes": "Sì", "no": "No" }, "countPlaceholder": "Numero di iscritti" },
-      "audienceSocial": { "question": "Hai un pubblico sui social?", "options": { "yes": "Sì", "no": "No" }, "countPlaceholder": "Follower totali (tutte le piattaforme)" },
+      "clientTestimonials": {
+        "question": "Condividi 2-3 testimonianze di clienti.",
+        "placeholder": "es. «Grazie a te ho finalmente lanciato il mio corso!» — Maria"
+      },
+      "offers": {
+        "question": "Quali sono le tue offerte attuali?",
+        "description": "Aggiungi fino a 3 offerte con i loro dettagli."
+      },
+      "salesPageUrls": {
+        "question": "Hai pagine di vendita? Condividi i link.",
+        "placeholder": "https://…"
+      },
+      "commissionRate": {
+        "question": "Qual è la tua commissione media?",
+        "placeholder": "es. 30%"
+      },
+      "monthlyCommissions": {
+        "question": "Quante commissioni ricevi in media al mese?",
+        "placeholder": "es. 5 commissioni"
+      },
+      "audienceEmail": {
+        "question": "Hai una lista email?",
+        "options": {
+          "yes": "Sì",
+          "no": "No"
+        },
+        "countPlaceholder": "Numero di iscritti"
+      },
+      "audienceSocial": {
+        "question": "Hai un pubblico sui social?",
+        "options": {
+          "yes": "Sì",
+          "no": "No"
+        },
+        "countPlaceholder": "Follower totali (tutte le piattaforme)"
+      },
       "refusals": {
         "question": "C'è qualcosa che rifiuti categoricamente di fare?",
         "description": "Non includerò nulla di questo nella tua strategia.",
-        "options": { "no_dm": "Niente prospezione via DM", "no_video": "Niente video", "no_articles": "Niente articoli / blog", "no_social": "Niente social media", "no_course": "Niente creazione di corsi", "no_coaching": "Niente coaching individuale", "no_personal_branding": "Niente personal branding", "none": "Nessuna restrizione" }
+        "options": {
+          "no_dm": "Niente prospezione via DM",
+          "no_video": "Niente video",
+          "no_articles": "Niente articoli / blog",
+          "no_social": "Niente social media",
+          "no_course": "Niente creazione di corsi",
+          "no_coaching": "Niente coaching individuale",
+          "no_personal_branding": "Niente personal branding",
+          "none": "Nessuna restrizione"
+        }
+      },
+      "nicheArea": {
+        "question": "In quale settore creerai la tua attività?",
+        "description": "Scegli il settore più vicino al tuo progetto.",
+        "options": {
+          "wellness": "Benessere / Salute / Sport",
+          "business": "Business / Imprenditoria",
+          "marketing": "Marketing / Social media / Personal branding",
+          "finance": "Finanza / Investimenti / Denaro",
+          "parenting": "Genitorialità / Famiglia / Educazione",
+          "creativity": "Creatività / Arte / Design",
+          "coaching": "Life coaching / Sviluppo personale",
+          "tech": "Tech / Dev / AI",
+          "food": "Cucina / Nutrizione / Alimentazione",
+          "education": "Formazione / Insegnamento / E-learning",
+          "travel": "Viaggio / Lifestyle",
+          "other": "Altro settore"
+        }
       }
     },
-    "finalize": { "title": "Costruendo la tua strategia…", "step0": "Salvataggio delle risposte…", "step1": "Costruendo la tua strategia personalizzata…", "step2": "Generando i tuoi primi compiti…", "step3": "Configurando il tuo spazio…", "done": "Tutto pronto!" }
+    "finalize": {
+      "title": "Costruendo la tua strategia…",
+      "step0": "Salvataggio delle risposte…",
+      "step1": "Costruendo la tua strategia personalizzata…",
+      "step2": "Generando i tuoi primi compiti…",
+      "step3": "Configurando il tuo spazio…",
+      "done": "Tutto pronto!"
+    }
   },
   "automations": {
     "title": "Automazioni",
@@ -814,17 +981,110 @@
     "delete": "Elimina",
     "statsTriggers": "{count} attivazioni",
     "statsDms": "{count} DM inviati",
-    "hero": { "title": "Automazioni social — Stile ManyChat", "description": "Rileva parole chiave nei commenti e invia automaticamente un DM personalizzato su Instagram e Facebook. Cattura email, invia risorse gratuite — in automatico." },
+    "hero": {
+      "title": "Automazioni social — Stile ManyChat",
+      "description": "Rileva parole chiave nei commenti e invia automaticamente un DM personalizzato su Instagram e Facebook. Cattura email, invia risorse gratuite — in automatico."
+    },
     "platformsTitle": "Disponibilità per piattaforma",
-    "status": { "available": "Disponibile", "soon": "Prossimamente", "unavailable": "Non disponibile" },
+    "status": {
+      "available": "Disponibile",
+      "soon": "Prossimamente",
+      "unavailable": "Non disponibile"
+    },
     "xNote": "X/Twitter: l'API DM richiede un piano Pro da 5.000$/mese — non fattibile. Threads: l'API DM non è ancora disponibile per gli sviluppatori.",
-    "setup": { "title": "Configurazione richiesta — Tabella Supabase mancante", "description": "Copia questo SQL ed eseguilo nell'editor SQL di Supabase per creare la tabella delle automazioni.", "instructions": "Supabase → SQL Editor → New Query → Incolla → Run" },
-    "guide": { "title": "Guida alla configurazione n8n + Meta", "intro": "Ecco i 4 passaggi per attivare le tue automazioni su Instagram e Facebook.", "step1": { "title": "Crea una Meta App", "desc": "In Meta for Developers, crea un'app di tipo Business. Abilita i prodotti Webhooks e Messenger/Instagram Messaging." }, "step2": { "title": "Configura i webhook Meta", "desc": "Iscriviti ai campi 'comments' e 'messages' sul tuo oggetto Page/Instagram. Punta la URL di callback al tuo n8n (nodo Facebook Trigger)." }, "step3": { "title": "Importa il workflow n8n", "desc": "Importa n8n/workflow-comment-to-dm.json nella tua istanza n8n. Configura le tue credenziali Meta e la URL del webhook dell'app Tipote." }, "step4": { "title": "Supera la Meta App Review", "desc": "Richiedi i permessi instagram_manage_comments, instagram_manage_messages e pages_messaging. Tempi: 1-4 settimane." } },
-    "rgpd": { "title": "Conformità GDPR — cosa facciamo", "description": "L'utente avvia il contatto commentando → consenso implicito. Ogni DM include automaticamente 'Rispondi STOP per annullare'. La finestra di 24h di Meta limita naturalmente i messaggi non richiesti." },
+    "setup": {
+      "title": "Configurazione richiesta — Tabella Supabase mancante",
+      "description": "Copia questo SQL ed eseguilo nell'editor SQL di Supabase per creare la tabella delle automazioni.",
+      "instructions": "Supabase → SQL Editor → New Query → Incolla → Run"
+    },
+    "guide": {
+      "title": "Come attivare le tue automazioni",
+      "intro": "Segui questi 4 semplici passi per far ricevere ai tuoi follower un DM automatico quando commentano una parola chiave sui tuoi post.",
+      "step1": {
+        "title": "Collega il tuo account Meta",
+        "desc": "Vai su Impostazioni → Connessioni e collega il tuo account Instagram e/o Facebook professionale (Pagina o Account Creator)."
+      },
+      "step2": {
+        "title": "Verifica l'accesso ai messaggi",
+        "desc": "Dal tuo account Instagram o dalla tua Pagina Facebook, assicurati che DM e messaggi siano abilitati nelle impostazioni della privacy."
+      },
+      "step3": {
+        "title": "Crea la tua automazione qui",
+        "desc": "Scegli una parola chiave trigger (es: PDF, GUIDA, PROMO) e scrivi il messaggio che i tuoi follower riceveranno automaticamente in DM."
+      },
+      "step4": {
+        "title": "Testa con un commento",
+        "desc": "Pubblica qualcosa su Instagram o Facebook, commenta con la tua parola chiave e verifica di ricevere il DM automatico in pochi secondi."
+      }
+    },
+    "rgpd": {
+      "title": "Conformità GDPR — cosa facciamo",
+      "description": "L'utente avvia il contatto commentando → consenso implicito. Ogni DM include automaticamente 'Rispondi STOP per annullare'. La finestra di 24h di Meta limita naturalmente i messaggi non richiesti."
+    },
     "listTitle": "Le mie automazioni",
-    "empty": { "title": "Nessuna automazione", "description": "Crea la tua prima automazione per rispondere automaticamente ai commenti su Instagram e Facebook.", "ctaDm": "Auto DM sui commenti", "ctaEmail": "Auto Email sui commenti", "emailName": "Raccolta email sui commenti" },
-    "templates": { "title": "Template pronti all'uso", "useBtn": "Usa questo template", "dm": { "title": "Auto DM sui Commenti", "description": "Pubblica 'Commenta PDF per ricevere la tua guida'. Quando qualcuno commenta 'PDF', riceve automaticamente il tuo link via DM.", "example": "Post: 'Commenta PDF 👇' → Commento 'PDF ottimo' → DM automatico con il link", "badge": "Instagram + Facebook", "defaultMessage": "Ciao {{nome}}! Grazie per il tuo commento 🙌 Ecco la tua guida gratuita: [IL_TUO_LINK]\n\nRispondi STOP per annullare." }, "email": { "title": "Auto Email sui Commenti", "description": "L'utente commenta una parola chiave, riceve un DM che chiede la sua email, poi riceve la guida nella sua casella di posta via systeme.io.", "example": "Commento 'GUIDA' → DM 'Inviami la tua email' → Email inviata → Aggiunto a systeme.io", "badge": "Instagram + Facebook + systeme.io", "defaultMessage": "Ciao {{nome}}! Per ricevere la tua guida gratuita, rispondi a questo messaggio con la tua email 👇\n\nRispondi STOP per annullare.", "defaultEmailDm": "Ottimo! Ti invio la guida a {{email}} nei prossimi minuti. Controlla la cartella spam se non la vedi 📬" } },
-    "form": { "createTitle": "Crea automazione", "editTitle": "Modifica automazione", "name": "Nome dell'automazione", "namePlaceholder": "Es.: Guida PDF Instagram", "type": "Tipo di automazione", "type_comment_to_dm": "Auto DM", "type_comment_to_dm_desc": "Invia un DM con un link o messaggio", "type_comment_to_email": "Auto Email", "type_comment_to_email_desc": "Cattura l'email e invia a systeme.io", "platforms": "Piattaforme", "keyword": "Parola chiave di attivazione", "keywordPlaceholder": "Es.: PDF", "keywordHint": "Non sensibile alle maiuscole — qualsiasi commento contenente questa parola attiverà l'automazione.", "dmMessage": "Messaggio DM", "firstDmMessage": "Primo messaggio DM", "dmMessagePlaceholder": "Ciao {{nome}}! Ecco la tua guida: [link]\n\nRispondi STOP per annullare.", "dmMessageHint": "Usa {{nome}} per personalizzare. STOP verrà aggiunto automaticamente se lo dimentichi.", "emailCapture": "Raccolta email", "emailCaptureHint": "Dopo il primo DM, il bot aspetta una risposta con l'email e la invia a systeme.io", "emailDmMessage": "Messaggio DM per richiedere l'email", "emailDmPlaceholder": "Rispondi a questo messaggio con la tua email per ricevere la tua guida 📧", "systemeioTag": "Tag systeme.io", "systemeioTagPlaceholder": "Es.: lead-guida-pdf", "systemeioTagHint": "Questo tag verrà assegnato al contatto in systeme.io per attivare le tue automazioni email.", "rgpdNote": "Ogni DM includerà automaticamente una menzione STOP. L'utente ha avviato il contatto commentando — è il consenso implicito conforme al GDPR e alle policy Meta.", "cancel": "Annulla", "save": "Salva", "saving": "Salvataggio…", "errorName": "Dai un nome all'automazione", "errorKeyword": "Inserisci una parola chiave di attivazione", "errorMessage": "Scrivi il messaggio DM", "errorPlatform": "Seleziona almeno una piattaforma" },
-    "errors": { "tableNotReady": "La tabella Supabase non esiste ancora. Segui la guida di configurazione sopra.", "saveFailed": "Errore durante il salvataggio" }
+    "empty": {
+      "title": "Nessuna automazione",
+      "description": "Crea la tua prima automazione per rispondere automaticamente ai commenti su Instagram e Facebook.",
+      "ctaDm": "Auto DM sui commenti",
+      "ctaEmail": "Auto Email sui commenti",
+      "emailName": "Raccolta email sui commenti"
+    },
+    "templates": {
+      "title": "Template pronti all'uso",
+      "useBtn": "Usa questo template",
+      "dm": {
+        "title": "Auto DM sui Commenti",
+        "description": "Pubblica 'Commenta PDF per ricevere la tua guida'. Quando qualcuno commenta 'PDF', riceve automaticamente il tuo link via DM.",
+        "example": "Post: 'Commenta PDF 👇' → Commento 'PDF ottimo' → DM automatico con il link",
+        "badge": "Instagram + Facebook",
+        "defaultMessage": "Ciao {{nome}}! Grazie per il tuo commento 🙌 Ecco la tua guida gratuita: [IL_TUO_LINK]\n\nRispondi STOP per annullare."
+      },
+      "email": {
+        "title": "Auto Email sui Commenti",
+        "description": "L'utente commenta una parola chiave, riceve un DM che chiede la sua email, poi riceve la guida nella sua casella di posta via systeme.io.",
+        "example": "Commento 'GUIDA' → DM 'Inviami la tua email' → Email inviata → Aggiunto a systeme.io",
+        "badge": "Instagram + Facebook + systeme.io",
+        "defaultMessage": "Ciao {{nome}}! Per ricevere la tua guida gratuita, rispondi a questo messaggio con la tua email 👇\n\nRispondi STOP per annullare.",
+        "defaultEmailDm": "Ottimo! Ti invio la guida a {{email}} nei prossimi minuti. Controlla la cartella spam se non la vedi 📬"
+      }
+    },
+    "form": {
+      "createTitle": "Crea automazione",
+      "editTitle": "Modifica automazione",
+      "name": "Nome dell'automazione",
+      "namePlaceholder": "Es.: Guida PDF Instagram",
+      "type": "Tipo di automazione",
+      "type_comment_to_dm": "Auto DM",
+      "type_comment_to_dm_desc": "Invia un DM con un link o messaggio",
+      "type_comment_to_email": "Auto Email",
+      "type_comment_to_email_desc": "Cattura l'email e invia a systeme.io",
+      "platforms": "Piattaforme",
+      "keyword": "Parola chiave di attivazione",
+      "keywordPlaceholder": "Es.: PDF",
+      "keywordHint": "Non sensibile alle maiuscole — qualsiasi commento contenente questa parola attiverà l'automazione.",
+      "dmMessage": "Messaggio DM",
+      "firstDmMessage": "Primo messaggio DM",
+      "dmMessagePlaceholder": "Ciao {{nome}}! Ecco la tua guida: [link]\n\nRispondi STOP per annullare.",
+      "dmMessageHint": "Usa {{nome}} per personalizzare. STOP verrà aggiunto automaticamente se lo dimentichi.",
+      "emailCapture": "Raccolta email",
+      "emailCaptureHint": "Dopo il primo DM, il bot aspetta una risposta con l'email e la invia a systeme.io",
+      "emailDmMessage": "Messaggio DM per richiedere l'email",
+      "emailDmPlaceholder": "Rispondi a questo messaggio con la tua email per ricevere la tua guida 📧",
+      "systemeioTag": "Tag systeme.io",
+      "systemeioTagPlaceholder": "Es.: lead-guida-pdf",
+      "systemeioTagHint": "Questo tag verrà assegnato al contatto in systeme.io per attivare le tue automazioni email.",
+      "rgpdNote": "Ogni DM includerà automaticamente una menzione STOP. L'utente ha avviato il contatto commentando — è il consenso implicito conforme al GDPR e alle policy Meta.",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "errorName": "Dai un nome all'automazione",
+      "errorKeyword": "Inserisci una parola chiave di attivazione",
+      "errorMessage": "Scrivi il messaggio DM",
+      "errorPlatform": "Seleziona almeno una piattaforma"
+    },
+    "errors": {
+      "tableNotReady": "La tabella Supabase non esiste ancora. Segui la guida di configurazione sopra.",
+      "saveFailed": "Errore durante il salvataggio"
+    }
   }
 }

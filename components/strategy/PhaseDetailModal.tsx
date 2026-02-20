@@ -497,7 +497,7 @@ export const PhaseDetailModal = ({
                         <div
                           key={task.id}
                           className={[
-                            "w-full text-left flex items-center gap-3 rounded-xl border",
+                            "group w-full text-left flex items-center gap-3 rounded-xl border",
                             "bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer",
                           ].join(" ")}
                           onClick={() => handleToggleTask(task.id)}
@@ -509,7 +509,7 @@ export const PhaseDetailModal = ({
                           />
                           <span
                             className={[
-                              "text-sm",
+                              "flex-1 text-sm",
                               task.done
                                 ? "line-through text-muted-foreground"
                                 : "",
@@ -517,6 +517,17 @@ export const PhaseDetailModal = ({
                           >
                             {task.task}
                           </span>
+                          <button
+                            type="button"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex items-center justify-center rounded text-destructive hover:bg-destructive/10 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(task.id);
+                            }}
+                            aria-label="Supprimer la tâche"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       ))
                     )

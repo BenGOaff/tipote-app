@@ -172,7 +172,8 @@
     "tooltipSettingsAi": "Settings — AI & Credits 🤖 Track your credit usage and recharge if needed. You can also customise the style of auto-comments on posts.",
     "tooltipSettingsPricing": "Settings — Subscription 💳 Cancel or upgrade your subscription independently from this tab.",
     "tooltipCoach": "Your AI Coach 🧠 Available on PRO and ELITE plans, here to help you make decisions and refine your strategies. It knows you and your project — no more buying courses!",
-    "tooltipComplete": "That's it! 🚀 You now know all the tools. Get started — I'm here if you need me."
+    "tooltipComplete": "That's it! 🚀 You now know all the tools. Get started — I'm here if you need me.",
+    "next": "Next"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -660,11 +661,21 @@
     },
     "refreshAria": "Refresh",
     "plan": {
-      "free": { "desc": "Limited access" },
-      "beta": { "desc": "Lifetime Pro access (beta)" },
-      "basic": { "desc": "1 module • Content Hub" },
-      "pro": { "desc": "3 modules • AI coach • Content Hub" },
-      "elite": { "desc": "Unlimited modules • Priority support" }
+      "free": {
+        "desc": "Limited access"
+      },
+      "beta": {
+        "desc": "Lifetime Pro access (beta)"
+      },
+      "basic": {
+        "desc": "1 module • Content Hub"
+      },
+      "pro": {
+        "desc": "3 modules • AI coach • Content Hub"
+      },
+      "elite": {
+        "desc": "Unlimited modules • Priority support"
+      }
     },
     "current": "Current",
     "currentLabel": "Current plan",
@@ -1003,6 +1014,24 @@
           "no_personal_branding": "No personal branding (don't want to show myself)",
           "none": "No restrictions"
         }
+      },
+      "nicheArea": {
+        "question": "What field will you build your business in?",
+        "description": "Choose the field closest to your project.",
+        "options": {
+          "wellness": "Wellness / Health / Sport",
+          "business": "Business / Entrepreneurship",
+          "marketing": "Marketing / Social media / Personal branding",
+          "finance": "Finance / Investment / Money",
+          "parenting": "Parenting / Family / Education",
+          "creativity": "Creativity / Art / Design",
+          "coaching": "Life coaching / Personal development",
+          "tech": "Tech / Dev / AI",
+          "food": "Cooking / Nutrition / Food",
+          "education": "Training / Teaching / E-learning",
+          "travel": "Travel / Lifestyle",
+          "other": "Other field"
+        }
       }
     },
     "finalize": {
@@ -1048,12 +1077,24 @@
       "instructions": "Supabase → SQL Editor → New Query → Paste → Run"
     },
     "guide": {
-      "title": "n8n + Meta setup guide",
-      "intro": "Here are the 4 steps to activate your Instagram and Facebook automations.",
-      "step1": { "title": "Create a Meta App", "desc": "In Meta for Developers, create a Business app. Enable the Webhooks and Messenger/Instagram Messaging products." },
-      "step2": { "title": "Configure Meta webhooks", "desc": "Subscribe to 'comments' and 'messages' fields on your Page/Instagram object. Point the callback URL to your n8n (Facebook Trigger node)." },
-      "step3": { "title": "Import the n8n workflow", "desc": "Import n8n/workflow-comment-to-dm.json into your n8n instance. Configure your Meta credentials and the Tipote app webhook URL." },
-      "step4": { "title": "Pass Meta App Review", "desc": "Request instagram_manage_comments, instagram_manage_messages and pages_messaging permissions. Timeline: 1–4 weeks." }
+      "title": "How to activate your automations",
+      "intro": "Follow these 4 simple steps so your followers receive an automatic DM whenever they comment a keyword on your posts.",
+      "step1": {
+        "title": "Connect your Meta account",
+        "desc": "Go to Settings → Connections and connect your professional Instagram and/or Facebook account (Page or Creator Account)."
+      },
+      "step2": {
+        "title": "Check messaging access",
+        "desc": "From your Instagram account or Facebook Page, make sure DMs and messages are enabled in your privacy settings."
+      },
+      "step3": {
+        "title": "Create your automation here",
+        "desc": "Choose a trigger keyword (e.g. PDF, GUIDE, PROMO) and write the message your followers will automatically receive in their DMs."
+      },
+      "step4": {
+        "title": "Test with a comment",
+        "desc": "Post something on Instagram or Facebook, comment with your keyword and check that you receive the automatic DM within seconds."
+      }
     },
     "rgpd": {
       "title": "GDPR compliance — what we do",
