@@ -119,6 +119,25 @@ export default function SocialConnections() {
   const [loading, setLoading] = useState(true);
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [fbWebhookLoading, setFbWebhookLoading] = useState(false);
+
+  /** Abonne la Page Facebook aux events webhook Meta (feed + messages) */
+  async function activateFbWebhook() {
+    setFbWebhookLoading(true);
+    try {
+      const res = await fetch("/api/social/facebook-subscribe", { method: "POST" });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: "✅ Webhooks Facebook activés", description: "Les commentaires déclencheront maintenant vos automatisations." });
+      } else {
+        toast({ title: "Erreur d'activation", description: json.error ?? "Réessaie ou reconnecte Facebook.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erreur réseau", variant: "destructive" });
+    } finally {
+      setFbWebhookLoading(false);
+    }
+  }
 
 
   // Charger les connexions
@@ -295,6 +314,22 @@ export default function SocialConnections() {
                 <div className="flex items-center gap-2">
                   {connection ? (
                     <>
+                      {/* Bouton d'activation webhook — Facebook uniquement */}
+                      {platform.key === "facebook" && !connection.expired && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={activateFbWebhook}
+                          disabled={fbWebhookLoading}
+                          title="Activer la réception des commentaires pour les automatisations"
+                        >
+                          {fbWebhookLoading
+                            ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            : <RefreshCw className="w-4 h-4 mr-1" />
+                          }
+                          Sync webhooks
+                        </Button>
+                      )}
                       {connection.expired && (
                         <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
                           <RefreshCw className="w-4 h-4 mr-1" />

@@ -249,6 +249,28 @@ export async function GET(req: NextRequest) {
     }
 
     console.log("[Facebook callback] Connection saved successfully!");
+
+    // 8. Abonner la Page aux webhooks Meta (feed = commentaires, messages = DMs)
+    //    Sans cet appel, Meta ne sait pas qu'il doit envoyer les events vers notre webhook.
+    try {
+      const params = new URLSearchParams({
+        access_token: page.access_token,
+        subscribed_fields: "feed,messages",
+      });
+      const subRes = await fetch(
+        `https://graph.facebook.com/v21.0/${page.id}/subscribed_apps`,
+        { method: "POST", body: params }
+      );
+      const subJson = await subRes.json();
+      if (subJson.success) {
+        console.log("[Facebook callback] Page webhook subscription: OK");
+      } else {
+        console.warn("[Facebook callback] Page webhook subscription failed:", JSON.stringify(subJson));
+      }
+    } catch (err) {
+      console.error("[Facebook callback] Page webhook subscription error (non-bloquant):", err);
+    }
+
     return NextResponse.redirect(`${settingsUrl}&meta_connected=facebook`);
   } catch (err) {
     console.error("[Facebook callback] Error:", err);
