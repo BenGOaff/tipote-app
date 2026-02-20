@@ -240,8 +240,9 @@ export function PublishModal({
 
       // Phase 2: Publish the post
       setStep("publishing");
+      let publishResult: PublishResult = { ok: false };
       try {
-        const publishResult = await doPublish(idToPublish);
+        publishResult = await doPublish(idToPublish);
         if (!publishResult.ok) {
           setStep("error");
           setResult({ ok: false, error: publishResult.error ?? "Erreur inconnue" });
