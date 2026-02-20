@@ -104,18 +104,20 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
       if (val.item !== "comment" || val.verb !== "add") continue;
       if (!val.message || !val.from?.id) continue;
 
-      // Look up page access token from our DB
+      // Look up page access token + user_id from our DB
       let pageAccessToken: string | null = null;
+      let connUserId: string | undefined;
       try {
         const { data: conn } = await supabaseAdmin
           .from("social_connections")
-          .select("access_token_encrypted")
+          .select("access_token_encrypted, user_id")
           .eq("platform", "facebook")
           .eq("platform_user_id", pageId)
           .maybeSingle();
 
         if (conn?.access_token_encrypted) {
           pageAccessToken = decrypt(conn.access_token_encrypted);
+          connUserId = conn.user_id;
         }
       } catch (err) {
         console.error("[webhook] Token lookup error:", err);
@@ -128,7 +130,6 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
       // post_id in Meta's format is "pageId_postId"
       const rawPostId = val.post_id ?? "";
-      const postId = rawPostId.includes("_") ? rawPostId.split("_")[1] : rawPostId;
 
       const res = await processComment({
         platform: "facebook",
@@ -139,6 +140,7 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
         comment_id: val.comment_id,
         post_id: rawPostId, // pass full post_id for matching
         page_access_token: pageAccessToken,
+        user_id: connUserId, // filter automations to this page's owner
       });
 
       const resBody = await res.json().catch(() => ({}));
@@ -214,23 +216,29 @@ async function processComment(params: {
 
     if (!dmResult.ok) {
       console.error("[webhook] DM send failed:", dmResult.error);
-      return NextResponse.json({ error: "DM send failed", detail: dmResult.error }, { status: 502 });
     }
 
-    // 3. Update stats
+    // 3. Update stats — triggers always, dms_sent only on success
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
     await supabaseAdmin
       .from("social_automations")
       .update({
         stats: {
           triggers: (currentStats.triggers ?? 0) + 1,
-          dms_sent: (currentStats.dms_sent ?? 0) + 1,
+          dms_sent: (currentStats.dms_sent ?? 0) + (dmResult.ok ? 1 : 0),
         },
         updated_at: new Date().toISOString(),
       })
       .eq("id", matched.id);
 
-    return NextResponse.json({ ok: true, matched: 1, automation_id: matched.id });
+    // Always return 200 — Meta retries on non-2xx, we don't want that
+    return NextResponse.json({
+      ok: true,
+      matched: 1,
+      automation_id: matched.id,
+      dm_sent: dmResult.ok,
+      ...(dmResult.ok ? {} : { dm_error: dmResult.error }),
+    });
 
   } catch (err) {
     console.error("[webhook] Error:", err);
