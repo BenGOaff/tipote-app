@@ -250,25 +250,60 @@ export async function GET(req: NextRequest) {
 
     console.log("[Facebook callback] Connection saved successfully!");
 
-    // 8. Abonner la Page aux webhooks Meta (feed = commentaires, messages = DMs)
-    //    Sans cet appel, Meta ne sait pas qu'il doit envoyer les events vers notre webhook.
+    // 8. Configurer les webhooks Meta en deux étapes (non-bloquant)
+    const appId = process.env.META_APP_ID;
+    const appSecret = process.env.META_APP_SECRET;
+    const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    const webhookCallbackUrl = `${appUrl}/api/automations/webhook`;
+
+    // Étape A : Enregistrer l'URL callback au niveau de l'App
+    //   POST /{APP_ID}/subscriptions — nécessaire une fois par app
+    //   Utilise le token d'app (APP_ID|APP_SECRET), pas le token user
+    if (appId && appSecret && verifyToken) {
+      try {
+        const appParams = new URLSearchParams({
+          object: "page",
+          callback_url: webhookCallbackUrl,
+          fields: "feed",
+          verify_token: verifyToken,
+          access_token: `${appId}|${appSecret}`,
+        });
+        const appSubRes = await fetch(
+          `https://graph.facebook.com/v21.0/${appId}/subscriptions`,
+          { method: "POST", body: appParams }
+        );
+        const appSubJson = await appSubRes.json();
+        if (appSubJson.success) {
+          console.log("[Facebook callback] App webhook subscription: OK");
+        } else {
+          console.warn("[Facebook callback] App webhook subscription failed:", JSON.stringify(appSubJson));
+        }
+      } catch (err) {
+        console.error("[Facebook callback] App webhook subscription error:", err);
+      }
+    } else {
+      console.warn("[Facebook callback] Missing META env vars — skipping app webhook subscription");
+    }
+
+    // Étape B : Abonner la Page aux events
+    //   POST /{PAGE_ID}/subscribed_apps — nécessaire par page connectée
     try {
-      const params = new URLSearchParams({
+      const pageParams = new URLSearchParams({
         access_token: page.access_token,
         subscribed_fields: "feed,messages",
       });
-      const subRes = await fetch(
+      const pageSubRes = await fetch(
         `https://graph.facebook.com/v21.0/${page.id}/subscribed_apps`,
-        { method: "POST", body: params }
+        { method: "POST", body: pageParams }
       );
-      const subJson = await subRes.json();
-      if (subJson.success) {
+      const pageSubJson = await pageSubRes.json();
+      if (pageSubJson.success) {
         console.log("[Facebook callback] Page webhook subscription: OK");
       } else {
-        console.warn("[Facebook callback] Page webhook subscription failed:", JSON.stringify(subJson));
+        console.warn("[Facebook callback] Page webhook subscription failed:", JSON.stringify(pageSubJson));
       }
     } catch (err) {
-      console.error("[Facebook callback] Page webhook subscription error (non-bloquant):", err);
+      console.error("[Facebook callback] Page webhook subscription error:", err);
     }
 
     return NextResponse.redirect(`${settingsUrl}&meta_connected=facebook`);
