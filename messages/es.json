@@ -1080,7 +1080,18 @@
       "errorName": "Dale un nombre a la automatización",
       "errorKeyword": "Introduce una palabra clave de activación",
       "errorMessage": "Escribe el mensaje DM",
-      "errorPlatform": "Selecciona al menos una plataforma"
+      "errorPlatform": "Selecciona al menos una plataforma",
+      "optional": "opcional",
+      "targetPost": "Post objetivo",
+      "targetPostPlaceholder": "https://www.facebook.com/photo?fbid=...",
+      "targetPostHint": "Opcional — pega la URL de un post para activar esta automatización solo en ese post.",
+      "commentReplies": "Respuesta automática al comentario",
+      "commentRepliesPlaceholder": "¡Está en tus DMs!\nDime si lo has recibido 👌\nCita en mensajes privados\nGenial, te lo envío en 2 min ✉️\n¡Revisa tus DMs!",
+      "commentRepliesHint": "Una variante por línea. Se publicará una respuesta aleatoria como comentario antes de enviar el DM."
+    },
+    "card": {
+      "postTargeted": "Post objetivo",
+      "replyVariants": "{count} variantes de respuesta"
     },
     "errors": {
       "tableNotReady": "La tabla de Supabase todavía no existe. Sigue la guía de configuración de arriba.",
