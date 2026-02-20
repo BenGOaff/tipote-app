@@ -39,7 +39,7 @@ export const SortableTask = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors ${
+      className={`group flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors ${
         isDragging ? "shadow-lg ring-2 ring-primary/20" : ""
       }`}
     >
@@ -67,16 +67,18 @@ export const SortableTask = ({
         {task.task}
       </span>
 
-      {isEditing && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={() => onDelete(task.id)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )}
+      {/* Trash icon: always visible on hover, always visible in edit mode */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 transition-opacity ${
+          isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}
+        onClick={() => onDelete(task.id)}
+        title="Supprimer la tâche"
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 };

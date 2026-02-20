@@ -43,6 +43,7 @@ import {
   Save,
   ChevronRight,
   Check,
+  Trash2,
 } from "lucide-react";
 
 import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
@@ -955,7 +956,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       <div
                                         key={item.id}
                                         data-task-row
-                                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                        className="group flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                                         onClick={(e) => e.stopPropagation()}
                                         onPointerDown={(e) => e.stopPropagation()}
                                       >
@@ -970,14 +971,25 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                           }
                                         />
                                         <span
-                                          className={
+                                          className={`flex-1 ${
                                             checked
                                               ? "line-through text-muted-foreground"
                                               : ""
-                                          }
+                                          }`}
                                         >
                                           {item.title || "—"}
                                         </span>
+                                        <button
+                                          type="button"
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex items-center justify-center rounded text-destructive hover:bg-destructive/10 shrink-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteTask(String(item.id));
+                                          }}
+                                          title="Supprimer la tâche"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                       </div>
                                     );
                                   })}

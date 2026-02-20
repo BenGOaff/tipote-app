@@ -172,7 +172,8 @@
     "tooltipSettingsAi": "Paramètres — IA et crédits 🤖 Suis ta consommation de crédits et recharge-les si besoin. Tu peux aussi personnaliser le style des auto-commentaires de posts.",
     "tooltipSettingsPricing": "Paramètres — Abonnement 💳 Annule ou upgrade ton abonnement en toute autonomie depuis cet onglet.",
     "tooltipCoach": "Ton coach IA 🧠 Disponible aux plans PRO et ELITE, il est là pour t'aider à prendre des décisions et affiner tes stratégies. Il te connaît et connaît ton projet — plus besoin de formations !",
-    "tooltipComplete": "C'est tout ! 🚀 Tu connais maintenant tous les outils. Lance-toi, je suis là si tu as besoin."
+    "tooltipComplete": "C'est tout ! 🚀 Tu connais maintenant tous les outils. Lance-toi, je suis là si tu as besoin.",
+    "next": "Suivant"
   },
   "errors": {
     "generic": "Une erreur est survenue. Veuillez réessayer.",
@@ -660,11 +661,21 @@
     },
     "refreshAria": "Rafraîchir",
     "plan": {
-      "free": { "desc": "Accès limité" },
-      "beta": { "desc": "Accès Pro lifetime (beta)" },
-      "basic": { "desc": "1 module • Content Hub" },
-      "pro": { "desc": "3 modules • Coach IA • Content Hub" },
-      "elite": { "desc": "Modules illimités • Support prioritaire" }
+      "free": {
+        "desc": "Accès limité"
+      },
+      "beta": {
+        "desc": "Accès Pro lifetime (beta)"
+      },
+      "basic": {
+        "desc": "1 module • Content Hub"
+      },
+      "pro": {
+        "desc": "3 modules • Coach IA • Content Hub"
+      },
+      "elite": {
+        "desc": "Modules illimités • Support prioritaire"
+      }
     },
     "current": "Actuel",
     "currentLabel": "Plan actuel",
@@ -1003,6 +1014,24 @@
           "no_personal_branding": "Pas de personal branding (ne pas se montrer)",
           "none": "Aucun refus"
         }
+      },
+      "nicheArea": {
+        "question": "Dans quel domaine vas-tu créer ton activité ?",
+        "description": "Choisis le domaine le plus proche de ton projet.",
+        "options": {
+          "wellness": "Bien-être / Santé / Sport",
+          "business": "Business / Entrepreneuriat",
+          "marketing": "Marketing / Réseaux sociaux / Personal branding",
+          "finance": "Finance / Investissement / Argent",
+          "parenting": "Parentalité / Famille / Éducation",
+          "creativity": "Créativité / Art / Design",
+          "coaching": "Coaching de vie / Développement personnel",
+          "tech": "Tech / Dev / IA",
+          "food": "Cuisine / Nutrition / Alimentation",
+          "education": "Formation / Enseignement / E-learning",
+          "travel": "Voyage / Lifestyle",
+          "other": "Autre domaine"
+        }
       }
     },
     "finalize": {
@@ -1048,23 +1077,23 @@
       "instructions": "Supabase → SQL Editor → New Query → Coller → Run"
     },
     "guide": {
-      "title": "Guide de configuration n8n + Meta",
-      "intro": "Voici les 4 étapes pour activer tes automatisations Instagram et Facebook.",
+      "title": "Comment activer tes automatisations",
+      "intro": "Suis ces 4 étapes simples pour que tes abonnés reçoivent un DM automatique dès qu'ils commentent un mot-clé sur tes posts.",
       "step1": {
-        "title": "Créer une Meta App",
-        "desc": "Dans Meta for Developers, crée une app de type Business. Active les produits Webhooks et Messenger/Instagram Messaging."
+        "title": "Connecte ton compte Meta",
+        "desc": "Va dans Paramètres → Connexions et connecte ton compte Instagram et/ou Facebook professionnel (Page ou Compte Créateur)."
       },
       "step2": {
-        "title": "Configurer les webhooks Meta",
-        "desc": "Abonne-toi aux champs 'comments' et 'messages' sur ton objet Page/Instagram. Pointe le callback URL vers ton n8n (node Facebook Trigger)."
+        "title": "Vérifie l'accès aux messages",
+        "desc": "Depuis ton compte Instagram ou ta Page Facebook, assure-toi que les DMs et messages sont activés dans tes paramètres de confidentialité."
       },
       "step3": {
-        "title": "Importer le workflow n8n",
-        "desc": "Importe le fichier n8n/workflow-comment-to-dm.json dans ton instance n8n. Configure tes credentials Meta et le webhook URL de l'app Tipote."
+        "title": "Crée ton automatisation ici",
+        "desc": "Choisis un mot-clé déclencheur (ex : PDF, GUIDE, PROMO) et rédige le message que tes abonnés recevront automatiquement en DM."
       },
       "step4": {
-        "title": "Passer la Meta App Review",
-        "desc": "Demande les permissions instagram_manage_comments, instagram_manage_messages et pages_messaging. Délai : 1 à 4 semaines."
+        "title": "Teste avec un commentaire",
+        "desc": "Publie un post sur Instagram ou Facebook, commente avec ton mot-clé et vérifie que tu reçois bien le DM automatique dans les secondes qui suivent."
       }
     },
     "rgpd": {

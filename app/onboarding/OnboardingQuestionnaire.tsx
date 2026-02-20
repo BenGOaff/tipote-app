@@ -25,7 +25,7 @@ type TFunc = ReturnType<typeof useTranslations> & {
 
 type StepId =
   | "firstName" | "revenueGoal" | "primaryGoal" | "businessObjectives"
-  | "niche" | "clientProfile" | "timeAvailable" | "biggestBlocker"
+  | "nicheArea" | "niche" | "clientProfile" | "timeAvailable" | "biggestBlocker"
   | "contentPreference" | "preferredTone" | "platforms" | "businessStatus"
   | "hasAlreadySold" | "satisfiedWithOffers" | "currentMonthlyRevenue"
   | "clientTestimonials" | "offers" | "salesPageUrls"
@@ -64,6 +64,7 @@ const STEPS: StepDef[] = [
   { id: "revenueGoal", type: "single", autoAdvance: true },
   { id: "primaryGoal", type: "single", autoAdvance: true },
   { id: "businessObjectives", type: "multiple" },
+  { id: "nicheArea", type: "single", autoAdvance: true },
   { id: "niche", type: "fill_in" },
   { id: "clientProfile", type: "client_profile" },
   { id: "timeAvailable", type: "single", autoAdvance: true },
@@ -273,6 +274,7 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         revenueGoalMonthly: a.revenueGoal ?? null,
         primaryGoal: a.primaryGoal ?? null,
         businessObjectives: a.businessObjectives ?? [],
+        nicheArea: a.nicheArea ?? null,
         nicheTarget: nicheMap?.nicheTarget ?? "",
         nicheObjective: nicheMap?.nicheObjective ?? "",
         nicheMechanism: nicheMap?.nicheMechanism ?? "",
