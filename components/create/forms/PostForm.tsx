@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays } from "lucide-react";
+import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
@@ -101,6 +101,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   });
   const [userPlan, setUserPlan] = useState<string | null>(null);
 
+  // Automation linking (Facebook only)
+  const [selectedAutomationId, setSelectedAutomationId] = useState<string>("");
+  const [fbAutomations, setFbAutomations] = useState<{ id: string; name: string; trigger_keyword: string }[]>([]);
+
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   // Use ref for synchronous access (avoids stale closure creating duplicate entries)
@@ -142,6 +146,27 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
     return () => { mounted = false; };
   }, []);
+
+  // Fetch Facebook automations when platform = facebook
+  useEffect(() => {
+    if (platform !== "facebook") { setFbAutomations([]); setSelectedAutomationId(""); return; }
+    let mounted = true;
+    const supabase = getSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted || !data.user) return;
+      supabase
+        .from("social_automations")
+        .select("id, name, trigger_keyword")
+        .eq("user_id", data.user.id)
+        .eq("enabled", true)
+        .contains("platforms", ["facebook"])
+        .order("created_at", { ascending: false })
+        .then(({ data: autos }) => {
+          if (mounted) setFbAutomations((autos ?? []) as { id: string; name: string; trigger_keyword: string }[]);
+        });
+    });
+    return () => { mounted = false; };
+  }, [platform]);
 
   const selectedOffer = useMemo(() => {
     if (creationMode !== "existing") return null;
@@ -509,6 +534,44 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             />
           )}
 
+          {/* Automation DM panel — Facebook only */}
+          {generatedContent && platform === "facebook" && (
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Automatiser les réponses</p>
+                  <p className="text-xs text-muted-foreground">Envoie un DM auto quand quelqu&apos;un commente un mot-clé sur ce post</p>
+                </div>
+              </div>
+
+              {fbAutomations.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Aucune automatisation Facebook active.{" "}
+                  <a href="/automations" className="text-primary underline-offset-2 hover:underline">
+                    Créer une automatisation →
+                  </a>
+                </p>
+              ) : (
+                <Select value={selectedAutomationId} onValueChange={setSelectedAutomationId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Choisir une automatisation (optionnel)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Aucune</SelectItem>
+                    {fbAutomations.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name} — mot-clé : <span className="font-mono">{a.trigger_keyword}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           {generatedContent && (
             <div className="space-y-3">
               {/* CTA row: Publier + Programmer (same line, same purple) */}
@@ -574,6 +637,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         platform={platform}
         contentId={savedContentId ?? ""}
         contentPreview={generatedContent}
+        automationId={selectedAutomationId || undefined}
         autoCommentConfig={autoCommentConfig.enabled ? {
           enabled: true,
           nbBefore: autoCommentConfig.nbBefore,

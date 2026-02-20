@@ -1162,8 +1162,11 @@
       "errorPlatform": "Select at least one platform",
       "optional": "optional",
       "targetPost": "Targeted post",
-      "targetPostPlaceholder": "https://www.facebook.com/photo?fbid=...",
-      "targetPostHint": "Optional — paste a post URL to trigger this automation only on that specific post.",
+      "targetPostPick": "Choose a Facebook post",
+      "targetPostPickTitle": "Select a Facebook post",
+      "targetPostPickError": "Make sure your Facebook account is connected in Settings.",
+      "targetPostPickEmpty": "No posts found on your Facebook page.",
+      "targetPostHint": "Optional — activate this automation on one specific post only.",
       "commentReplies": "Automatic comment reply",
       "commentRepliesPlaceholder": "It's in your DMs!\nLet me know if you received it 👌\nCheck your private messages\nGreat, sending it in 2 min ✉️\nCheck your DMs!",
       "commentRepliesHint": "One variant per line. A random reply will be posted as a comment before sending the DM."
