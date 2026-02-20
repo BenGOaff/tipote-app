@@ -1,10 +1,15 @@
 // app/api/automations/webhook/route.ts
-// Gère les webhooks Meta (commentaires Instagram/Facebook)
-// GET : vérification du webhook Meta (hub.challenge)
-// POST : traitement d'un commentaire → envoi DM + réponse commentaire + capture email
+// Gère les webhooks Meta (commentaires Facebook)
+// GET  : vérification du webhook Meta (hub.challenge)
+// POST : deux modes :
+//   1. Meta natif  → X-Hub-Signature-256 header, payload Meta standard
+//   2. n8n relayé  → x-n8n-secret header, payload custom (rétrocompatible)
+// PUT  : réponse email (appelée par n8n après réponse DM de l'user)
 
+import { createHmac } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +29,25 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ error: "Verification failed" }, { status: 403 });
 }
 
-/* ─── Incoming comment event (forwarded by n8n) ─── */
+/* ─── Incoming comment event ─── */
 export async function POST(req: NextRequest) {
-  // Shared secret check (n8n → Tipote)
-  const secret = req.headers.get("x-n8n-secret");
-  if (secret !== process.env.N8N_SHARED_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const n8nSecret = req.headers.get("x-n8n-secret");
+  const metaSig = req.headers.get("x-hub-signature-256");
+
+  // ── Path 1: n8n forwarded (rétrocompatible) ──
+  if (n8nSecret) {
+    if (n8nSecret !== process.env.N8N_SHARED_SECRET) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return handleN8nPayload(req);
   }
 
+  // ── Path 2: Meta native webhook ──
+  return handleMetaNativePayload(req, metaSig);
+}
+
+/* ─── n8n forwarded handler (existing format) ─── */
+async function handleN8nPayload(req: NextRequest): Promise<NextResponse> {
   let body: CommentWebhookPayload;
   try {
     body = await req.json();
@@ -39,23 +55,113 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const {
-    platform,
-    page_id,
-    sender_id,
-    sender_name,
-    comment_text,
-    comment_id,
-    post_id,
-    page_access_token,
-    user_id,
-  } = body;
+  const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = body;
 
   if (!platform || !page_id || !sender_id || !comment_text || !page_access_token) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Find matching automations for this page + platform + keyword
+  return processComment({ platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id });
+}
+
+/* ─── Meta native webhook handler ─── */
+async function handleMetaNativePayload(req: NextRequest, signature: string | null): Promise<NextResponse> {
+  const rawBody = await req.text();
+
+  // Verify X-Hub-Signature-256 if app secret is configured
+  const appSecret = process.env.META_APP_SECRET;
+  if (appSecret) {
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+    const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
+    if (signature !== expected) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  }
+
+  let payload: MetaNativePayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Only handle Page comment events
+  if (payload.object !== "page") {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  const results: { matched: number; errors: number } = { matched: 0, errors: 0 };
+
+  for (const entry of payload.entry ?? []) {
+    const pageId = entry.id;
+
+    for (const change of entry.changes ?? []) {
+      // Only handle new comment additions on feed
+      if (change.field !== "feed") continue;
+      const val = change.value;
+      if (val.item !== "comment" || val.verb !== "add") continue;
+      if (!val.message || !val.from?.id) continue;
+
+      // Look up page access token from our DB
+      let pageAccessToken: string | null = null;
+      try {
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("platform", "facebook")
+          .eq("platform_user_id", pageId)
+          .maybeSingle();
+
+        if (conn?.access_token_encrypted) {
+          pageAccessToken = decrypt(conn.access_token_encrypted);
+        }
+      } catch (err) {
+        console.error("[webhook] Token lookup error:", err);
+      }
+
+      if (!pageAccessToken) {
+        console.warn("[webhook] No token found for page:", pageId);
+        continue;
+      }
+
+      // post_id in Meta's format is "pageId_postId"
+      const rawPostId = val.post_id ?? "";
+      const postId = rawPostId.includes("_") ? rawPostId.split("_")[1] : rawPostId;
+
+      const res = await processComment({
+        platform: "facebook",
+        page_id: pageId,
+        sender_id: val.from.id,
+        sender_name: val.from.name ?? "",
+        comment_text: val.message,
+        comment_id: val.comment_id,
+        post_id: rawPostId, // pass full post_id for matching
+        page_access_token: pageAccessToken,
+      });
+
+      const resBody = await res.json().catch(() => ({}));
+      if ((resBody as any).matched) results.matched++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...results });
+}
+
+/* ─── Core comment processing (shared by both paths) ─── */
+async function processComment(params: {
+  platform: "instagram" | "facebook";
+  page_id: string;
+  sender_id: string;
+  sender_name: string;
+  comment_text: string;
+  comment_id?: string;
+  post_id?: string;
+  page_access_token: string;
+  user_id?: string;
+}): Promise<NextResponse> {
+  const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = params;
   const commentUpper = comment_text.toUpperCase();
 
   try {
@@ -74,14 +180,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Find the first automation whose keyword appears in the comment
-    // Also filter by target_post_url if set: the post_id must appear in the stored URL
+    // If automation has target_post_url set, the incoming post_id must match
     const matched = automations.find((auto) => {
       if (!commentUpper.includes(auto.trigger_keyword.toUpperCase())) return false;
-      if (auto.target_post_url && post_id) {
-        return auto.target_post_url.includes(post_id);
+      if (auto.target_post_url) {
+        if (!post_id) return false;
+        // Match either exact post_id or post_id contained in stored URL/ID
+        return auto.target_post_url === post_id ||
+               auto.target_post_url.includes(post_id) ||
+               post_id.includes(auto.target_post_url);
       }
-      // If automation has target_post_url but no post_id provided, skip
-      if (auto.target_post_url && !post_id) return false;
       return true;
     });
 
@@ -91,27 +199,25 @@ export async function POST(req: NextRequest) {
 
     const firstName = extractFirstName(sender_name);
 
-    // 1. Reply to the comment with a random variant (non-blocking)
+    // 1. Reply to comment with random variant (non-blocking)
     if (matched.comment_reply_variants?.length && comment_id) {
       const variants: string[] = matched.comment_reply_variants;
       const replyText = variants[Math.floor(Math.random() * variants.length)];
       replyToComment(page_access_token, comment_id, replyText).catch((err) => {
-        console.error("[automations/webhook] Failed to reply to comment:", err);
+        console.error("[webhook] Comment reply failed:", err);
       });
     }
 
-    // 2. Personalize the DM message
+    // 2. Send DM
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
-
-    // 3. Send DM via Meta Graph API
     const dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
 
     if (!dmResult.ok) {
-      console.error("[automations/webhook] Failed to send DM:", dmResult.error);
+      console.error("[webhook] DM send failed:", dmResult.error);
       return NextResponse.json({ error: "DM send failed", detail: dmResult.error }, { status: 502 });
     }
 
-    // 4. Update automation stats
+    // 3. Update stats
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
     await supabaseAdmin
       .from("social_automations")
@@ -127,13 +233,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, matched: 1, automation_id: matched.id });
 
   } catch (err) {
-    console.error("[automations/webhook] Error:", err);
+    console.error("[webhook] Error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
 /* ─── Email reply handler ─── */
-// Called by n8n when a user replies to the email capture DM
 export async function PUT(req: NextRequest) {
   const secret = req.headers.get("x-n8n-secret");
   if (secret !== process.env.N8N_SHARED_SECRET) {
@@ -153,7 +258,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Get the automation config
   const { data: automation, error } = await supabaseAdmin
     .from("social_automations")
     .select("*")
@@ -166,34 +270,23 @@ export async function PUT(req: NextRequest) {
 
   const firstName = extractFirstName(sender_name);
 
-  // 1. Add contact to systeme.io if configured
   if (automation.systemeio_tag) {
     try {
-      await addToSystemeIo({
-        email,
-        firstName,
-        tag: automation.systemeio_tag,
-      });
+      await addToSystemeIo({ email, firstName, tag: automation.systemeio_tag });
     } catch (err) {
-      console.error("[automations/webhook] systeme.io error:", err);
-      // Non-blocking — continue even if systeme.io fails
+      console.error("[webhook] systeme.io error:", err);
     }
   }
 
-  // 2. Send confirmation DM
   if (automation.email_dm_message) {
-    const confirmDm = personalize(automation.email_dm_message, {
-      email,
-      prenom: firstName,
-      firstname: firstName,
-    });
+    const confirmDm = personalize(automation.email_dm_message, { email, prenom: firstName, firstname: firstName });
     await sendMetaDM(page_access_token, sender_id, confirmDm);
   }
 
   return NextResponse.json({ ok: true });
 }
 
-/* ─── Helpers ─── */
+/* ─── Types ─── */
 
 interface CommentWebhookPayload {
   platform: "instagram" | "facebook";
@@ -215,6 +308,28 @@ interface EmailReplyPayload {
   page_access_token: string;
 }
 
+interface MetaNativePayload {
+  object: string;
+  entry: Array<{
+    id: string;
+    time?: number;
+    changes: Array<{
+      field: string;
+      value: {
+        from?: { id: string; name?: string };
+        message?: string;
+        post_id?: string;
+        comment_id?: string;
+        item?: string;
+        verb?: string;
+        created_time?: number;
+      };
+    }>;
+  }>;
+}
+
+/* ─── Helpers ─── */
+
 function extractFirstName(fullName: string): string {
   return (fullName ?? "").split(" ")[0] ?? fullName ?? "";
 }
@@ -229,21 +344,18 @@ async function sendMetaDM(
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/me/messages`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${pageAccessToken}`,
-        },
-        body: JSON.stringify({
-          recipient: { id: recipientId },
-          message: { text },
-          messaging_type: "RESPONSE",
-        }),
-      }
-    );
+    const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${pageAccessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+        messaging_type: "RESPONSE",
+      }),
+    });
 
     if (!res.ok) {
       const errBody = await res.text();
@@ -256,22 +368,15 @@ async function sendMetaDM(
   }
 }
 
-async function replyToComment(
-  pageAccessToken: string,
-  commentId: string,
-  text: string,
-): Promise<void> {
-  const res = await fetch(
-    `https://graph.facebook.com/v21.0/${commentId}/comments`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${pageAccessToken}`,
-      },
-      body: JSON.stringify({ message: text }),
-    }
-  );
+async function replyToComment(pageAccessToken: string, commentId: string, text: string): Promise<void> {
+  const res = await fetch(`https://graph.facebook.com/v21.0/${commentId}/comments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${pageAccessToken}`,
+    },
+    body: JSON.stringify({ message: text }),
+  });
 
   if (!res.ok) {
     const errBody = await res.text();
@@ -279,43 +384,24 @@ async function replyToComment(
   }
 }
 
-async function addToSystemeIo(params: {
-  email: string;
-  firstName: string;
-  tag: string;
-}) {
+async function addToSystemeIo(params: { email: string; firstName: string; tag: string }) {
   const apiKey = process.env.SYSTEME_IO_API_KEY;
   if (!apiKey) return;
 
-  // 1. Create or update contact
   const createRes = await fetch("https://api.systeme.io/api/contacts", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
-    body: JSON.stringify({
-      email: params.email,
-      fields: [{ slug: "first_name", value: params.firstName }],
-    }),
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+    body: JSON.stringify({ email: params.email, fields: [{ slug: "first_name", value: params.firstName }] }),
   });
 
-  if (!createRes.ok) {
-    throw new Error(`systeme.io create contact failed: ${await createRes.text()}`);
-  }
+  if (!createRes.ok) throw new Error(`systeme.io contact failed: ${await createRes.text()}`);
 
   const contact = await createRes.json();
-  const contactId = contact.id;
+  if (!contact.id) return;
 
-  if (!contactId) return;
-
-  // 2. Find or create tag
   const tagRes = await fetch("https://api.systeme.io/api/tags", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
     body: JSON.stringify({ name: params.tag }),
   });
 
@@ -323,13 +409,9 @@ async function addToSystemeIo(params: {
   const tag = await tagRes.json();
   if (!tag.id) return;
 
-  // 3. Assign tag to contact
-  await fetch(`https://api.systeme.io/api/contacts/${contactId}/tags`, {
+  await fetch(`https://api.systeme.io/api/contacts/${contact.id}/tags`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
     body: JSON.stringify({ tagId: tag.id }),
   });
 }

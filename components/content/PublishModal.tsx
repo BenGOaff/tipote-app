@@ -10,8 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle } from "lucide-react";
+import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle, Zap } from "lucide-react";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type PublishStep =
   | "confirm"
@@ -70,6 +71,8 @@ type Props = {
     nbBefore: number;
     nbAfter: number;
   };
+  /** If set, links this automation to the published Facebook post ID */
+  automationId?: string;
 };
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -83,6 +86,7 @@ export function PublishModal({
   onBeforePublish,
   onPublished,
   autoCommentConfig,
+  automationId,
 }: Props) {
   const [step, setStep] = React.useState<PublishStep>("confirm");
   const [result, setResult] = React.useState<PublishResult | null>(null);
@@ -157,6 +161,23 @@ export function PublishModal({
       pollRef.current = null;
     }
   }, []);
+
+  /** Link the selected automation to the published Facebook post (non-blocking) */
+  const linkAutomationToPost = React.useCallback(async (postId: string) => {
+    if (!automationId || !postId || platform !== "facebook") return;
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("social_automations")
+        .update({ target_post_url: postId, updated_at: new Date().toISOString() })
+        .eq("id", automationId)
+        .eq("user_id", user.id);
+    } catch {
+      // Non-blocking — silently fail
+    }
+  }, [automationId, platform]);
 
   /** Publish the post via /api/social/publish */
   const doPublish = React.useCallback(async (idToPublish: string): Promise<PublishResult> => {
@@ -235,6 +256,7 @@ export function PublishModal({
 
       // Done! After-comments run in background on the server — no need to wait.
       setStep("success");
+      if (publishResult.postId) void linkAutomationToPost(publishResult.postId);
       onPublished?.();
       return;
     }
@@ -253,6 +275,7 @@ export function PublishModal({
 
       setStep("success");
       setResult(publishResult);
+      if (publishResult.postId) void linkAutomationToPost(publishResult.postId);
       onPublished?.();
     } catch (e) {
       setStep("error");
@@ -432,6 +455,12 @@ export function PublishModal({
             </DialogHeader>
 
             <div className="flex flex-col gap-3 pt-2">
+              {automationId && result?.postId && platform === "facebook" && (
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  Automatisation liée à ce post — le DM se déclenchera sur les commentaires de ce post uniquement.
+                </div>
+              )}
               {result?.postUrl && (
                 <Button
                   variant="outline"

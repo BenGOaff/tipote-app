@@ -1083,8 +1083,11 @@
       "errorPlatform": "Seleziona almeno una piattaforma",
       "optional": "opzionale",
       "targetPost": "Post specifico",
-      "targetPostPlaceholder": "https://www.facebook.com/photo?fbid=...",
-      "targetPostHint": "Opzionale — incolla l'URL di un post per attivare questa automazione solo su quel post.",
+      "targetPostPick": "Scegli un post Facebook",
+      "targetPostPickTitle": "Seleziona un post Facebook",
+      "targetPostPickError": "Verifica che il tuo account Facebook sia connesso nelle Impostazioni.",
+      "targetPostPickEmpty": "Nessun post trovato sulla tua pagina Facebook.",
+      "targetPostHint": "Opzionale — attiva questa automazione solo su un post specifico.",
       "commentReplies": "Risposta automatica al commento",
       "commentRepliesPlaceholder": "È nei tuoi DM!\nDimmi se l'hai ricevuto 👌\nAppuntamento in privato\nOttimo, te lo mando in 2 min ✉️\nControlla i tuoi DM!",
       "commentRepliesHint": "Una variante per riga. Una risposta casuale verrà pubblicata come commento prima di inviare il DM."

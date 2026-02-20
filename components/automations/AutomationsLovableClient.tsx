@@ -31,14 +31,16 @@ import {
   ChevronUp,
   Pencil,
   Trash2,
-  AlertCircle,
   CheckCircle2,
   Clock,
   XCircle,
   Info,
-  Copy,
   Link2,
   MessageSquare,
+  ImageIcon,
+  CalendarDays,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { toast } from "sonner";
@@ -75,6 +77,7 @@ interface FormState {
   email_dm_message: string;
   systemeio_tag: string;
   target_post_url: string;
+  target_post_preview: string; // display only, not persisted
   comment_reply_variants: string; // newline-separated in form
 }
 
@@ -96,6 +99,7 @@ const DEFAULT_FORM: FormState = {
   email_dm_message: "",
   systemeio_tag: "",
   target_post_url: "",
+  target_post_preview: "",
   comment_reply_variants: DEFAULT_COMMENT_REPLIES,
 };
 
@@ -167,12 +171,12 @@ export default function AutomationsLovableClient() {
 
   const [automations, setAutomations] = useState<SocialAutomation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [tableReady, setTableReady] = useState(true);
-  const [showSetup, setShowSetup] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [postPickerOpen, setPostPickerOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   /* ── Load automations ── */
   const loadAutomations = useCallback(async () => {
@@ -192,19 +196,10 @@ export default function AutomationsLovableClient() {
 
       if (projectId) query = query.eq("project_id", projectId);
 
-      const { data, error, status } = await query;
+      const { data, error } = await query;
 
-      if (error || status === 404) {
-        // Table doesn't exist yet → show Supabase setup guide
-        // Detect via: PostgreSQL code 42P01, PostgREST 404, or message
-        const isTableMissing =
-          status === 404 ||
-          error?.code === "42P01" ||
-          error?.code === "PGRST116" ||
-          error?.message?.toLowerCase().includes("does not exist") ||
-          error?.message?.toLowerCase().includes("not found");
-
-        if (isTableMissing) setTableReady(false);
+      if (error) {
+        console.error("[automations] Load error:", error);
         setAutomations([]);
       } else {
         setAutomations((data as SocialAutomation[]) ?? []);
@@ -237,6 +232,7 @@ export default function AutomationsLovableClient() {
       email_dm_message: auto.email_dm_message ?? "",
       systemeio_tag: auto.systemeio_tag ?? "",
       target_post_url: auto.target_post_url ?? "",
+      target_post_preview: "",
       comment_reply_variants: (auto.comment_reply_variants ?? []).join("\n"),
     });
     setEditingId(auto.id);
@@ -276,7 +272,6 @@ export default function AutomationsLovableClient() {
 
     try {
       let error;
-      let status: number | undefined;
       if (editingId) {
         const res = await supabase
           .from("social_automations")
@@ -284,28 +279,15 @@ export default function AutomationsLovableClient() {
           .eq("id", editingId)
           .eq("user_id", user.id);
         error = res.error;
-        status = res.status;
       } else {
         const res = await supabase
           .from("social_automations")
           .insert(payload);
         error = res.error;
-        status = res.status;
       }
 
-      if (error || status === 404) {
-        const isTableMissing =
-          status === 404 ||
-          error?.code === "42P01" ||
-          error?.code === "PGRST116" ||
-          error?.message?.toLowerCase().includes("does not exist");
-
-        if (isTableMissing) {
-          setTableReady(false);
-          toast.error(t("errors.tableNotReady"));
-        } else {
-          toast.error(t("errors.saveFailed"));
-        }
+      if (error) {
+        toast.error(t("errors.saveFailed"));
       } else {
         toast.success(editingId ? t("savedUpdated") : t("savedCreated"));
         setShowModal(false);
@@ -366,42 +348,6 @@ export default function AutomationsLovableClient() {
     }));
   }
 
-  /* ── Copy helper ── */
-  function copyText(text: string) {
-    navigator.clipboard.writeText(text);
-    toast.success(t("copied"));
-  }
-
-  /* ── SQL migration text ── */
-  const sqlMigration = `-- Créer la table social_automations dans Supabase SQL Editor
-CREATE TABLE IF NOT EXISTS public.social_automations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  project_id UUID,
-  name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('comment_to_dm', 'comment_to_email')),
-  platforms TEXT[] NOT NULL DEFAULT '{}',
-  trigger_keyword TEXT NOT NULL,
-  dm_message TEXT NOT NULL,
-  include_email_capture BOOLEAN DEFAULT FALSE,
-  email_dm_message TEXT,
-  systemeio_tag TEXT,
-  target_post_url TEXT,
-  comment_reply_variants TEXT[],
-  enabled BOOLEAN DEFAULT TRUE,
-  stats JSONB DEFAULT '{"triggers": 0, "dms_sent": 0}'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE public.social_automations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage their own automations"
-  ON public.social_automations FOR ALL
-  USING (auth.uid() = user_id);
-
--- Si la table existe déjà, ajouter les nouvelles colonnes :
-ALTER TABLE public.social_automations
-  ADD COLUMN IF NOT EXISTS target_post_url TEXT,
-  ADD COLUMN IF NOT EXISTS comment_reply_variants TEXT[];`;
 
   /* ─── Status icon helper ─── */
   function StatusIcon({ status }: { status: "available" | "soon" | "unavailable" }) {
@@ -468,53 +414,21 @@ ALTER TABLE public.social_automations
         </div>
       </div>
 
-      {/* ── DB not ready: setup guide ── */}
-      {!tableReady && (
-        <Card className="border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-base">
-              <AlertCircle className="w-5 h-5" />
-              {t("setup.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-amber-700 dark:text-amber-400">{t("setup.description")}</p>
-            <div className="rounded-lg bg-background border border-border p-3 relative">
-              <code className="text-xs font-mono text-foreground whitespace-pre-wrap break-all">
-                {sqlMigration}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="absolute top-2 right-2 gap-1"
-                onClick={() => copyText(sqlMigration)}
-              >
-                <Copy className="w-3 h-3" />
-                {t("copy")}
-              </Button>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-500">
-              {t("setup.instructions")}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* ── Setup guide (collapsible) ── */}
       <Card>
         <CardHeader
           className="pb-2 cursor-pointer select-none"
-          onClick={() => setShowSetup((s) => !s)}
+          onClick={() => setShowGuide((s) => !s)}
         >
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Info className="w-4 h-4 text-primary" />
               {t("guide.title")}
             </CardTitle>
-            {showSetup ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            {showGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </div>
         </CardHeader>
-        {showSetup && (
+        {showGuide && (
           <CardContent className="space-y-4 pt-0">
             <p className="text-sm text-muted-foreground">{t("guide.intro")}</p>
 
@@ -646,6 +560,16 @@ ALTER TABLE public.social_automations
         </div>
       </div>
 
+      {/* ── Facebook Post Picker Modal ── */}
+      <FacebookPostPickerModal
+        open={postPickerOpen}
+        onOpenChange={setPostPickerOpen}
+        onSelect={(postId, preview) => {
+          setForm((f) => ({ ...f, target_post_url: postId, target_post_preview: preview }));
+          setPostPickerOpen(false);
+        }}
+      />
+
       {/* ── Create / Edit Modal ── */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="automation-form-desc">
@@ -742,18 +666,39 @@ ALTER TABLE public.social_automations
               <p className="text-xs text-muted-foreground">{t("form.keywordHint")}</p>
             </div>
 
-            {/* Target post URL (optional) */}
+            {/* Target post picker (optional) */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
                 <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
                 {t("form.targetPost")}
                 <span className="text-xs text-muted-foreground font-normal">({t("form.optional")})</span>
               </label>
-              <Input
-                placeholder={t("form.targetPostPlaceholder")}
-                value={form.target_post_url}
-                onChange={(e) => setForm((f) => ({ ...f, target_post_url: e.target.value }))}
-              />
+              {form.target_post_url ? (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+                  <ImageIcon className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="flex-1 text-xs text-foreground truncate">
+                    {form.target_post_preview || form.target_post_url}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, target_post_url: "", target_post_preview: "" }))}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 justify-start"
+                  onClick={() => setPostPickerOpen(true)}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  {t("form.targetPostPick")}
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground">{t("form.targetPostHint")}</p>
             </div>
 
@@ -968,6 +913,127 @@ function AutomationCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/* ─────────────────────────── FacebookPostPickerModal sub-component ─── */
+
+interface FbPostItem {
+  id: string;
+  message: string;
+  created_time: string;
+  permalink_url: string;
+}
+
+function FacebookPostPickerModal({
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSelect: (postId: string, preview: string) => void;
+}) {
+  const t = useTranslations("automations");
+  const [posts, setPosts] = useState<FbPostItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setError(null);
+
+    fetch("/api/social/facebook-posts")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) setError(d.error);
+        else setPosts(d.posts ?? []);
+      })
+      .catch(() => setError("Impossible de charger les posts"))
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  function formatDate(iso: string) {
+    try {
+      return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+    } catch { return iso; }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col" aria-describedby="post-picker-desc">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Facebook className="w-4 h-4 text-blue-500" />
+            {t("form.targetPostPickTitle")}
+          </DialogTitle>
+          <DialogDescription id="post-picker-desc" className="sr-only">
+            {t("form.targetPostPickTitle")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-2 py-2 min-h-0">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {error && !loading && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              <p>{error}</p>
+              <p className="text-xs mt-1 text-muted-foreground/70">{t("form.targetPostPickError")}</p>
+            </div>
+          )}
+
+          {!loading && !error && posts.length === 0 && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {t("form.targetPostPickEmpty")}
+            </div>
+          )}
+
+          {!loading && posts.map((post) => {
+            const preview = post.message?.slice(0, 120) || "—";
+            return (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => onSelect(post.id, preview)}
+                className="w-full text-left rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 p-3 transition-colors"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <CalendarDays className="w-3 h-3 shrink-0" />
+                      {formatDate(post.created_time)}
+                    </p>
+                    <p className="text-sm text-foreground line-clamp-2">{preview}</p>
+                  </div>
+                  {post.permalink_url && (
+                    <a
+                      href={post.permalink_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 text-muted-foreground hover:text-primary mt-0.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-end pt-2 border-t">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
