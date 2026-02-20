@@ -129,8 +129,10 @@ export default function SocialConnections() {
       const json = await res.json();
       if (json.ok) {
         toast({ title: "✅ Webhooks Facebook activés", description: "Les commentaires déclencheront maintenant vos automatisations." });
+      } else if (json.app_subscription && !json.page_subscription) {
+        toast({ title: "⚠️ Partiellement activé", description: `App OK, erreur page : ${json.page_error ?? "inconnue"}`, variant: "destructive" });
       } else {
-        toast({ title: "Erreur d'activation", description: json.error ?? "Réessaie ou reconnecte Facebook.", variant: "destructive" });
+        toast({ title: "Erreur d'activation", description: json.app_error ?? json.error ?? "Réessaie ou reconnecte Facebook.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Erreur réseau", variant: "destructive" });
