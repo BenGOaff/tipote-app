@@ -95,13 +95,14 @@ export function AutoCommentPanel({
     });
   }, [enabled, nbBefore, nbAfter, creditsNeeded, hasAccess, platformSupported, onChange]);
 
-  // Plateforme sans API de recherche publique → petit message discret, pas de Card
+  // Plateforme sans API de recherche publique → retrait discret
   if (!platformSupported) {
+    // Facebook : section "Automatiser les réponses" prend le relais, rien à afficher ici
+    if (platform === "facebook") return null;
+
     const unsupportedMsg =
       platform === "linkedin"
-        ? "LinkedIn requiert une approbation partenaire (MDP) pour accéder aux posts — les auto-commentaires ne sont pas disponibles pour l'instant."
-        : platform === "facebook"
-        ? "Facebook a supprimé son API de recherche de posts en 2018 — les auto-commentaires ne sont pas disponibles."
+        ? "LinkedIn requiert une approbation partenaire (MDP) — les auto-commentaires ne sont pas disponibles pour l'instant."
         : "Cette plateforme ne supporte pas les auto-commentaires à l'heure actuelle.";
     return (
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
