@@ -572,7 +572,7 @@ export default function AutomationsLovableClient() {
 
       {/* ── Create / Edit Modal ── */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="automation-form-desc">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden" aria-describedby="automation-form-desc">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
@@ -603,7 +603,7 @@ export default function AutomationsLovableClient() {
                     key={type}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, type }))}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
+                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors overflow-hidden ${
                       form.type === type
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
@@ -612,9 +612,9 @@ export default function AutomationsLovableClient() {
                     {type === "comment_to_dm"
                       ? <MessageCircle className="w-4 h-4 text-primary shrink-0" />
                       : <Mail className="w-4 h-4 text-primary shrink-0" />}
-                    <div>
-                      <p className="text-sm font-medium">{t(`form.type_${type}`)}</p>
-                      <p className="text-xs text-muted-foreground">{t(`form.type_${type}_desc`)}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{t(`form.type_${type}`)}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{t(`form.type_${type}_desc`)}</p>
                     </div>
                   </button>
                 ))}
@@ -860,14 +860,12 @@ function AutomationCard({
               )}
             </div>
 
-            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1">
-                <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
-                  {auto.trigger_keyword}
-                </span>
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+              <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground shrink-0">
+                {auto.trigger_keyword}
               </span>
-              <span>→</span>
-              <span className="truncate max-w-xs">{auto.dm_message}</span>
+              <span className="shrink-0">→</span>
+              <span className="truncate min-w-0">{auto.dm_message}</span>
             </div>
 
             {/* Reply variants info */}
@@ -962,7 +960,7 @@ function FacebookPostPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col" aria-describedby="post-picker-desc">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[80vh] flex flex-col overflow-x-hidden" aria-describedby="post-picker-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Facebook className="w-4 h-4 text-blue-500" />

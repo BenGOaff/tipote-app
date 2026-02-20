@@ -569,16 +569,19 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                   Créer une automatisation
                 </Button>
               ) : (
-                <div className="flex gap-2">
-                  <Select value={selectedAutomationId} onValueChange={setSelectedAutomationId}>
-                    <SelectTrigger className="h-9 text-sm flex-1">
+                <div className="flex gap-2 min-w-0">
+                  <Select
+                    value={selectedAutomationId || "__none__"}
+                    onValueChange={(v) => setSelectedAutomationId(v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-9 text-sm flex-1 min-w-0">
                       <SelectValue placeholder="Choisir une automatisation (optionnel)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Aucune</SelectItem>
+                      <SelectItem value="__none__">Aucune</SelectItem>
                       {fbAutomations.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.name} — mot-clé : {a.trigger_keyword}
+                          {a.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -758,7 +761,7 @@ function QuickCreateAutomationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
