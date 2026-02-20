@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap } from "lucide-react";
+import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap, Plus, MessageCircle } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
@@ -17,6 +17,15 @@ import { ImageUploader, type UploadedImage } from "@/components/content/ImageUpl
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
 import { emitCreditsUpdated } from "@/lib/credits/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -104,6 +113,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   // Automation linking (Facebook only)
   const [selectedAutomationId, setSelectedAutomationId] = useState<string>("");
   const [fbAutomations, setFbAutomations] = useState<{ id: string; name: string; trigger_keyword: string }[]>([]);
+  const [createAutomationOpen, setCreateAutomationOpen] = useState(false);
+  const [automationsVersion, setAutomationsVersion] = useState(0);
 
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -166,7 +177,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         });
     });
     return () => { mounted = false; };
-  }, [platform]);
+  }, [platform, automationsVersion]);
 
   const selectedOffer = useMemo(() => {
     if (creationMode !== "existing") return null;
@@ -548,26 +559,40 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               </div>
 
               {fbAutomations.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Aucune automatisation Facebook active.{" "}
-                  <a href="/automations" className="text-primary underline-offset-2 hover:underline">
-                    Créer une automatisation →
-                  </a>
-                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-dashed"
+                  onClick={() => setCreateAutomationOpen(true)}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Créer une automatisation
+                </Button>
               ) : (
-                <Select value={selectedAutomationId} onValueChange={setSelectedAutomationId}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Choisir une automatisation (optionnel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
-                    {fbAutomations.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} — mot-clé : <span className="font-mono">{a.trigger_keyword}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={selectedAutomationId} onValueChange={setSelectedAutomationId}>
+                    <SelectTrigger className="h-9 text-sm flex-1">
+                      <SelectValue placeholder="Choisir une automatisation (optionnel)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Aucune</SelectItem>
+                      {fbAutomations.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} — mot-clé : {a.trigger_keyword}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 shrink-0"
+                    onClick={() => setCreateAutomationOpen(true)}
+                    title="Créer une nouvelle automatisation"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -659,6 +684,135 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         platformLabel={platformLabel}
         onConfirm={handleScheduleConfirm}
       />
+
+      {/* Modale de création rapide d'automatisation */}
+      <QuickCreateAutomationModal
+        open={createAutomationOpen}
+        onOpenChange={setCreateAutomationOpen}
+        onCreated={(newAuto) => {
+          setFbAutomations((prev) => [newAuto, ...prev]);
+          setSelectedAutomationId(newAuto.id);
+          setAutomationsVersion((v) => v + 1);
+        }}
+      />
     </div>
+  );
+}
+
+/* ─── Quick Create Automation Modal ─── */
+
+type QuickAuto = { id: string; name: string; trigger_keyword: string };
+
+function QuickCreateAutomationModal({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: (auto: QuickAuto) => void;
+}) {
+  const [keyword, setKeyword] = useState("");
+  const [dmMessage, setDmMessage] = useState(
+    "Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌"
+  );
+  const [saving, setSaving] = useState(false);
+
+  const canSave = keyword.trim().length > 0 && dmMessage.trim().length > 0;
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Non authentifié");
+
+      const name = `Auto — "${keyword.trim()}"`;
+      const { data, error } = await supabase
+        .from("social_automations")
+        .insert({
+          user_id: userData.user.id,
+          name,
+          trigger_keyword: keyword.trim(),
+          dm_message: dmMessage.trim(),
+          platforms: ["facebook"],
+          enabled: true,
+        })
+        .select("id, name, trigger_keyword")
+        .single();
+
+      if (error || !data) throw new Error(error?.message ?? "Erreur inconnue");
+
+      toast.success("Automatisation créée !");
+      onCreated(data as QuickAuto);
+      onOpenChange(false);
+      setKeyword("");
+      setDmMessage("Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌");
+    } catch (err: any) {
+      toast.error(err.message ?? "Impossible de créer l'automatisation");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-primary" />
+            Nouvelle automatisation Facebook
+          </DialogTitle>
+          <DialogDescription>
+            Quand quelqu&apos;un commente le mot-clé sur votre post, Tipote lui envoie automatiquement un DM.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="qa-keyword">
+              Mot-clé déclencheur <span className="text-rose-500">*</span>
+            </Label>
+            <Input
+              id="qa-keyword"
+              placeholder="Ex : GUIDE, LINK, OUI…"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="uppercase placeholder:normal-case"
+            />
+            <p className="text-xs text-muted-foreground">
+              Le commentaire doit contenir ce mot pour déclencher le DM.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="qa-dm">
+              Message DM <span className="text-rose-500">*</span>
+            </Label>
+            <Textarea
+              id="qa-dm"
+              rows={4}
+              value={dmMessage}
+              onChange={(e) => setDmMessage(e.target.value)}
+              placeholder="Voici ton lien 👉 ..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Utilisez <span className="font-mono bg-muted px-1 rounded">{"{{prenom}}"}</span> pour personnaliser avec le prénom.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Annuler
+          </Button>
+          <Button onClick={handleSave} disabled={!canSave || saving}>
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Créer l&apos;automatisation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
