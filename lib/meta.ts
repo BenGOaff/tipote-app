@@ -720,7 +720,23 @@ export async function publishToInstagram(
 
   if (publishRes.ok) {
     const publishJson = await publishRes.json();
-    return { ok: true, postId: publishJson.id };
+    const mediaId = publishJson.id as string;
+
+    // Récupère le shortcode pour construire l'URL correcte (ex: DVBUklhiGTi)
+    // car les URLs Instagram utilisent le shortcode, pas l'ID numérique
+    try {
+      const scRes = await fetch(
+        `${INSTAGRAM_GRAPH_BASE}/${mediaId}?fields=shortcode&access_token=${accessToken}`
+      );
+      if (scRes.ok) {
+        const scJson = await scRes.json();
+        if (scJson.shortcode) return { ok: true, postId: scJson.shortcode };
+      }
+    } catch {
+      // Pas bloquant : fallback sur l'ID numérique
+    }
+
+    return { ok: true, postId: mediaId };
   }
 
   const errText = await publishRes.text();
