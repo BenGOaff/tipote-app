@@ -11,6 +11,12 @@ const FB_AUTH_URL = `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`
 const THREADS_AUTH_URL = "https://threads.net/oauth/authorize";
 const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 
+// Instagram Professional Login (OAuth séparé de Facebook)
+// Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login
+const INSTAGRAM_AUTH_URL = "https://www.instagram.com/oauth/authorize";
+const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
+const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
+
 // Facebook Pages scopes (OAuth Facebook Login – config "Tipote")
 // instagram_manage_hashtags : required for hashtag search (GET /ig_hashtag_search + recent_media)
 // instagram_manage_comments : required for commenting on public media (POST /{media-id}/comments)
@@ -32,6 +38,18 @@ const THREADS_SCOPES = [
   "threads_keyword_search",
 ];
 
+// Instagram Professional Login scopes
+// instagram_business_basic      : profil + médias
+// instagram_business_manage_comments : lire/répondre aux commentaires
+// instagram_business_manage_messages : envoyer des DMs
+// instagram_business_content_publish : publier des posts
+const INSTAGRAM_SCOPES = [
+  "instagram_business_basic",
+  "instagram_business_manage_comments",
+  "instagram_business_manage_messages",
+  "instagram_business_content_publish",
+];
+
 function getAppId(): string {
   const id = process.env.META_APP_ID;
   if (!id) throw new Error("Missing env META_APP_ID");
@@ -42,6 +60,26 @@ function getAppSecret(): string {
   const secret = process.env.META_APP_SECRET;
   if (!secret) throw new Error("Missing env META_APP_SECRET");
   return secret;
+}
+
+// Instagram Professional Login utilise un App ID / App Secret séparé
+// (visible dans Meta Developer > ton app Instagram > Paramètres de base)
+function getInstagramAppId(): string {
+  const id = process.env.INSTAGRAM_APP_ID;
+  if (!id) throw new Error("Missing env INSTAGRAM_APP_ID");
+  return id;
+}
+
+function getInstagramAppSecret(): string {
+  const secret = process.env.INSTAGRAM_APP_SECRET;
+  if (!secret) throw new Error("Missing env INSTAGRAM_APP_SECRET");
+  return secret;
+}
+
+function getInstagramRedirectUri(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
+  return `${appUrl}/api/auth/instagram/callback`;
 }
 
 // Threads utilise un App ID / App Secret separe (visible dans Meta Developer > Threads > Settings)
@@ -220,6 +258,99 @@ export async function exchangeForLongLivedToken(shortLivedToken: string): Promis
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Meta long-lived token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+// ----------------------------------------------------------------
+// Instagram Professional Login OAuth
+// Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/get-started
+// ----------------------------------------------------------------
+
+/**
+ * Construit l'URL d'autorisation Instagram Professional Login.
+ * Endpoint : https://www.instagram.com/oauth/authorize
+ */
+export function buildInstagramAuthorizationUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: getInstagramAppId(),
+    redirect_uri: getInstagramRedirectUri(),
+    scope: INSTAGRAM_SCOPES.join(","),
+    response_type: "code",
+    state,
+  });
+  return `${INSTAGRAM_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Echange le code Instagram contre un short-lived access token.
+ * Endpoint : https://api.instagram.com/oauth/access_token
+ */
+export async function exchangeInstagramCodeForToken(code: string): Promise<{
+  access_token: string;
+  user_id: string;
+}> {
+  const params = new URLSearchParams({
+    client_id: getInstagramAppId(),
+    client_secret: getInstagramAppSecret(),
+    redirect_uri: getInstagramRedirectUri(),
+    grant_type: "authorization_code",
+    code,
+  });
+
+  const res = await fetch(INSTAGRAM_TOKEN_URL, {
+    method: "POST",
+    body: params,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Instagram token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
+ * Endpoint : https://graph.instagram.com/{version}/access_token
+ */
+export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const params = new URLSearchParams({
+    grant_type: "ig_exchange_token",
+    client_secret: getInstagramAppSecret(),
+    access_token: shortLivedToken,
+  });
+
+  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/access_token?${params.toString()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+export type InstagramUserInfo = {
+  id: string;
+  username?: string;
+  name?: string;
+  profile_picture_url?: string;
+  account_type?: string;
+};
+
+/**
+ * Recupere le profil Instagram de l'utilisateur connecté.
+ * Endpoint : GET /me?fields=id,username,name,profile_picture_url,account_type
+ */
+export async function getInstagramUser(userAccessToken: string): Promise<InstagramUserInfo> {
+  const res = await fetch(
+    `${INSTAGRAM_GRAPH_BASE}/me?fields=id,username,name,profile_picture_url,account_type&access_token=${userAccessToken}`
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Instagram user info failed (${res.status}): ${text}`);
   }
   return res.json();
 }
