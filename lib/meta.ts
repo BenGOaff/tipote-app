@@ -684,6 +684,30 @@ export async function publishToInstagram(
     return { ok: false, error: "No creation_id returned from Instagram", statusCode: 500 };
   }
 
+  // Etape 1.5 : Attendre que le container soit prêt (Instagram traite l'image de manière asynchrone)
+  const maxAttempts = 10;
+  const pollIntervalMs = 3000;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const statusRes = await fetch(
+      `${INSTAGRAM_GRAPH_BASE}/${creationId}?fields=status_code&access_token=${accessToken}`
+    );
+    if (!statusRes.ok) {
+      const errText = await statusRes.text();
+      return { ok: false, error: `Instagram status check failed: ${errText}`, statusCode: statusRes.status };
+    }
+    const { status_code } = await statusRes.json();
+    if (status_code === "FINISHED") break;
+    if (status_code === "ERROR" || status_code === "EXPIRED") {
+      return { ok: false, error: `Instagram container failed with status: ${status_code}`, statusCode: 500 };
+    }
+    // IN_PROGRESS : attendre avant le prochain poll
+    if (attempt < maxAttempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    } else {
+      return { ok: false, error: "Instagram container not ready after 30s", statusCode: 500 };
+    }
+  }
+
   // Etape 2 : Publier le container
   const publishRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media_publish`, {
     method: "POST",
