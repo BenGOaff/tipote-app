@@ -649,19 +649,21 @@ export async function getInstagramBusinessAccount(
  *   2. POST /{ig_user_id}/media_publish (creation_id) -> media_id
  */
 export async function publishToInstagram(
-  pageAccessToken: string,
+  accessToken: string,
   igUserId: string,
   caption: string,
   imageUrl: string
 ): Promise<MetaPostResult> {
+  // Utilise l'Instagram Graph API (Professional Login)
+  // Endpoint : https://graph.instagram.com/v21.0/{ig-user-id}/media
   // Etape 1 : Creer le container media
-  const createRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media`, {
+  const createRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       image_url: imageUrl,
       caption,
-      access_token: pageAccessToken,
+      access_token: accessToken,
     }),
   });
 
@@ -678,12 +680,12 @@ export async function publishToInstagram(
   }
 
   // Etape 2 : Publier le container
-  const publishRes = await fetch(`${GRAPH_API_BASE}/${igUserId}/media_publish`, {
+  const publishRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media_publish`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       creation_id: creationId,
-      access_token: pageAccessToken,
+      access_token: accessToken,
     }),
   });
 
