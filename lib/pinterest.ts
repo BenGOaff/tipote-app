@@ -4,21 +4,14 @@
 
 const PINTEREST_AUTH_URL = "https://www.pinterest.com/oauth/";
 const PINTEREST_TOKEN_URL = "https://api.pinterest.com/v5/oauth/token";
-
-// En accès Trial Pinterest, utiliser l'API sandbox.
-// Passer à https://api.pinterest.com une fois l'accès Standard approuvé.
-const PINTEREST_API_BASE =
-  process.env.PINTEREST_USE_SANDBOX === "true"
-    ? "https://api-sandbox.pinterest.com/v5"
-    : "https://api.pinterest.com/v5";
+const PINTEREST_API_BASE = "https://api.pinterest.com/v5";
 
 // Scopes requis :
-//   boards:read    → lister les tableaux de l'utilisateur
-//   boards:write   → requis par Pinterest v5 pour poster une épingle sur un tableau
-//   pins:read      → lire les épingles (requis en sandbox + certains endpoints v5)
-//   pins:write     → créer des épingles
+//   boards:read        → lister les tableaux de l'utilisateur
+//   pins:read          → lire les épingles
+//   pins:write         → créer des épingles
 //   user_accounts:read → lire le profil utilisateur
-const SCOPES = ["boards:read", "boards:write", "pins:read", "pins:write", "user_accounts:read"];
+const SCOPES = ["boards:read", "pins:read", "pins:write", "user_accounts:read"];
 
 // ── Contraintes Pinterest ──
 // Titre   : max 100 caractères
