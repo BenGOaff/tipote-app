@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -245,6 +244,7 @@ export default function AutomationsLovableClient() {
     if (!form.trigger_keyword.trim()) { toast.error(t("form.errorKeyword")); return; }
     if (!form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
     if (form.platforms.length === 0) { toast.error(t("form.errorPlatform")); return; }
+    if (!form.target_post_url.trim()) { toast.error("Choisis un post cible avant de continuer."); return; }
 
     setIsSaving(true);
     const supabase = getSupabaseBrowserClient();
@@ -339,12 +339,13 @@ export default function AutomationsLovableClient() {
   }
 
   /* ── Platform toggle helper (Facebook only for now) ── */
-  function togglePlatform(p: Platform) {
+  function selectPlatform(p: Platform) {
     setForm((f) => ({
       ...f,
-      platforms: f.platforms.includes(p)
-        ? f.platforms.filter((x) => x !== p)
-        : [...f.platforms, p],
+      platforms: [p],
+      // Reset post selection when platform changes
+      target_post_url: "",
+      target_post_preview: "",
     }));
   }
 
@@ -560,10 +561,11 @@ export default function AutomationsLovableClient() {
         </div>
       </div>
 
-      {/* ── Facebook Post Picker Modal ── */}
-      <FacebookPostPickerModal
+      {/* ── Post Picker Modal (Facebook or Instagram) ── */}
+      <PostPickerModal
         open={postPickerOpen}
         onOpenChange={setPostPickerOpen}
+        platform={form.platforms[0] ?? "facebook"}
         onSelect={(postId, preview) => {
           setForm((f) => ({ ...f, target_post_url: postId, target_post_preview: preview }));
           setPostPickerOpen(false);
@@ -621,29 +623,31 @@ export default function AutomationsLovableClient() {
               </div>
             </div>
 
-            {/* Platforms — Facebook + Instagram */}
+            {/* Platform — single choice (radio) */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.platforms")}</label>
               <div className="flex gap-3 flex-wrap">
                 {(["facebook", "instagram"] as Platform[]).map((p) => {
                   const PIcon = p === "instagram" ? Instagram : Facebook;
                   const iconColor = p === "instagram" ? "text-pink-500" : "text-blue-500";
+                  const selected = form.platforms[0] === p;
                   return (
-                    <label
+                    <button
                       key={p}
+                      type="button"
+                      onClick={() => selectPlatform(p)}
                       className={`flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 transition-colors ${
-                        form.platforms.includes(p)
+                        selected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
-                      <Checkbox
-                        checked={form.platforms.includes(p)}
-                        onCheckedChange={() => togglePlatform(p)}
-                      />
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary" : "border-muted-foreground/40"}`}>
+                        {selected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </div>
                       <PIcon className={`w-4 h-4 ${iconColor}`} />
                       <span className="text-sm capitalize">{p}</span>
-                    </label>
+                    </button>
                   );
                 })}
               </div>
@@ -661,12 +665,12 @@ export default function AutomationsLovableClient() {
               <p className="text-xs text-muted-foreground">{t("form.keywordHint")}</p>
             </div>
 
-            {/* Target post picker (optional) */}
+            {/* Target post picker (required) */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
                 <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
                 {t("form.targetPost")}
-                <span className="text-xs text-muted-foreground font-normal">({t("form.optional")})</span>
+                <span className="text-xs text-destructive font-medium">*</span>
               </label>
               {form.target_post_url ? (
                 <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
@@ -909,26 +913,28 @@ function AutomationCard({
   );
 }
 
-/* ─────────────────────────── FacebookPostPickerModal sub-component ─── */
+/* ─────────────────────────── PostPickerModal sub-component ─── */
 
-interface FbPostItem {
+interface PostItem {
   id: string;
   message: string;
   created_time: string;
   permalink_url: string;
 }
 
-function FacebookPostPickerModal({
+function PostPickerModal({
   open,
   onOpenChange,
+  platform,
   onSelect,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  platform: Platform;
   onSelect: (postId: string, preview: string) => void;
 }) {
   const t = useTranslations("automations");
-  const [posts, setPosts] = useState<FbPostItem[]>([]);
+  const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -936,8 +942,13 @@ function FacebookPostPickerModal({
     if (!open) return;
     setLoading(true);
     setError(null);
+    setPosts([]);
 
-    fetch("/api/social/facebook-posts")
+    const apiUrl = platform === "instagram"
+      ? "/api/social/instagram-posts"
+      : "/api/social/facebook-posts";
+
+    fetch(apiUrl)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
@@ -945,7 +956,7 @@ function FacebookPostPickerModal({
       })
       .catch(() => setError("Impossible de charger les posts"))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, platform]);
 
   function formatDate(iso: string) {
     try {
@@ -953,12 +964,15 @@ function FacebookPostPickerModal({
     } catch { return iso; }
   }
 
+  const PlatformIcon = platform === "instagram" ? Instagram : Facebook;
+  const iconColor = platform === "instagram" ? "text-pink-500" : "text-blue-500";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[80vh] flex flex-col overflow-x-hidden" aria-describedby="post-picker-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Facebook className="w-4 h-4 text-blue-500" />
+            <PlatformIcon className={`w-4 h-4 ${iconColor}`} />
             {t("form.targetPostPickTitle")}
           </DialogTitle>
           <DialogDescription id="post-picker-desc" className="sr-only">
