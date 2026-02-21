@@ -286,14 +286,19 @@ export function buildInstagramAuthorizationUrl(state: string): string {
  * Echange le code Instagram contre un short-lived access token.
  * Endpoint : https://api.instagram.com/oauth/access_token
  */
-export async function exchangeInstagramCodeForToken(code: string): Promise<{
+export async function exchangeInstagramCodeForToken(
+  code: string,
+  redirectUri?: string,
+): Promise<{
   access_token: string;
   user_id: string;
 }> {
+  const resolvedRedirectUri = redirectUri ?? getInstagramRedirectUri();
+  console.log("[Instagram] token exchange redirect_uri:", resolvedRedirectUri);
   const params = new URLSearchParams({
     client_id: getInstagramAppId(),
     client_secret: getInstagramAppSecret(),
-    redirect_uri: getInstagramRedirectUri(),
+    redirect_uri: resolvedRedirectUri,
     grant_type: "authorization_code",
     code,
   });
