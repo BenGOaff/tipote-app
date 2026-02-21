@@ -14,6 +14,7 @@ import type { OfferOption } from "@/lib/offers";
 import { PublishModal } from "@/components/content/PublishModal";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
+import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
 import { emitCreditsUpdated } from "@/lib/credits/client";
@@ -43,6 +44,7 @@ const platforms = [
   { id: "twitter", label: "X (Twitter)" },
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },
+  { id: "pinterest", label: "Pinterest" },
 ];
 
 /** Limites de caractères par plateforme */
@@ -52,6 +54,7 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   threads: 500,
   facebook: 63206,
   instagram: 2200,
+  pinterest: 500, // Description épingle (titre : 100 car. géré côté serveur)
 };
 
 const themes = [
@@ -77,6 +80,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   threads: "Threads",
   twitter: "X (Twitter)",
   reddit: "Reddit",
+  pinterest: "Pinterest",
 };
 
 export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {
@@ -103,6 +107,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
   // Images
   const [images, setImages] = useState<UploadedImage[]>([]);
+
+  // Pinterest-specific fields
+  const [pinterestBoardId, setPinterestBoardId] = useState("");
+  const [pinterestLink, setPinterestLink] = useState("");
+  const isPinterest = platform === "pinterest";
 
   // Auto-comment state
   const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
@@ -251,6 +260,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     const meta: Record<string, any> = {};
     if (scheduledTime) meta.scheduled_time = scheduledTime;
     if (images.length > 0) meta.images = images;
+
+    // Pinterest-specific meta
+    if (isPinterest) {
+      if (pinterestBoardId) meta.pinterest_board_id = pinterestBoardId;
+      if (pinterestLink.trim()) meta.pinterest_link = pinterestLink.trim();
+    }
 
     // Auto-comment config in meta
     if (autoCommentConfig.enabled) {
@@ -530,12 +545,32 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
           {/* Image upload */}
           {generatedContent && (
-            <ImageUploader
-              images={images}
-              onChange={setImages}
-              contentId={savedContentId ?? undefined}
-              maxImages={4}
-            />
+            <>
+              <ImageUploader
+                images={images}
+                onChange={setImages}
+                contentId={savedContentId ?? undefined}
+                maxImages={isPinterest ? 1 : 4}
+              />
+              {isPinterest && (
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* Sélecteur de tableau Pinterest */}
+          {generatedContent && isPinterest && (
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <p className="font-semibold text-sm">Paramètres Pinterest</p>
+              <PinterestBoardSelector
+                boardId={pinterestBoardId}
+                link={pinterestLink}
+                onBoardChange={setPinterestBoardId}
+                onLinkChange={setPinterestLink}
+              />
+            </div>
           )}
 
           {/* Auto-comment panel */}
@@ -612,8 +647,16 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving}
-                      title={isOverLimit ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}` : undefined}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0))}
+                      title={
+                        isOverLimit
+                          ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}`
+                          : isPinterest && !pinterestBoardId
+                          ? "Sélectionne un tableau Pinterest"
+                          : isPinterest && images.length === 0
+                          ? "Ajoute une image (obligatoire pour Pinterest)"
+                          : undefined
+                      }
                     >
                       <Send className="w-4 h-4 mr-1" />
                       Publier sur {platformLabel}
@@ -622,7 +665,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0))}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}
