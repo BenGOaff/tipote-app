@@ -86,8 +86,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Échange code → short-lived token
-    console.log("[Instagram callback] Exchanging code for token...");
-    const shortLived = await exchangeInstagramCodeForToken(code);
+    // On dérive le redirect_uri depuis l'URL réelle de la requête pour garantir une correspondance exacte avec Meta
+    const callbackRedirectUri = `${req.nextUrl.origin}${req.nextUrl.pathname}`;
+    console.log("[Instagram callback] Exchanging code for token... redirect_uri:", callbackRedirectUri);
+    const shortLived = await exchangeInstagramCodeForToken(code, callbackRedirectUri);
     console.log("[Instagram callback] Short-lived token OK, user_id:", shortLived.user_id);
 
     // Échange short-lived → long-lived (~60 jours)
