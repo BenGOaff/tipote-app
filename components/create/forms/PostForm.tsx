@@ -111,6 +111,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   // Pinterest-specific fields
   const [pinterestBoardId, setPinterestBoardId] = useState("");
   const [pinterestLink, setPinterestLink] = useState("");
+  const [pinterestTitle, setPinterestTitle] = useState("");
   const isPinterest = platform === "pinterest";
 
   // Auto-comment state
@@ -240,7 +241,23 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     const contentId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
 
     if (text) {
-      setGeneratedContent(text);
+      // Pinterest: extraire TITRE: et description séparément
+      if (isPinterest) {
+        const titleMatch = text.match(/^TITRE\s*:\s*(.+)/im);
+        if (titleMatch) {
+          const extractedTitle = titleMatch[1].trim().slice(0, 100);
+          const descriptionPart = text
+            .replace(/^TITRE\s*:.*$/im, "")
+            .replace(/^-{3,}$/m, "")
+            .trim();
+          setPinterestTitle(extractedTitle);
+          setGeneratedContent(descriptionPart);
+        } else {
+          setGeneratedContent(text);
+        }
+      } else {
+        setGeneratedContent(text);
+      }
     }
     // Capture contentId from generate (placeholder row) so subsequent saves PATCH instead of POST
     if (contentId) {
@@ -279,6 +296,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
     let id: string | null;
 
+    // Titre effectif : pour Pinterest, on utilise le titre extrait de la génération
+    const effectiveTitle = isPinterest
+      ? (pinterestTitle.trim().slice(0, 100) || title)
+      : title;
+
     // Read from ref (synchronous, never stale) to avoid duplicate entries
     const existingId = savedContentIdRef.current;
 
@@ -289,7 +311,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title,
+            title: effectiveTitle,
             content: generatedContent,
             status,
             channel: platform,
@@ -306,7 +328,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       }
     } else {
       id = await onSave({
-        title,
+        title: effectiveTitle,
         content: generatedContent,
         type: "post",
         platform,
@@ -522,8 +544,26 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
         {/* Right: Preview + Actions */}
         <div className="space-y-4">
+          {/* Titre Pinterest */}
+          {isPinterest && (
+            <div className="space-y-2">
+              <Label>
+                Titre de l&apos;épingle <span className="text-rose-500">*</span>
+                <span className="ml-1 text-xs text-muted-foreground font-normal">(max 100 car.)</span>
+              </Label>
+              <Input
+                placeholder="Ex: Comment doubler ton CA en 90 jours"
+                value={pinterestTitle}
+                onChange={(e) => setPinterestTitle(e.target.value.slice(0, 100))}
+              />
+              <div className={`text-xs text-right ${pinterestTitle.length > 90 ? "text-amber-500" : "text-muted-foreground"}`}>
+                {pinterestTitle.length} / 100
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Contenu</Label>
+            <Label>{isPinterest ? "Description de l'épingle" : "Contenu"}</Label>
 
             {/* Toujours éditable */}
             <Textarea

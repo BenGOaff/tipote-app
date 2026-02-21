@@ -7,7 +7,7 @@
 // - Tipote Knowledge (ressources internes via manifest xlsx)
 // ⚠️ Sortie attendue: texte brut uniquement (pas de markdown).
 
-export type SocialPlatform = "linkedin" | "threads" | "twitter" | "facebook" | "instagram" | "tiktok";
+export type SocialPlatform = "linkedin" | "threads" | "twitter" | "facebook" | "instagram" | "tiktok" | "pinterest";
 export type SocialTheme = "educate" | "sell" | "entertain" | "storytelling" | "social_proof";
 export type SocialTone = "professional" | "casual" | "inspirational" | "educational" | "humorous";
 
@@ -92,6 +92,26 @@ function platformGuidelines(platform: SocialPlatform): string {
         "Objectif: phrase d'accroche + promesse claire + punchlines.",
         "Ton oral, naturel. Rythme très rapide.",
         "CTA: inviter à commenter un mot-clé, ou à suivre pour la suite.",
+      ].join("\n");
+
+    case "pinterest":
+      return [
+        "Plateforme: Pinterest.",
+        "Tu dois générer DEUX éléments distincts dans cet ordre exact:",
+        "1. TITRE: [titre accrocheur, MAX 100 caractères STRICT, sans ponctuation finale]",
+        "2. Une ligne vide",
+        "3. [description, MAX 500 caractères STRICT, espaces et emojis inclus]",
+        "Exemple de format attendu:",
+        "TITRE: Comment doubler ton chiffre d'affaires en 90 jours",
+        "",
+        "Tu veux plus de clients sans bosser plus ? Voici la méthode simple que personne ne t'a apprise. 3 leviers, 1 système. Ça tient en 90 jours. Sauvegarde cette épingle.",
+        "---",
+        "Règles STRICTES:",
+        "- TITRE: max 100 caractères, accrocheur, orienté bénéfice ou curiosité",
+        "- Description: max 500 caractères. Hook fort, 1-2 phrases de développement, CTA discret.",
+        "- Pas de hashtags.",
+        "- Ton inspirant, visuel, orienté résultat.",
+        "- CTA final: 'Sauvegarde', 'Visite le lien', 'Découvre comment' ou similaire.",
       ].join("\n");
   }
 }
@@ -250,7 +270,9 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
 
   const outputBlock = [
     "SORTIE ATTENDUE:",
-    batchCount === 1
+    platform === "pinterest"
+      ? "- Retourne TITRE + description selon le format décrit. Jamais autre chose."
+      : batchCount === 1
       ? "- Retourne uniquement le post final."
       : "- Retourne 5 posts différents séparés par une ligne contenant uniquement: -----",
   ].join("\n");

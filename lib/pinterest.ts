@@ -9,8 +9,9 @@ const PINTEREST_API_BASE = "https://api.pinterest.com/v5";
 // Scopes requis :
 //   boards:read    → lister les tableaux de l'utilisateur
 //   pins:write     → créer des épingles
+//   pins:read      → lire les épingles (requis en sandbox + certains endpoints v5)
 //   user_accounts:read → lire le profil utilisateur
-const SCOPES = ["boards:read", "pins:write", "user_accounts:read"];
+const SCOPES = ["boards:read", "pins:read", "pins:write", "user_accounts:read"];
 
 // ── Contraintes Pinterest ──
 // Titre   : max 100 caractères
