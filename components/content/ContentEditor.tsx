@@ -28,6 +28,7 @@ import {
 
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
+import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 
 import {
   Copy,
@@ -117,6 +118,18 @@ export function ContentEditor({ initialItem }: Props) {
   const [status, setStatus] = useState(normalizeStatusValue(baseline.status));
   const [scheduledDate, setScheduledDate] = useState(toYmdOrEmpty(baseline.scheduled_date ?? null));
   const [content, setContent] = useState(baseline.content ?? "");
+
+  // -----------------------------
+  // Pinterest-specific fields
+  // -----------------------------
+  const [pinterestBoardId, setPinterestBoardId] = useState<string>(
+    () => (initialItem as any)?.meta?.pinterest_board_id ?? ""
+  );
+  const [pinterestLink, setPinterestLink] = useState<string>(
+    () => (initialItem as any)?.meta?.pinterest_link ?? ""
+  );
+
+  const isPinterest = channel === "pinterest";
 
   // -----------------------------
   // Images support
@@ -396,6 +409,15 @@ export function ContentEditor({ initialItem }: Props) {
         };
       }
 
+      // ✅ Pinterest: stocker board_id et lien dans meta
+      if (channel === "pinterest") {
+        payload.meta = {
+          ...(payload.meta || {}),
+          ...(pinterestBoardId ? { pinterest_board_id: pinterestBoardId } : {}),
+          ...(pinterestLink.trim() ? { pinterest_link: pinterestLink.trim() } : {}),
+        };
+      }
+
       // ✅ Funnel: duplique les infos structurées en meta (si la colonne existe en DB, le backend fera un best-effort)
       if (isFunnel && funnelTemplateId.trim()) {
         payload.meta = {
@@ -570,6 +592,13 @@ export function ContentEditor({ initialItem }: Props) {
                   type: img.type,
                 })),
               }
+            : {}),
+          // Pinterest: inclure board_id et lien si disponibles
+          ...(channel === "pinterest" && pinterestBoardId
+            ? { pinterest_board_id: pinterestBoardId }
+            : {}),
+          ...(channel === "pinterest" && pinterestLink.trim()
+            ? { pinterest_link: pinterestLink.trim() }
             : {}),
         },
       };
@@ -969,7 +998,31 @@ export function ContentEditor({ initialItem }: Props) {
               images={images}
               onChange={setImages}
               contentId={baseline.id}
-              maxImages={4}
+              maxImages={isPinterest ? 1 : 4}
+              disabled={saving}
+            />
+            {isPinterest && (
+              <p className="text-xs text-muted-foreground">
+                Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo (PNG, JPG, WEBP).
+              </p>
+            )}
+          </Card>
+        )}
+
+        {/* Champs spécifiques Pinterest */}
+        {isSocialPost && isPinterest && (
+          <Card className="p-4 space-y-4">
+            <div>
+              <p className="font-semibold">Paramètres Pinterest</p>
+              <p className="text-sm text-muted-foreground">
+                Titre max 100 car. · Description max 500 car. · Image requise
+              </p>
+            </div>
+            <PinterestBoardSelector
+              boardId={pinterestBoardId}
+              link={pinterestLink}
+              onBoardChange={setPinterestBoardId}
+              onLinkChange={setPinterestLink}
               disabled={saving}
             />
           </Card>

@@ -290,7 +290,8 @@
       "instagram": "Post to your professional Instagram account",
       "threads": "Post to your Threads account",
       "twitter": "Post to your X account",
-      "reddit": "Post to your Reddit profile"
+      "reddit": "Post to your Reddit profile",
+      "pinterest": "Publish pins to your Pinterest account"
     },
     "disconnectTitle": "Disconnect {platform}?",
     "disconnectDesc": "You will no longer be able to publish to {platform} from Tipote. You can reconnect your account at any time.",
@@ -308,6 +309,8 @@
       "twitterOkDesc": "Your X account is now linked to Tipote.",
       "redditOk": "Reddit connected",
       "redditOkDesc": "Your Reddit account is now linked to Tipote.",
+      "pinterestOk": "Pinterest connected",
+      "pinterestOkDesc": "Your Pinterest account is now linked to Tipote.",
       "disconnected": "Account disconnected",
       "disconnectedDesc": "The connection has been removed.",
       "errorTitle": "Error",

@@ -13,11 +13,12 @@ import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { publishPost as publishRedditPost } from "@/lib/reddit";
+import { createPin } from "@/lib/pinterest";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit", "pinterest"] as const;
 
 /**
  * Résout l'URL de la première image depuis meta.
@@ -62,6 +63,10 @@ function buildPostUrl(platform: string, postId?: string | null): string | null {
       return postId.startsWith("http") ? postId : null;
     case "instagram":
       return `https://www.instagram.com/p/${postId}/`;
+    case "pinterest":
+      return postId.startsWith("http")
+        ? postId
+        : `https://www.pinterest.com/pin/${postId}/`;
     default:
       return null;
   }
@@ -319,6 +324,7 @@ export async function POST(req: NextRequest) {
     threads: "Threads",
     twitter: "X",
     reddit: "Reddit",
+    pinterest: "Pinterest",
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
@@ -383,7 +389,9 @@ export async function POST(req: NextRequest) {
           ? "twitter-publish"
           : platform === "reddit"
             ? "reddit-publish"
-            : "meta-publish"; // facebook, instagram, threads all go via meta-publish
+            : platform === "pinterest"
+              ? "pinterest-publish"
+              : "meta-publish"; // facebook, instagram, threads all go via meta-publish
       const webhookUrl = `${n8nWebhookBase}/webhook/${webhookPath}`;
 
       // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)
@@ -417,6 +425,30 @@ export async function POST(req: NextRequest) {
       // Pour Reddit, le titre est obligatoire
       if (platform === "reddit") {
         n8nPayload.title = contentItem.title || "Post depuis Tipote";
+      }
+
+      // Pour Pinterest : titre, board_id et image requis
+      if (platform === "pinterest") {
+        n8nPayload.title = contentItem.title || "";
+        n8nPayload.board_id = contentItem.meta?.pinterest_board_id ?? null;
+        if (contentItem.meta?.pinterest_link) {
+          n8nPayload.link = contentItem.meta.pinterest_link;
+        }
+        if (!n8nPayload.board_id) {
+          return NextResponse.json(
+            { error: "Pinterest : sélectionne un tableau avant de publier." },
+            { status: 400 }
+          );
+        }
+        if (!resolvedImageUrl) {
+          return NextResponse.json(
+            {
+              error:
+                "Pinterest nécessite une image. Ajoute une image à ton contenu avant de publier.",
+            },
+            { status: 400 }
+          );
+        }
       }
 
       const n8nRes = await fetch(webhookUrl, {
@@ -498,6 +530,35 @@ export async function POST(req: NextRequest) {
     const title = contentItem.title || "Post depuis Tipote";
     const rdResult = await publishRedditPost(accessToken, platformUserId, title, contentItem.content);
     result = { ...rdResult };
+  } else if (platform === "pinterest") {
+    if (!directImageUrl) {
+      return NextResponse.json(
+        {
+          error:
+            "Pinterest nécessite une image. Ajoute une image à ton contenu avant de publier.",
+        },
+        { status: 400 }
+      );
+    }
+    const boardId = contentItem.meta?.pinterest_board_id;
+    if (!boardId) {
+      return NextResponse.json(
+        { error: "Pinterest : sélectionne un tableau avant de publier." },
+        { status: 400 }
+      );
+    }
+    const pinTitle = (contentItem.title ?? "").slice(0, 100);
+    const pinDescription = (contentItem.content ?? "").slice(0, 500);
+    const pinLink = contentItem.meta?.pinterest_link;
+    const pinResult = await createPin(
+      accessToken,
+      boardId,
+      pinTitle,
+      pinDescription,
+      directImageUrl,
+      pinLink
+    );
+    result = { ...pinResult, postId: pinResult.pinId, postUrn: undefined };
   } else {
     return NextResponse.json({ error: "Plateforme non supportee" }, { status: 400 });
   }

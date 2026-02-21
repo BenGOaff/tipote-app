@@ -2,7 +2,7 @@
 // GET : appele par les workflows cron n8n pour recuperer les posts a publier.
 // Retourne les posts "scheduled" dont la date+heure est <= maintenant.
 // Securise par N8N_SHARED_SECRET.
-// Query param optionnel : ?platform=linkedin|facebook|threads|twitter|reddit
+// Query param optionnel : ?platform=linkedin|facebook|threads|twitter|reddit|pinterest
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -11,7 +11,7 @@ import { refreshSocialToken } from "@/lib/refreshSocialToken";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "reddit"];
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "reddit", "pinterest"];
 
 /**
  * Résout l'URL de la première image depuis meta.
@@ -266,6 +266,22 @@ export async function GET(req: NextRequest) {
       // Pour Reddit, le titre est obligatoire
       if (platform === "reddit") {
         postData.title = post.title || "Post depuis Tipote";
+      }
+
+      // Pour Pinterest : titre, board_id et image requis
+      if (platform === "pinterest") {
+        postData.title = post.title || "";
+        postData.board_id = post.meta?.pinterest_board_id ?? null;
+        if (post.meta?.pinterest_link) {
+          postData.link = post.meta.pinterest_link;
+        }
+        // Skip post si données manquantes (board_id ou image)
+        if (!postData.board_id || !imageUrl) {
+          console.warn(
+            `[scheduled-posts] Pinterest post ${post.id} skipped: missing board_id or image`
+          );
+          return null;
+        }
       }
 
       return postData;

@@ -290,7 +290,8 @@
       "instagram": "Instagram profesional",
       "threads": "Threads",
       "twitter": "X (Twitter)",
-      "reddit": "Reddit"
+      "reddit": "Reddit",
+      "pinterest": "Publica pines en tu cuenta de Pinterest"
     },
     "disconnectTitle": "¿Desconectar esta cuenta?",
     "disconnectDesc": "Perderás la posibilidad de publicar en esta red desde Tipote.",
@@ -301,7 +302,9 @@
       "connectSuccess": "Cuenta conectada correctamente.",
       "connectError": "Error al conectar la cuenta.",
       "disconnectSuccess": "Cuenta desconectada correctamente.",
-      "disconnectError": "Error al desconectar la cuenta."
+      "disconnectError": "Error al desconectar la cuenta.",
+      "pinterestOk": "Pinterest conectado",
+      "pinterestOkDesc": "Tu cuenta de Pinterest está ahora vinculada a Tipote."
     }
   },
   "aiCredits": {
