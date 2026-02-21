@@ -4,7 +4,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Linkedin, Facebook, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 // Icone X (Twitter) - SVG officiel du logo X
 function XIcon({ className }: { className?: string }) {
@@ -79,6 +79,15 @@ const PLATFORMS: PlatformConfig[] = [
     bgColor: "bg-[#1877F2]/10",
     hoverColor: "hover:bg-[#0C5DC7]",
     oauthUrl: "/api/auth/meta",
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    icon: <Instagram className="h-5 w-5 text-[#E1306C]" />,
+    color: "bg-[#E1306C]",
+    bgColor: "bg-[#E1306C]/10",
+    hoverColor: "hover:bg-[#C1185A]",
+    oauthUrl: "/api/auth/instagram",
   },
   {
     key: "threads",
@@ -165,6 +174,20 @@ export default function SocialConnections() {
       toast({
         title: `${t("toast.errorTitle")} Facebook`,
         description: decodeURIComponent(metaError),
+        variant: "destructive",
+      });
+    }
+
+    // Instagram
+    if (searchParams.get("instagram_connected") === "1") {
+      toast({ title: "Instagram connecté !", description: "Ton compte Instagram est maintenant connecté." });
+      fetchConnections();
+    }
+    const instagramError = searchParams.get("instagram_error");
+    if (instagramError) {
+      toast({
+        title: `${t("toast.errorTitle")} Instagram`,
+        description: decodeURIComponent(instagramError),
         variant: "destructive",
       });
     }

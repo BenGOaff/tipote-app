@@ -42,6 +42,7 @@ const platforms = [
   { id: "threads", label: "Threads" },
   { id: "twitter", label: "X (Twitter)" },
   { id: "facebook", label: "Facebook" },
+  { id: "instagram", label: "Instagram" },
 ];
 
 /** Limites de caractères par plateforme */
@@ -50,6 +51,7 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   twitter: 280,
   threads: 500,
   facebook: 63206,
+  instagram: 2200,
 };
 
 const themes = [
@@ -71,6 +73,7 @@ const tones = [
 const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
   facebook: "Facebook",
+  instagram: "Instagram",
   threads: "Threads",
   twitter: "X (Twitter)",
   reddit: "Reddit",
@@ -110,7 +113,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   });
   const [userPlan, setUserPlan] = useState<string | null>(null);
 
-  // Automation linking (Facebook only)
+  // Automation linking (Facebook + Instagram)
   const [selectedAutomationId, setSelectedAutomationId] = useState<string>("");
   const [fbAutomations, setFbAutomations] = useState<{ id: string; name: string; trigger_keyword: string }[]>([]);
   const [createAutomationOpen, setCreateAutomationOpen] = useState(false);
@@ -158,9 +161,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     return () => { mounted = false; };
   }, []);
 
-  // Fetch Facebook automations when platform = facebook
+  // Fetch automations when platform = facebook ou instagram
   useEffect(() => {
-    if (platform !== "facebook") { setFbAutomations([]); setSelectedAutomationId(""); return; }
+    if (platform !== "facebook" && platform !== "instagram") { setFbAutomations([]); setSelectedAutomationId(""); return; }
     let mounted = true;
     const supabase = getSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
@@ -170,7 +173,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
         .select("id, name, trigger_keyword")
         .eq("user_id", data.user.id)
         .eq("enabled", true)
-        .contains("platforms", ["facebook"])
+        .contains("platforms", [platform])
         .order("created_at", { ascending: false })
         .then(({ data: autos }) => {
           if (mounted) setFbAutomations((autos ?? []) as { id: string; name: string; trigger_keyword: string }[]);
@@ -545,8 +548,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             />
           )}
 
-          {/* Automation DM panel — Facebook only */}
-          {generatedContent && platform === "facebook" && (
+          {/* Automation DM panel — Facebook + Instagram */}
+          {generatedContent && (platform === "facebook" || platform === "instagram") && (
             <div className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -692,6 +695,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       <QuickCreateAutomationModal
         open={createAutomationOpen}
         onOpenChange={setCreateAutomationOpen}
+        platform={platform as "facebook" | "instagram"}
         onCreated={(newAuto) => {
           setFbAutomations((prev) => [newAuto, ...prev]);
           setSelectedAutomationId(newAuto.id);
@@ -709,10 +713,12 @@ type QuickAuto = { id: string; name: string; trigger_keyword: string };
 function QuickCreateAutomationModal({
   open,
   onOpenChange,
+  platform,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  platform: "facebook" | "instagram";
   onCreated: (auto: QuickAuto) => void;
 }) {
   const [keyword, setKeyword] = useState("");
@@ -739,7 +745,7 @@ function QuickCreateAutomationModal({
           name,
           trigger_keyword: keyword.trim(),
           dm_message: dmMessage.trim(),
-          platforms: ["facebook"],
+          platforms: [platform],
           enabled: true,
         })
         .select("id, name, trigger_keyword")
@@ -765,7 +771,7 @@ function QuickCreateAutomationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            Nouvelle automatisation Facebook
+            Nouvelle automatisation {platform === "instagram" ? "Instagram" : "Facebook"}
           </DialogTitle>
           <DialogDescription>
             Quand quelqu&apos;un commente le mot-clé sur votre post, Tipote lui envoie automatiquement un DM.

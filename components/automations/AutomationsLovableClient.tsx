@@ -118,7 +118,7 @@ const PLATFORM_STATUS = [
     id: "instagram",
     label: "Instagram",
     icon: Instagram,
-    status: "soon" as const,
+    status: "available" as const,
     color: "text-pink-500",
     bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
   },
@@ -621,12 +621,13 @@ export default function AutomationsLovableClient() {
               </div>
             </div>
 
-            {/* Platforms — Facebook only for now */}
+            {/* Platforms — Facebook + Instagram */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.platforms")}</label>
-              <div className="flex gap-3">
-                {(["facebook"] as Platform[]).map((p) => {
-                  const PIcon = Facebook;
+              <div className="flex gap-3 flex-wrap">
+                {(["facebook", "instagram"] as Platform[]).map((p) => {
+                  const PIcon = p === "instagram" ? Instagram : Facebook;
+                  const iconColor = p === "instagram" ? "text-pink-500" : "text-blue-500";
                   return (
                     <label
                       key={p}
@@ -640,17 +641,11 @@ export default function AutomationsLovableClient() {
                         checked={form.platforms.includes(p)}
                         onCheckedChange={() => togglePlatform(p)}
                       />
-                      <PIcon className="w-4 h-4 text-blue-500" />
+                      <PIcon className={`w-4 h-4 ${iconColor}`} />
                       <span className="text-sm capitalize">{p}</span>
                     </label>
                   );
                 })}
-                {/* Instagram coming soon badge */}
-                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 opacity-50 cursor-not-allowed select-none">
-                  <Instagram className="w-4 h-4 text-pink-500" />
-                  <span className="text-sm">Instagram</span>
-                  <Badge variant="secondary" className="text-xs">{t("status.soon")}</Badge>
-                </div>
               </div>
             </div>
 
