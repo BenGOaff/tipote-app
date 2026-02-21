@@ -574,8 +574,8 @@ export default function AutomationsLovableClient() {
 
       {/* ── Create / Edit Modal ── */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden" aria-describedby="automation-form-desc">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl flex flex-col max-h-[90vh] overflow-hidden" aria-describedby="automation-form-desc">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
               {editingId ? t("form.editTitle") : t("form.createTitle")}
@@ -585,7 +585,7 @@ export default function AutomationsLovableClient() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5 py-2">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 py-2 pr-1">
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.name")}</label>
@@ -695,7 +695,7 @@ export default function AutomationsLovableClient() {
                   onClick={() => setPostPickerOpen(true)}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
-                  {t("form.targetPostPick")}
+                  {t("form.targetPostPick")} {form.platforms[0] === "instagram" ? "Instagram" : "Facebook"}
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">{t("form.targetPostHint")}</p>
@@ -777,7 +777,7 @@ export default function AutomationsLovableClient() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4 mt-2">
             <Button variant="outline" onClick={() => setShowModal(false)}>
               {t("form.cancel")}
             </Button>
@@ -810,6 +810,11 @@ function AutomationCard({
   onToggle: (a: SocialAutomation) => void;
 }) {
   const t = useTranslations("automations");
+  const [showTest, setShowTest] = useState(false);
+  const [testInput, setTestInput] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null);
+
   const platformIcons: Record<Platform, React.ElementType> = {
     instagram: Instagram,
     facebook: Facebook,
@@ -821,6 +826,25 @@ function AutomationCard({
 
   const hasPostTarget = Boolean(auto.target_post_url?.trim());
   const replyCount = auto.comment_reply_variants?.length ?? 0;
+
+  async function runTest() {
+    if (!testInput.trim()) return;
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/automations/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
+      });
+      const data = await res.json();
+      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? "Erreur inconnue" });
+    } catch {
+      setTestResult({ ok: false, detail: "Erreur réseau" });
+    } finally {
+      setIsTesting(false);
+    }
+  }
 
   return (
     <Card className={`transition-opacity ${auto.enabled ? "" : "opacity-60"}`}>
@@ -867,7 +891,6 @@ function AutomationCard({
               <span className="truncate min-w-0">{auto.dm_message}</span>
             </div>
 
-            {/* Reply variants info */}
             {replyCount > 0 && (
               <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                 <MessageSquare className="w-3 h-3" />
@@ -875,11 +898,43 @@ function AutomationCard({
               </div>
             )}
 
-            {/* Stats */}
             <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
               <span>{t("statsTriggers", { count: auto.stats?.triggers ?? 0 })}</span>
               <span>{t("statsDms", { count: auto.stats?.dms_sent ?? 0 })}</span>
+              <button
+                type="button"
+                onClick={() => { setShowTest((v) => !v); setTestResult(null); }}
+                className="text-primary hover:underline text-xs"
+              >
+                {showTest ? "Masquer le test" : "Tester"}
+              </button>
             </div>
+
+            {/* Inline test panel */}
+            {showTest && (
+              <div className="mt-3 rounded-lg border border-dashed border-primary/30 bg-primary/3 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Simule un commentaire contenant ton mot-clé pour vérifier que tout fonctionne.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={testInput}
+                    onChange={(e) => setTestInput(e.target.value)}
+                    placeholder={`ex: ${auto.trigger_keyword}`}
+                    className="text-xs h-8"
+                    onKeyDown={(e) => { if (e.key === "Enter") runTest(); }}
+                  />
+                  <Button size="sm" className="h-8 shrink-0" onClick={runTest} disabled={isTesting || !testInput.trim()}>
+                    {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Tester"}
+                  </Button>
+                </div>
+                {testResult && (
+                  <p className={`text-xs ${testResult.ok ? "text-green-600" : "text-destructive"}`}>
+                    {testResult.ok ? "✓" : "✗"} {testResult.detail}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -966,6 +1021,8 @@ function PostPickerModal({
 
   const PlatformIcon = platform === "instagram" ? Instagram : Facebook;
   const iconColor = platform === "instagram" ? "text-pink-500" : "text-blue-500";
+  const platformLabel = platform === "instagram" ? "Instagram" : "Facebook";
+  const pickerTitle = `${t("form.targetPostPickTitle")} ${platformLabel}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -973,10 +1030,10 @@ function PostPickerModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PlatformIcon className={`w-4 h-4 ${iconColor}`} />
-            {t("form.targetPostPickTitle")}
+            {pickerTitle}
           </DialogTitle>
           <DialogDescription id="post-picker-desc" className="sr-only">
-            {t("form.targetPostPickTitle")}
+            {pickerTitle}
           </DialogDescription>
         </DialogHeader>
 
