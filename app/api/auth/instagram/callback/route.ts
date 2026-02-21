@@ -86,10 +86,21 @@ export async function GET(req: NextRequest) {
     }
 
     // Échange code → short-lived token
-    // On dérive le redirect_uri depuis l'URL réelle de la requête pour garantir une correspondance exacte avec Meta
-    const callbackRedirectUri = `${req.nextUrl.origin}${req.nextUrl.pathname}`;
-    console.log("[Instagram callback] Exchanging code for token... redirect_uri:", callbackRedirectUri);
-    const shortLived = await exchangeInstagramCodeForToken(code, callbackRedirectUri);
+    // On utilise NEXT_PUBLIC_APP_URL (même source que l'URL d'autorisation) avec un trim du slash final
+    const appUrlClean = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+    const callbackRedirectUri = `${appUrlClean}/api/auth/instagram/callback`;
+    console.log("[Instagram callback] redirect_uri for token exchange:", callbackRedirectUri);
+    let shortLived: { access_token: string; user_id: string };
+    try {
+      shortLived = await exchangeInstagramCodeForToken(code, callbackRedirectUri);
+    } catch (tokenErr) {
+      const msg = tokenErr instanceof Error ? tokenErr.message : String(tokenErr);
+      return NextResponse.redirect(
+        `${settingsUrl}&instagram_error=${encodeURIComponent(
+          `Token exchange failed. redirect_uri envoyé : "${callbackRedirectUri}". Erreur : ${msg}`
+        )}`
+      );
+    }
     console.log("[Instagram callback] Short-lived token OK, user_id:", shortLived.user_id);
 
     // Échange short-lived → long-lived (~60 jours)
