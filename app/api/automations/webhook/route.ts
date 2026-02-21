@@ -68,8 +68,22 @@ async function handleN8nPayload(req: NextRequest): Promise<NextResponse> {
 async function handleMetaNativePayload(req: NextRequest, signature: string | null): Promise<NextResponse> {
   const rawBody = await req.text();
 
-  // Verify X-Hub-Signature-256 if app secret is configured
-  const appSecret = process.env.META_APP_SECRET;
+  // Pré-lecture du payload pour déterminer le bon secret avant vérification
+  let payloadObj: MetaNativePayload;
+  try {
+    payloadObj = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Choisir le bon app secret selon l'objet du webhook
+  // Facebook Pages → META_APP_SECRET
+  // Instagram Professional Login → INSTAGRAM_APP_SECRET
+  const appSecret =
+    payloadObj.object === "instagram"
+      ? (process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET)
+      : process.env.META_APP_SECRET;
+
   if (appSecret) {
     if (!signature) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
@@ -80,16 +94,16 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
     }
   }
 
-  let payload: MetaNativePayload;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  const payload = payloadObj;
+
+  // Seuls les events Page (Facebook) et Instagram sont traités ici
+  if (payload.object !== "page" && payload.object !== "instagram") {
+    return NextResponse.json({ ok: true, skipped: true });
   }
 
-  // Only handle Page comment events
-  if (payload.object !== "page") {
-    return NextResponse.json({ ok: true, skipped: true });
+  // Déléguer les events Instagram au handler dédié
+  if (payload.object === "instagram") {
+    return handleInstagramNativePayload(payload);
   }
 
   const results: { matched: number; errors: number } = { matched: 0, errors: 0 };
@@ -292,6 +306,69 @@ export async function PUT(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+/* ─── Instagram native webhook handler ─── */
+async function handleInstagramNativePayload(payload: MetaNativePayload): Promise<NextResponse> {
+  const results: { matched: number; errors: number } = { matched: 0, errors: 0 };
+
+  for (const entry of payload.entry ?? []) {
+    const igAccountId = entry.id;
+
+    for (const change of entry.changes ?? []) {
+      if (change.field !== "comments") continue;
+      const val = change.value;
+      // Le payload Instagram comments a "text" (pas "message") et "from.username"
+      const commentText = (val as any).text ?? val.message;
+      const fromId = val.from?.id;
+      if (!commentText || !fromId) continue;
+
+      // Récupérer le token Instagram depuis la DB
+      let igAccessToken: string | null = null;
+      let connUserId: string | undefined;
+      try {
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted, user_id")
+          .eq("platform", "instagram")
+          .eq("platform_user_id", igAccountId)
+          .maybeSingle();
+
+        if (conn?.access_token_encrypted) {
+          igAccessToken = decrypt(conn.access_token_encrypted);
+          connUserId = conn.user_id;
+        }
+      } catch (err) {
+        console.error("[webhook/instagram] Token lookup error:", err);
+      }
+
+      if (!igAccessToken) {
+        console.warn("[webhook/instagram] No token for IG account:", igAccountId);
+        continue;
+      }
+
+      const mediaId = (val as any).media?.id;
+      const commentId = (val as any).id ?? val.comment_id;
+      const senderName = val.from?.name ?? (val as any).from?.username ?? fromId;
+
+      const res = await processComment({
+        platform: "instagram",
+        page_id: igAccountId,
+        sender_id: fromId,
+        sender_name: senderName,
+        comment_text: commentText,
+        comment_id: commentId,
+        post_id: mediaId,
+        page_access_token: igAccessToken,
+        user_id: connUserId,
+      });
+
+      const resBody = await res.json().catch(() => ({}));
+      if ((resBody as any).matched) results.matched++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...results });
 }
 
 /* ─── Types ─── */
