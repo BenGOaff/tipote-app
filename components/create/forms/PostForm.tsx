@@ -44,6 +44,7 @@ const platforms = [
   { id: "twitter", label: "X (Twitter)" },
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },
+  { id: "reddit", label: "Reddit" },
   { id: "pinterest", label: "Pinterest" },
 ];
 
@@ -54,6 +55,7 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   threads: 500,
   facebook: 63206,
   instagram: 2200,
+  reddit: 40000, // Posts texte Reddit (self posts)
   pinterest: 500, // Description épingle (titre : 100 car. géré côté serveur)
 };
 
@@ -113,6 +115,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [pinterestLink, setPinterestLink] = useState("");
   const [pinterestTitle, setPinterestTitle] = useState("");
   const isPinterest = platform === "pinterest";
+  const isReddit = platform === "reddit";
 
   // Auto-comment state
   const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
@@ -559,6 +562,13 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               <div className={`text-xs text-right ${pinterestTitle.length > 90 ? "text-amber-500" : "text-muted-foreground"}`}>
                 {pinterestTitle.length} / 100
               </div>
+            </div>
+          )}
+
+          {/* Note Reddit : le sujet devient le titre du post */}
+          {isReddit && (
+            <div className="rounded-lg border border-[#FF4500]/20 bg-[#FF4500]/5 px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium text-[#FF4500]">Reddit</span> — Le champ &quot;Sujet&quot; sera utilisé comme titre du post. Les posts Reddit nécessitent un titre.
             </div>
           )}
 
