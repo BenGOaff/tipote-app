@@ -290,7 +290,8 @@
       "instagram": "Instagram الاحترافي",
       "threads": "Threads",
       "twitter": "X (Twitter)",
-      "reddit": "Reddit"
+      "reddit": "Reddit",
+      "pinterest": "انشر الدبابيس على حساب Pinterest الخاص بك"
     },
     "disconnectTitle": "هل تريد قطع اتصال هذا الحساب؟",
     "disconnectDesc": "لن تتمكن بعد ذلك من النشر على هذه الشبكة من Tipote.",
@@ -301,7 +302,9 @@
       "connectSuccess": "تم ربط الحساب بنجاح.",
       "connectError": "حدث خطأ أثناء ربط الحساب.",
       "disconnectSuccess": "تم قطع اتصال الحساب بنجاح.",
-      "disconnectError": "حدث خطأ أثناء قطع اتصال الحساب."
+      "disconnectError": "حدث خطأ أثناء قطع اتصال الحساب.",
+      "pinterestOk": "تم توصيل Pinterest",
+      "pinterestOkDesc": "تم ربط حساب Pinterest الخاص بك بـ Tipote الآن."
     }
   },
   "aiCredits": {

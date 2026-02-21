@@ -1,10 +1,11 @@
 // lib/refreshSocialToken.ts
 // Shared helper: refresh an expired OAuth token and persist the new tokens in DB.
-// Currently supports Twitter/X (rotating refresh tokens).
+// Supports: Twitter/X (rotating refresh tokens), Pinterest.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { refreshAccessToken as refreshTwitterToken } from "@/lib/twitter";
+import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
 
 type RefreshResult = {
   ok: boolean;
@@ -26,8 +27,7 @@ export async function refreshSocialToken(
     return { ok: false, error: "No refresh token available" };
   }
 
-  // Only Twitter supports token refresh for now
-  if (platform !== "twitter") {
+  if (platform !== "twitter" && platform !== "pinterest") {
     return { ok: false, error: `Token refresh not supported for ${platform}` };
   }
 
@@ -39,7 +39,18 @@ export async function refreshSocialToken(
   }
 
   try {
-    const tokens = await refreshTwitterToken(refreshToken);
+    let tokens: {
+      access_token: string;
+      expires_in?: number;
+      refresh_token?: string;
+    };
+
+    if (platform === "twitter") {
+      tokens = await refreshTwitterToken(refreshToken);
+    } else {
+      // Pinterest
+      tokens = await refreshPinterestToken(refreshToken);
+    }
 
     // Persist new tokens to DB
     const updateData: Record<string, any> = {
@@ -49,7 +60,7 @@ export async function refreshSocialToken(
       ).toISOString(),
     };
 
-    // Twitter uses rotating refresh tokens — persist the new one
+    // Persist the new refresh token (both Twitter and Pinterest rotate them)
     if (tokens.refresh_token) {
       updateData.refresh_token_encrypted = encrypt(tokens.refresh_token);
     }
@@ -60,10 +71,15 @@ export async function refreshSocialToken(
       .eq("id", connectionId);
 
     if (dbError) {
-      // The new rotating refresh token was not persisted — returning ok here would leave
-      // the old (now-invalid) refresh token in DB, causing permanent disconnection next cycle.
-      console.error(`[refreshSocialToken] CRITICAL: DB update failed for ${platform} connection ${connectionId}:`, dbError.message);
-      return { ok: false, error: "Token rafraîchi mais impossible de sauvegarder en base. Reconnecte ton compte." };
+      console.error(
+        `[refreshSocialToken] CRITICAL: DB update failed for ${platform} connection ${connectionId}:`,
+        dbError.message
+      );
+      return {
+        ok: false,
+        error:
+          "Token rafraîchi mais impossible de sauvegarder en base. Reconnecte ton compte.",
+      };
     }
 
     return { ok: true, accessToken: tokens.access_token };

@@ -290,7 +290,8 @@
       "instagram": "Publie sur ton compte Instagram professionnel",
       "threads": "Publie sur ton compte Threads",
       "twitter": "Publie sur ton compte X",
-      "reddit": "Publie sur ton profil Reddit"
+      "reddit": "Publie sur ton profil Reddit",
+      "pinterest": "Publie des épingles sur ton compte Pinterest"
     },
     "disconnectTitle": "Déconnecter {platform} ?",
     "disconnectDesc": "Tu ne pourras plus publier sur {platform} depuis Tipote. Tu peux reconnecter ton compte à tout moment.",
@@ -308,6 +309,8 @@
       "twitterOkDesc": "Ton compte X est maintenant lié à Tipote.",
       "redditOk": "Reddit connecté",
       "redditOkDesc": "Ton compte Reddit est maintenant lié à Tipote.",
+      "pinterestOk": "Pinterest connecté",
+      "pinterestOkDesc": "Ton compte Pinterest est maintenant lié à Tipote.",
       "disconnected": "Compte déconnecté",
       "disconnectedDesc": "La connexion a été supprimée.",
       "errorTitle": "Erreur",
