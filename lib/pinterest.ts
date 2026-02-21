@@ -4,7 +4,13 @@
 
 const PINTEREST_AUTH_URL = "https://www.pinterest.com/oauth/";
 const PINTEREST_TOKEN_URL = "https://api.pinterest.com/v5/oauth/token";
-const PINTEREST_API_BASE = "https://api.pinterest.com/v5";
+
+// En accès Trial Pinterest, utiliser l'API sandbox.
+// Passer à https://api.pinterest.com une fois l'accès Standard approuvé.
+const PINTEREST_API_BASE =
+  process.env.PINTEREST_USE_SANDBOX === "true"
+    ? "https://api-sandbox.pinterest.com/v5"
+    : "https://api.pinterest.com/v5";
 
 // Scopes requis :
 //   boards:read    → lister les tableaux de l'utilisateur
