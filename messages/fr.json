@@ -287,6 +287,7 @@
     "platforms": {
       "linkedin": "Publie sur ton profil personnel LinkedIn",
       "facebook": "Publie sur ta Page Facebook",
+      "instagram": "Publie sur ton compte Instagram professionnel",
       "threads": "Publie sur ton compte Threads",
       "twitter": "Publie sur ton compte X",
       "reddit": "Publie sur ton profil Reddit"
@@ -299,6 +300,8 @@
       "linkedinOkDesc": "Ton compte LinkedIn est maintenant lié à Tipote.",
       "facebookOk": "Facebook connecté",
       "facebookOkDesc": "Ta Page Facebook est maintenant liée à Tipote.",
+      "instagramOk": "Instagram connecté",
+      "instagramOkDesc": "Ton compte Instagram est maintenant lié à Tipote.",
       "threadsOk": "Threads connecté",
       "threadsOkDesc": "Ton compte Threads est maintenant lié à Tipote.",
       "twitterOk": "X connecté",

@@ -287,6 +287,7 @@
     "platforms": {
       "linkedin": "LinkedIn",
       "facebook": "Facebook",
+      "instagram": "Instagram الاحترافي",
       "threads": "Threads",
       "twitter": "X (Twitter)",
       "reddit": "Reddit"
@@ -295,6 +296,8 @@
     "disconnectDesc": "لن تتمكن بعد ذلك من النشر على هذه الشبكة من Tipote.",
     "disconnectConfirm": "نعم، قطع الاتصال",
     "toast": {
+      "instagramOk": "تم ربط Instagram",
+      "instagramOkDesc": "تم ربط حسابك على Instagram بـ Tipote.",
       "connectSuccess": "تم ربط الحساب بنجاح.",
       "connectError": "حدث خطأ أثناء ربط الحساب.",
       "disconnectSuccess": "تم قطع اتصال الحساب بنجاح.",

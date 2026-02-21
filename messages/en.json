@@ -287,6 +287,7 @@
     "platforms": {
       "linkedin": "Post to your personal LinkedIn profile",
       "facebook": "Post to your Facebook Page",
+      "instagram": "Post to your professional Instagram account",
       "threads": "Post to your Threads account",
       "twitter": "Post to your X account",
       "reddit": "Post to your Reddit profile"
@@ -299,6 +300,8 @@
       "linkedinOkDesc": "Your LinkedIn account is now linked to Tipote.",
       "facebookOk": "Facebook connected",
       "facebookOkDesc": "Your Facebook Page is now linked to Tipote.",
+      "instagramOk": "Instagram connected",
+      "instagramOkDesc": "Your Instagram account is now linked to Tipote.",
       "threadsOk": "Threads connected",
       "threadsOkDesc": "Your Threads account is now linked to Tipote.",
       "twitterOk": "X connected",

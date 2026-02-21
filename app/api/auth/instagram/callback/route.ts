@@ -59,7 +59,9 @@ export async function GET(req: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.redirect(`${appUrl}/login`);
+      return NextResponse.redirect(
+        `${settingsUrl}&instagram_error=${encodeURIComponent("Session expirée. Reconnecte-toi à Tipote et réessaie.")}`
+      );
     }
 
     const code = searchParams.get("code");

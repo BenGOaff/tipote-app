@@ -180,7 +180,7 @@ export default function SocialConnections() {
 
     // Instagram
     if (searchParams.get("instagram_connected") === "1") {
-      toast({ title: "Instagram connecté !", description: "Ton compte Instagram est maintenant connecté." });
+      toast({ title: t("toast.instagramOk"), description: t("toast.instagramOkDesc") });
       fetchConnections();
     }
     const instagramError = searchParams.get("instagram_error");

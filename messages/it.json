@@ -287,6 +287,7 @@
     "platforms": {
       "linkedin": "LinkedIn",
       "facebook": "Facebook",
+      "instagram": "Instagram professionale",
       "threads": "Threads",
       "twitter": "X (Twitter)",
       "reddit": "Reddit"
@@ -295,6 +296,8 @@
     "disconnectDesc": "Perderai la possibilità di pubblicare su questo social da Tipote.",
     "disconnectConfirm": "Sì, disconnetti",
     "toast": {
+      "instagramOk": "Instagram connesso",
+      "instagramOkDesc": "Il tuo account Instagram è ora collegato a Tipote.",
       "connectSuccess": "Account connesso correttamente.",
       "connectError": "Errore durante la connessione dell'account.",
       "disconnectSuccess": "Account disconnesso correttamente.",
