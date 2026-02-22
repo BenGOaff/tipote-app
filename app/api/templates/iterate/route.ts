@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { getOwnerOpenAI, OPENAI_MODEL } from "@/lib/openaiClient";
+import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -305,12 +305,14 @@ export async function POST(req: Request) {
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
+      ...cachingParams("template_iterate"),
       model: OPENAI_MODEL,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-    });
+      max_completion_tokens: 4000,
+    } as any);
 
     raw = completion.choices?.[0]?.message?.content?.trim() || "";
   } catch (e: any) {

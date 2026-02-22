@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     });
 
     const resp = await ai.chat.completions.create({
+      ...cachingParams("quiz"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
         { role: "user", content: userPrompt },
       ],
       max_completion_tokens: 4000,
-    });
+    } as any);
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
     let quiz: any;

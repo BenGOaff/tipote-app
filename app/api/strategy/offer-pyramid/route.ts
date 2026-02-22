@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -1085,13 +1085,15 @@ STRUCTURE EXACTE À RENVOYER :
       await ensureUserCredits(userId);
 
       const aiResponse = await ai.chat.completions.create({
+        ...cachingParams("offer_pyramid"),
         model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-      });
+        max_completion_tokens: 8000,
+      } as any);
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
       const parsed = JSON.parse(raw) as AnyRecord;
@@ -1248,13 +1250,15 @@ Contraintes :
     await ensureUserCredits(userId);
 
     const fullAiResponse = await ai.chat.completions.create({
+      ...cachingParams("offer_pyramid_full"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-    });
+      max_completion_tokens: 16000,
+    } as any);
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
     const fullParsed = JSON.parse(fullRaw) as AnyRecord;

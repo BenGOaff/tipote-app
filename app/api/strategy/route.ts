@@ -12,7 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
@@ -875,6 +875,7 @@ ${JSON.stringify(
 
   try {
     const resp = await ai.chat.completions.create({
+      ...cachingParams("strategy_starter"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
@@ -882,7 +883,7 @@ ${JSON.stringify(
         { role: "user", content: userPrompt },
       ],
       max_completion_tokens: 4000,
-    });
+    } as any);
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as AnyRecord;
@@ -1322,13 +1323,15 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 }`.trim();
 
       const aiResponse = await ai.chat.completions.create({
+        ...cachingParams("strategy_offers"),
         model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-      });
+        max_completion_tokens: 8000,
+      } as any);
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
       const parsed = JSON.parse(raw) as AnyRecord;
@@ -1556,13 +1559,15 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 `.trim();
 
       const fullAiResponse = await ai.chat.completions.create({
+        ...cachingParams("strategy_full"),
         model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-      });
+        max_completion_tokens: 16000,
+      } as any);
 
       const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
       const fullParsed = JSON.parse(fullRaw) as AnyRecord;
@@ -1857,13 +1862,15 @@ CONSINGNES
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
+      ...cachingParams("strategy_full"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-    });
+      max_completion_tokens: 16000,
+    } as any);
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
     const fullParsed = JSON.parse(fullRaw) as AnyRecord;

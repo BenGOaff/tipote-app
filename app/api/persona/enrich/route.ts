@@ -4,7 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildEnhancedPersonaPrompt } from "@/lib/prompts/persona/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -205,6 +205,7 @@ Génère le profil persona enrichi complet du CLIENT IDEAL en JSON.
 Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du business.`;
 
     const resp = await ai.chat.completions.create({
+      ...cachingParams("persona"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
@@ -212,7 +213,7 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
         { role: "user", content: userPrompt },
       ],
       max_completion_tokens: 16000,
-    }, { timeout: 110_000 });
+    } as any);
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as AnyRecord;

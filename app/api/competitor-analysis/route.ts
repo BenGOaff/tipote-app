@@ -11,7 +11,7 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { getOwnerOpenAI, OPENAI_MODEL } from "@/lib/openaiClient";
+import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,18 +29,20 @@ async function callOpenAI(args: {
   system: string;
   user: string;
   maxTokens?: number;
+  cacheKey?: string;
 }): Promise<string> {
   const client = getOwnerOpenAI();
   if (!client) throw new Error("Clé API OpenAI non configurée. Contactez le support.");
 
   const completion = await client.chat.completions.create({
+    ...cachingParams(args.cacheKey ?? "competitor_analysis"),
     model: OPENAI_MODEL,
     max_completion_tokens: args.maxTokens ?? 4000,
     messages: [
       { role: "system", content: args.system },
       { role: "user", content: args.user },
     ],
-  });
+  } as any);
 
   return completion.choices[0]?.message?.content?.trim() ?? "";
 }
