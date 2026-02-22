@@ -166,6 +166,7 @@ export default function PyramidSelection() {
   const [selectedOfferSetId, setSelectedOfferSetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [genError, setGenError] = useState(false);
 
   async function loadFromPlan() {
     const {
@@ -206,48 +207,36 @@ export default function PyramidSelection() {
     return { ok: true as const };
   }
 
-  useEffect(() => {
-    let mounted = true;
+  async function generateAndLoad() {
+    setLoading(true);
+    setGenError(false);
+    try {
+      // 1) Try to load existing pyramids from plan
+      const firstTry = await loadFromPlan();
+      if (firstTry.ok) return;
+      if (firstTry.reason === "no_user") return;
 
-    async function init() {
+      // 2) No pyramids yet — generate via strategy SSE
       try {
-        setLoading(true);
-
-        // 1) tenter de charger depuis plan
-        const firstTry = await loadFromPlan();
-        if (firstTry.ok) return;
-
-        if (firstTry.reason === "no_user") return;
-
-        // 2) si pas d'offres, générer puis recharger (SSE stream)
-        await callStrategySSE({}).catch(() => null);
-
-        const secondTry = await loadFromPlan();
-        if (!secondTry.ok) {
-          toast({
-            title: "Génération en cours.",
-            description:
-              "Nous préparons tes 3 stratégies. Réessaie dans quelques secondes.",
-          });
-        }
-      } catch (error) {
-        console.error("Error loading offer sets:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les offres. Réessaie.",
-          variant: "destructive",
-        });
-      } finally {
-        if (mounted) setLoading(false);
+        await callStrategySSE({});
+      } catch {
+        // SSE may fail (no credits, timeout, etc.) — we still try loading
       }
+
+      const secondTry = await loadFromPlan();
+      if (!secondTry.ok) {
+        setGenError(true);
+      }
+    } catch (error) {
+      console.error("Error loading offer sets:", error);
+      setGenError(true);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    init();
-
-    return () => {
-      mounted = false;
-    };
-  }, [router, supabase, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { generateAndLoad(); }, []);
 
   const selected = useMemo(() => {
     if (!selectedOfferSetId) return null;
@@ -344,6 +333,30 @@ export default function PyramidSelection() {
               Nous préparons 3 pyramides d'offres adaptées à ton business.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (genError && offerSets.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-primary/5 flex flex-col items-center justify-center p-6">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-destructive" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Génération en cours</h1>
+            <p className="text-muted-foreground">
+              La création de tes pyramides prend un peu plus de temps que prévu. Clique ci-dessous pour réessayer.
+            </p>
+          </div>
+          <Button size="lg" onClick={() => generateAndLoad()}>
+            <ArrowRight className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
         </div>
       </div>
     );

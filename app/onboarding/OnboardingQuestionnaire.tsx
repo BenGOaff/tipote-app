@@ -303,6 +303,11 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         refusals: a.refusals ?? [],
       };
 
+      // Determine whether user needs pyramid selection based on questionnaire answers.
+      // This is the source of truth — NOT the DB state, which may be stale or empty.
+      const bStatus = String(a.businessStatus ?? "none");
+      const shouldShowPyramids = bStatus !== "has_offers" && bStatus !== "affiliation";
+
       // Step 0: Save answers & mark onboarding complete
       try {
         await postJSON("/api/onboarding/questionnaire", payload);
@@ -314,33 +319,22 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         } catch {/* ignore */}
       }
 
-      // Step 1: Generate strategy (SSE stream — heartbeats prevent proxy timeout)
+      // Step 1: Generate strategy (SSE — generates offer pyramids when applicable)
       setBootStep(1);
       try {
         await callStrategySSE({ force: true });
-      } catch {/* fail-open */}
+      } catch {/* fail-open — pyramid selection page will retry if needed */}
 
-      // Step 1.5: If pyramids were generated (user has no offers), redirect to
-      // the pyramid selection page so the user can CHOOSE among the 3 pyramids.
-      // The selection page handles: choose → full strategy generation → tasks sync → /app.
-      try {
-        const pyramidStatus = await fetch("/api/strategy/offer-pyramid")
-          .then((r) => r.json())
-          .catch(() => ({}));
+      if (shouldShowPyramids) {
+        // Redirect to pyramid selection page.
+        // The selection page handles everything: load/retry pyramid generation,
+        // user picks one, then full strategy + tasks + redirect to /app.
+        clearTimeout(safetyTimeout);
+        router.replace("/strategy/pyramids");
+        return;
+      }
 
-        if (
-          pyramidStatus.shouldGenerateOffers &&
-          Array.isArray(pyramidStatus.offer_pyramids) &&
-          pyramidStatus.offer_pyramids.length > 0 &&
-          pyramidStatus.selected_offer_pyramid_index === null
-        ) {
-          clearTimeout(safetyTimeout);
-          router.replace("/strategy/pyramids");
-          return;
-        }
-      } catch {/* fail-open — continue to normal /app redirect */}
-
-      // Step 2: Sync tasks (only for users who already have a full strategy)
+      // Non-pyramid users (affiliates, users with offers): sync tasks → dashboard
       setBootStep(2);
       try {
         await Promise.race([
