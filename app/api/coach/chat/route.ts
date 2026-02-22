@@ -945,7 +945,6 @@ Rules:
           { role: "system", content: system },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.6,
         max_completion_tokens: 1200,
       });
       raw = ai.choices?.[0]?.message?.content ?? "";
