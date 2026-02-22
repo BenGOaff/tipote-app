@@ -121,12 +121,8 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
             body: JSON.stringify({ selectedIndex: 0 }),
           }).catch(() => null);
 
-          // Generate full strategy with selected pyramid
-          await fetch("/api/strategy/offer-pyramid", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          }).catch(() => null);
+          // Generate full strategy via SSE (heartbeats prevent 504 timeout)
+          await callStrategySSE({});
         }
       } catch {
         // fail-open
