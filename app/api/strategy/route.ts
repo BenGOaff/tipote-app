@@ -494,27 +494,9 @@ async function enrichBusinessProfileMissionBestEffort(params: {
       }
     }
 
-    // ✅ Build proper niche formula from strategy output (positioning + mission + promise)
-    // This rewrites the niche field with a structured niche formula instead of just the raw topic
-    if (planJson) {
-      const stratMission = cleanString(planJson.mission, 240);
-      const stratPromise = cleanString(planJson.promise, 240);
-      const stratPositioning = cleanString(planJson.positioning, 320);
-      const stratSummary = cleanString(planJson.summary ?? planJson.strategy_summary, 600);
-
-      // Build a richer niche description from strategy data
-      const nicheParts: string[] = [];
-      if (stratPositioning) nicheParts.push(stratPositioning);
-      else if (stratMission) nicheParts.push(stratMission);
-      if (stratPromise && !nicheParts.some((p) => p.toLowerCase().includes(stratPromise.toLowerCase().slice(0, 30))))
-        nicheParts.push(`Promesse : ${stratPromise}`);
-      if (nicheParts.length === 0 && stratSummary) nicheParts.push(stratSummary);
-
-      const nicheFormula = nicheParts.join("\n").trim();
-      if (nicheFormula) {
-        patch.niche = nicheFormula.slice(0, 500);
-      }
-    }
+    // ✅ Niche formula: NEVER overwrite — the user's exact onboarding sentence is the source of truth.
+    // The niche field is set during onboarding (questionnaire) and editable in Settings > Positionnement.
+    // Strategy generation must not replace it with AI-generated text.
 
     if (Object.keys(patch).length <= 1) return; // only updated_at, nothing useful
 

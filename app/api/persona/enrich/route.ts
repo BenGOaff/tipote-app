@@ -211,8 +211,8 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.5,
-      max_tokens: 6000,
+      temperature: 0.6,
+      max_tokens: 16000,
     });
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
@@ -225,9 +225,8 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
     if (parsed.persona_summary) {
       profilePatch.mission = cleanString(parsed.persona_summary, 10000);
     }
-    if (parsed.niche_summary) {
-      profilePatch.niche = cleanString(parsed.niche_summary, 5000);
-    }
+    // ✅ Niche formula: NEVER overwrite — the user's exact onboarding sentence is the source of truth.
+    // The niche is set during onboarding and editable in Settings > Positionnement.
 
     const bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", user.id);
     if (projectId) bpUpdateQ.eq("project_id", projectId);
@@ -253,6 +252,10 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
               ...parsed.persona_classic,
               detailed: parsed.persona_detailed,
               narrative_synthesis: parsed.narrative_synthesis,
+              // New rich markdown fields from enhanced prompt
+              persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
+              competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
+              narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
             },
             updated_at: now,
           };
@@ -267,10 +270,13 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
     return NextResponse.json({
       ok: true,
       persona_summary: parsed.persona_summary ?? null,
-      niche_summary: parsed.niche_summary ?? null,
       persona_detailed: parsed.persona_detailed ?? null,
       narrative_synthesis: parsed.narrative_synthesis ?? null,
       persona_classic: parsed.persona_classic ?? null,
+      // New rich markdown fields
+      persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
+      competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
+      narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
     });
   } catch (e: any) {
     const msg = (e?.message ?? "").toUpperCase();

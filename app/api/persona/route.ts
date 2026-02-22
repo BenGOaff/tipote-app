@@ -71,6 +71,10 @@ export async function GET() {
         pains: parseJson(data.pains) || [],
         desires: parseJson(data.desires) || [],
         channels: parseJson(channelsRaw) || [],
+        // Rich markdown fields from enrichment
+        persona_detailed_markdown: pj.persona_detailed_markdown ?? null,
+        competitor_insights_markdown: pj.competitor_insights_markdown ?? null,
+        narrative_synthesis_markdown: pj.narrative_synthesis_markdown ?? null,
       },
     }, { status: 200 });
   } catch (e) {

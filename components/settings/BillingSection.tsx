@@ -93,15 +93,15 @@ function isAnnualSubscription(sub: any): boolean {
 function planMeta(plan: Exclude<PlanKey, "essential">) {
   switch (plan) {
     case "basic":
-      return { label: "Basic", price: 19 };
+      return { label: "Basic", price: 19, lifetime: false };
     case "beta":
-      return { label: "Beta", price: 0 };
+      return { label: "Beta — Accès à vie", price: 0, lifetime: true };
     case "pro":
-      return { label: "Pro", price: 49 };
+      return { label: "Pro", price: 49, lifetime: false };
     case "elite":
-      return { label: "Elite", price: 99 };
+      return { label: "Elite", price: 99, lifetime: false };
     default:
-      return { label: "Free", price: 0 };
+      return { label: "Free", price: 0, lifetime: false };
   }
 }
 
@@ -292,11 +292,16 @@ export default function BillingSection({ email }: Props) {
           <div>
             <Badge className="mb-2 bg-background/20 text-primary-foreground">{t("currentPlanBadge")}</Badge>
             <h2 className="text-2xl font-bold text-primary-foreground mb-1">{loading ? "—" : currentMeta.label}</h2>
-            <p className="text-primary-foreground/80">{loading ? t("loading") : t(`plan.${currentPlan}.desc`)}</p>
+            <p className="text-primary-foreground/80">
+              {loading ? t("loading") : isBeta ? "Accès PRO à vie — 150 crédits IA/mois — Coach IA inclus" : t(`plan.${currentPlan}.desc`)}
+            </p>
           </div>
           <p className="text-3xl font-bold text-primary-foreground">
-            {loading ? "—" : `${currentMeta.price}€`}
-            <span className="text-lg font-normal">{t("perMonth")}</span>
+            {loading ? "—" : currentMeta.lifetime ? (
+              <span className="text-xl">Offert</span>
+            ) : (
+              <>{currentMeta.price}€<span className="text-lg font-normal">{t("perMonth")}</span></>
+            )}
           </p>
         </div>
       </Card>
@@ -456,21 +461,35 @@ export default function BillingSection({ email }: Props) {
         </Card>
       </div>
 
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">{t("manage.title")}</p>
-            <p className="text-sm text-muted-foreground">{t("manage.desc")}</p>
+      {isBeta ? (
+        <Card className="p-6 border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+            <div>
+              <p className="font-medium">Accès Beta à vie</p>
+              <p className="text-sm text-muted-foreground">
+                Tu fais partie des premiers utilisateurs de Tipote. Ton accès PRO est garanti à vie, avec 150 crédits IA par mois et l&apos;accès au coach. Pas d&apos;abonnement, pas d&apos;annulation.
+              </p>
+            </div>
           </div>
+        </Card>
+      ) : (
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{t("manage.title")}</p>
+              <p className="text-sm text-muted-foreground">{t("manage.desc")}</p>
+            </div>
 
-          <Button variant="outline" asChild>
-            <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              {t("manage.cta")}
-            </a>
-          </Button>
-        </div>
-      </Card>
+            <Button variant="outline" asChild>
+              <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t("manage.cta")}
+              </a>
+            </Button>
+          </div>
+        </Card>
+      )}
     </>
   );
 }
