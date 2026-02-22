@@ -50,6 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
+import { AIContent } from "@/components/ui/ai-content";
 
 type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
 
@@ -404,6 +405,28 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   // Persona enrichment
   // -------------------------
   const [enriching, setEnriching] = useState(false);
+  const [personaDetailedMarkdown, setPersonaDetailedMarkdown] = useState<string | null>(null);
+  const [competitorInsightsMarkdown, setCompetitorInsightsMarkdown] = useState<string | null>(null);
+  const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
+  const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
+
+  // Load existing persona detailed data on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/persona", { method: "GET" });
+        const json = (await res.json().catch(() => null)) as any;
+        if (cancelled || !json?.ok || !json?.persona) return;
+        if (json.persona.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+        if (json.persona.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+        if (json.persona.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+      } catch {
+        // non-blocking
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const enrichPersona = async () => {
     setEnriching(true);
@@ -425,26 +448,19 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       if (json.persona_summary) {
         setMission(json.persona_summary);
       }
-      if (json.niche_summary) {
-        const newNiche: string = json.niche_summary;
-        const nicheMatch = newNiche.match(/j'aide les (.+?) à (.+?) avec (.+?) en (.+)/i);
-        if (nicheMatch) {
-          setNicheTarget(nicheMatch[1]);
-          setNicheObjective(nicheMatch[2]);
-          setNicheMechanism(nicheMatch[3]);
-          setNicheMarker(nicheMatch[4]);
-        } else {
-          setNicheTarget(newNiche);
-          setNicheObjective("");
-          setNicheMechanism("");
-          setNicheMarker("");
-        }
-      }
+      // ✅ Niche is NOT overwritten — the user's exact onboarding sentence is the source of truth
+
+      // Update rich markdown fields
+      if (json.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona_detailed_markdown);
+      if (json.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.competitor_insights_markdown);
+      if (json.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.narrative_synthesis_markdown);
+
+      // Auto-switch to detailed view if available
+      if (json.persona_detailed_markdown) setPersonaDetailTab("detailed");
 
       // Update initialProfile to reflect new values
       setInitialProfile((prev) => ({
         ...prev,
-        niche: json.niche_summary || prev?.niche,
         mission: json.persona_summary || prev?.mission,
       }));
 
@@ -1200,16 +1216,104 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {tSP("positioningTab.personaDesc")}
           </p>
 
-          <div className="space-y-2">
-            <Textarea
-              value={mission}
-              onChange={(e) => setMission(e.target.value)}
-              rows={5}
-              className="resize-none"
-              disabled={profileLoading}
-              placeholder={tSP("positioningTab.personaPlaceholder")}
-            />
+          {/* Sub-tabs for persona views */}
+          <div className="flex gap-1 mb-4 border-b">
+            <button
+              onClick={() => setPersonaDetailTab("summary")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "summary"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Résumé
+            </button>
+            <button
+              onClick={() => setPersonaDetailTab("detailed")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "detailed"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Persona détaillé
+            </button>
+            <button
+              onClick={() => setPersonaDetailTab("synthesis")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "synthesis"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Synthèse narrative
+            </button>
           </div>
+
+          {personaDetailTab === "summary" && (
+            <div className="space-y-2">
+              <Textarea
+                value={mission}
+                onChange={(e) => setMission(e.target.value)}
+                rows={8}
+                className="resize-y min-h-[200px]"
+                disabled={profileLoading}
+                placeholder={tSP("positioningTab.personaPlaceholder")}
+              />
+            </div>
+          )}
+
+          {personaDetailTab === "detailed" && (
+            <div className="rounded-lg border bg-background">
+              {personaDetailedMarkdown ? (
+                <AIContent
+                  content={personaDetailedMarkdown}
+                  mode="markdown"
+                  scroll
+                  maxHeight="70vh"
+                  className="p-5"
+                />
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de persona détaillé</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un profil persona ultra-détaillé de ton client idéal.</p>
+                </div>
+              )}
+              {competitorInsightsMarkdown && (
+                <>
+                  <hr className="border-border" />
+                  <div className="p-5">
+                    <h4 className="text-base font-bold mb-3">Mécanisme unique &amp; analyse concurrentielle</h4>
+                    <AIContent
+                      content={competitorInsightsMarkdown}
+                      mode="markdown"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {personaDetailTab === "synthesis" && (
+            <div className="rounded-lg border bg-background">
+              {narrativeSynthesisMarkdown ? (
+                <AIContent
+                  content={narrativeSynthesisMarkdown}
+                  mode="markdown"
+                  scroll
+                  maxHeight="70vh"
+                  className="p-5"
+                />
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de synthèse narrative</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer une synthèse complète.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-3 mt-4">
             <Button variant="outline" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>

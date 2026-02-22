@@ -114,8 +114,36 @@ export async function POST(req: NextRequest) {
       if (fromProfile) contactId = fromProfile;
     }
 
-    // 3) Si toujours pas de contactId, erreur
+    // 3) Si toujours pas de contactId, vérifier si c'est un utilisateur beta
+    // Beta = accès à vie au plan PRO. Pas d'abonnement Systeme.io, pas de contactId.
     if (!contactId) {
+      // Try to load profile if not yet loaded
+      if (!profile && email) {
+        const { data } = await supabaseAdmin.from("profiles").select("*").eq("email", email).maybeSingle();
+        profile = (data as ProfileRow | null) ?? null;
+      }
+
+      const currentPlan = normalizePlan(profile?.plan);
+
+      // Beta users: lifetime PRO access, no Systeme.io subscription
+      if (currentPlan === "beta") {
+        return NextResponse.json(
+          {
+            contactId: null,
+            profile,
+            subscriptions: [],
+            activeSubscription: {
+              status: "active",
+              product_name: "Tipote Beta — Accès à vie",
+              offer_price_plan: { name: "Beta (accès à vie)", inner_name: "beta" },
+              _beta_lifetime: true,
+            },
+            latestSubscription: null,
+          },
+          { status: 200 },
+        );
+      }
+
       return NextResponse.json(
         { error: "contactId manquant : fournis sio_contact_id/contactId/contact ou un email déjà connu." },
         { status: 400 },
