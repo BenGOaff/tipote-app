@@ -320,6 +320,39 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         await callStrategySSE({ force: true });
       } catch {/* fail-open */}
 
+      // Step 1.5: For users with no offers (shouldGenerateOffers=true), the SSE above only generates
+      // offer pyramids and stops. We auto-select pyramid 0 and generate the full strategy + tasks here,
+      // so the user arrives on /app with a complete plan and tasks ready.
+      try {
+        const pyramidStatus = await fetch("/api/strategy/offer-pyramid")
+          .then((r) => r.json())
+          .catch(() => ({}));
+
+        if (
+          pyramidStatus.shouldGenerateOffers &&
+          Array.isArray(pyramidStatus.offer_pyramids) &&
+          pyramidStatus.offer_pyramids.length > 0 &&
+          pyramidStatus.selected_offer_pyramid_index === null
+        ) {
+          // Auto-select first offer pyramid
+          await fetch("/api/strategy/offer-pyramid", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ selectedIndex: 0 }),
+          }).catch(() => {});
+
+          // Generate full strategy (persona + plan 90j + tasks) based on selected offer
+          await Promise.race([
+            fetch("/api/strategy/offer-pyramid", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            }),
+            new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 60_000)),
+          ]).catch(() => {});
+        }
+      } catch {/* fail-open */}
+
       // Step 2: Sync tasks
       setBootStep(2);
       try {

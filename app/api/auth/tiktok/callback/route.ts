@@ -54,9 +54,17 @@ export async function GET(req: NextRequest) {
     const tokens = await exchangeCodeForTokens(code);
     console.log("[TikTok] Token exchange OK, open_id:", tokens.open_id, "scope:", tokens.scope);
 
-    // 4. Recuperer les infos du profil TikTok
-    const userInfo = await getUserInfo(tokens.access_token);
-    console.log("[TikTok] User info OK:", userInfo.display_name, userInfo.open_id);
+    // 4. Recuperer les infos du profil TikTok (fallback si scope non autorise)
+    let platformUserId = tokens.open_id;
+    let platformUsername = "TikTok";
+    try {
+      const userInfo = await getUserInfo(tokens.access_token);
+      platformUserId = userInfo.open_id || platformUserId;
+      platformUsername = userInfo.display_name || userInfo.username || platformUsername;
+      console.log("[TikTok] User info OK:", platformUsername, platformUserId);
+    } catch (infoErr) {
+      console.warn("[TikTok] getUserInfo failed (scope missing?), using open_id from token:", infoErr);
+    }
 
     // 5. Chiffrer les tokens
     const accessTokenEncrypted = encrypt(tokens.access_token);
@@ -79,8 +87,8 @@ export async function GET(req: NextRequest) {
           user_id: user.id,
           project_id: projectId ?? null,
           platform: "tiktok",
-          platform_user_id: userInfo.open_id,
-          platform_username: userInfo.display_name || userInfo.username || "TikTok",
+          platform_user_id: platformUserId,
+          platform_username: platformUsername,
           access_token_encrypted: accessTokenEncrypted,
           refresh_token_encrypted: refreshTokenEncrypted,
           token_expires_at: tokenExpiresAt,
@@ -97,7 +105,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log("[TikTok] Connection saved, project_id:", projectId, "platform_user_id:", userInfo.open_id);
+    console.log("[TikTok] Connection saved, project_id:", projectId, "platform_user_id:", platformUserId);
 
     // 8. Rediriger vers les settings avec succes
     return NextResponse.redirect(

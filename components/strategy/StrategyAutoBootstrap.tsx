@@ -45,9 +45,53 @@ export default function StrategyAutoBootstrap() {
         // Si erreur schema/RLS => fail-open (ne jamais casser /app)
         if (existingPlanError) return;
 
-        if ((existingPlan as any)?.plan_json) return;
+        const planJson = (existingPlan as any)?.plan_json;
 
-        // Génération idempotente via SSE stream (heartbeats prevent proxy timeout)
+        if (planJson) {
+          // Check for incomplete flow: offer pyramids generated but no selection and no full strategy.
+          // This happens when the user has has_offers=false (no offers yet) — the onboarding generates
+          // offer pyramids but the selection + full strategy step is missing from the flow.
+          const offerPyramids = Array.isArray(planJson.offer_pyramids) ? planJson.offer_pyramids : [];
+          const hasSelection = typeof planJson.selected_offer_pyramid_index === "number";
+          const hasTasks =
+            Array.isArray(planJson.plan_90_days?.tasks_by_timeframe?.d30) &&
+            planJson.plan_90_days.tasks_by_timeframe.d30.length > 0;
+
+          if (offerPyramids.length > 0 && !hasSelection && !hasTasks) {
+            // Auto-select first offer pyramid, generate full strategy, then sync tasks.
+            try {
+              await fetch("/api/strategy/offer-pyramid", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ selectedIndex: 0 }),
+              }).catch(() => null);
+
+              if (cancelled) return;
+
+              const fullStratRes = await fetch("/api/strategy/offer-pyramid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+              }).catch(() => null);
+
+              const fullStratResult = await fullStratRes?.json().catch(() => ({}));
+
+              if ((fullStratResult as any)?.success && !cancelled) {
+                await fetch("/api/tasks/sync", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({}),
+                }).catch(() => null);
+              }
+            } catch {
+              // fail-open
+            }
+          }
+
+          return;
+        }
+
+        // No plan_json at all — generate from scratch via SSE stream (heartbeats prevent proxy timeout)
         const result = await callStrategySSE({}).catch(() => null);
 
         // ✅ Sync tasks after strategy generation so project_tasks is populated
