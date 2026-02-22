@@ -101,8 +101,38 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
 
     setIsGenerating(true);
     try {
+      // Step 1: Generate strategy (may generate offers for "no offers" users)
       await callStrategySSE({});
-      // ✅ Sync tasks after strategy generation so project_tasks is populated
+
+      // Step 2: Auto-select first pyramid if offers were generated but not selected
+      try {
+        const checkRes = await fetch("/api/strategy/offer-pyramid")
+          .then((r) => r.json())
+          .catch(() => ({}));
+        const offerPyramids = Array.isArray(checkRes?.offer_pyramids) ? checkRes.offer_pyramids : [];
+        const hasSelection = checkRes?.selected_offer_pyramid_index !== null &&
+          checkRes?.selected_offer_pyramid_index !== undefined;
+
+        if (offerPyramids.length > 0 && !hasSelection) {
+          // Auto-select first pyramid
+          await fetch("/api/strategy/offer-pyramid", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ selectedIndex: 0 }),
+          }).catch(() => null);
+
+          // Generate full strategy with selected pyramid
+          await fetch("/api/strategy/offer-pyramid", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => null);
+        }
+      } catch {
+        // fail-open
+      }
+
+      // Step 3: Sync tasks
       await fetch("/api/tasks/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,10 +185,9 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
 
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-end md:gap-3">
             {selectedMissing ? (
-              <Button asChild className="gap-2">
-                <Link href="/strategy/pyramids">
-                  Choisir une option <ArrowRight className="h-4 w-4" />
-                </Link>
+              <Button onClick={generateFullStrategy} disabled={isGenerating} className="gap-2">
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {isGenerating ? "Génération..." : "Générer maintenant"}
               </Button>
             ) : (
               <Button onClick={generateFullStrategy} disabled={isGenerating} className="gap-2">

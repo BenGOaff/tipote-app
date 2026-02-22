@@ -150,9 +150,39 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     setIsGeneratingPlan(true);
 
     try {
+      // Step 1: Generate strategy (offers + starter plan for "no offers" users)
       await callStrategySSE({});
 
-      // ✅ Sync tasks after strategy generation so project_tasks is populated
+      // Step 2: Check if offers were generated but not selected
+      // This happens for "no offers" users — auto-select first pyramid + generate full strategy
+      try {
+        const checkRes = await fetch("/api/strategy/offer-pyramid")
+          .then((r) => r.json())
+          .catch(() => ({}));
+        const offerPyramids = Array.isArray(checkRes?.offer_pyramids) ? checkRes.offer_pyramids : [];
+        const hasSelection = checkRes?.selected_offer_pyramid_index !== null &&
+          checkRes?.selected_offer_pyramid_index !== undefined;
+
+        if (offerPyramids.length > 0 && !hasSelection) {
+          // Auto-select first pyramid
+          await fetch("/api/strategy/offer-pyramid", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ selectedIndex: 0 }),
+          }).catch(() => null);
+
+          // Generate full strategy with selected pyramid
+          await fetch("/api/strategy/offer-pyramid", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => null);
+        }
+      } catch {
+        // fail-open
+      }
+
+      // Step 3: Sync tasks after strategy generation
       await fetch("/api/tasks/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -179,7 +209,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       });
       setIsGeneratingPlan(false);
     }
-  }, [isGeneratingPlan, router, toast]);
+  }, [isGeneratingPlan, router, toast, t]);
 
   // --- Sélection offres (inchangé) ---
   const selectedOfferSet = pickSelectedOfferSet(

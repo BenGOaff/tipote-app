@@ -13,9 +13,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowRight, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Loader2, ArrowRight, ArrowLeft, Check, Plus, Trash2, Sparkles, Gift, Zap, Crown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { callStrategySSE } from "@/lib/strategySSE";
+
+// ─── Pyramid types ──────────────────────────────────────────────────────────
+
+type AnyRecord = Record<string, unknown>;
+
+interface PyramidOffer {
+  title?: string;
+  format?: string;
+  price?: number;
+  composition?: string;
+  purpose?: string;
+  insight?: string;
+}
+
+interface PyramidSet {
+  id?: string;
+  name?: string;
+  strategy_summary?: string;
+  lead_magnet?: PyramidOffer | null;
+  low_ticket?: PyramidOffer | null;
+  middle_ticket?: PyramidOffer | null;
+  high_ticket?: PyramidOffer | null;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,6 +184,17 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
+async function patchJSON<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  return json as T;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export type OnboardingQuestionnaireProps = {
@@ -182,6 +217,11 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [bootStep, setBootStep] = useState(0);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  // ─── Pyramid selection state ─────────────────────────────────────────────
+  const [pyramids, setPyramids] = useState<PyramidSet[]>([]);
+  const [showPyramidSelection, setShowPyramidSelection] = useState(false);
+  const [selectingPyramid, setSelectingPyramid] = useState(false);
 
   const visibleSteps = useMemo(() => getVisibleSteps(answers), [answers]);
   const currentStep = visibleSteps[currentIdx] ?? visibleSteps[0];
@@ -255,12 +295,67 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
     });
   }, []);
 
+  // ─── Pyramid selection handler ────────────────────────────────────────────
+  const handlePyramidSelect = useCallback(async (selectedIndex: number) => {
+    if (selectingPyramid) return;
+    setSelectingPyramid(true);
+    setShowPyramidSelection(false);
+    setIsFinalizing(true);
+    setBootStep(2); // "Saving your choice"
+
+    const safetyTimeout = setTimeout(() => router.replace("/app"), 120_000);
+
+    try {
+      // 1) Save the pyramid selection (PATCH)
+      await patchJSON("/api/strategy/offer-pyramid", {
+        selectedIndex,
+        pyramid: pyramids[selectedIndex] ?? null,
+      }).catch((err) => {
+        console.error("pyramid selection save error:", err);
+      });
+
+      // 2) Generate full strategy
+      setBootStep(3);
+      try {
+        const fullRes = await postJSON<AnyRecord>("/api/strategy/offer-pyramid", {});
+        if (!(fullRes as AnyRecord)?.success) {
+          console.error("full strategy generation returned non-success:", fullRes);
+        }
+      } catch (err) {
+        console.error("full strategy generation error:", err);
+        // fail-open: try SSE fallback
+        try { await callStrategySSE({ force: true }); } catch {/* ignore */}
+      }
+
+      // 3) Sync tasks
+      try {
+        await Promise.race([
+          postJSON("/api/tasks/sync", {}),
+          new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 20_000)),
+        ]);
+      } catch {/* fail-open */}
+
+      await new Promise((r) => setTimeout(r, 800));
+      clearTimeout(safetyTimeout);
+      router.replace("/app");
+    } catch (e) {
+      clearTimeout(safetyTimeout);
+      toast({
+        title: "Oups",
+        description: e instanceof Error ? e.message : "Une erreur est survenue.",
+        variant: "destructive",
+      });
+      // Fallback: go to app anyway, StrategyAutoBootstrap will fix things
+      router.replace("/app");
+    }
+  }, [selectingPyramid, pyramids, router, toast]);
+
   const finalize = useCallback(async () => {
     if (isFinalizing) return;
     setIsFinalizing(true);
     setBootStep(0);
 
-    const safetyTimeout = setTimeout(() => router.replace("/app"), 90_000);
+    const safetyTimeout = setTimeout(() => router.replace("/app"), 120_000);
 
     try {
       // Build payload
@@ -319,17 +414,62 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         } catch {/* ignore */}
       }
 
-      // For pyramid users: redirect IMMEDIATELY to /strategy/pyramids.
-      // The pyramid page handles the full flow:
-      //   load/generate offer pyramids → user picks one → full strategy → tasks → /app
-      // We redirect BEFORE callStrategySSE to avoid timeout/safety-timer race conditions.
+      // ─── PYRAMID USERS: generate offers + show selection UI ──────────────
       if (shouldShowPyramids) {
+        setBootStep(1); // "Generating your offer options..."
+
+        try {
+          // Generate 3 offer pyramids via the offer-pyramid API
+          const offerRes = await postJSON<AnyRecord>("/api/strategy/offer-pyramid", {});
+
+          if ((offerRes as AnyRecord)?.success) {
+            // Offers generated — now fetch them to display
+            const getRes = await fetch("/api/strategy/offer-pyramid").then((r) => r.json()).catch(() => ({}));
+            const generatedPyramids = Array.isArray((getRes as AnyRecord)?.offer_pyramids)
+              ? ((getRes as AnyRecord).offer_pyramids as PyramidSet[])
+              : [];
+
+            if (generatedPyramids.length > 0) {
+              clearTimeout(safetyTimeout);
+              setPyramids(generatedPyramids);
+              setIsFinalizing(false);
+              setShowPyramidSelection(true);
+              return; // Wait for user to select a pyramid
+            }
+          }
+        } catch (err) {
+          console.error("offer pyramid generation error:", err);
+        }
+
+        // Fallback: if offer generation failed, try SSE strategy generation
+        // and auto-select first pyramid if any
+        try {
+          await callStrategySSE({ force: true });
+
+          // Check if offers were generated by SSE
+          const checkRes = await fetch("/api/strategy/offer-pyramid").then((r) => r.json()).catch(() => ({}));
+          const sseOffers = Array.isArray((checkRes as AnyRecord)?.offer_pyramids)
+            ? ((checkRes as AnyRecord).offer_pyramids as PyramidSet[])
+            : [];
+
+          if (sseOffers.length > 0) {
+            clearTimeout(safetyTimeout);
+            setPyramids(sseOffers);
+            setIsFinalizing(false);
+            setShowPyramidSelection(true);
+            return;
+          }
+        } catch {/* fail-open */}
+
+        // Ultimate fallback: go to app, StrategyAutoBootstrap will handle it
+        setBootStep(3);
+        await new Promise((r) => setTimeout(r, 800));
         clearTimeout(safetyTimeout);
-        router.replace("/strategy/pyramids");
+        router.replace("/app");
         return;
       }
 
-      // Non-pyramid users (affiliates, users with offers): strategy → tasks → dashboard
+      // ─── NON-PYRAMID USERS (affiliates, users with offers) ───────────────
       setBootStep(1);
       try {
         await callStrategySSE({ force: true });
@@ -369,6 +509,109 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
       }
     }
   }, [currentStep, answers, isLast, finalize, goNext]);
+
+  // ── Render pyramid selection overlay ──────────────────────────────────────
+  if (showPyramidSelection && pyramids.length > 0) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <Sparkles className="h-7 w-7 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              Choisis ta direction stratégique
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+              Tipote a généré 3 options adaptées à ton profil. Chaque pyramide représente un angle différent.
+              Choisis celle qui te parle le plus.
+            </p>
+          </div>
+
+          {/* Pyramid cards */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {pyramids.map((pyr, idx) => {
+              const lead = pyr.lead_magnet;
+              const low = pyr.low_ticket;
+              const mid = pyr.middle_ticket;
+              const high = pyr.high_ticket;
+
+              return (
+                <Card
+                  key={idx}
+                  className="flex flex-col overflow-hidden border-2 border-border/60 transition-all hover:border-primary/50 hover:shadow-lg"
+                >
+                  {/* Pyramid header */}
+                  <div className="border-b bg-muted/30 px-5 py-4">
+                    <h3 className="text-base font-semibold leading-snug">
+                      {String(pyr.name || `Option ${idx + 1}`)}
+                    </h3>
+                    {pyr.strategy_summary && (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {String(pyr.strategy_summary)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Offer levels */}
+                  <div className="flex flex-1 flex-col gap-3 p-5">
+                    {lead && (
+                      <PyramidLevel
+                        icon={<Gift className="h-4 w-4 text-green-600" />}
+                        label="Lead Magnet"
+                        offer={lead}
+                      />
+                    )}
+                    {low && (
+                      <PyramidLevel
+                        icon={<Zap className="h-4 w-4 text-blue-600" />}
+                        label="Low Ticket"
+                        offer={low}
+                      />
+                    )}
+                    {mid && (
+                      <PyramidLevel
+                        icon={<ArrowRight className="h-4 w-4 text-orange-600" />}
+                        label="Middle Ticket"
+                        offer={mid}
+                      />
+                    )}
+                    {high && (
+                      <PyramidLevel
+                        icon={<Crown className="h-4 w-4 text-purple-600" />}
+                        label="High Ticket"
+                        offer={high}
+                      />
+                    )}
+                  </div>
+
+                  {/* Select button */}
+                  <div className="border-t bg-muted/10 px-5 py-4">
+                    <Button
+                      onClick={() => handlePyramidSelect(idx)}
+                      disabled={selectingPyramid}
+                      className="w-full gap-2"
+                      size="lg"
+                    >
+                      {selectingPyramid ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      Choisir cette direction
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Render boot overlay ────────────────────────────────────────────────────
   if (isFinalizing) {
@@ -950,6 +1193,42 @@ function QuestionHeader({ step, t, hint }: QuestionHeaderProps) {
       )}
       {hint && !description && (
         <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Pyramid Level sub-component ──────────────────────────────────────────
+
+interface PyramidLevelProps {
+  icon: React.ReactNode;
+  label: string;
+  offer: PyramidOffer;
+}
+
+function PyramidLevel({ icon, label, offer }: PyramidLevelProps) {
+  const title = String(offer.title || "");
+  const format = String(offer.format || "");
+  const price = typeof offer.price === "number" ? offer.price : null;
+
+  return (
+    <div className="rounded-lg border border-border/40 bg-background px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        {price !== null && (
+          <span className="ml-auto text-xs font-semibold text-foreground">
+            {price === 0 ? "Gratuit" : `${price} €`}
+          </span>
+        )}
+      </div>
+      {title && (
+        <p className="mt-1 text-sm font-medium leading-snug">{title}</p>
+      )}
+      {format && (
+        <p className="mt-0.5 text-xs text-muted-foreground">{format}</p>
       )}
     </div>
   );
