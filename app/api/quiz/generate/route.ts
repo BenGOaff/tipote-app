@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     });
 
     const resp = await ai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5.1",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },

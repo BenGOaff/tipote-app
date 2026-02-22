@@ -28,7 +28,7 @@ function cleanString(v: unknown, maxLen = 240): string {
 const OPENAI_MODEL =
   process.env.TIPOTE_OPENAI_MODEL?.trim() ||
   process.env.OPENAI_MODEL?.trim() ||
-  "gpt-4.1";
+  "gpt-5.1";
 
 async function callOpenAI(args: {
   system: string;
@@ -61,11 +61,11 @@ const CompetitorSchema = z.object({
 });
 
 const PostSchema = z.object({
-  competitors: z.array(CompetitorSchema).min(2).max(5),
+  competitors: z.array(CompetitorSchema).min(1).max(5),
 });
 
 const PatchSchema = z.object({
-  competitors: z.array(CompetitorSchema).min(2).max(5).optional(),
+  competitors: z.array(CompetitorSchema).min(1).max(5).optional(),
   competitor_details: z.record(z.string(), z.any()).optional(),
   summary: z.string().trim().max(10000).optional(),
   strengths: z.array(z.string().max(500)).max(20).optional(),

@@ -875,7 +875,7 @@ ${JSON.stringify(
 
   try {
     const resp = await ai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5.1",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -1323,7 +1323,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 }`.trim();
 
       const aiResponse = await ai.chat.completions.create({
-        model: "gpt-4.1",
+        model: "gpt-5.1",
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1558,7 +1558,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 `.trim();
 
       const fullAiResponse = await ai.chat.completions.create({
-        model: "gpt-4.1",
+        model: "gpt-5.1",
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1860,7 +1860,7 @@ CONSINGNES
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5.1",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },

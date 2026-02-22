@@ -22,7 +22,7 @@ function cleanString(v: unknown, maxLen = 240): string {
 const OPENAI_MODEL =
   process.env.TIPOTE_OPENAI_MODEL?.trim() ||
   process.env.OPENAI_MODEL?.trim() ||
-  "gpt-4.1";
+  "gpt-5.1";
 
 async function callOpenAI(args: {
   system: string;
