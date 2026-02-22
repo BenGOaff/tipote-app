@@ -245,11 +245,35 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_completion_tokens: 8000,
+          max_completion_tokens: 16000,
         });
 
-        const raw = resp.choices?.[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(raw) as AnyRecord;
+        const choice = resp.choices?.[0];
+        const raw = choice?.message?.content ?? "{}";
+
+        // Detect truncated output (model hit token limit before finishing JSON)
+        if (choice?.finish_reason === "length") {
+          console.error("[persona/enrich] Output truncated (finish_reason=length). Tokens used:",
+            resp.usage?.completion_tokens, "/", 16000);
+          sendSSE("error", {
+            ok: false,
+            error: "La génération a été tronquée (réponse trop longue). Réessayez.",
+          });
+          return;
+        }
+
+        let parsed: AnyRecord;
+        try {
+          parsed = JSON.parse(raw) as AnyRecord;
+        } catch (parseErr) {
+          console.error("[persona/enrich] JSON parse failed. Raw length:", raw.length,
+            "finish_reason:", choice?.finish_reason);
+          sendSSE("error", {
+            ok: false,
+            error: "L'IA a retourné un JSON invalide. Réessayez.",
+          });
+          return;
+        }
 
         sendSSE("progress", { step: "Sauvegarde du persona..." });
 
