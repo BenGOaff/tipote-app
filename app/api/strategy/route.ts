@@ -882,7 +882,7 @@ ${JSON.stringify(
         { role: "user", content: userPrompt },
       ],
       temperature: 0.35,
-      max_tokens: 700,
+      max_completion_tokens: 700,
     });
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
