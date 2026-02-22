@@ -43,7 +43,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
   threads: "Threads",
   twitter: "X (Twitter)",
-  reddit: "Reddit",
+  tiktok: "TikTok",
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -52,7 +52,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   instagram: "#E4405F",
   threads: "#000000",
   twitter: "#000000",
-  reddit: "#FF4500",
+  tiktok: "#000000",
 };
 
 type Props = {

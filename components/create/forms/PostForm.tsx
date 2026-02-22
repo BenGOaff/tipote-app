@@ -42,6 +42,7 @@ const platforms = [
   { id: "linkedin", label: "LinkedIn" },
   { id: "threads", label: "Threads" },
   { id: "twitter", label: "X (Twitter)" },
+  { id: "tiktok", label: "TikTok" },
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },
   { id: "pinterest", label: "Pinterest" },
@@ -55,6 +56,7 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   facebook: 63206,
   instagram: 2200,
   pinterest: 500, // Description épingle (titre : 100 car. géré côté serveur)
+  tiktok: 150, // TikTok Content Posting API: titre limité à 150 car.
 };
 
 const themes = [
@@ -79,8 +81,8 @@ const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
   threads: "Threads",
   twitter: "X (Twitter)",
-  reddit: "Reddit",
   pinterest: "Pinterest",
+  tiktok: "TikTok",
 };
 
 export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {

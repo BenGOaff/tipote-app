@@ -1,7 +1,7 @@
 // app/api/social/publish/route.ts
 // POST : publie un contenu sur un réseau social via n8n (ou directement).
 // Body : { contentId, platform }
-// Plateformes supportées : linkedin, facebook, threads, twitter, reddit
+// Plateformes supportées : linkedin, facebook, threads, twitter, pinterest, tiktok
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -12,13 +12,13 @@ import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { publishPost } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
-import { publishPost as publishRedditPost } from "@/lib/reddit";
 import { createPin } from "@/lib/pinterest";
+import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo } from "@/lib/tiktok";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "reddit", "pinterest"] as const;
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "twitter", "pinterest", "tiktok"] as const;
 
 /**
  * Résout l'URL de la première image depuis meta.
@@ -58,15 +58,15 @@ function buildPostUrl(platform: string, postId?: string | null): string | null {
     case "threads":
       // Le postId peut être un permalink complet (https://www.threads.net/...) ou un ID numérique
       return postId.startsWith("http") ? postId : `https://www.threads.net/t/${postId}`;
-    case "reddit":
-      // Reddit retourne déjà une URL complète
-      return postId.startsWith("http") ? postId : null;
     case "instagram":
       return `https://www.instagram.com/p/${postId}/`;
     case "pinterest":
       return postId.startsWith("http")
         ? postId
         : `https://www.pinterest.com/pin/${postId}/`;
+    case "tiktok":
+      // TikTok publishId n'est pas directement une URL publique
+      return null;
     default:
       return null;
   }
@@ -323,8 +323,8 @@ export async function POST(req: NextRequest) {
     instagram: "Instagram",
     threads: "Threads",
     twitter: "X",
-    reddit: "Reddit",
     pinterest: "Pinterest",
+    tiktok: "TikTok",
   };
   const platformLabel = platformLabels[platform] ?? platform;
 
@@ -387,8 +387,8 @@ export async function POST(req: NextRequest) {
         ? "linkedin-publish"
         : platform === "twitter"
           ? "twitter-publish"
-          : platform === "reddit"
-            ? "reddit-publish"
+          : platform === "tiktok"
+            ? "tiktok-publish"
             : platform === "pinterest"
               ? "pinterest-publish"
               : "meta-publish"; // facebook, instagram, threads all go via meta-publish
@@ -420,11 +420,6 @@ export async function POST(req: NextRequest) {
           { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
           { status: 400 }
         );
-      }
-
-      // Pour Reddit, le titre est obligatoire
-      if (platform === "reddit") {
-        n8nPayload.title = contentItem.title || "Post depuis Tipote";
       }
 
       // Pour Pinterest : titre, board_id et image requis
@@ -526,10 +521,6 @@ export async function POST(req: NextRequest) {
     result = await publishToThreads(accessToken, platformUserId, contentItem.content, directImageUrl);
   } else if (platform === "twitter") {
     result = await publishTweet(accessToken, contentItem.content, directImageUrl);
-  } else if (platform === "reddit") {
-    const title = contentItem.title || "Post depuis Tipote";
-    const rdResult = await publishRedditPost(accessToken, platformUserId, title, contentItem.content);
-    result = { ...rdResult };
   } else if (platform === "pinterest") {
     if (!directImageUrl) {
       return NextResponse.json(
@@ -559,6 +550,24 @@ export async function POST(req: NextRequest) {
       pinLink
     );
     result = { ...pinResult, postId: pinResult.pinId, postUrn: undefined };
+  } else if (platform === "tiktok") {
+    // TikTok : publier une photo ou une video
+    const videoUrl = contentItem.meta?.video_url;
+    if (videoUrl) {
+      const ttResult = await publishTikTokVideo(accessToken, videoUrl, contentItem.content);
+      result = { ok: ttResult.ok, postId: ttResult.publishId, error: ttResult.error, statusCode: ttResult.statusCode };
+    } else if (directImageUrl) {
+      const imageUrls = Array.isArray(contentItem.meta?.images)
+        ? contentItem.meta.images.map((img: any) => typeof img === "string" ? img : img?.url).filter(Boolean)
+        : [directImageUrl];
+      const ttResult = await publishTikTokPhoto(accessToken, imageUrls, contentItem.content);
+      result = { ok: ttResult.ok, postId: ttResult.publishId, error: ttResult.error, statusCode: ttResult.statusCode };
+    } else {
+      return NextResponse.json(
+        { error: "TikTok necessite une photo ou une video. Ajoute un media a ton contenu avant de publier." },
+        { status: 400 }
+      );
+    }
   } else {
     return NextResponse.json({ error: "Plateforme non supportee" }, { status: 400 });
   }

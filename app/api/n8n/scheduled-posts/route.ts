@@ -2,7 +2,7 @@
 // GET : appele par les workflows cron n8n pour recuperer les posts a publier.
 // Retourne les posts "scheduled" dont la date+heure est <= maintenant.
 // Securise par N8N_SHARED_SECRET.
-// Query param optionnel : ?platform=linkedin|facebook|threads|twitter|reddit|pinterest
+// Query param optionnel : ?platform=linkedin|facebook|threads|twitter|pinterest|tiktok
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -11,7 +11,7 @@ import { refreshSocialToken } from "@/lib/refreshSocialToken";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "reddit", "pinterest"];
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "pinterest", "tiktok"];
 
 /**
  * Résout l'URL de la première image depuis meta.
@@ -263,9 +263,25 @@ export async function GET(req: NextRequest) {
         postData.image_url = imageUrl;
       }
 
-      // Pour Reddit, le titre est obligatoire
-      if (platform === "reddit") {
-        postData.title = post.title || "Post depuis Tipote";
+      // Pour TikTok : video_url ou images requises
+      if (platform === "tiktok") {
+        const videoUrl = post.meta?.video_url;
+        if (videoUrl) {
+          postData.video_url = videoUrl;
+        }
+        // Inclure toutes les images si disponibles
+        if (Array.isArray(post.meta?.images) && post.meta.images.length > 0) {
+          postData.images = post.meta.images.map((img: any) =>
+            typeof img === "string" ? img : img?.url
+          ).filter(Boolean);
+        }
+        // TikTok nécessite au moins une image ou une vidéo
+        if (!videoUrl && !imageUrl) {
+          console.warn(
+            `[scheduled-posts] TikTok post ${post.id} skipped: missing video or image`
+          );
+          return null;
+        }
       }
 
       // Pour Pinterest : titre, board_id et image requis

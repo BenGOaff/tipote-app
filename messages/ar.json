@@ -290,7 +290,7 @@
       "instagram": "Instagram الاحترافي",
       "threads": "Threads",
       "twitter": "X (Twitter)",
-      "reddit": "Reddit",
+      "tiktok": "انشر الصور والفيديوهات على حساب TikTok الخاص بك",
       "pinterest": "انشر الدبابيس على حساب Pinterest الخاص بك"
     },
     "disconnectTitle": "هل تريد قطع اتصال هذا الحساب؟",
@@ -851,7 +851,7 @@
           "linkedin": "لينكد إن",
           "facebook": "فيسبوك",
           "x": "X (تويتر)",
-          "reddit": "ريديت",
+          "tiktok": "تيك توك",
           "pinterest": "بينتريست",
           "threads": "ثريدز",
           "medium": "ميديوم",

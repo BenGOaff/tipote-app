@@ -1,11 +1,12 @@
 // lib/refreshSocialToken.ts
 // Shared helper: refresh an expired OAuth token and persist the new tokens in DB.
-// Supports: Twitter/X (rotating refresh tokens), Pinterest.
+// Supports: Twitter/X (rotating refresh tokens), Pinterest, TikTok.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { refreshAccessToken as refreshTwitterToken } from "@/lib/twitter";
 import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
+import { refreshAccessToken as refreshTikTokToken } from "@/lib/tiktok";
 
 type RefreshResult = {
   ok: boolean;
@@ -27,7 +28,7 @@ export async function refreshSocialToken(
     return { ok: false, error: "No refresh token available" };
   }
 
-  if (platform !== "twitter" && platform !== "pinterest") {
+  if (platform !== "twitter" && platform !== "pinterest" && platform !== "tiktok") {
     return { ok: false, error: `Token refresh not supported for ${platform}` };
   }
 
@@ -47,6 +48,13 @@ export async function refreshSocialToken(
 
     if (platform === "twitter") {
       tokens = await refreshTwitterToken(refreshToken);
+    } else if (platform === "tiktok") {
+      const ttTokens = await refreshTikTokToken(refreshToken);
+      tokens = {
+        access_token: ttTokens.access_token,
+        expires_in: ttTokens.expires_in,
+        refresh_token: ttTokens.refresh_token,
+      };
     } else {
       // Pinterest
       tokens = await refreshPinterestToken(refreshToken);
@@ -60,7 +68,7 @@ export async function refreshSocialToken(
       ).toISOString(),
     };
 
-    // Persist the new refresh token (both Twitter and Pinterest rotate them)
+    // Persist the new refresh token (Twitter, Pinterest, and TikTok all rotate them)
     if (tokens.refresh_token) {
       updateData.refresh_token_encrypted = encrypt(tokens.refresh_token);
     }

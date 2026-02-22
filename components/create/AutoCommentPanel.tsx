@@ -36,7 +36,7 @@ export type AutoCommentConfig = {
 // Threads: requires threads_keyword_search scope (reconnect needed)
 // LinkedIn: requires LinkedIn MDP approval — disabled until then
 // Facebook: search API removed in 2018 — permanently disabled
-const SUPPORTED_PLATFORMS = ["twitter", "reddit", "threads", "instagram"];
+const SUPPORTED_PLATFORMS = ["twitter", "threads", "instagram"];
 
 type AutoCommentPanelProps = {
   /** Current user plan */

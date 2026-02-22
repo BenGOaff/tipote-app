@@ -290,7 +290,7 @@
       "instagram": "Instagram profesional",
       "threads": "Threads",
       "twitter": "X (Twitter)",
-      "reddit": "Reddit",
+      "tiktok": "Publica fotos y videos en tu cuenta de TikTok",
       "pinterest": "Publica pines en tu cuenta de Pinterest"
     },
     "disconnectTitle": "¿Desconectar esta cuenta?",
@@ -851,7 +851,7 @@
           "linkedin": "LinkedIn",
           "facebook": "Facebook",
           "x": "X (Twitter)",
-          "reddit": "Reddit",
+          "tiktok": "TikTok",
           "pinterest": "Pinterest",
           "threads": "Threads",
           "medium": "Medium",

@@ -51,7 +51,6 @@ export async function generateComment(opts: {
     twitter: 240,
     threads: 400,
     facebook: 300,
-    reddit: 500,
   };
   const maxChars = charLimits[opts.platform] ?? 280;
 
@@ -208,64 +207,6 @@ export async function twitterLikeTweet(
     body: JSON.stringify({ tweet_id: tweetId }),
   });
   return res.ok;
-}
-
-// ─── Reddit API Functions ────────────────────────────────────────────────────
-
-export async function redditSearchPosts(
-  accessToken: string,
-  query: string,
-  maxResults = 10,
-): Promise<Array<{ id: string; title: string; selftext: string; subreddit: string; url: string }>> {
-  const params = new URLSearchParams({
-    q: query,
-    sort: "hot",
-    type: "link",
-    limit: String(maxResults),
-    t: "week",
-  });
-
-  const res = await fetch(`https://oauth.reddit.com/search?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "tipote-app/1.0" },
-  });
-
-  if (!res.ok) return [];
-
-  const json = (await res.json()) as any;
-  const children = json?.data?.children ?? [];
-  return children.map((c: any) => ({
-    id: c.data?.id ?? "",
-    title: c.data?.title ?? "",
-    selftext: c.data?.selftext ?? "",
-    subreddit: c.data?.subreddit ?? "",
-    url: `https://reddit.com${c.data?.permalink ?? ""}`,
-  }));
-}
-
-export async function redditCommentOnPost(
-  accessToken: string,
-  postId: string,
-  text: string,
-): Promise<{ ok: boolean; commentId?: string; error?: string }> {
-  const res = await fetch("https://oauth.reddit.com/api/comment", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "tipote-app/1.0",
-    },
-    body: new URLSearchParams({
-      thing_id: `t3_${postId}`,
-      text,
-    }),
-  });
-
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    return { ok: false, error: `Reddit comment error (${res.status}): ${t}` };
-  }
-
-  return { ok: true };
 }
 
 // ─── LinkedIn API Functions ──────────────────────────────────────────────────
@@ -659,16 +600,6 @@ export async function searchRelevantPosts(
           url: `https://twitter.com/i/web/status/${t.id}`,
         }));
     }
-    case "reddit": {
-      const posts = await redditSearchPosts(accessToken, query, maxResults * 2);
-      return posts
-        .filter((p) => isRelevantPost(`${p.title} ${p.selftext}`))
-        .map((p) => ({
-          id: p.id,
-          text: `${p.title}\n${p.selftext}`.trim(),
-          url: p.url,
-        }));
-    }
     case "linkedin":
       throw new Error(
         "LinkedIn feed search requiert le programme partenaire LinkedIn (MDP) ou le scope r_member_social — " +
@@ -731,8 +662,6 @@ export async function postCommentOnPost(
   switch (platform) {
     case "twitter":
       return twitterReplyToTweet(accessToken, postId, commentText);
-    case "reddit":
-      return redditCommentOnPost(accessToken, postId, commentText);
     case "linkedin":
       return linkedinCommentOnPost(accessToken, postId, `urn:li:person:${platformUserId}`, commentText);
     case "threads":
