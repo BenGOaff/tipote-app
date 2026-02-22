@@ -464,31 +464,59 @@ async function enrichBusinessProfileMissionBestEffort(params: {
   projectId?: string | null;
 }): Promise<void> {
   const { supabase, userId, persona, planJson, projectId } = params;
-  if (!persona) return;
+  if (!persona && !planJson) return;
 
   try {
-    const parts: string[] = [];
+    const patch: AnyRecord = { updated_at: new Date().toISOString() };
 
-    const title = cleanString(persona.title ?? persona.profile ?? persona.name, 200);
-    if (title) parts.push(title);
+    // ✅ Build persona summary for mission field
+    if (persona) {
+      const parts: string[] = [];
 
-    const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
-    if (pains.length > 0) parts.push(`Douleurs principales : ${pains.slice(0, 4).join(" ; ")}.`);
+      const title = cleanString(persona.title ?? persona.profile ?? persona.name, 200);
+      if (title) parts.push(title);
 
-    const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
-    if (desires.length > 0) parts.push(`Désirs : ${desires.slice(0, 4).join(" ; ")}.`);
+      const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
+      if (pains.length > 0) parts.push(`Douleurs principales : ${pains.slice(0, 4).join(" ; ")}.`);
 
-    const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
-    if (objections.length > 0) parts.push(`Objections fréquentes : ${objections.slice(0, 3).join(" ; ")}.`);
+      const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
+      if (desires.length > 0) parts.push(`Désirs : ${desires.slice(0, 4).join(" ; ")}.`);
 
-    const channels = asArray(persona.channels).map((x) => cleanString(x, 80)).filter(Boolean);
-    if (channels.length > 0) parts.push(`Canaux préférés : ${channels.join(", ")}.`);
+      const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
+      if (objections.length > 0) parts.push(`Objections fréquentes : ${objections.slice(0, 3).join(" ; ")}.`);
 
-    const summary = parts.join("\n");
-    if (!summary.trim()) return;
+      const channels = asArray(persona.channels).map((x) => cleanString(x, 80)).filter(Boolean);
+      if (channels.length > 0) parts.push(`Canaux préférés : ${channels.join(", ")}.`);
 
-    // Only update mission — never overwrite niche (user may have set it via questionnaire)
-    const patch: AnyRecord = { mission: summary, updated_at: new Date().toISOString() };
+      const summary = parts.join("\n");
+      if (summary.trim()) {
+        patch.mission = summary;
+      }
+    }
+
+    // ✅ Build proper niche formula from strategy output (positioning + mission + promise)
+    // This rewrites the niche field with a structured niche formula instead of just the raw topic
+    if (planJson) {
+      const stratMission = cleanString(planJson.mission, 240);
+      const stratPromise = cleanString(planJson.promise, 240);
+      const stratPositioning = cleanString(planJson.positioning, 320);
+      const stratSummary = cleanString(planJson.summary ?? planJson.strategy_summary, 600);
+
+      // Build a richer niche description from strategy data
+      const nicheParts: string[] = [];
+      if (stratPositioning) nicheParts.push(stratPositioning);
+      else if (stratMission) nicheParts.push(stratMission);
+      if (stratPromise && !nicheParts.some((p) => p.toLowerCase().includes(stratPromise.toLowerCase().slice(0, 30))))
+        nicheParts.push(`Promesse : ${stratPromise}`);
+      if (nicheParts.length === 0 && stratSummary) nicheParts.push(stratSummary);
+
+      const nicheFormula = nicheParts.join("\n").trim();
+      if (nicheFormula) {
+        patch.niche = nicheFormula.slice(0, 500);
+      }
+    }
+
+    if (Object.keys(patch).length <= 1) return; // only updated_at, nothing useful
 
     let bpUpdateQuery = supabase.from("business_profiles").update(patch).eq("user_id", userId);
     if (projectId) bpUpdateQuery = bpUpdateQuery.eq("project_id", projectId);
@@ -922,6 +950,10 @@ export async function POST(req: Request) {
     const userId = session.user.id;
     const projectId = await getActiveProjectId(supabase, userId);
 
+    // ✅ Read request body (force flag from front-end onboarding finalization)
+    const reqBody = (await req.json().catch(() => ({}))) as { force?: boolean };
+    const forceRegenerate = Boolean(reqBody?.force);
+
     const acceptLang = (req.headers.get("accept-language") || "").toLowerCase();
     const locale: "fr" | "en" = acceptLang.includes("fr") ? "fr" : "en";
 
@@ -945,10 +977,17 @@ export async function POST(req: Request) {
           ? existingPlanJson.selected_pyramid_index
           : null;
 
-    const hasSelected = typeof existingSelectedIndex === "number";
+    // ✅ When force=true (e.g. after reset + re-onboarding), treat existing plan as stale
+    // so we always regenerate a fresh strategy based on the new onboarding data.
+    if (forceRegenerate && existingPlanJson) {
+      // Wipe stale plan so all "already_complete" guards are bypassed
+      existingPlanJson = null;
+    }
+
+    const hasSelected = typeof existingSelectedIndex === "number" && !forceRegenerate;
     const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
-    const hasUsefulOffers = offersLookUseful(existingOffers);
-    const hasStarter = starterPlanLooksUseful(existingPlanJson);
+    const hasUsefulOffers = !forceRegenerate && offersLookUseful(existingOffers);
+    const hasStarter = !forceRegenerate && starterPlanLooksUseful(existingPlanJson);
 
     // 1) business_profile
     let profileQuery = supabase
@@ -1440,8 +1479,13 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 MISSION
 À partir du business_profile, des onboarding_facts (source de vérité), et des ressources internes, tu produis :
 1) une stratégie claire (mission, promesse, positionnement, résumé),
-2) un persona “terrain” (pains, désirs, objections, déclencheurs, phrases exactes),
+2) un persona “terrain” du CLIENT IDEAL (pains, désirs, objections, déclencheurs, phrases exactes),
 3) un plan 90 jours exécutable (focus unique + milestones + tâches datées).
+
+⚠️ DISTINCTION PROPRIETAIRE vs CLIENT IDEAL :
+- Le “persona” décrit le CLIENT IDEAL (la cible, l'acheteur), PAS le propriétaire du business.
+- Les champs “non_negotiables”, “root_fear”, “situation_tried”, “tone_preference”, “time_available” = contraintes du PROPRIETAIRE.
+- Ne les attribue JAMAIS au persona du client idéal.
 
 RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Tu NE CRÉES PAS de nouvelles offres si l'utilisateur a déjà une offre.
@@ -1723,12 +1767,17 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 MISSION :
 À partir du business_profile (onboarding), du diagnostic_profile (si présent) et de l'offre choisie, tu produis :
 1) stratégie claire (mission, promesse, positionnement, résumé),
-2) persona "terrain" (pains, désirs, objections, déclencheurs, phrases exactes),
+2) persona "terrain" du CLIENT IDEAL (pains, désirs, objections, déclencheurs, phrases exactes),
 3) plan 90 jours exécutable (focus unique + milestones + tâches datées).
+
+⚠️ DISTINCTION PROPRIETAIRE vs CLIENT IDEAL :
+- Le "persona" décrit le CLIENT IDEAL (la cible, l'acheteur), PAS le propriétaire du business.
+- Les champs "non_negotiables", "root_fear", "situation_tried", "tone_preference", "time_available" = contraintes du PROPRIETAIRE.
+- Ne les attribue JAMAIS au persona du client idéal.
 
 RÈGLES COACH-LEVEL :
 - ZÉRO généralités.
-- Respect strict des contraintes/non_negotiables si présentes.
+- Respect strict des contraintes/non_negotiables si présentes (ce sont les contraintes du propriétaire pour le plan 90j, pas du persona).
 - Cohérence totale avec l'offre choisie.
 - 1 levier principal (focus).
 - Min 6 tâches par timeframe, due_date valides.
@@ -1786,6 +1835,9 @@ FORMAT JSON STRICT UNIQUEMENT :
 
     const fullUserPrompt = `Revenue goal (label) : ${cleanString(revenueGoalLabel, 240) || "N/A"}
 Target monthly revenue (guess) : ${targetMonthlyRevGuess !== null ? String(targetMonthlyRevGuess) : "N/A"}
+
+ONBOARDING FACTS (SOURCE DE VÉRITÉ)
+${JSON.stringify(onboardingFacts ?? null, null, 2)}
 
 SOURCE PRIORITAIRE — Diagnostic (si présent)
 diagnostic_profile :
