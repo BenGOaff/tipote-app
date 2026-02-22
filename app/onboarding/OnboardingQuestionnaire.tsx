@@ -319,22 +319,22 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         } catch {/* ignore */}
       }
 
-      // Step 1: Generate strategy (SSE — generates offer pyramids when applicable)
-      setBootStep(1);
-      try {
-        await callStrategySSE({ force: true });
-      } catch {/* fail-open — pyramid selection page will retry if needed */}
-
+      // For pyramid users: redirect IMMEDIATELY to /strategy/pyramids.
+      // The pyramid page handles the full flow:
+      //   load/generate offer pyramids → user picks one → full strategy → tasks → /app
+      // We redirect BEFORE callStrategySSE to avoid timeout/safety-timer race conditions.
       if (shouldShowPyramids) {
-        // Redirect to pyramid selection page.
-        // The selection page handles everything: load/retry pyramid generation,
-        // user picks one, then full strategy + tasks + redirect to /app.
         clearTimeout(safetyTimeout);
         router.replace("/strategy/pyramids");
         return;
       }
 
-      // Non-pyramid users (affiliates, users with offers): sync tasks → dashboard
+      // Non-pyramid users (affiliates, users with offers): strategy → tasks → dashboard
+      setBootStep(1);
+      try {
+        await callStrategySSE({ force: true });
+      } catch {/* fail-open */}
+
       setBootStep(2);
       try {
         await Promise.race([
