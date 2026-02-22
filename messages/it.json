@@ -111,6 +111,7 @@
     "errUnexpected": "Errore imprevisto. Riprova.",
     "errFillEmail": "Inserisci la tua email.",
     "errSendFailed": "Impossibile inviare il link di accesso.",
+    "errRateLimit": "Troppi tentativi. Attendi qualche minuto prima di riprovare.",
     "successMagic": "Un link di accesso è stato inviato. Controlla anche la cartella spam."
   },
   "forgotPasswordPage": {
@@ -121,6 +122,7 @@
     "sendLink": "Invia link",
     "errFillEmail": "Inserisci la tua email.",
     "errSendFailed": "Impossibile inviare l'email di reimpostazione. Verifica l'indirizzo.",
+    "errRateLimit": "Troppi tentativi. Attendi qualche minuto prima di riprovare.",
     "successSent": "Se esiste un account con questa email, è stato inviato un link di reimpostazione.",
     "errUnexpected": "Errore imprevisto. Riprova."
   },

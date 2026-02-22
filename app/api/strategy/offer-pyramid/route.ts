@@ -280,13 +280,15 @@ function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
 
 function normalizeOfferSet(p: AnyRecord | null, idx: number): AnyRecord {
   const id = String(p?.id ?? idx);
-  const name = cleanString(p?.name ?? p?.nom ?? `Offre ${idx + 1}`, 160);
+  const name = cleanString(p?.name ?? p?.nom ?? `Pyramide ${idx + 1}`, 160);
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
     asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
   const low =
-    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
+    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? null;
+  const mid =
+    asRecord(p?.middle_ticket) ?? asRecord(p?.middleTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
   const high =
     asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
@@ -296,6 +298,7 @@ function normalizeOfferSet(p: AnyRecord | null, idx: number): AnyRecord {
     strategy_summary,
     lead_magnet: normalizeOffer(lead),
     low_ticket: normalizeOffer(low),
+    middle_ticket: normalizeOffer(mid),
     high_ticket: normalizeOffer(high),
   };
 }
@@ -305,6 +308,7 @@ function offersLookUseful(offers: unknown[]): boolean {
   const ok = offers
     .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
     .filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
+  // middle_ticket is optional for backward compat with existing data
   return ok.length >= 1;
 }
 
@@ -604,10 +608,18 @@ async function persistOfferPyramidsBestEffort(params: {
 
   const now = new Date().toISOString();
 
+  // Map internal names → DB enum (offer_level): lead_magnet, entry, core, premium
+  const DB_LEVEL_MAP: Record<string, string> = {
+    lead_magnet: "lead_magnet",
+    low_ticket: "entry",
+    middle_ticket: "core",
+    high_ticket: "premium",
+  };
+
   function mkRow(args: {
     offerSetName: string;
     offerSetSummary: string;
-    level: "lead_magnet" | "low_ticket" | "high_ticket";
+    level: "lead_magnet" | "low_ticket" | "middle_ticket" | "high_ticket";
     offer: AnyRecord;
     isFlagship: boolean;
   }): AnyRecord {
@@ -622,7 +634,7 @@ async function persistOfferPyramidsBestEffort(params: {
       user_id: userId,
       ...(projectId ? { project_id: projectId } : {}),
       ...(strategyId ? { strategy_id: strategyId } : {}),
-      level: args.level,
+      level: DB_LEVEL_MAP[args.level] ?? args.level,
       name: cleanString(`${args.offerSetName} — ${title || args.level}`, 240) || args.level,
       description: cleanString(`${args.offerSetSummary}\n\n${composition}`, 4000),
       promise: purpose,
@@ -642,12 +654,14 @@ async function persistOfferPyramidsBestEffort(params: {
 
     const lead = asRecord(p.lead_magnet);
     const low = asRecord(p.low_ticket);
+    const mid = asRecord(p.middle_ticket);
     const high = asRecord(p.high_ticket);
 
     const isSelected = typeof selectedIndex === "number" && idx === selectedIndex;
 
     if (lead) rows.push(mkRow({ offerSetName, offerSetSummary, level: "lead_magnet", offer: lead, isFlagship: isSelected }));
     if (low) rows.push(mkRow({ offerSetName, offerSetSummary, level: "low_ticket", offer: low, isFlagship: isSelected }));
+    if (mid) rows.push(mkRow({ offerSetName, offerSetSummary, level: "middle_ticket", offer: mid, isFlagship: isSelected }));
     if (high) rows.push(mkRow({ offerSetName, offerSetSummary, level: "high_ticket", offer: high, isFlagship: isSelected }));
   });
 
@@ -904,7 +918,7 @@ export async function PATCH(req: Request) {
 
         const pyramids = asArray(nextPlan.offer_pyramids)
           .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
-          .filter((x) => !!x && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
+          .filter((x) => !!x && !!x.lead_magnet && (!!x.low_ticket || !!x.middle_ticket) && !!x.high_ticket);
 
         if (pyramids.length) {
           await persistOfferPyramidsBestEffort({ userId, strategyId, pyramids, selectedIndex, projectId });
@@ -1028,7 +1042,7 @@ export async function POST(req: Request) {
      * 1) Générer les offres si besoin
      */
     if (!hasUsefulOffers) {
-      const OFFERS_COUNT = 5;
+      const OFFERS_COUNT = 3;
 
       const { contextBlock } = selectRelevantContext({
         resources: (resources ?? []) as AnyRecord[],
@@ -1041,7 +1055,8 @@ export async function POST(req: Request) {
 
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
-OBJECTIF : Proposer ${OFFERS_COUNT} offres existantes (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
+OBJECTIF : Proposer ${OFFERS_COUNT} pyramides d'offres complètes (lead magnet → low ticket → middle ticket → high ticket) adaptées à l'utilisateur.
+Chaque pyramide = un ANGLE STRATÉGIQUE différent (objectif, mécanisme, positionnement).
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain.
@@ -1050,9 +1065,10 @@ SOURCE DE VÉRITÉ (ordre de priorité) :
 
 EXIGENCES “ANTI-GÉNÉRALITÉS” :
 - Interdit: “faire du contenu”, “améliorer la com”, “poster sur Instagram” sans préciser QUOI / ANGLE / FORMAT / FRÉQUENCE / CTA.
-- Chaque offre doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit”.
-- Chaque offre = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
-- Intègre un quick win 7 jours cohérent avec l'offre.
+- Chaque pyramide doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit” par niveau.
+- Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
+- Intègre un quick win 7 jours cohérent avec la pyramide.
+- Les pyramides doivent représenter des ORIENTATIONS DIFFÉRENTES pour aider l'utilisateur à se décider.
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 IMPORTANT : Réponds en JSON strict uniquement, sans texte autour.`;
 
@@ -1094,27 +1110,28 @@ RESSOURCES INTERNES (top extraits pertinents) :
 ${contextBlock || "(aucun extrait pertinent trouvé)"}
 
 Contraintes de sortie :
-- Génère ${OFFERS_COUNT} offres complètes.
-- Chaque offre contient : lead_magnet, low_ticket, high_ticket.
-- Pour chaque offre, renseigne :
+- Génère ${OFFERS_COUNT} pyramides d'offres complètes, chacune avec un ANGLE STRATÉGIQUE différent.
+- Chaque pyramide contient 4 niveaux : lead_magnet, low_ticket, middle_ticket, high_ticket.
+- Pour chaque niveau, renseigne :
   - title (spécifique + outcome + mécanisme)
   - format (PDF, mini-cours, workshop, template, audit, coaching, etc.)
   - price (nombre)
   - composition (livrables concrets)
   - purpose (objectif/transformation mesurable)
   - insight (1 phrase: pourquoi ça convertit à ce niveau)
-- La logique globale de chaque offre = strategy_summary (1 phrase).
+- La logique globale de chaque pyramide = strategy_summary (1 phrase expliquant l'orientation).
 
 STRUCTURE EXACTE À RENVOYER :
 {
   "offer_pyramids": [
     {
       "id": "A",
-      "name": "Offre A — ...",
-      "strategy_summary": "1 phrase",
-      "lead_magnet": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-      "low_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-      "high_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
+      "name": "Pyramide A — ...",
+      "strategy_summary": "1 phrase expliquant l'angle stratégique de cette pyramide",
+      "lead_magnet":   { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "low_ticket":    { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "middle_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "high_ticket":   { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
     }
   ]
 }`.trim();
@@ -1382,7 +1399,7 @@ Contraintes :
       try {
         const pyramids = asArray(nextPlan.offer_pyramids)
           .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
-          .filter((x) => !!x && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
+          .filter((x) => !!x && !!x.lead_magnet && (!!x.low_ticket || !!x.middle_ticket) && !!x.high_ticket);
 
         if (pyramids.length) {
           await persistOfferPyramidsBestEffort({

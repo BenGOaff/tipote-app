@@ -568,13 +568,15 @@ function normalizeOffer(offer: AnyRecord | null): AnyRecord | null {
 
 function normalizeOfferSet(p: AnyRecord | null, idx: number): AnyRecord {
   const id = String(p?.id ?? idx);
-  const name = cleanString(p?.name ?? p?.nom ?? `Offre ${idx + 1}`, 160);
+  const name = cleanString(p?.name ?? p?.nom ?? `Pyramide ${idx + 1}`, 160);
   const strategy_summary = cleanString(p?.strategy_summary ?? p?.logique ?? "", 4000);
 
   const lead =
     asRecord(p?.lead_magnet) ?? asRecord(p?.leadMagnet) ?? asRecord(p?.lead) ?? asRecord(p?.lead_offer) ?? null;
   const low =
-    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
+    asRecord(p?.low_ticket) ?? asRecord(p?.lowTicket) ?? null;
+  const mid =
+    asRecord(p?.middle_ticket) ?? asRecord(p?.middleTicket) ?? asRecord(p?.mid) ?? asRecord(p?.middle_offer) ?? null;
   const high =
     asRecord(p?.high_ticket) ?? asRecord(p?.highTicket) ?? asRecord(p?.high) ?? asRecord(p?.high_offer) ?? null;
 
@@ -584,6 +586,7 @@ function normalizeOfferSet(p: AnyRecord | null, idx: number): AnyRecord {
     strategy_summary,
     lead_magnet: normalizeOffer(lead),
     low_ticket: normalizeOffer(low),
+    middle_ticket: normalizeOffer(mid),
     high_ticket: normalizeOffer(high),
   };
 }
@@ -593,6 +596,7 @@ function offersLookUseful(offers: unknown[]): boolean {
   const ok = offers
     .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
     .filter((x) => !!cleanString(x.name, 2) && !!x.lead_magnet && !!x.low_ticket && !!x.high_ticket);
+  // middle_ticket is optional for backward compat with existing data
   return ok.length >= 1;
 }
 
@@ -615,10 +619,12 @@ async function persistOfferPyramidsBestEffort(params: {
       const offerSetName = cleanString(pyr?.name ?? `Offre ${idx + 1}`, 160);
       const offerSetSummary = cleanString(pyr?.strategy_summary ?? "", 4000);
 
+      // Map internal names → DB enum (offer_level): lead_magnet, entry, core, premium
       const levels: { level: string; offer: AnyRecord | null }[] = [
         { level: "lead_magnet", offer: asRecord(pyr?.lead_magnet) },
-        { level: "low_ticket", offer: asRecord(pyr?.low_ticket) },
-        { level: "high_ticket", offer: asRecord(pyr?.high_ticket) },
+        { level: "entry", offer: asRecord(pyr?.low_ticket) },
+        { level: "core", offer: asRecord(pyr?.middle_ticket) },
+        { level: "premium", offer: asRecord(pyr?.high_ticket) },
       ];
 
       levels.forEach(({ level, offer }) => {
@@ -645,7 +651,7 @@ async function persistOfferPyramidsBestEffort(params: {
           format,
           ...(price !== null ? { price_min: price, price_max: price } : {}),
           main_outcome,
-          is_flagship: level === "high_ticket",
+          is_flagship: level === "premium",
           details: {
             pyramid: { id: cleanString(pyr?.id, 64), name: offerSetName, strategy_summary: offerSetSummary },
             offer: o,
@@ -1299,11 +1305,12 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
       const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
 OBJECTIF :
-Proposer 3 offres existantes (lead magnet → low ticket → high ticket) adaptées à l'utilisateur.
+Proposer 3 pyramides d'offres complètes (lead magnet → low ticket → middle ticket → high ticket) adaptées à l'utilisateur.
+Chaque pyramide = un ANGLE STRATÉGIQUE différent (objectif, mécanisme, positionnement).
 
 CONTEXTE IMPORTANT :
 - Si l'utilisateur a déjà des offres ET qu'il n'est PAS satisfait : propose 3 alternatives d'offres (angles/mécanismes) en réutilisant ou améliorant ses offres existantes quand c'est pertinent.
-- Si l'utilisateur n'a pas d'offre : propose 3 offres complètes from scratch.
+- Si l'utilisateur n'a pas d'offre : propose 3 pyramides d'offres complètes from scratch.
 
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain, ultra prioritaire.
@@ -1312,10 +1319,11 @@ SOURCE DE VÉRITÉ (ordre de priorité) :
 
 EXIGENCES “COACH-LEVEL” :
 - Zéro blabla : tout doit être actionnable, spécifique, niché.
-- Chaque offre = une stratégie distincte (angle, mécanisme, promesse, canal, format).
+- Chaque pyramide = une stratégie distincte (angle, mécanisme, promesse, canal, format).
 - Pas de généralités : préciser le quoi / comment / pourquoi.
 - Cohérence : respecter contraintes & non-négociables (temps, énergie, budget, formats refusés).
 - Inclure un quick win 7 jours dans la logique globale.
+- Les 3 pyramides doivent représenter des ORIENTATIONS DIFFÉRENTES pour aider l'utilisateur à se décider (ex: communauté vs expertise vs productisation).
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 IMPORTANT :
 Tu dois répondre en JSON strict uniquement, sans texte autour.`.trim();
@@ -1375,23 +1383,25 @@ Chunks pertinents (extraits) :
 ${JSON.stringify(limitedChunks ?? [], null, 2)}
 
 ${competitorContext ? competitorContext + "\n" : ""}Contraintes :
-- Génère 3 offres complètes.
+- Génère 3 pyramides d'offres complètes, chacune avec un ANGLE STRATÉGIQUE différent.
 ${competitorContext ? "- Tiens compte de l'analyse concurrentielle pour proposer des offres différenciantes." : ""}
-- Chaque offre contient : lead_magnet, low_ticket, high_ticket.
-- Pour chaque offre :
+- Chaque pyramide contient 4 niveaux : lead_magnet, low_ticket, middle_ticket, high_ticket.
+- Pour chaque niveau :
   - title, format, price (number), composition, purpose, insight
-- 1 phrase "strategy_summary" par offre.
+- 1 phrase "strategy_summary" par pyramide expliquant l'orientation et pourquoi cette approche.
+- Les 3 pyramides doivent aider l'utilisateur à choisir entre des directions différentes.
 
 STRUCTURE EXACTE À RENVOYER (JSON strict) :
 {
   "offer_pyramids": [
     {
       "id": "A",
-      "name": "Offre A — ...",
-      "strategy_summary": "1 phrase",
-      "lead_magnet": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-      "low_ticket":  { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
-      "high_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
+      "name": "Pyramide A — ...",
+      "strategy_summary": "1 phrase expliquant l'angle stratégique de cette pyramide",
+      "lead_magnet":   { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "low_ticket":    { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "middle_ticket": { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" },
+      "high_ticket":   { "title":"", "format":"", "price":0, "composition":"", "purpose":"", "insight":"" }
     }
   ]
 }`.trim();

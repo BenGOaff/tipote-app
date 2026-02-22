@@ -53,6 +53,7 @@ import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 import { AIContent } from "@/components/ui/ai-content";
+import LogoutButton from "@/components/LogoutButton";
 
 type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
 
@@ -861,6 +862,17 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <Save className="w-4 h-4 mr-2" />
             {pendingProfile ? tSP("profile.saving") : tSP("profile.save")}
           </Button>
+        </Card>
+
+        {/* Déconnexion */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">{tSP("profile.logoutTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{tSP("profile.logoutDesc")}</p>
+            </div>
+            <LogoutButton />
+          </div>
         </Card>
 
         {/* ✅ ZONE DANGER */}

@@ -38,6 +38,7 @@ interface OfferSet {
   strategy_summary: string;
   lead_magnet: OfferDetail;
   low_ticket: OfferDetail;
+  middle_ticket: OfferDetail;
   high_ticket: OfferDetail;
 }
 
@@ -49,9 +50,10 @@ function asString(v: unknown): string {
 }
 
 function normalizeNewSchema(p: any, idx: number): OfferSet {
+  const mid = p?.middle_ticket ?? p?.middleTicket ?? null;
   return {
     id: String(p?.id ?? idx),
-    name: String(p?.name ?? `Stratégie ${idx + 1}`),
+    name: String(p?.name ?? `Pyramide ${idx + 1}`),
     strategy_summary: String(p?.strategy_summary ?? ""),
     lead_magnet: {
       title: asString(p?.lead_magnet?.title ?? ""),
@@ -64,6 +66,12 @@ function normalizeNewSchema(p: any, idx: number): OfferSet {
       composition: asString(p?.low_ticket?.composition ?? ""),
       purpose: asString(p?.low_ticket?.purpose ?? ""),
       format: asString(p?.low_ticket?.format ?? ""),
+    },
+    middle_ticket: {
+      title: asString(mid?.title ?? ""),
+      composition: asString(mid?.composition ?? ""),
+      purpose: asString(mid?.purpose ?? ""),
+      format: asString(mid?.format ?? ""),
     },
     high_ticket: {
       title: asString(p?.high_ticket?.title ?? ""),
@@ -87,6 +95,7 @@ function normalizeLegacySchema(p: any, idx: number): OfferSet {
   const offers = Array.isArray(p?.offers) ? p.offers : [];
   const lead = offers[0] ?? {};
   const low = offers[1] ?? offers[0] ?? {};
+  const mid = offers.length >= 4 ? (offers[2] ?? {}) : {};
   const high =
     offers.length ? offers[offers.length - 1] : offers[1] ?? offers[0] ?? {};
 
@@ -106,12 +115,13 @@ function normalizeLegacySchema(p: any, idx: number): OfferSet {
     strategy_summary: rationale,
     lead_magnet: toOffer(lead),
     low_ticket: toOffer(low),
+    middle_ticket: toOffer(mid),
     high_ticket: toOffer(high),
   };
 }
 
 function looksLikeNewSchema(p: any): boolean {
-  return !!p && (p.lead_magnet || p.low_ticket || p.high_ticket);
+  return !!p && (p.lead_magnet || p.low_ticket || p.middle_ticket || p.high_ticket);
 }
 
 // -------------------------
@@ -298,9 +308,9 @@ export default function PyramidSelection() {
       }
 
       toast({
-        title: "Stratégie sélectionnée ✅",
+        title: "Pyramide sélectionnée",
         description:
-          "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote™ !",
+          "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote !",
       });
 
       router.push("/app");
@@ -329,9 +339,9 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Création de ta stratégie...</h1>
+            <h1 className="text-2xl font-bold">Création de tes pyramides d'offres...</h1>
             <p className="text-muted-foreground max-w-md">
-              Nous préparons 3 scénarios d'offres adaptés à ton business.
+              Nous préparons 3 pyramides d'offres adaptées à ton business.
             </p>
           </div>
         </div>
@@ -347,9 +357,9 @@ export default function PyramidSelection() {
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="text-primary font-medium">Étape 1</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">Choisis tes offres</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Choisis ta pyramide d'offres</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Nous avons généré 3 stratégies différentes. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
+            Nous avons généré 3 pyramides d'offres sous des angles différents. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
           </p>
         </div>
 
@@ -427,6 +437,14 @@ export default function PyramidSelection() {
                     </p>
                     <p className="font-medium text-sm">{offerSet.low_ticket.title}</p>
                   </div>
+                  {offerSet.middle_ticket.title && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        Middle Ticket
+                      </p>
+                      <p className="font-medium text-sm">{offerSet.middle_ticket.title}</p>
+                    </div>
+                  )}
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-xs font-medium text-muted-foreground mb-1">
                       High Ticket
@@ -444,7 +462,7 @@ export default function PyramidSelection() {
                       setSelectedOfferSetId(offerSet.id);
                     }}
                   >
-                    {selectedOfferSetId === offerSet.id ? "Sélectionné" : "Choisir cette stratégie"}
+                    {selectedOfferSetId === offerSet.id ? "Sélectionnée" : "Choisir cette pyramide"}
                   </Button>
                 </div>
               </CardContent>
@@ -466,7 +484,7 @@ export default function PyramidSelection() {
               </>
             ) : (
               <>
-                Continuer avec cette stratégie
+                Continuer avec cette pyramide
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             )}

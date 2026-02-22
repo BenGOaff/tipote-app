@@ -111,6 +111,7 @@
     "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo.",
     "errFillEmail": "Por favor, introduce tu correo.",
     "errSendFailed": "No se pudo enviar el enlace de acceso.",
+    "errRateLimit": "Demasiadas tentativas. Espera unos minutos antes de intentar de nuevo.",
     "successMagic": "Se ha enviado un enlace de acceso. Revisa también tu carpeta de spam."
   },
   "forgotPasswordPage": {
@@ -121,6 +122,7 @@
     "sendLink": "Enviar enlace",
     "errFillEmail": "Por favor, introduce tu correo.",
     "errSendFailed": "No se pudo enviar el correo de restablecimiento. Verifica la dirección.",
+    "errRateLimit": "Demasiadas tentativas. Espera unos minutos antes de intentar de nuevo.",
     "successSent": "Si existe una cuenta con este correo, se ha enviado un enlace de restablecimiento.",
     "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo."
   },

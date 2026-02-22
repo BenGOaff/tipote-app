@@ -110,7 +110,8 @@
     "errInvalidCredentials": "Invalid email or password.",
     "errUnexpected": "Unexpected error. Please try again.",
     "errFillEmail": "Please enter your email.",
-    "errSendFailed": "Unable to send the sign-in link.",
+    "errSendFailed": "Unable to send the sign-in link. Check your email or try again in a few minutes.",
+    "errRateLimit": "Too many attempts. Please wait a few minutes before trying again.",
     "successMagic": "A sign-in link has been sent. Check your spam folder too."
   },
   "forgotPasswordPage": {
@@ -120,8 +121,9 @@
     "sending": "Sending...",
     "sendLink": "Send link",
     "errFillEmail": "Please enter your email.",
-    "errSendFailed": "Unable to send the reset email. Check the address.",
-    "successSent": "If an account exists for this email, a reset link has been sent.",
+    "errSendFailed": "Unable to send the reset email. Check your email or try again in a few minutes.",
+    "errRateLimit": "Too many attempts. Please wait a few minutes before trying again.",
+    "successSent": "If an account exists for this email, a reset link has been sent. Check your spam folder too.",
     "errUnexpected": "Unexpected error. Please try again."
   },
   "callbackPage": {
@@ -398,6 +400,8 @@
       "timezoneLabel": "Time zone",
       "save": "Save",
       "saving": "Saving…",
+      "logoutTitle": "Sign out",
+      "logoutDesc": "Sign out of your Tipote account on this device.",
       "danger": {
         "title": "Danger zone",
         "subtitle": "Reset my Tipote",

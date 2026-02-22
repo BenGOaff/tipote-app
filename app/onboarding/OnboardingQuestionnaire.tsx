@@ -320,9 +320,9 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         await callStrategySSE({ force: true });
       } catch {/* fail-open */}
 
-      // Step 1.5: For users with no offers (shouldGenerateOffers=true), the SSE above only generates
-      // offer pyramids and stops. We auto-select pyramid 0 and generate the full strategy + tasks here,
-      // so the user arrives on /app with a complete plan and tasks ready.
+      // Step 1.5: If pyramids were generated (user has no offers), redirect to
+      // the pyramid selection page so the user can CHOOSE among the 3 pyramids.
+      // The selection page handles: choose → full strategy generation → tasks sync → /app.
       try {
         const pyramidStatus = await fetch("/api/strategy/offer-pyramid")
           .then((r) => r.json())
@@ -334,26 +334,13 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
           pyramidStatus.offer_pyramids.length > 0 &&
           pyramidStatus.selected_offer_pyramid_index === null
         ) {
-          // Auto-select first offer pyramid
-          await fetch("/api/strategy/offer-pyramid", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ selectedIndex: 0 }),
-          }).catch(() => {});
-
-          // Generate full strategy (persona + plan 90j + tasks) based on selected offer
-          await Promise.race([
-            fetch("/api/strategy/offer-pyramid", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({}),
-            }),
-            new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 60_000)),
-          ]).catch(() => {});
+          clearTimeout(safetyTimeout);
+          router.replace("/strategy/pyramids");
+          return;
         }
-      } catch {/* fail-open */}
+      } catch {/* fail-open — continue to normal /app redirect */}
 
-      // Step 2: Sync tasks
+      // Step 2: Sync tasks (only for users who already have a full strategy)
       setBootStep(2);
       try {
         await Promise.race([

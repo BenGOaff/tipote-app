@@ -8,7 +8,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
 import { useTranslations } from 'next-intl';
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tipote.com';
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.tipote.com';
 
 export default function ForgotPasswordForm() {
   const t = useTranslations('forgotPasswordPage');
@@ -24,7 +24,8 @@ export default function ForgotPasswordForm() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!email) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
       setErrorMsg(t('errFillEmail'));
       return;
     }
@@ -32,16 +33,23 @@ export default function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${SITE_URL}/auth/callback`,
       });
 
       if (error) {
         console.error(
           '[ForgotPasswordForm] resetPasswordForEmail error',
-          error,
+          error.message,
+          error.status,
         );
-        setErrorMsg(t('errSendFailed'));
+
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('rate') || msg.includes('limit') || error.status === 429) {
+          setErrorMsg(t('errRateLimit'));
+        } else {
+          setErrorMsg(t('errSendFailed'));
+        }
         setLoading(false);
         return;
       }

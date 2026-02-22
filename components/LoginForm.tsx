@@ -108,7 +108,8 @@ export default function LoginForm() {
     e.preventDefault();
     setErrorPassword(null);
 
-    if (!emailPassword || !password) {
+    const cleanEmail = emailPassword.trim().toLowerCase();
+    if (!cleanEmail || !password) {
       setErrorPassword(t('errFillCredentials'));
       return;
     }
@@ -117,12 +118,12 @@ export default function LoginForm() {
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: emailPassword,
+        email: cleanEmail,
         password,
       });
 
       if (error) {
-        console.error('[LoginForm] signInWithPassword error', error);
+        console.error('[LoginForm] signInWithPassword error', error.message, error.status);
         setErrorPassword(t('errInvalidCredentials'));
         setLoadingPassword(false);
         return;
@@ -142,7 +143,8 @@ export default function LoginForm() {
     setErrorMagic(null);
     setSuccessMagic(null);
 
-    if (!emailMagic) {
+    const cleanEmail = emailMagic.trim().toLowerCase();
+    if (!cleanEmail) {
       setErrorMagic(t('errFillEmail'));
       return;
     }
@@ -151,16 +153,20 @@ export default function LoginForm() {
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        email: emailMagic,
+        email: cleanEmail,
         options: {
-          // ⚠️ Très important : doit pointer sur app.tipote.com (pas tipote.com)
           emailRedirectTo: `${SITE_URL}/auth/callback`,
         },
       });
 
       if (error) {
-        console.error('[LoginForm] signInWithOtp error', error);
-        setErrorMagic(t('errSendFailed'));
+        console.error('[LoginForm] signInWithOtp error', error.message, error.status);
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('rate') || msg.includes('limit') || error.status === 429) {
+          setErrorMagic(t('errRateLimit'));
+        } else {
+          setErrorMagic(t('errSendFailed'));
+        }
         setLoadingMagic(false);
         return;
       }

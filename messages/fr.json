@@ -110,7 +110,8 @@
     "errInvalidCredentials": "Email ou mot de passe incorrect.",
     "errUnexpected": "Erreur inattendue. Merci de réessayer.",
     "errFillEmail": "Merci de renseigner ton email.",
-    "errSendFailed": "Impossible d'envoyer le lien de connexion.",
+    "errSendFailed": "Impossible d'envoyer le lien de connexion. Vérifie ton email ou réessaie dans quelques minutes.",
+    "errRateLimit": "Trop de tentatives. Merci de patienter quelques minutes avant de réessayer.",
     "successMagic": "Un lien de connexion t'a été envoyé. Pense à vérifier tes spams."
   },
   "forgotPasswordPage": {
@@ -120,8 +121,9 @@
     "sending": "Envoi...",
     "sendLink": "Envoyer le lien",
     "errFillEmail": "Merci de renseigner ton email.",
-    "errSendFailed": "Impossible d'envoyer l'email de réinitialisation. Vérifie l'adresse.",
-    "successSent": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.",
+    "errSendFailed": "Impossible d'envoyer l'email de réinitialisation. Vérifie ton email ou réessaie dans quelques minutes.",
+    "errRateLimit": "Trop de tentatives. Merci de patienter quelques minutes avant de réessayer.",
+    "successSent": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé. Pense à vérifier tes spams.",
     "errUnexpected": "Erreur inattendue. Merci de réessayer."
   },
   "callbackPage": {
@@ -398,6 +400,8 @@
       "timezoneLabel": "Fuseau horaire",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
+      "logoutTitle": "Déconnexion",
+      "logoutDesc": "Te déconnecter de ton compte Tipote sur cet appareil.",
       "danger": {
         "title": "Zone danger",
         "subtitle": "Réinitialiser mon Tipote",
