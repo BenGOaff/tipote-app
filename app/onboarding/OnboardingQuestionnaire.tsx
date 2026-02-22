@@ -8,6 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -414,30 +415,74 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
       if (shouldShowPyramids) {
         setBootStep(1); // "Generating your offer options..."
 
+        let pyramidsFound: PyramidSet[] = [];
+
+        // Step A: Generate offers via SSE (heartbeats prevent 504 timeout)
         try {
-          // Generate 3 offer pyramids via the SSE strategy endpoint.
-          // We use callStrategySSE (SSE with heartbeats) to avoid 504 proxy timeouts.
-          // The SSE route generates offers for "no offers" users automatically.
-          await callStrategySSE({ force: true });
-
-          // Offers generated — fetch them via the GET endpoint
-          const getRes = await fetch("/api/strategy/offer-pyramid").then((r) => r.json()).catch(() => ({}));
-          const generatedPyramids = Array.isArray((getRes as AnyRecord)?.offer_pyramids)
-            ? ((getRes as AnyRecord).offer_pyramids as PyramidSet[])
-            : [];
-
-          if (generatedPyramids.length > 0) {
-            clearTimeout(safetyTimeout);
-            setPyramids(generatedPyramids);
-            setIsFinalizing(false);
-            setShowPyramidSelection(true);
-            return; // Wait for user to select a pyramid
-          }
+          console.log("[onboarding] Calling callStrategySSE({ force: true }) to generate offers...");
+          const sseResult = await callStrategySSE({ force: true });
+          console.log("[onboarding] SSE result:", JSON.stringify(sseResult));
         } catch (err) {
-          console.error("offer pyramid generation error:", err);
+          console.error("[onboarding] SSE offer generation error:", err);
         }
 
-        // Ultimate fallback: go to app, StrategyAutoBootstrap will handle it
+        // Step B: Read the plan directly from DB (bypass GET endpoint to avoid project_id / RLS issues)
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData?.user?.id;
+          console.log("[onboarding] Reading plan for user:", uid);
+
+          if (uid) {
+            const { data: planRows, error: planError } = await supabase
+              .from("business_plan")
+              .select("plan_json")
+              .eq("user_id", uid)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+
+            console.log("[onboarding] Plan query error:", planError?.message ?? "none");
+            console.log("[onboarding] Plan rows found:", planRows?.length ?? 0);
+
+            const planJson = (planRows?.[0]?.plan_json ?? null) as AnyRecord | null;
+            const rawPyramids = planJson ? (planJson as AnyRecord).offer_pyramids : null;
+            console.log("[onboarding] offer_pyramids type:", typeof rawPyramids, "isArray:", Array.isArray(rawPyramids), "length:", Array.isArray(rawPyramids) ? rawPyramids.length : "N/A");
+
+            if (Array.isArray(rawPyramids) && rawPyramids.length > 0) {
+              pyramidsFound = rawPyramids as PyramidSet[];
+            }
+          }
+        } catch (err) {
+          console.error("[onboarding] Direct DB read error:", err);
+        }
+
+        // Step C: Fallback — try the GET endpoint too
+        if (pyramidsFound.length === 0) {
+          try {
+            console.log("[onboarding] Trying GET /api/strategy/offer-pyramid as fallback...");
+            const getRes = await fetch("/api/strategy/offer-pyramid").then((r) => r.json()).catch(() => ({}));
+            console.log("[onboarding] GET response:", JSON.stringify(getRes).slice(0, 500));
+            const arr = Array.isArray((getRes as AnyRecord)?.offer_pyramids)
+              ? ((getRes as AnyRecord).offer_pyramids as PyramidSet[])
+              : [];
+            if (arr.length > 0) pyramidsFound = arr;
+          } catch (err) {
+            console.error("[onboarding] GET fallback error:", err);
+          }
+        }
+
+        // Step D: Show pyramid selection if we have offers
+        if (pyramidsFound.length > 0) {
+          console.log("[onboarding] ✅ Showing pyramid selection with", pyramidsFound.length, "options");
+          clearTimeout(safetyTimeout);
+          setPyramids(pyramidsFound);
+          setIsFinalizing(false);
+          setShowPyramidSelection(true);
+          return; // Wait for user to select a pyramid
+        }
+
+        // Step E: Ultimate fallback — no offers found, go to app
+        console.error("[onboarding] ❌ No pyramids found after generation. Falling back to /app");
         setBootStep(3);
         await new Promise((r) => setTimeout(r, 800));
         clearTimeout(safetyTimeout);
