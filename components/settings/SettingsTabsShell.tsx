@@ -26,6 +26,8 @@ import {
   FileText,
   Paintbrush,
   Target,
+  Pencil,
+  Eye,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -100,6 +102,8 @@ type ProfileRow = {
   brand_tone_of_voice?: string | null;
   // Onboarding tone (fallback for brand_tone_of_voice)
   preferred_tone?: string | null;
+  // Diagnostic profile (contains niche components from onboarding)
+  diagnostic_profile?: Record<string, any> | null;
 };
 
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
@@ -215,18 +219,35 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setFirstName(row?.first_name ?? "");
         setMission(row?.mission ?? "");
         // Parse niche formula into 4 sub-fields
-        const nicheStr = row?.niche ?? "";
-        const nicheMatch = nicheStr.match(/j'aide les (.+?) à (.+?) avec (.+?) en (.+)/i);
-        if (nicheMatch) {
-          setNicheTarget(nicheMatch[1]);
-          setNicheObjective(nicheMatch[2]);
-          setNicheMechanism(nicheMatch[3]);
-          setNicheMarker(nicheMatch[4]);
+        // Priority 1: use individual components from diagnostic_profile (onboarding source of truth)
+        const diag = row?.diagnostic_profile;
+        const diagTarget = typeof diag?.nicheTarget === "string" ? diag.nicheTarget.trim() : "";
+        const diagObjective = typeof diag?.nicheObjective === "string" ? diag.nicheObjective.trim() : "";
+        const diagMechanism = typeof diag?.nicheMechanism === "string" ? diag.nicheMechanism.trim() : "";
+        const diagTimeframe = typeof diag?.nicheTimeframe === "string" ? diag.nicheTimeframe.trim() : "";
+
+        if (diagTarget || diagObjective) {
+          setNicheTarget(diagTarget);
+          setNicheObjective(diagObjective);
+          setNicheMechanism(diagMechanism);
+          setNicheMarker(diagTimeframe);
         } else {
-          setNicheTarget(nicheStr);
-          setNicheObjective("");
-          setNicheMechanism("");
-          setNicheMarker("");
+          // Priority 2: parse from niche string (supports "grâce à" and "avec")
+          const nicheStr = row?.niche ?? "";
+          const nicheMatch = nicheStr.match(
+            /j['']aide les (.+?) à (.+?)(?:\s+(?:grâce à|avec)\s+(.+?))?(?:\s+en\s+(.+))?$/i
+          );
+          if (nicheMatch) {
+            setNicheTarget(nicheMatch[1]?.trim() ?? "");
+            setNicheObjective(nicheMatch[2]?.trim() ?? "");
+            setNicheMechanism(nicheMatch[3]?.trim() ?? "");
+            setNicheMarker(nicheMatch[4]?.trim() ?? "");
+          } else {
+            setNicheTarget(nicheStr);
+            setNicheObjective("");
+            setNicheMechanism("");
+            setNicheMarker("");
+          }
         }
         setPrivacyUrl(row?.privacy_url ?? "");
         setTermsUrl(row?.terms_url ?? "");
@@ -277,7 +298,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const assembledNiche = useMemo(() => {
     if (!nicheTarget && !nicheObjective && !nicheMechanism && !nicheMarker) return "";
-    return `J'aide les ${nicheTarget} à ${nicheObjective} avec ${nicheMechanism} en ${nicheMarker}`;
+    const parts = [`J'aide les ${nicheTarget || "…"} à ${nicheObjective || "…"}`];
+    if (nicheMechanism) parts.push(`grâce à ${nicheMechanism}`);
+    if (nicheMarker) parts.push(`en ${nicheMarker}`);
+    return parts.join(" ");
   }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker]);
 
   const positioningDirty = useMemo(() => {
@@ -409,6 +433,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [competitorInsightsMarkdown, setCompetitorInsightsMarkdown] = useState<string | null>(null);
   const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
+  const [summaryEditMode, setSummaryEditMode] = useState(false);
 
   // Load existing persona detailed data on mount
   useEffect(() => {
@@ -1213,11 +1238,19 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             J&apos;aide les{" "}
             <span className="font-semibold text-primary">{nicheTarget || "[cible]"}</span>{" "}
             à{" "}
-            <span className="font-semibold text-primary">{nicheObjective || "[objectif]"}</span>{" "}
-            avec{" "}
-            <span className="font-semibold text-primary">{nicheMechanism || "[mécanisme unique]"}</span>{" "}
-            en{" "}
-            <span className="font-semibold text-primary">{nicheMarker || "[marqueur temporel]"}</span>
+            <span className="font-semibold text-primary">{nicheObjective || "[objectif]"}</span>
+            {(nicheMechanism || !nicheTarget) && (
+              <>
+                {" "}grâce à{" "}
+                <span className="font-semibold text-primary">{nicheMechanism || "[mécanisme unique]"}</span>
+              </>
+            )}
+            {(nicheMarker || !nicheTarget) && (
+              <>
+                {" "}en{" "}
+                <span className="font-semibold text-primary">{nicheMarker || "[marqueur temporel]"}</span>
+              </>
+            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -1307,15 +1340,53 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </div>
 
           {personaDetailTab === "summary" && (
-            <div className="space-y-2">
-              <Textarea
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                rows={8}
-                className="resize-y min-h-[200px]"
-                disabled={profileLoading}
-                placeholder={tSP("positioningTab.personaPlaceholder")}
-              />
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setSummaryEditMode((v) => !v)}
+                >
+                  {summaryEditMode ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      Aperçu
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="w-3.5 h-3.5" />
+                      Modifier
+                    </>
+                  )}
+                </Button>
+              </div>
+              {summaryEditMode ? (
+                <Textarea
+                  value={mission}
+                  onChange={(e) => setMission(e.target.value)}
+                  rows={12}
+                  className="resize-y min-h-[300px] font-mono text-sm"
+                  disabled={profileLoading}
+                  placeholder={tSP("positioningTab.personaPlaceholder")}
+                />
+              ) : mission ? (
+                <div className="rounded-lg border bg-background">
+                  <AIContent
+                    content={mission}
+                    mode="markdown"
+                    scroll
+                    maxHeight="70vh"
+                    className="p-5"
+                  />
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground rounded-lg border bg-background">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de résumé persona</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un résumé de ton client idéal.</p>
+                </div>
+              )}
             </div>
           )}
 

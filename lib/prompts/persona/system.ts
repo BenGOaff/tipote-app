@@ -137,7 +137,7 @@ FORMAT JSON STRICT — Respecte EXACTEMENT cette structure :
   "persona_detailed_markdown": "string (le profil persona COMPLET en Markdown, étape 1 — MINIMUM 2000 mots)",
   "competitor_insights_markdown": "string (mécanisme unique en Markdown, étape 2 — au moins 300 mots)",
   "narrative_synthesis_markdown": "string (synthèse narrative en Markdown, étape 3 — au moins 400 mots)",
-  "persona_summary": "string (résumé de 5-8 phrases pour afficher dans les réglages)",
+  "persona_summary": "string (résumé structuré en Markdown pour afficher dans les réglages — utilise des **mots en gras**, des listes à puces, des titres courts ## si besoin, et des sauts de ligne pour une lecture facile. Environ 10-15 lignes, couvrant : qui est le client idéal, ses douleurs principales, ses désirs, et ce qui le motive à passer à l'action)",
   "persona_classic": {
     "title": "string (profil type en une phrase)",
     "pains": ["string — au moins 6 douleurs détaillées"],
