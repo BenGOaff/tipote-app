@@ -211,7 +211,6 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.6,
       max_completion_tokens: 16000,
     }, { timeout: 110_000 });
 

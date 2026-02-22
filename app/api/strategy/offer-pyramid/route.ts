@@ -1091,7 +1091,6 @@ STRUCTURE EXACTE À RENVOYER :
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.65,
       });
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -1255,7 +1254,6 @@ Contraintes :
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-      temperature: 0.6,
     });
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
