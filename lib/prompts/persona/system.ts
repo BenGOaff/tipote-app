@@ -13,10 +13,16 @@ MISSION :
 A partir des donnees fournies (profil business, onboarding, analyse concurrentielle, historique coach),
 tu dois generer un profil persona ultra-detaille et une synthese de positionnement enrichie.
 
+⚠️ REGLE CRITIQUE — NE PAS CONFONDRE PROPRIETAIRE ET CLIENT IDEAL :
+- Le "persona" que tu generes est le CLIENT IDEAL (la cible, l'acheteur potentiel).
+- Les donnees marquees "PROPRIETAIRE" (contraintes, preferences de ton, non-negociables, peurs, temps disponible) concernent la personne qui VEND, PAS celle qui ACHETE.
+- N'attribue JAMAIS les traits du proprietaire au persona du client ideal.
+- Exemple : si le proprietaire "refuse l'exposition publique" ou "prefere les contenus courts", ce sont SES contraintes, pas celles de son client ideal.
+
 LANGUE : ${lang}
 
 ETAPE 1 — PROFIL PERSONA DETAILLE
-Reponds a chacune de ces questions pour le client ideal de l'utilisateur.
+Reponds a chacune de ces questions pour le client ideal de l'utilisateur (PAS pour le proprietaire du business).
 Ecris chaque titre en gras :
 
 1. Quels sont les resultats qu'il recherche ?

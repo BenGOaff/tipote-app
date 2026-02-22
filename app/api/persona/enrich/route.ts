@@ -109,30 +109,81 @@ export async function POST() {
 
     const systemPrompt = buildEnhancedPersonaPrompt({ locale: "fr" });
 
-    const userPrompt = `DONNEES UTILISATEUR
+    // ✅ Separate owner data from persona-relevant data to prevent mixing
+    const diagnosticProfile = (businessProfile?.diagnostic_profile ?? null) as AnyRecord | null;
 
-PROFIL BUSINESS :
-${JSON.stringify(
-  {
-    niche: businessProfile?.niche ?? null,
-    mission: businessProfile?.mission ?? null,
-    offers: businessProfile?.offers ?? null,
-    business_maturity: businessProfile?.business_maturity ?? null,
-    tone_preference: businessProfile?.tone_preference ?? null,
-    diagnostic_profile: businessProfile?.diagnostic_profile ?? null,
-    diagnostic_summary: businessProfile?.diagnostic_summary ?? null,
-  },
-  null,
-  2,
-)}
+    // Extract owner-specific fields (constraints, preferences) — these are NOT about the persona
+    const ownerConstraints: AnyRecord = {};
+    const personaRelevantDiagnostic: AnyRecord = {};
+    if (diagnosticProfile && typeof diagnosticProfile === "object") {
+      const ownerKeys = ["non_negotiables", "constraints", "root_fear", "situation_tried", "offers_satisfaction"];
+      for (const [k, v] of Object.entries(diagnosticProfile)) {
+        if (ownerKeys.includes(k)) {
+          ownerConstraints[k] = v;
+        } else {
+          personaRelevantDiagnostic[k] = v;
+        }
+      }
+    }
 
-ONBOARDING FACTS :
-${JSON.stringify(onboardingFacts, null, 2)}
+    // Extract owner-specific onboarding facts vs persona-relevant ones
+    const ownerOnboardingFacts: AnyRecord = {};
+    const personaOnboardingFacts: AnyRecord = {};
+    const ownerFactKeys = new Set([
+      "non_negotiables", "root_fear", "situation_tried", "constraints",
+      "tone_preference_hint", "preferred_tone", "time_available_hours_week",
+      "time_available", "content_channels_priority", "revenue_goal_monthly",
+      "offers_satisfaction", "business_stage", "business_maturity",
+    ]);
+    for (const [k, v] of Object.entries(onboardingFacts)) {
+      if (ownerFactKeys.has(k)) {
+        ownerOnboardingFacts[k] = v;
+      } else {
+        personaOnboardingFacts[k] = v;
+      }
+    }
+
+    const userPrompt = `⚠️ REGLE CRITIQUE : Tu génères le persona du CLIENT IDEAL (la cible), PAS le profil du propriétaire du business.
+Les informations ci-dessous distinguent clairement ce qui concerne le propriétaire (ses contraintes, ses préférences) et ce qui concerne sa cible (son audience, sa niche, ses offres). Ne mélange JAMAIS les deux.
+
+═══════════════════════════════════════════════════
+SECTION 1 — LE BUSINESS (niche, offres, positionnement)
+Ces infos décrivent CE QUE FAIT le propriétaire et À QUI il s'adresse.
+Utilise-les pour DÉDUIRE le profil du client idéal.
+═══════════════════════════════════════════════════
+
+Niche / activité : ${cleanString(businessProfile?.niche, 500) || "Non renseigné"}
+Mission / persona existant : ${cleanString(businessProfile?.mission, 500) || "Non renseigné"}
+Offres : ${JSON.stringify(businessProfile?.offers ?? "Non disponible", null, 2)}
+Audience cible (onboarding) : ${cleanString(personaOnboardingFacts["target_audience_short"], 300) || "Non renseigné"}
+Sujet principal : ${cleanString(personaOnboardingFacts["main_topic"], 200) || cleanString(personaOnboardingFacts["primary_activity"], 200) || "Non renseigné"}
+Modèle économique : ${cleanString(personaOnboardingFacts["business_model"], 100) || "Non renseigné"}
+Focus principal : ${cleanString(personaOnboardingFacts["primary_focus"], 100) || "Non renseigné"}
+
+Diagnostic (infos sur la cible) :
+${JSON.stringify(Object.keys(personaRelevantDiagnostic).length > 0 ? personaRelevantDiagnostic : "Non disponible", null, 2)}
+
+═══════════════════════════════════════════════════
+SECTION 2 — LE PROPRIETAIRE DU BUSINESS (ses contraintes perso)
+⚠️ Ces infos concernent le PROPRIETAIRE, PAS son client idéal.
+NE LES ATTRIBUE PAS au persona. Elles servent uniquement de contexte
+pour comprendre les limites et le style du business.
+═══════════════════════════════════════════════════
+
+Maturité business : ${cleanString(businessProfile?.business_maturity, 100) || "Non renseigné"}
+Ton préféré (du propriétaire) : ${cleanString(businessProfile?.tone_preference, 200) || "Non renseigné"}
+Contraintes du propriétaire : ${JSON.stringify(Object.keys(ownerConstraints).length > 0 ? ownerConstraints : "Aucune", null, 2)}
+Préférences du propriétaire (onboarding) : ${JSON.stringify(Object.keys(ownerOnboardingFacts).length > 0 ? ownerOnboardingFacts : "Aucune", null, 2)}
+Résumé diagnostic : ${cleanString(businessProfile?.diagnostic_summary, 1000) || "Non disponible"}
+
+═══════════════════════════════════════════════════
+SECTION 3 — DONNÉES EXISTANTES (enrichissement)
+═══════════════════════════════════════════════════
 
 ANALYSE CONCURRENTIELLE :
 ${JSON.stringify(competitorAnalysis ?? "Non disponible", null, 2)}
 
-PERSONA EXISTANT :
+PERSONA EXISTANT (à enrichir, pas à copier tel quel) :
 ${JSON.stringify(existingPersona?.persona_json ?? "Non disponible", null, 2)}
 
 STRATEGIE EXISTANTE :
@@ -150,7 +201,8 @@ ${JSON.stringify(
 EXTRAITS CONVERSATIONS COACH (contexte utilisateur) :
 ${coachContext || "Aucune conversation disponible."}
 
-Genere le profil persona enrichi complet en JSON.`;
+Génère le profil persona enrichi complet du CLIENT IDEAL en JSON.
+Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du business.`;
 
     const resp = await ai.chat.completions.create({
       model: "gpt-4.1",
