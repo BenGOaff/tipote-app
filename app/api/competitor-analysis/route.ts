@@ -29,6 +29,7 @@ async function callOpenAI(args: {
   system: string;
   user: string;
   maxTokens?: number;
+  temperature?: number;
 }): Promise<string> {
   const client = getOwnerOpenAI();
   if (!client) throw new Error("Clé API OpenAI non configurée. Contactez le support.");
@@ -36,6 +37,7 @@ async function callOpenAI(args: {
   const completion = await client.chat.completions.create({
     model: OPENAI_MODEL,
     max_completion_tokens: args.maxTokens ?? 4000,
+    temperature: args.temperature ?? 0.4,
     messages: [
       { role: "system", content: args.system },
       { role: "user", content: args.user },
@@ -485,6 +487,7 @@ Analyse chaque concurrent en détail et produis le rapport complet en JSON.`;
       system: systemPrompt,
       user: userPrompt,
       maxTokens: 12000,
+      temperature: 0.4,
     });
 
     // Robust JSON extraction:

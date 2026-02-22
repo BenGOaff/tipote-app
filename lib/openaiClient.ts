@@ -17,4 +17,4 @@ export const openai = getOwnerOpenAI();
 export const OPENAI_MODEL =
   process.env.TIPOTE_OPENAI_MODEL?.trim() ||
   process.env.OPENAI_MODEL?.trim() ||
-  "gpt-5-mini";
+  "gpt-5-nano";

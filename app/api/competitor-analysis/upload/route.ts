@@ -23,6 +23,7 @@ async function callOpenAI(args: {
   system: string;
   user: string;
   maxTokens?: number;
+  temperature?: number;
 }): Promise<string> {
   const client = getOwnerOpenAI();
   if (!client) throw new Error("Clé API OpenAI non configurée. Contactez le support.");
@@ -30,6 +31,7 @@ async function callOpenAI(args: {
   const completion = await client.chat.completions.create({
     model: OPENAI_MODEL,
     max_completion_tokens: args.maxTokens ?? 4000,
+    temperature: args.temperature ?? 0.3,
     messages: [
       { role: "system", content: args.system },
       { role: "user", content: args.user },
@@ -256,6 +258,7 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure :
       system: systemPrompt,
       user: `DOCUMENT UPLOADÉ :\n\n${documentText}`,
       maxTokens: 2000,
+      temperature: 0.2,
     });
 
     let jsonStr = raw;

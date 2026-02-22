@@ -67,6 +67,7 @@ Ta mission :
 
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
+        temperature: 0.4,
         messages: [
           { role: "system", content: system },
           { role: "user", content: userMsg },
