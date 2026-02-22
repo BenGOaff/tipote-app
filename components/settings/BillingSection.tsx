@@ -296,13 +296,11 @@ export default function BillingSection({ email }: Props) {
               {loading ? t("loading") : isBeta ? "Accès PRO à vie — 150 crédits IA/mois — Coach IA inclus" : t(`plan.${currentPlan}.desc`)}
             </p>
           </div>
-          <p className="text-3xl font-bold text-primary-foreground">
-            {loading ? "—" : currentMeta.lifetime ? (
-              <span className="text-xl">Offert</span>
-            ) : (
-              <>{currentMeta.price}€<span className="text-lg font-normal">{t("perMonth")}</span></>
-            )}
-          </p>
+          {!loading && !currentMeta.lifetime && (
+            <p className="text-3xl font-bold text-primary-foreground">
+              {currentMeta.price}€<span className="text-lg font-normal">{t("perMonth")}</span>
+            </p>
+          )}
         </div>
       </Card>
 

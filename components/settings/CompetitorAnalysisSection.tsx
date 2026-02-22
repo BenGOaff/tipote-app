@@ -251,7 +251,6 @@ export default function CompetitorAnalysisSection() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [competitors, setCompetitors] = useState<CompetitorInput[]>([
     { name: "", website: "", notes: "" },
-    { name: "", website: "", notes: "" },
   ]);
   const [researching, startResearchTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
@@ -272,7 +271,7 @@ export default function CompetitorAnalysisSection() {
         if (cancelled) return;
         if (json?.ok && json.analysis) {
           setAnalysis(json.analysis);
-          if (Array.isArray(json.analysis.competitors) && json.analysis.competitors.length >= 2) {
+          if (Array.isArray(json.analysis.competitors) && json.analysis.competitors.length >= 1) {
             setCompetitors(json.analysis.competitors);
           }
           if (json.analysis.status === "completed") setShowResults(true);
@@ -293,7 +292,7 @@ export default function CompetitorAnalysisSection() {
     setCompetitors((prev) => [...prev, { name: "", website: "", notes: "" }]);
   };
   const removeCompetitor = (idx: number) => {
-    if (competitors.length <= 2) return;
+    if (competitors.length <= 1) return;
     setCompetitors((prev) => prev.filter((_, i) => i !== idx));
   };
   const updateCompetitor = (idx: number, field: keyof CompetitorInput, value: string) => {
@@ -301,7 +300,7 @@ export default function CompetitorAnalysisSection() {
   };
 
   const canResearch = useMemo(
-    () => competitors.filter((c) => c.name.trim().length > 0).length >= 2,
+    () => competitors.filter((c) => c.name.trim().length > 0).length >= 1,
     [competitors],
   );
 
@@ -482,7 +481,7 @@ export default function CompetitorAnalysisSection() {
               <div key={idx} className="p-4 border rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="font-medium text-sm">Concurrent {idx + 1}</Label>
-                  {competitors.length > 2 && (
+                  {competitors.length > 1 && (
                     <Button
                       variant="ghost"
                       size="sm"

@@ -61,11 +61,11 @@ const CompetitorSchema = z.object({
 });
 
 const PostSchema = z.object({
-  competitors: z.array(CompetitorSchema).min(2).max(5),
+  competitors: z.array(CompetitorSchema).min(1).max(5),
 });
 
 const PatchSchema = z.object({
-  competitors: z.array(CompetitorSchema).min(2).max(5).optional(),
+  competitors: z.array(CompetitorSchema).min(1).max(5).optional(),
   competitor_details: z.record(z.string(), z.any()).optional(),
   summary: z.string().trim().max(10000).optional(),
   strengths: z.array(z.string().max(500)).max(20).optional(),
