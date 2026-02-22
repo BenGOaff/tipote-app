@@ -149,7 +149,21 @@
     "loading": "Cargando…",
     "loadingDesc": "Preparando la página de restablecimiento de contraseña.",
     "title": "Establecer una nueva contraseña",
-    "description": "Elige una nueva contraseña para tu cuenta de Tipote."
+    "description": "Elige una nueva contraseña para tu cuenta de Tipote.",
+    "labelNewPassword": "Nueva contraseña",
+    "labelConfirm": "Confirmar contraseña",
+    "hintMinLength": "Mínimo 8 caracteres",
+    "saving": "Guardando…",
+    "submit": "Guardar contraseña",
+    "errFillBoth": "Por favor, completa los dos campos.",
+    "errMismatch": "Las contraseñas no coinciden.",
+    "errMinLength": "La contraseña debe tener al menos 8 caracteres.",
+    "errSessionExpired": "Tu sesión ha expirado. Vuelve a abrir el enlace recibido por correo e inténtalo de nuevo.",
+    "errSamePassword": "Elige una contraseña diferente a la anterior.",
+    "errUpdateFailed": "No se pudo actualizar la contraseña.",
+    "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo.",
+    "successFirst": "Contraseña creada. Ya puedes iniciar sesión.",
+    "successReset": "Contraseña actualizada. Ya puedes iniciar sesión."
   },
   "setPasswordPage": {
     "tagline": "Tu asistente estratégico inteligente",

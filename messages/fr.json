@@ -149,7 +149,21 @@
     "loading": "Chargement…",
     "loadingDesc": "On prépare la page de réinitialisation du mot de passe.",
     "title": "Définir un nouveau mot de passe",
-    "description": "Choisis un nouveau mot de passe pour ton compte Tipote."
+    "description": "Choisis un nouveau mot de passe pour ton compte Tipote.",
+    "labelNewPassword": "Nouveau mot de passe",
+    "labelConfirm": "Confirmer le mot de passe",
+    "hintMinLength": "Minimum 8 caractères",
+    "saving": "Enregistrement…",
+    "submit": "Valider le mot de passe",
+    "errFillBoth": "Merci de remplir les deux champs.",
+    "errMismatch": "Les mots de passe ne correspondent pas.",
+    "errMinLength": "Le mot de passe doit contenir au moins 8 caractères.",
+    "errSessionExpired": "Ta session a expiré. Merci de rouvrir le lien reçu par email et de réessayer.",
+    "errSamePassword": "Choisis un mot de passe différent de l'ancien.",
+    "errUpdateFailed": "Impossible de mettre à jour le mot de passe.",
+    "errUnexpected": "Erreur inattendue. Merci de réessayer.",
+    "successFirst": "Mot de passe créé. Tu peux maintenant te connecter.",
+    "successReset": "Mot de passe mis à jour. Tu peux maintenant te connecter."
   },
   "setPasswordPage": {
     "tagline": "Ton assistant stratégique intelligent",

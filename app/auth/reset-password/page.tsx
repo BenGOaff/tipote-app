@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import SetPasswordForm from "@/components/SetPasswordForm";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ResetPasswordPage() {
   const t = useTranslations("resetPasswordPage");
@@ -39,24 +40,35 @@ export default function ResetPasswordPage() {
     };
   }, [router]);
 
-  if (!ready) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-          <h1 className="text-xl font-semibold text-slate-50 mb-2">{t("loading")}</h1>
-          <p className="text-sm text-slate-400">{t("loadingDesc")}</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
-        <h1 className="text-xl font-semibold text-slate-50 mb-2">{t("title")}</h1>
-        <p className="text-sm text-slate-400 mb-4">{t("description")}</p>
-        <SetPasswordForm mode="reset" />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground">
+            Tipote<span className="text-primary">&trade;</span>
+          </h1>
+        </div>
+
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-2xl font-bold text-center">{t("title")}</CardTitle>
+            <CardDescription className="text-center">
+              {t("description")}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {ready ? (
+              <SetPasswordForm mode="reset" />
+            ) : (
+              <div className="min-h-[120px] flex items-center justify-center">
+                <p className="text-muted-foreground">{t("loading")}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </main>
+    </div>
   );
 }

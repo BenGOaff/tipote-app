@@ -149,7 +149,21 @@
     "loading": "Caricamento…",
     "loadingDesc": "Preparazione della pagina di reimpostazione password.",
     "title": "Imposta una nuova password",
-    "description": "Scegli una nuova password per il tuo account Tipote."
+    "description": "Scegli una nuova password per il tuo account Tipote.",
+    "labelNewPassword": "Nuova password",
+    "labelConfirm": "Conferma password",
+    "hintMinLength": "Minimo 8 caratteri",
+    "saving": "Salvataggio…",
+    "submit": "Salva password",
+    "errFillBoth": "Compila entrambi i campi.",
+    "errMismatch": "Le password non corrispondono.",
+    "errMinLength": "La password deve contenere almeno 8 caratteri.",
+    "errSessionExpired": "La sessione è scaduta. Riapri il link ricevuto via email e riprova.",
+    "errSamePassword": "Scegli una password diversa dalla precedente.",
+    "errUpdateFailed": "Impossibile aggiornare la password.",
+    "errUnexpected": "Errore imprevisto. Riprova.",
+    "successFirst": "Password creata. Ora puoi accedere.",
+    "successReset": "Password aggiornata. Ora puoi accedere."
   },
   "setPasswordPage": {
     "tagline": "Il tuo assistente strategico intelligente",

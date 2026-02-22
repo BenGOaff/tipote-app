@@ -149,7 +149,21 @@
     "loading": "Loading…",
     "loadingDesc": "Preparing the password reset page.",
     "title": "Set a new password",
-    "description": "Choose a new password for your Tipote account."
+    "description": "Choose a new password for your Tipote account.",
+    "labelNewPassword": "New password",
+    "labelConfirm": "Confirm password",
+    "hintMinLength": "Minimum 8 characters",
+    "saving": "Saving…",
+    "submit": "Set password",
+    "errFillBoth": "Please fill in both fields.",
+    "errMismatch": "Passwords do not match.",
+    "errMinLength": "Password must be at least 8 characters.",
+    "errSessionExpired": "Your session has expired. Please re-open the link from your email and try again.",
+    "errSamePassword": "Please choose a different password from your previous one.",
+    "errUpdateFailed": "Unable to update the password.",
+    "errUnexpected": "Unexpected error. Please try again.",
+    "successFirst": "Password created. You can now sign in.",
+    "successReset": "Password updated. You can now sign in."
   },
   "setPasswordPage": {
     "tagline": "Your smart strategic assistant",
