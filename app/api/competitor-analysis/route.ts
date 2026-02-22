@@ -41,7 +41,7 @@ async function callOpenAI(args: {
 
   const completion = await client.chat.completions.create({
     model: OPENAI_MODEL,
-    max_tokens: args.maxTokens ?? 4000,
+    max_completion_tokens: args.maxTokens ?? 4000,
     temperature: args.temperature ?? 0.4,
     messages: [
       { role: "system", content: args.system },

@@ -212,7 +212,7 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
         { role: "user", content: userPrompt },
       ],
       temperature: 0.6,
-      max_tokens: 16000,
+      max_completion_tokens: 16000,
     }, { timeout: 110_000 });
 
     const raw = resp.choices?.[0]?.message?.content ?? "{}";
