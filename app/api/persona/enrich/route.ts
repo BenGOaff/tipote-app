@@ -1,17 +1,18 @@
 // app/api/persona/enrich/route.ts
 // Regenerate enriched persona using onboarding data + competitor analysis + coach history
 // Costs 1 credit. Updates business_profiles.mission and business_profiles.niche.
+// Returns SSE stream with heartbeats to prevent proxy/hosting 504 timeouts.
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildEnhancedPersonaPrompt } from "@/lib/prompts/persona/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 type AnyRecord = Record<string, any>;
 
@@ -22,8 +23,13 @@ function cleanString(v: unknown, maxLen = 240): string {
 }
 
 export async function POST() {
+  // ── Pre-validate synchronously before starting the stream ──────────
+  let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  let userId: string;
+  let projectId: string | null;
+
   try {
-    const supabase = await getSupabaseServerClient();
+    supabase = await getSupabaseServerClient();
     const {
       data: { user },
       error: userError,
@@ -32,11 +38,10 @@ export async function POST() {
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+    userId = user.id;
+    projectId = await getActiveProjectId(supabase, userId);
 
-    const projectId = await getActiveProjectId(supabase, user.id);
-
-    const ai = openai;
-    if (!ai) {
+    if (!openai) {
       return NextResponse.json(
         { ok: false, error: "AI client not configured" },
         { status: 500 },
@@ -44,8 +49,8 @@ export async function POST() {
     }
 
     // Charge 1 credit
-    await ensureUserCredits(user.id);
-    const creditsResult = await consumeCredits(user.id, 1, { feature: "persona_enrich" });
+    await ensureUserCredits(userId);
+    const creditsResult = await consumeCredits(userId, 1, { feature: "persona_enrich" });
     if (creditsResult && typeof creditsResult === "object") {
       const ok = (creditsResult as any).success;
       const err = cleanString((creditsResult as any).error, 120).toUpperCase();
@@ -53,97 +58,124 @@ export async function POST() {
         return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
       }
     }
-
-    // Gather all available data
-    const bpQ = supabase.from("business_profiles").select("*").eq("user_id", user.id);
-    if (projectId) bpQ.eq("project_id", projectId);
-
-    const ofQ = supabase.from("onboarding_facts").select("key,value").eq("user_id", user.id);
-    if (projectId) ofQ.eq("project_id", projectId);
-
-    const caQ = supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", user.id);
-    if (projectId) caQ.eq("project_id", projectId);
-
-    const cmQ = supabase.from("coach_messages").select("content,role").eq("user_id", user.id);
-    if (projectId) cmQ.eq("project_id", projectId);
-
-    const pQ = supabase.from("personas").select("persona_json").eq("user_id", user.id).eq("role", "client_ideal");
-    if (projectId) pQ.eq("project_id", projectId);
-
-    const plQ = supabase.from("business_plan").select("plan_json").eq("user_id", user.id);
-    if (projectId) plQ.eq("project_id", projectId);
-
-    const [
-      { data: businessProfile },
-      { data: onboardingFactsRows },
-      { data: competitorAnalysis },
-      { data: coachMessages },
-      { data: existingPersona },
-      { data: businessPlan },
-    ] = await Promise.all([
-      bpQ.maybeSingle(),
-      ofQ,
-      caQ.maybeSingle(),
-      cmQ.order("created_at", { ascending: false }).limit(20),
-      pQ.maybeSingle(),
-      plQ.maybeSingle(),
-    ]);
-
-    // Build onboarding facts map
-    const onboardingFacts: Record<string, unknown> = {};
-    if (Array.isArray(onboardingFactsRows)) {
-      for (const row of onboardingFactsRows) {
-        if (row?.key) onboardingFacts[String(row.key)] = row.value;
-      }
+  } catch (e: any) {
+    const msg = (e?.message ?? "").toUpperCase();
+    if (msg.includes("NO_CREDITS")) {
+      return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
 
-    // Build coach context
-    const coachContext = Array.isArray(coachMessages)
-      ? coachMessages
-          .filter((m: any) => m.role === "user")
-          .slice(0, 10)
-          .map((m: any) => cleanString(m.content, 300))
-          .filter(Boolean)
-          .join("\n---\n")
-      : "";
+  // ── Start SSE stream — heartbeats keep the connection alive ────────
+  const ai = openai!;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function sendSSE(event: string, data: any) {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      }
 
-    const systemPrompt = buildEnhancedPersonaPrompt({ locale: "fr" });
+      // Send heartbeat every 5 seconds to prevent proxy timeout
+      const heartbeat = setInterval(() => {
+        try {
+          sendSSE("heartbeat", { status: "enriching" });
+        } catch { /* stream closed */ }
+      }, 5000);
 
-    // ✅ Separate owner data from persona-relevant data to prevent mixing
-    const diagnosticProfile = (businessProfile?.diagnostic_profile ?? null) as AnyRecord | null;
+      try {
+        sendSSE("progress", { step: "Collecte des données..." });
 
-    // Extract owner-specific fields (constraints, preferences) — these are NOT about the persona
-    const ownerConstraints: AnyRecord = {};
-    const personaRelevantDiagnostic: AnyRecord = {};
-    if (diagnosticProfile && typeof diagnosticProfile === "object") {
-      const ownerKeys = ["non_negotiables", "constraints", "root_fear", "situation_tried", "offers_satisfaction"];
-      for (const [k, v] of Object.entries(diagnosticProfile)) {
-        if (ownerKeys.includes(k)) {
-          ownerConstraints[k] = v;
-        } else {
-          personaRelevantDiagnostic[k] = v;
+        // Gather all available data in parallel
+        const bpQ = supabase.from("business_profiles").select("*").eq("user_id", userId);
+        if (projectId) bpQ.eq("project_id", projectId);
+
+        const ofQ = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+        if (projectId) ofQ.eq("project_id", projectId);
+
+        const caQ = supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", userId);
+        if (projectId) caQ.eq("project_id", projectId);
+
+        const cmQ = supabase.from("coach_messages").select("content,role").eq("user_id", userId);
+        if (projectId) cmQ.eq("project_id", projectId);
+
+        const pQ = supabase.from("personas").select("persona_json").eq("user_id", userId).eq("role", "client_ideal");
+        if (projectId) pQ.eq("project_id", projectId);
+
+        const plQ = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+        if (projectId) plQ.eq("project_id", projectId);
+
+        const [
+          { data: businessProfile },
+          { data: onboardingFactsRows },
+          { data: competitorAnalysis },
+          { data: coachMessages },
+          { data: existingPersona },
+          { data: businessPlan },
+        ] = await Promise.all([
+          bpQ.maybeSingle(),
+          ofQ,
+          caQ.maybeSingle(),
+          cmQ.order("created_at", { ascending: false }).limit(20),
+          pQ.maybeSingle(),
+          plQ.maybeSingle(),
+        ]);
+
+        // Build onboarding facts map
+        const onboardingFacts: Record<string, unknown> = {};
+        if (Array.isArray(onboardingFactsRows)) {
+          for (const row of onboardingFactsRows) {
+            if (row?.key) onboardingFacts[String(row.key)] = row.value;
+          }
         }
-      }
-    }
 
-    // Extract owner-specific onboarding facts vs persona-relevant ones
-    const ownerOnboardingFacts: AnyRecord = {};
-    const personaOnboardingFacts: AnyRecord = {};
-    const ownerFactKeys = new Set([
-      "non_negotiables", "root_fear", "situation_tried", "constraints",
-      "tone_preference_hint", "preferred_tone", "time_available_hours_week",
-      "time_available", "content_channels_priority", "revenue_goal_monthly",
-      "offers_satisfaction", "business_stage", "business_maturity",
-    ]);
-    for (const [k, v] of Object.entries(onboardingFacts)) {
-      if (ownerFactKeys.has(k)) {
-        ownerOnboardingFacts[k] = v;
-      } else {
-        personaOnboardingFacts[k] = v;
-      }
-    }
+        // Build coach context
+        const coachContext = Array.isArray(coachMessages)
+          ? coachMessages
+              .filter((m: any) => m.role === "user")
+              .slice(0, 10)
+              .map((m: any) => cleanString(m.content, 300))
+              .filter(Boolean)
+              .join("\n---\n")
+          : "";
 
-    const userPrompt = `⚠️ REGLE CRITIQUE : Tu génères le persona du CLIENT IDEAL (la cible), PAS le profil du propriétaire du business.
+        const systemPrompt = buildEnhancedPersonaPrompt({ locale: "fr" });
+
+        // Separate owner data from persona-relevant data to prevent mixing
+        const diagnosticProfile = (businessProfile?.diagnostic_profile ?? null) as AnyRecord | null;
+
+        const ownerConstraints: AnyRecord = {};
+        const personaRelevantDiagnostic: AnyRecord = {};
+        if (diagnosticProfile && typeof diagnosticProfile === "object") {
+          const ownerKeys = ["non_negotiables", "constraints", "root_fear", "situation_tried", "offers_satisfaction"];
+          for (const [k, v] of Object.entries(diagnosticProfile)) {
+            if (ownerKeys.includes(k)) {
+              ownerConstraints[k] = v;
+            } else {
+              personaRelevantDiagnostic[k] = v;
+            }
+          }
+        }
+
+        const ownerOnboardingFacts: AnyRecord = {};
+        const personaOnboardingFacts: AnyRecord = {};
+        const ownerFactKeys = new Set([
+          "non_negotiables", "root_fear", "situation_tried", "constraints",
+          "tone_preference_hint", "preferred_tone", "time_available_hours_week",
+          "time_available", "content_channels_priority", "revenue_goal_monthly",
+          "offers_satisfaction", "business_stage", "business_maturity",
+        ]);
+        for (const [k, v] of Object.entries(onboardingFacts)) {
+          if (ownerFactKeys.has(k)) {
+            ownerOnboardingFacts[k] = v;
+          } else {
+            personaOnboardingFacts[k] = v;
+          }
+        }
+
+        const userPrompt = `⚠️ REGLE CRITIQUE : Tu génères le persona du CLIENT IDEAL (la cible), PAS le profil du propriétaire du business.
 Les informations ci-dessous distinguent clairement ce qui concerne le propriétaire (ses contraintes, ses préférences) et ce qui concerne sa cible (son audience, sa niche, ses offres). Ne mélange JAMAIS les deux.
 
 ═══════════════════════════════════════════════════
@@ -204,88 +236,101 @@ ${coachContext || "Aucune conversation disponible."}
 Génère le profil persona enrichi complet du CLIENT IDEAL en JSON.
 Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du business.`;
 
-    const resp = await ai.chat.completions.create({
-      ...cachingParams("persona"),
-      model: OPENAI_MODEL,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_completion_tokens: 16000,
-    } as any);
+        sendSSE("progress", { step: "Génération IA du persona enrichi..." });
 
-    const raw = resp.choices?.[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as AnyRecord;
+        const resp = await ai.chat.completions.create({
+          model: OPENAI_MODEL,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          max_completion_tokens: 8000,
+        });
 
-    // Update business_profiles with enriched summaries
-    const now = new Date().toISOString();
-    const profilePatch: AnyRecord = { updated_at: now };
+        const raw = resp.choices?.[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(raw) as AnyRecord;
 
-    if (parsed.persona_summary) {
-      profilePatch.mission = cleanString(parsed.persona_summary, 10000);
-    }
-    // ✅ Niche formula: NEVER overwrite — the user's exact onboarding sentence is the source of truth.
-    // The niche is set during onboarding and editable in Settings > Positionnement.
+        sendSSE("progress", { step: "Sauvegarde du persona..." });
 
-    const bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", user.id);
-    if (projectId) bpUpdateQ.eq("project_id", projectId);
-    await bpUpdateQ;
+        // Update business_profiles with enriched summaries
+        const now = new Date().toISOString();
+        const profilePatch: AnyRecord = { updated_at: now };
 
-    // Update personas table with enriched data
-    if (parsed.persona_classic) {
-      try {
-        const admin = await import("@/lib/supabaseAdmin").then((m) => m.supabaseAdmin).catch(() => null);
-        if (admin) {
-          const personaPayload: AnyRecord = {
-            user_id: user.id,
-            ...(projectId ? { project_id: projectId } : {}),
-            role: "client_ideal",
-            name: cleanString(parsed.persona_classic?.title, 240) || null,
-            pains: JSON.stringify(parsed.persona_classic?.pains ?? []),
-            desires: JSON.stringify(parsed.persona_classic?.desires ?? []),
-            objections: JSON.stringify(parsed.persona_classic?.objections ?? []),
-            triggers: JSON.stringify(parsed.persona_classic?.triggers ?? []),
-            exact_phrases: JSON.stringify(parsed.persona_classic?.exact_phrases ?? []),
-            channels: JSON.stringify(parsed.persona_classic?.channels ?? []),
-            persona_json: {
-              ...parsed.persona_classic,
-              detailed: parsed.persona_detailed,
-              narrative_synthesis: parsed.narrative_synthesis,
-              // New rich markdown fields from enhanced prompt
-              persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
-              competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
-              narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
-            },
-            updated_at: now,
-          };
-
-          await admin.from("personas").upsert(personaPayload, { onConflict: "user_id,role" });
+        if (parsed.persona_summary) {
+          profilePatch.mission = cleanString(parsed.persona_summary, 10000);
         }
-      } catch (e) {
-        console.error("Persona persistence error (non-blocking):", e);
-      }
-    }
+        // Niche formula: NEVER overwrite — the user's exact onboarding sentence is the source of truth.
 
-    return NextResponse.json({
-      ok: true,
-      persona_summary: parsed.persona_summary ?? null,
-      persona_detailed: parsed.persona_detailed ?? null,
-      narrative_synthesis: parsed.narrative_synthesis ?? null,
-      persona_classic: parsed.persona_classic ?? null,
-      // New rich markdown fields
-      persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
-      competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
-      narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
-    });
-  } catch (e: any) {
-    const msg = (e?.message ?? "").toUpperCase();
-    if (msg.includes("NO_CREDITS")) {
-      return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
-    }
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
-  }
+        const bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", userId);
+        if (projectId) bpUpdateQ.eq("project_id", projectId);
+        await bpUpdateQ;
+
+        // Update personas table with enriched data
+        if (parsed.persona_classic) {
+          try {
+            const admin = await import("@/lib/supabaseAdmin").then((m) => m.supabaseAdmin).catch(() => null);
+            if (admin) {
+              const personaPayload: AnyRecord = {
+                user_id: userId,
+                ...(projectId ? { project_id: projectId } : {}),
+                role: "client_ideal",
+                name: cleanString(parsed.persona_classic?.title, 240) || null,
+                pains: JSON.stringify(parsed.persona_classic?.pains ?? []),
+                desires: JSON.stringify(parsed.persona_classic?.desires ?? []),
+                objections: JSON.stringify(parsed.persona_classic?.objections ?? []),
+                triggers: JSON.stringify(parsed.persona_classic?.triggers ?? []),
+                exact_phrases: JSON.stringify(parsed.persona_classic?.exact_phrases ?? []),
+                channels: JSON.stringify(parsed.persona_classic?.channels ?? []),
+                persona_json: {
+                  ...parsed.persona_classic,
+                  detailed: parsed.persona_detailed,
+                  narrative_synthesis: parsed.narrative_synthesis,
+                  persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
+                  competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
+                  narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
+                },
+                updated_at: now,
+              };
+
+              await admin.from("personas").upsert(personaPayload, { onConflict: "user_id,role" });
+            }
+          } catch (e) {
+            console.error("Persona persistence error (non-blocking):", e);
+          }
+        }
+
+        sendSSE("result", {
+          ok: true,
+          persona_summary: parsed.persona_summary ?? null,
+          persona_detailed: parsed.persona_detailed ?? null,
+          narrative_synthesis: parsed.narrative_synthesis ?? null,
+          persona_classic: parsed.persona_classic ?? null,
+          persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
+          competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
+          narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
+        });
+      } catch (e: any) {
+        const msg = (e?.message ?? "").toUpperCase();
+        if (msg.includes("NO_CREDITS")) {
+          sendSSE("error", { ok: false, error: "NO_CREDITS" });
+        } else {
+          console.error("[persona/enrich] SSE stream error:", e);
+          sendSSE("error", { ok: false, error: e instanceof Error ? e.message : "Unknown error" });
+        }
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // Prevent nginx proxy buffering
+    },
+  });
 }

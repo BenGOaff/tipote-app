@@ -432,6 +432,72 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     setEnriching(true);
     try {
       const res = await fetch("/api/persona/enrich", { method: "POST" });
+
+      const contentType = res.headers.get("content-type") ?? "";
+
+      // ── SSE stream mode (heartbeats prevent proxy 504) ──
+      if (contentType.includes("text/event-stream")) {
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("Stream non disponible");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalResult: any = null;
+        let finalError: string | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? "";
+          for (const eventBlock of events) {
+            const lines = eventBlock.split("\n");
+            let eventType = "";
+            let eventData = "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) eventType = line.slice(7);
+              if (line.startsWith("data: ")) eventData = line.slice(6);
+            }
+            if (!eventData) continue;
+            try {
+              const parsed = JSON.parse(eventData);
+              if (eventType === "result") finalResult = parsed;
+              else if (eventType === "error") finalError = parsed.error || "Erreur inconnue";
+            } catch { /* skip malformed */ }
+          }
+        }
+
+        if (finalError) {
+          if (finalError === "NO_CREDITS") {
+            toast({
+              title: "Crédits insuffisants",
+              description: "L'enrichissement du persona coûte 1 crédit.",
+              variant: "destructive",
+            });
+            return;
+          }
+          throw new Error(finalError);
+        }
+
+        if (finalResult?.ok) {
+          if (finalResult.persona_summary) setMission(finalResult.persona_summary);
+          if (finalResult.persona_detailed_markdown) setPersonaDetailedMarkdown(finalResult.persona_detailed_markdown);
+          if (finalResult.competitor_insights_markdown) setCompetitorInsightsMarkdown(finalResult.competitor_insights_markdown);
+          if (finalResult.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(finalResult.narrative_synthesis_markdown);
+          if (finalResult.persona_detailed_markdown) setPersonaDetailTab("detailed");
+          setInitialProfile((prev) => ({
+            ...prev,
+            mission: finalResult.persona_summary || prev?.mission,
+          }));
+          toast({ title: "Persona enrichi avec succès" });
+        } else {
+          throw new Error("Aucun résultat reçu");
+        }
+        return;
+      }
+
+      // ── Fallback JSON mode (pre-auth errors return JSON directly) ──
       const json = (await res.json().catch(() => null)) as any;
       if (!json?.ok) {
         if (json?.error === "NO_CREDITS") {
@@ -445,25 +511,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         throw new Error(json?.error || "Erreur");
       }
 
-      if (json.persona_summary) {
-        setMission(json.persona_summary);
-      }
-      // ✅ Niche is NOT overwritten — the user's exact onboarding sentence is the source of truth
-
-      // Update rich markdown fields
+      if (json.persona_summary) setMission(json.persona_summary);
       if (json.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona_detailed_markdown);
       if (json.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.competitor_insights_markdown);
       if (json.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.narrative_synthesis_markdown);
-
-      // Auto-switch to detailed view if available
       if (json.persona_detailed_markdown) setPersonaDetailTab("detailed");
-
-      // Update initialProfile to reflect new values
       setInitialProfile((prev) => ({
         ...prev,
         mission: json.persona_summary || prev?.mission,
       }));
-
       toast({ title: "Persona enrichi avec succès" });
     } catch (e: any) {
       toast({

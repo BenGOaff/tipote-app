@@ -2,16 +2,13 @@
 // Client OpenAI pour l'IA stratégique (clé du propriétaire)
 // IMPORTANT : ne jamais throw au moment de l'import (sinon /api/strategy = 500 direct)
 //
-// ✅ Prompt Caching :
-// - timeout augmenté (4 min) pour laisser le temps aux longues générations
-// - helper `cachingParams(feature)` à utiliser dans chaque appel
-//   → ajoute `prompt_cache_key` pour améliorer le routage serveur (même préfixe → même machine)
-//   → réduit le TTFT de 30-80% sur les prompts longs et les coûts de 90% sur gpt-5-nano
+// OpenAI prompt caching is automatic for prompts > 1024 tokens (GPT-4+, GPT-5).
+// No special parameter needed — the SDK handles it transparently.
 
 import OpenAI from "openai";
 
-/** Timeout par défaut : 4 minutes — headroom pour les longues générations */
-const DEFAULT_TIMEOUT_MS = 240_000;
+/** Timeout par défaut : 5 minutes — headroom pour les longues générations */
+const DEFAULT_TIMEOUT_MS = 300_000;
 
 export function getOwnerOpenAI(): OpenAI | null {
   const apiKey = process.env.OPENAI_API_KEY_OWNER;
@@ -29,15 +26,10 @@ export const OPENAI_MODEL =
   "gpt-5-nano";
 
 /**
- * Retourne les paramètres de prompt caching à spreader dans `chat.completions.create`.
- *
- * `prompt_cache_key` aide le routeur OpenAI à diriger les requêtes avec un préfixe commun
- * vers le même serveur, maximisant les cache hits (KV cache réutilisé).
- *
- * @param feature — identifiant stable de la feature (ex: "strategy", "coach", "quiz")
+ * Backward-compatible stub — returns empty object.
+ * OpenAI prompt caching is automatic for prompts > 1024 tokens.
+ * No special parameter needed.
  */
-export function cachingParams(feature: string): Record<string, unknown> {
-  return {
-    prompt_cache_key: `tipote:${feature}`,
-  };
+export function cachingParams(_feature: string): Record<string, unknown> {
+  return {};
 }

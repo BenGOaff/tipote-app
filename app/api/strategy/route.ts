@@ -1566,7 +1566,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_completion_tokens: 16000,
+        max_completion_tokens: 10000,
       } as any);
 
       const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -1869,7 +1869,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-      max_completion_tokens: 16000,
+      max_completion_tokens: 10000,
     } as any);
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
