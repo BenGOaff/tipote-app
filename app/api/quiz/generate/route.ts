@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     });
 
     const resp = await ai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },

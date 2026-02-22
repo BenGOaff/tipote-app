@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
 import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -937,7 +937,7 @@ Rules:
     let raw = "";
 
     if (openai) {
-      const model = process.env.TIPOTE_COACH_MODEL?.trim() || "gpt-5.1";
+      const model = process.env.TIPOTE_COACH_MODEL?.trim() || OPENAI_MODEL;
       const ai = await openai.chat.completions.create({
         model,
         response_format: { type: "json_object" },

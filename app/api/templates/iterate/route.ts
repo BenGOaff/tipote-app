@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { getOwnerOpenAI } from "@/lib/openaiClient";
+import { getOwnerOpenAI, OPENAI_MODEL } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -305,7 +305,7 @@ export async function POST(req: Request) {
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       temperature: 0.2,
       messages: [
         { role: "system", content: system },

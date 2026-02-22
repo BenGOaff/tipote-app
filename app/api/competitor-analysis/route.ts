@@ -11,7 +11,7 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { getOwnerOpenAI } from "@/lib/openaiClient";
+import { getOwnerOpenAI, OPENAI_MODEL } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,11 +24,6 @@ function cleanString(v: unknown, maxLen = 240): string {
   if (!s) return "";
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
-
-const OPENAI_MODEL =
-  process.env.TIPOTE_OPENAI_MODEL?.trim() ||
-  process.env.OPENAI_MODEL?.trim() ||
-  "gpt-5.1";
 
 async function callOpenAI(args: {
   system: string;
