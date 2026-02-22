@@ -56,7 +56,7 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   facebook: 63206,
   instagram: 2200,
   pinterest: 500, // Description épingle (titre : 100 car. géré côté serveur)
-  tiktok: 150, // TikTok Content Posting API: titre limité à 150 car.
+  tiktok: 2200, // TikTok Content Posting API: titre limité à 2200 car.
 };
 
 const themes = [

@@ -195,7 +195,7 @@ export async function publishPhoto(
   accessToken: string,
   imageUrls: string[],
   caption: string,
-  privacyLevel: string = "PUBLIC_TO_EVERYONE",
+  privacyLevel: string = "SELF_ONLY",
 ): Promise<TikTokPostResult> {
   if (imageUrls.length === 0) {
     return { ok: false, error: "Au moins une image est requise" };
@@ -203,7 +203,8 @@ export async function publishPhoto(
 
   const body = {
     post_info: {
-      title: caption.slice(0, 150), // TikTok limite le titre des photos
+      title: caption.slice(0, 90), // Photo title: max 90 UTF-16 runes
+      description: caption.slice(0, 4000), // Photo description: max 4000 UTF-16 runes
       privacy_level: privacyLevel,
       disable_comment: false,
       auto_add_music: true,
@@ -213,6 +214,7 @@ export async function publishPhoto(
       photo_cover_index: 0,
       photo_images: imageUrls.slice(0, 35), // Max 35 images par post
     },
+    post_mode: "DIRECT_POST",
     media_type: "PHOTO",
   };
 
@@ -254,11 +256,11 @@ export async function publishVideo(
   accessToken: string,
   videoUrl: string,
   caption: string,
-  privacyLevel: string = "PUBLIC_TO_EVERYONE",
+  privacyLevel: string = "SELF_ONLY",
 ): Promise<TikTokPostResult> {
   const body = {
     post_info: {
-      title: caption.slice(0, 150),
+      title: caption.slice(0, 2200),
       privacy_level: privacyLevel,
       disable_comment: false,
     },
