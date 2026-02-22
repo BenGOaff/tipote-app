@@ -143,35 +143,47 @@ export async function POST() {
 
         const systemPrompt = buildEnhancedPersonaPrompt({ locale: "fr" });
 
-        // Separate owner data from persona-relevant data to prevent mixing
+        // ── Separate owner data from persona-relevant data ──
+        // WHITELIST approach: only explicitly persona-relevant keys pass through.
+        // Everything else defaults to OWNER to prevent data leakage into the persona.
         const diagnosticProfile = (businessProfile?.diagnostic_profile ?? null) as AnyRecord | null;
 
         const ownerConstraints: AnyRecord = {};
         const personaRelevantDiagnostic: AnyRecord = {};
         if (diagnosticProfile && typeof diagnosticProfile === "object") {
-          const ownerKeys = ["non_negotiables", "constraints", "root_fear", "situation_tried", "offers_satisfaction"];
+          // Only these keys describe the TARGET MARKET / AUDIENCE (not the owner)
+          const personaDiagnosticKeys = new Set([
+            "target_audience", "target_market", "ideal_client", "client_profile",
+            "audience_demographics", "audience_pain_points", "market_segment",
+            "customer_needs", "customer_desires", "customer_objections",
+          ]);
           for (const [k, v] of Object.entries(diagnosticProfile)) {
-            if (ownerKeys.includes(k)) {
-              ownerConstraints[k] = v;
-            } else {
+            if (personaDiagnosticKeys.has(k)) {
               personaRelevantDiagnostic[k] = v;
+            } else {
+              ownerConstraints[k] = v;
             }
           }
         }
 
+        // ── Onboarding facts: WHITELIST of persona-relevant keys ──
+        // Only keys that describe the BUSINESS CONTEXT (niche, audience, topic)
+        // are used to DEDUCE the persona. Everything else is owner data.
         const ownerOnboardingFacts: AnyRecord = {};
         const personaOnboardingFacts: AnyRecord = {};
-        const ownerFactKeys = new Set([
-          "non_negotiables", "root_fear", "situation_tried", "constraints",
-          "tone_preference_hint", "preferred_tone", "time_available_hours_week",
-          "time_available", "content_channels_priority", "revenue_goal_monthly",
-          "offers_satisfaction", "business_stage", "business_maturity",
+        const personaFactKeys = new Set([
+          // Audience / target
+          "target_audience_short", "target_audience", "ideal_client",
+          "real_persona_detail",
+          // Business context (used to DEDUCE the persona, not persona traits)
+          "main_topic", "primary_activity", "business_model",
+          "primary_focus", "niche", "market_segment",
         ]);
         for (const [k, v] of Object.entries(onboardingFacts)) {
-          if (ownerFactKeys.has(k)) {
-            ownerOnboardingFacts[k] = v;
-          } else {
+          if (personaFactKeys.has(k)) {
             personaOnboardingFacts[k] = v;
+          } else {
+            ownerOnboardingFacts[k] = v;
           }
         }
 
@@ -181,25 +193,25 @@ Les informations ci-dessous distinguent clairement ce qui concerne le propriéta
 ═══════════════════════════════════════════════════
 SECTION 1 — LE BUSINESS (niche, offres, positionnement)
 Ces infos décrivent CE QUE FAIT le propriétaire et À QUI il s'adresse.
-Utilise-les pour DÉDUIRE le profil du client idéal.
+Utilise-les UNIQUEMENT pour DÉDUIRE le profil du client idéal.
 ═══════════════════════════════════════════════════
 
 Niche / activité : ${cleanString(businessProfile?.niche, 500) || "Non renseigné"}
 Mission / persona existant : ${cleanString(businessProfile?.mission, 500) || "Non renseigné"}
 Offres : ${JSON.stringify(businessProfile?.offers ?? "Non disponible", null, 2)}
-Audience cible (onboarding) : ${cleanString(personaOnboardingFacts["target_audience_short"], 300) || "Non renseigné"}
+Audience cible (onboarding) : ${cleanString(personaOnboardingFacts["target_audience_short"] ?? personaOnboardingFacts["target_audience"], 300) || "Non renseigné"}
 Sujet principal : ${cleanString(personaOnboardingFacts["main_topic"], 200) || cleanString(personaOnboardingFacts["primary_activity"], 200) || "Non renseigné"}
 Modèle économique : ${cleanString(personaOnboardingFacts["business_model"], 100) || "Non renseigné"}
 Focus principal : ${cleanString(personaOnboardingFacts["primary_focus"], 100) || "Non renseigné"}
-
-Diagnostic (infos sur la cible) :
-${JSON.stringify(Object.keys(personaRelevantDiagnostic).length > 0 ? personaRelevantDiagnostic : "Non disponible", null, 2)}
+${Object.keys(personaRelevantDiagnostic).length > 0 ? `\nDonnées sur la cible (diagnostic) :\n${JSON.stringify(personaRelevantDiagnostic, null, 2)}` : ""}
 
 ═══════════════════════════════════════════════════
-SECTION 2 — LE PROPRIETAIRE DU BUSINESS (ses contraintes perso)
-⚠️ Ces infos concernent le PROPRIETAIRE, PAS son client idéal.
-NE LES ATTRIBUE PAS au persona. Elles servent uniquement de contexte
-pour comprendre les limites et le style du business.
+SECTION 2 — LE PROPRIETAIRE DU BUSINESS (⛔ NE PAS UTILISER DANS LE PERSONA)
+Ces infos concernent le PROPRIETAIRE UNIQUEMENT.
+Elles sont fournies pour contexte business mais NE DOIVENT JAMAIS
+apparaître dans le persona, même reformulées.
+Exemples : "contenus courts", "peu de temps", "coaching pragmatique",
+"LinkedIn", "format lisible" = préférences du PROPRIETAIRE, pas de la cible.
 ═══════════════════════════════════════════════════
 
 Maturité business : ${cleanString(businessProfile?.business_maturity, 100) || "Non renseigné"}

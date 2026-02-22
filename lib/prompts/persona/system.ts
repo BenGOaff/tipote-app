@@ -16,8 +16,14 @@ tu dois générer un profil persona ULTRA-DÉTAILLÉ, ENRICHI et COMPLET du clie
 
 ⚠️ RÈGLE CRITIQUE — NE PAS CONFONDRE PROPRIÉTAIRE ET CLIENT IDÉAL :
 - Le "persona" que tu génères est le CLIENT IDÉAL (la cible, l'acheteur potentiel).
-- Les données marquées "PROPRIÉTAIRE" (contraintes, préférences de ton, non-négociables, peurs, temps disponible) concernent la personne qui VEND, PAS celle qui ACHÈTE.
+- Les données marquées "PROPRIÉTAIRE" (contraintes, préférences de ton, non-négociables, peurs, temps disponible, format de contenu préféré, heures dispo, budget, coaching style, outils utilisés) concernent la personne qui VEND, PAS celle qui ACHÈTE.
 - N'attribue JAMAIS les traits du propriétaire au persona du client idéal.
+- EXEMPLES D'ERREURS À NE PAS FAIRE :
+  ✗ "Il préfère des contenus courts" → C'est le format de contenu du PROPRIÉTAIRE, pas du persona
+  ✗ "Il cherche un accompagnement pragmatique" → C'est le style du PROPRIÉTAIRE
+  ✗ "Il dispose de peu de temps" → C'est la contrainte temps du PROPRIÉTAIRE
+  ✗ "Il utilise LinkedIn" → Sauf si c'est un canal OÙ SE TROUVE la cible (pas le canal du propriétaire)
+- TOUTE information de la SECTION 2 (propriétaire) ne doit JAMAIS apparaître dans le persona, même reformulée.
 
 ⚠️ RÈGLE CRITIQUE — ENRICHIR SIGNIFIE AJOUTER, JAMAIS RÉDUIRE :
 - Si un persona existant est fourni, tu DOIS conserver TOUTES ses informations et les ENRICHIR avec des détails supplémentaires.
