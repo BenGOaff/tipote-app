@@ -940,18 +940,58 @@ export async function PATCH(req: Request) {
 
 /**
  * -----------------------
- * POST
+ * POST — SSE stream with heartbeats to prevent proxy 504 timeout
+ * Generates offer pyramids ONLY (not full strategy).
  * -----------------------
  */
 export async function POST(req: Request) {
+  // ── Pre-validate synchronously before starting the stream ──────────
+  let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  let userId: string;
+  let projectId: string | null;
+
   try {
-    const supabase = await getSupabaseServerClient();
+    supabase = await getSupabaseServerClient();
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
 
-    if (!session?.user) return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
-    const userId = session.user.id;
-    const projectId = await getActiveProjectId(supabase, userId);
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
+    }
+
+    userId = session.user.id;
+    projectId = await getActiveProjectId(supabase, userId);
+
+    if (!openai) {
+      return NextResponse.json({ success: false, error: "AI client not configured (strategy disabled)" }, { status: 500 });
+    }
+  } catch (e: any) {
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+
+  // ── Start SSE stream — heartbeats keep the connection alive ────────
+  const ai = openai!;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function sendSSE(event: string, data: any) {
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch { /* stream closed */ }
+      }
+
+      // Send heartbeat every 5 seconds to prevent proxy timeout
+      const heartbeat = setInterval(() => {
+        try {
+          sendSSE("heartbeat", { status: "generating" });
+        } catch { /* stream closed */ }
+      }, 5000);
+
+      try {
+        sendSSE("progress", { step: "Lecture des données..." });
 
     let postPlanQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
     if (projectId) postPlanQuery = postPlanQuery.eq("project_id", projectId);
@@ -961,22 +1001,14 @@ export async function POST(req: Request) {
     const existingPlanJson = (existingPlan?.plan_json ?? null) as AnyRecord | null;
 
     const existingOffers = existingPlanJson ? asArray(existingPlanJson.offer_pyramids) : [];
-    const existingSelectedIndex =
-      typeof existingPlanJson?.selected_offer_pyramid_index === "number"
-        ? existingPlanJson.selected_offer_pyramid_index
-        : typeof existingPlanJson?.selected_pyramid_index === "number"
-          ? existingPlanJson.selected_pyramid_index
-          : null;
-
-    const hasSelected = typeof existingSelectedIndex === "number";
-    const needFullStrategy = hasSelected && !fullStrategyLooksUseful(existingPlanJson);
     const hasUsefulOffers = offersLookUseful(existingOffers);
 
-    if (hasSelected && !needFullStrategy) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
-    }
-    if (!hasSelected && hasUsefulOffers) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
+    // If we already have useful offers, return them immediately
+    if (hasUsefulOffers) {
+      sendSSE("result", { success: true, skipped: true, reason: "already_generated", offer_pyramids: existingOffers });
+      clearInterval(heartbeat);
+      controller.close();
+      return;
     }
 
     let postBpQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
@@ -984,13 +1016,15 @@ export async function POST(req: Request) {
     const { data: businessProfile, error: profileError } = await postBpQuery.single();
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
-      return NextResponse.json({ success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` }, { status: 400 });
+      sendSSE("error", { success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` });
+      clearInterval(heartbeat);
+      controller.close();
+      return;
     }
 
     // -----------------------
     // Offer mode (new onboarding)
     // -----------------------
-    // Offres ONLY si: user sans offre ET pas affilié
     const onboardingFacts: Record<string, unknown> = {};
     try {
       let postFactsQuery = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
@@ -1019,10 +1053,14 @@ export async function POST(req: Request) {
     const offerMode = isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none";
     const shouldGenerateOffers = offerMode === "none";
 
-    // ✅ Si l'onboarding dit "affiliate" ou "existing_offer", ce endpoint ne doit PAS générer d'offres.
     if (!shouldGenerateOffers) {
-      return NextResponse.json({ success: true, skipped: true, reason: "offer_mode_no_pyramids", offer_mode: offerMode }, { status: 200 });
+      sendSSE("result", { success: true, skipped: true, reason: "offer_mode_no_pyramids", offer_mode: offerMode });
+      clearInterval(heartbeat);
+      controller.close();
+      return;
     }
+
+    sendSSE("progress", { step: "Génération des pyramides d'offres..." });
 
     const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
     const targetMonthlyRevGuess = parseMoneyFromText(revenueGoalLabel);
@@ -1033,27 +1071,18 @@ export async function POST(req: Request) {
     const { data: resourceChunks, error: chunksError } = await supabase.from("resource_chunks").select("*");
     if (chunksError) console.error("Error loading resource_chunks:", chunksError);
 
-    const ai = openai;
-    if (!ai) {
-      return NextResponse.json({ success: false, error: "AI client not configured (strategy disabled)" }, { status: 500 });
-    }
+    const OFFERS_COUNT = 3;
 
-    /**
-     * 1) Générer les offres si besoin
-     */
-    if (!hasUsefulOffers) {
-      const OFFERS_COUNT = 3;
+    const { contextBlock } = selectRelevantContext({
+      resources: (resources ?? []) as AnyRecord[],
+      resourceChunks: (resourceChunks ?? []) as AnyRecord[],
+      businessProfile: businessProfile as AnyRecord,
+      selectedOffers: null,
+      maxResources: 5,
+      maxChunks: 10,
+    });
 
-      const { contextBlock } = selectRelevantContext({
-        resources: (resources ?? []) as AnyRecord[],
-        resourceChunks: (resourceChunks ?? []) as AnyRecord[],
-        businessProfile: businessProfile as AnyRecord,
-        selectedOffers: null,
-        maxResources: 5,
-        maxChunks: 10,
-      });
-
-      const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
+    const systemPrompt = `Tu es Tipote™, un coach business senior (niveau mastermind) spécialisé en offre, positionnement, acquisition et systèmes.
 
 OBJECTIF : Proposer ${OFFERS_COUNT} pyramides d'offres complètes (lead magnet → low ticket → middle ticket → high ticket) adaptées à l'utilisateur.
 Chaque pyramide = un ANGLE STRATÉGIQUE différent (objectif, mécanisme, positionnement).
@@ -1061,18 +1090,18 @@ Chaque pyramide = un ANGLE STRATÉGIQUE différent (objectif, mécanisme, positi
 SOURCE DE VÉRITÉ (ordre de priorité) :
 1) business_profile.diagnostic_profile (si présent) = vérité terrain.
 2) diagnostic_summary + diagnostic_answers (si présents).
-3) Champs onboarding “cases” = fallback.
+3) Champs onboarding "cases" = fallback.
 
-EXIGENCES “ANTI-GÉNÉRALITÉS” :
-- Interdit: “faire du contenu”, “améliorer la com”, “poster sur Instagram” sans préciser QUOI / ANGLE / FORMAT / FRÉQUENCE / CTA.
-- Chaque pyramide doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit” par niveau.
+EXIGENCES "ANTI-GÉNÉRALITÉS" :
+- Interdit: "faire du contenu", "améliorer la com", "poster sur Instagram" sans préciser QUOI / ANGLE / FORMAT / FRÉQUENCE / CTA.
+- Chaque pyramide doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase "pourquoi ça convertit" par niveau.
 - Chaque pyramide = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
 - Intègre un quick win 7 jours cohérent avec la pyramide.
 - Les pyramides doivent représenter des ORIENTATIONS DIFFÉRENTES pour aider l'utilisateur à se décider.
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 IMPORTANT : Réponds en JSON strict uniquement, sans texte autour.`;
 
-      const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
+    const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
 - diagnostic_profile : ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
 - diagnostic_summary : ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
 - diagnostic_answers : ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
@@ -1136,313 +1165,111 @@ STRUCTURE EXACTE À RENVOYER :
   ]
 }`.trim();
 
-      // 🪙 Credits: 1 génération = 1 crédit
-      await ensureUserCredits(userId);
-
-      const aiResponse = await ai.chat.completions.create({
-        ...cachingParams("offer_pyramid"),
-        model: OPENAI_MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_completion_tokens: 8000,
-      } as any);
-
-      const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
-      const parsed = JSON.parse(raw) as AnyRecord;
-      await consumeCredits(userId, 1, { feature: "offer_pyramid" });
-
-      const offersRaw = asArray(parsed.offer_pyramids);
-      const normalizedOffers = offersRaw.map((p, idx) => normalizeOfferSet(asRecord(p), idx));
-
-      if (!offersLookUseful(normalizedOffers)) {
-        console.error("AI returned incomplete offer_pyramids payload:", parsed);
-        return NextResponse.json({ success: false, error: "AI returned incomplete offer_pyramids" }, { status: 502 });
-      }
-
-      const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
-      const plan_json: AnyRecord = {
-        ...basePlan,
-        offer_pyramids: normalizedOffers,
-
-        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel } : {}),
-
-        horizon_days: toNumber(basePlan.horizon_days) ?? 90,
-        ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
-
-        selected_offer_pyramid_index: typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
-        selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
-
-        // legacy compat
-        selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
-        selected_pyramid: basePlan.selected_pyramid ?? null,
-
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data: saved, error: saveErr } = await supabase
-        .from("business_plan")
-        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-        .select("id")
-        .maybeSingle();
-
-      if (saveErr) {
-        console.error("Error saving business_plan offers:", saveErr);
-        return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
-      }
-
-      try {
-        const strategyId = await getOrCreateStrategyIdBestEffort({
-          userId,
-          businessProfile: businessProfile as AnyRecord,
-          planJson: plan_json,
-          projectId,
-        });
-
-        await persistOfferPyramidsBestEffort({
-          userId,
-          strategyId,
-          pyramids: normalizedOffers,
-          selectedIndex: null,
-          projectId,
-        });
-      } catch (e) {
-        console.error("POST offers sync unexpected error:", e);
-      }
-
-      return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
-    }
-
-    /**
-     * 2) Générer la stratégie complète si offre choisie et stratégie pas encore complète
-     */
-    const selectedOffers = pickSelectedPyramidFromPlan(existingPlanJson);
-    if (!selectedOffers) {
-      return NextResponse.json(
-        { success: false, error: "selected_offer_pyramid is missing. Choose an offer set first before generating the full strategy." },
-        { status: 400 },
-      );
-    }
-
-    const { contextBlock } = selectRelevantContext({
-      resources: (resources ?? []) as AnyRecord[],
-      resourceChunks: (resourceChunks ?? []) as AnyRecord[],
-      businessProfile: businessProfile as AnyRecord,
-      selectedOffers: selectedOffers as AnyRecord,
-      maxResources: 6,
-      maxChunks: 12,
-    });
-
-    const fullSystemPrompt = `Tu es Tipote™, un stratège business senior + expert persona francophone (niveau mondial).
-Tu dois créer une stratégie complète et actionnable à partir de l'onboarding + de l'offre choisie.
-
-RÈGLES “COACH-LEVEL” :
-- Réponds en JSON strict uniquement (zéro texte autour).
-- Concret, actionnable, niché. Aucun conseil générique.
-- Chaque recommandation doit préciser: QUOI / COMMENT / LIVRABLE / MÉTRIQUE.
-- Cohérence totale avec l’offre choisie (angle, canal principal, promesse).
-- Interdit: “crée du contenu” sans (thèmes, formats, fréquence, CTA, distribution).
-- Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé.
-- Plan 90 jours: tâches “solo-exécutables”, avec due_date valides, et priorité.
-${buildRefusalsPromptSection(businessProfile as AnyRecord)}
-FORMAT JSON STRICT :
-{
-  "mission": "string",
-  "promise": "string",
-  "positioning": "string",
-  "summary": "string",
-  "persona": { ... },
-  "plan_90_days": { "tasks_by_timeframe": { "d30": [...], "d60": [...], "d90": [...] } }
-}`.trim();
-
-    const fullUserPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
-- diagnostic_profile : ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
-- diagnostic_summary : ${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
-- diagnostic_answers : ${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
-
-DONNÉES FORMULAIRES (fallback) :
-${JSON.stringify(
-  {
-    country: (businessProfile as any).country ?? null,
-    niche: (businessProfile as any).niche ?? null,
-    mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
-    maturity: (businessProfile as any).maturity ?? null,
-    biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
-    weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
-    revenue_goal_monthly:
-      (businessProfile as any).revenue_goal_monthly ??
-      (businessProfile as any).revenueGoalMonthly ??
-      (businessProfile as any).target_monthly_revenue ??
-      (businessProfile as any).revenue_goal ??
-      null,
-    has_offers: (businessProfile as any).has_offers ?? (businessProfile as any).hasOffers ?? null,
-    offers: (businessProfile as any).offers ?? null,
-    social_links: (businessProfile as any).social_links ?? (businessProfile as any).socialLinks ?? null,
-    email_list_size: (businessProfile as any).email_list_size ?? (businessProfile as any).emailListSize ?? null,
-    main_goal_90_days: (businessProfile as any).main_goal_90_days ?? (businessProfile as any).main_goal ?? (businessProfile as any).mainGoal90Days ?? null,
-    main_goals: (businessProfile as any).main_goals ?? (businessProfile as any).mainGoals ?? null,
-    preferred_content_type: (businessProfile as any).preferred_content_type ?? (businessProfile as any).preferredContentType ?? null,
-    tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
-  },
-  null,
-  2,
-)}
-
-OFFRE CHOISIE :
-${JSON.stringify(selectedOffers, null, 2)}
-
-RESSOURCES INTERNES (top extraits pertinents) :
-${contextBlock || "(aucun extrait pertinent trouvé)"}
-
-Contraintes :
-- d30/d60/d90 : au moins 10 tâches chacun
-- due_date en YYYY-MM-DD (dates réelles et réparties)
-- chaque tâche doit être spécifique (livrable concret)`.trim();
-
     // 🪙 Credits: 1 génération = 1 crédit
     await ensureUserCredits(userId);
 
-    const fullAiResponse = await ai.chat.completions.create({
-      ...cachingParams("offer_pyramid_full"),
+    sendSSE("progress", { step: "L'IA génère tes 3 pyramides d'offres..." });
+
+    const aiResponse = await ai.chat.completions.create({
+      ...cachingParams("offer_pyramid"),
       model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: fullSystemPrompt },
-        { role: "user", content: fullUserPrompt },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
       ],
-      max_completion_tokens: 10000,
+      max_completion_tokens: 8000,
     } as any);
 
-    const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
-    const fullParsed = JSON.parse(fullRaw) as AnyRecord;
-    await consumeCredits(userId, 1, { feature: "strategy_full" });
+    const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw) as AnyRecord;
+    await consumeCredits(userId, 1, { feature: "offer_pyramid" });
 
-    const mission = cleanString(fullParsed.mission, 240);
-    const promise = cleanString(fullParsed.promise, 240);
-    const positioning = cleanString(fullParsed.positioning, 320);
-    const summary = cleanString(fullParsed.summary ?? fullParsed.strategy_summary ?? fullParsed.strategySummary, 4000);
+    const offersRaw = asArray(parsed.offer_pyramids);
+    const normalizedOffers = offersRaw.map((p, idx) => normalizeOfferSet(asRecord(p), idx));
 
-    const persona = normalizePersona(asRecord(fullParsed.persona));
+    if (!offersLookUseful(normalizedOffers)) {
+      console.error("AI returned incomplete offer_pyramids payload:", parsed);
+      sendSSE("error", { success: false, error: "AI returned incomplete offer_pyramids" });
+      clearInterval(heartbeat);
+      controller.close();
+      return;
+    }
 
-    const plan90Raw = asRecord(fullParsed.plan_90_days) ?? asRecord(fullParsed.plan90) ?? {};
-    const tasksByTf = normalizeTasksByTimeframe(asRecord(plan90Raw.tasks_by_timeframe));
+    sendSSE("progress", { step: "Sauvegarde des pyramides..." });
 
     const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
-    const hasUsefulTasks = tasksByTimeframeLooksUseful({ plan_90_days: { tasks_by_timeframe: tasksByTf } } as any);
-
-    const fallbackTasksByTf = hasUsefulTasks
-      ? null
-      : buildFallbackTasksByTimeframe(new Date(), {
-          niche: cleanString((businessProfile as any)?.niche, 80) || cleanString((businessProfile as any)?.market, 80),
-          mainGoal:
-            cleanString((businessProfile as any)?.main_goal_90_days, 160) ||
-            cleanString((businessProfile as any)?.main_goal, 160) ||
-            cleanString((businessProfile as any)?.mainGoal90Days, 160) ||
-            pickRevenueGoalLabel(businessProfile as AnyRecord),
-        });
-
-    const nextPlan: AnyRecord = {
+    const plan_json: AnyRecord = {
       ...basePlan,
+      offer_pyramids: normalizedOffers,
 
-      mission: mission || basePlan.mission || "",
-      promise: promise || basePlan.promise || "",
-      positioning: positioning || basePlan.positioning || "",
-      summary: summary || basePlan.summary || "",
+      ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel } : {}),
 
-      persona: persona ?? basePlan.persona ?? null,
+      horizon_days: toNumber(basePlan.horizon_days) ?? 90,
+      ...(targetMonthlyRevGuess !== null ? { target_monthly_rev: targetMonthlyRevGuess } : {}),
 
-      plan_90_days: {
-        tasks_by_timeframe: (fallbackTasksByTf ?? tasksByTf) as any,
-      },
-
-      selected_offer_pyramid_index:
-        typeof basePlan.selected_offer_pyramid_index === "number"
-          ? basePlan.selected_offer_pyramid_index
-          : typeof existingSelectedIndex === "number"
-            ? existingSelectedIndex
-            : null,
-      selected_offer_pyramid: basePlan.selected_offer_pyramid ?? selectedOffers ?? null,
+      selected_offer_pyramid_index: typeof basePlan.selected_offer_pyramid_index === "number" ? basePlan.selected_offer_pyramid_index : null,
+      selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
 
       // legacy compat
-      selected_pyramid_index:
-        typeof basePlan.selected_pyramid_index === "number"
-          ? basePlan.selected_pyramid_index
-          : typeof existingSelectedIndex === "number"
-            ? existingSelectedIndex
-            : null,
-      selected_pyramid: basePlan.selected_pyramid ?? selectedOffers ?? null,
+      selected_pyramid_index: typeof basePlan.selected_pyramid_index === "number" ? basePlan.selected_pyramid_index : null,
+      selected_pyramid: basePlan.selected_pyramid ?? null,
 
       updated_at: new Date().toISOString(),
     };
 
-    const { data: saved2, error: saveErr2 } = await supabase
+    const { data: saved, error: saveErr } = await supabase
       .from("business_plan")
-      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
       .select("id")
       .maybeSingle();
 
-    if (saveErr2) {
-      console.error("Error saving business_plan full strategy:", saveErr2);
-      return NextResponse.json({ success: false, error: saveErr2.message }, { status: 500 });
+    if (saveErr) {
+      console.error("Error saving business_plan offers:", saveErr);
+      sendSSE("error", { success: false, error: saveErr.message });
+      clearInterval(heartbeat);
+      controller.close();
+      return;
     }
 
     try {
       const strategyId = await getOrCreateStrategyIdBestEffort({
         userId,
         businessProfile: businessProfile as AnyRecord,
-        planJson: nextPlan,
+        planJson: plan_json,
         projectId,
       });
 
-      try {
-        const pyramids = asArray(nextPlan.offer_pyramids)
-          .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
-          .filter((x) => !!x && !!x.lead_magnet && (!!x.low_ticket || !!x.middle_ticket) && !!x.high_ticket);
-
-        if (pyramids.length) {
-          await persistOfferPyramidsBestEffort({
-            userId,
-            strategyId,
-            pyramids,
-            selectedIndex: typeof existingSelectedIndex === "number" ? existingSelectedIndex : null,
-            projectId,
-          });
-        }
-      } catch {
-        // fail-open
-      }
-
-      await persistPersonaBestEffort({ userId, strategyId, persona: persona ?? null, projectId });
-
-      await enrichBusinessProfileMissionBestEffort({
-        supabase,
+      await persistOfferPyramidsBestEffort({
         userId,
-        persona: persona ?? null,
-        planJson: nextPlan,
+        strategyId,
+        pyramids: normalizedOffers,
+        selectedIndex: null,
         projectId,
       });
     } catch (e) {
-      console.error("POST best-effort sync (strategy/persona) unexpected error:", e);
+      console.error("POST offers sync unexpected error:", e);
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        planId: saved2?.id ?? null,
-        strategy: {
-          mission: mission || null,
-          promise: promise || null,
-          positioning: positioning || null,
-          summary: summary || null,
-        },
-        hasPersona: Boolean(persona),
-      },
-      { status: 200 },
-    );
-  } catch (err) {
-    console.error("Unhandled error in POST /api/strategy/offer-pyramid:", err);
-    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : "Internal server error" }, { status: 500 });
-  }
+    // ✅ Return the generated pyramids in the SSE result
+    sendSSE("result", { success: true, planId: saved?.id ?? null, offer_pyramids: normalizedOffers });
+
+      } catch (err) {
+        console.error("Unhandled error in POST /api/strategy/offer-pyramid SSE:", err);
+        sendSSE("error", { success: false, error: err instanceof Error ? err.message : "Internal server error" });
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
