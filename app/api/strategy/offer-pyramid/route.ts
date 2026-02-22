@@ -1085,7 +1085,7 @@ STRUCTURE EXACTE À RENVOYER :
       await ensureUserCredits(userId);
 
       const aiResponse = await ai.chat.completions.create({
-        model: "gpt-4.1",
+        model: "gpt-5.1",
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1249,7 +1249,7 @@ Contraintes :
     await ensureUserCredits(userId);
 
     const fullAiResponse = await ai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5.1",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },

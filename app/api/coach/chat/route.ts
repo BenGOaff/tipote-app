@@ -937,7 +937,7 @@ Rules:
     let raw = "";
 
     if (openai) {
-      const model = process.env.TIPOTE_COACH_MODEL?.trim() || "gpt-4.1";
+      const model = process.env.TIPOTE_COACH_MODEL?.trim() || "gpt-5.1";
       const ai = await openai.chat.completions.create({
         model,
         response_format: { type: "json_object" },

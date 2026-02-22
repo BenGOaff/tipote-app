@@ -205,7 +205,7 @@ Génère le profil persona enrichi complet du CLIENT IDEAL en JSON.
 Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du business.`;
 
     const resp = await ai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5.1",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },

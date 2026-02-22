@@ -1509,7 +1509,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing OpenAI key (OPENAI_API_KEY_OWNER)" }, { status: 500 });
     }
 
-    const model = process.env.TIPOTE_ONBOARDING_MODEL?.trim() || "gpt-4.1";
+    const model = process.env.TIPOTE_ONBOARDING_MODEL?.trim() || "gpt-5.1";
 
     const ai = await openai.chat.completions.create({
       model,

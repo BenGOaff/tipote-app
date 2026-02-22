@@ -305,7 +305,7 @@ export async function POST(req: Request) {
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5.1",
       temperature: 0.2,
       messages: [
         { role: "system", content: system },
