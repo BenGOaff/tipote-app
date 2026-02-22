@@ -12,3 +12,9 @@ export function getOwnerOpenAI(): OpenAI | null {
 }
 
 export const openai = getOwnerOpenAI();
+
+/** Modèle OpenAI par défaut — configurable via env var */
+export const OPENAI_MODEL =
+  process.env.TIPOTE_OPENAI_MODEL?.trim() ||
+  process.env.OPENAI_MODEL?.trim() ||
+  "gpt-5-mini";

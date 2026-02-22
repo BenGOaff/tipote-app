@@ -4,7 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildEnhancedPersonaPrompt } from "@/lib/prompts/persona/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -205,7 +205,7 @@ Génère le profil persona enrichi complet du CLIENT IDEAL en JSON.
 Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du business.`;
 
     const resp = await ai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },

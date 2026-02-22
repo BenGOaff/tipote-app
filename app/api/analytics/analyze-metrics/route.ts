@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 const BodySchema = z.object({
@@ -66,7 +66,7 @@ Ta mission :
 4) Finir par une mini-checklist "Semaine 1 / Semaine 2 / Semaine 3 / Semaine 4".`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-5.1",
+        model: OPENAI_MODEL,
         temperature: 0.4,
         messages: [
           { role: "system", content: system },

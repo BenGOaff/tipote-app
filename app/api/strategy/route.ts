@@ -12,7 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
@@ -875,7 +875,7 @@ ${JSON.stringify(
 
   try {
     const resp = await ai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -1323,7 +1323,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 }`.trim();
 
       const aiResponse = await ai.chat.completions.create({
-        model: "gpt-5.1",
+        model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1558,7 +1558,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 `.trim();
 
       const fullAiResponse = await ai.chat.completions.create({
-        model: "gpt-5.1",
+        model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1860,7 +1860,7 @@ CONSINGNES
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}`.trim();
 
     const fullAiResponse = await ai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },

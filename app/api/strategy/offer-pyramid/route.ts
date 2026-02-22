@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -1085,7 +1085,7 @@ STRUCTURE EXACTE À RENVOYER :
       await ensureUserCredits(userId);
 
       const aiResponse = await ai.chat.completions.create({
-        model: "gpt-5.1",
+        model: OPENAI_MODEL,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
@@ -1249,7 +1249,7 @@ Contraintes :
     await ensureUserCredits(userId);
 
     const fullAiResponse = await ai.chat.completions.create({
-      model: "gpt-5.1",
+      model: OPENAI_MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: fullSystemPrompt },
