@@ -157,7 +157,7 @@ export async function getUserInfo(accessToken: string): Promise<TikTokUserInfo> 
   }
 
   const json = await res.json();
-  if (json.error?.code) {
+  if (json.error?.code && json.error.code !== "ok") {
     throw new Error(`TikTok userinfo error: ${json.error.code} — ${json.error.message}`);
   }
 

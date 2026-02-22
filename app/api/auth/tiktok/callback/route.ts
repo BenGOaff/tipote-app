@@ -52,9 +52,11 @@ export async function GET(req: NextRequest) {
 
     // 3. Echanger le code contre des tokens
     const tokens = await exchangeCodeForTokens(code);
+    console.log("[TikTok] Token exchange OK, open_id:", tokens.open_id, "scope:", tokens.scope);
 
     // 4. Recuperer les infos du profil TikTok
     const userInfo = await getUserInfo(tokens.access_token);
+    console.log("[TikTok] User info OK:", userInfo.display_name, userInfo.open_id);
 
     // 5. Chiffrer les tokens
     const accessTokenEncrypted = encrypt(tokens.access_token);
@@ -89,20 +91,23 @@ export async function GET(req: NextRequest) {
       );
 
     if (dbError) {
-      console.error("social_connections upsert error:", dbError);
+      console.error("[TikTok] social_connections upsert error:", dbError);
       return NextResponse.redirect(
-        `${settingsUrl}&tiktok_error=${encodeURIComponent("Erreur sauvegarde. Reessaie.")}`
+        `${settingsUrl}&tiktok_error=${encodeURIComponent("Erreur sauvegarde: " + (dbError.message ?? "inconnue"))}`
       );
     }
+
+    console.log("[TikTok] Connection saved, project_id:", projectId, "platform_user_id:", userInfo.open_id);
 
     // 8. Rediriger vers les settings avec succes
     return NextResponse.redirect(
       `${settingsUrl}&tiktok_connected=1`
     );
   } catch (err) {
-    console.error("TikTok OAuth callback error:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[TikTok] OAuth callback error:", errMsg);
     return NextResponse.redirect(
-      `${settingsUrl}&tiktok_error=${encodeURIComponent("Erreur de connexion TikTok. Reessaie.")}`
+      `${settingsUrl}&tiktok_error=${encodeURIComponent(errMsg.slice(0, 200))}`
     );
   }
 }
