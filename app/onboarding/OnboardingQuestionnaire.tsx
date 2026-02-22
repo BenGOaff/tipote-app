@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowRight, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { callStrategySSE } from "@/lib/strategySSE";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -313,13 +314,10 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
         } catch {/* ignore */}
       }
 
-      // Step 1: Generate strategy
+      // Step 1: Generate strategy (SSE stream — heartbeats prevent proxy timeout)
       setBootStep(1);
       try {
-        await Promise.race([
-          postJSON("/api/strategy", { force: true }),
-          new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 35_000)),
-        ]);
+        await callStrategySSE({ force: true });
       } catch {/* fail-open */}
 
       // Step 2: Sync tasks

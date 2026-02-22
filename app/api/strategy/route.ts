@@ -1,5 +1,5 @@
 // app/api/strategy/route.ts
-// ✅ POST idempotent :
+// ✅ POST idempotent — Returns SSE stream with heartbeats to prevent proxy 504 timeouts.
 // - Génère un "starter plan" (strategy_summary + goals) si manquant (best-effort)
 // - Si user = (non affilié) ET (pas d'offre OU pas satisfait) : génère 3 offres si manquantes
 // - Si offre choisie : génère stratégie complète (persona + plan 90j)
@@ -919,8 +919,15 @@ ${JSON.stringify(
 }
 
 export async function POST(req: Request) {
+  // ── Pre-validate synchronously before starting the stream ──────────
+  let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
+  let userId: string;
+  let projectId: string | null;
+  let forceRegenerate: boolean;
+  let locale: "fr" | "en";
+
   try {
-    const supabase = await getSupabaseServerClient();
+    supabase = await getSupabaseServerClient();
 
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
@@ -929,15 +936,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     }
 
-    const userId = session.user.id;
-    const projectId = await getActiveProjectId(supabase, userId);
+    userId = session.user.id;
+    projectId = await getActiveProjectId(supabase, userId);
 
     // ✅ Read request body (force flag from front-end onboarding finalization)
     const reqBody = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const forceRegenerate = Boolean(reqBody?.force);
+    forceRegenerate = Boolean(reqBody?.force);
 
     const acceptLang = (req.headers.get("accept-language") || "").toLowerCase();
-    const locale: "fr" | "en" = acceptLang.includes("fr") ? "fr" : "en";
+    locale = acceptLang.includes("fr") ? "fr" : "en";
+
+    if (!openai) {
+      return NextResponse.json(
+        { success: false, error: "AI client not configured" },
+        { status: 500 },
+      );
+    }
+  } catch (e: any) {
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+
+  // ── Start SSE stream — heartbeats keep the connection alive ────────
+  const ai = openai!;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function sendSSE(event: string, data: any) {
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch { /* stream closed */ }
+      }
+
+      // Send heartbeat every 5 seconds to prevent proxy timeout
+      const heartbeat = setInterval(() => {
+        try {
+          sendSSE("heartbeat", { status: "generating" });
+        } catch { /* stream closed */ }
+      }, 5000);
+
+      try {
+        sendSSE("progress", { step: "Lecture des données..." });
 
     // 0) Lire plan existant (idempotence)
     let bpQuery = supabase
@@ -981,10 +1022,8 @@ export async function POST(req: Request) {
 
     if (profileError || !businessProfile) {
       console.error("Business profile error:", profileError);
-      return NextResponse.json(
-        { success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` },
-        { status: 400 },
-      );
+      sendSSE("result", { success: false, error: `Business profile missing: ${profileError?.message ?? "unknown"}` });
+      return;
     }
 
     const revenueGoalLabel = pickRevenueGoalLabel(businessProfile as AnyRecord);
@@ -1104,13 +1143,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
     });
     const resourcesForPrompt = summarizeResourcesForPrompt(resources ?? [], 12);
 
-    const ai = openai;
-    if (!ai) {
-      return NextResponse.json(
-        { success: false, error: "OPENAI client not configured (strategy generation disabled)" },
-        { status: 500 },
-      );
-    }
+    // ai is already validated above (pre-stream check)
 
     /**
      * 4) Nettoyage anti-régression :
@@ -1156,6 +1189,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
      */
     if (!hasStarter) {
       try {
+        sendSSE("progress", { step: "Génération du plan de démarrage..." });
         // ✅ crédits : 1 génération = 1 crédit
         await chargeCreditOrThrow({ userId, feature: "strategy_starter" });
 
@@ -1185,7 +1219,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
         }
       } catch (e) {
         if (isNoCreditsError(e)) {
-          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+          sendSSE("result", { success: false, error: "NO_CREDITS" }); return;
         }
         console.error("starter plan generation failed (non-blocking):", e);
       }
@@ -1195,11 +1229,11 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
      * 6) Early returns (après starter)
      */
     if (hasSelected && !needFullStrategy && starterPlanLooksUseful(existingPlanJson)) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_complete" }, { status: 200 });
+      sendSSE("result", { success: true, planId: null, skipped: true, reason: "already_complete" }); return;
     }
 
     if (shouldGenerateOffers && !hasSelected && hasUsefulOffers && starterPlanLooksUseful(existingPlanJson)) {
-      return NextResponse.json({ success: true, planId: null, skipped: true, reason: "already_generated" }, { status: 200 });
+      sendSSE("result", { success: true, planId: null, skipped: true, reason: "already_generated" }); return;
     }
 
     /**
@@ -1217,7 +1251,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
         });
       } catch (e) {
         if (isNoCreditsError(e)) {
-          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+          sendSSE("result", { success: false, error: "NO_CREDITS" }); return;
         }
         throw e;
       }
@@ -1322,6 +1356,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
   ]
 }`.trim();
 
+      sendSSE("progress", { step: "Génération des offres..." });
       const aiResponse = await ai.chat.completions.create({
         ...cachingParams("strategy_offers"),
         model: OPENAI_MODEL,
@@ -1341,7 +1376,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 
       if (!offersLookUseful(normalizedOffers)) {
         console.error("AI returned incomplete offer_pyramids payload:", parsed);
-        return NextResponse.json({ success: false, error: "AI returned incomplete offer_pyramids" }, { status: 502 });
+        sendSSE("result", { success: false, error: "AI returned incomplete offer_pyramids" }); return;
       }
 
       const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
@@ -1423,12 +1458,12 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
 
       if (saveErr) {
         console.error("Error saving business_plan offers:", saveErr);
-        return NextResponse.json({ success: false, error: saveErr.message }, { status: 500 });
+        sendSSE("result", { success: false, error: saveErr.message }); return;
       }
 
       await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: plan_json, projectId });
 
-      return NextResponse.json({ success: true, planId: saved?.id ?? null }, { status: 200 });
+      sendSSE("result", { success: true, planId: saved?.id ?? null }); return;
     }
 
     /**
@@ -1437,10 +1472,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
      */
     if (!shouldGenerateOffers) {
       if (fullStrategyLooksUseful(existingPlanJson) && starterPlanLooksUseful(existingPlanJson)) {
-        return NextResponse.json(
-          { success: true, planId: null, skipped: true, reason: "already_complete_no_pyramids" },
-          { status: 200 },
-        );
+        sendSSE("result", { success: true, planId: null, skipped: true, reason: "already_complete_no_pyramids" }); return;
       }
 
       // ✅ crédits : 1 génération = 1 crédit
@@ -1452,7 +1484,7 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
         });
       } catch (e) {
         if (isNoCreditsError(e)) {
-          return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+          sendSSE("result", { success: false, error: "NO_CREDITS" }); return;
         }
         throw e;
       }
@@ -1558,6 +1590,7 @@ CONTRAINTES TASKS
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}
 `.trim();
 
+      sendSSE("progress", { step: "Génération de la stratégie complète..." });
       const fullAiResponse = await ai.chat.completions.create({
         ...cachingParams("strategy_full"),
         model: OPENAI_MODEL,
@@ -1679,7 +1712,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
       if (fullErr) {
         console.error("Error saving business_plan full strategy (no offers):", fullErr);
-        return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
+        sendSSE("result", { success: false, error: fullErr.message }); return;
       }
 
       await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan, projectId });
@@ -1711,7 +1744,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         console.error("persona persistence error (non-blocking):", e);
       }
 
-      return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
+      sendSSE("result", { success: true, planId: savedFull?.id ?? null }); return;
     }
 
     /**
@@ -1720,14 +1753,10 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
     const selectedOffers = pickSelectedPyramidFromPlan(existingPlanJson);
 
     if (!selectedOffers) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "selected_offer_pyramid is missing. Choose an offer set first (/api/strategy/offer-pyramid PATCH) before generating the full strategy.",
-        },
-        { status: 400 },
-      );
+      sendSSE("result", {
+        success: false,
+        error: "selected_offer_pyramid is missing. Choose an offer set first (/api/strategy/offer-pyramid PATCH) before generating the full strategy.",
+      }); return;
     }
 
     // ✅ crédits : 1 génération = 1 crédit
@@ -1739,7 +1768,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
       });
     } catch (e) {
       if (isNoCreditsError(e)) {
-        return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
+        sendSSE("result", { success: false, error: "NO_CREDITS" }); return;
       }
       throw e;
     }
@@ -1861,6 +1890,7 @@ CONSINGNES
 - Focus = 1 levier concret (tunnel lead magnet → low-ticket → high-ticket).
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}`.trim();
 
+    sendSSE("progress", { step: "Génération de la stratégie complète avec offres..." });
     const fullAiResponse = await ai.chat.completions.create({
       ...cachingParams("strategy_full"),
       model: OPENAI_MODEL,
@@ -1941,7 +1971,7 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
     if (fullErr) {
       console.error("Error saving business_plan full strategy:", fullErr);
-      return NextResponse.json({ success: false, error: fullErr.message }, { status: 500 });
+      sendSSE("result", { success: false, error: fullErr.message }); return;
     }
 
     await persistStrategyRow({ supabase, userId, businessProfile: businessProfile as AnyRecord, planJson: nextPlan, projectId });
@@ -1973,16 +2003,27 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
       console.error("persona persistence error (non-blocking):", e);
     }
 
-    return NextResponse.json({ success: true, planId: savedFull?.id ?? null }, { status: 200 });
-  } catch (err) {
-    if (isNoCreditsError(err)) {
-      return NextResponse.json({ success: false, error: "NO_CREDITS" }, { status: 402 });
-    }
+    sendSSE("result", { success: true, planId: savedFull?.id ?? null });
+      } catch (err: any) {
+        if (isNoCreditsError(err)) {
+          sendSSE("result", { success: false, error: "NO_CREDITS" });
+        } else {
+          console.error("Unhandled error in /api/strategy:", err);
+          sendSSE("error", { success: false, error: err instanceof Error ? err.message : "Internal server error" });
+        }
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
 
-    console.error("Unhandled error in /api/strategy:", err);
-    return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 },
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

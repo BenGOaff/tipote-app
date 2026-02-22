@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { callStrategySSE } from "@/lib/strategySSE";
 
 type AnyRecord = Record<string, any>;
 
@@ -67,6 +68,7 @@ function hasFullStrategy(planJson: AnyRecord | null): boolean {
   return Boolean(mission || promise || positioning) && d30 + d60 + d90 >= 6;
 }
 
+// postJSON kept for non-strategy endpoints
 async function postJSON<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
@@ -99,7 +101,7 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
 
     setIsGenerating(true);
     try {
-      await postJSON<{ success?: boolean; ok?: boolean }>("/api/strategy", {});
+      await callStrategySSE({});
       // ✅ Sync tasks after strategy generation so project_tasks is populated
       await fetch("/api/tasks/sync", {
         method: "POST",

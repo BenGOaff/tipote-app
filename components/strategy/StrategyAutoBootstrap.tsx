@@ -3,13 +3,14 @@
 
 // Bootstrap silencieux du plan stratégique après onboarding.
 // Objectif: quand l'user arrive sur /app, si business_plan n'existe pas encore,
-// on lance /api/strategy (idempotent) une seule fois (sessionStorage), sans bloquer l'UI.
+// on lance /api/strategy (SSE stream, idempotent) une seule fois (sessionStorage), sans bloquer l'UI.
 // ✅ Ne casse rien : fail-open, aucun UI, aucune redirection.
 
 import { useEffect, useMemo } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { callStrategySSE } from "@/lib/strategySSE";
 
-const SESSION_KEY = "tipote:auto_strategy_bootstrap_v1";
+const SESSION_KEY = "tipote:auto_strategy_bootstrap_v2";
 
 export default function StrategyAutoBootstrap() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -46,15 +47,11 @@ export default function StrategyAutoBootstrap() {
 
         if ((existingPlan as any)?.plan_json) return;
 
-        // Génération idempotente (le backend skip si déjà généré)
-        const stratRes = await fetch("/api/strategy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        }).catch(() => null);
+        // Génération idempotente via SSE stream (heartbeats prevent proxy timeout)
+        const result = await callStrategySSE({}).catch(() => null);
 
         // ✅ Sync tasks after strategy generation so project_tasks is populated
-        if (stratRes?.ok && !cancelled) {
+        if (result?.success && !cancelled) {
           await fetch("/api/tasks/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

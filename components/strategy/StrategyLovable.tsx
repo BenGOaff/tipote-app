@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { callStrategySSE } from "@/lib/strategySSE";
 
 import {
   DndContext,
@@ -149,19 +150,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     setIsGeneratingPlan(true);
 
     try {
-      const res = await fetch("/api/strategy", { method: "POST" });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const msg = (data && (data.error || data.message)) || `Erreur (${res.status})`;
-        toast({
-          title: t("toast.planError"),
-          description: String(msg),
-          variant: "destructive",
-        });
-        setIsGeneratingPlan(false);
-        return;
-      }
+      await callStrategySSE({});
 
       // ✅ Sync tasks after strategy generation so project_tasks is populated
       await fetch("/api/tasks/sync", {

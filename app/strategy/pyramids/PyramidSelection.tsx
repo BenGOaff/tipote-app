@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useToast } from "@/components/ui/use-toast";
+import { callStrategySSE } from "@/lib/strategySSE";
 
 
 interface OfferDetail {
@@ -208,8 +209,8 @@ export default function PyramidSelection() {
 
         if (firstTry.reason === "no_user") return;
 
-        // 2) si pas d'offres, générer puis recharger
-        await fetch("/api/strategy", { method: "POST" }).catch(() => null);
+        // 2) si pas d'offres, générer puis recharger (SSE stream)
+        await callStrategySSE({}).catch(() => null);
 
         const secondTry = await loadFromPlan();
         if (!secondTry.ok) {
@@ -273,24 +274,19 @@ export default function PyramidSelection() {
         throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
       }
 
-      // ✅ Générer la stratégie complète (idempotent)
-      let fullRes: Response | null = null;
-      let fullJson: any = null;
-
+      // ✅ Générer la stratégie complète (idempotent, SSE stream)
+      let fullOk = false;
       try {
-        fullRes = await fetch("/api/strategy", { method: "POST" });
-        fullJson = await fullRes.json().catch(() => null);
+        const result = await callStrategySSE({});
+        fullOk = Boolean(result?.success);
       } catch {
-        fullRes = null;
-        fullJson = null;
+        fullOk = false;
       }
-
-      const fullOk = Boolean(fullRes?.ok && fullJson?.ok !== false);
       if (!fullOk) {
         // ✅ fallback spécial timeouts (ex: 504) : la stratégie peut exister malgré tout
         const recovered = await ensureStrategyAfterTimeout(supabase, user.id);
         if (!recovered) {
-          throw new Error(fullJson?.error || "Impossible de générer la stratégie complète.");
+          throw new Error("Impossible de générer la stratégie complète.");
         }
       }
 
