@@ -100,6 +100,46 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
 
 /**
  * -----------------------
+ * Refusals / constraints helper
+ * -----------------------
+ * Maps raw onboarding refusal keys to human-readable FR labels
+ * and builds an explicit prompt section so the AI NEVER ignores them.
+ */
+const REFUSAL_LABELS: Record<string, string> = {
+  no_dm: "Pas de prospection en DM",
+  no_video: "Pas de vidéos",
+  no_articles: "Pas d'articles / blog",
+  no_social: "Pas de réseaux sociaux",
+  no_course: "Pas de création de formation",
+  no_coaching: "Pas de coaching individuel",
+  no_personal_branding: "Pas de personal branding (ne pas se montrer)",
+};
+
+function extractRefusals(businessProfile: AnyRecord): string[] {
+  const da = asRecord(businessProfile.diagnostic_answers) ?? asRecord(businessProfile.diagnosticAnswers) ?? {};
+  const raw = asArray(da.refusals ?? []);
+  return raw
+    .map((r) => {
+      const key = cleanString(r, 60).toLowerCase();
+      if (!key || key === "none" || key === "aucun" || key === "aucun refus") return "";
+      return REFUSAL_LABELS[key] ?? key;
+    })
+    .filter(Boolean);
+}
+
+function buildRefusalsPromptSection(businessProfile: AnyRecord): string {
+  const refusals = extractRefusals(businessProfile);
+  if (refusals.length === 0) return "";
+  return `
+🚫 REFUS ABSOLUS DE L'UTILISATEUR (NON-NÉGOCIABLES) :
+${refusals.map((r) => `- ${r}`).join("\n")}
+
+⚠️ INSTRUCTION CRITIQUE : Tu ne dois JAMAIS proposer, recommander ou inclure dans la stratégie, les offres, ou le plan 90 jours quoi que ce soit qui corresponde aux refus ci-dessus. Si l'utilisateur a dit "Pas de création de formation", tu ne proposes AUCUNE formation. Si "Pas de réseaux sociaux", tu ne proposes AUCUNE action sur les réseaux. Ces refus sont ABSOLUS et PRIORITAIRES sur toute autre considération.
+`;
+}
+
+/**
+ * -----------------------
  * Credits helpers
  * -----------------------
  */
@@ -841,7 +881,7 @@ RULES
 - dashboard_focus are short labels to drive the dashboard (ex: "Visibilité", "Ventes", "Offre").
 - If business_model is affiliate: never talk about creating an offer.
 - If user has multiple activities: focus ONLY on primary_activity.
-`.trim();
+${buildRefusalsPromptSection(businessProfile)}`.trim();
 
   const userPrompt = `
 CONTEXT — Onboarding facts (chat V2):
@@ -1276,7 +1316,7 @@ EXIGENCES “COACH-LEVEL” :
 - Pas de généralités : préciser le quoi / comment / pourquoi.
 - Cohérence : respecter contraintes & non-négociables (temps, énergie, budget, formats refusés).
 - Inclure un quick win 7 jours dans la logique globale.
-
+${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 IMPORTANT :
 Tu dois répondre en JSON strict uniquement, sans texte autour.`.trim();
 
@@ -1509,40 +1549,40 @@ RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Si business_model = affiliate : tu NE PARLES PAS de créer une offre.
 - Zéro blabla : tout doit être actionnable, spécifique, niché.
 - Respect strict des contraintes si elles existent.
-
+${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 FORMAT JSON STRICT UNIQUEMENT :
 {
-  "mission": "string",
-  "promise": "string",
-  "positioning": "string",
-  "summary": "string",
-  "persona": {
-    "title": "profil en 1 phrase",
-    "pains": ["..."],
-    "desires": ["..."],
-    "channels": ["..."],
-    "objections": ["..."],
-    "triggers": ["..."],
-    "exact_phrases": ["..."]
+  “mission”: “string”,
+  “promise”: “string”,
+  “positioning”: “string”,
+  “summary”: “string”,
+  “persona”: {
+    “title”: “profil en 1 phrase”,
+    “pains”: [“...”],
+    “desires”: [“...”],
+    “channels”: [“...”],
+    “objections”: [“...”],
+    “triggers”: [“...”],
+    “exact_phrases”: [“...”]
   },
-  "plan_90_days": {
-    "focus": "string",
-    "milestones": ["...", "...", "..."],
-    "tasks_by_timeframe": {
-      "d30": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
-      "d60": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }],
-      "d90": [{ "title": "...", "due_date": "YYYY-MM-DD", "priority": "high|medium|low" }]
+  “plan_90_days”: {
+    “focus”: “string”,
+    “milestones”: [“...”, “...”, “...”],
+    “tasks_by_timeframe”: {
+      “d30”: [{ “title”: “...”, “due_date”: “YYYY-MM-DD”, “priority”: “high|medium|low” }],
+      “d60”: [{ “title”: “...”, “due_date”: “YYYY-MM-DD”, “priority”: “high|medium|low” }],
+      “d90”: [{ “title”: “...”, “due_date”: “YYYY-MM-DD”, “priority”: “high|medium|low” }]
     }
   },
-  "offer_audit": {
-    "diagnosis": "string",
-    "quick_wins": ["string","string","string"],
-    "improvements": [
-      { "area": "positioning|promise|pricing|packaging|delivery|funnel|traffic", "recommendation": "string", "test": "string (simple experiment 7-14 days)" }
+  “offer_audit”: {
+    “diagnosis”: “string”,
+    “quick_wins”: [“string”,”string”,”string”],
+    “improvements”: [
+      { “area”: “positioning|promise|pricing|packaging|delivery|funnel|traffic”, “recommendation”: “string”, “test”: “string (simple experiment 7-14 days)” }
     ]
   },
-  "offer_alternatives": [
-    { "angle": "string", "for_who": "string", "core_promise": "string", "suggested_changes": ["string"], "first_test": "string" }
+  “offer_alternatives”: [
+    { “angle”: “string”, “for_who”: “string”, “core_promise”: “string”, “suggested_changes”: [“string”], “first_test”: “string” }
   ]
 }`.trim();
 
@@ -1555,6 +1595,16 @@ FORMAT JSON STRICT UNIQUEMENT :
 
       const userPrompt = `ONBOARDING FACTS (SOURCE DE VÉRITÉ)
 ${JSON.stringify(onboardingFacts ?? null, null, 2)}
+
+SOURCE PRIORITAIRE — Diagnostic (si présent) :
+- diagnostic_profile :
+${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}
+
+- diagnostic_summary :
+${JSON.stringify((businessProfile as any).diagnostic_summary ?? (businessProfile as any).diagnosticSummary ?? null, null, 2)}
+
+- diagnostic_answers (extraits) :
+${JSON.stringify(((businessProfile as any).diagnostic_answers ?? (businessProfile as any).diagnosticAnswers ?? []) as any[], null, 2)}
 
 BUSINESS PROFILE (fallback)
 ${JSON.stringify(
@@ -1794,7 +1844,7 @@ RÈGLES COACH-LEVEL :
 - Cohérence totale avec l'offre choisie.
 - 1 levier principal (focus).
 - Min 6 tâches par timeframe, due_date valides.
-${isBeginnerPath ? `
+${buildRefusalsPromptSection(businessProfile as AnyRecord)}${isBeginnerPath ? `
 CONTEXTE DÉBUTANT (IMPORTANT) :
 L'utilisateur part de ZÉRO. Il n'a pas encore de clients ni de preuve sociale.
 - Phase 1 (d30) : tâches de validation et construction des bases (niche, persona, présence, premiers contenus). PAS encore de vente forcée.

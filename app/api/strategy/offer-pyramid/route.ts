@@ -77,6 +77,44 @@ function pickRevenueGoalLabel(businessProfile: AnyRecord): string {
 
 /**
  * -----------------------
+ * Refusals / constraints helper
+ * -----------------------
+ */
+const REFUSAL_LABELS: Record<string, string> = {
+  no_dm: "Pas de prospection en DM",
+  no_video: "Pas de vidéos",
+  no_articles: "Pas d'articles / blog",
+  no_social: "Pas de réseaux sociaux",
+  no_course: "Pas de création de formation",
+  no_coaching: "Pas de coaching individuel",
+  no_personal_branding: "Pas de personal branding (ne pas se montrer)",
+};
+
+function extractRefusals(businessProfile: AnyRecord): string[] {
+  const da = asRecord(businessProfile.diagnostic_answers) ?? asRecord(businessProfile.diagnosticAnswers) ?? {};
+  const raw = asArray(da.refusals ?? []);
+  return raw
+    .map((r) => {
+      const key = cleanString(r, 60).toLowerCase();
+      if (!key || key === "none" || key === "aucun" || key === "aucun refus") return "";
+      return REFUSAL_LABELS[key] ?? key;
+    })
+    .filter(Boolean);
+}
+
+function buildRefusalsPromptSection(businessProfile: AnyRecord): string {
+  const refusals = extractRefusals(businessProfile);
+  if (refusals.length === 0) return "";
+  return `
+🚫 REFUS ABSOLUS DE L'UTILISATEUR (NON-NÉGOCIABLES) :
+${refusals.map((r) => `- ${r}`).join("\n")}
+
+⚠️ INSTRUCTION CRITIQUE : Tu ne dois JAMAIS proposer, recommander ou inclure dans la stratégie, les offres, ou le plan 90 jours quoi que ce soit qui corresponde aux refus ci-dessus. Si l'utilisateur a dit "Pas de création de formation", tu ne proposes AUCUNE formation. Si "Pas de réseaux sociaux", tu ne proposes AUCUNE action sur les réseaux. Ces refus sont ABSOLUS et PRIORITAIRES sur toute autre considération.
+`;
+}
+
+/**
+ * -----------------------
  * Retrieval (best-effort)
  * -----------------------
  */
@@ -1015,7 +1053,7 @@ EXIGENCES “ANTI-GÉNÉRALITÉS” :
 - Chaque offre doit avoir: mécanisme, livrables, critère de réussite, et 1 phrase “pourquoi ça convertit”.
 - Chaque offre = stratégie distincte (angle, mécanisme, promesse, canal principal, format, objection principale).
 - Intègre un quick win 7 jours cohérent avec l'offre.
-
+${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 IMPORTANT : Réponds en JSON strict uniquement, sans texte autour.`;
 
       const userPrompt = `SOURCE PRIORITAIRE — Diagnostic (si présent) :
@@ -1187,11 +1225,11 @@ RÈGLES “COACH-LEVEL” :
 - Réponds en JSON strict uniquement (zéro texte autour).
 - Concret, actionnable, niché. Aucun conseil générique.
 - Chaque recommandation doit préciser: QUOI / COMMENT / LIVRABLE / MÉTRIQUE.
-- Cohérence totale avec l'offre choisie (angle, canal principal, promesse).
+- Cohérence totale avec l’offre choisie (angle, canal principal, promesse).
 - Interdit: “crée du contenu” sans (thèmes, formats, fréquence, CTA, distribution).
 - Persona: pas d’âge, pas de ville, pas de prénom/nom. Mais ultra détaillé.
 - Plan 90 jours: tâches “solo-exécutables”, avec due_date valides, et priorité.
-
+${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 FORMAT JSON STRICT :
 {
   "mission": "string",
