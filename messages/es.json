@@ -124,7 +124,8 @@
     "errSendFailed": "No se pudo enviar el correo de restablecimiento. Verifica la dirección.",
     "errRateLimit": "Demasiadas tentativas. Espera unos minutos antes de intentar de nuevo.",
     "successSent": "Si existe una cuenta con este correo, se ha enviado un enlace de restablecimiento.",
-    "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo."
+    "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo.",
+    "backToLogin": "Volver al inicio de sesión"
   },
   "callbackPage": {
     "loadingTitle": "Iniciando sesión…",

@@ -124,7 +124,8 @@
     "errSendFailed": "Impossibile inviare l'email di reimpostazione. Verifica l'indirizzo.",
     "errRateLimit": "Troppi tentativi. Attendi qualche minuto prima di riprovare.",
     "successSent": "Se esiste un account con questa email, è stato inviato un link di reimpostazione.",
-    "errUnexpected": "Errore imprevisto. Riprova."
+    "errUnexpected": "Errore imprevisto. Riprova.",
+    "backToLogin": "Torna all'accesso"
   },
   "callbackPage": {
     "loadingTitle": "Accesso in corso…",

@@ -124,7 +124,8 @@
     "errSendFailed": "Impossible d'envoyer l'email de réinitialisation. Vérifie ton email ou réessaie dans quelques minutes.",
     "errRateLimit": "Trop de tentatives. Merci de patienter quelques minutes avant de réessayer.",
     "successSent": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé. Pense à vérifier tes spams.",
-    "errUnexpected": "Erreur inattendue. Merci de réessayer."
+    "errUnexpected": "Erreur inattendue. Merci de réessayer.",
+    "backToLogin": "Retour à la connexion"
   },
   "callbackPage": {
     "loadingTitle": "Connexion en cours…",

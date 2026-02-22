@@ -124,7 +124,8 @@
     "errSendFailed": "Unable to send the reset email. Check your email or try again in a few minutes.",
     "errRateLimit": "Too many attempts. Please wait a few minutes before trying again.",
     "successSent": "If an account exists for this email, a reset link has been sent. Check your spam folder too.",
-    "errUnexpected": "Unexpected error. Please try again."
+    "errUnexpected": "Unexpected error. Please try again.",
+    "backToLogin": "Back to sign in"
   },
   "callbackPage": {
     "loadingTitle": "Signing in…",
