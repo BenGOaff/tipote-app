@@ -881,7 +881,6 @@ ${JSON.stringify(
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.35,
       max_completion_tokens: 4000,
     });
 
@@ -1329,7 +1328,6 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
       });
 
       const raw = aiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -1564,7 +1562,6 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.55,
       });
 
       const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
@@ -1866,7 +1863,6 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         { role: "system", content: fullSystemPrompt },
         { role: "user", content: fullUserPrompt },
       ],
-      temperature: 0.6,
     });
 
     const fullRaw = fullAiResponse.choices?.[0]?.message?.content ?? "{}";
