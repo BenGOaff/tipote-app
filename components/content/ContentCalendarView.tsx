@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { FileText, Mail, Video, MessageSquare, Clock } from "lucide-react";
+import { FileText, Mail, Video, MessageSquare, Clock, CalendarDays } from "lucide-react";
 import type { ContentListItem } from "@/lib/types/content";
 
 const typeIcons: Record<string, any> = {
@@ -186,7 +186,7 @@ export function ContentCalendarView({
                     return (
                       <div
                         key={content.id}
-                        className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                        className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors group"
                         onClick={() => onSelectContent?.(content)}
                       >
                         <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
@@ -215,7 +215,15 @@ export function ContentCalendarView({
                           </div>
                         </div>
 
-                        <Badge className={badgeClass}>{badgeLabel}</Badge>
+                        <div className="flex items-center gap-2">
+                          {stKey === "scheduled" && (
+                            <span className="hidden group-hover:inline-flex items-center gap-1 text-xs text-primary">
+                              <CalendarDays className="w-3 h-3" />
+                              Reprogrammer
+                            </span>
+                          )}
+                          <Badge className={badgeClass}>{badgeLabel}</Badge>
+                        </div>
                       </div>
                     );
                   })}

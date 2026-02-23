@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -211,16 +212,17 @@ export function AppSidebar() {
     // -> On force "collapsible=none" pour une sidebar desktop en flow normal (width réservée),
     //    ce qui empêche TOUT chevauchement avec le contenu.
     <Sidebar collapsible="none">
-      <SidebarHeader className="border-b border-sidebar-border p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="text-lg font-display font-bold">Tipote™</h2>
-            <p className="text-xs text-muted-foreground">{ts("tagline")}</p>
-          </div>
-        </div>
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <Link href="/app" className="block">
+          <Image
+            src="/logo-normal.png"
+            alt="Tipote"
+            width={120}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
+        </Link>
       </SidebarHeader>
 
       {/* IMPORTANT: Tipote UI sidebar.tsx met overflow-auto par défaut => ça CLIP l'infobulle.

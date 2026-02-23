@@ -272,7 +272,13 @@ export async function GET(req: NextRequest) {
           postData.image_urn = imageUrn;
           console.log(`[scheduled-posts] LinkedIn image uploaded for post ${post.id}: ${imageUrn}`);
         } catch (err) {
-          console.error(`[scheduled-posts] LinkedIn image upload failed for post ${post.id}, posting without image:`, err);
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const isGif = imageUrl.toLowerCase().includes(".gif");
+          if (isGif) {
+            console.warn(`[scheduled-posts] LinkedIn GIF processing failed for post ${post.id}, posting without image. Use PNG/JPG instead. Error: ${errMsg}`);
+          } else {
+            console.error(`[scheduled-posts] LinkedIn image upload failed for post ${post.id}, posting without image:`, errMsg);
+          }
         }
       }
 

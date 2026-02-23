@@ -260,10 +260,14 @@ export default function MyContentLovableClient({
 
   const [planningContent, setPlanningContent] = useState<ContentListItem | null>(null);
   const [planDate, setPlanDate] = useState<string>("");
+  const [planTime, setPlanTime] = useState<string>("09:00");
 
   const openPlan = (content: ContentListItem) => {
     setPlanningContent(content);
     setPlanDate(toYmdOrEmpty(content.scheduled_date));
+    // Pré-remplir l'heure depuis meta.scheduled_time si disponible
+    const metaTime = (content.meta as any)?.scheduled_time;
+    setPlanTime(typeof metaTime === "string" && metaTime.trim() ? metaTime : "09:00");
   };
 
   const filtered = useMemo(() => {
@@ -353,6 +357,7 @@ export default function MyContentLovableClient({
         body: JSON.stringify({
           status: "scheduled",
           scheduledDate: planDate,
+          meta: planTime ? { scheduled_time: planTime } : undefined,
         }),
       });
 
@@ -366,7 +371,13 @@ export default function MyContentLovableClient({
         return;
       }
 
-      toast({ title: "Planifié ✅", description: "La date de publication a été enregistrée." });
+      const isReschedule = normalizeKeyStatus(planningContent.status) === "scheduled";
+      toast({
+        title: isReschedule ? "Reprogrammé" : "Planifié",
+        description: isReschedule
+          ? `Publication reprogrammée au ${planDate} à ${planTime || "09:00"}.`
+          : "La date de publication a été enregistrée.",
+      });
       setPlanningContent(null);
       router.refresh();
     } catch (e) {
@@ -574,7 +585,19 @@ export default function MyContentLovableClient({
             {/* Content */}
             <div className="space-y-6">
               {view === "calendar" ? (
-                <ContentCalendarView contents={filtered} />
+                <ContentCalendarView
+                  contents={filtered}
+                  onSelectContent={(content) => {
+                    const st = normalizeKeyStatus(content.status);
+                    if (st === "scheduled") {
+                      // Pour les posts planifiés, ouvrir le dialog de reprogrammation
+                      openPlan(content);
+                    } else {
+                      // Pour les autres, naviguer vers la page de détail
+                      router.push(`/contents/${content.id}`);
+                    }
+                  }}
+                />
               ) : activeFolder === null ? (
                 /* ===== Folder Grid View ===== */
                 <div className="space-y-6">
@@ -637,10 +660,18 @@ export default function MyContentLovableClient({
                                         <span className="capitalize">{safeString(item.channel)}</span>
                                       ) : null}
                                       {statusKey === "scheduled" && item.scheduled_date ? (
-                                        <span className="inline-flex items-center gap-1">
+                                        <button
+                                          className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer rounded px-1 -mx-1 hover:bg-primary/5"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openPlan(item);
+                                          }}
+                                          title="Modifier la date et l'heure de publication"
+                                        >
                                           <Clock className="h-3.5 w-3.5" />
                                           {formatDate(item.scheduled_date)}
-                                        </span>
+                                          {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                        </button>
                                       ) : null}
                                     </div>
                                   </div>
@@ -803,10 +834,18 @@ export default function MyContentLovableClient({
                                             ) : null}
 
                                             {statusKey === "scheduled" && item.scheduled_date ? (
-                                              <span className="inline-flex items-center gap-1">
+                                              <button
+                                                className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer rounded px-1 -mx-1 hover:bg-primary/5"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openPlan(item);
+                                                }}
+                                                title="Modifier la date et l'heure de publication"
+                                              >
                                                 <Clock className="h-3.5 w-3.5" />
                                                 {formatDate(item.scheduled_date)}
-                                              </span>
+                                                {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                              </button>
                                             ) : null}
                                           </div>
                                         </div>
@@ -922,32 +961,70 @@ export default function MyContentLovableClient({
               </DialogContent>
             </Dialog>
 
-            {/* Plan Dialog (Lovable-style) */}
+            {/* Plan / Reschedule Dialog */}
             <Dialog open={!!planningContent} onOpenChange={(open) => (!open ? setPlanningContent(null) : null)}>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
-                  <DialogTitle>Planifier le contenu</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                    {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                      ? "Reprogrammer la publication"
+                      : "Planifier la publication"}
+                  </DialogTitle>
                   <DialogDescription>
-                    Choisis une date de publication. Le statut passera sur “Planifié”.
+                    {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                      ? "Modifie la date et l\u2019heure de publication. Le post sera automatiquement publi\u00e9 via Tipote."
+                      : "Choisis une date et une heure de publication. Le statut passera sur \u00abPlanifi\u00e9\u00bb."}
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-2">
-                  <Label htmlFor="plan-date">Date</Label>
-                  <Input
-                    id="plan-date"
-                    type="date"
-                    value={planDate}
-                    onChange={(e) => setPlanDate(e.target.value)}
-                  />
+                {/* Resume du contenu */}
+                {planningContent && (
+                  <div className="rounded-lg border bg-muted/50 p-3">
+                    <p className="text-sm font-medium truncate">
+                      {safeString(planningContent.title) || "Sans titre"}
+                    </p>
+                    {safeString(planningContent.channel) && (
+                      <p className="text-xs text-muted-foreground capitalize mt-0.5">
+                        {safeString(planningContent.channel)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-date">Date de publication</Label>
+                    <Input
+                      id="plan-date"
+                      type="date"
+                      value={planDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setPlanDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-time">Heure de publication</Label>
+                    <Input
+                      id="plan-time"
+                      type="time"
+                      value={planTime}
+                      onChange={(e) => setPlanTime(e.target.value)}
+                    />
+                  </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
                     Annuler
                   </Button>
-                  <Button onClick={handleSavePlan} disabled={busy === "plan"}>
-                    {busy === "plan" ? "Enregistrement..." : "Enregistrer"}
+                  <Button onClick={handleSavePlan} disabled={busy === "plan" || !planDate}>
+                    {busy === "plan"
+                      ? "Enregistrement..."
+                      : planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                        ? "Reprogrammer"
+                        : "Planifier"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
