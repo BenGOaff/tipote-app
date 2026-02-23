@@ -303,8 +303,12 @@ export default function PyramidSelection() {
         console.error("Pyramid generation error:", err);
       }
 
+      // Server may still be writing — retry with short delay
       const secondTry = await loadPyramids();
-      if (!secondTry.ok) setGenError(true);
+      if (secondTry.ok) return;
+      await new Promise((r) => setTimeout(r, 2000));
+      const thirdTry = await loadPyramids();
+      if (!thirdTry.ok) setGenError(true);
     } catch (error) {
       console.error("Error loading offer sets:", error);
       setGenError(true);

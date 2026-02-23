@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MessageCircle, Send, X, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,8 +87,11 @@ const QUICK_REPLIES: Array<{ id: string; label: string; message: string }> = [
   { id: "deeper", label: "Go deeper", message: "go deeper" },
 ];
 
+const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/"];
+
 export function CoachWidget() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
@@ -444,6 +447,10 @@ export function CoachWidget() {
   }
 
   const showQuickReplies = open && !locked && !bootstrapping && !loading && input.trim().length === 0;
+
+  // Hide coach on onboarding, auth, and other pre-dashboard pages
+  const hidden = pathname === "/" || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  if (hidden) return null;
 
   return (
     <>

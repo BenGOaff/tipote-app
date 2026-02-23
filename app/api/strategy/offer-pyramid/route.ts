@@ -259,68 +259,72 @@ async function persistOfferPyramids(params: {
 // ─── Read pyramids from DB and reconstruct pyramid sets ─────────────────────
 
 async function loadPyramidsFromDb(params: {
-  supabase: any;
   userId: string;
   projectId?: string | null;
 }): Promise<{ pyramidSets: AnyRecord[]; selectedIndex: number | null } | null> {
-  const { supabase, userId, projectId } = params;
+  const { userId, projectId } = params;
 
-  let query = supabase
-    .from("offer_pyramids")
-    .select("*")
-    .eq("user_id", userId)
-    .order("option_index", { ascending: true })
-    .order("level", { ascending: true });
-  if (projectId) query = query.eq("project_id", projectId);
-  const { data: rows, error } = await query;
+  try {
+    let query = supabaseAdmin
+      .from("offer_pyramids")
+      .select("*")
+      .eq("user_id", userId)
+      .order("option_index", { ascending: true })
+      .order("level", { ascending: true });
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data: rows, error } = await query;
 
-  if (error || !rows || rows.length === 0) return null;
+    if (error || !rows || rows.length === 0) return null;
 
-  // Group rows by option_index → reconstruct pyramid sets
-  const grouped = new Map<number, AnyRecord[]>();
-  for (const row of rows) {
-    const idx = row.option_index ?? 0;
-    if (!grouped.has(idx)) grouped.set(idx, []);
-    grouped.get(idx)!.push(row);
-  }
-
-  let selectedIndex: number | null = null;
-  const pyramidSets: AnyRecord[] = [];
-
-  for (const [optIdx, levelRows] of [...grouped.entries()].sort((a, b) => a[0] - b[0])) {
-    const firstRow = levelRows[0];
-    const pyramidMeta = asRecord((firstRow.details as any)?.pyramid) ?? {};
-
-    const set: AnyRecord = {
-      id: cleanString(pyramidMeta.id ?? String(optIdx), 64),
-      name: cleanString(pyramidMeta.name ?? `Pyramide ${optIdx + 1}`, 200),
-      strategy_summary: cleanString(pyramidMeta.strategy_summary ?? "", 4000),
-    };
-
-    for (const row of levelRows) {
-      const internalLevel = DB_LEVEL_REVERSE[row.level] ?? row.level;
-      const offerFromDetails = asRecord((row.details as any)?.offer);
-
-      if (offerFromDetails) {
-        set[internalLevel] = normalizeOffer(offerFromDetails);
-      } else {
-        set[internalLevel] = normalizeOffer({
-          title: row.name,
-          pitch: row.description,
-          transformation: row.promise ?? row.main_outcome,
-          format: row.format,
-          cta: row.delivery,
-          price: row.price_min,
-        });
-      }
-
-      if (row.is_selected) selectedIndex = optIdx;
+    // Group rows by option_index → reconstruct pyramid sets
+    const grouped = new Map<number, AnyRecord[]>();
+    for (const row of rows) {
+      const idx = row.option_index ?? 0;
+      if (!grouped.has(idx)) grouped.set(idx, []);
+      grouped.get(idx)!.push(row);
     }
 
-    pyramidSets.push(set);
-  }
+    let selectedIndex: number | null = null;
+    const pyramidSets: AnyRecord[] = [];
 
-  return { pyramidSets, selectedIndex };
+    for (const [optIdx, levelRows] of [...grouped.entries()].sort((a, b) => a[0] - b[0])) {
+      const firstRow = levelRows[0];
+      const pyramidMeta = asRecord((firstRow.details as any)?.pyramid) ?? {};
+
+      const set: AnyRecord = {
+        id: cleanString(pyramidMeta.id ?? String(optIdx), 64),
+        name: cleanString(pyramidMeta.name ?? `Pyramide ${optIdx + 1}`, 200),
+        strategy_summary: cleanString(pyramidMeta.strategy_summary ?? "", 4000),
+      };
+
+      for (const row of levelRows) {
+        const internalLevel = DB_LEVEL_REVERSE[row.level] ?? row.level;
+        const offerFromDetails = asRecord((row.details as any)?.offer);
+
+        if (offerFromDetails) {
+          set[internalLevel] = normalizeOffer(offerFromDetails);
+        } else {
+          set[internalLevel] = normalizeOffer({
+            title: row.name,
+            pitch: row.description,
+            transformation: row.promise ?? row.main_outcome,
+            format: row.format,
+            cta: row.delivery,
+            price: row.price_min,
+          });
+        }
+
+        if (row.is_selected) selectedIndex = optIdx;
+      }
+
+      pyramidSets.push(set);
+    }
+
+    return { pyramidSets, selectedIndex };
+  } catch (e) {
+    console.error("loadPyramidsFromDb error:", e);
+    return null;
+  }
 }
 
 // ─── GET ─────────────────────────────────────────────────────────────────────
@@ -335,7 +339,7 @@ export async function GET(_req: Request) {
     const projectId = await getActiveProjectId(supabase, userId);
 
     // Primary: read from offer_pyramids table
-    const dbResult = await loadPyramidsFromDb({ supabase, userId, projectId });
+    const dbResult = await loadPyramidsFromDb({ userId, projectId });
     if (dbResult && dbResult.pyramidSets.length > 0) {
       return NextResponse.json({
         success: true,
@@ -471,7 +475,7 @@ export async function POST(req: Request) {
         sendSSE("progress", { step: "Lecture de ton profil..." });
 
         // Check existing in offer_pyramids table first
-        const dbResult = await loadPyramidsFromDb({ supabase, userId, projectId });
+        const dbResult = await loadPyramidsFromDb({ userId, projectId });
         if (dbResult && dbResult.pyramidSets.length > 0 && offersLookUseful(dbResult.pyramidSets)) {
           sendSSE("result", { success: true, skipped: true, reason: "already_generated", offer_pyramids: dbResult.pyramidSets });
           clearInterval(heartbeat);
