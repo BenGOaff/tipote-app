@@ -35,6 +35,7 @@ const PUBLIC_PREFIXES = [
   "/login", // legacy
   "/onboarding",
   "/auth",
+  "/legal", // pages légales (CGU, CGV, privacy, mentions)
   "/api",
   "/_next",
   "/favicon.ico",

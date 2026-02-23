@@ -353,6 +353,24 @@ export default function LoginForm() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           {t('copyright', { year: new Date().getFullYear() })}
         </p>
+
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
+          {([
+            ['cgu', t('legalCgu')],
+            ['cgv', t('legalCgv')],
+            ['privacy', t('legalPrivacy')],
+            ['mentions', t('legalMentions')],
+            ['cookies', t('legalCookies')],
+          ] as const).map(([slug, label]) => (
+            <Link
+              key={slug}
+              href={`/legal/${slug}`}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
