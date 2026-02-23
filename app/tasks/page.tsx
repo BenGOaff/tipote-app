@@ -12,6 +12,7 @@ import AppShell from '@/components/AppShell'
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { TaskList, type TaskItem } from '@/components/tasks/TaskList'
+import CompletedTasksSection from '@/components/tasks/CompletedTasksSection'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -27,7 +28,8 @@ type TaskRow = {
 }
 
 function isDone(status: string | null) {
-  return (status ?? '').toLowerCase() === 'done'
+  const s = (status ?? '').toLowerCase().trim()
+  return s === 'done' || s === 'completed' || s === 'fait' || s === 'terminé' || s === 'termine'
 }
 
 function toTaskItem(row: TaskRow): TaskItem {
@@ -65,7 +67,9 @@ export default async function TasksPage() {
     ? (tasksRaw as TaskRow[]).map(toTaskItem).filter((t) => t.title.trim().length > 0)
     : []
 
-  const doneCount = tasks.filter((t) => isDone(t.status)).length
+  const activeTasks = tasks.filter((t) => !isDone(t.status))
+  const doneTasks = tasks.filter((t) => isDone(t.status))
+  const doneCount = doneTasks.length
   const totalCount = tasks.length
 
   return (
@@ -188,11 +192,11 @@ export default async function TasksPage() {
           </div>
         </Card>
 
-        {/* Liste */}
+        {/* Liste (tâches actives uniquement) */}
         <Card className="p-6">
           <TaskList
             title="Mes tâches"
-            tasks={tasks}
+            tasks={activeTasks}
             showSync
             allowCreate
             allowEdit
@@ -200,6 +204,9 @@ export default async function TasksPage() {
             variant="card"
           />
         </Card>
+
+        {/* Tâches terminées (archive) */}
+        <CompletedTasksSection tasks={doneTasks} />
 
         {tasks.length === 0 ? (
           <div className="text-sm text-muted-foreground">

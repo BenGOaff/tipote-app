@@ -43,6 +43,7 @@ import {
   X,
   Save,
   ChevronRight,
+  ChevronDown,
   Check,
   Trash2,
 } from "lucide-react";
@@ -245,6 +246,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const [phases, setPhases] = useState<Phase[]>(props.phases || []);
   const [savedPhases, setSavedPhases] = useState<Phase[]>(props.phases || []);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [showDoneTasks, setShowDoneTasks] = useState(false);
 
   // ✅ NEW (Lovable): modales détails
   const [selectedPhaseIndex, setSelectedPhaseIndex] = useState<number | null>(
@@ -856,6 +858,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 <div className="space-y-6">
                   {(phasesForRender || []).map((phase, phaseIndex) => {
                     const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
+                    const activeTasks = tasks.filter((t) => !isDoneStatus(statusById[String(t.id)] ?? t.status));
                     const doneInPhase = tasks.filter((task) =>
                       isDoneStatus(statusById[String(task.id)] ?? task.status),
                     ).length;
@@ -925,16 +928,16 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
                         {isEditing ? (
                           <div className="grid md:grid-cols-2 gap-3">
-                            {tasks.length ? (
+                            {activeTasks.length ? (
                               <DndContext
                                 sensors={sensors}
                                 onDragEnd={(e) => handleDragEnd(e, phaseIndex)}
                               >
                                 <SortableContext
-                                  items={tasks.map((t) => String(t.id))}
+                                  items={activeTasks.map((t) => String(t.id))}
                                   strategy={verticalListSortingStrategy}
                                 >
-                                  {tasks.map((t) => (
+                                  {activeTasks.map((t) => (
                                     <SortableTask
                                       key={String(t.id)}
                                       task={{
@@ -959,9 +962,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {tasks.length ? (
+                            {activeTasks.length ? (
                               <>
-                                {tasks
+                                {activeTasks
                                   .slice(0, TASKS_DISPLAY_LIMIT)
                                   .map((item) => {
                                     const checked = isDoneStatus(
@@ -1009,7 +1012,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                     );
                                   })}
 
-                                {tasks.length > TASKS_DISPLAY_LIMIT && (
+                                {activeTasks.length > TASKS_DISPLAY_LIMIT && (
                                   <button
                                     type="button"
                                     className="text-sm text-primary hover:underline mt-2 inline-flex items-center gap-2"
@@ -1018,7 +1021,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       openPhase(phaseIndex);
                                     }}
                                   >
-                                    {t("moreTasks", { count: tasks.length - TASKS_DISPLAY_LIMIT })}
+                                    {t("moreTasks", { count: activeTasks.length - TASKS_DISPLAY_LIMIT })}
                                     <ChevronRight className="w-4 h-4" />
                                   </button>
                                 )}
@@ -1037,6 +1040,57 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     );
                   })}
                 </div>
+
+                {/* Tâches terminées (archive) */}
+                {(() => {
+                  const allDone = (phasesForRender || []).flatMap((ph) =>
+                    (ph.tasks || []).filter((task) =>
+                      isDoneStatus(statusById[String(task.id)] ?? task.status)
+                    )
+                  );
+                  if (allDone.length === 0) return null;
+                  return (
+                    <Card className="p-6">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 w-full text-left"
+                        onClick={() => setShowDoneTasks(!showDoneTasks)}
+                      >
+                        <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
+                        <span className="font-semibold flex-1">
+                          Tâches terminées
+                        </span>
+                        <Badge variant="secondary">{allDone.length}</Badge>
+                        <ChevronDown
+                          className={`w-4 h-4 text-muted-foreground transition-transform ${
+                            showDoneTasks ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                      {showDoneTasks && (
+                        <div className="mt-4 space-y-2">
+                          {allDone.map((item) => (
+                            <div
+                              key={item.id}
+                              data-task-row
+                              className="group flex items-center gap-3 p-3 rounded-lg bg-muted/30"
+                            >
+                              <Checkbox
+                                checked
+                                onCheckedChange={() =>
+                                  toggleTask(String(item.id), false)
+                                }
+                              />
+                              <span className="line-through text-muted-foreground flex-1">
+                                {item.title || "—"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })()}
             </div>
           </div>
 
@@ -1044,12 +1098,13 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             phasesForRender?.[selectedPhaseIndex] &&
             (() => {
               const ph = phasesForRender[selectedPhaseIndex] as Phase;
-              const tasks = Array.isArray(ph.tasks) ? ph.tasks : [];
-              const completed = tasks.filter((task) =>
+              const allTasksInPhase = Array.isArray(ph.tasks) ? ph.tasks : [];
+              const activeTasksInPhase = allTasksInPhase.filter((t) => !isDoneStatus(statusById[String(t.id)] ?? t.status));
+              const completed = allTasksInPhase.filter((task) =>
                 isDoneStatus(statusById[String(task.id)] ?? task.status),
               ).length;
-              const progress = tasks.length
-                ? Math.round((completed / tasks.length) * 100)
+              const progress = allTasksInPhase.length
+                ? Math.round((completed / allTasksInPhase.length) * 100)
                 : 0;
 
               return (
@@ -1060,7 +1115,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     title: ph.title,
                     period: ph.period,
                     progress,
-                    tasks: tasks.map((t) => ({
+                    tasks: activeTasksInPhase.map((t) => ({
                       id: String(t.id),
                       task: t.title || "—",
                       done: isDoneStatus(statusById[String(t.id)] ?? t.status),
