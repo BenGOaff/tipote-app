@@ -104,10 +104,10 @@ export async function syncStrategyTasksFromPlanJson(params: {
     (t): t is { title: string; due_date: string | null; priority: string | null } => Boolean(t),
   );
 
-  // préserver status existant
+  // préserver status existant + repérer les tâches soft-deleted
   const { data: existingStrategy, error: exErr } = await supabase
     .from("project_tasks")
-    .select("title, due_date, status")
+    .select("title, due_date, status, deleted_at")
     .eq("user_id", userId)
     .eq("source", "strategy");
 
@@ -116,19 +116,28 @@ export async function syncStrategyTasksFromPlanJson(params: {
   }
 
   const statusByKey = new Map<string, string | null>();
+  const deletedKeys = new Set<string>();
   for (const r of (existingStrategy ?? []) as AnyRecord[]) {
     const title = cleanString(r.title);
     if (!title) continue;
     const due = cleanString(r.due_date) || null;
-    statusByKey.set(keyOf(title, due), (r.status as string | null) ?? null);
+    const k = keyOf(title, due);
+
+    if (r.deleted_at != null) {
+      // ✅ Tâche supprimée par l'user → ne pas recréer
+      deletedKeys.add(k);
+    } else {
+      statusByKey.set(k, (r.status as string | null) ?? null);
+    }
   }
 
-  // delete uniquement strategy
+  // delete uniquement strategy ACTIVES (pas les soft-deleted)
   const { error: delErr } = await supabase
     .from("project_tasks")
     .delete()
     .eq("user_id", userId)
-    .eq("source", "strategy");
+    .eq("source", "strategy")
+    .is("deleted_at", null);
 
   if (delErr) {
     return { ok: false as const, error: delErr.message, inserted: 0 };
@@ -138,14 +147,21 @@ export async function syncStrategyTasksFromPlanJson(params: {
     return { ok: true as const, inserted: 0 };
   }
 
-  const payload = parsed.map((t) => ({
-    user_id: userId,
-    title: t.title,
-    due_date: t.due_date ?? null,
-    priority: t.priority ?? null,
-    status: statusByKey.get(keyOf(t.title, t.due_date ?? null)) ?? "todo",
-    source: "strategy",
-  }));
+  // ✅ Exclure les tâches que l'user a supprimées
+  const payload = parsed
+    .filter((t) => !deletedKeys.has(keyOf(t.title, t.due_date ?? null)))
+    .map((t) => ({
+      user_id: userId,
+      title: t.title,
+      due_date: t.due_date ?? null,
+      priority: t.priority ?? null,
+      status: statusByKey.get(keyOf(t.title, t.due_date ?? null)) ?? "todo",
+      source: "strategy",
+    }));
+
+  if (payload.length === 0) {
+    return { ok: true as const, inserted: 0 };
+  }
 
   const { error: insErr } = await supabase.from("project_tasks").insert(payload);
   if (insErr) {

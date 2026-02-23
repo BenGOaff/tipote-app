@@ -66,7 +66,8 @@ export async function GET() {
     let query = supabase
       .from("project_tasks")
       .select("id, title, status, priority, source, created_at, updated_at")
-      .eq("user_id", auth.user.id);
+      .eq("user_id", auth.user.id)
+      .is("deleted_at", null);
 
     if (projectId) query = query.eq("project_id", projectId);
 

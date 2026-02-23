@@ -65,7 +65,8 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       .from("project_tasks")
       .update({ status: st, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", auth.user.id);
+      .eq("user_id", auth.user.id)
+      .is("deleted_at", null);
 
     if (projectId) updateQuery = updateQuery.eq("project_id", projectId);
 

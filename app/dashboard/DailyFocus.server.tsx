@@ -27,6 +27,7 @@ export default async function DailyFocusServer() {
     .select('id,title,status,created_at')
     .eq('user_id', user.id)
     .neq('status', 'done')
+    .is('deleted_at', null)
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle<TaskRow>()

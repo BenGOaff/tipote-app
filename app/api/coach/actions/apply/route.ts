@@ -219,7 +219,8 @@ async function applySingleTaskUpdate(args: { userId: string; projectId?: string 
     .from("project_tasks")
     .update({ ...patch, updated_at: nowIso })
     .eq("id", taskId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("deleted_at", null);
   if (projectId) query = query.eq("project_id", projectId);
 
   const { data, error } = await query

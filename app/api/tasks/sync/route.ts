@@ -191,11 +191,12 @@ export async function POST() {
     }
 
     // Lire existantes (uniquement sur les sources présentes dans le plan)
+    // ⚠️ On inclut aussi les tâches soft-deleted pour ne pas les recréer
     const sources = Array.from(new Set(tasks.map((t) => t.source))).filter(Boolean);
 
     let existingQuery = supabaseAdmin
       .from("project_tasks")
-      .select("id,title,source,priority,status")
+      .select("id,title,source,priority,status,deleted_at")
       .eq("user_id", userId)
       .in("source", sources);
 
@@ -209,7 +210,7 @@ export async function POST() {
 
     const existingIndex = new Map<
       string,
-      { id: string; title: string; source: string; priority: Priority | null; status: Status | null }
+      { id: string; title: string; source: string; priority: Priority | null; status: Status | null; deleted: boolean }
     >();
 
     for (const row of existing ?? []) {
@@ -222,6 +223,7 @@ export async function POST() {
         source: String((row as any).source ?? ""),
         priority: (row as any).priority ? (String((row as any).priority) as Priority) : null,
         status: (row as any).status ? (String((row as any).status) as Status) : null,
+        deleted: (row as any).deleted_at != null,
       });
     }
 
@@ -233,6 +235,9 @@ export async function POST() {
       const ex = existingIndex.get(key);
 
       if (ex) {
+        // ✅ Si la tâche a été supprimée par l'user, on ne la recrée pas
+        if (ex.deleted) continue;
+
         // Update soft : title + priority only
         const patch: Record<string, any> = {};
 

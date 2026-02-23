@@ -512,6 +512,7 @@ export default function TodayLovable() {
             .from("project_tasks")
             .select("id, title, status, priority, source, created_at, updated_at")
             .eq("user_id", userId)
+            .is("deleted_at", null)
             .order("created_at", { ascending: true })
             .limit(500);
           if (!tasksRes.error && Array.isArray(tasksRes.data)) {

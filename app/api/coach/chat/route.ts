@@ -828,7 +828,8 @@ export async function POST(req: NextRequest) {
     const tasksQuery = supabase
       .from("project_tasks")
       .select("id, title, status, due_date, timeframe, updated_at")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .is("deleted_at", null);
     if (projectId) tasksQuery.eq("project_id", projectId);
 
     const contentsQuery = supabase

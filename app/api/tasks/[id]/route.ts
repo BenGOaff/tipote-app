@@ -68,12 +68,13 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const projectId = await getActiveProjectId(supabase, auth.user.id);
 
-    // ✅ RLS-safe read (service_role) + filtre user_id
+    // ✅ RLS-safe read (service_role) + filtre user_id + exclure soft-deleted
     let query = supabaseAdmin
       .from("project_tasks")
       .select("*")
       .eq("id", id)
-      .eq("user_id", auth.user.id);
+      .eq("user_id", auth.user.id)
+      .is("deleted_at", null);
 
     if (projectId) query = query.eq("project_id", projectId);
 
@@ -149,12 +150,13 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "No fields to update" }, { status: 400 });
     }
 
-    // ✅ RLS-safe write + filtre user_id
+    // ✅ RLS-safe write + filtre user_id + exclure soft-deleted
     let updateQuery = supabaseAdmin
       .from("project_tasks")
       .update({ ...update, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", auth.user.id);
+      .eq("user_id", auth.user.id)
+      .is("deleted_at", null);
 
     if (projectId) updateQuery = updateQuery.eq("project_id", projectId);
 
@@ -185,20 +187,21 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = await getActiveProjectId(supabase, auth.user.id);
-
-    // ✅ RLS-safe delete + filtre user_id
-    let deleteQuery = supabaseAdmin
+    // ✅ Soft-delete : on marque deleted_at au lieu de supprimer physiquement.
+    // Cela empêche le sync de recréer la tâche.
+    // Pas de filtre project_id : id + user_id suffit pour la sécurité
+    // et évite les échecs silencieux quand project_id est null.
+    const { data, error } = await supabaseAdmin
       .from("project_tasks")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", auth.user.id);
-
-    if (projectId) deleteQuery = deleteQuery.eq("project_id", projectId);
-
-    const { error } = await deleteQuery;
+      .eq("user_id", auth.user.id)
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle();
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    if (!data) return NextResponse.json({ ok: false, error: "Tâche introuvable" }, { status: 404 });
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {

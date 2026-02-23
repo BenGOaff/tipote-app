@@ -384,6 +384,7 @@ export default async function StrategyPage() {
     .from("project_tasks")
     .select("id, title, status, priority, source, created_at, updated_at")
     .eq("user_id", user.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(500);
 

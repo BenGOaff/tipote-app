@@ -22,6 +22,7 @@ export default async function TasksPage() {
     .from('project_tasks')
     .select('id,title,status')
     .eq('user_id', session.user.id)
+    .is('deleted_at', null)
     .order('created_at', { ascending: true })
 
   return (
