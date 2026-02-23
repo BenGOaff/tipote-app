@@ -1,7 +1,7 @@
 // app/strategy/pyramids/page.tsx
-// Page de selection des pyramides d'offres.
-// Accessible apres l'onboarding pour les utilisateurs sans offres (non affilies).
-// Genere les pyramides puis les affiche pour selection.
+// Page de sélection des pyramides d'offres.
+// Accessible après l'onboarding pour les utilisateurs sans offres (non affiliés).
+// Génère les pyramides puis les affiche pour sélection.
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";

@@ -168,7 +168,7 @@ function OfferCard({ offer, level, expanded, onToggle }: {
             <div className="flex items-start gap-2">
               <Target className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Probleme urgent :</p>
+                <p className="text-xs font-medium text-muted-foreground">Problème urgent :</p>
                 <p className="text-sm">{offer.problem}</p>
               </div>
             </div>
@@ -251,35 +251,37 @@ export default function PyramidSelection() {
   const [loading, setLoading] = useState(true);
   const [progressStep, setProgressStep] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [bootStep, setBootStep] = useState(0);
   const [genError, setGenError] = useState(false);
   const [expandedOffers, setExpandedOffers] = useState<Record<string, boolean>>({});
+
+  const BOOT_STEPS = [
+    "Je sauvegarde ta sélection…",
+    "Je construis ta stratégie personnalisée…",
+    "Je génère tes premières tâches…",
+    "Je peaufine ton espace…",
+  ] as const;
 
   const toggleOffer = useCallback((key: string) => {
     setExpandedOffers((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  async function loadFromPlan(): Promise<{ ok: boolean; reason?: string }> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/");
-      return { ok: false, reason: "no_user" };
+  async function loadPyramids(): Promise<{ ok: boolean; reason?: string }> {
+    try {
+      const res = await fetch("/api/strategy/offer-pyramid");
+      if (!res.ok) return { ok: false, reason: "fetch_error" };
+      const json = await res.json();
+      if (!json.success) return { ok: false, reason: "api_error" };
+
+      const rawSets = Array.isArray(json.offer_pyramids) ? json.offer_pyramids : [];
+      if (!rawSets.length) return { ok: false, reason: "no_offers" };
+
+      const normalized = rawSets.slice(0, 3).map((p: any, idx: number) => normalizePyramid(p, idx));
+      setOfferSets(normalized);
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: "network_error" };
     }
-
-    const { data: planRow, error: planError } = await supabase
-      .from("business_plan")
-      .select("plan_json")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (planError) throw planError;
-    const planJson = (planRow?.plan_json ?? null) as any;
-    const rawSets = Array.isArray(planJson?.offer_pyramids) ? planJson.offer_pyramids : [];
-
-    if (!rawSets.length) return { ok: false, reason: "no_offers" };
-
-    const normalized = rawSets.slice(0, 3).map((p: any, idx: number) => normalizePyramid(p, idx));
-    setOfferSets(normalized);
-    return { ok: true };
   }
 
   async function generateAndLoad() {
@@ -288,7 +290,7 @@ export default function PyramidSelection() {
     setProgressStep("");
 
     try {
-      const firstTry = await loadFromPlan();
+      const firstTry = await loadPyramids();
       if (firstTry.ok) { setLoading(false); return; }
       if (firstTry.reason === "no_user") { setLoading(false); return; }
 
@@ -301,7 +303,7 @@ export default function PyramidSelection() {
         console.error("Pyramid generation error:", err);
       }
 
-      const secondTry = await loadFromPlan();
+      const secondTry = await loadPyramids();
       if (!secondTry.ok) setGenError(true);
     } catch (error) {
       console.error("Error loading offer sets:", error);
@@ -323,14 +325,17 @@ export default function PyramidSelection() {
 
     try {
       setSubmitting(true);
+      setBootStep(0);
+
+      const safetyTimeout = setTimeout(() => router.replace("/app"), 120_000);
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/"); return; }
+      if (!user) { clearTimeout(safetyTimeout); router.push("/"); return; }
 
       const selectedIndex = offerSets.findIndex((p) => p.id === selected.id);
       if (selectedIndex < 0) throw new Error("Index introuvable.");
 
-      // 1) Save selection
+      // Step 0: Save selection
       const patchRes = await fetch("/api/strategy/offer-pyramid", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -339,7 +344,8 @@ export default function PyramidSelection() {
       const patchJson = await patchRes.json().catch(() => ({} as any));
       if (!patchRes.ok) throw new Error(patchJson?.error || "Impossible de sauvegarder.");
 
-      // 2) Generate full strategy
+      // Step 1: Generate full strategy
+      setBootStep(1);
       let fullOk = false;
       try {
         const result = await callStrategySSE({});
@@ -349,21 +355,23 @@ export default function PyramidSelection() {
       }
       if (!fullOk) {
         const recovered = await ensureStrategyAfterTimeout(supabase, user.id);
-        if (!recovered) throw new Error("Impossible de generer la strategie.");
+        if (!recovered) throw new Error("Impossible de générer la stratégie.");
       }
 
-      // 3) Sync tasks
-      const syncRes = await fetch("/api/tasks/sync", { method: "POST" });
-      const syncJson = await syncRes.json().catch(() => ({} as any));
-      if (!syncRes.ok || syncJson?.ok === false) {
-        throw new Error(syncJson?.error || "Impossible de generer les taches.");
-      }
+      // Step 2: Sync tasks
+      setBootStep(2);
+      try {
+        await Promise.race([
+          fetch("/api/tasks/sync", { method: "POST" }).then((r) => r.json()),
+          new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 20_000)),
+        ]);
+      } catch {/* fail-open */}
 
-      toast({
-        title: "Pyramide selectionnee",
-        description: "Ta strategie et tes taches sont pretes. Bienvenue dans Tipote !",
-      });
+      // Step 3: Finalize
+      setBootStep(3);
+      await sleep(900);
 
+      clearTimeout(safetyTimeout);
       router.push("/app");
       router.refresh();
     } catch (error) {
@@ -373,10 +381,42 @@ export default function PyramidSelection() {
         description: error instanceof Error ? error.message : "Impossible de sauvegarder.",
         variant: "destructive",
       });
-    } finally {
       setSubmitting(false);
     }
   };
+
+  // ── Boot overlay (after pyramid selection) ─────────────────────────────────
+  if (submitting) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold">Je construis ta stratégie…</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {BOOT_STEPS[bootStep]}
+          </p>
+          <div className="mt-6 space-y-2">
+            {BOOT_STEPS.map((label, idx) => (
+              <div key={idx} className="flex items-center gap-3 text-sm">
+                <div className={`h-2.5 w-2.5 shrink-0 rounded-full transition-colors ${
+                  idx < bootStep ? "bg-primary" :
+                  idx === bootStep ? "animate-pulse bg-primary/60" :
+                  "bg-muted-foreground/20"
+                }`} />
+                <span className={idx === bootStep ? "text-foreground" : "text-muted-foreground"}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -389,9 +429,9 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Tipote cree tes pyramides d'offres...</h1>
+            <h1 className="text-2xl font-bold">Tipote crée tes pyramides d'offres...</h1>
             <p className="text-muted-foreground">
-              {progressStep || "Analyse de ton profil et creation de 3 pyramides d'offres percutantes."}
+              {progressStep || "Analyse de ton profil et création de 3 pyramides d'offres percutantes."}
             </p>
           </div>
         </div>
@@ -410,14 +450,14 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Generation en cours</h1>
+            <h1 className="text-2xl font-bold">Génération en cours</h1>
             <p className="text-muted-foreground">
-              La creation de tes pyramides prend un peu plus de temps. Clique ci-dessous pour reessayer.
+              La création de tes pyramides prend un peu plus de temps. Clique ci-dessous pour réessayer.
             </p>
           </div>
           <Button size="lg" onClick={() => generateAndLoad()}>
             <ArrowRight className="w-4 h-4 mr-2" />
-            Reessayer
+            Réessayer
           </Button>
         </div>
       </div>
@@ -438,7 +478,7 @@ export default function PyramidSelection() {
             Tes 3 pyramides d'offres
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Tipote a genere 3 pyramides sous des angles differents. Explore chaque offre en detail, puis choisis celle qui te correspond le mieux.
+            Tipote a généré 3 pyramides sous des angles différents. Explore chaque offre en détail, puis choisis celle qui te correspond le mieux.
           </p>
         </div>
 
@@ -538,7 +578,7 @@ export default function PyramidSelection() {
                       {isSelected ? (
                         <>
                           <Check className="w-4 h-4 mr-2" />
-                          Selectionnee
+                          Sélectionnée
                         </>
                       ) : (
                         "Choisir cette pyramide"
@@ -556,20 +596,11 @@ export default function PyramidSelection() {
           <Button
             size="lg"
             className="px-10"
-            disabled={!selectedId || submitting}
+            disabled={!selectedId}
             onClick={handleSelect}
           >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creation de ta strategie...
-              </>
-            ) : (
-              <>
-                Valider et generer ma strategie
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
+            Valider et générer ma stratégie
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
 
           <p className="text-sm text-muted-foreground">

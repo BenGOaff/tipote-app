@@ -509,24 +509,40 @@ async function enrichBusinessProfileMissionBestEffort(params: {
   try {
     const patch: AnyRecord = { updated_at: new Date().toISOString() };
 
-    // ✅ Build persona summary for mission field
+    // ✅ Build persona summary for mission field (markdown format for AIContent rendering)
     if (persona) {
       const parts: string[] = [];
 
       const title = cleanString(persona.title ?? persona.profile ?? persona.name, 200);
-      if (title) parts.push(title);
+      if (title) parts.push(`**${title}**`);
 
       const pains = asArray(persona.pains).map((x) => cleanString(x, 160)).filter(Boolean);
-      if (pains.length > 0) parts.push(`Douleurs principales : ${pains.slice(0, 4).join(" ; ")}.`);
+      if (pains.length > 0) {
+        parts.push("");
+        parts.push("**Douleurs principales**");
+        pains.slice(0, 4).forEach((p) => parts.push(`- ${p}`));
+      }
 
       const desires = asArray(persona.desires).map((x) => cleanString(x, 160)).filter(Boolean);
-      if (desires.length > 0) parts.push(`Désirs : ${desires.slice(0, 4).join(" ; ")}.`);
+      if (desires.length > 0) {
+        parts.push("");
+        parts.push("**Désirs**");
+        desires.slice(0, 4).forEach((d) => parts.push(`- ${d}`));
+      }
 
       const objections = asArray(persona.objections).map((x) => cleanString(x, 160)).filter(Boolean);
-      if (objections.length > 0) parts.push(`Objections fréquentes : ${objections.slice(0, 3).join(" ; ")}.`);
+      if (objections.length > 0) {
+        parts.push("");
+        parts.push("**Objections fréquentes**");
+        objections.slice(0, 3).forEach((o) => parts.push(`- ${o}`));
+      }
 
       const channels = asArray(persona.channels).map((x) => cleanString(x, 80)).filter(Boolean);
-      if (channels.length > 0) parts.push(`Canaux préférés : ${channels.join(", ")}.`);
+      if (channels.length > 0) {
+        parts.push("");
+        parts.push("**Canaux préférés**");
+        channels.forEach((c) => parts.push(`- ${c}`));
+      }
 
       const summary = parts.join("\n");
       if (summary.trim()) {

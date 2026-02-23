@@ -187,26 +187,35 @@ function selectRelevantContext(params: {
   }).join("\n\n");
 }
 
-// ─── DB persistence (best-effort) ────────────────────────────────────────────
+// ─── DB level mapping ────────────────────────────────────────────────────────
 
-async function persistOfferPyramidsBestEffort(params: {
+const DB_LEVEL_MAP: Record<string, string> = {
+  lead_magnet: "lead_magnet", low_ticket: "entry",
+  middle_ticket: "core", high_ticket: "premium",
+};
+const DB_LEVEL_REVERSE: Record<string, string> = {
+  lead_magnet: "lead_magnet", entry: "low_ticket",
+  core: "middle_ticket", premium: "high_ticket",
+};
+
+// ─── DB persistence ─────────────────────────────────────────────────────────
+
+async function persistOfferPyramids(params: {
   userId: string;
   pyramids: AnyRecord[];
+  pyramidRunId: string;
   selectedIndex: number | null;
   projectId?: string | null;
 }): Promise<void> {
-  const { userId, pyramids, selectedIndex, projectId } = params;
+  const { userId, pyramids, pyramidRunId, selectedIndex, projectId } = params;
   if (!Array.isArray(pyramids) || pyramids.length < 1) return;
 
   const now = new Date().toISOString();
-  const DB_LEVEL_MAP: Record<string, string> = {
-    lead_magnet: "lead_magnet", low_ticket: "entry",
-    middle_ticket: "core", high_ticket: "premium",
-  };
-
   const rows: AnyRecord[] = [];
+
   pyramids.forEach((p, idx) => {
     const setName = cleanString(p.name, 160) || `Offre ${idx + 1}`;
+    const setSummary = cleanString(p.strategy_summary, 4000);
     const isSelected = typeof selectedIndex === "number" && idx === selectedIndex;
 
     for (const level of ["lead_magnet", "low_ticket", "middle_ticket", "high_ticket"] as const) {
@@ -215,15 +224,23 @@ async function persistOfferPyramidsBestEffort(params: {
       rows.push({
         user_id: userId,
         ...(projectId ? { project_id: projectId } : {}),
+        pyramid_run_id: pyramidRunId,
+        option_index: idx,
         level: DB_LEVEL_MAP[level] ?? level,
-        name: cleanString(`${setName} — ${cleanString(offer.title, 160) || level}`, 240),
+        name: cleanString(offer.title ?? offer.name ?? "", 180),
         description: cleanString(offer.pitch ?? offer.description, 4000),
         promise: cleanString(offer.transformation ?? offer.purpose, 800),
         format: cleanString(offer.format, 180),
         delivery: cleanString(offer.cta, 800),
         ...(toNumber(offer.price) !== null ? { price_min: toNumber(offer.price), price_max: toNumber(offer.price) } : {}),
         main_outcome: cleanString(offer.transformation ?? offer.purpose, 800),
-        is_flagship: isSelected,
+        is_flagship: false,
+        is_selected: isSelected,
+        ...(isSelected ? { selected_at: now } : {}),
+        details: {
+          pyramid: { id: cleanString(p.id, 64), name: setName, strategy_summary: setSummary },
+          offer,
+        },
         updated_at: now,
       });
     }
@@ -231,14 +248,79 @@ async function persistOfferPyramidsBestEffort(params: {
 
   if (!rows.length) return;
 
-  try {
-    let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
-    if (projectId) delQuery = delQuery.eq("project_id", projectId);
-    await delQuery;
-    await supabaseAdmin.from("offer_pyramids").insert(rows);
-  } catch (e) {
-    console.error("persistOfferPyramidsBestEffort error:", e);
+  // Delete existing pyramids for this user/project, then insert fresh
+  let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+  if (projectId) delQuery = delQuery.eq("project_id", projectId);
+  await delQuery;
+  const { error } = await supabaseAdmin.from("offer_pyramids").insert(rows);
+  if (error) throw error;
+}
+
+// ─── Read pyramids from DB and reconstruct pyramid sets ─────────────────────
+
+async function loadPyramidsFromDb(params: {
+  supabase: any;
+  userId: string;
+  projectId?: string | null;
+}): Promise<{ pyramidSets: AnyRecord[]; selectedIndex: number | null } | null> {
+  const { supabase, userId, projectId } = params;
+
+  let query = supabase
+    .from("offer_pyramids")
+    .select("*")
+    .eq("user_id", userId)
+    .order("option_index", { ascending: true })
+    .order("level", { ascending: true });
+  if (projectId) query = query.eq("project_id", projectId);
+  const { data: rows, error } = await query;
+
+  if (error || !rows || rows.length === 0) return null;
+
+  // Group rows by option_index → reconstruct pyramid sets
+  const grouped = new Map<number, AnyRecord[]>();
+  for (const row of rows) {
+    const idx = row.option_index ?? 0;
+    if (!grouped.has(idx)) grouped.set(idx, []);
+    grouped.get(idx)!.push(row);
   }
+
+  let selectedIndex: number | null = null;
+  const pyramidSets: AnyRecord[] = [];
+
+  for (const [optIdx, levelRows] of [...grouped.entries()].sort((a, b) => a[0] - b[0])) {
+    const firstRow = levelRows[0];
+    const pyramidMeta = asRecord((firstRow.details as any)?.pyramid) ?? {};
+
+    const set: AnyRecord = {
+      id: cleanString(pyramidMeta.id ?? String(optIdx), 64),
+      name: cleanString(pyramidMeta.name ?? `Pyramide ${optIdx + 1}`, 200),
+      strategy_summary: cleanString(pyramidMeta.strategy_summary ?? "", 4000),
+    };
+
+    for (const row of levelRows) {
+      const internalLevel = DB_LEVEL_REVERSE[row.level] ?? row.level;
+      const offerFromDetails = asRecord((row.details as any)?.offer);
+
+      if (offerFromDetails) {
+        set[internalLevel] = normalizeOffer(offerFromDetails);
+      } else {
+        set[internalLevel] = normalizeOffer({
+          title: row.name,
+          pitch: row.description,
+          transformation: row.promise ?? row.main_outcome,
+          format: row.format,
+          cta: row.delivery,
+          price: row.price_min,
+        });
+      }
+
+      if (row.is_selected) selectedIndex = optIdx;
+    }
+
+    pyramidSets.push(set);
+  }
+
+  return { pyramidSets, selectedIndex };
 }
 
 // ─── GET ─────────────────────────────────────────────────────────────────────
@@ -252,6 +334,17 @@ export async function GET(_req: Request) {
     const userId = sessionData.session.user.id;
     const projectId = await getActiveProjectId(supabase, userId);
 
+    // Primary: read from offer_pyramids table
+    const dbResult = await loadPyramidsFromDb({ supabase, userId, projectId });
+    if (dbResult && dbResult.pyramidSets.length > 0) {
+      return NextResponse.json({
+        success: true,
+        offer_pyramids: dbResult.pyramidSets,
+        selected_index: dbResult.selectedIndex,
+      });
+    }
+
+    // Fallback: read from business_plan.plan_json (backward compat)
     let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
     if (projectId) planQuery = planQuery.eq("project_id", projectId);
     const { data: planRow } = await planQuery.maybeSingle();
@@ -260,7 +353,7 @@ export async function GET(_req: Request) {
     return NextResponse.json({
       success: true,
       offer_pyramids: planJson ? asArray(planJson.offer_pyramids) : [],
-      selected_offer_pyramid_index: typeof planJson?.selected_offer_pyramid_index === "number"
+      selected_index: typeof planJson?.selected_offer_pyramid_index === "number"
         ? planJson.selected_offer_pyramid_index : null,
     });
   } catch (err) {
@@ -286,6 +379,29 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Invalid selectedIndex" }, { status: 400 });
     }
 
+    const now = new Date().toISOString();
+
+    // 1) Primary: update offer_pyramids table (reset all → mark selected)
+    let resetQuery = supabaseAdmin
+      .from("offer_pyramids")
+      .update({ is_selected: false, selected_at: null })
+      .eq("user_id", userId);
+    if (projectId) resetQuery = resetQuery.eq("project_id", projectId);
+    await resetQuery;
+
+    let selectQuery = supabaseAdmin
+      .from("offer_pyramids")
+      .update({ is_selected: true, selected_at: now })
+      .eq("user_id", userId)
+      .eq("option_index", selectedIndex);
+    if (projectId) selectQuery = selectQuery.eq("project_id", projectId);
+    const { error: selectErr } = await selectQuery;
+    if (selectErr) {
+      console.error("PATCH select error:", selectErr);
+      return NextResponse.json({ error: selectErr.message }, { status: 500 });
+    }
+
+    // 2) Backward compat: update business_plan.plan_json
     let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
     if (projectId) planQuery = planQuery.eq("project_id", projectId);
     const { data: planRow } = await planQuery.maybeSingle();
@@ -295,39 +411,23 @@ export async function PATCH(req: Request) {
     if (!pyramid) {
       const pyramidsArr = asArray(basePlan.offer_pyramids);
       pyramid = asRecord(pyramidsArr[selectedIndex]);
-      if (!pyramid) return NextResponse.json({ error: "Pyramid not found at selectedIndex" }, { status: 400 });
     }
 
-    const nextPlan: AnyRecord = {
-      ...basePlan,
-      selected_offer_pyramid_index: selectedIndex,
-      selected_offer_pyramid: pyramid,
-      selected_pyramid_index: selectedIndex,
-      selected_pyramid: pyramid,
-      updated_at: new Date().toISOString(),
-    };
+    if (pyramid) {
+      const nextPlan: AnyRecord = {
+        ...basePlan,
+        selected_offer_pyramid_index: selectedIndex,
+        selected_offer_pyramid: pyramid,
+        selected_pyramid_index: selectedIndex,
+        selected_pyramid: pyramid,
+        updated_at: now,
+      };
 
-    const { error: saveErr } = await supabase
-      .from("business_plan")
-      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
-
-    if (saveErr) {
-      console.error("PATCH save error:", saveErr);
-      return NextResponse.json({ error: saveErr.message }, { status: 500 });
-    }
-
-    // Best-effort sync to offer_pyramids table
-    try {
-      const pyramids = asArray(nextPlan.offer_pyramids)
-        .map((p, idx) => normalizeOfferSet(asRecord(p), idx))
-        .filter((x) => !!x.lead_magnet && !!x.high_ticket);
-      if (pyramids.length) {
-        await persistOfferPyramidsBestEffort({ userId, pyramids, selectedIndex, projectId });
-      }
-    } catch (e) {
-      console.error("PATCH sync error:", e);
+      await supabase
+        .from("business_plan")
+        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: now }, { onConflict: "user_id" })
+        .select("id")
+        .maybeSingle();
     }
 
     return NextResponse.json({ success: true });
@@ -370,7 +470,16 @@ export async function POST(req: Request) {
       try {
         sendSSE("progress", { step: "Lecture de ton profil..." });
 
-        // Check existing
+        // Check existing in offer_pyramids table first
+        const dbResult = await loadPyramidsFromDb({ supabase, userId, projectId });
+        if (dbResult && dbResult.pyramidSets.length > 0 && offersLookUseful(dbResult.pyramidSets)) {
+          sendSSE("result", { success: true, skipped: true, reason: "already_generated", offer_pyramids: dbResult.pyramidSets });
+          clearInterval(heartbeat);
+          controller.close();
+          return;
+        }
+
+        // Fallback: check business_plan.plan_json
         let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
         if (projectId) planQuery = planQuery.eq("project_id", projectId);
         const { data: existingPlan } = await planQuery.maybeSingle();
@@ -574,10 +683,20 @@ STRUCTURE EXACTE À RENVOYER :
 
         sendSSE("progress", { step: "Sauvegarde de tes pyramides..." });
 
+        // Primary: persist to offer_pyramids table
+        const pyramidRunId = crypto.randomUUID();
+        try {
+          await persistOfferPyramids({ userId, pyramids: normalizedOffers, pyramidRunId, selectedIndex: null, projectId });
+        } catch (e) {
+          console.error("POST persistOfferPyramids error:", e);
+        }
+
+        // Backward compat: also save to business_plan.plan_json
         const basePlan: AnyRecord = isRecord(existingPlanJson) ? existingPlanJson : {};
         const plan_json: AnyRecord = {
           ...basePlan,
           offer_pyramids: normalizedOffers,
+          offer_pyramids_run_id: pyramidRunId,
           horizon_days: toNumber(basePlan.horizon_days) ?? 90,
           selected_offer_pyramid_index: basePlan.selected_offer_pyramid_index ?? null,
           selected_offer_pyramid: basePlan.selected_offer_pyramid ?? null,
@@ -586,25 +705,11 @@ STRUCTURE EXACTE À RENVOYER :
           updated_at: new Date().toISOString(),
         };
 
-        const { error: saveErr } = await supabase
+        await supabase
           .from("business_plan")
           .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
           .select("id")
           .maybeSingle();
-
-        if (saveErr) {
-          sendSSE("error", { error: saveErr.message });
-          clearInterval(heartbeat);
-          controller.close();
-          return;
-        }
-
-        // Best-effort sync
-        try {
-          await persistOfferPyramidsBestEffort({ userId, pyramids: normalizedOffers, selectedIndex: null, projectId });
-        } catch (e) {
-          console.error("POST sync error:", e);
-        }
 
         sendSSE("result", { success: true, offer_pyramids: normalizedOffers });
       } catch (err) {
