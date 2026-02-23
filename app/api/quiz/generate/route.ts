@@ -1,10 +1,9 @@
 // app/api/quiz/generate/route.ts
-// AI-powered quiz generation. Costs 4 credits.
+// AI-powered quiz generation using Claude (Anthropic). Costs 4 credits.
 // Returns SSE stream with heartbeats to prevent proxy/hosting 504 timeouts.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -13,6 +12,26 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+
+function getClaudeApiKey(): string {
+  return (
+    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    ""
+  );
+}
+
+function getClaudeModel(): string {
+  return (
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-sonnet-4-5-20250929"
+  );
+}
+
 export async function POST(req: NextRequest) {
   // ── Pre-validate synchronously before starting the stream ──────────
   let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
@@ -20,6 +39,14 @@ export async function POST(req: NextRequest) {
   let projectId: string | null;
   let system: string;
   let userPrompt: string;
+
+  const apiKey = getClaudeApiKey();
+  if (!apiKey) {
+    return NextResponse.json(
+      { ok: false, error: "Clé API Claude manquante côté serveur." },
+      { status: 500 },
+    );
+  }
 
   try {
     supabase = await getSupabaseServerClient();
@@ -33,11 +60,6 @@ export async function POST(req: NextRequest) {
     }
     userId = user.id;
     projectId = await getActiveProjectId(supabase, userId);
-
-    const ai = openai;
-    if (!ai) {
-      return NextResponse.json({ ok: false, error: "AI client not configured" }, { status: 500 });
-    }
 
     let body: any;
     try {
@@ -102,7 +124,6 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Start SSE stream — heartbeats keep the connection alive ────────
-  const ai = openai!;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -120,24 +141,62 @@ export async function POST(req: NextRequest) {
       try {
         sendSSE("progress", { step: "Génération du quiz en cours..." });
 
-        const resp = await ai.chat.completions.create({
-          ...cachingParams("quiz"),
-          model: OPENAI_MODEL,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: userPrompt },
-          ],
-          max_completion_tokens: 8000,
-        } as any);
+        const timeoutMs = 180_000; // 3 minutes
+        const controller2 = new AbortController();
+        const timer = setTimeout(() => controller2.abort(), timeoutMs);
 
-        const choice = resp.choices?.[0];
-        const raw = choice?.message?.content ?? "{}";
+        let res: Response;
+        try {
+          res = await fetch(CLAUDE_API_URL, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+            },
+            signal: controller2.signal,
+            body: JSON.stringify({
+              model: getClaudeModel(),
+              max_tokens: 8000,
+              temperature: 0.7,
+              system,
+              messages: [{ role: "user", content: userPrompt }],
+            }),
+          });
+        } catch (fetchErr: any) {
+          const name = String(fetchErr?.name ?? "");
+          const msg = String(fetchErr?.message ?? "");
+          if (name === "AbortError" || /aborted|abort/i.test(msg)) {
+            sendSSE("error", { ok: false, error: `Timeout Claude API après ${timeoutMs / 1000}s` });
+            return;
+          }
+          throw fetchErr;
+        } finally {
+          clearTimeout(timer);
+        }
 
-        // Detect truncated output (model hit token limit before finishing JSON)
-        if (choice?.finish_reason === "length") {
-          console.error("[quiz/generate] Output truncated (finish_reason=length). Tokens used:",
-            resp.usage?.completion_tokens, "/ 8000");
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 300));
+          sendSSE("error", {
+            ok: false,
+            error: `Erreur Claude API (${res.status}). Réessaie.`,
+          });
+          return;
+        }
+
+        const json = (await res.json()) as any;
+        const parts = Array.isArray(json?.content) ? json.content : [];
+        const raw = parts
+          .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+          .filter(Boolean)
+          .join("")
+          .trim();
+
+        // Detect truncated output
+        if (json?.stop_reason === "max_tokens") {
+          console.error("[quiz/generate] Output truncated (stop_reason=max_tokens). Tokens used:",
+            json?.usage?.output_tokens, "/ 8000");
           sendSSE("error", {
             ok: false,
             error: "La génération du quiz a été tronquée (réponse trop longue). Essaie avec moins de questions.",
@@ -145,12 +204,26 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        // Robust JSON extraction
         let quiz: any;
         try {
-          quiz = JSON.parse(raw);
+          // Try markdown code blocks first
+          const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (codeBlockMatch) {
+            quiz = JSON.parse(codeBlockMatch[1].trim());
+          } else {
+            // Try outermost { ... }
+            const start = raw.indexOf("{");
+            const end = raw.lastIndexOf("}");
+            if (start !== -1 && end !== -1 && end > start) {
+              quiz = JSON.parse(raw.slice(start, end + 1));
+            } else {
+              quiz = JSON.parse(raw);
+            }
+          }
         } catch {
           console.error("[quiz/generate] JSON parse failed. Raw length:", raw.length,
-            "finish_reason:", choice?.finish_reason, "raw preview:", raw.slice(0, 200));
+            "stop_reason:", json?.stop_reason, "raw preview:", raw.slice(0, 200));
           sendSSE("error", {
             ok: false,
             error: "L'IA a retourné un JSON invalide. Réessaie.",

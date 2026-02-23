@@ -464,7 +464,7 @@ RÉPONDS UNIQUEMENT EN JSON VALIDE avec cette structure (sans texte avant ni apr
   "strengths": ["string (forces globales de l'utilisateur vs tous les concurrents)"],
   "weaknesses": ["string (faiblesses globales à corriger en priorité)"],
   "opportunities": ["string (opportunités de différenciation et niches inexploitées)"],
-  "positioning_matrix": "string (matrice de positionnement avec comparaison tarifs/fonctionnalités/cibles)"
+  "positioning_matrix": "string — OBLIGATOIREMENT un tableau Markdown avec | pour comparer les concurrents. Format attendu :\n| Concurrent | Prix | Fonctionnalités clés | Cible |\n|---|---|---|---|\n| Concurrent 1 | ... | ... | ... |\n| Concurrent 2 | ... | ... | ... |\n| [Nom de l'utilisateur/Tipote] | ... | ... | ... |\nInclure TOUS les concurrents analysés + l'utilisateur dans la dernière ligne."
 }`;
 
   const competitorsList = competitors

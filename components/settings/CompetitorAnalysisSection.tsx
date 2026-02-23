@@ -77,6 +77,77 @@ type AnalysisData = {
   updated_at?: string;
 };
 
+// ─── Positioning matrix formatter ───────────────────────────────────────────────
+
+/**
+ * Converts flat positioning matrix text into a markdown table.
+ * Handles legacy data stored as "Matrice: Prix -> X; Fonctionnalités -> Y; ..."
+ * If already a markdown table (contains "|"), returns as-is.
+ */
+function formatPositioningMatrix(text: string): string {
+  if (!text?.trim()) return text;
+  // Already a markdown table
+  if (text.includes("|")) return text;
+  // Already has markdown formatting (headers, lists)
+  if (/^##?\s/m.test(text) || /^\s*[-*]\s/m.test(text)) return text;
+
+  // Try to parse "Key = value" or "Key -> value" patterns separated by ";"
+  // e.g. "Matrice: Prix -> Moyen; ... Nach: Jasper = IA + templates; ChatGPT = IA générale; ..."
+  const parts = text.split(/\s*;\s*/);
+  if (parts.length < 3) return text;
+
+  // Detect competitor entries: "Name = description" pattern
+  const competitorEntries: { name: string; desc: string }[] = [];
+  const axisEntries: { axis: string; value: string }[] = [];
+
+  for (const part of parts) {
+    const cleaned = part.replace(/^Matrice\s*:\s*/i, "").replace(/^Nach\s*:\s*/i, "").trim();
+    if (!cleaned) continue;
+
+    const arrowMatch = cleaned.match(/^(.+?)\s*->\s*(.+)$/);
+    const equalMatch = cleaned.match(/^(.+?)\s*=\s*(.+)$/);
+
+    if (arrowMatch) {
+      axisEntries.push({ axis: arrowMatch[1].trim(), value: arrowMatch[2].trim() });
+    } else if (equalMatch) {
+      competitorEntries.push({ name: equalMatch[1].trim(), desc: equalMatch[2].trim() });
+    }
+  }
+
+  // Build a simple markdown table
+  if (competitorEntries.length > 0) {
+    const lines: string[] = [];
+    // Header with axis names if available
+    if (axisEntries.length > 0) {
+      lines.push(`| Critère | Valeur |`);
+      lines.push(`|---|---|`);
+      for (const a of axisEntries) {
+        lines.push(`| **${a.axis}** | ${a.value} |`);
+      }
+      lines.push("");
+    }
+    lines.push(`| Concurrent | Positionnement |`);
+    lines.push(`|---|---|`);
+    for (const c of competitorEntries) {
+      lines.push(`| **${c.name}** | ${c.desc} |`);
+    }
+    return lines.join("\n");
+  }
+
+  // Fallback: all axis entries
+  if (axisEntries.length > 0) {
+    const lines: string[] = [];
+    lines.push(`| Critère | Valeur |`);
+    lines.push(`|---|---|`);
+    for (const a of axisEntries) {
+      lines.push(`| **${a.axis}** | ${a.value} |`);
+    }
+    return lines.join("\n");
+  }
+
+  return text;
+}
+
 // ─── Markdown renderer ─────────────────────────────────────────────────────────
 
 function renderInline(text: string): React.ReactNode {
@@ -750,7 +821,7 @@ export default function CompetitorAnalysisSection() {
           {analysis.positioning_matrix && (
             <Card className="p-6">
               <h4 className="font-semibold mb-3">Matrice de positionnement</h4>
-              {renderMarkdown(analysis.positioning_matrix)}
+              {renderMarkdown(formatPositioningMatrix(analysis.positioning_matrix))}
             </Card>
           )}
 
