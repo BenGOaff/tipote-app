@@ -209,8 +209,10 @@ export function QuizForm({ onClose }: QuizFormProps) {
         }),
       });
 
-      const json = await res.json();
-      if (!json?.ok) {
+      // Handle non-stream error responses (401, 400, 402, etc.)
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const json = await res.json();
         if (json?.error === "NO_CREDITS") {
           toast({
             title: "Crédits insuffisants",
@@ -222,7 +224,57 @@ export function QuizForm({ onClose }: QuizFormProps) {
         throw new Error(json?.error || "Erreur de génération");
       }
 
-      const quiz = json.quiz;
+      // Read SSE stream
+      if (!res.body) throw new Error("Pas de réponse du serveur");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? ""; // Keep incomplete line in buffer
+
+        let eventType = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6);
+            try {
+              const data = JSON.parse(dataStr);
+              if (eventType === "result" && data.ok) {
+                result = data;
+              } else if (eventType === "error") {
+                if (data.error === "NO_CREDITS") {
+                  toast({
+                    title: "Crédits insuffisants",
+                    description: "La génération de quiz coûte 4 crédits.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                throw new Error(data.error || "Erreur de génération");
+              }
+              // heartbeat and progress events are ignored
+            } catch (parseErr) {
+              // Ignore malformed SSE data lines
+              if (eventType === "error" || eventType === "result") throw parseErr;
+            }
+          }
+        }
+      }
+
+      if (!result?.ok) {
+        throw new Error("La génération n'a pas abouti. Réessaie.");
+      }
+
+      const quiz = result.quiz;
       setTitle(quiz.title ?? "");
       setIntroduction(quiz.introduction ?? "");
       setCtaText(quiz.cta_text ?? cta);

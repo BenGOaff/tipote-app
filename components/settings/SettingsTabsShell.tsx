@@ -107,6 +107,86 @@ type ProfileRow = {
   diagnostic_profile?: Record<string, any> | null;
 };
 
+/**
+ * Formate un résumé persona plat en markdown structuré.
+ * Détecte les labels "Douleurs principales :", "Désirs :", etc.
+ * et les convertit en titres + listes à puces.
+ */
+function formatPersonaSummary(text: string): string {
+  if (!text?.trim()) return text;
+  // Si déjà formaté en markdown (contient des titres ou des listes), ne pas reformater
+  if (/^##?\s/m.test(text) || /^\s*[-*]\s/m.test(text)) return text;
+
+  // Labels de sections connus (insensible à la casse, avec ou sans ":")
+  const sectionLabels = [
+    "Douleurs principales",
+    "Douleurs",
+    "Points de douleur",
+    "Désirs",
+    "Objectifs",
+    "Motivations",
+    "Objections fréquentes",
+    "Objections",
+    "Canaux préférés",
+    "Canaux",
+    "Déclencheurs d'achat",
+    "Déclencheurs",
+    "Phrases exactes",
+    "Phrases types",
+  ];
+
+  // Build regex: match "Label :" or "Label:" anywhere in text
+  const labelPattern = sectionLabels
+    .map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const regex = new RegExp(`(?:^|(?<=[\\.!?]\\s*))\\s*(${labelPattern})\\s*:\\s*`, "gi");
+
+  // Find all section matches
+  const matches: { label: string; index: number; endIndex: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    matches.push({ label: m[1], index: m.index, endIndex: m.index + m[0].length });
+  }
+
+  if (matches.length === 0) return text;
+
+  // Extract intro (text before first section)
+  const intro = text.slice(0, matches[0].index).replace(/[\s.]+$/, "").trim();
+
+  const parts: string[] = [];
+  if (intro) parts.push(intro + "\n");
+
+  for (let i = 0; i < matches.length; i++) {
+    const label = matches[i].label;
+    const start = matches[i].endIndex;
+    const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+    const content = text.slice(start, end).replace(/[\s.]+$/, "").trim();
+
+    parts.push(`\n## ${label}\n`);
+
+    // Split items on ";" or "," (for channels)
+    const items = content
+      .split(/\s*;\s*/)
+      .flatMap((item) => {
+        // If an item contains no ";" but has comma-separated items (like channels), split on ","
+        // Only do this for short items (channels-like), not descriptions
+        return [item];
+      })
+      .map((item) => item.replace(/^\s*\.?\s*$/, "").trim())
+      .filter(Boolean);
+
+    if (items.length > 1) {
+      for (const item of items) {
+        parts.push(`- ${item}`);
+      }
+    } else if (items.length === 1) {
+      parts.push(`- ${items[0]}`);
+    }
+  }
+
+  return parts.join("\n");
+}
+
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const tSettings = useTranslations("settings");
   const tSP = useTranslations("settingsPage");
@@ -1385,7 +1465,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : mission ? (
                 <div className="rounded-lg border bg-background">
                   <AIContent
-                    content={mission}
+                    content={formatPersonaSummary(mission)}
                     mode="markdown"
                     scroll
                     maxHeight="70vh"
