@@ -75,7 +75,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.body.platform_user_id || $json.body.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.body.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.body.platform_user_id || $json.body.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.body.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false{{ $json.body.image_urn ? ', \"content\": { \"media\": { \"title\": \"Image\", \"id\": \"' + $json.body.image_urn + '\" } }' : '' }}\n}",
         "options": {
           "response": {
             "response": {

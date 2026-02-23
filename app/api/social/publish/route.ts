@@ -9,7 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
-import { publishPost } from "@/lib/linkedin";
+import { publishPost, uploadImageToLinkedIn } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
@@ -398,6 +398,18 @@ export async function POST(req: NextRequest) {
       const resolvedImageUrl = resolveImageUrl(contentItem.meta);
       console.log(`[publish] ${platform}: image_url=${resolvedImageUrl ?? "none"}, meta.images count=${Array.isArray(contentItem.meta?.images) ? contentItem.meta.images.length : 0}`);
 
+      // Pour LinkedIn : uploader l'image côté app avant d'envoyer à n8n
+      // (n8n ne gère pas le process d'upload en 2 étapes de LinkedIn)
+      let linkedInImageUrn: string | undefined;
+      if (resolvedImageUrl && platform === "linkedin") {
+        try {
+          linkedInImageUrn = await uploadImageToLinkedIn(accessToken, platformUserId, resolvedImageUrl);
+          console.log(`[publish] LinkedIn image uploaded: ${linkedInImageUrn}`);
+        } catch (err) {
+          console.error("[publish] LinkedIn image upload failed, posting without image:", err);
+        }
+      }
+
       const n8nPayload: Record<string, unknown> = {
         content_id: contentId,
         user_id: user.id,
@@ -412,6 +424,11 @@ export async function POST(req: NextRequest) {
       // Ajouter l'image pour toutes les plateformes qui la supportent
       if (resolvedImageUrl) {
         n8nPayload.image_url = resolvedImageUrl;
+      }
+
+      // Ajouter l'URN de l'image LinkedIn si uploadée avec succès
+      if (linkedInImageUrn) {
+        n8nPayload.image_urn = linkedInImageUrn;
       }
 
       // Pour Instagram, l'image est REQUISE

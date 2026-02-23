@@ -228,7 +228,7 @@ const LINKEDIN_IMAGES_URL = "https://api.linkedin.com/rest/images";
  *   2. PUT uploadUrl avec le binaire de l'image
  * @returns L'URN de l'image (ex: urn:li:image:xxx)
  */
-async function uploadImageToLinkedIn(
+export async function uploadImageToLinkedIn(
   accessToken: string,
   personId: string,
   imageUrl: string

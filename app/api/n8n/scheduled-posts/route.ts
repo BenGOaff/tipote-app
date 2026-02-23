@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
+import { uploadImageToLinkedIn } from "@/lib/linkedin";
 
 export const dynamic = "force-dynamic";
 
@@ -261,6 +262,18 @@ export async function GET(req: NextRequest) {
       // Ajouter l'image pour toutes les plateformes qui la supportent
       if (imageUrl) {
         postData.image_url = imageUrl;
+      }
+
+      // Pour LinkedIn : uploader l'image côté app avant d'envoyer à n8n
+      // (n8n ne gère pas le process d'upload en 2 étapes de LinkedIn)
+      if (imageUrl && platform === "linkedin") {
+        try {
+          const imageUrn = await uploadImageToLinkedIn(accessToken, conn.platform_user_id, imageUrl);
+          postData.image_urn = imageUrn;
+          console.log(`[scheduled-posts] LinkedIn image uploaded for post ${post.id}: ${imageUrn}`);
+        } catch (err) {
+          console.error(`[scheduled-posts] LinkedIn image upload failed for post ${post.id}, posting without image:`, err);
+        }
       }
 
       // Pour TikTok : video_url ou images requises

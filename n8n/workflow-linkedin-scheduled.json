@@ -105,7 +105,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.platform_user_id || $json.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false\n}",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:{{ $json.platform_user_id || $json.person_id }}\",\n  \"commentary\": {{ JSON.stringify($json.commentary) }},\n  \"visibility\": \"PUBLIC\",\n  \"distribution\": {\n    \"feedDistribution\": \"MAIN_FEED\",\n    \"targetEntities\": [],\n    \"thirdPartyDistributionChannels\": []\n  },\n  \"lifecycleState\": \"PUBLISHED\",\n  \"isReshareDisabledByAuthor\": false{{ $json.image_urn ? ', \"content\": { \"media\": { \"title\": \"Image\", \"id\": \"' + $json.image_urn + '\" } }' : '' }}\n}",
         "options": {
           "response": {
             "response": {
