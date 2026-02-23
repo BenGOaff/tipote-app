@@ -88,15 +88,29 @@ export async function POST(req: NextRequest) {
         { role: "system", content: system },
         { role: "user", content: userPrompt },
       ],
-      max_completion_tokens: 4000,
+      max_completion_tokens: 8000,
     } as any);
 
-    const raw = resp.choices?.[0]?.message?.content ?? "{}";
+    const choice = resp.choices?.[0];
+    const raw = choice?.message?.content ?? "{}";
+
+    // Detect truncated output (model hit token limit before finishing JSON)
+    if (choice?.finish_reason === "length") {
+      console.error("[quiz/generate] Output truncated (finish_reason=length). Tokens used:",
+        resp.usage?.completion_tokens, "/ 8000");
+      return NextResponse.json(
+        { ok: false, error: "La génération du quiz a été tronquée (réponse trop longue). Essaie avec moins de questions." },
+        { status: 500 },
+      );
+    }
+
     let quiz: any;
     try {
       quiz = JSON.parse(raw);
     } catch {
-      return NextResponse.json({ ok: false, error: "AI returned invalid JSON" }, { status: 500 });
+      console.error("[quiz/generate] JSON parse failed. Raw length:", raw.length,
+        "finish_reason:", choice?.finish_reason, "raw preview:", raw.slice(0, 200));
+      return NextResponse.json({ ok: false, error: "L'IA a retourné un JSON invalide. Réessaie." }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, quiz });

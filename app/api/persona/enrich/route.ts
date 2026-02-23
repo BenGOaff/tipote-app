@@ -307,29 +307,64 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
           try {
             const admin = await import("@/lib/supabaseAdmin").then((m) => m.supabaseAdmin).catch(() => null);
             if (admin) {
-              const personaPayload: AnyRecord = {
-                user_id: userId,
-                ...(projectId ? { project_id: projectId } : {}),
-                role: "client_ideal",
-                name: cleanString(parsed.persona_classic?.title, 240) || null,
+              // Build persona_json with all detailed data (including triggers, channels, etc.)
+              const fullPersonaJson = {
+                ...parsed.persona_classic,
+                detailed: parsed.persona_detailed,
+                narrative_synthesis: parsed.narrative_synthesis,
+                persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
+                competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
+                narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
+              };
+
+              // Only include columns that exist in the personas table schema.
+              // Extra fields (triggers, exact_phrases, channels) are stored inside persona_json.
+              const dataFields: AnyRecord = {
+                name: cleanString(parsed.persona_classic?.title, 240) || "Client idéal",
+                description: cleanString(parsed.persona_classic?.description ?? parsed.persona_summary, 500) || null,
                 pains: JSON.stringify(parsed.persona_classic?.pains ?? []),
                 desires: JSON.stringify(parsed.persona_classic?.desires ?? []),
                 objections: JSON.stringify(parsed.persona_classic?.objections ?? []),
-                triggers: JSON.stringify(parsed.persona_classic?.triggers ?? []),
-                exact_phrases: JSON.stringify(parsed.persona_classic?.exact_phrases ?? []),
-                channels: JSON.stringify(parsed.persona_classic?.channels ?? []),
-                persona_json: {
-                  ...parsed.persona_classic,
-                  detailed: parsed.persona_detailed,
-                  narrative_synthesis: parsed.narrative_synthesis,
-                  persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
-                  competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
-                  narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
-                },
+                persona_json: fullPersonaJson,
                 updated_at: now,
               };
 
-              await admin.from("personas").upsert(personaPayload, { onConflict: "user_id,role" });
+              // Try UPDATE first (avoids strategy_id NOT NULL issue on INSERT)
+              const { data: updatedRows, error: updateErr } = await admin
+                .from("personas")
+                .update(dataFields)
+                .eq("user_id", userId)
+                .eq("role", "client_ideal")
+                .select("id");
+
+              if (updateErr) {
+                console.error("[persona/enrich] Persona update failed:", updateErr.message);
+              }
+
+              // If no existing row, INSERT with strategy_id (required by schema)
+              if (!updatedRows || updatedRows.length === 0) {
+                const { data: stratRow } = await admin
+                  .from("strategies")
+                  .select("id")
+                  .eq("user_id", userId)
+                  .limit(1);
+                const strategyId = stratRow?.[0]?.id ?? null;
+
+                if (strategyId) {
+                  const { error: insertErr } = await admin.from("personas").insert({
+                    user_id: userId,
+                    strategy_id: strategyId,
+                    ...(projectId ? { project_id: projectId } : {}),
+                    role: "client_ideal",
+                    ...dataFields,
+                  });
+                  if (insertErr) {
+                    console.error("[persona/enrich] Persona insert failed:", insertErr.message);
+                  }
+                } else {
+                  console.warn("[persona/enrich] No strategy_id found — cannot insert persona row. Data saved in business_profiles.mission.");
+                }
+              }
             }
           } catch (e) {
             console.error("Persona persistence error (non-blocking):", e);
