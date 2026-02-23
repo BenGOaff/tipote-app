@@ -950,6 +950,47 @@
         },
         "countPlaceholder": "Follower totali (tutte le piattaforme)"
       },
+      "urgentProblem": {
+        "question": "Quale problema urgente risolverai per il tuo cliente ideale?",
+        "description": "Un problema reale che lo stressa o gli impedisce di progredire ogni giorno.",
+        "placeholder": "Es: Non riesce a trovare i suoi primi clienti nonostante mesi di sforzi..."
+      },
+      "quickResult": {
+        "question": "Quale risultato rapido, visibile e motivante puoi promettergli?",
+        "description": "Un risultato che crea un effetto \"wow\" nei primi 7 giorni.",
+        "placeholder": "Es: Ottenere i primi 3 appuntamenti qualificati in 7 giorni..."
+      },
+      "topObstacles": {
+        "question": "Quali sono i 3 maggiori ostacoli che impediscono al tuo cliente di ottenere questo risultato?",
+        "description": "I blocchi concreti che lo frenano oggi.",
+        "placeholder": "Es: 1) Non sa come posizionarsi\n2) Ha paura di vendere\n3) Non ha un sistema di acquisizione..."
+      },
+      "uniqueMethods": {
+        "question": "Quali sono i tuoi metodi unici o innovativi per aiutarlo?",
+        "description": "Ciò che ti distingue: il tuo metodo segreto, il tuo framework, il tuo approccio unico.",
+        "placeholder": "Es: Il mio metodo in 3 fasi per creare un'offerta irresistibile senza pubblico..."
+      },
+      "offerFormat": {
+        "question": "In quale/i formato/i vuoi proporre le tue offerte?",
+        "description": "Scegli uno o più formati che ti corrispondono.",
+        "options": {
+          "video_course": "Corso video",
+          "coaching": "Coaching / Mentoring",
+          "templates": "Template pronti all'uso",
+          "membership": "Abbonamento / Membership",
+          "mastermind": "Mastermind / Gruppo",
+          "checklist": "Checklist / Guida pratica",
+          "app_tool": "App / Strumento",
+          "workshop": "Workshop dal vivo",
+          "ebook": "E-book / PDF",
+          "audit": "Audit personalizzato"
+        }
+      },
+      "uniqueness": {
+        "question": "Perché la tua offerta è unica e diversa da tutto ciò che esiste?",
+        "description": "Ciò che la rende una scelta ovvia per il tuo cliente.",
+        "placeholder": "Es: Perché combino X e Y in un modo che nessun altro fa..."
+      },
       "refusals": {
         "question": "C'è qualcosa che rifiuti categoricamente di fare?",
         "description": "Non includerò nulla di questo nella tua strategia.",

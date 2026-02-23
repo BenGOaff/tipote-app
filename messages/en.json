@@ -1031,6 +1031,47 @@
         },
         "countPlaceholder": "Total followers (all platforms)"
       },
+      "urgentProblem": {
+        "question": "What urgent problem will you solve for your ideal client?",
+        "description": "A real problem that stresses them or blocks their progress daily.",
+        "placeholder": "E.g.: They can't find their first clients despite months of effort..."
+      },
+      "quickResult": {
+        "question": "What quick, visible and motivating result can you promise?",
+        "description": "A result that creates a \"wow\" effect within the first 7 days.",
+        "placeholder": "E.g.: Getting their first 3 qualified meetings in 7 days..."
+      },
+      "topObstacles": {
+        "question": "What are the 3 biggest obstacles preventing your client from getting this result?",
+        "description": "The concrete blockers holding them back today.",
+        "placeholder": "E.g.: 1) They don't know how to position themselves\n2) They're afraid to sell\n3) They have no acquisition system..."
+      },
+      "uniqueMethods": {
+        "question": "What are your unique or innovative methods to help them?",
+        "description": "What sets you apart: your secret method, your framework, your unique approach.",
+        "placeholder": "E.g.: My 3-step method to create an irresistible offer without an audience..."
+      },
+      "offerFormat": {
+        "question": "In which format(s) do you want to offer your products?",
+        "description": "Choose one or more formats that suit you.",
+        "options": {
+          "video_course": "Video course",
+          "coaching": "Coaching / Mentoring",
+          "templates": "Ready-to-use templates",
+          "membership": "Subscription / Membership",
+          "mastermind": "Mastermind / Group",
+          "checklist": "Checklist / Practical guide",
+          "app_tool": "App / Tool",
+          "workshop": "Live workshop",
+          "ebook": "E-book / PDF",
+          "audit": "Personalized audit"
+        }
+      },
+      "uniqueness": {
+        "question": "Why is your offer unique and different from everything else?",
+        "description": "What makes it an obvious choice for your client.",
+        "placeholder": "E.g.: Because I combine X and Y in a way nobody else does..."
+      },
       "refusals": {
         "question": "Is there anything you absolutely refuse to do?",
         "description": "I won't include any of this in your strategy.",

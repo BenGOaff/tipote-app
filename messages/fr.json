@@ -1031,6 +1031,47 @@
         },
         "countPlaceholder": "Nombre d'abonnés (tous réseaux)"
       },
+      "urgentProblem": {
+        "question": "Quel problème urgent tu vas résoudre pour ton client idéal ?",
+        "description": "Un vrai problème qui le stresse ou l'empêche d'avancer au quotidien.",
+        "placeholder": "Ex: Il n'arrive pas à trouver ses premiers clients malgré des mois d'efforts..."
+      },
+      "quickResult": {
+        "question": "Quel résultat rapide, visible et motivant peux-tu lui promettre ?",
+        "description": "Un résultat qui crée un effet \"wow\" dans les 7 premiers jours.",
+        "placeholder": "Ex: Obtenir ses 3 premiers rendez-vous qualifiés en 7 jours..."
+      },
+      "topObstacles": {
+        "question": "Quels sont les 3 plus gros obstacles qui empêchent ton client d'obtenir ce résultat ?",
+        "description": "Les blocages concrets qui le freinent aujourd'hui.",
+        "placeholder": "Ex: 1) Il ne sait pas comment se positionner\n2) Il a peur de vendre\n3) Il n'a pas de système d'acquisition..."
+      },
+      "uniqueMethods": {
+        "question": "Quelles sont tes méthodes uniques ou innovantes pour l'aider ?",
+        "description": "Ce qui te différencie : ta méthode secrète, ton framework, ton approche unique.",
+        "placeholder": "Ex: Ma méthode en 3 étapes pour créer une offre irrésistible sans audience..."
+      },
+      "offerFormat": {
+        "question": "Sous quel(s) format(s) veux-tu proposer tes offres ?",
+        "description": "Choisis un ou plusieurs formats qui te correspondent.",
+        "options": {
+          "video_course": "Formation vidéo",
+          "coaching": "Accompagnement / Coaching",
+          "templates": "Templates prêts à l'emploi",
+          "membership": "Abonnement / Membership",
+          "mastermind": "Mastermind / Groupe",
+          "checklist": "Checklist / Guide pratique",
+          "app_tool": "Application / Outil",
+          "workshop": "Atelier / Workshop live",
+          "ebook": "E-book / PDF",
+          "audit": "Audit personnalisé"
+        }
+      },
+      "uniqueness": {
+        "question": "Pourquoi ton offre est unique et différente de tout ce qui existe ?",
+        "description": "Ce qui fait qu'elle est une évidence pour ton client.",
+        "placeholder": "Ex: Parce que je combine X et Y d'une façon que personne d'autre ne fait..."
+      },
       "refusals": {
         "question": "Y a-t-il des choses que tu refuses catégoriquement de faire ?",
         "description": "Je n'incluray rien de ça dans ta stratégie.",

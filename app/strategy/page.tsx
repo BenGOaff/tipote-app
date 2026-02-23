@@ -221,28 +221,6 @@ export default async function StrategyPage() {
     void (projectId ? migQ.eq("project_id", projectId) : migQ);
   }
 
-  // Offres : UNIQUEMENT pour les users SANS offres et NON affilies (sinon: jamais de /strategy/pyramids)
-  let isAffiliate = Boolean((profileRow as AnyRecord | null)?.is_affiliate);
-
-  // Aligne la détection affiliation avec l'API /api/strategy/offer-pyramid (best-effort)
-  try {
-    const { data: bmRow } = await supabase
-      .from("onboarding_facts")
-      .select("value")
-      .eq("user_id", user.id)
-      .eq("key", "business_model")
-      .maybeSingle();
-
-    const bm = asString((bmRow as AnyRecord | null)?.value).toLowerCase();
-    if (bm.includes("affiliate") || bm.includes("affilié") || bm.includes("affiliation")) isAffiliate = true;
-  } catch {
-    // fail-open
-  }
-
-  const offersArr = Array.isArray((profileRow as AnyRecord | null)?.offers) ? (((profileRow as AnyRecord | null)?.offers) as any[]) : [];
-  const hasOffersEffective = Boolean((profileRow as AnyRecord | null)?.has_offers) || offersArr.length > 0;
-  const shouldGenerateOffers = !isAffiliate && !hasOffersEffective;
-
   // Plan
   const planRes = await supabase
     .from("business_plan")
@@ -301,10 +279,7 @@ export default async function StrategyPage() {
     );
   }
 
-  // Selection des offres :
-  // - On NE redirige JAMAIS vers /strategy/pyramids (route reservee a l'onboarding et aux users sans offres).
-  // - Si une selection existe dans le plan -> on l'utilise.
-  // - Sinon, on fail-open en prenant le 1er jeu d'offres si dispo (sans bloquer l'acces a /strategy).
+  // Offer selection from plan_json:
   const selectedIndexRaw = (planJson as AnyRecord).selected_offer_pyramid_index;
   const selectedIndex = typeof selectedIndexRaw === "number" ? (selectedIndexRaw as number) : null;
 
@@ -356,7 +331,7 @@ export default async function StrategyPage() {
     channels: preferredContentTypes.length ? preferredContentTypes : asStringArray(personaRaw.channels),
   };
 
-  // Offres (depuis plan_json -- DB key: offer_pyramids)
+  // Offres (depuis plan_json)
   const offerSets = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
 
   const hasExplicitSelection =

@@ -1,9 +1,8 @@
 /**
  * Shared offer loading utility.
- * Merges offers from 3 sources:
- *  1. business_plan.plan_json.selected_pyramid (AI-generated offers — DB key kept for compat)
- *  2. offer_pyramids table (legacy DB table — name kept for compat)
- *  3. business_profiles.offers (user's own / affiliate offers from settings)
+ * Loads offers from:
+ *  1. business_plan.plan_json.selected_pyramid (AI-generated offers)
+ *  2. business_profiles.offers (user's own / affiliate offers from settings)
  */
 
 export type OfferOption = {
@@ -11,7 +10,7 @@ export type OfferOption = {
   name: string;
   level: string;
   is_flagship?: boolean | null;
-  source?: "generated" | "user" | "legacy";
+  source?: "generated" | "user";
 
   // Details for AI copywriting
   promise?: string | null;
@@ -42,7 +41,7 @@ function toNumberOrNull(v: unknown): number | null {
 }
 
 /**
- * Normalise business_plan.plan_json.selected_pyramid (legacy DB key) vers une liste d'offres existantes
+ * Normalize a selected pyramid object (from business_plan.plan_json) into a flat list of offers.
  */
 function normalizeSelectedOffers(userId: string, selected: any, updatedAt?: string | null): OfferOption[] {
   const out: OfferOption[] = [];
@@ -52,21 +51,21 @@ function normalizeSelectedOffers(userId: string, selected: any, updatedAt?: stri
     if (!o) return;
 
     const name =
-      safeStringOrNull((o as any).name) ??
-      safeStringOrNull((o as any).offer_name) ??
-      safeStringOrNull((o as any).offerTitle) ??
-      safeStringOrNull((o as any).title) ??
+      safeStringOrNull(o.name) ??
+      safeStringOrNull(o.offer_name) ??
+      safeStringOrNull(o.offerTitle) ??
+      safeStringOrNull(o.title) ??
       null;
 
     if (!name) return;
 
-    const rawId = safeStringOrNull((o as any).id) ?? safeStringOrNull((o as any).offer_id) ?? null;
+    const rawId = safeStringOrNull(o.id) ?? safeStringOrNull(o.offer_id) ?? null;
     const id = rawId || `${userId}:${String(levelRaw ?? "offer")}:${String(idxHint ?? out.length)}`;
 
     const level =
       safeStringOrNull(levelRaw) ??
-      safeStringOrNull((o as any).level) ??
-      safeStringOrNull((o as any).offer_level) ??
+      safeStringOrNull(o.level) ??
+      safeStringOrNull(o.offer_level) ??
       "";
 
     out.push({
@@ -74,47 +73,20 @@ function normalizeSelectedOffers(userId: string, selected: any, updatedAt?: stri
       name,
       level,
       source: "generated",
-      is_flagship: typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null,
-      description: safeStringOrNull((o as any).description) ?? safeStringOrNull((o as any).desc) ?? null,
-      promise: safeStringOrNull((o as any).promise) ?? safeStringOrNull((o as any).promesse) ?? null,
-      main_outcome: safeStringOrNull((o as any).main_outcome) ?? safeStringOrNull((o as any).outcome) ?? null,
-      format: safeStringOrNull((o as any).format) ?? null,
-      delivery: safeStringOrNull((o as any).delivery) ?? null,
-      target: safeStringOrNull((o as any).target) ?? safeStringOrNull((o as any).target_audience) ?? null,
-      price_min: toNumberOrNull((o as any).price_min ?? (o as any).min_price),
-      price_max: toNumberOrNull((o as any).price_max ?? (o as any).max_price),
-      updated_at: safeStringOrNull((o as any).updated_at) ?? updatedAt ?? null,
+      is_flagship: typeof o.is_flagship === "boolean" ? o.is_flagship : null,
+      description: safeStringOrNull(o.description) ?? safeStringOrNull(o.desc) ?? null,
+      promise: safeStringOrNull(o.promise) ?? safeStringOrNull(o.promesse) ?? null,
+      main_outcome: safeStringOrNull(o.main_outcome) ?? safeStringOrNull(o.outcome) ?? null,
+      format: safeStringOrNull(o.format) ?? null,
+      delivery: safeStringOrNull(o.delivery) ?? null,
+      target: safeStringOrNull(o.target) ?? safeStringOrNull(o.target_audience) ?? null,
+      price_min: toNumberOrNull(o.price_min ?? o.min_price),
+      price_max: toNumberOrNull(o.price_max ?? o.max_price),
+      updated_at: safeStringOrNull(o.updated_at) ?? updatedAt ?? null,
     });
   };
 
   if (!selected) return out;
-
-  const topOffers =
-    (Array.isArray((selected as any).offers) && (selected as any).offers) ||
-    (Array.isArray((selected as any).pyramid) && (selected as any).pyramid) ||
-    null;
-
-  if (Array.isArray(topOffers)) {
-    topOffers.forEach((item: any, idx: number) => {
-      const isLevelBucket = isRecord(item) && (Array.isArray((item as any).offers) || Array.isArray((item as any).items));
-      if (isLevelBucket) {
-        const level = (item as any).level ?? (item as any).offer_level ?? (item as any).type ?? (item as any).tier;
-        const offersArr = (item as any).offers ?? (item as any).items ?? [];
-        if (Array.isArray(offersArr)) {
-          offersArr.forEach((o: any, j: number) => pushOffer(level, o, j));
-        }
-      } else {
-        pushOffer((item as any)?.level ?? (item as any)?.offer_level ?? "", item, idx);
-      }
-    });
-    return out;
-  }
-
-  if (isRecord(selected) && Array.isArray((selected as any).offers)) {
-    const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
-    (selected as any).offers.forEach((o: any, idx: number) => pushOffer(lvl, o, idx));
-    return out;
-  }
 
   // Shape: map { lead_magnet, low_ticket, high_ticket, ... }
   if (isRecord(selected)) {
@@ -136,11 +108,11 @@ function normalizeSelectedOffers(userId: string, selected: any, updatedAt?: stri
     for (const [kLower, level] of KEY_TO_LEVEL) {
       const realKey = loweredKeys[kLower];
       if (!realKey) continue;
-      pushOffer(level, (selected as any)[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
+      pushOffer(level, selected[realKey], level === "lead_magnet" ? 0 : level === "low_ticket" ? 1 : 2);
     }
 
     if (out.length === 0) {
-      const lvl = (selected as any).level ?? (selected as any).offer_level ?? (selected as any).type ?? null;
+      const lvl = selected.level ?? selected.offer_level ?? selected.type ?? null;
       pushOffer(lvl, selected, 0);
     }
   }
@@ -171,8 +143,7 @@ export function formatPriceRange(offer: OfferOption): string | null {
 }
 
 /**
- * Load all offers from 3 sources and merge them into a single list.
- * Call from useEffect in any form component.
+ * Load all offers and merge them into a single list.
  */
 export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
   const {
@@ -184,7 +155,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
   const allOffers: OfferOption[] = [];
   const userId = user.id;
 
-  // ---- Source 1: business_plan.plan_json.selected_pyramid (DB key kept for compat) ----
+  // ---- Source 1: business_plan.plan_json.selected_pyramid (AI-generated offers) ----
   try {
     let planRow: any = null;
     const { data, error } = await supabase
@@ -204,9 +175,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
       const planJson: any = planRow.plan_json;
       const selected =
         planJson?.selected_pyramid ??
-        planJson?.pyramid?.selected_pyramid ??
-        planJson?.pyramid ??
-        planJson?.offer_pyramid ??
+        planJson?.selected_offer_pyramid ??
         null;
 
       if (selected) {
@@ -218,46 +187,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
     // continue
   }
 
-  // ---- Source 2: offer_pyramids table (legacy DB table — name kept for compat) ----
-  if (allOffers.length === 0) {
-    try {
-      const { data, error } = await supabase
-        .from("offer_pyramids")
-        .select("id,user_id,name,level,is_flagship,description,promise,price_min,price_max,main_outcome,format,delivery,updated_at")
-        .eq("user_id", userId)
-        .order("is_flagship", { ascending: false })
-        .order("updated_at", { ascending: false })
-        .limit(100);
-
-      if (!error && Array.isArray(data)) {
-        for (const r of data) {
-          const id = typeof r?.id === "string" ? r.id : "";
-          const name = typeof r?.name === "string" ? r.name : "";
-          if (!id || !name) continue;
-
-          allOffers.push({
-            id,
-            name,
-            level: typeof r?.level === "string" ? r.level : "",
-            source: "legacy",
-            is_flagship: typeof r?.is_flagship === "boolean" ? r.is_flagship : null,
-            description: typeof r?.description === "string" ? r.description : null,
-            promise: typeof r?.promise === "string" ? r.promise : null,
-            price_min: toNumberOrNull(r?.price_min),
-            price_max: toNumberOrNull(r?.price_max),
-            main_outcome: typeof r?.main_outcome === "string" ? r.main_outcome : null,
-            format: typeof r?.format === "string" ? r.format : null,
-            delivery: typeof r?.delivery === "string" ? r.delivery : null,
-            updated_at: typeof r?.updated_at === "string" ? r.updated_at : null,
-          });
-        }
-      }
-    } catch {
-      // continue
-    }
-  }
-
-  // ---- Source 3: business_profiles.offers (user's own/affiliate offers) ----
+  // ---- Source 2: business_profiles.offers (user's own/affiliate offers) ----
   try {
     const { data: profile } = await supabase
       .from("business_profiles")
@@ -273,7 +203,6 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
         const name = typeof o?.name === "string" ? o.name.trim() : "";
         if (!name) continue;
 
-        // Skip duplicates (same name already from generated/legacy)
         if (existingNames.has(name.toLowerCase())) continue;
 
         const priceStr = typeof o?.price === "string" ? o.price.trim() : typeof o?.price === "number" ? String(o.price) : "";

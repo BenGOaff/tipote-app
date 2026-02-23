@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -17,129 +17,75 @@ import {
   Gift,
   Zap,
   Crown,
+  Star,
   Check,
   ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  Package,
+  Target,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useToast } from "@/components/ui/use-toast";
 import { callStrategySSE } from "@/lib/strategySSE";
+import { callOfferPyramidSSE } from "@/lib/offerPyramidSSE";
+import type { PyramidSet, PyramidOffer } from "@/lib/offerPyramidSSE";
 
-
-interface OfferDetail {
-  title: string;
-  composition: string;
-  purpose: string;
-  format: string;
-}
-
-interface OfferSet {
-  id: string;
-  name: string;
-  strategy_summary: string;
-  lead_magnet: OfferDetail;
-  low_ticket: OfferDetail;
-  middle_ticket: OfferDetail;
-  high_ticket: OfferDetail;
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function asString(v: unknown): string {
   if (typeof v === "string") return v;
   if (typeof v === "number") return String(v);
-  if (typeof v === "boolean") return v ? "true" : "false";
   return "";
 }
 
-function normalizeNewSchema(p: any, idx: number): OfferSet {
-  const mid = p?.middle_ticket ?? p?.middleTicket ?? null;
+function asArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(asString).filter(Boolean);
+  return [];
+}
+
+function normalizePyramid(p: any, idx: number): PyramidSet {
+  const normalizeOffer = (raw: any): PyramidOffer | null => {
+    if (!raw) return null;
+    return {
+      title: asString(raw.title ?? raw.nom),
+      titles: asArray(raw.titles ?? raw.title_options).length > 0
+        ? asArray(raw.titles ?? raw.title_options)
+        : [asString(raw.title ?? raw.nom)].filter(Boolean),
+      pitch: asString(raw.pitch ?? raw.description),
+      problem: asString(raw.problem ?? raw.probleme),
+      transformation: asString(raw.transformation ?? raw.result),
+      format: asString(raw.format ?? raw.type),
+      price: typeof raw.price === "number" ? raw.price : undefined,
+      bonuses: asArray(raw.bonuses ?? raw.bonus),
+      guarantee: asString(raw.guarantee ?? raw.garantie),
+      cta: asString(raw.cta ?? raw.call_to_action),
+    };
+  };
+
   return {
     id: String(p?.id ?? idx),
-    name: String(p?.name ?? `Pyramide ${idx + 1}`),
-    strategy_summary: String(p?.strategy_summary ?? ""),
-    lead_magnet: {
-      title: asString(p?.lead_magnet?.title ?? ""),
-      composition: asString(p?.lead_magnet?.composition ?? ""),
-      purpose: asString(p?.lead_magnet?.purpose ?? ""),
-      format: asString(p?.lead_magnet?.format ?? ""),
-    },
-    low_ticket: {
-      title: asString(p?.low_ticket?.title ?? ""),
-      composition: asString(p?.low_ticket?.composition ?? ""),
-      purpose: asString(p?.low_ticket?.purpose ?? ""),
-      format: asString(p?.low_ticket?.format ?? ""),
-    },
-    middle_ticket: {
-      title: asString(mid?.title ?? ""),
-      composition: asString(mid?.composition ?? ""),
-      purpose: asString(mid?.purpose ?? ""),
-      format: asString(mid?.format ?? ""),
-    },
-    high_ticket: {
-      title: asString(p?.high_ticket?.title ?? ""),
-      composition: asString(p?.high_ticket?.composition ?? ""),
-      purpose: asString(p?.high_ticket?.purpose ?? ""),
-      format: asString(p?.high_ticket?.format ?? ""),
-    },
+    name: asString(p?.name ?? `Pyramide ${idx + 1}`),
+    strategy_summary: asString(p?.strategy_summary ?? p?.logique ?? ""),
+    lead_magnet: normalizeOffer(p?.lead_magnet ?? p?.leadMagnet),
+    low_ticket: normalizeOffer(p?.low_ticket ?? p?.lowTicket),
+    middle_ticket: normalizeOffer(p?.middle_ticket ?? p?.middleTicket),
+    high_ticket: normalizeOffer(p?.high_ticket ?? p?.highTicket),
   };
 }
 
-/**
- * Legacy schema support (ce que tu as dans business_plan.plan_json aujourd'hui):
- * offer_pyramids (DB key): [{ scenario, rationale, offers: [{name,type,price,description?}, ...] }]
- *
- * Mapping:
- * - lead_magnet = offers[0]
- * - low_ticket  = offers[1]
- * - high_ticket = last offer
- */
-function normalizeLegacySchema(p: any, idx: number): OfferSet {
-  const offers = Array.isArray(p?.offers) ? p.offers : [];
-  const lead = offers[0] ?? {};
-  const low = offers[1] ?? offers[0] ?? {};
-  const mid = offers.length >= 4 ? (offers[2] ?? {}) : {};
-  const high =
-    offers.length ? offers[offers.length - 1] : offers[1] ?? offers[0] ?? {};
-
-  const scenario = asString(p?.scenario ?? `Scénario ${idx + 1}`);
-  const rationale = asString(p?.rationale ?? "");
-
-  const toOffer = (o: any): OfferDetail => ({
-    title: asString(o?.name ?? o?.title ?? ""),
-    composition: asString(o?.description ?? o?.composition ?? ""),
-    purpose: "",
-    format: asString(o?.type ?? o?.format ?? ""),
-  });
-
-  return {
-    id: String(idx),
-    name: scenario,
-    strategy_summary: rationale,
-    lead_magnet: toOffer(lead),
-    low_ticket: toOffer(low),
-    middle_ticket: toOffer(mid),
-    high_ticket: toOffer(high),
-  };
-}
-
-function looksLikeNewSchema(p: any): boolean {
-  return !!p && (p.lead_magnet || p.low_ticket || p.middle_ticket || p.high_ticket);
-}
-
-// -------------------------
-// ✅ Fallback anti-timeout / 504
-// -------------------------
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 async function strategyExistsForUser(supabase: any, userId: string) {
   try {
-    // Table/colonne : chez toi c’est "strategies" + "user_id" (vu dans ton Supabase)
     const { data, error } = await supabase
       .from("strategies")
       .select("id")
       .eq("user_id", userId)
       .limit(1);
-
     if (error) return false;
     return Array.isArray(data) && data.length > 0;
   } catch {
@@ -148,7 +94,6 @@ async function strategyExistsForUser(supabase: any, userId: string) {
 }
 
 async function ensureStrategyAfterTimeout(supabase: any, userId: string) {
-  // 3 tentatives ~6-7 sec : suffisant pour le cas “504 mais la route a fini en DB”
   for (let i = 0; i < 3; i++) {
     await sleep(2200);
     const ok = await strategyExistsForUser(supabase, userId);
@@ -157,26 +102,167 @@ async function ensureStrategyAfterTimeout(supabase: any, userId: string) {
   return false;
 }
 
+// ─── Level icons ──────────────────────────────────────────────────────────────
+
+const LEVEL_CONFIG = {
+  lead_magnet: { icon: Gift, label: "Lead Magnet", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", badge: "Gratuit" },
+  low_ticket: { icon: Zap, label: "Low Ticket", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", badge: "7€–97€" },
+  middle_ticket: { icon: Star, label: "Middle Ticket", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", badge: "97€–497€" },
+  high_ticket: { icon: Crown, label: "High Ticket", color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200", badge: "497€+" },
+} as const;
+
+// ─── Offer card sub-component ─────────────────────────────────────────────────
+
+function OfferCard({ offer, level, expanded, onToggle }: {
+  offer: PyramidOffer;
+  level: keyof typeof LEVEL_CONFIG;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const cfg = LEVEL_CONFIG[level];
+  const Icon = cfg.icon;
+  const priceLabel = typeof offer.price === "number"
+    ? offer.price === 0 ? "Gratuit" : `${offer.price}€`
+    : cfg.badge;
+
+  return (
+    <div className={`rounded-xl border ${cfg.border} ${cfg.bg}/30 overflow-hidden transition-all`}>
+      {/* Header — always visible */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-white/50 transition-colors"
+      >
+        <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center`}>
+          <Icon className={`w-4 h-4 ${cfg.color}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-xs font-semibold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
+            <Badge variant="outline" className={`text-[10px] ${cfg.border} ${cfg.color}`}>{priceLabel}</Badge>
+          </div>
+          <p className="font-semibold text-sm mt-1 leading-snug">{offer.title}</p>
+        </div>
+        <div className="flex-shrink-0 mt-1">
+          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
+          {/* Alt titles */}
+          {offer.titles.length > 1 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Titres alternatifs :</p>
+              <div className="flex flex-wrap gap-1.5">
+                {offer.titles.map((t, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs font-medium">{t}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Problem */}
+          {offer.problem && (
+            <div className="flex items-start gap-2">
+              <Target className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Probleme urgent :</p>
+                <p className="text-sm">{offer.problem}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Pitch */}
+          {offer.pitch && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Pitch :</p>
+              <p className="text-sm leading-relaxed">{offer.pitch}</p>
+            </div>
+          )}
+
+          {/* Transformation */}
+          {offer.transformation && (
+            <div className="flex items-start gap-2">
+              <ArrowRight className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Transformation :</p>
+                <p className="text-sm font-medium text-green-700">{offer.transformation}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Format */}
+          {offer.format && (
+            <div className="flex items-center gap-2">
+              <Package className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <p className="text-sm"><span className="text-muted-foreground">Format :</span> {offer.format}</p>
+            </div>
+          )}
+
+          {/* Bonuses */}
+          {offer.bonuses.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Bonus inclus :</p>
+              <ul className="space-y-1">
+                {offer.bonuses.map((b, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-sm">
+                    <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Guarantee */}
+          {offer.guarantee && (
+            <div className="flex items-start gap-2 bg-green-50 rounded-lg px-3 py-2">
+              <ShieldCheck className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-green-700">Garantie :</p>
+                <p className="text-sm text-green-800">{offer.guarantee}</p>
+              </div>
+            </div>
+          )}
+
+          {/* CTA */}
+          {offer.cta && (
+            <div className="rounded-lg bg-primary/5 px-3 py-2">
+              <p className="text-sm font-semibold text-primary">{offer.cta}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function PyramidSelection() {
   const router = useRouter();
   const { toast } = useToast();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
-  const [offerSets, setOfferSets] = useState<OfferSet[]>([]);
-  const [selectedOfferSetId, setSelectedOfferSetId] = useState<string | null>(null);
+  const [offerSets, setOfferSets] = useState<PyramidSet[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [progressStep, setProgressStep] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [genError, setGenError] = useState(false);
+  const [expandedOffers, setExpandedOffers] = useState<Record<string, boolean>>({});
 
-  async function loadFromPlan() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const toggleOffer = useCallback((key: string) => {
+    setExpandedOffers((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
+  async function loadFromPlan(): Promise<{ ok: boolean; reason?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push("/");
-      router.refresh();
-      return { ok: false as const, reason: "no_user" as const };
+      return { ok: false, reason: "no_user" };
     }
 
     const { data: planRow, error: planError } = await supabase
@@ -186,47 +272,37 @@ export default function PyramidSelection() {
       .maybeSingle();
 
     if (planError) throw planError;
-
     const planJson = (planRow?.plan_json ?? null) as any;
-    const rawOfferSets = Array.isArray(planJson?.offer_pyramids)
-      ? planJson.offer_pyramids
-      : [];
+    const rawSets = Array.isArray(planJson?.offer_pyramids) ? planJson.offer_pyramids : [];
 
-    if (!rawOfferSets.length) {
-      return { ok: false as const, reason: "no_offers" as const };
-    }
+    if (!rawSets.length) return { ok: false, reason: "no_offers" };
 
-    const normalized: OfferSet[] = rawOfferSets
-      .slice(0, 3)
-      .map((p: any, idx: number) => {
-        if (looksLikeNewSchema(p)) return normalizeNewSchema(p, idx);
-        return normalizeLegacySchema(p, idx);
-      });
-
+    const normalized = rawSets.slice(0, 3).map((p: any, idx: number) => normalizePyramid(p, idx));
     setOfferSets(normalized);
-    return { ok: true as const };
+    return { ok: true };
   }
 
   async function generateAndLoad() {
     setLoading(true);
     setGenError(false);
-    try {
-      // 1) Try to load existing pyramids from plan
-      const firstTry = await loadFromPlan();
-      if (firstTry.ok) return;
-      if (firstTry.reason === "no_user") return;
+    setProgressStep("");
 
-      // 2) No pyramids yet — generate via strategy SSE
+    try {
+      const firstTry = await loadFromPlan();
+      if (firstTry.ok) { setLoading(false); return; }
+      if (firstTry.reason === "no_user") { setLoading(false); return; }
+
+      // Generate via SSE
       try {
-        await callStrategySSE({});
-      } catch {
-        // SSE may fail (no credits, timeout, etc.) — we still try loading
+        await callOfferPyramidSSE({
+          onProgress: (step) => setProgressStep(step),
+        });
+      } catch (err) {
+        console.error("Pyramid generation error:", err);
       }
 
       const secondTry = await loadFromPlan();
-      if (!secondTry.ok) {
-        setGenError(true);
-      }
+      if (!secondTry.ok) setGenError(true);
     } catch (error) {
       console.error("Error loading offer sets:", error);
       setGenError(true);
@@ -235,45 +311,35 @@ export default function PyramidSelection() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { generateAndLoad(); }, []);
 
   const selected = useMemo(() => {
-    if (!selectedOfferSetId) return null;
-    return offerSets.find((p) => p.id === selectedOfferSetId) ?? null;
-  }, [offerSets, selectedOfferSetId]);
+    if (!selectedId) return null;
+    return offerSets.find((p) => p.id === selectedId) ?? null;
+  }, [offerSets, selectedId]);
 
-  const handleSelectOfferSet = async () => {
+  const handleSelect = async () => {
     if (!selected) return;
 
     try {
       setSubmitting(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/");
-        router.refresh();
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/"); return; }
 
       const selectedIndex = offerSets.findIndex((p) => p.id === selected.id);
-      if (selectedIndex < 0) throw new Error("Index d'offres introuvable.");
+      if (selectedIndex < 0) throw new Error("Index introuvable.");
 
+      // 1) Save selection
       const patchRes = await fetch("/api/strategy/offer-pyramid", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ selectedIndex, pyramid: selected }),
       });
-
       const patchJson = await patchRes.json().catch(() => ({} as any));
-      if (!patchRes.ok) {
-        throw new Error(patchJson?.error || "Impossible de sauvegarder votre choix.");
-      }
+      if (!patchRes.ok) throw new Error(patchJson?.error || "Impossible de sauvegarder.");
 
-      // ✅ Générer la stratégie complète (idempotent, SSE stream)
+      // 2) Generate full strategy
       let fullOk = false;
       try {
         const result = await callStrategySSE({});
@@ -282,34 +348,29 @@ export default function PyramidSelection() {
         fullOk = false;
       }
       if (!fullOk) {
-        // ✅ fallback spécial timeouts (ex: 504) : la stratégie peut exister malgré tout
         const recovered = await ensureStrategyAfterTimeout(supabase, user.id);
-        if (!recovered) {
-          throw new Error("Impossible de générer la stratégie complète.");
-        }
+        if (!recovered) throw new Error("Impossible de generer la strategie.");
       }
 
-      // ✅ Puis seulement synchroniser les tâches depuis le plan (idempotent)
+      // 3) Sync tasks
       const syncRes = await fetch("/api/tasks/sync", { method: "POST" });
       const syncJson = await syncRes.json().catch(() => ({} as any));
       if (!syncRes.ok || syncJson?.ok === false) {
-        throw new Error(syncJson?.error || "Impossible de générer les tâches.");
+        throw new Error(syncJson?.error || "Impossible de generer les taches.");
       }
 
       toast({
-        title: "Pyramide sélectionnée",
-        description:
-          "Ta stratégie complète et tes tâches sont prêtes. Bienvenue dans Tipote !",
+        title: "Pyramide selectionnee",
+        description: "Ta strategie et tes taches sont pretes. Bienvenue dans Tipote !",
       });
 
       router.push("/app");
       router.refresh();
     } catch (error) {
-      console.error("Error selecting offer set:", error);
+      console.error("Error selecting:", error);
       toast({
         title: "Erreur",
-        description:
-          error instanceof Error ? error.message : "Impossible de sauvegarder votre choix.",
+        description: error instanceof Error ? error.message : "Impossible de sauvegarder.",
         variant: "destructive",
       });
     } finally {
@@ -317,20 +378,20 @@ export default function PyramidSelection() {
     }
   };
 
-  // === UI Lovable (structure JSX + className) ===
+  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-primary/5 flex flex-col items-center justify-center p-6">
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-6 max-w-lg">
           <div className="flex items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Création de tes pyramides d'offres...</h1>
-            <p className="text-muted-foreground max-w-md">
-              Nous préparons 3 pyramides d'offres adaptées à ton business.
+            <h1 className="text-2xl font-bold">Tipote cree tes pyramides d'offres...</h1>
+            <p className="text-muted-foreground">
+              {progressStep || "Analyse de ton profil et creation de 3 pyramides d'offres percutantes."}
             </p>
           </div>
         </div>
@@ -338,6 +399,7 @@ export default function PyramidSelection() {
     );
   }
 
+  // ── Error state ────────────────────────────────────────────────────────────
   if (genError && offerSets.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-primary/5 flex flex-col items-center justify-center p-6">
@@ -348,163 +410,170 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Génération en cours</h1>
+            <h1 className="text-2xl font-bold">Generation en cours</h1>
             <p className="text-muted-foreground">
-              La création de tes pyramides prend un peu plus de temps que prévu. Clique ci-dessous pour réessayer.
+              La creation de tes pyramides prend un peu plus de temps. Clique ci-dessous pour reessayer.
             </p>
           </div>
           <Button size="lg" onClick={() => generateAndLoad()}>
             <ArrowRight className="w-4 h-4 mr-2" />
-            Réessayer
+            Reessayer
           </Button>
         </div>
       </div>
     );
   }
 
+  // ── Selection UI ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-primary/5">
-      <main className="container mx-auto px-4 py-10 max-w-6xl">
+      <main className="container mx-auto px-4 py-10 max-w-7xl">
+        {/* Header */}
         <div className="text-center space-y-4 mb-10">
           <div className="flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-primary font-medium">Étape 1</span>
+            <span className="text-primary font-medium">Choisis ta direction</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">Choisis ta pyramide d'offres</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Tes 3 pyramides d'offres
+          </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Nous avons généré 3 pyramides d'offres sous des angles différents. Choisis celle qui correspond le mieux à ton style et à tes objectifs.
+            Tipote a genere 3 pyramides sous des angles differents. Explore chaque offre en detail, puis choisis celle qui te correspond le mieux.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
-          {offerSets.map((offerSet) => (
-            <Card
-              key={offerSet.id}
-              className={`relative overflow-hidden transition-all cursor-pointer border ${
-                selectedOfferSetId === offerSet.id
-                  ? "ring-2 ring-primary shadow-lg bg-primary/5 border-primary/30"
-                  : "hover:shadow-md bg-background border-border"
-              }`}
+        {/* Pyramid cards */}
+        <div className="grid lg:grid-cols-3 gap-6 mb-10">
+          {offerSets.map((offerSet, pyramidIdx) => {
+            const isSelected = selectedId === offerSet.id;
+            const pyramidLetters = ["A", "B", "C"];
+            const pyramidColors = [
+              { ring: "ring-blue-500", iconBg: "bg-blue-100", iconColor: "text-blue-600" },
+              { ring: "ring-amber-500", iconBg: "bg-amber-100", iconColor: "text-amber-600" },
+              { ring: "ring-purple-500", iconBg: "bg-purple-100", iconColor: "text-purple-600" },
+            ];
+            const colors = pyramidColors[pyramidIdx] ?? pyramidColors[0];
 
-              onClick={() => setSelectedOfferSetId(offerSet.id)}
-            >
-              {selectedOfferSetId === offerSet.id && (
-                <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <Check className="w-5 h-5 text-primary-foreground" />
-                </div>
-              )}
+            return (
+              <Card
+                key={offerSet.id}
+                className={`relative overflow-hidden transition-all cursor-pointer ${
+                  isSelected
+                    ? `ring-2 ${colors.ring} shadow-xl bg-white border-transparent`
+                    : "hover:shadow-lg bg-background border-border"
+                }`}
+                onClick={() => setSelectedId(offerSet.id)}
+              >
+                {/* Selection indicator */}
+                {isSelected && (
+                  <div className="absolute top-4 right-4 w-8 h-8 bg-primary rounded-full flex items-center justify-center z-10">
+                    <Check className="w-5 h-5 text-primary-foreground" />
+                  </div>
+                )}
 
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      offerSet.id === "A"
-                        ? "bg-primary/10"
-                        : offerSet.id === "B"
-                          ? "bg-secondary/10"
-                          : "bg-accent/10"
-                    }`}
-                  >
-                    {offerSet.id === "A" ? (
-                      <Gift className="w-6 h-6 text-primary" />
-                    ) : offerSet.id === "B" ? (
-                      <Zap className="w-6 h-6 text-secondary" />
-                    ) : (
-                      <Crown className="w-6 h-6 text-accent" />
-                    )}
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">{offerSet.name}</CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={`mt-1 ${
-                        offerSet.id === "A"
-                          ? "border-primary/20 text-primary"
-                          : offerSet.id === "B"
-                            ? "border-secondary/20 text-secondary"
-                            : "border-accent/20 text-accent"
-                      }`}
-                    >
-                      {offerSet.id === "A"
-                        ? "Simplicité"
-                        : offerSet.id === "B"
-                          ? "Expertise"
-                          : "Scalabilité"}
-                    </Badge>
-                  </div>
-                </div>
-                <CardDescription className="text-sm">{offerSet.strategy_summary}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Lead Magnet
-                    </p>
-                    <p className="font-medium text-sm">{offerSet.lead_magnet.title}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Low Ticket
-                    </p>
-                    <p className="font-medium text-sm">{offerSet.low_ticket.title}</p>
-                  </div>
-                  {offerSet.middle_ticket.title && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Middle Ticket
-                      </p>
-                      <p className="font-medium text-sm">{offerSet.middle_ticket.title}</p>
+                {/* Pyramid header */}
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colors.iconBg}`}>
+                      <span className={`text-lg font-bold ${colors.iconColor}`}>
+                        {pyramidLetters[pyramidIdx] ?? (pyramidIdx + 1)}
+                      </span>
                     </div>
-                  )}
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      High Ticket
-                    </p>
-                    <p className="font-medium text-sm">{offerSet.high_ticket.title}</p>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg leading-snug">{offerSet.name}</CardTitle>
+                    </div>
                   </div>
-                </div>
+                  {offerSet.strategy_summary && (
+                    <CardDescription className="text-sm leading-relaxed">
+                      {offerSet.strategy_summary}
+                    </CardDescription>
+                  )}
+                </CardHeader>
 
-                <div className="pt-2">
-                  <Button
-                    variant={selectedOfferSetId === offerSet.id ? "default" : "outline"}
-                    className="w-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOfferSetId(offerSet.id);
-                    }}
-                  >
-                    {selectedOfferSetId === offerSet.id ? "Sélectionnée" : "Choisir cette pyramide"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                {/* Offer levels */}
+                <CardContent className="space-y-3 pt-0">
+                  {offerSet.lead_magnet && (
+                    <OfferCard
+                      offer={offerSet.lead_magnet}
+                      level="lead_magnet"
+                      expanded={!!expandedOffers[`${offerSet.id}:lm`]}
+                      onToggle={() => toggleOffer(`${offerSet.id}:lm`)}
+                    />
+                  )}
+                  {offerSet.low_ticket && (
+                    <OfferCard
+                      offer={offerSet.low_ticket}
+                      level="low_ticket"
+                      expanded={!!expandedOffers[`${offerSet.id}:lt`]}
+                      onToggle={() => toggleOffer(`${offerSet.id}:lt`)}
+                    />
+                  )}
+                  {offerSet.middle_ticket && offerSet.middle_ticket.title && (
+                    <OfferCard
+                      offer={offerSet.middle_ticket}
+                      level="middle_ticket"
+                      expanded={!!expandedOffers[`${offerSet.id}:mt`]}
+                      onToggle={() => toggleOffer(`${offerSet.id}:mt`)}
+                    />
+                  )}
+                  {offerSet.high_ticket && (
+                    <OfferCard
+                      offer={offerSet.high_ticket}
+                      level="high_ticket"
+                      expanded={!!expandedOffers[`${offerSet.id}:ht`]}
+                      onToggle={() => toggleOffer(`${offerSet.id}:ht`)}
+                    />
+                  )}
+
+                  {/* Select button */}
+                  <div className="pt-3">
+                    <Button
+                      variant={isSelected ? "default" : "outline"}
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(offerSet.id);
+                      }}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Selectionnee
+                        </>
+                      ) : (
+                        "Choisir cette pyramide"
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
+        {/* Confirm button */}
         <div className="text-center space-y-4">
           <Button
             size="lg"
-            className="px-8"
-            disabled={!selectedOfferSetId || submitting}
-            onClick={handleSelectOfferSet}
+            className="px-10"
+            disabled={!selectedId || submitting}
+            onClick={handleSelect}
           >
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Validation...
+                Creation de ta strategie...
               </>
             ) : (
               <>
-                Continuer avec cette pyramide
+                Valider et generer ma strategie
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             )}
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Tu pourras modifier tes offres plus tard dans l'onglet "Ma Stratégie".
+            Tu pourras modifier tes offres plus tard dans ton dashboard.
           </p>
         </div>
       </main>

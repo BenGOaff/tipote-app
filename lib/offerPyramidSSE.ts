@@ -1,15 +1,36 @@
 // lib/offerPyramidSSE.ts
 // SSE consumer for POST /api/strategy/offer-pyramid
-// Generates ONLY the 3 offer pyramids (not the full strategy).
-// Uses heartbeats to prevent proxy 504 timeout.
+// Generates 3 offer pyramids. Uses heartbeats to prevent proxy 504 timeout.
+
+export type PyramidOffer = {
+  title: string;
+  titles: string[];
+  pitch: string;
+  problem: string;
+  transformation: string;
+  format: string;
+  price?: number;
+  bonuses: string[];
+  guarantee: string;
+  cta: string;
+};
+
+export type PyramidSet = {
+  id: string;
+  name: string;
+  strategy_summary: string;
+  lead_magnet: PyramidOffer | null;
+  low_ticket: PyramidOffer | null;
+  middle_ticket: PyramidOffer | null;
+  high_ticket: PyramidOffer | null;
+};
 
 export type PyramidSSEResult = {
   success: boolean;
   planId?: string | null;
   skipped?: boolean;
   reason?: string;
-  offer_pyramids?: unknown[];
-  offer_mode?: string;
+  offer_pyramids?: PyramidSet[];
   error?: string;
 };
 
@@ -32,7 +53,6 @@ export async function callOfferPyramidSSE(
     body: JSON.stringify({}),
   });
 
-  // Non-SSE error response (e.g. 401, 500 from pre-validation)
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("text/event-stream")) {
     const json = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
@@ -41,13 +61,11 @@ export async function callOfferPyramidSSE(
       callbacks?.onError?.(errMsg);
       throw new Error(errMsg);
     }
-    // Pre-validation returned JSON directly (e.g. skipped)
     const result = json as PyramidSSEResult;
     callbacks?.onResult?.(result);
     return result;
   }
 
-  // Parse SSE stream
   return new Promise<PyramidSSEResult>((resolve, reject) => {
     const reader = res.body?.getReader();
     if (!reader) {
@@ -82,11 +100,10 @@ export async function callOfferPyramidSSE(
               callbacks?.onError?.(data.error || "Unknown error");
               break;
             case "heartbeat":
-              // ignore, just keeps connection alive
               break;
           }
         } catch {
-          // ignore parse errors on individual events
+          // ignore parse errors
         }
         (processLine as any).__event = null;
       }
@@ -95,7 +112,6 @@ export async function callOfferPyramidSSE(
     function pump(): Promise<void> {
       return reader!.read().then(({ done, value }) => {
         if (done) {
-          // Process any remaining buffer
           if (buffer.trim()) {
             for (const line of buffer.split("\n")) {
               if (line.trim()) processLine(line.trim());
@@ -115,7 +131,7 @@ export async function callOfferPyramidSSE(
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // keep incomplete line in buffer
+        buffer = lines.pop() || "";
         for (const line of lines) {
           if (line.trim()) processLine(line.trim());
         }

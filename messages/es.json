@@ -950,6 +950,47 @@
         },
         "countPlaceholder": "Seguidores totales (todas las plataformas)"
       },
+      "urgentProblem": {
+        "question": "¿Qué problema urgente vas a resolver para tu cliente ideal?",
+        "description": "Un problema real que le estresa o le impide avanzar a diario.",
+        "placeholder": "Ej: No logra encontrar sus primeros clientes a pesar de meses de esfuerzo..."
+      },
+      "quickResult": {
+        "question": "¿Qué resultado rápido, visible y motivador puedes prometerle?",
+        "description": "Un resultado que cree un efecto \"wow\" en los primeros 7 días.",
+        "placeholder": "Ej: Conseguir sus 3 primeras reuniones cualificadas en 7 días..."
+      },
+      "topObstacles": {
+        "question": "¿Cuáles son los 3 mayores obstáculos que impiden a tu cliente obtener este resultado?",
+        "description": "Los bloqueos concretos que le frenan hoy.",
+        "placeholder": "Ej: 1) No sabe cómo posicionarse\n2) Tiene miedo de vender\n3) No tiene un sistema de captación..."
+      },
+      "uniqueMethods": {
+        "question": "¿Cuáles son tus métodos únicos o innovadores para ayudarle?",
+        "description": "Lo que te diferencia: tu método secreto, tu framework, tu enfoque único.",
+        "placeholder": "Ej: Mi método en 3 pasos para crear una oferta irresistible sin audiencia..."
+      },
+      "offerFormat": {
+        "question": "¿En qué formato(s) quieres ofrecer tus productos?",
+        "description": "Elige uno o varios formatos que te convengan.",
+        "options": {
+          "video_course": "Curso en vídeo",
+          "coaching": "Coaching / Mentoría",
+          "templates": "Plantillas listas para usar",
+          "membership": "Suscripción / Membresía",
+          "mastermind": "Mastermind / Grupo",
+          "checklist": "Checklist / Guía práctica",
+          "app_tool": "Aplicación / Herramienta",
+          "workshop": "Taller / Workshop en vivo",
+          "ebook": "E-book / PDF",
+          "audit": "Auditoría personalizada"
+        }
+      },
+      "uniqueness": {
+        "question": "¿Por qué tu oferta es única y diferente a todo lo que existe?",
+        "description": "Lo que la hace una opción obvia para tu cliente.",
+        "placeholder": "Ej: Porque combino X e Y de una forma que nadie más hace..."
+      },
       "refusals": {
         "question": "¿Hay algo que te niegas absolutamente a hacer?",
         "description": "No incluiré nada de esto en tu estrategia.",
