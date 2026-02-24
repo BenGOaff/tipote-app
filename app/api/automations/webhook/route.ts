@@ -219,14 +219,32 @@ async function processComment(params: {
     if (matched.comment_reply_variants?.length && comment_id) {
       const variants: string[] = matched.comment_reply_variants;
       const replyText = variants[Math.floor(Math.random() * variants.length)];
-      replyToComment(page_access_token, comment_id, replyText).catch((err) => {
-        console.error("[webhook] Comment reply failed:", err);
-      });
+      if (platform === "instagram") {
+        replyToInstagramComment(page_access_token, comment_id, replyText).catch((err) => {
+          console.error("[webhook] Instagram comment reply failed:", err);
+        });
+      } else {
+        replyToComment(page_access_token, comment_id, replyText).catch((err) => {
+          console.error("[webhook] Comment reply failed:", err);
+        });
+      }
     }
 
-    // 2. Send DM
+    // 2. Send DM — Instagram uses Private Reply (comment_id), Facebook uses recipient.id
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
-    const dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+    let dmResult: { ok: boolean; error?: string };
+
+    if (platform === "instagram" && comment_id) {
+      // Instagram : Private Reply via comment_id (méthode ManyChat)
+      dmResult = await sendInstagramPrivateReply(page_access_token, page_id, comment_id, dmText);
+      if (!dmResult.ok) {
+        console.warn("[webhook] Instagram Private Reply failed, trying recipient.id fallback:", dmResult.error);
+        dmResult = await sendInstagramDMById(page_access_token, page_id, sender_id, dmText);
+      }
+    } else {
+      // Facebook : DM via Messenger API
+      dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+    }
 
     if (!dmResult.ok) {
       console.error("[webhook] DM send failed:", dmResult.error);
@@ -423,6 +441,86 @@ function personalize(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
 }
 
+/**
+ * Instagram Private Reply : envoie un DM lié au commentaire (méthode ManyChat).
+ * Essaie IG Graph API puis Messenger Platform en fallback.
+ */
+async function sendInstagramPrivateReply(
+  igAccessToken: string,
+  igAccountId: string,
+  commentId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    // Tentative 1 : Instagram Graph API
+    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+        access_token: igAccessToken,
+      }),
+    });
+
+    if (res.ok) return { ok: true };
+
+    const errBody = await res.text();
+    console.warn(`[webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
+
+    // Tentative 2 : Messenger Platform
+    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${igAccessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+
+    if (fbRes.ok) return { ok: true };
+
+    const fbErr = await fbRes.text();
+    return { ok: false, error: `IG: ${errBody.slice(0, 150)} | FB: ${fbErr.slice(0, 150)}` };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
+ * Instagram DM fallback : envoie un DM via recipient.id.
+ */
+async function sendInstagramDMById(
+  igAccessToken: string,
+  igAccountId: string,
+  recipientId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+        messaging_type: "RESPONSE",
+        access_token: igAccessToken,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, error: errBody };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
 async function sendMetaDM(
   pageAccessToken: string,
   recipientId: string,
@@ -450,6 +548,19 @@ async function sendMetaDM(
     return { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };
+  }
+}
+
+async function replyToInstagramComment(igAccessToken: string, commentId: string, text: string): Promise<void> {
+  const res = await fetch(`https://graph.instagram.com/v21.0/${commentId}/replies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, access_token: igAccessToken }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Instagram comment reply failed: ${errBody}`);
   }
 }
 
