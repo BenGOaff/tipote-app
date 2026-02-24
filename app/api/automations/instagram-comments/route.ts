@@ -175,9 +175,41 @@ export async function GET(req: NextRequest) {
         let repliesSent = 0;
 
         for (const comment of newComments) {
+          // ── DEDUP: re-read meta from DB to catch webhook-processed comments ──
+          const { data: freshAuto } = await supabaseAdmin
+            .from("social_automations")
+            .select("meta")
+            .eq("id", auto.id)
+            .single();
+
+          const freshMeta = (freshAuto?.meta as Record<string, unknown>) ?? {};
+          const freshProcessed: string[] = Array.isArray(freshMeta.ig_processed_ids)
+            ? (freshMeta.ig_processed_ids as string[])
+            : [];
+
+          if (freshProcessed.includes(comment.id)) {
+            debug.push(`    SKIP ${comment.id} (already processed — fresh DB check)`);
+            continue;
+          }
+
+          // ── MARK AS PROCESSED BEFORE sending DM (prevents duplicates on next cycle) ──
+          const updatedIds = [...freshProcessed, comment.id].slice(-200);
+          await supabaseAdmin
+            .from("social_automations")
+            .update({
+              meta: {
+                ...freshMeta,
+                ig_last_comment_id: comment.id,
+                ig_last_processed: Math.floor(Date.now() / 1000),
+                ig_processed_ids: updatedIds,
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", auto.id);
+
           const firstName = extractFirstName(comment.username ?? comment.from_id);
 
-          // a) Répondre au commentaire (public, non-bloquant)
+          // a) Répondre au commentaire (public)
           if (auto.comment_reply_variants?.length) {
             const variants: string[] = auto.comment_reply_variants;
             const replyText = personalize(
@@ -216,35 +248,20 @@ export async function GET(req: NextRequest) {
           await new Promise((r) => setTimeout(r, 1500));
         }
 
-        // Mettre à jour les stats et le dernier commentaire traité
+        // Mettre à jour les stats
         const currentStats = (auto.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
-        const newestComment = newComments.reduce((a, b) =>
-          a.timestamp_unix >= b.timestamp_unix ? a : b
-        );
 
-        // Ajouter les IDs traités à la liste (garder max 200 pour ne pas exploser la taille)
-        for (const c of newComments) processedIds.add(c.id);
-        const updatedProcessedIds = [...processedIds].slice(-200);
-
-        const { error: updateErr } = await supabaseAdmin
-          .from("social_automations")
-          .update({
-            stats: {
-              triggers: (currentStats.triggers ?? 0) + newComments.length,
-              dms_sent: (currentStats.dms_sent ?? 0) + dmsSent,
-            },
-            meta: {
-              ...meta,
-              ig_last_comment_id: newestComment.id,
-              ig_last_processed: Math.floor(Date.now() / 1000),
-              ig_processed_ids: updatedProcessedIds,
-            },
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", auto.id);
-
-        if (updateErr) {
-          debug.push(`    Stats update failed: ${updateErr.message}`);
+        if (dmsSent > 0 || repliesSent > 0) {
+          await supabaseAdmin
+            .from("social_automations")
+            .update({
+              stats: {
+                triggers: (currentStats.triggers ?? 0) + newComments.length,
+                dms_sent: (currentStats.dms_sent ?? 0) + dmsSent,
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", auto.id);
         }
       }
     }

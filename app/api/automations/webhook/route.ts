@@ -215,6 +215,40 @@ async function processComment(params: {
 
     const firstName = extractFirstName(sender_name);
 
+    // ── DEDUP: check if this comment was already processed ──
+    if (comment_id) {
+      const { data: freshAuto } = await supabaseAdmin
+        .from("social_automations")
+        .select("meta")
+        .eq("id", matched.id)
+        .single();
+
+      const freshMeta = (freshAuto?.meta as Record<string, unknown>) ?? {};
+      const alreadyProcessed: string[] = Array.isArray(freshMeta.ig_processed_ids)
+        ? (freshMeta.ig_processed_ids as string[])
+        : [];
+
+      if (alreadyProcessed.includes(comment_id)) {
+        console.log(`[webhook] SKIP ${comment_id} — already processed`);
+        return NextResponse.json({ ok: true, matched: 1, skipped: true, reason: "already_processed" });
+      }
+
+      // ── MARK AS PROCESSED IMMEDIATELY (before sending DM) ──
+      const updatedIds = [...alreadyProcessed, comment_id].slice(-200);
+      await supabaseAdmin
+        .from("social_automations")
+        .update({
+          meta: {
+            ...freshMeta,
+            ig_last_comment_id: comment_id,
+            ig_last_processed: Math.floor(Date.now() / 1000),
+            ig_processed_ids: updatedIds,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matched.id);
+    }
+
     // 1. Reply to comment with random variant
     let commentReplyOk = false;
     if (matched.comment_reply_variants?.length && comment_id) {
@@ -238,14 +272,12 @@ async function processComment(params: {
     let dmResult: { ok: boolean; error?: string };
 
     if (platform === "instagram" && comment_id) {
-      // Instagram : Private Reply via comment_id (méthode ManyChat)
       dmResult = await sendInstagramPrivateReply(page_access_token, page_id, comment_id, dmText);
       if (!dmResult.ok) {
         console.warn("[webhook] Instagram Private Reply failed, trying recipient.id fallback:", dmResult.error);
         dmResult = await sendInstagramDMById(page_access_token, page_id, sender_id, dmText);
       }
     } else {
-      // Facebook : DM via Messenger API
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
     }
 
@@ -253,30 +285,14 @@ async function processComment(params: {
       console.error("[webhook] DM send failed:", dmResult.error);
     }
 
-    // 3. Update stats AND meta (so polling doesn't re-process this comment)
+    // 3. Update stats only (meta already saved above)
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
-    const currentMeta = (matched.meta as Record<string, unknown>) ?? {};
-    // Ajouter le comment_id à la liste des IDs traités (max 200)
-    const processedIds: string[] = Array.isArray(currentMeta.ig_processed_ids)
-      ? (currentMeta.ig_processed_ids as string[])
-      : [];
-    if (comment_id && !processedIds.includes(comment_id)) {
-      processedIds.push(comment_id);
-    }
-    const trimmedIds = processedIds.slice(-200);
-
     await supabaseAdmin
       .from("social_automations")
       .update({
         stats: {
           triggers: (currentStats.triggers ?? 0) + 1,
           dms_sent: (currentStats.dms_sent ?? 0) + (dmResult.ok ? 1 : 0),
-        },
-        meta: {
-          ...currentMeta,
-          ...(comment_id ? { ig_last_comment_id: comment_id } : {}),
-          ig_last_processed: Math.floor(Date.now() / 1000),
-          ig_processed_ids: trimmedIds,
         },
         updated_at: new Date().toISOString(),
       })
