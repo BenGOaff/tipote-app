@@ -10,7 +10,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { publishPost, uploadImageToLinkedIn } from "@/lib/linkedin";
-import { publishToFacebookPage, publishPhotoToFacebookPage, publishToThreads, publishToInstagram } from "@/lib/meta";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishVideoToFacebookPage, publishToThreads, publishToInstagram, publishVideoToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
 import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo } from "@/lib/tiktok";
@@ -431,10 +431,16 @@ export async function POST(req: NextRequest) {
         n8nPayload.image_urn = linkedInImageUrn;
       }
 
-      // Pour Instagram, l'image est REQUISE
-      if (platform === "instagram" && !resolvedImageUrl) {
+      // Ajouter la vidéo pour les plateformes qui la supportent (FB, Instagram, TikTok)
+      const videoUrl = contentItem.meta?.video_url;
+      if (videoUrl) {
+        n8nPayload.video_url = videoUrl;
+      }
+
+      // Pour Instagram, une image OU une vidéo est REQUISE
+      if (platform === "instagram" && !resolvedImageUrl && !videoUrl) {
         return NextResponse.json(
-          { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
+          { error: "Instagram nécessite une image ou une vidéo. Ajoute un média à ton contenu avant de publier." },
           { status: 400 }
         );
       }
@@ -521,19 +527,26 @@ export async function POST(req: NextRequest) {
     const liResult = await publishPost(accessToken, platformUserId, contentItem.content, directImageUrl);
     result = { ...liResult, postId: liResult.postUrn };
   } else if (platform === "facebook") {
-    if (directImageUrl) {
+    const fbVideoUrl = contentItem.meta?.video_url;
+    if (fbVideoUrl) {
+      result = await publishVideoToFacebookPage(accessToken, platformUserId, contentItem.content, fbVideoUrl);
+    } else if (directImageUrl) {
       result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
     } else {
       result = await publishToFacebookPage(accessToken, platformUserId, contentItem.content);
     }
   } else if (platform === "instagram") {
-    if (!directImageUrl) {
+    const igVideoUrl = contentItem.meta?.video_url;
+    if (igVideoUrl) {
+      result = await publishVideoToInstagram(accessToken, platformUserId, contentItem.content, igVideoUrl);
+    } else if (directImageUrl) {
+      result = await publishToInstagram(accessToken, platformUserId, contentItem.content, directImageUrl);
+    } else {
       return NextResponse.json(
-        { error: "Instagram nécessite une image. Ajoute une image a ton contenu avant de publier." },
+        { error: "Instagram nécessite une image ou une vidéo. Ajoute un média à ton contenu avant de publier." },
         { status: 400 }
       );
     }
-    result = await publishToInstagram(accessToken, platformUserId, contentItem.content, directImageUrl);
   } else if (platform === "threads") {
     result = await publishToThreads(accessToken, platformUserId, contentItem.content, directImageUrl);
   } else if (platform === "twitter") {

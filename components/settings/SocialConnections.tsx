@@ -108,29 +108,37 @@ const PLATFORMS: PlatformConfig[] = [
     hoverColor: "hover:bg-[#333333]",
     oauthUrl: "/api/auth/tiktok",
   },
-];
-
-// Plateformes en attente — "bientot disponible"
-const COMING_SOON_PLATFORMS = [
   {
     key: "facebook",
     label: "Facebook",
     icon: <Facebook className="h-5 w-5 text-[#1877F2]" />,
+    color: "bg-[#1877F2]",
     bgColor: "bg-[#1877F2]/10",
+    hoverColor: "hover:bg-[#1565C0]",
+    oauthUrl: "/api/auth/meta",
   },
   {
     key: "instagram",
     label: "Instagram",
     icon: <Instagram className="h-5 w-5 text-[#E1306C]" />,
+    color: "bg-[#E1306C]",
     bgColor: "bg-[#E1306C]/10",
+    hoverColor: "hover:bg-[#C2185B]",
+    oauthUrl: "/api/auth/instagram",
   },
   {
     key: "pinterest",
     label: "Pinterest",
     icon: <PinterestIcon className="h-5 w-5 text-[#E60023]" />,
+    color: "bg-[#E60023]",
     bgColor: "bg-[#E60023]/10",
+    hoverColor: "hover:bg-[#C50000]",
+    oauthUrl: "/api/auth/pinterest",
   },
 ];
+
+// Plateformes en attente — "bientot disponible"
+const COMING_SOON_PLATFORMS: { key: string; label: string; icon: React.ReactNode; bgColor: string }[] = [];
 
 export default function SocialConnections() {
   const { toast } = useToast();

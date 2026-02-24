@@ -503,6 +503,130 @@ export async function publishPhotoToFacebookPage(
   return { ok: false, error: text, statusCode: res.status };
 }
 
+/**
+ * Publie une vidéo sur une Page Facebook.
+ * Endpoint : POST /{page-id}/videos avec file_url (PULL_FROM_URL).
+ * Doc : https://developers.facebook.com/docs/video-api/publishing
+ */
+export async function publishVideoToFacebookPage(
+  pageAccessToken: string,
+  pageId: string,
+  description: string,
+  videoUrl: string
+): Promise<MetaPostResult> {
+  const res = await fetch(`${GRAPH_API_BASE}/${pageId}/videos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      file_url: videoUrl,
+      description,
+      access_token: pageAccessToken,
+    }),
+  });
+
+  if (res.ok) {
+    const json = await res.json();
+    return { ok: true, postId: json.id };
+  }
+
+  const text = await res.text();
+  return { ok: false, error: text, statusCode: res.status };
+}
+
+/**
+ * Publie une vidéo (Reel) sur Instagram.
+ * Processus en 3 étapes :
+ *   1. POST /{ig_user_id}/media (media_type=REELS, video_url, caption) -> creation_id
+ *   2. Poll status_code == FINISHED
+ *   3. POST /{ig_user_id}/media_publish (creation_id) -> media_id
+ * Doc : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/content-publishing#reels
+ */
+export async function publishVideoToInstagram(
+  accessToken: string,
+  igUserId: string,
+  caption: string,
+  videoUrl: string
+): Promise<MetaPostResult> {
+  // Étape 1 : Créer le container Reel
+  const createRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      media_type: "REELS",
+      video_url: videoUrl,
+      caption,
+      access_token: accessToken,
+    }),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    return { ok: false, error: `Instagram Reel container creation failed: ${errText}`, statusCode: createRes.status };
+  }
+
+  const createJson = await createRes.json();
+  const creationId = createJson.id;
+
+  if (!creationId) {
+    return { ok: false, error: "No creation_id returned from Instagram Reel", statusCode: 500 };
+  }
+
+  // Étape 2 : Attendre que le container soit prêt (vidéo = plus long que image)
+  const maxAttempts = 30;
+  const pollIntervalMs = 5000;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const statusRes = await fetch(
+      `${INSTAGRAM_GRAPH_BASE}/${creationId}?fields=status_code&access_token=${accessToken}`
+    );
+    if (!statusRes.ok) {
+      const errText = await statusRes.text();
+      return { ok: false, error: `Instagram Reel status check failed: ${errText}`, statusCode: statusRes.status };
+    }
+    const { status_code } = await statusRes.json();
+    if (status_code === "FINISHED") break;
+    if (status_code === "ERROR" || status_code === "EXPIRED") {
+      return { ok: false, error: `Instagram Reel container failed with status: ${status_code}`, statusCode: 500 };
+    }
+    if (attempt < maxAttempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    } else {
+      return { ok: false, error: "Instagram Reel container not ready after 150s", statusCode: 500 };
+    }
+  }
+
+  // Étape 3 : Publier le container
+  const publishRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      creation_id: creationId,
+      access_token: accessToken,
+    }),
+  });
+
+  if (publishRes.ok) {
+    const publishJson = await publishRes.json();
+    const mediaId = publishJson.id as string;
+
+    try {
+      const scRes = await fetch(
+        `${INSTAGRAM_GRAPH_BASE}/${mediaId}?fields=shortcode&access_token=${accessToken}`
+      );
+      if (scRes.ok) {
+        const scJson = await scRes.json();
+        if (scJson.shortcode) return { ok: true, postId: scJson.shortcode };
+      }
+    } catch {
+      // Fallback sur l'ID numérique
+    }
+
+    return { ok: true, postId: mediaId };
+  }
+
+  const errText = await publishRes.text();
+  return { ok: false, error: `Instagram Reel publish failed: ${errText}`, statusCode: publishRes.status };
+}
+
 // ----------------------------------------------------------------
 // Threads Publishing (2 etapes : create container -> publish)
 // Threads supporte les posts texte seuls ET les posts avec image.

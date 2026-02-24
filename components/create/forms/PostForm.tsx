@@ -117,6 +117,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [pinterestTitle, setPinterestTitle] = useState("");
   const isPinterest = platform === "pinterest";
   const isTikTok = platform === "tiktok";
+  const isInstagram = platform === "instagram";
+  const isFacebook = platform === "facebook";
+  const supportsVideo = isTikTok || isInstagram || isFacebook;
 
   // Video upload (TikTok, etc.)
   const [uploadedVideo, setUploadedVideo] = useState<UploadedVideo | null>(null);
@@ -596,8 +599,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             )}
           </div>
 
-          {/* Video upload (TikTok) */}
-          {generatedContent && isTikTok && (
+          {/* Video upload (TikTok, Instagram, Facebook) */}
+          {generatedContent && supportsVideo && (
             <VideoUploader
               video={uploadedVideo}
               onChange={setUploadedVideo}
@@ -623,6 +626,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               {isTikTok && !uploadedVideo && images.length === 0 && (
                 <p className="text-xs text-amber-600 -mt-1">
                   TikTok nécessite au moins une image ou une vidéo pour publier.
+                </p>
+              )}
+              {isInstagram && !uploadedVideo && images.length === 0 && (
+                <p className="text-xs text-amber-600 -mt-1">
+                  Instagram nécessite une image ou une vidéo (Reel) pour publier.
                 </p>
               )}
             </>
@@ -719,7 +727,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0)}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0) || (isInstagram && !uploadedVideo && images.length === 0)}
                       title={
                         isOverLimit
                           ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}`
@@ -729,6 +737,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                           ? "Ajoute une image (obligatoire pour Pinterest)"
                           : isTikTok && !uploadedVideo && images.length === 0
                           ? "Uploade une vidéo ou ajoute une image (obligatoire pour TikTok)"
+                          : isInstagram && !uploadedVideo && images.length === 0
+                          ? "Uploade une vidéo ou ajoute une image (obligatoire pour Instagram)"
                           : undefined
                       }
                     >
@@ -739,7 +749,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0)}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0) || (isInstagram && !uploadedVideo && images.length === 0)}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}
