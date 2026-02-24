@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap, Plus, MessageCircle } from "lucide-react";
+import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap, Plus, MessageCircle, Video } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
@@ -115,6 +115,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [pinterestLink, setPinterestLink] = useState("");
   const [pinterestTitle, setPinterestTitle] = useState("");
   const isPinterest = platform === "pinterest";
+  const isTikTok = platform === "tiktok";
+
+  // Video URL (TikTok, etc.)
+  const [videoUrl, setVideoUrl] = useState("");
 
   // Auto-comment state
   const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
@@ -175,7 +179,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
 
   // Fetch automations when platform = facebook ou instagram
   useEffect(() => {
-    if (platform !== "facebook" && platform !== "instagram") { setFbAutomations([]); setSelectedAutomationId(""); return; }
+    if (platform !== "facebook" && platform !== "instagram" && platform !== "tiktok") { setFbAutomations([]); setSelectedAutomationId(""); return; }
     let mounted = true;
     const supabase = getSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
@@ -284,6 +288,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
     if (isPinterest) {
       if (pinterestBoardId) meta.pinterest_board_id = pinterestBoardId;
       if (pinterestLink.trim()) meta.pinterest_link = pinterestLink.trim();
+    }
+
+    // Video URL (TikTok, etc.)
+    if (videoUrl.trim()) {
+      meta.video_url = videoUrl.trim();
     }
 
     // Auto-comment config in meta
@@ -585,6 +594,25 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             )}
           </div>
 
+          {/* Video URL (TikTok) */}
+          {generatedContent && isTikTok && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Video className="w-3.5 h-3.5 text-muted-foreground" />
+                URL de la vidéo
+              </Label>
+              <Input
+                placeholder="https://... (lien direct vers la vidéo MP4)"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                TikTok téléchargera la vidéo depuis cette URL. Formats : MP4, WebM. Max 4 Go, durée 3s-10min.
+                {!videoUrl.trim() && " Si pas de vidéo, ajoute au moins une image ci-dessous."}
+              </p>
+            </div>
+          )}
+
           {/* Image upload */}
           {generatedContent && (
             <>
@@ -592,11 +620,16 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 images={images}
                 onChange={setImages}
                 contentId={savedContentId ?? undefined}
-                maxImages={isPinterest ? 1 : 4}
+                maxImages={isPinterest ? 1 : isTikTok ? 35 : 4}
               />
               {isPinterest && (
                 <p className="text-xs text-muted-foreground -mt-1">
                   Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo.
+                </p>
+              )}
+              {isTikTok && !videoUrl.trim() && images.length === 0 && (
+                <p className="text-xs text-amber-600 -mt-1">
+                  TikTok nécessite au moins une image ou une vidéo pour publier.
                 </p>
               )}
             </>
@@ -625,8 +658,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             />
           )}
 
-          {/* Automation DM panel — Facebook + Instagram */}
-          {generatedContent && (platform === "facebook" || platform === "instagram") && (
+          {/* Automation DM panel — Facebook, Instagram, TikTok */}
+          {generatedContent && (platform === "facebook" || platform === "instagram" || platform === "tiktok") && (
             <div className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -634,7 +667,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                 </div>
                 <div>
                   <p className="font-semibold text-sm">Automatiser les réponses</p>
-                  <p className="text-xs text-muted-foreground">Envoie un DM auto quand quelqu&apos;un commente un mot-clé sur ce post</p>
+                  <p className="text-xs text-muted-foreground">
+                    {platform === "tiktok"
+                      ? "Répond automatiquement aux commentaires contenant un mot-clé sur ce post"
+                      : "Envoie un DM auto quand quelqu'un commente un mot-clé sur ce post"}
+                  </p>
                 </div>
               </div>
 
@@ -689,7 +726,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0))}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !videoUrl.trim() && images.length === 0)}
                       title={
                         isOverLimit
                           ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}`
@@ -697,6 +734,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                           ? "Sélectionne un tableau Pinterest"
                           : isPinterest && images.length === 0
                           ? "Ajoute une image (obligatoire pour Pinterest)"
+                          : isTikTok && !videoUrl.trim() && images.length === 0
+                          ? "Ajoute une vidéo ou une image (obligatoire pour TikTok)"
                           : undefined
                       }
                     >
@@ -707,7 +746,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0))}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !videoUrl.trim() && images.length === 0)}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}
@@ -780,7 +819,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       <QuickCreateAutomationModal
         open={createAutomationOpen}
         onOpenChange={setCreateAutomationOpen}
-        platform={platform as "facebook" | "instagram"}
+        platform={platform as "facebook" | "instagram" | "tiktok"}
         onCreated={(newAuto) => {
           setFbAutomations((prev) => [newAuto, ...prev]);
           setSelectedAutomationId(newAuto.id);
@@ -803,7 +842,7 @@ function QuickCreateAutomationModal({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  platform: "facebook" | "instagram";
+  platform: "facebook" | "instagram" | "tiktok";
   onCreated: (auto: QuickAuto) => void;
 }) {
   const [keyword, setKeyword] = useState("");
@@ -856,10 +895,12 @@ function QuickCreateAutomationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            Nouvelle automatisation {platform === "instagram" ? "Instagram" : "Facebook"}
+            Nouvelle automatisation {platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : "Facebook"}
           </DialogTitle>
           <DialogDescription>
-            Quand quelqu&apos;un commente le mot-clé sur votre post, Tipote lui envoie automatiquement un DM.
+            {platform === "tiktok"
+              ? "Quand quelqu'un commente le mot-clé sur votre post TikTok, Tipote répond automatiquement au commentaire."
+              : "Quand quelqu'un commente le mot-clé sur votre post, Tipote lui envoie automatiquement un DM."}
           </DialogDescription>
         </DialogHeader>
 

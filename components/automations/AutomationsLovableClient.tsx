@@ -47,7 +47,7 @@ import { toast } from "sonner";
 /* ─────────────────────────────────────────── Types ─── */
 
 type AutomationType = "comment_to_dm" | "comment_to_email";
-type Platform = "instagram" | "facebook";
+type Platform = "instagram" | "facebook" | "tiktok";
 
 interface SocialAutomation {
   id: string;
@@ -104,6 +104,15 @@ const DEFAULT_FORM: FormState = {
 
 /* ─────────────────────────── Platform status config ─── */
 
+// TikTok icon (inline SVG component matching lucide style)
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.72a8.2 8.2 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.15z" />
+    </svg>
+  );
+}
+
 const PLATFORM_STATUS = [
   {
     id: "facebook",
@@ -120,6 +129,15 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-pink-500",
     bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    icon: TikTokIcon,
+    status: "available" as const,
+    color: "text-black dark:text-white",
+    bg: "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800/40",
+    note: "Auto-réponse commentaires",
   },
   {
     id: "linkedin",
@@ -627,9 +645,9 @@ export default function AutomationsLovableClient() {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.platforms")}</label>
               <div className="flex gap-3 flex-wrap">
-                {(["facebook", "instagram"] as Platform[]).map((p) => {
-                  const PIcon = p === "instagram" ? Instagram : Facebook;
-                  const iconColor = p === "instagram" ? "text-pink-500" : "text-blue-500";
+                {(["facebook", "instagram", "tiktok"] as Platform[]).map((p) => {
+                  const PIcon = p === "instagram" ? Instagram : p === "tiktok" ? TikTokIcon : Facebook;
+                  const iconColor = p === "instagram" ? "text-pink-500" : p === "tiktok" ? "text-black dark:text-white" : "text-blue-500";
                   const selected = form.platforms[0] === p;
                   return (
                     <button
@@ -818,10 +836,12 @@ function AutomationCard({
   const platformIcons: Record<Platform, React.ElementType> = {
     instagram: Instagram,
     facebook: Facebook,
+    tiktok: TikTokIcon,
   };
   const platformColors: Record<Platform, string> = {
     instagram: "text-pink-500",
     facebook: "text-blue-500",
+    tiktok: "text-black dark:text-white",
   };
 
   const hasPostTarget = Boolean(auto.target_post_url?.trim());
@@ -1001,13 +1021,20 @@ function PostPickerModal({
 
     const apiUrl = platform === "instagram"
       ? "/api/social/instagram-posts"
+      : platform === "tiktok"
+      ? "/api/social/tiktok-videos"
       : "/api/social/facebook-posts";
 
     fetch(apiUrl)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else setPosts(d.posts ?? []);
+        else setPosts(d.posts ?? d.videos?.map((v: any) => ({
+          id: v.id,
+          message: v.title || v.video_description || "(sans titre)",
+          created_time: v.create_time ? new Date(v.create_time * 1000).toISOString() : "",
+          permalink_url: "",
+        })) ?? []);
       })
       .catch(() => setError("Impossible de charger les posts"))
       .finally(() => setLoading(false));
@@ -1019,9 +1046,9 @@ function PostPickerModal({
     } catch { return iso; }
   }
 
-  const PlatformIcon = platform === "instagram" ? Instagram : Facebook;
-  const iconColor = platform === "instagram" ? "text-pink-500" : "text-blue-500";
-  const platformLabel = platform === "instagram" ? "Instagram" : "Facebook";
+  const PlatformIcon = platform === "instagram" ? Instagram : platform === "tiktok" ? TikTokIcon : Facebook;
+  const iconColor = platform === "instagram" ? "text-pink-500" : platform === "tiktok" ? "text-black dark:text-white" : "text-blue-500";
+  const platformLabel = platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : "Facebook";
   const pickerTitle = `${t("form.targetPostPickTitle")} ${platformLabel}`;
 
   return (

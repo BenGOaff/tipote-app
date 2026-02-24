@@ -13,11 +13,19 @@ const TIKTOK_PHOTO_PUBLISH_URL = "https://open.tiktokapis.com/v2/post/publish/co
 const TIKTOK_VIDEO_PUBLISH_URL = "https://open.tiktokapis.com/v2/post/publish/video/init/";
 const TIKTOK_PUBLISH_STATUS_URL = "https://open.tiktokapis.com/v2/post/publish/status/fetch/";
 
+// Comment API
+const TIKTOK_COMMENT_LIST_URL = "https://open.tiktokapis.com/v2/comment/list/";
+const TIKTOK_COMMENT_REPLY_URL = "https://open.tiktokapis.com/v2/comment/reply/";
+const TIKTOK_VIDEO_LIST_URL = "https://open.tiktokapis.com/v2/video/list/";
+
 // Scopes nécessaires :
 // user.info.basic : profil de base
 // video.publish : publier des vidéos
 // video.upload : uploader des vidéos
-const SCOPES = ["user.info.basic", "video.publish", "video.upload"];
+// video.list : lister ses vidéos (pour le polling de commentaires)
+// comment.list : lister les commentaires
+// comment.list.manage : répondre aux commentaires
+const SCOPES = ["user.info.basic", "video.publish", "video.upload", "video.list", "comment.list", "comment.list.manage"];
 
 function getClientKey(): string {
   const key = process.env.TIKTOK_CLIENT_KEY;
@@ -337,4 +345,174 @@ export async function getPublishStatus(
     errorCode: json.error?.code,
     errorMessage: json.error?.message,
   };
+}
+
+// ----------------------------------------------------------------
+// Video List API
+// ----------------------------------------------------------------
+
+export type TikTokVideo = {
+  id: string;
+  title?: string;
+  create_time?: number;
+  cover_image_url?: string;
+  video_description?: string;
+};
+
+/**
+ * Liste les vidéos récentes du compte TikTok connecté.
+ * Utilisé pour le polling de commentaires.
+ */
+export async function listVideos(
+  accessToken: string,
+  maxCount: number = 20,
+  cursor?: number,
+): Promise<{ videos: TikTokVideo[]; cursor?: number; hasMore: boolean }> {
+  const body: Record<string, unknown> = { max_count: Math.min(maxCount, 20) };
+  if (cursor) body.cursor = cursor;
+
+  const res = await fetch(`${TIKTOK_VIDEO_LIST_URL}?fields=id,title,create_time,cover_image_url,video_description`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[TikTok] Video list error (${res.status}):`, text.slice(0, 300));
+    return { videos: [], hasMore: false };
+  }
+
+  const json = await res.json();
+  if (json.error?.code && json.error.code !== "ok") {
+    console.error(`[TikTok] Video list API error: ${json.error.code} — ${json.error.message}`);
+    return { videos: [], hasMore: false };
+  }
+
+  return {
+    videos: json.data?.videos ?? [],
+    cursor: json.data?.cursor,
+    hasMore: json.data?.has_more ?? false,
+  };
+}
+
+// ----------------------------------------------------------------
+// Comment List API
+// ----------------------------------------------------------------
+
+export type TikTokComment = {
+  id: string;
+  text: string;
+  create_time: number;
+  user_id?: string;
+  username?: string;
+  parent_comment_id?: string;
+  likes?: number;
+};
+
+/**
+ * Liste les commentaires d'une vidéo TikTok.
+ * Nécessite le scope comment.list.
+ */
+export async function listComments(
+  accessToken: string,
+  videoId: string,
+  maxCount: number = 50,
+  cursor?: number,
+): Promise<{ comments: TikTokComment[]; cursor?: number; hasMore: boolean }> {
+  const body: Record<string, unknown> = {
+    video_id: videoId,
+    max_count: Math.min(maxCount, 50),
+  };
+  if (cursor) body.cursor = cursor;
+
+  const res = await fetch(`${TIKTOK_COMMENT_LIST_URL}?fields=id,text,create_time,user.open_id,user.display_name,parent_comment_id,likes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[TikTok] Comment list error (${res.status}):`, text.slice(0, 300));
+    return { comments: [], hasMore: false };
+  }
+
+  const json = await res.json();
+  if (json.error?.code && json.error.code !== "ok") {
+    console.error(`[TikTok] Comment list API error: ${json.error.code} — ${json.error.message}`);
+    return { comments: [], hasMore: false };
+  }
+
+  const rawComments = json.data?.comments ?? [];
+  const comments: TikTokComment[] = rawComments.map((c: any) => ({
+    id: c.id,
+    text: c.text ?? "",
+    create_time: c.create_time ?? 0,
+    user_id: c.user?.open_id,
+    username: c.user?.display_name,
+    parent_comment_id: c.parent_comment_id,
+    likes: c.likes,
+  }));
+
+  return {
+    comments,
+    cursor: json.data?.cursor,
+    hasMore: json.data?.has_more ?? false,
+  };
+}
+
+// ----------------------------------------------------------------
+// Comment Reply API
+// ----------------------------------------------------------------
+
+export type TikTokReplyResult = {
+  ok: boolean;
+  commentId?: string;
+  error?: string;
+};
+
+/**
+ * Répond à un commentaire sur TikTok.
+ * Nécessite le scope comment.list.manage.
+ */
+export async function replyToComment(
+  accessToken: string,
+  videoId: string,
+  commentId: string,
+  text: string,
+): Promise<TikTokReplyResult> {
+  const body = {
+    video_id: videoId,
+    comment_id: commentId,
+    text: text.slice(0, 150), // TikTok comment limit
+  };
+
+  const res = await fetch(TIKTOK_COMMENT_REPLY_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[TikTok] Comment reply error (${res.status}):`, text.slice(0, 300));
+    return { ok: false, error: `TikTok reply error (${res.status})` };
+  }
+
+  const json = await res.json();
+  if (json.error?.code && json.error.code !== "ok") {
+    return { ok: false, error: `TikTok: ${json.error.code} — ${json.error.message}` };
+  }
+
+  return { ok: true, commentId: json.data?.comment_id };
 }

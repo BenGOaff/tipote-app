@@ -1,0 +1,157 @@
+{
+  "name": "Tipote - TikTok Comment Auto-Reply",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/automations/tiktok-comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "poll-comments",
+      "name": "Poll TikTok Comments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300],
+      "notes": "Appelle l'API Tipote qui : 1) Récupère les automatisations TikTok actives, 2) Liste les vidéos récentes, 3) Vérifie les commentaires avec mot-clé, 4) Répond automatiquement."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-replies",
+              "leftValue": "={{ $json.replies }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-replies",
+      "name": "Had Replies?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "notes": "Vérifie si des réponses automatiques ont été envoyées ce cycle."
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconsole.log(`[TikTok] Auto-reply cycle: ${data.processed} comments processed, ${data.replies} replies sent, ${data.errors} errors`);\nreturn [$input.first()];"
+      },
+      "id": "log-results",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {},
+      "id": "no-replies",
+      "name": "No New Replies",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Poll TikTok Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll TikTok Comments": {
+      "main": [
+        [
+          {
+            "node": "Had Replies?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Had Replies?": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New Replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote",
+      "createdAt": "2026-02-24T00:00:00.000Z",
+      "updatedAt": "2026-02-24T00:00:00.000Z"
+    },
+    {
+      "name": "automations"
+    },
+    {
+      "name": "tiktok"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "notes": "## Workflow TikTok Auto-Reply\n\nCe workflow poll les commentaires TikTok toutes les 3 minutes et répond automatiquement aux commentaires contenant un mot-clé.\n\n### Variables d'environnement requises dans n8n\n\n- `TIPOTE_APP_URL` : ex. https://app.tipote.com\n- `N8N_SHARED_SECRET` : même valeur que dans le .env Tipote\n\n### Architecture\n\n```\nCron (toutes les 3 min)\n  → Appel GET /api/automations/tiktok-comments\n  → Tipote récupère les automations TikTok actives\n  → Pour chaque user : liste les vidéos récentes\n  → Pour chaque vidéo : liste les commentaires\n  → Filtre les commentaires contenant le mot-clé\n  → Répond via TikTok Comment Reply API\n```\n\n### Différences avec Facebook/Instagram\n\n- **Pas de webhooks** : TikTok n'envoie pas de webhooks pour les commentaires, d'où le polling.\n- **Pas de DM** : TikTok n'a pas d'API de messagerie. On fait de l'auto-réponse en commentaire à la place.\n- **Rate limits** : 1 seconde de pause entre chaque réponse pour respecter les limites TikTok."
+  }
+}
