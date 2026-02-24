@@ -64,17 +64,16 @@ function getAppSecret(): string {
   return secret;
 }
 
-// Instagram Professional Login utilise un App ID / App Secret séparé
-// (visible dans Meta Developer > ton app Instagram > Paramètres de base)
+// Instagram Professional Login : même app Meta, fallback sur META_APP_ID / META_APP_SECRET
 function getInstagramAppId(): string {
-  const id = process.env.INSTAGRAM_APP_ID;
-  if (!id) throw new Error("Missing env INSTAGRAM_APP_ID");
+  const id = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  if (!id) throw new Error("Missing env INSTAGRAM_APP_ID or META_APP_ID");
   return id;
 }
 
 function getInstagramAppSecret(): string {
-  const secret = process.env.INSTAGRAM_APP_SECRET;
-  if (!secret) throw new Error("Missing env INSTAGRAM_APP_SECRET");
+  const secret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  if (!secret) throw new Error("Missing env INSTAGRAM_APP_SECRET or META_APP_SECRET");
   return secret;
 }
 
@@ -84,16 +83,16 @@ function getInstagramRedirectUri(): string {
   return `${appUrl}/api/auth/instagram/callback`;
 }
 
-// Threads utilise un App ID / App Secret separe (visible dans Meta Developer > Threads > Settings)
+// Threads : même app Meta, fallback sur META_APP_ID / META_APP_SECRET
 function getThreadsAppId(): string {
-  const id = process.env.THREADS_APP_ID;
-  if (!id) throw new Error("Missing env THREADS_APP_ID");
+  const id = process.env.THREADS_APP_ID ?? process.env.META_APP_ID;
+  if (!id) throw new Error("Missing env THREADS_APP_ID or META_APP_ID");
   return id;
 }
 
 function getThreadsAppSecret(): string {
-  const secret = process.env.THREADS_APP_SECRET;
-  if (!secret) throw new Error("Missing env THREADS_APP_SECRET");
+  const secret = process.env.THREADS_APP_SECRET ?? process.env.META_APP_SECRET;
+  if (!secret) throw new Error("Missing env THREADS_APP_SECRET or META_APP_SECRET");
   return secret;
 }
 
