@@ -18,7 +18,8 @@ import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
-const INSTAGRAM_GRAPH_BASE = "https://graph.instagram.com/v21.0";
+const IG_GRAPH = "https://graph.instagram.com/v21.0";
+const FB_GRAPH = "https://graph.facebook.com/v21.0";
 
 export async function GET(req: NextRequest) {
   // Auth par header secret (n8n ou cron)
@@ -115,6 +116,14 @@ export async function GET(req: NextRequest) {
 
         // Fetch les commentaires du post
         const fetchResult = await fetchComments(accessToken, targetPostId, igUsername);
+
+        // Always include diagnostics for debugging
+        if (fetchResult.diagnostics?.length) {
+          for (const d of fetchResult.diagnostics) {
+            debug.push(`    [diag] ${d}`);
+          }
+        }
+
         if (fetchResult.error) {
           debug.push(`    Fetch comments error: ${fetchResult.error}`);
           results.errors++;
@@ -252,64 +261,104 @@ interface IGComment {
 interface FetchResult {
   comments: IGComment[];
   error?: string;
+  diagnostics?: string[];
 }
 
 /**
  * Fetch comments from an Instagram media post.
- * Tries multiple field combinations for compatibility with both
- * Instagram Login API and legacy Graph API tokens.
+ * Strategy:
+ *   1. First verify the media exists and get its comments_count
+ *   2. Try graph.instagram.com with compatible fields
+ *   3. Fallback to graph.facebook.com (used by ManyChat-style apps)
+ *   4. Return full diagnostics for debugging
  */
 async function fetchComments(
   accessToken: string,
   mediaId: string,
   ownerUsername: string,
 ): Promise<FetchResult> {
-  // Stratégie 1 : champs compatibles Instagram API with Instagram Login
-  // L'API avec Instagram Login supporte `username` directement (pas `from{id,username}`)
+  const diag: string[] = [];
+
+  // Step 1: Verify the media exists and check comments_count
+  try {
+    const mediaCheckUrl = `${IG_GRAPH}/${mediaId}?fields=id,caption,comments_count,timestamp&access_token=${accessToken}`;
+    const mediaRes = await fetch(mediaCheckUrl, { cache: "no-store" });
+    if (mediaRes.ok) {
+      const mediaJson = await mediaRes.json();
+      diag.push(`Media check OK: id=${mediaJson.id}, comments_count=${mediaJson.comments_count ?? "N/A"}, caption="${(mediaJson.caption ?? "").slice(0, 50)}"`);
+    } else {
+      const errText = await mediaRes.text();
+      diag.push(`Media check FAILED (${mediaRes.status}): ${errText.slice(0, 200)}`);
+    }
+  } catch (err) {
+    diag.push(`Media check error: ${String(err).slice(0, 150)}`);
+  }
+
+  // Step 2: Try fetching comments with multiple base URLs and field sets
+  const attempts: { base: string; label: string }[] = [
+    { base: IG_GRAPH, label: "graph.instagram.com" },
+    { base: FB_GRAPH, label: "graph.facebook.com" },
+  ];
+
   const fieldSets = [
     "id,text,timestamp,username",
     "id,text,timestamp,from{id,username}",
     "id,text,timestamp",
   ];
 
-  for (const fields of fieldSets) {
-    try {
-      const url = `${INSTAGRAM_GRAPH_BASE}/${mediaId}/comments?fields=${encodeURIComponent(fields)}&limit=50&access_token=${accessToken}`;
-      const res = await fetch(url, { cache: "no-store" });
+  for (const { base, label } of attempts) {
+    for (const fields of fieldSets) {
+      try {
+        const url = `${base}/${mediaId}/comments?fields=${encodeURIComponent(fields)}&limit=50&access_token=${accessToken}`;
+        const res = await fetch(url, { cache: "no-store" });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.warn(`[ig-comments] Fetch with fields="${fields}" failed (${res.status}):`, errText.slice(0, 200));
-        // Try next field set
+        if (!res.ok) {
+          const errText = await res.text();
+          diag.push(`${label} fields="${fields}" → ${res.status}: ${errText.slice(0, 150)}`);
+          continue;
+        }
+
+        const json = await res.json();
+        const data = json.data ?? [];
+        diag.push(`${label} fields="${fields}" → 200 OK, ${data.length} comment(s), raw_keys=[${Object.keys(json).join(",")}]`);
+
+        // Log pagination info if present
+        if (json.paging) {
+          diag.push(`  paging: ${JSON.stringify(json.paging).slice(0, 150)}`);
+        }
+
+        // If we got empty data but the endpoint worked, log it and try next base URL
+        if (!data.length) {
+          // Don't return yet — try the other base URL as it might work
+          continue;
+        }
+
+        // Parse comments
+        const comments: IGComment[] = data.map((c: any) => ({
+          id: c.id,
+          text: c.text ?? "",
+          timestamp: c.timestamp,
+          timestamp_unix: c.timestamp ? Math.floor(new Date(c.timestamp).getTime() / 1000) : 0,
+          from_id: c.from?.id ?? "",
+          username: c.username ?? c.from?.username ?? "",
+        }));
+
+        // Log first comment for debugging
+        if (comments.length > 0) {
+          const first = comments[0];
+          diag.push(`  First comment: "${first.text.slice(0, 50)}" by ${first.username || first.from_id || "unknown"}`);
+        }
+
+        console.log(`[ig-comments] Fetched ${comments.length} comments via ${label} fields="${fields}"`);
+        return { comments, diagnostics: diag };
+      } catch (err) {
+        diag.push(`${label} fields="${fields}" → error: ${String(err).slice(0, 150)}`);
         continue;
       }
-
-      const json = await res.json();
-      const data = json.data ?? [];
-
-      if (!data.length) {
-        return { comments: [] };
-      }
-
-      const comments: IGComment[] = data.map((c: any) => ({
-        id: c.id,
-        text: c.text ?? "",
-        timestamp: c.timestamp,
-        timestamp_unix: c.timestamp ? Math.floor(new Date(c.timestamp).getTime() / 1000) : 0,
-        // Handle both direct `username` field and nested `from.username`
-        from_id: c.from?.id ?? "",
-        username: c.username ?? c.from?.username ?? "",
-      }));
-
-      console.log(`[ig-comments] Fetched ${comments.length} comments with fields="${fields}"`);
-      return { comments };
-    } catch (err) {
-      console.error(`[ig-comments] fetchComments error with fields="${fields}":`, err);
-      continue;
     }
   }
 
-  return { comments: [], error: "All field combinations failed for fetching comments" };
+  return { comments: [], diagnostics: diag, error: "All attempts returned 0 comments" };
 }
 
 /**
@@ -329,7 +378,7 @@ async function sendInstagramPrivateReply(
 
   // Tentative 1 : Instagram Graph API (endpoint Instagram Login)
   try {
-    const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/messages`, {
+    const res = await fetch(`${IG_GRAPH}/${igUserId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -384,7 +433,7 @@ async function replyToInstagramComment(
   commentId: string,
   text: string,
 ): Promise<void> {
-  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/${commentId}/replies`, {
+  const res = await fetch(`${IG_GRAPH}/${commentId}/replies`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: text, access_token: accessToken }),
