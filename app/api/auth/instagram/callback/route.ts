@@ -4,7 +4,7 @@
 //  1. Vérification webhook Meta (hub.mode=subscribe)
 //     → Meta envoie hub.mode, hub.verify_token, hub.challenge
 //     → On répond avec hub.challenge pour confirmer le webhook
-//     → Variables : INSTAGRAM_WEBHOOK_VERIFY_TOKEN (ex: "tipote-meta-verify-2026")
+//     → Variables : INSTAGRAM_WEBHOOK_VERIFY_TOKEN (fallback: META_WEBHOOK_VERIFY_TOKEN)
 //
 //  2. Callback OAuth Instagram Professional Login (param "code")
 //     → Instagram redirige ici après autorisation utilisateur
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const hubChallenge = searchParams.get("hub.challenge");
 
   if (hubMode === "subscribe") {
-    const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
+    const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
     if (hubToken === verifyToken && hubChallenge) {
       console.log("[Instagram webhook] Verification OK");
       return new NextResponse(hubChallenge, { status: 200 });
@@ -175,9 +175,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Abonnement webhook au niveau de l'app (non-bloquant)
-    const appId = process.env.INSTAGRAM_APP_ID;
-    const appSecret = process.env.INSTAGRAM_APP_SECRET;
-    const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
+    // Fallback: même app Meta → réutilise META_APP_ID/SECRET si les vars Instagram ne sont pas définies
+    const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+    const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+    const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
     const webhookCallbackUrl = `${appUrl}/api/auth/instagram/callback`;
 
     if (appId && appSecret && verifyToken) {
@@ -203,7 +204,7 @@ export async function GET(req: NextRequest) {
         console.error("[Instagram callback] App webhook subscription error:", err);
       }
     } else {
-      console.warn("[Instagram callback] Missing INSTAGRAM env vars — skipping webhook subscription");
+      console.warn("[Instagram callback] Missing INSTAGRAM/META env vars — skipping webhook subscription");
     }
 
     console.log("[Instagram callback] Connection saved successfully!");
