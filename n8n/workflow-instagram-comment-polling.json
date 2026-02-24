@@ -73,7 +73,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconsole.log(`[Instagram] Comment-to-DM cycle: ${data.processed} comments processed, ${data.replies} comment replies, ${data.dms_sent} DMs sent, ${data.errors} errors`);\nreturn [$input.first()];"
+        "jsCode": "const data = $input.first().json;\nconst debug = (data.debug || []).join('\\n  ');\nconsole.log(`[Instagram] Comment-to-DM cycle: ${data.processed} processed, ${data.replies} replies, ${data.dms_sent} DMs, ${data.errors} errors\\n  ${debug}`);\nreturn [$input.first()];"
       },
       "id": "log-results",
       "name": "Log Results",
@@ -82,11 +82,13 @@
       "position": [910, 240]
     },
     {
-      "parameters": {},
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst debug = (data.debug || []).join('\\n  ');\nconsole.log(`[Instagram] No DMs this cycle. Debug:\\n  ${debug}`);\nreturn [$input.first()];"
+      },
       "id": "no-dms",
-      "name": "No New DMs",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "name": "No New DMs (Log Debug)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [910, 400]
     }
   ],
@@ -124,7 +126,7 @@
         ],
         [
           {
-            "node": "No New DMs",
+            "node": "No New DMs (Log Debug)",
             "type": "main",
             "index": 0
           }

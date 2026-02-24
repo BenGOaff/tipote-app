@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
   }
 
   const results = { processed: 0, replies: 0, dms_sent: 0, errors: 0 };
+  const debug: string[] = [];
 
   try {
     // 1. Récupérer toutes les automatisations Instagram actives
@@ -37,9 +38,17 @@ export async function GET(req: NextRequest) {
       .eq("enabled", true)
       .contains("platforms", ["instagram"]);
 
-    if (autoErr || !automations?.length) {
-      return NextResponse.json({ ok: true, ...results, message: "No Instagram automations" });
+    if (autoErr) {
+      debug.push(`DB error: ${autoErr.message}`);
+      return NextResponse.json({ ok: false, ...results, debug });
     }
+
+    if (!automations?.length) {
+      debug.push("No active Instagram automations found in DB");
+      return NextResponse.json({ ok: true, ...results, debug });
+    }
+
+    debug.push(`Found ${automations.length} active automation(s)`);
 
     // 2. Grouper les automatisations par user_id
     const autosByUser = new Map<string, typeof automations>();
@@ -54,19 +63,19 @@ export async function GET(req: NextRequest) {
       // Récupérer la connexion Instagram
       const { data: conn } = await supabaseAdmin
         .from("social_connections")
-        .select("id, platform_user_id, access_token_encrypted, token_expires_at")
+        .select("id, platform_user_id, platform_username, access_token_encrypted, token_expires_at")
         .eq("user_id", userId)
         .eq("platform", "instagram")
         .maybeSingle();
 
       if (!conn?.access_token_encrypted) {
-        console.warn(`[ig-comments] No Instagram connection for user ${userId}`);
+        debug.push(`User ${userId.slice(0, 8)}…: no Instagram connection found`);
         continue;
       }
 
       // Vérifier que le token n'est pas expiré
       if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date()) {
-        console.warn(`[ig-comments] Token expired for user ${userId}, skipping`);
+        debug.push(`User ${userId.slice(0, 8)}…: token expired (${conn.token_expires_at})`);
         continue;
       }
 
@@ -74,23 +83,30 @@ export async function GET(req: NextRequest) {
       try {
         accessToken = decrypt(conn.access_token_encrypted);
       } catch {
-        console.error(`[ig-comments] Token decryption failed for user ${userId}`);
+        debug.push(`User ${userId.slice(0, 8)}…: token decryption failed`);
         continue;
       }
 
       const igUserId = conn.platform_user_id;
+      const igUsername = conn.platform_username ?? "";
+      debug.push(`User ${userId.slice(0, 8)}…: connection OK (ig_id=${igUserId}, username=${igUsername})`);
 
       // Pour chaque automatisation de ce user
       for (const auto of userAutos) {
         const keyword = (auto.trigger_keyword ?? "").toUpperCase();
-        if (!keyword) continue;
+        if (!keyword) {
+          debug.push(`  Auto ${auto.id.slice(0, 8)}…: no trigger keyword, skipping`);
+          continue;
+        }
 
         // Récupérer le target post ID
         const targetPostId = auto.target_post_url?.trim();
         if (!targetPostId) {
-          console.warn(`[ig-comments] Automation ${auto.id} has no target post, skipping`);
+          debug.push(`  Auto ${auto.id.slice(0, 8)}…: no target post, skipping`);
           continue;
         }
+
+        debug.push(`  Auto ${auto.id.slice(0, 8)}… "${auto.name}": keyword="${keyword}", post=${targetPostId}`);
 
         // Récupérer le dernier timestamp traité
         const meta = (auto.meta as Record<string, unknown>) ?? {};
@@ -98,25 +114,48 @@ export async function GET(req: NextRequest) {
         const lastProcessedTs = (meta.ig_last_processed as number) ?? 0;
 
         // Fetch les commentaires du post
-        const comments = await fetchComments(accessToken, targetPostId);
-        if (!comments.length) continue;
+        const fetchResult = await fetchComments(accessToken, targetPostId, igUsername);
+        if (fetchResult.error) {
+          debug.push(`    Fetch comments error: ${fetchResult.error}`);
+          results.errors++;
+          continue;
+        }
 
+        const comments = fetchResult.comments;
+        if (!comments.length) {
+          debug.push(`    No comments found on post ${targetPostId}`);
+          continue;
+        }
+
+        debug.push(`    Fetched ${comments.length} comment(s) from post`);
         results.processed += comments.length;
 
         // Filtrer les nouveaux commentaires contenant le mot-clé
         const newComments = comments.filter((c) => {
-          // Ignorer les commentaires déjà traités
+          // Ignorer les commentaires déjà traités (par timestamp)
           if (lastProcessedTs && c.timestamp_unix <= lastProcessedTs) return false;
+          // Ignorer par ID
           if (lastProcessedId && c.id === lastProcessedId) return false;
-          // Ignorer ses propres commentaires
-          if (c.from_id === igUserId) return false;
+          // Ignorer ses propres commentaires (par username ou ID)
+          if (igUserId && c.from_id && c.from_id === igUserId) return false;
+          if (igUsername && c.username && c.username.toLowerCase() === igUsername.toLowerCase()) return false;
           // Vérifier le mot-clé
           return c.text.toUpperCase().includes(keyword);
         });
 
-        if (!newComments.length) continue;
+        if (!newComments.length) {
+          debug.push(`    No NEW matching comments (keyword="${keyword}", last_ts=${lastProcessedTs})`);
+          // Log sample of what comments look like for debugging
+          if (comments.length > 0) {
+            const sample = comments.slice(0, 3).map((c) =>
+              `"${c.text.slice(0, 50)}" by ${c.username || c.from_id || "unknown"} at ${c.timestamp_unix}`
+            );
+            debug.push(`    Sample comments: ${sample.join(" | ")}`);
+          }
+          continue;
+        }
 
-        console.log(`[ig-comments] Found ${newComments.length} new matching comments for automation ${auto.id}`);
+        debug.push(`    Found ${newComments.length} new matching comment(s)!`);
 
         let dmsSent = 0;
         let repliesSent = 0;
@@ -136,14 +175,15 @@ export async function GET(req: NextRequest) {
               await replyToInstagramComment(accessToken, comment.id, replyText);
               repliesSent++;
               results.replies++;
+              debug.push(`    Comment reply sent to ${comment.id}`);
             } catch (err) {
-              console.error(`[ig-comments] Comment reply failed for ${comment.id}:`, err);
+              const errMsg = err instanceof Error ? err.message : String(err);
+              debug.push(`    Comment reply FAILED for ${comment.id}: ${errMsg.slice(0, 200)}`);
               results.errors++;
             }
           }
 
           // b) Envoyer un DM via Private Reply (recipient.comment_id)
-          //    C'est la méthode ManyChat : le DM est lié au commentaire
           const dmText = personalize(auto.dm_message ?? "", { prenom: firstName, firstname: firstName });
           if (dmText) {
             const dmResult = await sendInstagramPrivateReply(accessToken, igUserId, comment.id, dmText);
@@ -151,17 +191,10 @@ export async function GET(req: NextRequest) {
             if (dmResult.ok) {
               dmsSent++;
               results.dms_sent++;
+              debug.push(`    DM sent via ${dmResult.method} for comment ${comment.id}`);
             } else {
-              console.error(`[ig-comments] DM failed for comment ${comment.id}:`, dmResult.error);
+              debug.push(`    DM FAILED for comment ${comment.id}: ${dmResult.error?.slice(0, 200)}`);
               results.errors++;
-
-              // Fallback : essayer avec recipient.id si Private Reply échoue
-              const fallbackResult = await sendInstagramDMById(accessToken, igUserId, comment.from_id, dmText);
-              if (fallbackResult.ok) {
-                dmsSent++;
-                results.dms_sent++;
-                results.errors--; // Annuler l'erreur puisque le fallback a fonctionné
-              }
             }
           }
 
@@ -171,9 +204,11 @@ export async function GET(req: NextRequest) {
 
         // Mettre à jour les stats et le dernier commentaire traité
         const currentStats = (auto.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
-        const newestComment = newComments[0]; // Les commentaires sont triés du plus récent au plus ancien
+        const newestComment = newComments.reduce((a, b) =>
+          a.timestamp_unix >= b.timestamp_unix ? a : b
+        );
 
-        await supabaseAdmin
+        const { error: updateErr } = await supabaseAdmin
           .from("social_automations")
           .update({
             stats: {
@@ -188,14 +223,19 @@ export async function GET(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", auto.id);
+
+        if (updateErr) {
+          debug.push(`    Stats update failed: ${updateErr.message}`);
+        }
       }
     }
   } catch (err) {
-    console.error("[ig-comments] Error:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    debug.push(`Top-level error: ${errMsg}`);
     results.errors++;
   }
 
-  return NextResponse.json({ ok: true, ...results });
+  return NextResponse.json({ ok: true, ...results, debug });
 }
 
 /* ─── Helpers ─── */
@@ -209,47 +249,84 @@ interface IGComment {
   username: string;
 }
 
-async function fetchComments(accessToken: string, mediaId: string): Promise<IGComment[]> {
-  try {
-    const res = await fetch(
-      `${INSTAGRAM_GRAPH_BASE}/${mediaId}/comments?fields=id,text,timestamp,from{id,username}&limit=50&access_token=${accessToken}`,
-      { cache: "no-store" }
-    );
+interface FetchResult {
+  comments: IGComment[];
+  error?: string;
+}
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`[ig-comments] Fetch comments error (${res.status}):`, errText.slice(0, 300));
-      return [];
+/**
+ * Fetch comments from an Instagram media post.
+ * Tries multiple field combinations for compatibility with both
+ * Instagram Login API and legacy Graph API tokens.
+ */
+async function fetchComments(
+  accessToken: string,
+  mediaId: string,
+  ownerUsername: string,
+): Promise<FetchResult> {
+  // Stratégie 1 : champs compatibles Instagram API with Instagram Login
+  // L'API avec Instagram Login supporte `username` directement (pas `from{id,username}`)
+  const fieldSets = [
+    "id,text,timestamp,username",
+    "id,text,timestamp,from{id,username}",
+    "id,text,timestamp",
+  ];
+
+  for (const fields of fieldSets) {
+    try {
+      const url = `${INSTAGRAM_GRAPH_BASE}/${mediaId}/comments?fields=${encodeURIComponent(fields)}&limit=50&access_token=${accessToken}`;
+      const res = await fetch(url, { cache: "no-store" });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`[ig-comments] Fetch with fields="${fields}" failed (${res.status}):`, errText.slice(0, 200));
+        // Try next field set
+        continue;
+      }
+
+      const json = await res.json();
+      const data = json.data ?? [];
+
+      if (!data.length) {
+        return { comments: [] };
+      }
+
+      const comments: IGComment[] = data.map((c: any) => ({
+        id: c.id,
+        text: c.text ?? "",
+        timestamp: c.timestamp,
+        timestamp_unix: c.timestamp ? Math.floor(new Date(c.timestamp).getTime() / 1000) : 0,
+        // Handle both direct `username` field and nested `from.username`
+        from_id: c.from?.id ?? "",
+        username: c.username ?? c.from?.username ?? "",
+      }));
+
+      console.log(`[ig-comments] Fetched ${comments.length} comments with fields="${fields}"`);
+      return { comments };
+    } catch (err) {
+      console.error(`[ig-comments] fetchComments error with fields="${fields}":`, err);
+      continue;
     }
-
-    const json = await res.json();
-    return (json.data ?? []).map((c: any) => ({
-      id: c.id,
-      text: c.text ?? "",
-      timestamp: c.timestamp,
-      timestamp_unix: c.timestamp ? Math.floor(new Date(c.timestamp).getTime() / 1000) : 0,
-      from_id: c.from?.id ?? "",
-      username: c.from?.username ?? "",
-    }));
-  } catch (err) {
-    console.error("[ig-comments] fetchComments error:", err);
-    return [];
   }
+
+  return { comments: [], error: "All field combinations failed for fetching comments" };
 }
 
 /**
  * Envoie un DM Instagram via Private Reply (lié au commentaire).
- * Essaie 2 endpoints :
- *   1. Instagram Graph API : POST /{ig-user-id}/messages (Instagram Login token)
- *   2. Messenger Platform : POST /me/messages (Facebook Graph API, même token en fallback)
- * Doc : https://developers.facebook.com/docs/messenger-platform/instagram/features/private-replies/
+ * Essaie 3 méthodes dans l'ordre :
+ *   1. IG Graph API : POST /{ig-user-id}/messages avec recipient.comment_id
+ *   2. FB Messenger : POST /me/messages avec recipient.comment_id
+ *   3. IG Graph API : POST /{ig-user-id}/messages avec recipient.id (si from_id disponible)
  */
 async function sendInstagramPrivateReply(
   accessToken: string,
   igUserId: string,
   commentId: string,
   text: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; method?: string; error?: string }> {
+  const errors: string[] = [];
+
   // Tentative 1 : Instagram Graph API (endpoint Instagram Login)
   try {
     const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/messages`, {
@@ -263,14 +340,17 @@ async function sendInstagramPrivateReply(
     });
 
     if (res.ok) {
-      console.log(`[ig-comments] Private Reply sent via Instagram Graph API`);
-      return { ok: true };
+      return { ok: true, method: "ig_graph_private_reply" };
     }
 
     const errBody = await res.text();
-    console.warn(`[ig-comments] IG Graph API Private Reply failed (${res.status}):`, errBody.slice(0, 300));
+    errors.push(`IG(${res.status}): ${errBody.slice(0, 150)}`);
+  } catch (err) {
+    errors.push(`IG: ${String(err).slice(0, 100)}`);
+  }
 
-    // Tentative 2 : Messenger Platform (graph.facebook.com/me/messages)
+  // Tentative 2 : Messenger Platform (graph.facebook.com/me/messages)
+  try {
     const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
       method: "POST",
       headers: {
@@ -284,49 +364,16 @@ async function sendInstagramPrivateReply(
     });
 
     if (fbRes.ok) {
-      console.log(`[ig-comments] Private Reply sent via Messenger Platform`);
-      return { ok: true };
+      return { ok: true, method: "fb_messenger_private_reply" };
     }
 
     const fbErr = await fbRes.text();
-    console.error(`[ig-comments] Messenger Platform Private Reply also failed (${fbRes.status}):`, fbErr.slice(0, 300));
-    return { ok: false, error: `IG: ${errBody.slice(0, 200)} | FB: ${fbErr.slice(0, 200)}` };
+    errors.push(`FB(${fbRes.status}): ${fbErr.slice(0, 150)}`);
   } catch (err) {
-    return { ok: false, error: String(err) };
+    errors.push(`FB: ${String(err).slice(0, 100)}`);
   }
-}
 
-/**
- * Fallback : envoie un DM Instagram avec recipient.id (user IGSID).
- * Ne fonctionne que si une conversation existe déjà ou dans les 24h après interaction.
- */
-async function sendInstagramDMById(
-  accessToken: string,
-  igUserId: string,
-  recipientId: string,
-  text: string,
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipient: { id: recipientId },
-        message: { text },
-        messaging_type: "RESPONSE",
-        access_token: accessToken,
-      }),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text();
-      return { ok: false, error: errBody };
-    }
-
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: String(err) };
-  }
+  return { ok: false, error: errors.join(" | ") };
 }
 
 /**
@@ -345,7 +392,7 @@ async function replyToInstagramComment(
 
   if (!res.ok) {
     const errBody = await res.text();
-    throw new Error(`Instagram comment reply failed (${res.status}): ${errBody}`);
+    throw new Error(`(${res.status}): ${errBody}`);
   }
 }
 
