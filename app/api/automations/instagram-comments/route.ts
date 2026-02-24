@@ -239,8 +239,10 @@ async function fetchComments(accessToken: string, mediaId: string): Promise<IGCo
 
 /**
  * Envoie un DM Instagram via Private Reply (lié au commentaire).
- * C'est la méthode utilisée par ManyChat : recipient.comment_id
- * Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api#private-replies
+ * Essaie 2 endpoints :
+ *   1. Instagram Graph API : POST /{ig-user-id}/messages (Instagram Login token)
+ *   2. Messenger Platform : POST /me/messages (Facebook Graph API, même token en fallback)
+ * Doc : https://developers.facebook.com/docs/messenger-platform/instagram/features/private-replies/
  */
 async function sendInstagramPrivateReply(
   accessToken: string,
@@ -248,6 +250,7 @@ async function sendInstagramPrivateReply(
   commentId: string,
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  // Tentative 1 : Instagram Graph API (endpoint Instagram Login)
   try {
     const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/messages`, {
       method: "POST",
@@ -259,13 +262,35 @@ async function sendInstagramPrivateReply(
       }),
     });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error(`[ig-comments] Private Reply DM error (${res.status}):`, errBody.slice(0, 500));
-      return { ok: false, error: errBody };
+    if (res.ok) {
+      console.log(`[ig-comments] Private Reply sent via Instagram Graph API`);
+      return { ok: true };
     }
 
-    return { ok: true };
+    const errBody = await res.text();
+    console.warn(`[ig-comments] IG Graph API Private Reply failed (${res.status}):`, errBody.slice(0, 300));
+
+    // Tentative 2 : Messenger Platform (graph.facebook.com/me/messages)
+    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+
+    if (fbRes.ok) {
+      console.log(`[ig-comments] Private Reply sent via Messenger Platform`);
+      return { ok: true };
+    }
+
+    const fbErr = await fbRes.text();
+    console.error(`[ig-comments] Messenger Platform Private Reply also failed (${fbRes.status}):`, fbErr.slice(0, 300));
+    return { ok: false, error: `IG: ${errBody.slice(0, 200)} | FB: ${fbErr.slice(0, 200)}` };
   } catch (err) {
     return { ok: false, error: String(err) };
   }

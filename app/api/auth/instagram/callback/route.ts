@@ -390,7 +390,7 @@ function personalize(template: string, vars: Record<string, string>): string {
 
 /**
  * Envoie un DM via Private Reply (recipient.comment_id).
- * C'est la méthode ManyChat pour comment-to-DM.
+ * Essaie IG Graph API puis Messenger Platform en fallback.
  */
 async function sendInstagramPrivateReply(
   igAccessToken: string,
@@ -399,6 +399,7 @@ async function sendInstagramPrivateReply(
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    // Tentative 1 : Instagram Graph API
     const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -409,11 +410,28 @@ async function sendInstagramPrivateReply(
       }),
     });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      return { ok: false, error: errBody };
-    }
-    return { ok: true };
+    if (res.ok) return { ok: true };
+
+    const errBody = await res.text();
+    console.warn(`[Instagram webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
+
+    // Tentative 2 : Messenger Platform
+    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${igAccessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+
+    if (fbRes.ok) return { ok: true };
+
+    const fbErr = await fbRes.text();
+    return { ok: false, error: `IG: ${errBody.slice(0, 150)} | FB: ${fbErr.slice(0, 150)}` };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
