@@ -26,6 +26,7 @@ const FB_SCOPES = [
   "pages_manage_posts",
   "pages_read_engagement",
   "pages_messaging",
+  "pages_manage_metadata", // nécessaire pour abonner la page aux webhooks (feed/comments)
   "instagram_manage_hashtags",
   "instagram_manage_comments",
 ];
@@ -866,4 +867,74 @@ export async function publishToInstagram(
 
   const errText = await publishRes.text();
   return { ok: false, error: `Instagram publish failed: ${errText}`, statusCode: publishRes.status };
+}
+
+// ----------------------------------------------------------------
+// Webhook Subscription Helpers
+// ----------------------------------------------------------------
+
+/**
+ * Abonne une Page Facebook aux événements webhook (feed, messages).
+ * Effectue deux étapes :
+ *   A. App-level : POST /{APP_ID}/subscriptions (enregistre l'URL callback)
+ *   B. Page-level : POST /{PAGE_ID}/subscribed_apps (abonne la page)
+ *
+ * Retourne { appOk, pageOk, errors }.
+ */
+export async function subscribePageToWebhooks(
+  pageId: string,
+  pageAccessToken: string,
+): Promise<{ appOk: boolean; pageOk: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  let appOk = false;
+  let pageOk = false;
+
+  const appId = process.env.META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const webhookCallbackUrl = `${appUrl}/api/automations/webhook`;
+
+  // A. App-level subscription
+  if (appId && appSecret && verifyToken) {
+    try {
+      const appParams = new URLSearchParams({
+        object: "page",
+        callback_url: webhookCallbackUrl,
+        fields: "feed",
+        verify_token: verifyToken,
+        access_token: `${appId}|${appSecret}`,
+      });
+      const res = await fetch(
+        `${GRAPH_API_BASE}/${appId}/subscriptions`,
+        { method: "POST", body: appParams }
+      );
+      const json = await res.json();
+      appOk = json.success === true;
+      if (!appOk) errors.push(`App subscription: ${JSON.stringify(json.error ?? json)}`);
+    } catch (err) {
+      errors.push(`App subscription error: ${String(err)}`);
+    }
+  } else {
+    errors.push("Missing META_APP_ID, META_APP_SECRET, or META_WEBHOOK_VERIFY_TOKEN env vars");
+  }
+
+  // B. Page-level subscription
+  try {
+    const pageParams = new URLSearchParams({
+      access_token: pageAccessToken,
+      subscribed_fields: "feed,messages",
+    });
+    const res = await fetch(
+      `${GRAPH_API_BASE}/${pageId}/subscribed_apps`,
+      { method: "POST", body: pageParams }
+    );
+    const json = await res.json();
+    pageOk = json.success === true;
+    if (!pageOk) errors.push(`Page subscription: ${JSON.stringify(json.error ?? json)}`);
+  } catch (err) {
+    errors.push(`Page subscription error: ${String(err)}`);
+  }
+
+  return { appOk, pageOk, errors };
 }

@@ -120,4 +120,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-const SCOPES_STR = "user.info.basic,video.publish,video.upload,video.list,comment.list,comment.list.manage";
+const SCOPES_STR = "user.info.basic,video.publish,video.upload,video.list";

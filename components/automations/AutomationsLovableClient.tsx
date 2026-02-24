@@ -310,6 +310,17 @@ export default function AutomationsLovableClient() {
         toast.success(editingId ? t("savedUpdated") : t("savedCreated"));
         setShowModal(false);
         loadAutomations();
+
+        // Auto-subscribe la page Facebook aux webhooks Meta (non-bloquant)
+        if (form.platforms.includes("facebook")) {
+          fetch("/api/automations/subscribe", { method: "POST" })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.ok) console.log("[automations] Page Facebook abonnée aux webhooks");
+              else console.warn("[automations] Webhook subscription issue:", d.error);
+            })
+            .catch(() => {});
+        }
       }
     } catch {
       toast.error(t("errors.saveFailed"));
@@ -334,6 +345,11 @@ export default function AutomationsLovableClient() {
       setAutomations((prev) =>
         prev.map((a) => a.id === auto.id ? { ...a, enabled: !a.enabled } : a)
       );
+
+      // Si on active une automation Facebook, re-subscribe aux webhooks
+      if (!auto.enabled && auto.platforms.includes("facebook")) {
+        fetch("/api/automations/subscribe", { method: "POST" }).catch(() => {});
+      }
     }
   }
 
