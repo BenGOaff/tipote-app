@@ -349,9 +349,20 @@ async function processInstagramComment(params: {
       });
     }
 
-    // Envoyer un DM Instagram
+    // Envoyer un DM Instagram via Private Reply (recipient.comment_id)
+    // C'est la méthode ManyChat : le DM est lié au commentaire, contourne les restrictions de messaging window
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
-    const dmResult = await sendInstagramDM(ig_access_token, ig_account_id, sender_id, dmText);
+    let dmResult: { ok: boolean; error?: string };
+    if (comment_id) {
+      dmResult = await sendInstagramPrivateReply(ig_access_token, ig_account_id, comment_id, dmText);
+      // Fallback sur recipient.id si Private Reply échoue
+      if (!dmResult.ok) {
+        console.warn("[Instagram webhook] Private Reply failed, trying recipient.id fallback:", dmResult.error);
+        dmResult = await sendInstagramDM(ig_access_token, ig_account_id, sender_id, dmText);
+      }
+    } else {
+      dmResult = await sendInstagramDM(ig_access_token, ig_account_id, sender_id, dmText);
+    }
 
     // Mettre à jour les stats
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
@@ -375,6 +386,37 @@ async function processInstagramComment(params: {
 
 function personalize(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
+}
+
+/**
+ * Envoie un DM via Private Reply (recipient.comment_id).
+ * C'est la méthode ManyChat pour comment-to-DM.
+ */
+async function sendInstagramPrivateReply(
+  igAccessToken: string,
+  igAccountId: string,
+  commentId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+        access_token: igAccessToken,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, error: errBody };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
 }
 
 async function sendInstagramDM(

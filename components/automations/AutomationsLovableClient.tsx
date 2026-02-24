@@ -311,13 +311,18 @@ export default function AutomationsLovableClient() {
         setShowModal(false);
         loadAutomations();
 
-        // Auto-subscribe la page Facebook aux webhooks Meta (non-bloquant)
-        if (form.platforms.includes("facebook")) {
-          fetch("/api/automations/subscribe", { method: "POST" })
+        // Auto-subscribe aux webhooks Meta (non-bloquant)
+        const subPlatform = form.platforms[0] ?? "facebook";
+        if (subPlatform === "facebook" || subPlatform === "instagram") {
+          fetch("/api/automations/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ platform: subPlatform }),
+          })
             .then((r) => r.json())
             .then((d) => {
-              if (d.ok) console.log("[automations] Page Facebook abonnée aux webhooks");
-              else console.warn("[automations] Webhook subscription issue:", d.error);
+              if (d.ok) console.log(`[automations] ${subPlatform} abonné aux webhooks`);
+              else console.warn(`[automations] Webhook subscription issue:`, d.error);
             })
             .catch(() => {});
         }
@@ -346,9 +351,16 @@ export default function AutomationsLovableClient() {
         prev.map((a) => a.id === auto.id ? { ...a, enabled: !a.enabled } : a)
       );
 
-      // Si on active une automation Facebook, re-subscribe aux webhooks
-      if (!auto.enabled && auto.platforms.includes("facebook")) {
-        fetch("/api/automations/subscribe", { method: "POST" }).catch(() => {});
+      // Si on active une automation, re-subscribe aux webhooks
+      if (!auto.enabled) {
+        const subPlatform = auto.platforms?.[0] ?? "facebook";
+        if (subPlatform === "facebook" || subPlatform === "instagram") {
+          fetch("/api/automations/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ platform: subPlatform }),
+          }).catch(() => {});
+        }
       }
     }
   }

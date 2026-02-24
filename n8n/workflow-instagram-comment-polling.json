@@ -1,0 +1,155 @@
+{
+  "name": "Tipote - Instagram Comment-to-DM",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 2 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/automations/instagram-comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "poll-comments",
+      "name": "Poll Instagram Comments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300],
+      "notes": "Appelle l'API Tipote qui : 1) Récupère les automations Instagram actives, 2) Fetch les commentaires récents du post ciblé, 3) Matche les mots-clés, 4) Répond au commentaire + envoie un DM via Private Reply."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-dms",
+              "leftValue": "={{ $json.dms_sent }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-dms",
+      "name": "DMs Sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "notes": "Vérifie si des DMs ont été envoyés ce cycle."
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconsole.log(`[Instagram] Comment-to-DM cycle: ${data.processed} comments processed, ${data.replies} comment replies, ${data.dms_sent} DMs sent, ${data.errors} errors`);\nreturn [$input.first()];"
+      },
+      "id": "log-results",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {},
+      "id": "no-dms",
+      "name": "No New DMs",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Every 2 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Poll Instagram Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Instagram Comments": {
+      "main": [
+        [
+          {
+            "node": "DMs Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DMs Sent?": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New DMs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote"
+    },
+    {
+      "name": "automations"
+    },
+    {
+      "name": "instagram"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "notes": "## Workflow Instagram Comment-to-DM (style ManyChat)\n\nCe workflow poll les commentaires Instagram toutes les 2 minutes et envoie un DM automatique via Private Reply.\n\n### Variables d'environnement requises dans n8n\n\n- `TIPOTE_APP_URL` : ex. https://app.tipote.com\n- `N8N_SHARED_SECRET` : même valeur que dans le .env Tipote\n\n### Architecture\n\n```\nCron (toutes les 2 min)\n  → Appel GET /api/automations/instagram-comments\n  → Tipote récupère les automations Instagram actives\n  → Pour chaque automation : fetch les commentaires du post ciblé\n  → Filtre les commentaires contenant le mot-clé\n  → Répond au commentaire (public, variantes aléatoires)\n  → Envoie un DM via Private Reply (recipient.comment_id)\n  → Met à jour les stats\n```\n\n### Comment ça marche (Private Reply)\n\nL'API Instagram permet d'envoyer un DM lié à un commentaire spécifique via :\n```json\nPOST /{ig-user-id}/messages\n{\n  \"recipient\": {\"comment_id\": \"<COMMENT_ID>\"},\n  \"message\": {\"text\": \"Voici ta ressource !\"}\n}\n```\n\nC'est la même méthode utilisée par ManyChat. Elle contourne les restrictions de messaging window car le DM est une réponse privée à un commentaire sur le post du business."
+  }
+}
