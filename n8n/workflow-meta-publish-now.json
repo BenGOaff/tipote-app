@@ -1,10 +1,11 @@
 {
-  "name": "Tipote - Meta (FB + Threads) Publish Now",
+  "name": "Tipote - Meta (FB + IG + Threads) Publish Now",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "meta-publish",
+        "responseMode": "responseNode",
         "options": {
           "rawBody": false
         }
@@ -54,7 +55,7 @@
           },
           "conditions": [
             {
-              "id": "check-platform",
+              "id": "check-threads",
               "leftValue": "={{ $json.body.platform }}",
               "rightValue": "threads",
               "operator": {
@@ -66,7 +67,7 @@
           "combinator": "and"
         }
       },
-      "id": "route-platform",
+      "id": "is-threads",
       "name": "Is Threads?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -74,8 +75,75 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-instagram",
+              "leftValue": "={{ $json.body.platform }}",
+              "rightValue": "instagram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "is-instagram",
+      "name": "Is Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Publish to Instagram via Graph API.\n// Supports both IMAGE posts and REELS (video).\n// Instagram requires a 3-step async process:\n//   1. Create media container\n//   2. Poll until status = FINISHED\n//   3. Publish the container\n\nconst body = $input.first().json.body || $input.first().json;\nconst accessToken = body.access_token || '';\nconst igUserId = body.platform_user_id || '';\nconst caption = body.commentary || '';\nconst imageUrl = body.image_url || '';\nconst videoUrl = body.video_url || '';\nconst callbackUrl = body.callback_url || '';\nconst contentId = body.content_id || '';\nconst sharedSecret = $env.N8N_SHARED_SECRET || '';\n\nconst GRAPH_BASE = 'https://graph.instagram.com/v21.0';\nlet publishSuccess = false;\nlet postId = '';\nlet publishError = '';\n\ntry {\n  // Step 1: Create media container\n  const isVideo = !!videoUrl;\n  const createBody = isVideo\n    ? { media_type: 'REELS', video_url: videoUrl, caption, access_token: accessToken }\n    : { image_url: imageUrl, caption, access_token: accessToken };\n\n  const createRes = await fetch(`${GRAPH_BASE}/${igUserId}/media`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(createBody)\n  });\n\n  const createJson = await createRes.json();\n  if (!createRes.ok || !createJson.id) {\n    throw new Error(`Container creation failed: ${JSON.stringify(createJson)}`);\n  }\n  const creationId = createJson.id;\n\n  // Step 2: Poll for FINISHED status\n  const maxAttempts = isVideo ? 30 : 10;\n  const pollInterval = isVideo ? 5000 : 3000;\n  let ready = false;\n\n  for (let i = 0; i < maxAttempts; i++) {\n    const statusRes = await fetch(\n      `${GRAPH_BASE}/${creationId}?fields=status_code&access_token=${accessToken}`\n    );\n    const statusJson = await statusRes.json();\n    if (statusJson.status_code === 'FINISHED') { ready = true; break; }\n    if (statusJson.status_code === 'ERROR' || statusJson.status_code === 'EXPIRED') {\n      throw new Error(`Container failed: ${statusJson.status_code}`);\n    }\n    await new Promise(r => setTimeout(r, pollInterval));\n  }\n\n  if (!ready) throw new Error('Container not ready after polling');\n\n  // Step 3: Publish\n  const publishRes = await fetch(`${GRAPH_BASE}/${igUserId}/media_publish`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ creation_id: creationId, access_token: accessToken })\n  });\n\n  const publishJson = await publishRes.json();\n  if (!publishRes.ok || !publishJson.id) {\n    throw new Error(`Publish failed: ${JSON.stringify(publishJson)}`);\n  }\n\n  // Try to get shortcode for URL\n  try {\n    const scRes = await fetch(\n      `${GRAPH_BASE}/${publishJson.id}?fields=shortcode&access_token=${accessToken}`\n    );\n    const scJson = await scRes.json();\n    postId = scJson.shortcode || publishJson.id;\n  } catch {\n    postId = publishJson.id;\n  }\n\n  publishSuccess = true;\n} catch (e) {\n  publishError = e.message || 'instagram_publish_exception';\n}\n\n// Callback\nif (callbackUrl) {\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: { 'X-N8N-Secret': sharedSecret, 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        content_id: contentId,\n        platform: 'instagram',\n        success: publishSuccess,\n        postId: postId,\n        error: publishError || undefined\n      })\n    });\n  } catch {}\n}\n\nreturn [{ json: { ok: publishSuccess, postId, error: publishError || null } }];"
+      },
+      "id": "instagram-post",
+      "name": "Post to Instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 60],
+      "notes": "Publishes image or Reel (video) to Instagram via Graph API. Handles 3-step async process: create container → poll → publish."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-video",
+              "leftValue": "={{ $json.body.video_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "fb-has-video",
+      "name": "FB Has Video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, -40]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $json.body.platform_user_id }}/feed",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/videos",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -87,7 +155,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"message\": {{ JSON.stringify($json.body.commentary) }},\n  \"access_token\": \"{{ $json.body.access_token }}\"\n}",
+        "jsonBody": "={\n  \"file_url\": \"{{ $('Webhook Trigger').item.json.body.video_url }}\",\n  \"description\": {{ JSON.stringify($('Webhook Trigger').item.json.body.commentary) }},\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -97,11 +165,39 @@
           }
         }
       },
-      "id": "fb-post-text",
-      "name": "Post to Facebook (Text)",
+      "id": "fb-post-video",
+      "name": "Post to Facebook (Video)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [910, 180]
+      "position": [1130, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-image",
+              "leftValue": "={{ $('Webhook Trigger').item.json.body.image_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "fb-has-image",
+      "name": "FB Has Image?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1130, 180]
     },
     {
       "parameters": {
@@ -132,35 +228,90 @@
       "name": "Post to Facebook (Photo)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [910, 60]
+      "position": [1350, 120]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.body.platform_user_id }}/feed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "id": "has-image",
-              "leftValue": "={{ $json.body.image_url }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
+              "name": "Content-Type",
+              "value": "application/json"
             }
-          ],
-          "combinator": "and"
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Webhook Trigger').item.json.body.commentary) }},\n  \"access_token\": \"{{ $('Webhook Trigger').item.json.body.access_token }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "autodetect"
+            }
+          }
         }
       },
-      "id": "fb-has-image",
-      "name": "FB Has Image?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [690, 120]
+      "id": "fb-post-text",
+      "name": "Post to Facebook (Text)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook Trigger').item.json.body.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"{{ $('Webhook Trigger').item.json.body.platform }}\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.id || $json.body?.post_id || '' }}\"\n}",
+        "options": {}
+      },
+      "id": "callback-success-fb",
+      "name": "Callback Success (FB)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, postId: $json.body?.id || $json.body?.post_id || '' }) }}",
+        "options": {}
+      },
+      "id": "respond-success-fb",
+      "name": "Respond Success (FB)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1790, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $json.ok, postId: $json.postId || '', error: $json.error || undefined }) }}",
+        "options": {}
+      },
+      "id": "respond-success-ig",
+      "name": "Respond Success (IG)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 60]
     },
     {
       "parameters": {
@@ -219,34 +370,6 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"{{ $('Webhook Trigger').item.json.body.platform }}\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.id || $json.body?.post_id || '' }}\"\n}",
-        "options": {}
-      },
-      "id": "callback-success-fb",
-      "name": "Callback Success (FB)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1130, 120]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Webhook Trigger').item.json.body.callback_url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
         "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"threads\",\n  \"success\": true,\n  \"postId\": \"{{ $json.body?.id || '' }}\"\n}",
         "options": {}
       },
@@ -255,46 +378,6 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1350, 420]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Webhook Trigger').item.json.body.callback_url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"content_id\": \"{{ $('Webhook Trigger').item.json.body.content_id }}\",\n  \"platform\": \"{{ $('Webhook Trigger').item.json.body.platform }}\",\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || JSON.stringify($json.body?.error || 'Meta API error') }}\"\n}",
-        "options": {}
-      },
-      "id": "callback-error",
-      "name": "Callback Error",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1130, 560]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"ok\": true, \"postId\": \"{{ $json.body?.id || $json.body?.post_id || '' }}\" }",
-        "options": {}
-      },
-      "id": "respond-success",
-      "name": "Respond Success",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [1350, 120]
     },
     {
       "parameters": {
@@ -364,7 +447,65 @@
         ],
         [
           {
+            "node": "Is Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Post to Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FB Has Video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Instagram": {
+      "main": [
+        [
+          {
+            "node": "Respond Success (IG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Has Video?": {
+      "main": [
+        [
+          {
+            "node": "Post to Facebook (Video)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "FB Has Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Facebook (Video)": {
+      "main": [
+        [
+          {
+            "node": "Callback Success (FB)",
             "type": "main",
             "index": 0
           }
@@ -389,7 +530,7 @@
         ]
       ]
     },
-    "Post to Facebook (Text)": {
+    "Post to Facebook (Photo)": {
       "main": [
         [
           {
@@ -400,7 +541,7 @@
         ]
       ]
     },
-    "Post to Facebook (Photo)": {
+    "Post to Facebook (Text)": {
       "main": [
         [
           {
@@ -415,7 +556,7 @@
       "main": [
         [
           {
-            "node": "Respond Success",
+            "node": "Respond Success (FB)",
             "type": "main",
             "index": 0
           }
@@ -464,9 +605,9 @@
     {
       "name": "tipote",
       "createdAt": "2026-02-13T00:00:00.000Z",
-      "updatedAt": "2026-02-13T00:00:00.000Z"
+      "updatedAt": "2026-02-24T00:00:00.000Z"
     }
   ],
   "pinData": {},
-  "versionId": "2"
+  "versionId": "3"
 }

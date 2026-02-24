@@ -282,22 +282,26 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Pour TikTok : video_url ou images requises
-      if (platform === "tiktok") {
+      // Vidéo : passer video_url pour TikTok, Facebook, Instagram
+      if (platform === "tiktok" || platform === "facebook" || platform === "instagram") {
         const videoUrl = post.meta?.video_url;
         if (videoUrl) {
           postData.video_url = videoUrl;
         }
-        // Inclure toutes les images si disponibles
-        if (Array.isArray(post.meta?.images) && post.meta.images.length > 0) {
-          postData.images = post.meta.images.map((img: any) =>
-            typeof img === "string" ? img : img?.url
-          ).filter(Boolean);
+
+        // TikTok : inclure toutes les images si disponibles
+        if (platform === "tiktok") {
+          if (Array.isArray(post.meta?.images) && post.meta.images.length > 0) {
+            postData.images = post.meta.images.map((img: any) =>
+              typeof img === "string" ? img : img?.url
+            ).filter(Boolean);
+          }
         }
-        // TikTok nécessite au moins une image ou une vidéo
-        if (!videoUrl && !imageUrl) {
+
+        // TikTok et Instagram nécessitent au moins une image ou une vidéo
+        if ((platform === "tiktok" || platform === "instagram") && !videoUrl && !imageUrl) {
           console.warn(
-            `[scheduled-posts] TikTok post ${post.id} skipped: missing video or image`
+            `[scheduled-posts] ${platform} post ${post.id} skipped: missing video or image`
           );
           return null;
         }

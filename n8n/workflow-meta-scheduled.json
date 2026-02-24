@@ -1,5 +1,5 @@
 {
-  "name": "Tipote - Meta (FB + Threads) Scheduled Publisher",
+  "name": "Tipote - Meta (FB + IG + Threads) Scheduled Publisher",
   "nodes": [
     {
       "parameters": {
@@ -37,7 +37,28 @@
       "name": "Fetch FB Scheduled Posts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [470, 200]
+      "position": [470, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=instagram",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-ig-posts",
+      "name": "Fetch IG Scheduled Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
     },
     {
       "parameters": {
@@ -58,27 +79,13 @@
       "name": "Fetch Threads Scheduled Posts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [470, 420]
+      "position": [470, 500]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "check-fb-posts",
-              "leftValue": "={{ $json.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "check-fb", "leftValue": "={{ $json.count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
           "combinator": "and"
         }
       },
@@ -86,27 +93,27 @@
       "name": "Has FB Posts?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [690, 200]
+      "position": [690, 100]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "check-threads-posts",
-              "leftValue": "={{ $json.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "check-ig", "leftValue": "={{ $json.count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "has-ig-posts",
+      "name": "Has IG Posts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "check-threads", "leftValue": "={{ $json.count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
           "combinator": "and"
         }
       },
@@ -114,49 +121,69 @@
       "name": "Has Threads Posts?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [690, 420]
+      "position": [690, 500]
     },
     {
-      "parameters": {
-        "fieldToSplitOut": "posts",
-        "options": {}
-      },
+      "parameters": { "fieldToSplitOut": "posts", "options": {} },
       "id": "split-fb-posts",
       "name": "Split FB Posts",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [910, 140]
+      "position": [910, 40]
     },
     {
-      "parameters": {
-        "fieldToSplitOut": "posts",
-        "options": {}
-      },
+      "parameters": { "fieldToSplitOut": "posts", "options": {} },
+      "id": "split-ig-posts",
+      "name": "Split IG Posts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [910, 240]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "posts", "options": {} },
       "id": "split-threads-posts",
       "name": "Split Threads Posts",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [910, 360]
+      "position": [910, 440]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "fb-has-image",
-              "leftValue": "={{ $json.image_url }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "fb-video", "leftValue": "={{ $json.video_url }}", "rightValue": "", "operator": { "type": "string", "operation": "notEquals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "fb-has-video",
+      "name": "FB Has Video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1130, 40]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Split FB Posts').item.json.platform_user_id }}/videos",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Content-Type", "value": "application/json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"file_url\": \"{{ $('Split FB Posts').item.json.video_url }}\",\n  \"description\": {{ JSON.stringify($('Split FB Posts').item.json.commentary) }},\n  \"access_token\": \"{{ $('Split FB Posts').item.json.access_token }}\"\n}",
+        "options": { "response": { "response": { "fullResponse": true, "responseFormat": "autodetect" } } }
+      },
+      "id": "fb-post-video",
+      "name": "Post FB Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, -40],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "fb-image", "leftValue": "={{ $('Split FB Posts').item.json.image_url }}", "rightValue": "", "operator": { "type": "string", "operation": "notEquals" } }],
           "combinator": "and"
         }
       },
@@ -164,70 +191,42 @@
       "name": "FB Has Image?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1130, 140]
+      "position": [1350, 100]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/photos",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Split FB Posts').item.json.platform_user_id }}/photos",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [{ "name": "Content-Type", "value": "application/json" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Split FB Posts').item.json.commentary) }},\n  \"url\": \"{{ $('Split FB Posts').item.json.image_url }}\",\n  \"access_token\": \"{{ $('Split FB Posts').item.json.access_token }}\"\n}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "options": { "response": { "response": { "fullResponse": true, "responseFormat": "autodetect" } } }
       },
       "id": "fb-post-photo",
       "name": "Post FB Photo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1350, 80],
+      "position": [1570, 40],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $json.platform_user_id }}/feed",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Split FB Posts').item.json.platform_user_id }}/feed",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [{ "name": "Content-Type", "value": "application/json" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Split FB Posts').item.json.commentary) }},\n  \"access_token\": \"{{ $('Split FB Posts').item.json.access_token }}\"\n}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "options": { "response": { "response": { "fullResponse": true, "responseFormat": "autodetect" } } }
       },
       "id": "fb-post-text",
       "name": "Post FB Text",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1350, 200],
+      "position": [1570, 160],
       "onError": "continueRegularOutput"
     },
     {
@@ -235,18 +234,7 @@
         "method": "POST",
         "url": "={{ $('Split FB Posts').item.json.callback_url }}",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [{ "name": "X-N8N-Secret", "value": "={{ $env.N8N_SHARED_SECRET }}" }, { "name": "Content-Type", "value": "application/json" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"content_id\": \"{{ $('Split FB Posts').item.json.content_id }}\",\n  \"platform\": \"facebook\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || $json.body?.post_id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Facebook API error') : '' }}\"\n}",
@@ -256,46 +244,44 @@
       "name": "Callback FB to Tipote",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1570, 140]
+      "position": [1790, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Publish scheduled Instagram post (image or Reel)\nconst post = $input.first().json;\nconst accessToken = post.access_token || '';\nconst igUserId = post.platform_user_id || '';\nconst caption = post.commentary || '';\nconst imageUrl = post.image_url || '';\nconst videoUrl = post.video_url || '';\nconst callbackUrl = post.callback_url || '';\nconst contentId = post.content_id || '';\nconst sharedSecret = $env.N8N_SHARED_SECRET || '';\n\nconst GRAPH_BASE = 'https://graph.instagram.com/v21.0';\nlet success = false;\nlet postId = '';\nlet error = '';\n\ntry {\n  const isVideo = !!videoUrl;\n  const createBody = isVideo\n    ? { media_type: 'REELS', video_url: videoUrl, caption, access_token: accessToken }\n    : { image_url: imageUrl, caption, access_token: accessToken };\n\n  const createRes = await fetch(`${GRAPH_BASE}/${igUserId}/media`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(createBody)\n  });\n  const createJson = await createRes.json();\n  if (!createRes.ok || !createJson.id) throw new Error(JSON.stringify(createJson));\n\n  const creationId = createJson.id;\n  const maxAttempts = isVideo ? 30 : 10;\n  const pollMs = isVideo ? 5000 : 3000;\n  let ready = false;\n\n  for (let i = 0; i < maxAttempts; i++) {\n    const sRes = await fetch(`${GRAPH_BASE}/${creationId}?fields=status_code&access_token=${accessToken}`);\n    const sJson = await sRes.json();\n    if (sJson.status_code === 'FINISHED') { ready = true; break; }\n    if (sJson.status_code === 'ERROR' || sJson.status_code === 'EXPIRED') throw new Error(sJson.status_code);\n    await new Promise(r => setTimeout(r, pollMs));\n  }\n  if (!ready) throw new Error('Container not ready');\n\n  const pubRes = await fetch(`${GRAPH_BASE}/${igUserId}/media_publish`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ creation_id: creationId, access_token: accessToken })\n  });\n  const pubJson = await pubRes.json();\n  if (!pubRes.ok || !pubJson.id) throw new Error(JSON.stringify(pubJson));\n\n  try {\n    const scRes = await fetch(`${GRAPH_BASE}/${pubJson.id}?fields=shortcode&access_token=${accessToken}`);\n    const scJson = await scRes.json();\n    postId = scJson.shortcode || pubJson.id;\n  } catch { postId = pubJson.id; }\n\n  success = true;\n} catch (e) {\n  error = e.message || 'ig_scheduled_error';\n}\n\nif (callbackUrl) {\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: { 'X-N8N-Secret': sharedSecret, 'Content-Type': 'application/json' },\n      body: JSON.stringify({ content_id: contentId, platform: 'instagram', success, postId, error: error || undefined })\n    });\n  } catch {}\n}\n\nreturn [{ json: { ok: success, postId, error: error || null } }];"
+      },
+      "id": "ig-publish",
+      "name": "Publish Instagram Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300],
+      "onError": "continueRegularOutput",
+      "notes": "Publishes image or Reel to Instagram. Handles 3-step container creation → poll → publish."
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://graph.threads.net/v1.0/{{ $json.platform_user_id }}/threads?media_type={{ $('Split Threads Posts').item.json.image_url ? 'IMAGE' : 'TEXT' }}&text={{ encodeURIComponent($('Split Threads Posts').item.json.commentary) }}{{ $('Split Threads Posts').item.json.image_url ? '&image_url=' + encodeURIComponent($('Split Threads Posts').item.json.image_url) : '' }}&access_token={{ $('Split Threads Posts').item.json.access_token }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "options": { "response": { "response": { "fullResponse": true, "responseFormat": "autodetect" } } }
       },
       "id": "threads-create-container",
       "name": "Threads Create Container",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 360],
+      "position": [1130, 440],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://graph.threads.net/v1.0/{{ $('Split Threads Posts').item.json.platform_user_id }}/threads_publish?creation_id={{ $json.body.id }}&access_token={{ $('Split Threads Posts').item.json.access_token }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "options": { "response": { "response": { "fullResponse": true, "responseFormat": "autodetect" } } }
       },
       "id": "threads-publish",
       "name": "Threads Publish",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1350, 360],
+      "position": [1350, 440],
       "onError": "continueRegularOutput"
     },
     {
@@ -303,18 +289,7 @@
         "method": "POST",
         "url": "={{ $('Split Threads Posts').item.json.callback_url }}",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-N8N-Secret",
-              "value": "={{ $env.N8N_SHARED_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [{ "name": "X-N8N-Secret", "value": "={{ $env.N8N_SHARED_SECRET }}" }, { "name": "Content-Type", "value": "application/json" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"content_id\": \"{{ $('Split Threads Posts').item.json.content_id }}\",\n  \"platform\": \"threads\",\n  \"success\": {{ $json.statusCode >= 200 && $json.statusCode < 300 }},\n  \"postId\": \"{{ $json.body?.id || '' }}\",\n  \"error\": \"{{ $json.statusCode >= 300 ? ($json.body?.error?.message || 'Threads API error') : '' }}\"\n}",
@@ -324,7 +299,7 @@
       "name": "Callback Threads to Tipote",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1570, 360]
+      "position": [1570, 440]
     },
     {
       "parameters": {},
@@ -332,7 +307,15 @@
       "name": "No FB Posts",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [910, 260]
+      "position": [910, 160]
+    },
+    {
+      "parameters": {},
+      "id": "no-ig-posts",
+      "name": "No IG Posts",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 360]
     },
     {
       "parameters": {},
@@ -340,167 +323,81 @@
       "name": "No Threads Posts",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [910, 480]
+      "position": [910, 560]
     }
   ],
   "connections": {
     "Every 5 Minutes": {
       "main": [
         [
-          {
-            "node": "Fetch FB Scheduled Posts",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Threads Scheduled Posts",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Fetch FB Scheduled Posts", "type": "main", "index": 0 },
+          { "node": "Fetch IG Scheduled Posts", "type": "main", "index": 0 },
+          { "node": "Fetch Threads Scheduled Posts", "type": "main", "index": 0 }
         ]
       ]
     },
     "Fetch FB Scheduled Posts": {
-      "main": [
-        [
-          {
-            "node": "Has FB Posts?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Has FB Posts?", "type": "main", "index": 0 } ]]
+    },
+    "Fetch IG Scheduled Posts": {
+      "main": [[ { "node": "Has IG Posts?", "type": "main", "index": 0 } ]]
     },
     "Fetch Threads Scheduled Posts": {
-      "main": [
-        [
-          {
-            "node": "Has Threads Posts?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Has Threads Posts?", "type": "main", "index": 0 } ]]
     },
     "Has FB Posts?": {
       "main": [
-        [
-          {
-            "node": "Split FB Posts",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "No FB Posts",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Split FB Posts", "type": "main", "index": 0 }],
+        [{ "node": "No FB Posts", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has IG Posts?": {
+      "main": [
+        [{ "node": "Split IG Posts", "type": "main", "index": 0 }],
+        [{ "node": "No IG Posts", "type": "main", "index": 0 }]
       ]
     },
     "Has Threads Posts?": {
       "main": [
-        [
-          {
-            "node": "Split Threads Posts",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "No Threads Posts",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Split Threads Posts", "type": "main", "index": 0 }],
+        [{ "node": "No Threads Posts", "type": "main", "index": 0 }]
       ]
     },
     "Split FB Posts": {
+      "main": [[ { "node": "FB Has Video?", "type": "main", "index": 0 } ]]
+    },
+    "FB Has Video?": {
       "main": [
-        [
-          {
-            "node": "FB Has Image?",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Post FB Video", "type": "main", "index": 0 }],
+        [{ "node": "FB Has Image?", "type": "main", "index": 0 }]
       ]
+    },
+    "Post FB Video": {
+      "main": [[ { "node": "Callback FB to Tipote", "type": "main", "index": 0 } ]]
     },
     "FB Has Image?": {
       "main": [
-        [
-          {
-            "node": "Post FB Photo",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Post FB Text",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Post FB Photo", "type": "main", "index": 0 }],
+        [{ "node": "Post FB Text", "type": "main", "index": 0 }]
       ]
     },
     "Post FB Photo": {
-      "main": [
-        [
-          {
-            "node": "Callback FB to Tipote",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Callback FB to Tipote", "type": "main", "index": 0 } ]]
     },
     "Post FB Text": {
-      "main": [
-        [
-          {
-            "node": "Callback FB to Tipote",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Callback FB to Tipote", "type": "main", "index": 0 } ]]
+    },
+    "Split IG Posts": {
+      "main": [[ { "node": "Publish Instagram Post", "type": "main", "index": 0 } ]]
     },
     "Split Threads Posts": {
-      "main": [
-        [
-          {
-            "node": "Threads Create Container",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Threads Create Container", "type": "main", "index": 0 } ]]
     },
     "Threads Create Container": {
-      "main": [
-        [
-          {
-            "node": "Threads Publish",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Threads Publish", "type": "main", "index": 0 } ]]
     },
     "Threads Publish": {
-      "main": [
-        [
-          {
-            "node": "Callback Threads to Tipote",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[ { "node": "Callback Threads to Tipote", "type": "main", "index": 0 } ]]
     }
   },
   "settings": {
@@ -511,9 +408,9 @@
     {
       "name": "tipote",
       "createdAt": "2026-02-13T00:00:00.000Z",
-      "updatedAt": "2026-02-13T00:00:00.000Z"
+      "updatedAt": "2026-02-24T00:00:00.000Z"
     }
   ],
   "pinData": {},
-  "versionId": "2"
+  "versionId": "3"
 }
