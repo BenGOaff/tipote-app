@@ -109,10 +109,15 @@ export async function GET(req: NextRequest) {
 
         debug.push(`  Auto ${auto.id.slice(0, 8)}… "${auto.name}": keyword="${keyword}", post=${targetPostId}`);
 
-        // Récupérer le dernier timestamp traité
+        // Récupérer le dernier timestamp traité + liste de commentaires déjà traités
         const meta = (auto.meta as Record<string, unknown>) ?? {};
         const lastProcessedId = (meta.ig_last_comment_id as string) ?? "";
         const lastProcessedTs = (meta.ig_last_processed as number) ?? 0;
+        // Set of comment IDs already processed (by webhook or previous polling)
+        const processedIds = new Set<string>(
+          Array.isArray(meta.ig_processed_ids) ? (meta.ig_processed_ids as string[]) : []
+        );
+        if (lastProcessedId) processedIds.add(lastProcessedId);
 
         // Fetch les commentaires du post
         const fetchResult = await fetchComments(accessToken, targetPostId, igUsername);
@@ -141,10 +146,10 @@ export async function GET(req: NextRequest) {
 
         // Filtrer les nouveaux commentaires contenant le mot-clé
         const newComments = comments.filter((c) => {
+          // Ignorer les commentaires déjà traités (par ID — couvre webhook + polling)
+          if (processedIds.has(c.id)) return false;
           // Ignorer les commentaires déjà traités (par timestamp)
           if (lastProcessedTs && c.timestamp_unix <= lastProcessedTs) return false;
-          // Ignorer par ID
-          if (lastProcessedId && c.id === lastProcessedId) return false;
           // Ignorer ses propres commentaires (par username ou ID)
           if (igUserId && c.from_id && c.from_id === igUserId) return false;
           if (igUsername && c.username && c.username.toLowerCase() === igUsername.toLowerCase()) return false;
@@ -217,6 +222,10 @@ export async function GET(req: NextRequest) {
           a.timestamp_unix >= b.timestamp_unix ? a : b
         );
 
+        // Ajouter les IDs traités à la liste (garder max 200 pour ne pas exploser la taille)
+        for (const c of newComments) processedIds.add(c.id);
+        const updatedProcessedIds = [...processedIds].slice(-200);
+
         const { error: updateErr } = await supabaseAdmin
           .from("social_automations")
           .update({
@@ -228,6 +237,7 @@ export async function GET(req: NextRequest) {
               ...meta,
               ig_last_comment_id: newestComment.id,
               ig_last_processed: Math.floor(Date.now() / 1000),
+              ig_processed_ids: updatedProcessedIds,
             },
             updated_at: new Date().toISOString(),
           })
