@@ -215,18 +215,21 @@ async function processComment(params: {
 
     const firstName = extractFirstName(sender_name);
 
-    // 1. Reply to comment with random variant (non-blocking)
+    // 1. Reply to comment with random variant
+    let commentReplyOk = false;
     if (matched.comment_reply_variants?.length && comment_id) {
       const variants: string[] = matched.comment_reply_variants;
       const replyText = variants[Math.floor(Math.random() * variants.length)];
-      if (platform === "instagram") {
-        replyToInstagramComment(page_access_token, comment_id, replyText).catch((err) => {
-          console.error("[webhook] Instagram comment reply failed:", err);
-        });
-      } else {
-        replyToComment(page_access_token, comment_id, replyText).catch((err) => {
-          console.error("[webhook] Comment reply failed:", err);
-        });
+      try {
+        if (platform === "instagram") {
+          await replyToInstagramComment(page_access_token, comment_id, replyText);
+        } else {
+          await replyToComment(page_access_token, comment_id, replyText);
+        }
+        commentReplyOk = true;
+        console.log(`[webhook] Comment reply sent for ${comment_id}`);
+      } catch (err) {
+        console.error(`[webhook] Comment reply FAILED for ${comment_id}:`, err);
       }
     }
 
@@ -250,14 +253,30 @@ async function processComment(params: {
       console.error("[webhook] DM send failed:", dmResult.error);
     }
 
-    // 3. Update stats — triggers always, dms_sent only on success
+    // 3. Update stats AND meta (so polling doesn't re-process this comment)
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
+    const currentMeta = (matched.meta as Record<string, unknown>) ?? {};
+    // Ajouter le comment_id à la liste des IDs traités (max 200)
+    const processedIds: string[] = Array.isArray(currentMeta.ig_processed_ids)
+      ? (currentMeta.ig_processed_ids as string[])
+      : [];
+    if (comment_id && !processedIds.includes(comment_id)) {
+      processedIds.push(comment_id);
+    }
+    const trimmedIds = processedIds.slice(-200);
+
     await supabaseAdmin
       .from("social_automations")
       .update({
         stats: {
           triggers: (currentStats.triggers ?? 0) + 1,
           dms_sent: (currentStats.dms_sent ?? 0) + (dmResult.ok ? 1 : 0),
+        },
+        meta: {
+          ...currentMeta,
+          ...(comment_id ? { ig_last_comment_id: comment_id } : {}),
+          ig_last_processed: Math.floor(Date.now() / 1000),
+          ig_processed_ids: trimmedIds,
         },
         updated_at: new Date().toISOString(),
       })
@@ -268,6 +287,9 @@ async function processComment(params: {
       ok: true,
       matched: 1,
       automation_id: matched.id,
+      comment_reply_sent: commentReplyOk,
+      comment_reply_variants_count: matched.comment_reply_variants?.length ?? 0,
+      comment_id_present: !!comment_id,
       dm_sent: dmResult.ok,
       ...(dmResult.ok ? {} : { dm_error: dmResult.error }),
     });
