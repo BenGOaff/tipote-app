@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap, Plus, MessageCircle, Video } from "lucide-react";
+import { Loader2, Wand2, X, Copy, Check, FileDown, Send, CalendarDays, Zap, Plus, MessageCircle } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
 import { PublishModal } from "@/components/content/PublishModal";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
+import { VideoUploader, type UploadedVideo } from "@/components/content/VideoUploader";
 import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { AutoCommentPanel, type AutoCommentConfig } from "@/components/create/AutoCommentPanel";
@@ -117,8 +118,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const isPinterest = platform === "pinterest";
   const isTikTok = platform === "tiktok";
 
-  // Video URL (TikTok, etc.)
-  const [videoUrl, setVideoUrl] = useState("");
+  // Video upload (TikTok, etc.)
+  const [uploadedVideo, setUploadedVideo] = useState<UploadedVideo | null>(null);
 
   // Auto-comment state
   const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
@@ -290,9 +291,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
       if (pinterestLink.trim()) meta.pinterest_link = pinterestLink.trim();
     }
 
-    // Video URL (TikTok, etc.)
-    if (videoUrl.trim()) {
-      meta.video_url = videoUrl.trim();
+    // Video (TikTok, etc.) — stored in Supabase Storage
+    if (uploadedVideo) {
+      meta.video_url = uploadedVideo.url;
+      meta.video_path = uploadedVideo.path;
     }
 
     // Auto-comment config in meta
@@ -594,23 +596,14 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
             )}
           </div>
 
-          {/* Video URL (TikTok) */}
+          {/* Video upload (TikTok) */}
           {generatedContent && isTikTok && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5 text-muted-foreground" />
-                URL de la vidéo
-              </Label>
-              <Input
-                placeholder="https://... (lien direct vers la vidéo MP4)"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                TikTok téléchargera la vidéo depuis cette URL. Formats : MP4, WebM. Max 4 Go, durée 3s-10min.
-                {!videoUrl.trim() && " Si pas de vidéo, ajoute au moins une image ci-dessous."}
-              </p>
-            </div>
+            <VideoUploader
+              video={uploadedVideo}
+              onChange={setUploadedVideo}
+              contentId={savedContentId ?? undefined}
+              disabled={isSaving}
+            />
           )}
 
           {/* Image upload */}
@@ -627,7 +620,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                   Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo.
                 </p>
               )}
-              {isTikTok && !videoUrl.trim() && images.length === 0 && (
+              {isTikTok && !uploadedVideo && images.length === 0 && (
                 <p className="text-xs text-amber-600 -mt-1">
                   TikTok nécessite au moins une image ou une vidéo pour publier.
                 </p>
@@ -726,7 +719,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setPublishModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !videoUrl.trim() && images.length === 0)}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0)}
                       title={
                         isOverLimit
                           ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}`
@@ -734,8 +727,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                           ? "Sélectionne un tableau Pinterest"
                           : isPinterest && images.length === 0
                           ? "Ajoute une image (obligatoire pour Pinterest)"
-                          : isTikTok && !videoUrl.trim() && images.length === 0
-                          ? "Ajoute une vidéo ou une image (obligatoire pour TikTok)"
+                          : isTikTok && !uploadedVideo && images.length === 0
+                          ? "Uploade une vidéo ou ajoute une image (obligatoire pour TikTok)"
                           : undefined
                       }
                     >
@@ -746,7 +739,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
                     <Button
                       size="sm"
                       onClick={() => setScheduleModalOpen(true)}
-                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !videoUrl.trim() && images.length === 0)}
+                      disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0)}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
                       Programmer sur {platformLabel}
