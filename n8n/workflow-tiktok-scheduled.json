@@ -1,0 +1,167 @@
+{
+  "name": "Tipote - TikTok Scheduled Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/n8n/scheduled-posts?platform=tiktok",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-scheduled",
+      "name": "Fetch Scheduled TikTok Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-posts",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-posts",
+      "name": "Has Posts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      },
+      "id": "split-posts",
+      "name": "Split Posts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Publish to TikTok via Content Posting API.\n// Supports both photo (PULL_FROM_URL) and video (PULL_FROM_URL).\n\nconst post = $input.first().json;\nconst accessToken = post.access_token || '';\nconst text = post.commentary || '';\nconst imageUrl = post.image_url || '';\nconst videoUrl = post.video_url || '';\nconst images = post.images || [];\nconst callbackUrl = post.callback_url || '';\nconst contentId = post.content_id || '';\nconst sharedSecret = $env.N8N_SHARED_SECRET || '';\n\nlet publishSuccess = false;\nlet publishId = '';\nlet publishError = '';\n\nconsole.log('[TikTok-scheduled] video_url:', videoUrl ? videoUrl.substring(0, 80) : 'none');\nconsole.log('[TikTok-scheduled] image_url:', imageUrl ? imageUrl.substring(0, 80) : 'none');\nconsole.log('[TikTok-scheduled] images count:', images.length);\n\ntry {\n  if (videoUrl) {\n    // ── Video publish ──\n    const videoBody = {\n      post_info: {\n        title: text.slice(0, 2200),\n        privacy_level: 'SELF_ONLY',\n        disable_comment: false\n      },\n      source_info: {\n        source: 'PULL_FROM_URL',\n        video_url: videoUrl\n      }\n    };\n\n    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {\n      method: 'POST',\n      headers: {\n        'Authorization': 'Bearer ' + accessToken,\n        'Content-Type': 'application/json; charset=UTF-8'\n      },\n      body: JSON.stringify(videoBody)\n    });\n\n    const json = await res.json();\n    console.log('[TikTok-scheduled] Video response:', JSON.stringify(json).substring(0, 500));\n\n    if (res.ok && (!json.error?.code || json.error.code === 'ok')) {\n      publishSuccess = true;\n      publishId = json.data?.publish_id || '';\n    } else {\n      publishError = json.error?.message || json.error?.code || 'TikTok video error ' + res.status;\n    }\n  } else if (imageUrl || images.length > 0) {\n    // ── Photo publish ──\n    const photoUrls = images.length > 0 ? images : [imageUrl];\n\n    const photoBody = {\n      post_info: {\n        title: text.slice(0, 90),\n        description: text.slice(0, 4000),\n        privacy_level: 'SELF_ONLY',\n        disable_comment: false,\n        auto_add_music: true\n      },\n      source_info: {\n        source: 'PULL_FROM_URL',\n        photo_cover_index: 0,\n        photo_images: photoUrls.slice(0, 35)\n      },\n      post_mode: 'DIRECT_POST',\n      media_type: 'PHOTO'\n    };\n\n    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {\n      method: 'POST',\n      headers: {\n        'Authorization': 'Bearer ' + accessToken,\n        'Content-Type': 'application/json; charset=UTF-8'\n      },\n      body: JSON.stringify(photoBody)\n    });\n\n    const json = await res.json();\n    console.log('[TikTok-scheduled] Photo response:', JSON.stringify(json).substring(0, 500));\n\n    if (res.ok && (!json.error?.code || json.error.code === 'ok')) {\n      publishSuccess = true;\n      publishId = json.data?.publish_id || '';\n    } else {\n      publishError = json.error?.message || json.error?.code || 'TikTok photo error ' + res.status;\n    }\n  } else {\n    publishError = 'TikTok requires at least one image or video';\n  }\n} catch (e) {\n  publishError = e.message || 'tiktok_publish_exception';\n}\n\n// Callback to Tipote\ntry {\n  await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'X-N8N-Secret': sharedSecret,\n      'Content-Type': 'application/json'\n    },\n    body: JSON.stringify({\n      content_id: contentId,\n      platform: 'tiktok',\n      success: publishSuccess,\n      postId: publishId,\n      error: publishError || undefined\n    })\n  });\n} catch (e) {\n  // Callback failed — non-blocking\n}\n\nreturn [{\n  json: {\n    content_id: contentId,\n    success: publishSuccess,\n    publishId: publishId,\n    error: publishError || null\n  }\n}];"
+      },
+      "id": "tiktok-post",
+      "name": "Post to TikTok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 240],
+      "notes": "Publishes photo or video to TikTok via Content Posting API. Determines media type from payload. Handles callback to Tipote."
+    },
+    {
+      "parameters": {},
+      "id": "no-posts",
+      "name": "No Posts - Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch Scheduled TikTok Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Scheduled TikTok Posts": {
+      "main": [
+        [
+          {
+            "node": "Has Posts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Posts?": {
+      "main": [
+        [
+          {
+            "node": "Split Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Posts - Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Posts": {
+      "main": [
+        [
+          {
+            "node": "Post to TikTok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote",
+      "createdAt": "2026-02-24T00:00:00.000Z",
+      "updatedAt": "2026-02-24T00:00:00.000Z"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1"
+}

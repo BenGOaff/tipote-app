@@ -1,0 +1,141 @@
+{
+  "name": "Tipote - TikTok Publish Now",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tiktok-publish",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "tiktok-publish"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-secret",
+              "leftValue": "={{ $json.headers['x-n8n-secret'] }}",
+              "rightValue": "={{ $env.N8N_SHARED_SECRET }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "auth-check",
+      "name": "Auth Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Publish to TikTok via Content Posting API.\n// Supports both photo (PULL_FROM_URL) and video (PULL_FROM_URL).\n// Also handles callback to Tipote.\n\nconst body = $input.first().json.body || $input.first().json;\nconst accessToken = body.access_token || '';\nconst text = body.commentary || '';\nconst imageUrl = body.image_url || '';\nconst videoUrl = body.video_url || '';\nconst images = body.images || [];\nconst callbackUrl = body.callback_url || '';\nconst contentId = body.content_id || '';\nconst sharedSecret = $env.N8N_SHARED_SECRET || '';\n\nlet publishSuccess = false;\nlet publishId = '';\nlet publishError = '';\n\nconsole.log('[TikTok] video_url:', videoUrl ? videoUrl.substring(0, 80) : 'none');\nconsole.log('[TikTok] image_url:', imageUrl ? imageUrl.substring(0, 80) : 'none');\nconsole.log('[TikTok] images count:', images.length);\n\ntry {\n  if (videoUrl) {\n    // ── Video publish (PULL_FROM_URL) ──\n    const videoBody = {\n      post_info: {\n        title: text.slice(0, 2200),\n        privacy_level: 'SELF_ONLY',\n        disable_comment: false\n      },\n      source_info: {\n        source: 'PULL_FROM_URL',\n        video_url: videoUrl\n      }\n    };\n\n    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {\n      method: 'POST',\n      headers: {\n        'Authorization': 'Bearer ' + accessToken,\n        'Content-Type': 'application/json; charset=UTF-8'\n      },\n      body: JSON.stringify(videoBody)\n    });\n\n    const json = await res.json();\n    console.log('[TikTok] Video publish response:', JSON.stringify(json).substring(0, 500));\n\n    if (res.ok && (!json.error?.code || json.error.code === 'ok')) {\n      publishSuccess = true;\n      publishId = json.data?.publish_id || '';\n    } else {\n      publishError = json.error?.message || json.error?.code || 'TikTok video publish error ' + res.status;\n    }\n  } else if (imageUrl || images.length > 0) {\n    // ── Photo publish (PULL_FROM_URL) ──\n    const photoUrls = images.length > 0 ? images : [imageUrl];\n\n    const photoBody = {\n      post_info: {\n        title: text.slice(0, 90),\n        description: text.slice(0, 4000),\n        privacy_level: 'SELF_ONLY',\n        disable_comment: false,\n        auto_add_music: true\n      },\n      source_info: {\n        source: 'PULL_FROM_URL',\n        photo_cover_index: 0,\n        photo_images: photoUrls.slice(0, 35)\n      },\n      post_mode: 'DIRECT_POST',\n      media_type: 'PHOTO'\n    };\n\n    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {\n      method: 'POST',\n      headers: {\n        'Authorization': 'Bearer ' + accessToken,\n        'Content-Type': 'application/json; charset=UTF-8'\n      },\n      body: JSON.stringify(photoBody)\n    });\n\n    const json = await res.json();\n    console.log('[TikTok] Photo publish response:', JSON.stringify(json).substring(0, 500));\n\n    if (res.ok && (!json.error?.code || json.error.code === 'ok')) {\n      publishSuccess = true;\n      publishId = json.data?.publish_id || '';\n    } else {\n      publishError = json.error?.message || json.error?.code || 'TikTok photo publish error ' + res.status;\n    }\n  } else {\n    publishError = 'TikTok requires at least one image or video';\n  }\n} catch (e) {\n  publishError = e.message || 'tiktok_publish_exception';\n}\n\n// Callback to Tipote\nif (callbackUrl) {\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'X-N8N-Secret': sharedSecret,\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({\n        content_id: contentId,\n        platform: 'tiktok',\n        success: publishSuccess,\n        postId: publishId,\n        error: publishError || undefined\n      })\n    });\n  } catch (e) {\n    // Non-blocking\n  }\n}\n\nreturn [{\n  json: {\n    ok: publishSuccess,\n    postId: publishId,\n    publishId: publishId,\n    error: publishError || null\n  }\n}];"
+      },
+      "id": "tiktok-post",
+      "name": "Post to TikTok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 240],
+      "notes": "Publishes photo or video to TikTok via Content Posting API (PULL_FROM_URL). Determines media type from payload (video_url → video, image_url/images → photo). Handles callback to Tipote."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $json.ok, postId: $json.postId || '', publishId: $json.publishId || '', error: $json.error || undefined }) }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": false, \"error\": \"Unauthorized\" }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-unauthorized",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [690, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Auth Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Check": {
+      "main": [
+        [
+          {
+            "node": "Post to TikTok",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to TikTok": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote",
+      "createdAt": "2026-02-24T00:00:00.000Z",
+      "updatedAt": "2026-02-24T00:00:00.000Z"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1"
+}
