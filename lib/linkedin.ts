@@ -428,3 +428,126 @@ export async function uploadImageToLinkedIn(
 
   return imageUrn;
 }
+
+// ----------------------------------------------------------------
+// Comments API — Auto-Reply
+// Doc : https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/comments-api
+// ----------------------------------------------------------------
+
+export type LinkedInComment = {
+  id: string;           // commentUrn (urn:li:comment:...)
+  message: string;
+  actorUrn: string;     // urn:li:person:{id}
+  created: number;      // epoch ms
+  parentCommentUrn?: string;
+};
+
+/**
+ * Récupère les posts récents de l'utilisateur.
+ * Utilise GET /rest/posts?q=author&author={personUrn}
+ */
+export async function getMyPosts(
+  accessToken: string,
+  personId: string,
+  count = 20,
+): Promise<Array<{ urn: string; text: string; created: number }>> {
+  const authorUrn = encodeURIComponent(`urn:li:person:${personId}`);
+  const url = `${LINKEDIN_POSTS_URL}?q=author&author=${authorUrn}&count=${count}&sortBy=LAST_MODIFIED`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": LINKEDIN_API_VERSION,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`LinkedIn getMyPosts failed (${res.status}): ${text}`);
+  }
+
+  const json = await res.json();
+  const elements: any[] = json?.elements ?? [];
+
+  return elements.map((post: any) => ({
+    urn: post.id ?? "",
+    text: post.commentary ?? "",
+    created: post.createdAt ?? post.lastModifiedAt ?? 0,
+  })).filter((p) => p.urn);
+}
+
+/**
+ * Récupère les commentaires d'un post LinkedIn.
+ * GET /rest/socialActions/{postUrn}/comments
+ */
+export async function getPostComments(
+  accessToken: string,
+  postUrn: string,
+  count = 50,
+): Promise<LinkedInComment[]> {
+  const encodedUrn = encodeURIComponent(postUrn);
+  const url = `https://api.linkedin.com/rest/socialActions/${encodedUrn}/comments?count=${count}`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": LINKEDIN_API_VERSION,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`LinkedIn getPostComments failed (${res.status}): ${text}`);
+  }
+
+  const json = await res.json();
+  const elements: any[] = json?.elements ?? [];
+
+  return elements.map((c: any) => ({
+    id: c["$URN"] ?? c.id ?? "",
+    message: c.message?.text ?? "",
+    actorUrn: c.actor ?? "",
+    created: c.created?.time ?? 0,
+    parentCommentUrn: c.parentComment ?? undefined,
+  })).filter((c) => c.id && c.message);
+}
+
+/**
+ * Répond à un commentaire LinkedIn (nested reply).
+ * POST /rest/socialActions/{postUrn}/comments avec parentComment.
+ */
+export async function replyToLinkedInComment(
+  accessToken: string,
+  postUrn: string,
+  parentCommentUrn: string,
+  personUrn: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const encodedUrn = encodeURIComponent(postUrn);
+  const res = await fetch(
+    `https://api.linkedin.com/rest/socialActions/${encodedUrn}/comments`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "LinkedIn-Version": LINKEDIN_API_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+      body: JSON.stringify({
+        actor: personUrn,
+        message: { text },
+        parentComment: parentCommentUrn,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    return { ok: false, error: `LinkedIn reply error (${res.status}): ${t}` };
+  }
+
+  return { ok: true };
+}
