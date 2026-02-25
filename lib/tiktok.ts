@@ -22,10 +22,9 @@ const TIKTOK_VIDEO_LIST_URL = "https://open.tiktokapis.com/v2/video/list/";
 // user.info.basic : profil de base
 // video.publish : publier des vidéos
 // video.upload : uploader des vidéos
-// video.list : lister ses vidéos
-// Note : comment.list et comment.list.manage ne sont pas des scopes OAuth valides
-// Les APIs commentaires TikTok nécessitent une autorisation différente via le Developer Portal
-const SCOPES = ["user.info.basic", "video.publish", "video.upload", "video.list"];
+// Note : video.list nécessite une approbation séparée dans le TikTok Developer Portal.
+// Ne PAS l'inclure ici tant qu'il n'est pas approuvé, sinon l'OAuth échoue avec invalid_scope.
+const SCOPES = ["user.info.basic", "video.publish", "video.upload"];
 
 function getClientKey(): string {
   const key = process.env.TIKTOK_CLIENT_KEY;
