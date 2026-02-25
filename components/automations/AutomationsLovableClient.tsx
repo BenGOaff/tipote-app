@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,13 +26,8 @@ import {
   Twitter,
   MessageCircle,
   Mail,
-  ChevronDown,
-  ChevronUp,
   Pencil,
   Trash2,
-  CheckCircle2,
-  Clock,
-  XCircle,
   Info,
   Link2,
   MessageSquare,
@@ -88,6 +83,14 @@ const DEFAULT_COMMENT_REPLIES = [
   "Super, c'est dans tes messages !",
 ].join("\n");
 
+const DEFAULT_TIKTOK_COMMENT_REPLIES = [
+  "Merci pour ton commentaire ! 🙌",
+  "Super, merci de participer !",
+  "Top, content que ça t'intéresse ! 🔥",
+  "C'est noté, merci !",
+  "Génial, merci à toi !",
+].join("\n");
+
 const DEFAULT_FORM: FormState = {
   name: "",
   type: "comment_to_dm",
@@ -121,6 +124,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-blue-500",
     bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40",
+    description: "Auto DM + réponse commentaire",
   },
   {
     id: "instagram",
@@ -129,6 +133,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-pink-500",
     bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
+    description: "Auto DM + réponse commentaire",
   },
   {
     id: "tiktok",
@@ -137,7 +142,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-black dark:text-white",
     bg: "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800/40",
-    note: "Auto-réponse commentaires",
+    description: "Auto réponse commentaire",
   },
   {
     id: "linkedin",
@@ -146,6 +151,7 @@ const PLATFORM_STATUS = [
     status: "soon" as const,
     color: "text-sky-600",
     bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
+    description: "",
   },
   {
     id: "x",
@@ -154,6 +160,16 @@ const PLATFORM_STATUS = [
     status: "unavailable" as const,
     color: "text-muted-foreground",
     bg: "bg-muted/50 border-border",
+    description: "",
+  },
+  {
+    id: "pinterest",
+    label: "Pinterest",
+    icon: ImageIcon,
+    status: "soon" as const,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40",
+    description: "",
   },
   {
     id: "threads",
@@ -162,6 +178,7 @@ const PLATFORM_STATUS = [
     status: "soon" as const,
     color: "text-slate-500",
     bg: "bg-slate-50 dark:bg-slate-950/20 border-slate-200 dark:border-slate-800/40",
+    description: "",
   },
 ];
 
@@ -193,7 +210,6 @@ export default function AutomationsLovableClient() {
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [postPickerOpen, setPostPickerOpen] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
 
   /* ── Load automations ── */
   const loadAutomations = useCallback(async () => {
@@ -237,6 +253,20 @@ export default function AutomationsLovableClient() {
     setShowModal(true);
   }
 
+  /* ── Open create modal for a specific platform ── */
+  function openCreateForPlatform(platform: Platform) {
+    const isTiktok = platform === "tiktok";
+    setForm({
+      ...DEFAULT_FORM,
+      platforms: [platform],
+      type: isTiktok ? "comment_to_dm" : "comment_to_dm",
+      comment_reply_variants: isTiktok ? DEFAULT_TIKTOK_COMMENT_REPLIES : DEFAULT_COMMENT_REPLIES,
+      dm_message: isTiktok ? "" : "",
+    });
+    setEditingId(null);
+    setShowModal(true);
+  }
+
   /* ── Open edit modal ── */
   function openEdit(auto: SocialAutomation) {
     setForm({
@@ -258,9 +288,10 @@ export default function AutomationsLovableClient() {
 
   /* ── Save (create or update) ── */
   async function handleSave() {
+    const isTikTok = form.platforms[0] === "tiktok";
     if (!form.name.trim()) { toast.error(t("form.errorName")); return; }
     if (!form.trigger_keyword.trim()) { toast.error(t("form.errorKeyword")); return; }
-    if (!form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
+    if (!isTikTok && !form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
     if (form.platforms.length === 0) { toast.error(t("form.errorPlatform")); return; }
     if (!form.target_post_url.trim()) { toast.error("Choisis un post cible avant de continuer."); return; }
 
@@ -396,13 +427,6 @@ export default function AutomationsLovableClient() {
   }
 
 
-  /* ─── Status icon helper ─── */
-  function StatusIcon({ status }: { status: "available" | "soon" | "unavailable" }) {
-    if (status === "available") return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-    if (status === "soon") return <Clock className="w-4 h-4 text-amber-500" />;
-    return <XCircle className="w-4 h-4 text-muted-foreground" />;
-  }
-
   /* ─── Rendered ─── */
   return (
     <DashboardLayout
@@ -419,101 +443,57 @@ export default function AutomationsLovableClient() {
             <h2 className="text-xl font-display font-bold">{t("hero.title")}</h2>
             <p className="mt-1 text-primary-foreground/80 text-sm">{t("hero.description")}</p>
           </div>
-          <Button
-            variant="secondary"
-            className="gap-2 shrink-0"
-            onClick={openCreate}
-          >
-            <Plus className="w-4 h-4" />
-            {t("createBtn")}
-          </Button>
         </CardContent>
       </Card>
 
-      {/* ── Platform availability ── */}
+      {/* ── Automatiser par plateforme ── */}
       <div>
         <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
           {t("platformsTitle")}
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {PLATFORM_STATUS.map((p) => {
             const Icon = p.icon;
+            const isAvailable = p.status === "available";
             return (
-              <div
+              <button
                 key={p.id}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 ${p.bg}`}
+                type="button"
+                disabled={!isAvailable}
+                onClick={() => isAvailable && openCreateForPlatform(p.id as Platform)}
+                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                  isAvailable
+                    ? `${p.bg} hover:shadow-md cursor-pointer group`
+                    : "bg-muted/30 border-border opacity-50 cursor-not-allowed"
+                }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${p.color}`} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  isAvailable ? "bg-white/80 dark:bg-white/10" : "bg-muted"
+                }`}>
+                  <Icon className={`w-5 h-5 ${isAvailable ? p.color : "text-muted-foreground"}`} />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{p.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.status === "available"
-                      ? t("status.available")
+                  <p className="text-sm font-medium">{p.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isAvailable
+                      ? p.description
                       : p.status === "soon"
                       ? t("status.soon")
                       : t("status.unavailable")}
                   </p>
                 </div>
-                <StatusIcon status={p.status} />
-              </div>
+                {isAvailable && (
+                  <Plus className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                )}
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* ── Setup guide (collapsible) ── */}
-      <Card>
-        <CardHeader
-          className="pb-2 cursor-pointer select-none"
-          onClick={() => setShowGuide((s) => !s)}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Info className="w-4 h-4 text-primary" />
-              {t("guide.title")}
-            </CardTitle>
-            {showGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-          </div>
-        </CardHeader>
-        {showGuide && (
-          <CardContent className="space-y-4 pt-0">
-            <p className="text-sm text-muted-foreground">{t("guide.intro")}</p>
-
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((step) => (
-                <div key={step} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
-                    {step}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{t(`guide.step${step}.title`)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t(`guide.step${step}.desc`)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* RGPD note */}
-            <div className="flex items-start gap-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 p-4">
-              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{t("rgpd.title")}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t("rgpd.description")}</p>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
-
       {/* ── Automations list ── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-display font-bold">{t("listTitle")}</h3>
-          <Button variant="outline" size="sm" className="gap-2" onClick={openCreate}>
-            <Plus className="w-4 h-4" />
-            {t("createBtn")}
-          </Button>
-        </div>
+        <h3 className="text-lg font-display font-bold mb-4">{t("listTitle")}</h3>
 
         {isLoading ? (
           <div className="space-y-3">
@@ -529,21 +509,7 @@ export default function AutomationsLovableClient() {
                 <Zap className="w-8 h-8 text-muted-foreground" />
               </div>
               <h4 className="font-display font-semibold text-lg mb-2">{t("empty.title")}</h4>
-              <p className="text-sm text-muted-foreground max-w-xs mb-6">{t("empty.description")}</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button className="gap-2" onClick={openCreate}>
-                  <Plus className="w-4 h-4" />
-                  {t("empty.ctaDm")}
-                </Button>
-                <Button variant="outline" className="gap-2" onClick={() => {
-                  setForm({ ...DEFAULT_FORM, type: "comment_to_email", name: t("empty.emailName") });
-                  setEditingId(null);
-                  setShowModal(true);
-                }}>
-                  <Mail className="w-4 h-4" />
-                  {t("empty.ctaEmail")}
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground max-w-xs">{t("empty.description")}</p>
             </CardContent>
           </Card>
         ) : (
@@ -562,52 +528,7 @@ export default function AutomationsLovableClient() {
         )}
       </div>
 
-      {/* ── Templates section ── */}
-      <div>
-        <h3 className="text-lg font-display font-bold mb-4">{t("templates.title")}</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <TemplateCard
-            icon={<MessageCircle className="w-5 h-5 text-primary" />}
-            title={t("templates.dm.title")}
-            description={t("templates.dm.description")}
-            example={t("templates.dm.example")}
-            badge={t("templates.dm.badge")}
-            badgeVariant="default"
-            onUse={() => {
-              setForm({
-                ...DEFAULT_FORM,
-                name: t("templates.dm.title"),
-                type: "comment_to_dm",
-                dm_message: t("templates.dm.defaultMessage"),
-              });
-              setEditingId(null);
-              setShowModal(true);
-            }}
-          />
-          <TemplateCard
-            icon={<Mail className="w-5 h-5 text-primary" />}
-            title={t("templates.email.title")}
-            description={t("templates.email.description")}
-            example={t("templates.email.example")}
-            badge={t("templates.email.badge")}
-            badgeVariant="outline"
-            onUse={() => {
-              setForm({
-                ...DEFAULT_FORM,
-                name: t("templates.email.title"),
-                type: "comment_to_email",
-                include_email_capture: true,
-                dm_message: t("templates.email.defaultMessage"),
-                email_dm_message: t("templates.email.defaultEmailDm"),
-              });
-              setEditingId(null);
-              setShowModal(true);
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ── Post Picker Modal (Facebook or Instagram) ── */}
+      {/* ── Post Picker Modal ── */}
       <PostPickerModal
         open={postPickerOpen}
         onOpenChange={setPostPickerOpen}
@@ -631,7 +552,18 @@ export default function AutomationsLovableClient() {
             </DialogDescription>
           </DialogHeader>
 
+          {(() => {
+            const isTikTok = form.platforms[0] === "tiktok";
+            const platformLabel = form.platforms[0] === "instagram" ? "Instagram" : form.platforms[0] === "tiktok" ? "TikTok" : "Facebook";
+            return (
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 py-2 pr-1">
+            {/* Platform badge (read-only) */}
+            <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : <Facebook className="w-4 h-4 text-blue-500" />}
+              <span className="text-sm font-medium">{platformLabel}</span>
+              {isTikTok && <Badge variant="secondary" className="text-xs ml-auto">{t("form.tiktokCommentOnly")}</Badge>}
+            </div>
+
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t("form.name")}</label>
@@ -642,62 +574,34 @@ export default function AutomationsLovableClient() {
               />
             </div>
 
-            {/* Type */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t("form.type")}</label>
-              <div className="grid grid-cols-2 gap-3">
-                {(["comment_to_dm", "comment_to_email"] as AutomationType[]).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, type }))}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors overflow-hidden ${
-                      form.type === type
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {type === "comment_to_dm"
-                      ? <MessageCircle className="w-4 h-4 text-primary shrink-0" />
-                      : <Mail className="w-4 h-4 text-primary shrink-0" />}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{t(`form.type_${type}`)}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{t(`form.type_${type}_desc`)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Platform — single choice (radio) */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t("form.platforms")}</label>
-              <div className="flex gap-3 flex-wrap">
-                {(["facebook", "instagram", "tiktok"] as Platform[]).map((p) => {
-                  const PIcon = p === "instagram" ? Instagram : p === "tiktok" ? TikTokIcon : Facebook;
-                  const iconColor = p === "instagram" ? "text-pink-500" : p === "tiktok" ? "text-black dark:text-white" : "text-blue-500";
-                  const selected = form.platforms[0] === p;
-                  return (
+            {/* Type — hidden for TikTok (comment reply only) */}
+            {!isTikTok && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("form.type")}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(["comment_to_dm", "comment_to_email"] as AutomationType[]).map((type) => (
                     <button
-                      key={p}
+                      key={type}
                       type="button"
-                      onClick={() => selectPlatform(p)}
-                      className={`flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 transition-colors ${
-                        selected
+                      onClick={() => setForm((f) => ({ ...f, type }))}
+                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors overflow-hidden ${
+                        form.type === type
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
-                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary" : "border-muted-foreground/40"}`}>
-                        {selected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      {type === "comment_to_dm"
+                        ? <MessageCircle className="w-4 h-4 text-primary shrink-0" />
+                        : <Mail className="w-4 h-4 text-primary shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{t(`form.type_${type}`)}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{t(`form.type_${type}_desc`)}</p>
                       </div>
-                      <PIcon className={`w-4 h-4 ${iconColor}`} />
-                      <span className="text-sm capitalize">{p}</span>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Trigger keyword */}
             <div className="space-y-1.5">
@@ -741,44 +645,49 @@ export default function AutomationsLovableClient() {
                   onClick={() => setPostPickerOpen(true)}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
-                  {t("form.targetPostPick")} {form.platforms[0] === "instagram" ? "Instagram" : "Facebook"}
+                  {t("form.targetPostPick")} {platformLabel}
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">{t("form.targetPostHint")}</p>
             </div>
 
-            {/* DM Message */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">
-                {form.type === "comment_to_email" ? t("form.firstDmMessage") : t("form.dmMessage")}
-              </label>
-              <Textarea
-                placeholder={t("form.dmMessagePlaceholder")}
-                value={form.dm_message}
-                onChange={(e) => setForm((f) => ({ ...f, dm_message: e.target.value }))}
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">{t("form.dmMessageHint")}</p>
-            </div>
+            {/* DM Message — hidden for TikTok */}
+            {!isTikTok && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  {form.type === "comment_to_email" ? t("form.firstDmMessage") : t("form.dmMessage")}
+                </label>
+                <Textarea
+                  placeholder={t("form.dmMessagePlaceholder")}
+                  value={form.dm_message}
+                  onChange={(e) => setForm((f) => ({ ...f, dm_message: e.target.value }))}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">{t("form.dmMessageHint")}</p>
+              </div>
+            )}
 
             {/* Comment reply variants */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
                 <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
                 {t("form.commentReplies")}
+                {isTikTok && <span className="text-xs text-destructive font-medium">*</span>}
               </label>
               <Textarea
-                placeholder={t("form.commentRepliesPlaceholder")}
+                placeholder={isTikTok ? t("form.tiktokCommentRepliesPlaceholder") : t("form.commentRepliesPlaceholder")}
                 value={form.comment_reply_variants}
                 onChange={(e) => setForm((f) => ({ ...f, comment_reply_variants: e.target.value }))}
                 rows={5}
                 className="font-mono text-xs"
               />
-              <p className="text-xs text-muted-foreground">{t("form.commentRepliesHint")}</p>
+              <p className="text-xs text-muted-foreground">
+                {isTikTok ? t("form.tiktokCommentRepliesHint") : t("form.commentRepliesHint")}
+              </p>
             </div>
 
-            {/* Email capture (only for comment_to_email) */}
-            {form.type === "comment_to_email" && (
+            {/* Email capture (only for comment_to_email, not TikTok) */}
+            {!isTikTok && form.type === "comment_to_email" && (
               <>
                 <div className="flex items-center gap-3 rounded-lg border border-border p-3">
                   <Switch
@@ -816,12 +725,16 @@ export default function AutomationsLovableClient() {
               </>
             )}
 
-            {/* RGPD reminder */}
+            {/* Info note */}
             <div className="flex items-start gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 p-3">
               <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700 dark:text-blue-400">{t("form.rgpdNote")}</p>
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                {isTikTok ? t("form.tiktokNote") : t("form.rgpdNote")}
+              </p>
             </div>
           </div>
+            );
+          })()}
 
           <DialogFooter className="shrink-0 border-t pt-4 mt-2">
             <Button variant="outline" onClick={() => setShowModal(false)}>
@@ -1156,56 +1069,3 @@ function PostPickerModal({
   );
 }
 
-/* ─────────────────────────── TemplateCard sub-component ─── */
-
-function TemplateCard({
-  icon,
-  title,
-  description,
-  example,
-  badge,
-  badgeVariant,
-  onUse,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  example: string;
-  badge: string;
-  badgeVariant: "default" | "outline";
-  onUse: () => void;
-}) {
-  const t = useTranslations("automations");
-  return (
-    <Card className="flex flex-col">
-      <CardContent className="flex flex-col flex-1 p-5 gap-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            {icon}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-display font-semibold text-sm">{title}</h4>
-              <Badge variant={badgeVariant} className="text-xs">{badge}</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{description}</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-muted px-3 py-2">
-          <p className="text-xs font-mono text-foreground/80">{example}</p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-auto gap-2"
-          onClick={onUse}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          {t("templates.useBtn")}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
