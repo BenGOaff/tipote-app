@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.social_automations (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE public.social_automations IS 'Automations comment-to-DM et comment-to-email pour Facebook, Instagram, TikTok.';
+COMMENT ON TABLE public.social_automations IS 'Automations comment-to-DM et comment-to-email pour Facebook, Instagram, TikTok, Twitter/X, LinkedIn.';
 
 CREATE INDEX IF NOT EXISTS idx_social_automations_user ON public.social_automations(user_id);
 CREATE INDEX IF NOT EXISTS idx_social_automations_enabled ON public.social_automations(enabled) WHERE enabled = true;
