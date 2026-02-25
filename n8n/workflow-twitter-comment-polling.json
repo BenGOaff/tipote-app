@@ -1,0 +1,155 @@
+{
+  "name": "Tipote - X (Twitter) Comment-to-DM",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.TIPOTE_APP_URL }}/api/automations/twitter-comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Secret",
+              "value": "={{ $env.N8N_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "poll-comments",
+      "name": "Poll Twitter Replies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300],
+      "notes": "Appelle l'API Tipote qui : 1) Récupère les automations Twitter actives, 2) Fetch les replies via l'API interne Twitter (scraping), 3) Matche les mots-clés, 4) Répond au tweet via API v2 officielle + envoie un DM via l'API interne."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-dms",
+              "leftValue": "={{ $json.dms_sent }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-dms",
+      "name": "DMs Sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "notes": "Vérifie si des DMs ont été envoyés ce cycle."
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconsole.log(`[Twitter] Comment-to-DM cycle: ${data.processed} replies processed, ${data.replies} comment replies, ${data.dms_sent} DMs sent, ${data.errors} errors`);\nif (data.debug) console.log('[Twitter] Debug:', JSON.stringify(data.debug, null, 2));\nreturn [$input.first()];"
+      },
+      "id": "log-results",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 240]
+    },
+    {
+      "parameters": {},
+      "id": "no-dms",
+      "name": "No New DMs",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Poll Twitter Replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Twitter Replies": {
+      "main": [
+        [
+          {
+            "node": "DMs Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DMs Sent?": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New DMs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "tipote"
+    },
+    {
+      "name": "automations"
+    },
+    {
+      "name": "twitter"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "notes": "## Workflow X (Twitter) Comment-to-DM\n\nCe workflow poll les replies sur les tweets X toutes les 3 minutes et déclenche le flow keyword → reply + DM.\n\n### Variables d'environnement requises dans n8n\n\n- `TIPOTE_APP_URL` : ex. https://app.tipote.com\n- `N8N_SHARED_SECRET` : même valeur que dans le .env Tipote\n\n### Variables d'environnement requises dans Tipote (.env)\n\n- `TWITTER_AUTH_TOKEN` : cookie auth_token de x.com\n- `TWITTER_CT0` : cookie ct0 de x.com (CSRF token)\n\n### Architecture\n\n```\nCron (toutes les 3 min)\n  → Appel GET /api/automations/twitter-comments\n  → Tipote récupère les automations Twitter actives\n  → Pour chaque automation : fetch les replies du tweet ciblé (scraping)\n  → Filtre les replies contenant le mot-clé\n  → Répond au tweet (public, via API v2 officielle)\n  → Envoie un DM (via API interne Twitter)\n  → Met à jour les stats\n```\n\n### Comment récupérer les cookies Twitter\n\n1. Connecte-toi à x.com dans Chrome\n2. Ouvre DevTools (F12) → onglet Application → Cookies → x.com\n3. Copie la valeur de `auth_token` → TWITTER_AUTH_TOKEN\n4. Copie la valeur de `ct0` → TWITTER_CT0\n5. Ajoute-les dans ton .env Tipote\n\nNote: ces cookies expirent tous les ~1 an pour auth_token, et ct0 se renouvelle régulièrement. Si le scraping arrête de fonctionner, renouvelle les cookies."
+  }
+}

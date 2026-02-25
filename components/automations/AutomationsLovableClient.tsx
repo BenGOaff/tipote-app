@@ -42,7 +42,7 @@ import { toast } from "sonner";
 /* ─────────────────────────────────────────── Types ─── */
 
 type AutomationType = "comment_to_dm" | "comment_to_email";
-type Platform = "instagram" | "facebook" | "tiktok" | "linkedin";
+type Platform = "instagram" | "facebook" | "tiktok" | "linkedin" | "twitter";
 
 interface SocialAutomation {
   id: string;
@@ -97,6 +97,14 @@ const DEFAULT_LINKEDIN_COMMENT_REPLIES = [
   "Content que ça résonne avec toi !",
   "Merci d'avoir pris le temps de commenter 👏",
   "Très bonne question, merci !",
+].join("\n");
+
+const DEFAULT_TWITTER_COMMENT_REPLIES = [
+  "Merci pour ta réponse ! 🙌",
+  "Top, merci de participer !",
+  "Super, content que ça t'intéresse ! 🔥",
+  "C'est noté, merci !",
+  "Génial, merci à toi !",
 ].join("\n");
 
 const DEFAULT_FORM: FormState = {
@@ -162,13 +170,13 @@ const PLATFORM_STATUS = [
     description: "Auto réponse commentaire",
   },
   {
-    id: "x",
+    id: "twitter",
     label: "X / Twitter",
     icon: Twitter,
-    status: "unavailable" as const,
-    color: "text-muted-foreground",
-    bg: "bg-muted/50 border-border",
-    description: "",
+    status: "available" as const,
+    color: "text-sky-500",
+    bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
+    description: "Auto like + réponse commentaire",
   },
   {
     id: "pinterest",
@@ -263,7 +271,7 @@ export default function AutomationsLovableClient() {
 
   /* ── Open create modal for a specific platform ── */
   function openCreateForPlatform(platform: Platform) {
-    const isCommentOnly = platform === "tiktok" || platform === "linkedin";
+    const isCommentOnly = platform === "tiktok" || platform === "linkedin" || platform === "twitter";
     setForm({
       ...DEFAULT_FORM,
       platforms: [platform],
@@ -273,6 +281,8 @@ export default function AutomationsLovableClient() {
           ? DEFAULT_LINKEDIN_COMMENT_REPLIES
           : platform === "tiktok"
           ? DEFAULT_TIKTOK_COMMENT_REPLIES
+          : platform === "twitter"
+          ? DEFAULT_TWITTER_COMMENT_REPLIES
           : DEFAULT_COMMENT_REPLIES,
       dm_message: isCommentOnly ? "" : "",
     });
@@ -301,7 +311,7 @@ export default function AutomationsLovableClient() {
 
   /* ── Save (create or update) ── */
   async function handleSave() {
-    const isCommentOnlyPlatform = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin";
+    const isCommentOnlyPlatform = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin" || form.platforms[0] === "twitter";
     if (!form.name.trim()) { toast.error(t("form.errorName")); return; }
     if (!form.trigger_keyword.trim()) { toast.error(t("form.errorKeyword")); return; }
     if (!isCommentOnlyPlatform && !form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
@@ -567,16 +577,16 @@ export default function AutomationsLovableClient() {
           </DialogHeader>
 
           {(() => {
-            const isCommentOnly = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin";
+            const isCommentOnly = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin" || form.platforms[0] === "twitter";
             const isTikTok = isCommentOnly; // alias for backward compat in form logic
-            const platformLabel = form.platforms[0] === "instagram" ? "Instagram" : form.platforms[0] === "tiktok" ? "TikTok" : form.platforms[0] === "linkedin" ? "LinkedIn" : "Facebook";
+            const platformLabel = form.platforms[0] === "instagram" ? "Instagram" : form.platforms[0] === "tiktok" ? "TikTok" : form.platforms[0] === "linkedin" ? "LinkedIn" : form.platforms[0] === "twitter" ? "X / Twitter" : "Facebook";
             return (
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 py-2 pr-1">
             {/* Platform badge (read-only) */}
             <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : <Facebook className="w-4 h-4 text-blue-500" />}
+              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : form.platforms[0] === "twitter" ? <Twitter className="w-4 h-4 text-sky-500" /> : <Facebook className="w-4 h-4 text-blue-500" />}
               <span className="text-sm font-medium">{platformLabel}</span>
-              {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? "Réponse commentaire" : t("form.tiktokCommentOnly")}</Badge>}
+              {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? "Réponse commentaire" : form.platforms[0] === "twitter" ? "Like + réponse commentaire" : t("form.tiktokCommentOnly")}</Badge>}
             </div>
 
             {/* Name */}
@@ -795,12 +805,14 @@ function AutomationCard({
     facebook: Facebook,
     tiktok: TikTokIcon,
     linkedin: Linkedin,
+    twitter: Twitter,
   };
   const platformColors: Record<Platform, string> = {
     instagram: "text-pink-500",
     facebook: "text-blue-500",
     tiktok: "text-black dark:text-white",
     linkedin: "text-sky-600",
+    twitter: "text-sky-500",
   };
 
   const hasPostTarget = Boolean(auto.target_post_url?.trim());
@@ -984,6 +996,8 @@ function PostPickerModal({
       ? "/api/social/tiktok-videos"
       : platform === "linkedin"
       ? "/api/social/linkedin-posts"
+      : platform === "twitter"
+      ? "/api/social/twitter-tweets"
       : "/api/social/facebook-posts";
 
     fetch(apiUrl)
@@ -1007,9 +1021,9 @@ function PostPickerModal({
     } catch { return iso; }
   }
 
-  const PlatformIcon = platform === "instagram" ? Instagram : platform === "tiktok" ? TikTokIcon : platform === "linkedin" ? Linkedin : Facebook;
-  const iconColor = platform === "instagram" ? "text-pink-500" : platform === "tiktok" ? "text-black dark:text-white" : platform === "linkedin" ? "text-sky-600" : "text-blue-500";
-  const platformLabel = platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : platform === "linkedin" ? "LinkedIn" : "Facebook";
+  const PlatformIcon = platform === "instagram" ? Instagram : platform === "tiktok" ? TikTokIcon : platform === "linkedin" ? Linkedin : platform === "twitter" ? Twitter : Facebook;
+  const iconColor = platform === "instagram" ? "text-pink-500" : platform === "tiktok" ? "text-black dark:text-white" : platform === "linkedin" ? "text-sky-600" : platform === "twitter" ? "text-sky-500" : "text-blue-500";
+  const platformLabel = platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : platform === "linkedin" ? "LinkedIn" : platform === "twitter" ? "X / Twitter" : "Facebook";
   const pickerTitle = `${t("form.targetPostPickTitle")} ${platformLabel}`;
 
   return (

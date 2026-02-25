@@ -9,7 +9,7 @@ const TWITTER_TOKEN_URL = "https://api.twitter.com/2/oauth2/token";
 const TWITTER_USERINFO_URL = "https://api.twitter.com/2/users/me";
 const TWITTER_TWEETS_URL = "https://api.twitter.com/2/tweets";
 
-const SCOPES = ["tweet.read", "tweet.write", "users.read", "offline.access"];
+const SCOPES = ["tweet.read", "tweet.write", "users.read", "like.write", "offline.access"];
 
 function getClientId(): string {
   const id = process.env.TWITTER_CLIENT_ID;
