@@ -10,7 +10,7 @@ const LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts";
 // Version API LinkedIn (format YYYYMM)
 const LINKEDIN_API_VERSION = "202602";
 
-const SCOPES = ["openid", "profile", "email", "w_member_social"];
+const SCOPES = ["openid", "profile", "email", "w_member_social", "r_member_social"];
 
 function getClientId(): string {
   const id = process.env.LINKEDIN_CLIENT_ID;
@@ -459,6 +459,7 @@ export async function getMyPosts(
       Authorization: `Bearer ${accessToken}`,
       "X-Restli-Protocol-Version": "2.0.0",
       "LinkedIn-Version": LINKEDIN_API_VERSION,
+      "X-RestLi-Method": "FINDER",
     },
   });
 
