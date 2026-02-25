@@ -1,39 +1,10 @@
 // lib/twitterScraper.ts
-// Lightweight Twitter/X scraper using internal API endpoints.
-// Uses cookie-based auth (auth_token + ct0) for reading replies and sending DMs.
-// Uses official API v2 (OAuth bearer) for posting replies (Free tier compatible).
+// Twitter/X API v2 helpers for the comment automation system.
+// Uses each user's OAuth 2.0 bearer token (from social_connections).
+// Requires Basic tier ($200/month) for search/read endpoints.
+// Reply + Like work on Free tier too.
 //
-// Required env vars:
-//   TWITTER_AUTH_TOKEN  – auth_token cookie from x.com
-//   TWITTER_CT0         – ct0 cookie from x.com (CSRF token)
-
-// Twitter web app public bearer token (embedded in twitter.com JS bundle, not a secret)
-const WEB_BEARER =
-  "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
-
-function getCookies(): { authToken: string; ct0: string } {
-  const authToken = process.env.TWITTER_AUTH_TOKEN ?? "";
-  const ct0 = process.env.TWITTER_CT0 ?? "";
-  if (!authToken || !ct0) {
-    throw new Error("Missing TWITTER_AUTH_TOKEN or TWITTER_CT0 env vars");
-  }
-  return { authToken, ct0 };
-}
-
-function internalHeaders(): Record<string, string> {
-  const { authToken, ct0 } = getCookies();
-  return {
-    Authorization: `Bearer ${decodeURIComponent(WEB_BEARER)}`,
-    Cookie: `auth_token=${authToken}; ct0=${ct0}`,
-    "X-Csrf-Token": ct0,
-    "X-Twitter-Auth-Type": "OAuth2Session",
-    "X-Twitter-Active-User": "yes",
-    "X-Twitter-Client-Language": "en",
-    "Content-Type": "application/json",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  };
-}
+// NO cookies, NO scraping — pure official API v2.
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -47,29 +18,34 @@ export interface TweetReply {
   conversationId: string;
 }
 
-// ─── Get replies to a tweet ──────────────────────────────────────
+// ─── Search replies to a tweet (API v2 — Basic tier) ─────────────
 
 /**
- * Fetches replies to a specific tweet using Twitter's internal search API.
- * Uses conversation_id search to find all replies in the thread.
+ * Fetches replies to a specific tweet using the official Twitter API v2.
+ * Uses the search/recent endpoint with conversation_id filter.
+ * Requires Basic tier or above.
+ *
+ * @param accessToken - User's OAuth 2.0 bearer token
+ * @param tweetId - The tweet ID to find replies for
+ * @param maxResults - Max results to return (10-100)
  */
 export async function getTweetReplies(
+  accessToken: string,
   tweetId: string,
-  count = 50,
+  maxResults = 50,
 ): Promise<TweetReply[]> {
   const params = new URLSearchParams({
-    q: `conversation_id:${tweetId}`,
-    tweet_search_mode: "live",
-    count: String(count),
-    query_source: "typed_query",
-    pc: "1",
-    spelling_corrections: "1",
+    query: `conversation_id:${tweetId} is:reply`,
+    max_results: String(Math.min(Math.max(maxResults, 10), 100)),
+    "tweet.fields": "author_id,conversation_id,created_at,in_reply_to_user_id,text",
+    expansions: "author_id",
+    "user.fields": "id,name,username",
   });
 
-  const url = `https://x.com/i/api/2/search/adaptive.json?${params}`;
+  const url = `https://api.x.com/2/tweets/search/recent?${params}`;
 
   const res = await fetch(url, {
-    headers: internalHeaders(),
+    headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
 
@@ -79,126 +55,83 @@ export async function getTweetReplies(
   }
 
   const json = await res.json();
-  return parseAdaptiveSearchResults(json, tweetId);
+  return parseV2SearchResults(json, tweetId);
 }
 
-function parseAdaptiveSearchResults(json: any, originalTweetId: string): TweetReply[] {
-  const tweets = json?.globalObjects?.tweets ?? {};
-  const users = json?.globalObjects?.users ?? {};
+function parseV2SearchResults(json: any, originalTweetId: string): TweetReply[] {
+  const tweets = json?.data ?? [];
+  const users: Record<string, { id: string; name: string; username: string }> = {};
+
+  // Build user lookup from includes
+  for (const u of json?.includes?.users ?? []) {
+    users[u.id] = { id: u.id, name: u.name, username: u.username };
+  }
+
   const replies: TweetReply[] = [];
 
-  for (const [id, tweet] of Object.entries<any>(tweets)) {
+  for (const tweet of tweets) {
     // Skip the original tweet itself
-    if (id === originalTweetId) continue;
-    // Only include direct replies to the original tweet
-    if (tweet.in_reply_to_status_id_str !== originalTweetId) continue;
+    if (tweet.id === originalTweetId) continue;
 
-    const userId = tweet.user_id_str;
-    const user = users[userId] ?? {};
+    const author = users[tweet.author_id] ?? {
+      id: tweet.author_id,
+      name: "",
+      username: "",
+    };
 
     replies.push({
-      id,
-      text: tweet.full_text ?? tweet.text ?? "",
-      authorId: userId,
-      authorUsername: user.screen_name ?? "",
-      authorName: user.name ?? "",
-      createdAt: tweet.created_at
-        ? new Date(tweet.created_at).toISOString()
-        : new Date().toISOString(),
-      conversationId: tweet.conversation_id_str ?? originalTweetId,
+      id: tweet.id,
+      text: tweet.text ?? "",
+      authorId: tweet.author_id,
+      authorUsername: author.username,
+      authorName: author.name,
+      createdAt: tweet.created_at ?? new Date().toISOString(),
+      conversationId: tweet.conversation_id ?? originalTweetId,
     });
   }
 
   return replies;
 }
 
-// ─── Send a DM ───────────────────────────────────────────────────
+// ─── Like a tweet (API v2) ───────────────────────────────────────
 
 /**
- * Sends a Direct Message using Twitter's internal DM API.
- * @param recipientId - The Twitter user ID of the recipient
- * @param text - The message text
+ * Likes a tweet using the official Twitter API v2.
+ * @param accessToken - User's OAuth 2.0 bearer token
+ * @param userId - The authenticated user's Twitter user ID
+ * @param tweetId - The tweet to like
  */
-export async function sendTwitterDM(
-  recipientId: string,
-  text: string,
+export async function likeTweet(
+  accessToken: string,
+  userId: string,
+  tweetId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const requestId = crypto.randomUUID();
-    const url = "https://x.com/i/api/1.1/dm/new2.json";
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: internalHeaders(),
-      body: JSON.stringify({
-        recipient_ids: false,
-        request_id: requestId,
-        text,
-        cards_platform: "Web-12",
-        include_cards: 1,
-        include_quote_count: true,
-        dm_users: false,
-        conversation_id: recipientId, // Twitter creates/finds the conversation
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      return { ok: false, error: `DM failed (${res.status}): ${errText.slice(0, 300)}` };
-    }
-
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: String(err) };
-  }
-}
-
-/**
- * Alternative DM method using the modern event-based endpoint.
- * Tries this if the legacy endpoint fails.
- */
-export async function sendTwitterDMv2(
-  recipientId: string,
-  text: string,
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const url = "https://x.com/i/api/1.1/dm/conversation/create.json";
-
-    // First, we need to try sending via the dm/new2.json endpoint with proper params
-    const newDmUrl = "https://x.com/i/api/1.1/dm/new2.json";
-    const payload = {
-      conversation_id: `${recipientId}`,
-      recipient_ids: `${recipientId}`,
-      text,
-      cards_platform: "Web-12",
-      include_cards: 1,
-      include_quote_count: true,
-      request_id: crypto.randomUUID(),
-    };
-
-    const res = await fetch(newDmUrl, {
+    const res = await fetch(`https://api.x.com/2/users/${userId}/likes`, {
       method: "POST",
       headers: {
-        ...internalHeaders(),
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams(
-        Object.entries(payload).map(([k, v]) => [k, String(v)]),
-      ).toString(),
+      body: JSON.stringify({ tweet_id: tweetId }),
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return { ok: false, error: `DMv2 failed (${res.status}): ${errText.slice(0, 300)}` };
+    if (res.ok) {
+      return { ok: true };
     }
 
-    return { ok: true };
+    const errText = await res.text();
+    // 403 = already liked or not allowed on Free tier — not a fatal error
+    if (res.status === 403) {
+      return { ok: false, error: `Like not available (${res.status}): ${errText.slice(0, 200)}` };
+    }
+    return { ok: false, error: `Like failed (${res.status}): ${errText.slice(0, 300)}` };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
 }
 
-// ─── Reply to a tweet (official API v2) ──────────────────────────
+// ─── Reply to a tweet (API v2 — Free tier compatible) ────────────
 
 /**
  * Replies to a tweet using the official Twitter API v2.
@@ -213,7 +146,7 @@ export async function replyToTweet(
   text: string,
 ): Promise<{ ok: boolean; replyId?: string; error?: string }> {
   try {
-    const res = await fetch("https://api.twitter.com/2/tweets", {
+    const res = await fetch("https://api.x.com/2/tweets", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -235,6 +168,47 @@ export async function replyToTweet(
   } catch (err) {
     return { ok: false, error: String(err) };
   }
+}
+
+// ─── Get user's recent tweets (API v2) ───────────────────────────
+
+/**
+ * Fetches the authenticated user's recent tweets (for the post picker).
+ * Uses GET /2/users/:id/tweets.
+ * @param accessToken - User's OAuth 2.0 bearer token
+ * @param userId - The user's Twitter ID
+ * @param maxResults - Max results (5-100)
+ */
+export async function getUserTweets(
+  accessToken: string,
+  userId: string,
+  maxResults = 20,
+): Promise<{ id: string; text: string; created_at: string }[]> {
+  const params = new URLSearchParams({
+    max_results: String(Math.min(Math.max(maxResults, 5), 100)),
+    "tweet.fields": "created_at,text",
+    exclude: "retweets,replies",
+  });
+
+  const res = await fetch(
+    `https://api.x.com/2/users/${userId}/tweets?${params}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Twitter get tweets failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+  return (json.data ?? []).map((t: any) => ({
+    id: t.id,
+    text: t.text ?? "",
+    created_at: t.created_at ?? "",
+  }));
 }
 
 // ─── Extract tweet ID from URL ───────────────────────────────────

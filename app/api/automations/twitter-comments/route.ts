@@ -1,26 +1,27 @@
 // app/api/automations/twitter-comments/route.ts
 // GET : appelé par n8n (cron) pour poll les replies sur les tweets X/Twitter
-//       et déclencher le comment-to-DM automation.
+//       et déclencher l'automation like + reply.
 //
 // Flow :
 //   1. Récupère toutes les automations Twitter actives
 //   2. Pour chaque automation avec un target_post (tweet URL/ID) :
-//      - Fetch les replies via l'API interne Twitter (scraping cookies)
+//      - Fetch les replies via l'API v2 officielle (search/recent)
 //      - Matche les mots-clés
-//      - Répond au tweet (public) via API v2 officielle
-//      - Envoie un DM via l'API interne Twitter
+//      - Like le commentaire via API v2
+//      - Répond au tweet (public) via API v2
 //   3. Met à jour les stats et le dernier commentaire traité
 //
-// Sécurisé par N8N_SHARED_SECRET.
+// Sécurisé par N8N_SHARED_SECRET ou CRON_SECRET.
+// Nécessite le tier Basic ($200/mois) pour l'endpoint search/recent.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
+import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import {
   getTweetReplies,
   replyToTweet,
-  sendTwitterDM,
-  sendTwitterDMv2,
+  likeTweet,
   extractTweetId,
 } from "@/lib/twitterScraper";
 
@@ -38,17 +39,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const results = { processed: 0, replies: 0, dms_sent: 0, errors: 0 };
+  const results = { processed: 0, replies: 0, likes: 0, errors: 0 };
   const debug: string[] = [];
 
   try {
-    // 1. Vérifier que les cookies Twitter sont configurés
-    if (!process.env.TWITTER_AUTH_TOKEN || !process.env.TWITTER_CT0) {
-      debug.push("TWITTER_AUTH_TOKEN or TWITTER_CT0 not set — scraping disabled");
-      return NextResponse.json({ ok: false, ...results, debug });
-    }
-
-    // 2. Récupérer toutes les automatisations Twitter actives
+    // 1. Récupérer toutes les automatisations Twitter actives
     const { data: automations, error: autoErr } = await supabaseAdmin
       .from("social_automations")
       .select("*")
@@ -67,20 +62,20 @@ export async function GET(req: NextRequest) {
 
     debug.push(`Found ${automations.length} active automation(s)`);
 
-    // 3. Grouper par user_id
+    // 2. Grouper par user_id
     const autosByUser = new Map<string, typeof automations>();
     for (const auto of automations) {
       if (!autosByUser.has(auto.user_id)) autosByUser.set(auto.user_id, []);
       autosByUser.get(auto.user_id)!.push(auto);
     }
 
-    // 4. Pour chaque user
+    // 3. Pour chaque user
     for (const [userId, userAutos] of autosByUser) {
-      // Récupérer la connexion Twitter (pour le token OAuth v2 — utilisé pour les replies officielles)
+      // Récupérer la connexion Twitter
       const { data: conn } = await supabaseAdmin
         .from("social_connections")
         .select(
-          "id, platform_user_id, platform_username, access_token_encrypted, token_expires_at",
+          "id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at",
         )
         .eq("user_id", userId)
         .eq("platform", "twitter")
@@ -93,12 +88,35 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      // Vérifier / rafraîchir le token si expiré
       let accessToken: string;
-      try {
-        accessToken = decrypt(conn.access_token_encrypted);
-      } catch {
-        debug.push(`User ${userId.slice(0, 8)}…: token decryption failed`);
-        continue;
+      const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+      const isExpired =
+        conn.token_expires_at &&
+        new Date(conn.token_expires_at) <
+          new Date(Date.now() + REFRESH_BUFFER_MS);
+
+      if (isExpired) {
+        const refreshResult = await refreshSocialToken(
+          conn.id,
+          "twitter",
+          conn.refresh_token_encrypted ?? null,
+        );
+        if (!refreshResult.ok || !refreshResult.accessToken) {
+          debug.push(
+            `User ${userId.slice(0, 8)}…: token refresh failed: ${refreshResult.error}`,
+          );
+          continue;
+        }
+        accessToken = refreshResult.accessToken;
+        debug.push(`User ${userId.slice(0, 8)}…: token refreshed OK`);
+      } else {
+        try {
+          accessToken = decrypt(conn.access_token_encrypted);
+        } catch {
+          debug.push(`User ${userId.slice(0, 8)}…: token decryption failed`);
+          continue;
+        }
       }
 
       const twitterUserId = conn.platform_user_id;
@@ -145,10 +163,10 @@ export async function GET(req: NextRequest) {
             : [],
         );
 
-        // Fetch replies
+        // Fetch replies via official API v2
         let replies: Awaited<ReturnType<typeof getTweetReplies>>;
         try {
-          replies = await getTweetReplies(tweetId);
+          replies = await getTweetReplies(accessToken, tweetId);
           results.processed += replies.length;
           debug.push(`    Fetched ${replies.length} reply(ies)`);
         } catch (err) {
@@ -197,7 +215,7 @@ export async function GET(req: NextRequest) {
           `    Found ${newReplies.length} new matching reply(ies)!`,
         );
 
-        let dmsSent = 0;
+        let likesSent = 0;
         let repliesSent = 0;
 
         for (const reply of newReplies) {
@@ -241,12 +259,37 @@ export async function GET(req: NextRequest) {
             reply.authorName || reply.authorUsername,
           );
 
-          // a) Répondre au tweet (public) via API v2 officielle
+          // a) Liker le commentaire
+          if (twitterUserId) {
+            const likeResult = await likeTweet(
+              accessToken,
+              twitterUserId,
+              reply.id,
+            );
+
+            if (likeResult.ok) {
+              likesSent++;
+              results.likes++;
+              debug.push(
+                `    Liked reply ${reply.id} (@${reply.authorUsername})`,
+              );
+            } else {
+              debug.push(
+                `    Like FAILED for ${reply.id}: ${likeResult.error?.slice(0, 200)}`,
+              );
+            }
+          }
+
+          // b) Répondre au tweet (public) via API v2 officielle
           if (auto.comment_reply_variants?.length) {
             const variants: string[] = auto.comment_reply_variants;
             const replyText = personalize(
               variants[Math.floor(Math.random() * variants.length)],
-              { prenom: firstName, firstname: firstName, username: reply.authorUsername },
+              {
+                prenom: firstName,
+                firstname: firstName,
+                username: reply.authorUsername,
+              },
             );
 
             const replyResult = await replyToTweet(
@@ -259,43 +302,11 @@ export async function GET(req: NextRequest) {
               repliesSent++;
               results.replies++;
               debug.push(
-                `    Comment reply sent to ${reply.id} (@${reply.authorUsername})`,
+                `    Reply sent to ${reply.id} (@${reply.authorUsername})`,
               );
             } else {
               debug.push(
-                `    Comment reply FAILED for ${reply.id}: ${replyResult.error?.slice(0, 200)}`,
-              );
-              results.errors++;
-            }
-          }
-
-          // b) Envoyer un DM
-          const dmText = personalize(auto.dm_message ?? "", {
-            prenom: firstName,
-            firstname: firstName,
-            username: reply.authorUsername,
-          });
-
-          if (dmText) {
-            // Essayer d'abord la méthode principale, puis le fallback
-            let dmResult = await sendTwitterDM(reply.authorId, dmText);
-
-            if (!dmResult.ok) {
-              debug.push(
-                `    DM method 1 failed: ${dmResult.error?.slice(0, 150)}`,
-              );
-              dmResult = await sendTwitterDMv2(reply.authorId, dmText);
-            }
-
-            if (dmResult.ok) {
-              dmsSent++;
-              results.dms_sent++;
-              debug.push(
-                `    DM sent to @${reply.authorUsername} (${reply.authorId})`,
-              );
-            } else {
-              debug.push(
-                `    DM FAILED for @${reply.authorUsername}: ${dmResult.error?.slice(0, 200)}`,
+                `    Reply FAILED for ${reply.id}: ${replyResult.error?.slice(0, 200)}`,
               );
               results.errors++;
             }
@@ -312,13 +323,13 @@ export async function GET(req: NextRequest) {
             dms_sent: 0,
           };
 
-        if (dmsSent > 0 || repliesSent > 0) {
+        if (likesSent > 0 || repliesSent > 0) {
           await supabaseAdmin
             .from("social_automations")
             .update({
               stats: {
                 triggers: (currentStats.triggers ?? 0) + newReplies.length,
-                dms_sent: (currentStats.dms_sent ?? 0) + dmsSent,
+                dms_sent: (currentStats.dms_sent ?? 0) + repliesSent,
               },
               updated_at: new Date().toISOString(),
             })
