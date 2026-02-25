@@ -1132,10 +1132,10 @@
     "statsTriggers": "{count} déclenchements",
     "statsDms": "{count} DMs envoyés",
     "hero": {
-      "title": "Automatisations sociales — Style ManyChat",
-      "description": "Détecte les mots-clés dans les commentaires et envoie automatiquement un DM personnalisé sur Instagram et Facebook. Capte des emails, envoie des ressources gratuites — sans lever le petit doigt."
+      "title": "Automatisations sociales",
+      "description": "Détecte les mots-clés dans les commentaires et répond automatiquement : DM sur Instagram et Facebook, réponse commentaire sur TikTok. Choisis ta plateforme ci-dessous pour commencer."
     },
-    "platformsTitle": "Disponibilité par plateforme",
+    "platformsTitle": "Automatiser par plateforme",
     "status": {
       "available": "Disponible",
       "soon": "Bientôt",
@@ -1174,10 +1174,7 @@
     "listTitle": "Mes automatisations",
     "empty": {
       "title": "Aucune automatisation",
-      "description": "Crée ta première automatisation pour répondre automatiquement aux commentaires sur Instagram et Facebook.",
-      "ctaDm": "Auto DM commentaire",
-      "ctaEmail": "Auto Email commentaire",
-      "emailName": "Capture email commentaire"
+      "description": "Choisis une plateforme ci-dessus pour créer ta première automatisation."
     },
     "templates": {
       "title": "Templates prêts à l'emploi",
@@ -1240,7 +1237,11 @@
       "targetPostHint": "Sélectionne le post sur lequel tu veux activer cette automatisation.",
       "commentReplies": "Réponse automatique au commentaire",
       "commentRepliesPlaceholder": "C'est dans tes DM !\nDis-moi si tu as bien reçu 👌\nRDV en message privé\nSuper, je t'envoie ça dans 2mn ✉️\nCheck tes DMs !",
-      "commentRepliesHint": "Une variante par ligne. Une réponse aléatoire sera postée en commentaire avant l'envoi du DM."
+      "commentRepliesHint": "Une variante par ligne. Une réponse aléatoire sera postée en commentaire avant l'envoi du DM.",
+      "tiktokCommentOnly": "Réponse commentaire uniquement",
+      "tiktokCommentRepliesPlaceholder": "Merci pour ton commentaire ! 🙌\nSuper, merci de participer !\nTop, content que ça t'intéresse ! 🔥\nC'est noté, merci !\nGénial, merci à toi !",
+      "tiktokCommentRepliesHint": "Une variante par ligne. Une réponse aléatoire sera postée en réponse au commentaire.",
+      "tiktokNote": "TikTok ne propose pas d'API de DM. L'automatisation répondra directement en commentaire sous le post ciblé."
     },
     "card": {
       "postTargeted": "Post ciblé",
