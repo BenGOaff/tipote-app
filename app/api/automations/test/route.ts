@@ -101,7 +101,61 @@ export async function POST(req: NextRequest) {
       detail: "✓ Mot-clé OK · Token Instagram valide · Permissions OK. Si l'automatisation ne se déclenche pas en vrai, reconnecte ton compte Instagram pour re-enregistrer le webhook Meta.",
     });
 
-  } else {
+  } else if (platform === "twitter") {
+    // Twitter/X — vérifier le token via l'API v2
+    const meRes = await fetch("https://api.x.com/2/users/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!meRes.ok) {
+      const err = await meRes.text();
+      return NextResponse.json({ ok: false, step: "token", detail: `Token X (Twitter) invalide ou expiré. Reconnecte le compte X. (${err})` });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      detail: "✓ Mot-clé OK · Token X valide · Connexion OK. L'automatisation répondra aux commentaires contenant le mot-clé (les DMs ne sont pas disponibles via l'API X gratuite).",
+    });
+
+  } else if (platform === "tiktok") {
+    // TikTok — vérifier le token via l'API user info
+    const meRes = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name",
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (!meRes.ok) {
+      const err = await meRes.text();
+      return NextResponse.json({ ok: false, step: "token", detail: `Token TikTok invalide ou expiré. Reconnecte le compte TikTok. (${err})` });
+    }
+
+    const tiktokData = await meRes.json();
+    if (tiktokData.error?.code) {
+      return NextResponse.json({ ok: false, step: "token", detail: `Token TikTok invalide : ${tiktokData.error.message ?? "erreur inconnue"}. Reconnecte le compte TikTok.` });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      detail: "✓ Mot-clé OK · Token TikTok valide · Connexion OK. L'automatisation répondra aux commentaires contenant le mot-clé.",
+    });
+
+  } else if (platform === "linkedin") {
+    // LinkedIn — vérifier le token via userinfo
+    const meRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!meRes.ok) {
+      const err = await meRes.text();
+      return NextResponse.json({ ok: false, step: "token", detail: `Token LinkedIn invalide ou expiré. Reconnecte le compte LinkedIn. (${err})` });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      detail: "✓ Mot-clé OK · Token LinkedIn valide · Connexion OK. L'automatisation répondra aux commentaires contenant le mot-clé.",
+    });
+
+  } else if (platform === "facebook") {
     // Facebook — vérifier pages_messaging via debug_token
     const appId = process.env.META_APP_ID;
     const appSecret = process.env.META_APP_SECRET;
@@ -137,6 +191,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       detail: "✓ Mot-clé OK · Token Facebook valide · pages_messaging OK. Si l'automatisation ne se déclenche pas, reconnecte ton compte Facebook pour re-enregistrer le webhook.",
+    });
+
+  } else {
+    // Plateforme non supportée pour le test
+    return NextResponse.json({
+      ok: false,
+      step: "platform",
+      detail: `La vérification automatique n'est pas encore disponible pour la plateforme "${platform}". Vérifie manuellement que ton compte est connecté dans Paramètres → Connexions.`,
     });
   }
 }
