@@ -22,9 +22,9 @@ const TIKTOK_VIDEO_LIST_URL = "https://open.tiktokapis.com/v2/video/list/";
 // user.info.basic : profil de base
 // video.publish : publier des vidéos
 // video.upload : uploader des vidéos
-// Note : video.list nécessite une approbation séparée dans le TikTok Developer Portal.
-// Ne PAS l'inclure ici tant qu'il n'est pas approuvé, sinon l'OAuth échoue avec invalid_scope.
-const SCOPES = ["user.info.basic", "video.publish", "video.upload"];
+// video.list : lister les vidéos existantes (nécessaire pour le post picker)
+// comment.list.manage : lire et répondre aux commentaires (nécessaire pour auto-reply)
+const SCOPES = ["user.info.basic", "video.publish", "video.upload", "video.list", "comment.list.manage"];
 
 function getClientKey(): string {
   const key = process.env.TIKTOK_CLIENT_KEY;
@@ -366,7 +366,7 @@ export async function listVideos(
   accessToken: string,
   maxCount: number = 20,
   cursor?: number,
-): Promise<{ videos: TikTokVideo[]; cursor?: number; hasMore: boolean }> {
+): Promise<{ videos: TikTokVideo[]; cursor?: number; hasMore: boolean; error?: string }> {
   const body: Record<string, unknown> = { max_count: Math.min(maxCount, 20) };
   if (cursor) body.cursor = cursor;
 
@@ -382,13 +382,19 @@ export async function listVideos(
   if (!res.ok) {
     const text = await res.text();
     console.error(`[TikTok] Video list error (${res.status}):`, text.slice(0, 300));
-    return { videos: [], hasMore: false };
+    const hint = res.status === 401 || res.status === 403
+      ? "Token expiré ou scope video.list manquant. Reconnecte ton compte TikTok dans les paramètres."
+      : `Erreur TikTok (${res.status})`;
+    return { videos: [], hasMore: false, error: hint };
   }
 
   const json = await res.json();
   if (json.error?.code && json.error.code !== "ok") {
     console.error(`[TikTok] Video list API error: ${json.error.code} — ${json.error.message}`);
-    return { videos: [], hasMore: false };
+    const hint = json.error.code === "access_token_invalid" || json.error.code === "scope_not_authorized"
+      ? "Scope video.list non autorisé. Reconnecte ton compte TikTok dans les paramètres."
+      : `Erreur TikTok : ${json.error.message ?? json.error.code}`;
+    return { videos: [], hasMore: false, error: hint };
   }
 
   return {

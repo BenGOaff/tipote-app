@@ -68,7 +68,11 @@ export async function GET() {
   }
 
   // Lister les vidéos
-  const { videos } = await listVideos(accessToken, 20);
+  const { videos, error: listError } = await listVideos(accessToken, 20);
+
+  if (listError) {
+    return NextResponse.json({ error: listError }, { status: 400 });
+  }
 
   return NextResponse.json({ ok: true, videos });
 }
