@@ -1,0 +1,82 @@
+{
+  "string": {
+    "logo_text": ".logo",
+    "hero_badge": ".hero-badge",
+    "hero_title": ".hero-title",
+    "hero_subtitle": ".hero-subtitle",
+    "disclaimer_text": ".disclaimer",
+    "video_cta_banner": ".video-cta-banner",
+    "offer_hook": ".offer-hook",
+    "offer_title": ".offer-title",
+    "offer_price_old": ".price-old",
+    "countdown_label": ".countdown-label",
+    "cta_primary_text": ".btn-primary",
+    "program_section_title": ".content-header .section-title",
+    "secret_section_title": ".section-light .section-title",
+    "about_name": ".about-content strong",
+    "about_offer_question": ".about-content h3",
+    "guarantee_title": ".guarantee-section .section-title",
+    "guarantee_text": ".guarantee-section .text-content",
+    "footer_logo": ".footer-logo",
+    "footer_disclaimer": ".footer-disclaimer"
+  },
+  "arrays": {
+    "nav_links": {
+      "itemSelector": ".nav a"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_text": ".testimonial-text",
+        "author_name": ".author-name",
+        "author_rating": ".author-stars"
+      }
+    },
+    "program_days": {
+      "itemSelector": ".program-day",
+      "fields": {
+        "day_badge": ".day-badge",
+        "day_date": ".day-date",
+        "day_title": ".day-title",
+        "day_bullets": ".day-bullets li"
+      }
+    },
+    "qualification_list": {
+      "itemSelector": ".qualification-list li"
+    },
+    "methods": {
+      "itemSelector": ".method-card",
+      "fields": {
+        "method_badge": ".method-badge",
+        "method_title": ".method-title",
+        "method_description": ".method-description",
+        "method_problem": ".problem-text"
+      }
+    },
+    "comparison_before": {
+      "itemSelector": ".comparison-list.before li"
+    },
+    "comparison_after": {
+      "itemSelector": ".comparison-list.after li"
+    },
+    "pricing_tiers": {
+      "itemSelector": ".pricing-card",
+      "fields": {
+        "tier_label": ".pricing-label",
+        "tier_places": ".pricing-places",
+        "tier_price": ".pricing-amount",
+        "tier_note": ".pricing-note"
+      }
+    },
+    "info_cards": {
+      "itemSelector": ".info-card",
+      "fields": {
+        "info_title": ".info-title",
+        "info_text": ".info-text"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "string": {
+    "logo_text": ".logo-text",
+    "header_cta_text": ".cta-btn",
+    "hero_title": ".hero h1",
+    "info_banner_text": ".info-text",
+    "info_banner_button_text": ".info-btn",
+    "cta_section_title": ".cta-title",
+    "cta_section_subtitle": ".cta-subtitle",
+    "cta_button_text": ".cta-btn-large",
+    "press_title": ".press-title",
+    "results_section_title": ".results-section .section-title",
+    "results_section_subtitle": ".results-section .section-subtitle",
+    "testimonial_author_name": ".author-name",
+    "testimonial_quote": ".testimonial-text",
+    "program_section_title": ".program-title",
+    "keys_section_title": ".keys-section .section-title",
+    "included_section_title": ".included-section .section-title",
+    "challenge_plus_section_title": ".challenge-plus-section .section-title",
+    "expert_section_title": ".expert-title",
+    "expert_name": ".expert-info h4",
+    "expert_quote": ".expert-quote",
+    "pricing_section_title": ".pricing-title",
+    "disclaimer_text": ".disclaimer-text",
+    "footer_title": ".footer-title",
+    "footer_legal_text": ".footer-legal p"
+  },
+  "arrays": {
+    "press_logos": {
+      "itemSelector": ".press-logo"
+    },
+    "stats": {
+      "itemSelector": ".stat-card",
+      "fields": {
+        "stat_label": ".stat-label",
+        "stat_description": ".stat-description",
+        "stat_number": ".stat-number",
+        "stat_unit": ".stat-unit"
+      }
+    },
+    "program_list": {
+      "itemSelector": ".program-list li"
+    },
+    "keys": {
+      "itemSelector": ".key-card",
+      "fields": {
+        "key_title": ".key-title",
+        "key_description": ".key-description"
+      }
+    },
+    "included_tabs": {
+      "itemSelector": ".tab"
+    },
+    "tab_panels": {
+      "itemSelector": ".tab-panel",
+      "fields": {
+        "tab_title": ".daily-title",
+        "tab_text": ".daily-text"
+      }
+    },
+    "supplements": {
+      "itemSelector": ".supplement-card",
+      "fields": {
+        "supplement_name": ".supplement-name",
+        "supplement_description": ".supplement-description"
+      }
+    },
+    "pricing_plans": {
+      "itemSelector": ".pricing-card",
+      "fields": {
+        "plan_badge": ".pricing-badge",
+        "plan_title": ".pricing-plan-title",
+        "plan_description": ".pricing-description",
+        "plan_cta_text": ".pricing-cta",
+        "plan_note": ".pricing-note"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

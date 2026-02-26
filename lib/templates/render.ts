@@ -406,6 +406,81 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
 }
 
 /**
+ * Escape a JSON string for safe embedding inside a <script> tag.
+ * Prevents `</script>` and `<!--` from breaking out of the tag.
+ */
+function escapeForScriptTag(s: string): string {
+  return s.replace(/<\//g, "<\\/").replace(/<!--/g, "<\\!--");
+}
+
+/**
+ * For vente (sales) templates that are full standalone HTML documents,
+ * inject a <script> before </body> that replaces demo text with actual
+ * contentData values using CSS selectors from a companion selectors.json file.
+ *
+ * This avoids modifying each template's HTML while still enabling dynamic content.
+ */
+function injectVenteContentScript(
+  html: string,
+  contentData: Record<string, any>,
+  selectors: Record<string, any>,
+): string {
+  if (!contentData || Object.keys(contentData).length === 0) return html;
+
+  const dataJson = escapeForScriptTag(JSON.stringify(contentData));
+  const selectorsJson = escapeForScriptTag(JSON.stringify(selectors));
+
+  const script = `<script>(function(){
+var d=${dataJson};
+var m=${selectorsJson};
+if(!d)return;
+var sf=m.string||{};
+Object.keys(sf).forEach(function(k){
+  var v=d[k];
+  if(v==null||v==='')return;
+  document.querySelectorAll(sf[k]).forEach(function(el){el.textContent=String(v);});
+});
+var af=m.arrays||{};
+Object.keys(af).forEach(function(k){
+  var arr=d[k];
+  if(!Array.isArray(arr)||!arr.length)return;
+  var cfg=af[k];
+  var items=document.querySelectorAll(cfg.itemSelector);
+  if(!items.length)return;
+  if(typeof arr[0]==='string'){
+    for(var i=0;i<items.length;i++){
+      if(i<arr.length)items[i].textContent=arr[i];
+      else items[i].style.display='none';
+    }
+    for(var j=items.length;j<arr.length;j++){
+      var cl=items[0].cloneNode(true);
+      cl.textContent=arr[j];
+      items[0].parentElement.appendChild(cl);
+    }
+    return;
+  }
+  var parent=items[0].parentElement;
+  if(!parent)return;
+  var tpl=items[0].cloneNode(true);
+  for(var i=items.length-1;i>=0;i--)items[i].remove();
+  arr.forEach(function(item){
+    var clone=tpl.cloneNode(true);
+    var ff=cfg.fields||{};
+    Object.keys(ff).forEach(function(fk){
+      var sub=clone.querySelector(ff[fk]);
+      if(sub&&item[fk]!=null)sub.textContent=String(item[fk]);
+    });
+    parent.appendChild(clone);
+  });
+});
+})()</script>`;
+
+  const idx = html.lastIndexOf("</body>");
+  if (idx === -1) return html + script;
+  return html.slice(0, idx) + "\n" + script + "\n" + html.slice(idx);
+}
+
+/**
  * Export attendu par les routes API : renderTemplateHtml
  */
 export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
@@ -416,12 +491,13 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   const root = process.cwd();
   const tplDir = path.join(root, "src", "templates", kind, templateId);
 
-  const [html, css, kitCss, tokensStr, fontsHtml] = await Promise.all([
+  const [html, css, kitCss, tokensStr, fontsHtml, selectorsStr] = await Promise.all([
     readFileIfExists(path.join(tplDir, mode === "kit" ? "kit-systeme.html" : "layout.html")),
     readFileIfExists(path.join(tplDir, "styles.css")),
     readFileIfExists(path.join(tplDir, "styles.kit.css")),
     readFileIfExists(path.join(tplDir, "tokens.json")),
     readFileIfExists(path.join(tplDir, "fonts.html")),
+    readFileIfExists(path.join(tplDir, "selectors.json")),
   ]);
 
   if (!html) {
@@ -473,6 +549,13 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   // If it's a full standalone HTML doc, do NOT wrap it again.
   if (isFullDoc) {
+    // For vente templates: inject contentData via script using selectors.json mapping
+    if (kind === "vente" && selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+      try {
+        const selectors = JSON.parse(selectorsStr);
+        out = injectVenteContentScript(out, req.contentData, selectors);
+      } catch { /* ignore parse errors */ }
+    }
     return { html: out };
   }
 

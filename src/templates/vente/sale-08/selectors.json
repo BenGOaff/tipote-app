@@ -1,0 +1,133 @@
+{
+  "string": {
+    "logo_text": ".logo",
+    "top_cta_text": ".top-bar .cta-button",
+    "hero_title": ".hero h1",
+    "value_box_title": ".value-box h2",
+    "value_box_highlight": ".value-box .highlight",
+    "value_box_description": ".value-box p",
+    "value_box_cta_text": ".value-box .cta-button",
+    "value_box_bonus_note": ".bonus-note",
+    "letter_title": ".letter-content h2",
+    "letter_signature": ".letter-signature",
+    "questions_title": ".questions-title h2",
+    "questions_cta_paragraph_1": ".questions-cta p",
+    "questions_cta_paragraph_2": ".highlight-yellow",
+    "challenge_intro_title": ".challenge-intro h2",
+    "challenge_intro_subtitle": ".challenge-intro h3",
+    "challenge_box_intro": ".challenge-box-header p",
+    "challenge_box_name": ".challenge-box-header h3",
+    "challenge_box_subtitle": ".challenge-box-header .subtitle",
+    "challenge_box_description": ".challenge-box-content p",
+    "mission_title": ".mission-title h2",
+    "mission_subtitle": ".mission-title p",
+    "mission_box_title": ".mission-box h3",
+    "super_bonus_intro": ".super-bonus-header p",
+    "super_bonus_title": ".super-bonus-header h2",
+    "super_bonus_subtitle": ".super-bonus-header h3",
+    "super_bonus_note": ".super-bonus-note",
+    "trap_title": ".trap-title h2",
+    "timing_title": ".timing-title h2",
+    "guarantee_title": ".guarantee-title h2",
+    "next_steps_title": ".next-steps-title h2",
+    "next_steps_intro": ".next-steps-title p",
+    "next_steps_list_title": ".steps-list p",
+    "recap_title_line_1": ".recap-title h2",
+    "recap_title_line_2": ".recap-title h3",
+    "recap_bonus_title": ".bonus-recap h4",
+    "recap_note": ".recap-note",
+    "final_cta_title": ".final-cta h2",
+    "total_value": ".total-value",
+    "footer_legal": ".footer-legal p",
+    "footer_copyright": ".footer-copyright"
+  },
+  "arrays": {
+    "value_box_features": {
+      "itemSelector": ".feature-item"
+    },
+    "letter_paragraphs": {
+      "itemSelector": ".letter-content p"
+    },
+    "questions_list": {
+      "itemSelector": ".question-item .question-text"
+    },
+    "challenge_intro_paragraphs": {
+      "itemSelector": ".challenge-intro p"
+    },
+    "tracks": {
+      "itemSelector": ".track-card",
+      "fields": {
+        "track_title": "h4",
+        "track_subtitle": "h5",
+        "track_description": "p"
+      }
+    },
+    "mission_box_paragraphs": {
+      "itemSelector": ".mission-box p"
+    },
+    "mission_testimonials": {
+      "itemSelector": ".mission .testimonial-card",
+      "fields": {
+        "testimonial_name": ".testimonial-info h4",
+        "testimonial_role": ".testimonial-info p",
+        "testimonial_text": ".testimonial-text"
+      }
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-item",
+      "fields": {
+        "bonus_icon": ".bonus-content h3",
+        "bonus_title": ".bonus-content h4",
+        "bonus_description": ".bonus-content p"
+      }
+    },
+    "trap_paragraphs": {
+      "itemSelector": ".trap-content p"
+    },
+    "trap_testimonials": {
+      "itemSelector": ".trap .testimonial-card",
+      "fields": {
+        "testimonial_name": ".testimonial-info h4",
+        "testimonial_role": ".testimonial-info p",
+        "testimonial_text": ".testimonial-text"
+      }
+    },
+    "timing_paragraphs": {
+      "itemSelector": ".timing-content p"
+    },
+    "timing_testimonials": {
+      "itemSelector": ".timing .testimonial-card",
+      "fields": {
+        "testimonial_name": ".testimonial-info h4",
+        "testimonial_role": ".testimonial-info p",
+        "testimonial_text": ".testimonial-text"
+      }
+    },
+    "guarantee_paragraphs": {
+      "itemSelector": ".guarantee-content p"
+    },
+    "next_steps_list": {
+      "itemSelector": ".steps-list li"
+    },
+    "recap_value_items": {
+      "itemSelector": ".value-item",
+      "fields": {
+        "item_text": "span:first-child",
+        "item_price": ".price"
+      }
+    },
+    "recap_icons": {
+      "itemSelector": ".recap-icons div"
+    },
+    "recap_bonus_items": {
+      "itemSelector": ".bonus-recap-item",
+      "fields": {
+        "bonus_text": "span:first-child",
+        "bonus_price": ".price"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

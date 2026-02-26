@@ -1,0 +1,84 @@
+{
+  "string": {
+    "top_banner_text": ".top-banner-text",
+    "hero_logo": ".hero-logo",
+    "hero_title": ".hero-title",
+    "hero_subtitle": ".hero-subtitle",
+    "price_label": ".price-label",
+    "price_old": ".price-old",
+    "price_current": ".price-current",
+    "price_note": ".price-note",
+    "cta_main_text": ".btn-primary",
+    "cta_subtext": ".btn-primary small",
+    "timer_label": ".timer div:first-child",
+    "testimonials_section_title": ".testimonials-section .section-title",
+    "steps_section_title": ".steps-section .section-title",
+    "formations_section_title": ".formations-section .section-title",
+    "bonus_section_title": ".bonus-title",
+    "guarantee_title": ".guarantee-title",
+    "guarantee_text": ".guarantee-text",
+    "situation_section_title": ".situation-title",
+    "benefits_section_title": ".benefits-section .section-title",
+    "faq_section_title": ".faq-section .section-title",
+    "footer_logo": ".footer-logo",
+    "footer_copyright": ".footer-copyright"
+  },
+  "arrays": {
+    "hero_bullets": {
+      "itemSelector": ".hero-bullets li"
+    },
+    "trust_badges": {
+      "itemSelector": ".trust-badge"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_text": ".testimonial-text",
+        "testimonial_author": ".testimonial-author"
+      }
+    },
+    "steps": {
+      "itemSelector": ".step-card",
+      "fields": {
+        "step_number": ".step-number",
+        "step_title": ".step-title",
+        "step_text": ".step-text"
+      }
+    },
+    "formations": {
+      "itemSelector": ".formation-card",
+      "fields": {
+        "formation_badge": ".formation-badge",
+        "formation_title": ".formation-title",
+        "formation_meta": ".formation-meta-item"
+      }
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_number": ".bonus-number",
+        "bonus_name": ".bonus-name"
+      }
+    },
+    "situations": {
+      "itemSelector": ".situation-btn"
+    },
+    "benefits_blocks": {
+      "itemSelector": ".benefit-block",
+      "fields": {
+        "benefit_title": ".benefit-title",
+        "benefit_items": ".benefit-list li"
+      }
+    },
+    "faqs": {
+      "itemSelector": ".faq-item",
+      "fields": {
+        "faq_question": ".faq-question",
+        "faq_answer": ".faq-answer"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

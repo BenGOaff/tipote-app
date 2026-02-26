@@ -1,0 +1,87 @@
+{
+  "string": {
+    "logo_text": ".logo",
+    "nav_cta_text": ".cta-btn",
+    "product_type": ".product-type",
+    "hero_title": ".hero-title",
+    "hero_pitch": ".hero-pitch",
+    "hero_cta_text": ".hero-box .cta-btn",
+    "price_tag": ".price-tag",
+    "price_detail": ".price-detail",
+    "discover_title": ".discover-section .section-title",
+    "situations_title": ".situations-title",
+    "quote_title": ".quote-text h2",
+    "transformation_title": ".transformation-text h2",
+    "method_title": ".method-section .section-title",
+    "belief_title": ".belief-title",
+    "belief_subtitle": ".belief-subtitle",
+    "transformation_box_title": ".transformation-box h3",
+    "program_intro_title": ".program-intro h2",
+    "program_intro_text": ".program-intro p",
+    "program_offer_title": ".program-offer h3",
+    "ready_cta_title": ".ready-cta h3",
+    "curriculum_title": ".curriculum-section .section-title",
+    "author_title": ".about-section .about-header h2",
+    "testimonials_title": ".testimonials-title",
+    "testimonials_subtitle": ".testimonials-subtitle",
+    "guarantee_title": ".guarantee-box h2",
+    "guarantee_intro": ".guarantee-box p",
+    "situations_cta_paragraph_1": ".situations-cta",
+    "transformation_box_intro": ".transformation-box p",
+    "faq_title": ".faq-title",
+    "footer_logo": ".footer-logo",
+    "footer_text": ".footer-text",
+    "footer_brand_name": ".brand-text"
+  },
+  "arrays": {
+    "nav_links": {
+      "itemSelector": ".nav-links a"
+    },
+    "hero_benefits": {
+      "itemSelector": ".benefits-list li"
+    },
+    "situations_list": {
+      "itemSelector": ".situations-list li"
+    },
+    "quote_paragraphs": {
+      "itemSelector": ".quote-text p"
+    },
+    "transformation_paragraphs": {
+      "itemSelector": ".transformation-text p"
+    },
+    "benefits_grid_items": {
+      "itemSelector": ".benefit-item",
+      "fields": {
+        "benefit_icon": ".benefit-icon",
+        "benefit_text": ".benefit-text"
+      }
+    },
+    "offer_cards": {
+      "itemSelector": ".offer-card",
+      "fields": {
+        "offer_title": ".offer-title",
+        "offer_description": ".offer-description"
+      }
+    },
+    "modules": {
+      "itemSelector": ".module-card",
+      "fields": {
+        "module_title": ".module-content h3",
+        "module_description": ".module-description",
+        "module_items": ".module-promises li"
+      }
+    },
+    "belief_paragraphs": {
+      "itemSelector": ".method-header p"
+    },
+    "author_bio_paragraphs": {
+      "itemSelector": ".about-text p"
+    },
+    "faq_questions": {
+      "itemSelector": ".faq-item"
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

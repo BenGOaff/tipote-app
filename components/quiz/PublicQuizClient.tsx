@@ -56,11 +56,15 @@ type Step = "intro" | "quiz" | "email" | "result" | "bonus";
 
 interface PublicQuizClientProps {
   quizId: string;
+  /** If provided, skip the API fetch and use this data directly (preview mode). */
+  previewData?: PublicQuizData | null;
 }
 
-export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
-  const [quiz, setQuiz] = useState<PublicQuizData | null>(null);
-  const [loading, setLoading] = useState(true);
+export type { PublicQuizData };
+
+export default function PublicQuizClient({ quizId, previewData }: PublicQuizClientProps) {
+  const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
+  const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>("intro");
@@ -76,6 +80,13 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
 
   useEffect(() => {
+    // In preview mode, data is already provided via props
+    if (previewData) {
+      setQuiz(previewData);
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
         const res = await fetch(`/api/quiz/${quizId}/public`);
@@ -98,7 +109,7 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
       }
     };
     load();
-  }, [quizId]);
+  }, [quizId, previewData]);
 
   const computeResult = useCallback((): QuizResult | null => {
     if (!quiz) return null;
@@ -141,15 +152,18 @@ export default function PublicQuizClient({ quizId }: PublicQuizClientProps) {
       const profile = computeResult();
       setResultProfile(profile);
 
-      await fetch(`/api/quiz/${quizId}/public`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          result_id: profile?.id ?? null,
-          consent_given: consent,
-        }),
-      });
+      // In preview mode, skip the actual lead submission
+      if (!previewData) {
+        await fetch(`/api/quiz/${quizId}/public`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            result_id: profile?.id ?? null,
+            consent_given: consent,
+          }),
+        });
+      }
 
       setStep("result");
     } catch {

@@ -1,0 +1,103 @@
+{
+  "string": {
+    "top_banner_text": ".top-banner",
+    "logo_text": ".logo",
+    "nav_cta_text": ".cta-btn",
+    "hero_title": ".hero h1",
+    "hero_subtitle": ".hero-subtitle",
+    "hero_cta_text": ".hero-content .cta-btn",
+    "value_section_label": ".value-section .section-label",
+    "value_section_title": ".value-section .section-title",
+    "testimonial_author_initial": ".author-avatar",
+    "testimonial_author_name": ".author-info h4",
+    "testimonial_author_role": ".author-info p",
+    "content_section_label": ".content-section .section-label",
+    "content_section_title": ".content-section .section-title",
+    "agency_section_title": ".agency-text h2",
+    "team_section_label": ".team-section .section-label",
+    "team_section_title": ".team-section .section-title",
+    "team_description": ".team-description",
+    "social_proof_section_label": ".social-proof-section .section-label",
+    "social_proof_section_title": ".social-proof-section .section-title",
+    "portfolio_section_label": ".portfolio-section .section-label",
+    "portfolio_section_title": ".portfolio-section .section-title",
+    "portfolio_subtitle": ".portfolio-subtitle",
+    "faq_section_label": ".faq-section .section-label",
+    "faq_section_title": ".faq-section .section-title",
+    "faq_subtitle": ".faq-subtitle",
+    "final_cta_title": ".final-cta-left h2",
+    "final_cta_button_text": ".cta-btn-large",
+    "footer_newsletter_title": ".footer-newsletter p",
+    "footer_brand_description": ".footer-brand p"
+  },
+  "arrays": {
+    "nav_links": {
+      "itemSelector": ".nav-links a"
+    },
+    "hero_badges": {
+      "itemSelector": ".badge"
+    },
+    "tools": {
+      "itemSelector": ".tool-item",
+      "fields": {
+        "tool_name": ".tool-name",
+        "tool_description": ".tool-description"
+      }
+    },
+    "value_paragraphs": {
+      "itemSelector": ".value-text"
+    },
+    "content_modules": {
+      "itemSelector": ".content-module",
+      "fields": {
+        "module_title": ".module-title",
+        "module_description": ".module-description",
+        "module_features": ".module-features li",
+        "module_highlight": ".module-highlight p"
+      }
+    },
+    "agency_paragraphs": {
+      "itemSelector": ".agency-text p"
+    },
+    "agency_cards": {
+      "itemSelector": ".agency-card",
+      "fields": {
+        "card_title": ".card-title",
+        "card_tags": ".tag"
+      }
+    },
+    "team_members": {
+      "itemSelector": ".team-card",
+      "fields": {
+        "member_name": ".team-name",
+        "member_role": ".team-role"
+      }
+    },
+    "social_proof_text": {
+      "itemSelector": ".social-proof-text"
+    },
+    "faqs": {
+      "itemSelector": ".faq-item",
+      "fields": {
+        "faq_question": ".faq-question",
+        "faq_answer": ".faq-answer"
+      }
+    },
+    "final_cta_paragraphs": {
+      "itemSelector": ".final-cta-left p"
+    },
+    "final_cta_features": {
+      "itemSelector": ".final-cta-left li"
+    },
+    "footer_columns": {
+      "itemSelector": ".footer-column",
+      "fields": {
+        "column_title": "h4",
+        "column_links": "a"
+      }
+    },
+    "footer_tools": {
+      "itemSelector": ".footer-tool"
+    }
+  }
+}

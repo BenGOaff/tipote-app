@@ -1005,8 +1005,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{tSP("reglages.uiLangLabel")}</Label>
-              <p className="text-xs text-muted-foreground">{tSP("reglages.uiLangDesc")}</p>
-              <LanguageSwitcher variant="settings" />
+              <LanguageSwitcher variant="bare" />
             </div>
 
             <div className="space-y-2">

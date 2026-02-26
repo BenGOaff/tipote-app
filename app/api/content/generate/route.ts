@@ -29,6 +29,7 @@ import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import type { OfferMode, OfferSourceContext, OfferType } from "@/lib/prompts/content/offer";
+import { fetchPageText } from "@/lib/fetchPageText";
 import { renderTemplateHtml } from "@/lib/templates/render";
 import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
 
@@ -1069,6 +1070,8 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSour
       toNumberOrNull((o as any).max_price) ??
       null;
 
+    const link = safeStringOrNull((o as any).link) ?? safeStringOrNull((o as any).url) ?? safeStringOrNull((o as any).sales_page_url) ?? null;
+
     out.push({
       id,
       name,
@@ -1080,6 +1083,7 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSour
       main_outcome,
       format,
       delivery,
+      link,
       is_flagship: (typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null) as any,
       updated_at: safeStringOrNull((o as any).updated_at) ?? null,
     } as any);
@@ -1992,6 +1996,16 @@ export async function POST(req: Request) {
         const leadMagnetFormat = safeString(body.leadMagnetFormat).trim() || undefined;
         const target = safeString(body.target).trim() || undefined;
 
+        // Fetch sales page content for improvement analysis
+        let salesPageText: string | null = null;
+        if (offerMode === "improve" && sourceOffer?.link) {
+          try {
+            salesPageText = await fetchPageText(sourceOffer.link);
+          } catch {
+            // non-blocking — analysis continues without page content
+          }
+        }
+
         return buildOfferPrompt({
           offerMode,
           offerType,
@@ -2000,6 +2014,7 @@ export async function POST(req: Request) {
           leadMagnetFormat,
           sourceOffer: (offerMode === "from_existing" || offerMode === "improve") ? sourceOffer : null,
           improvementGoal: offerMode === "improve" ? safeString(body.improvementGoal).trim() || undefined : undefined,
+          salesPageText,
           language: contentLocale,
         } as any);
       }
@@ -2133,8 +2148,11 @@ export async function POST(req: Request) {
       if (body.offerType) userContextLines.push(`OfferType: ${safeString(body.offerType).trim()}`);
       userContextLines.push(`OfferMode: ${offerMode}`);
       if (offerMode === "from_existing" || offerMode === "improve") {
-        userContextLines.push("SourceOffer (JSON):");
+        userContextLines.push("SourceOffer (JSON) — SEULE offre à analyser :");
         userContextLines.push(JSON.stringify(sourceOffer));
+        if (offerMode === "improve") {
+          userContextLines.push("RAPPEL: Analyse UNIQUEMENT cette offre ci-dessus. Ignore toutes les autres offres dans le contexte.");
+        }
       }
       if (offerMode === "improve" && body.improvementGoal) {
         userContextLines.push(`ImprovementGoal: ${safeString(body.improvementGoal).trim()}`);

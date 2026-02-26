@@ -1,0 +1,95 @@
+{
+  "string": {
+    "header_countdown_text": ".header-bar",
+    "logo_text": ".logo",
+    "logo_accent": ".logo-accent",
+    "attention_box_text": ".attention-box",
+    "hero_title": ".hero h1",
+    "hero_title_highlight": ".hero h1 .highlight",
+    "hero_title_strikethrough": ".hero h1 .strikethrough",
+    "cta_primary_text": ".cta-button",
+    "problems_title": ".problems .section-title h2",
+    "problems_subtitle": ".problems .subtitle",
+    "empathy_title": ".empathy-box h3",
+    "solution_section_title": ".solution .section-title h2",
+    "solution_section_subtitle": ".solution .subtitle",
+    "bundle_logo": ".bundle-logo",
+    "bundle_tagline": ".bundle-tagline",
+    "content_section_title": ".content-overview .section-title h2",
+    "bonus_section_title": ".bonus-section .section-title h2",
+    "price_amount": ".price-amount",
+    "price_strike": ".price-strike",
+    "price_label": ".price-label",
+    "benefits_section_title": ".benefits .section-title h2",
+    "benefits_section_subtitle": ".benefits .subtitle",
+    "recap_section_title": ".recap .section-title h2",
+    "recap_section_subtitle": ".recap .subtitle",
+    "recap_content_title": ".recap-content h3",
+    "recap_content_subtitle": ".recap-subtitle",
+    "testimonials_section_title": ".testimonials .section-title h2",
+    "faq_section_title": ".faq .section-title h2",
+    "faq_cta_text": ".faq .cta-button",
+    "footer_logo": ".footer-logo",
+    "footer_copyright": ".footer p"
+  },
+  "arrays": {
+    "nav_links": {
+      "itemSelector": ".nav-links a"
+    },
+    "trust_badges": {
+      "itemSelector": ".badge",
+      "fields": {
+        "badge_icon": ".badge-icon"
+      }
+    },
+    "problem_list": {
+      "itemSelector": ".problem-item .problem-text"
+    },
+    "story_paragraphs": {
+      "itemSelector": ".story-text p"
+    },
+    "modules": {
+      "itemSelector": ".module-card",
+      "fields": {
+        "module_header": ".module-header",
+        "module_description": ".module-description",
+        "module_features": ".features-list li"
+      }
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_header": ".bonus-header",
+        "bonus_description": ".bonus-content p",
+        "bonus_features": ".features-list li"
+      }
+    },
+    "benefits": {
+      "itemSelector": ".benefit-card",
+      "fields": {
+        "benefit_icon": ".benefit-icon",
+        "benefit_title": "h3",
+        "benefit_text": "p"
+      }
+    },
+    "recap_list": {
+      "itemSelector": ".recap-list li"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_avatar": ".testimonial-avatar",
+        "testimonial_name": ".testimonial-name",
+        "testimonial_rating": ".testimonial-rating",
+        "testimonial_text": ".testimonial-text",
+        "testimonial_date": ".testimonial-date"
+      }
+    },
+    "faqs": {
+      "itemSelector": ".faq-item"
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

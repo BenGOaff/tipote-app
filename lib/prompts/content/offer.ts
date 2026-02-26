@@ -20,6 +20,7 @@ export type OfferSourceContext = {
   delivery?: string | null;
   price_min?: number | null;
   price_max?: number | null;
+  link?: string | null;
 };
 
 export type OfferPromptParams = {
@@ -39,6 +40,9 @@ export type OfferPromptParams = {
 
   // ✅ Improve: direction d'amélioration décrite par l'user
   improvementGoal?: string;
+
+  // Sales page text content (fetched from offer link URL)
+  salesPageText?: string | null;
 
   // Contexte enrichi (injecté automatiquement par route.ts)
   language?: string; // défaut fr
@@ -329,11 +333,28 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
 function buildOfferImprovementPrompt(params: OfferPromptParams): string {
   const sourceOffer = params.sourceOffer ?? null;
   const improvementGoal = safe(params.improvementGoal);
+  const salesPageText = safe(params.salesPageText ?? "");
+
+  const salesPageBlock = salesPageText
+    ? [
+        "",
+        "CONTENU COMPLET DE LA PAGE DE VENTE (texte extrait de l'URL fournie) :",
+        "---DÉBUT PAGE DE VENTE---",
+        salesPageText.slice(0, 60_000),
+        "---FIN PAGE DE VENTE---",
+        "",
+        "INSTRUCTION CRITIQUE :",
+        "- Tu DOIS baser ton analyse sur le contenu réel de cette page de vente ci-dessus.",
+        "- Si la page contient déjà une FAQ, une garantie, des témoignages, etc., tu DOIS le reconnaître et ne PAS suggérer de les ajouter.",
+        "- Analyse uniquement CETTE offre et CETTE page. Ne mélange PAS avec d'autres offres que tu pourrais voir dans le contexte business.",
+        "",
+      ].join("\n")
+    : "";
 
   return [
     "RÔLE & POSTURE :",
     "Tu es un consultant business senior spécialisé en design d'offres à haute valeur perçue.",
-    "Tu analyses une offre existante et proposes des améliorations concrètes et actionnables.",
+    "Tu analyses UNE SEULE offre existante et proposes des améliorations concrètes et actionnables.",
     "Tu t'appuies sur le persona client, le business plan, les ressources internes et les meilleures pratiques du marché.",
     "Tu ne mentionnes jamais que tu es une IA.",
     "",
@@ -343,9 +364,15 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
     "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
     "- Ton: clair, pro, actionnable, précis.",
     "",
+    "RÈGLE D'ISOLATION (CRITIQUE) :",
+    "- Tu analyses UNIQUEMENT l'offre fournie ci-dessous. UNE SEULE offre.",
+    "- Si le contexte business contient d'autres offres, tu les IGNORES complètement pour cette analyse.",
+    "- Ne mélange JAMAIS les informations de plusieurs offres.",
+    "- Chaque point de ton analyse doit concerner EXCLUSIVEMENT cette offre précise.",
+    "",
     "OFFRE À ANALYSER :",
     compactJson(sourceOffer),
-    "",
+    salesPageBlock,
     improvementGoal
       ? [
           "DIRECTION D'AMÉLIORATION DEMANDÉE PAR L'UTILISATEUR :",
@@ -357,9 +384,12 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
     "",
     "CONTEXTE À EXPLOITER :",
     "- Persona client idéal (douleurs, désirs, objections, vocabulaire) — injecté par l'API.",
-    "- Business profile + business plan (si disponibles).",
+    "- Business profile + business plan (si disponibles) — utilise-les UNIQUEMENT pour comprendre le contexte global, PAS pour mélanger les offres.",
     "- Ressources Tipote Knowledge (si présentes).",
     "- Tu croises ces infos avec l'offre pour identifier les gaps et les opportunités.",
+    salesPageText
+      ? "- IMPORTANT: Le contenu de la page de vente ci-dessus est ta source PRINCIPALE. Lis-le entièrement avant de faire ton diagnostic."
+      : "",
     "",
     "STRUCTURE ATTENDUE (OBLIGATOIRE) :",
     "",
@@ -367,6 +397,7 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
     "- Points forts de l'offre actuelle (2-3 max)",
     "- Points faibles ou manques identifiés (2-4 max)",
     "- Alignement avec le persona et le marché (note sur 10 + justification courte)",
+    salesPageText ? "- Éléments présents sur la page de vente: garantie, FAQ, témoignages, preuves sociales, etc. (ne suggère PAS d'ajouter ce qui existe déjà)" : "",
     "",
     "2) AMÉLIORATIONS PROPOSÉES",
     "Pour chaque amélioration (3 à 6 max) :",
