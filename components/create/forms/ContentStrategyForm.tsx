@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  AlertCircle,
 } from "lucide-react";
 
 /* ───────── Types ───────── */
@@ -54,7 +55,7 @@ type GeneratedContent = {
   day: number;
   jobId: string;
   content: string;
-  status: "generating" | "done" | "error";
+  status: "pending" | "generating" | "done" | "error";
   type: string;
   platform: string;
   theme: string;
@@ -95,6 +96,9 @@ const GOAL_OPTIONS = [
   { value: "engagement", label: "Engagement communauté" },
 ];
 
+/** Max concurrent generation requests to avoid overwhelming the server */
+const MAX_CONCURRENT = 3;
+
 /* ───────── Helpers ───────── */
 
 async function safeFetchJson(url: string, opts: RequestInit): Promise<any> {
@@ -110,23 +114,86 @@ async function safeFetchJson(url: string, opts: RequestInit): Promise<any> {
   return json;
 }
 
-async function pollContent(jobId: string, timeoutMs = 120_000): Promise<string> {
+/**
+ * Call /api/content/generate for a single content piece.
+ * Returns the jobId (content is generated async on server).
+ */
+async function requestGeneration(payload: Record<string, unknown>): Promise<string | null> {
+  try {
+    const res = await fetch("/api/content/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return null;
+    const json = await res.json();
+    return json?.jobId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Poll a content_item by jobId until it's done generating.
+ * Same pattern as CreateLovableClient.pollGeneratedContent.
+ */
+async function pollContent(
+  jobId: string,
+  onContent: (content: string) => void,
+  timeoutMs = 180_000,
+): Promise<boolean> {
   const start = Date.now();
-  let delay = 1000;
+  let delay = 1200;
+  let didTriggerProcess = false;
+
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`);
-      const data = await res.json().catch(() => null);
-      if (data?.ok && data?.item) {
+      const raw = await res.text().catch(() => "");
+      let data: any = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+
+      // Fallback: trigger server-side processing if stuck
+      if (!didTriggerProcess && Date.now() - start > 15_000) {
+        didTriggerProcess = true;
+        void fetch(`/api/content/${encodeURIComponent(jobId)}?process=1`).catch(() => null);
+      }
+
+      if (res.ok && data?.ok && data?.item) {
         const status = String(data.item.status ?? "").toLowerCase();
         const content = typeof data.item.content === "string" ? data.item.content.trim() : "";
-        if (content && status !== "generating") return content;
+        if (content && status !== "generating") {
+          onContent(content);
+          return true;
+        }
       }
     } catch { /* retry */ }
+
     await new Promise((r) => setTimeout(r, delay));
-    delay = Math.min(3000, Math.floor(delay * 1.3));
+    delay = Math.min(3000, Math.floor(delay * 1.15));
   }
-  return "";
+  return false;
+}
+
+/** Run promises with concurrency limit */
+async function runWithConcurrency<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let idx = 0;
+
+  async function worker() {
+    while (idx < tasks.length) {
+      const i = idx++;
+      results[i] = await tasks[i]();
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
 }
 
 /* ───────── Component ───────── */
@@ -160,13 +227,14 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
   // Generated content (Step 3-4)
   const [contents, setContents] = useState<GeneratedContent[]>([]);
-  const [generatingAll, setGeneratingAll] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState(0);
 
   // Content review
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
+
+  // Track abort
+  const abortRef = useRef(false);
 
   // Load offers on mount
   useEffect(() => {
@@ -194,17 +262,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     })();
   }, []);
 
-  const togglePlatform = (p: string) => {
-    setPlatforms((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
-    );
-  };
+  const togglePlatform = (p: string) =>
+    setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
 
-  const toggleGoal = (g: string) => {
-    setGoals((prev) =>
-      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g],
-    );
-  };
+  const toggleGoal = (g: string) =>
+    setGoals((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
+
+  // Progress
+  const doneCount = contents.filter((c) => c.status === "done").length;
+  const errorCount = contents.filter((c) => c.status === "error").length;
+  const totalCount = contents.length;
+  const progress = totalCount > 0 ? Math.round(((doneCount + errorCount) / totalCount) * 100) : 0;
 
   // ── STEP 1: Generate strategy plan ──
   const handleGeneratePlan = async () => {
@@ -248,85 +316,98 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     }
   };
 
-  // ── STEP 2: Generate all content ──
+  // ── STEP 2: Generate ALL content (client-side orchestration) ──
   const handleGenerateAll = async () => {
     if (!strategy) return;
+    abortRef.current = false;
 
-    setGeneratingAll(true);
+    const offer = selectedOfferIdx >= 0 ? offers[selectedOfferIdx] : null;
+
+    // Initialize content entries
+    const initial: GeneratedContent[] = strategy.days.map((day) => ({
+      day: day.day,
+      jobId: "",
+      content: "",
+      status: "pending" as const,
+      type: day.contentType === "email" ? "email" : "post",
+      platform: day.platform || "linkedin",
+      theme: day.theme || "",
+    }));
+    setContents(initial);
     setStep("generating");
-    setGenerationProgress(0);
 
-    try {
-      const offer = selectedOfferIdx >= 0 ? offers[selectedOfferIdx] : null;
+    // Build generation tasks
+    const tasks = strategy.days.map((day, idx) => async () => {
+      if (abortRef.current) return;
 
-      const json = await safeFetchJson("/api/content/strategy/generate-all", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: strategy.title,
-          days: strategy.days,
-          offerContext: offer || undefined,
-        }),
-      });
+      const type = day.contentType === "email" ? "email" : "post";
+      const channel = day.platform || "linkedin";
 
-      if (!json.ok) {
-        throw new Error(json.error || "Erreur lors de la génération");
+      // Build brief
+      const briefLines: string[] = [];
+      briefLines.push(`CONTEXTE STRATÉGIE : ${strategy.title} — Jour ${day.day}`);
+      briefLines.push(`THÈME DU JOUR : ${day.theme}`);
+      briefLines.push(`HOOK (accroche à utiliser) : ${day.hook}`);
+      briefLines.push(`CTA (appel à l'action) : ${day.cta}`);
+      briefLines.push(`PLATEFORME : ${channel}`);
+
+      if (offer) {
+        briefLines.push("");
+        briefLines.push("OFFRE DE RÉFÉRENCE :");
+        if (offer.name) briefLines.push(`Nom: ${offer.name}`);
+        if (offer.promise) briefLines.push(`Promesse: ${offer.promise}`);
+        if (offer.target) briefLines.push(`Public cible: ${offer.target}`);
+        if (offer.price) briefLines.push(`Prix: ${offer.price}`);
+        if (offer.description) briefLines.push(`Description: ${offer.description}`);
+        if (offer.link) briefLines.push(`Lien: ${offer.link}`);
       }
 
-      const jobs: Array<{ day: number; jobId: string | null; error?: string }> = json.jobs || [];
+      briefLines.push("");
+      briefLines.push(`Génère un contenu de type "${type}" prêt à publier, adapté à la plateforme ${channel}.`);
+      briefLines.push("Utilise le hook et le CTA fournis. Le contenu doit être directement utilisable, pas de titre, pas de markdown.");
 
-      // Initialize content entries
-      const initial: GeneratedContent[] = jobs.map((j) => {
-        const dayPlan = strategy.days.find((d) => d.day === j.day);
-        return {
-          day: j.day,
-          jobId: j.jobId || "",
-          content: "",
-          status: j.jobId ? "generating" : "error",
-          type: dayPlan?.contentType === "email" ? "email" : "post",
-          platform: dayPlan?.platform || "linkedin",
-          theme: dayPlan?.theme || "",
-        };
-      });
-      setContents(initial);
+      // Mark as generating
+      setContents((prev) =>
+        prev.map((c, i) => (i === idx ? { ...c, status: "generating" as const } : c)),
+      );
 
-      // Poll all jobs in parallel
-      const total = initial.filter((c) => c.status === "generating").length;
-      let doneCount = 0;
-
-      const pollPromises = initial.map(async (item, idx) => {
-        if (item.status === "error" || !item.jobId) return;
-        try {
-          const content = await pollContent(item.jobId);
-          doneCount++;
-          setGenerationProgress(Math.round((doneCount / total) * 100));
-          setContents((prev) =>
-            prev.map((c, i) =>
-              i === idx ? { ...c, content, status: content ? "done" : "error" } : c,
-            ),
-          );
-        } catch {
-          doneCount++;
-          setGenerationProgress(Math.round((doneCount / total) * 100));
-          setContents((prev) =>
-            prev.map((c, i) => (i === idx ? { ...c, status: "error" } : c)),
-          );
-        }
+      // 1) Request generation → get jobId
+      const jobId = await requestGeneration({
+        type,
+        channel,
+        prompt: briefLines.join("\n"),
       });
 
-      await Promise.all(pollPromises);
-      setStep("review");
-      toast({ title: `${doneCount} contenus générés !` });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e?.message || "Impossible de générer les contenus",
-        variant: "destructive",
+      if (!jobId) {
+        setContents((prev) =>
+          prev.map((c, i) => (i === idx ? { ...c, status: "error" as const } : c)),
+        );
+        return;
+      }
+
+      // Store jobId
+      setContents((prev) =>
+        prev.map((c, i) => (i === idx ? { ...c, jobId } : c)),
+      );
+
+      // 2) Poll until content is ready
+      const ok = await pollContent(jobId, (content) => {
+        setContents((prev) =>
+          prev.map((c, i) => (i === idx ? { ...c, content, status: "done" as const } : c)),
+        );
       });
-      setStep("plan");
-    } finally {
-      setGeneratingAll(false);
-    }
+
+      if (!ok) {
+        setContents((prev) =>
+          prev.map((c, i) => (i === idx && c.status !== "done" ? { ...c, status: "error" as const } : c)),
+        );
+      }
+    });
+
+    // Run with concurrency limit (3 at a time)
+    await runWithConcurrency(tasks, MAX_CONCURRENT);
+
+    setStep("review");
   };
 
   // ── Save edited content ──
@@ -350,39 +431,34 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     }
   };
 
-  // ── Download all as PDF ──
-  const handleDownloadPdf = useCallback(() => {
-    if (contents.length === 0) return;
-    import("jspdf").then(({ jsPDF }) => {
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text(strategy?.title || "Stratégie de contenu", 20, 20);
+  // ── Download all as text file (no jspdf dependency) ──
+  const handleDownloadText = useCallback(() => {
+    const doneItems = contents.filter((c) => c.status === "done");
+    if (doneItems.length === 0) return;
 
-      let y = 35;
-      for (const item of contents) {
-        if (item.status !== "done") continue;
-        if (y > 260) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text(`Jour ${item.day} — ${item.theme} (${item.platform})`, 20, y);
-        y += 7;
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        const lines = doc.splitTextToSize(item.content || "", 170);
-        doc.text(lines, 20, y);
-        y += lines.length * 5 + 10;
-      }
-      doc.save(`strategie-${strategy?.title?.replace(/[^a-zA-Z0-9]/g, "_") || "contenu"}.pdf`);
-    });
+    const lines: string[] = [];
+    lines.push(strategy?.title || "Stratégie de contenu");
+    lines.push("=".repeat(50));
+    lines.push("");
+
+    for (const item of doneItems) {
+      lines.push(`── Jour ${item.day} — ${item.theme} (${item.platform}) ──`);
+      lines.push("");
+      lines.push(item.content);
+      lines.push("");
+      lines.push("");
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `strategie-${(strategy?.title || "contenu").replace(/[^a-zA-Z0-9àéèùâêîôû]/gi, "_")}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }, [contents, strategy]);
 
-  // ── Navigate to content detail for scheduling ──
-  const handleOpenContent = (jobId: string) => {
-    router.push(`/contents/${jobId}`);
-  };
+  const handleOpenContent = (jobId: string) => router.push(`/contents/${jobId}`);
 
   // ═════════════════════════════════════════════
   // STEP 1: Configuration
@@ -568,17 +644,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   }
 
   // ═════════════════════════════════════════════
-  // STEP 3: Generating all content
+  // STEP 3: Generating all content (background)
   // ═════════════════════════════════════════════
   if (step === "generating") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <CalendarDays className="w-5 h-5" />
+          <Loader2 className="w-5 h-5 animate-spin" />
           <div>
             <h2 className="text-xl font-bold">Génération en cours...</h2>
             <p className="text-sm text-muted-foreground">
-              Tipote crée {strategy?.days.length || 0} contenus personnalisés
+              {doneCount}/{totalCount} contenus prêts
             </p>
           </div>
         </div>
@@ -587,25 +663,33 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span>Progression</span>
-              <span className="font-medium">{generationProgress}%</span>
+              <span className="font-medium">{progress}%</span>
             </div>
-            <div className="w-full bg-muted rounded-full h-3">
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
               <div
-                className="bg-primary h-3 rounded-full transition-all duration-500"
-                style={{ width: `${generationProgress}%` }}
+                className="bg-primary h-3 rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {contents.map((item) => (
-                <div key={item.day} className="flex items-center gap-3 text-sm">
-                  {item.status === "generating" ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                  ) : item.status === "done" ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <span className="w-4 h-4 rounded-full bg-red-100" />
+                <div key={item.day} className="flex items-center gap-3 text-sm py-1">
+                  {item.status === "pending" && (
+                    <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
                   )}
-                  <span>Jour {item.day} — {item.theme}</span>
+                  {item.status === "generating" && (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  )}
+                  {item.status === "done" && (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  )}
+                  {item.status === "error" && (
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className={item.status === "done" ? "text-foreground" : "text-muted-foreground"}>
+                    J{item.day} — {item.theme}
+                  </span>
+                  <Badge variant="outline" className="text-xs ml-auto">{item.platform}</Badge>
                 </div>
               ))}
             </div>
@@ -618,11 +702,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   // ═════════════════════════════════════════════
   // STEP 4: Review all generated content
   // ═════════════════════════════════════════════
-  const doneContents = contents.filter((c) => c.status === "done");
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
@@ -630,15 +712,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <div>
             <h2 className="text-xl font-bold">{strategy?.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {doneContents.length} contenus générés sur {contents.length}
+              {doneCount} contenus générés{errorCount > 0 ? `, ${errorCount} erreurs` : ""}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
-            <Download className="w-4 h-4 mr-1" />
-            PDF
-          </Button>
+          {doneCount > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadText}>
+              <Download className="w-4 h-4 mr-1" />
+              Télécharger
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => router.push("/contents")}>
             Mes contenus
           </Button>
@@ -652,7 +736,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             <Card key={item.day} className="overflow-hidden">
               <div
                 className="p-4 flex items-center gap-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => setExpandedDay(isExpanded ? null : idx)}
+                onClick={() => item.status === "done" && setExpandedDay(isExpanded ? null : idx)}
               >
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-sm font-bold text-primary">J{item.day}</span>
@@ -676,10 +760,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenContent(item.jobId);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleOpenContent(item.jobId); }}
                         title="Voir / Planifier / Publier"
                       >
                         <Eye className="w-4 h-4" />
@@ -688,21 +769,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingDay(idx);
-                          setEditText(item.content);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setEditingDay(idx); setEditText(item.content); }}
                         title="Modifier"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
                     </>
                   )}
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  {item.status === "done" && (
+                    isExpanded
+                      ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   )}
                 </div>
               </div>
@@ -713,22 +790,11 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                     {item.content}
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenContent(item.jobId)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleOpenContent(item.jobId)}>
                       <Eye className="w-3 h-3 mr-1" />
-                      Voir / Planifier / Publier
+                      Planifier / Publier
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingDay(idx);
-                        setEditText(item.content);
-                      }}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => { setEditingDay(idx); setEditText(item.content); }}>
                       <Edit className="w-3 h-3 mr-1" />
                       Modifier
                     </Button>
