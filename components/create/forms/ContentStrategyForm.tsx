@@ -114,6 +114,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         }),
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Erreur serveur (${res.status}). Réessaye.`);
+      }
       const json = await res.json();
       if (!res.ok || !json.ok) {
         throw new Error(json.error || "Erreur lors de la génération");
