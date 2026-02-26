@@ -1,11 +1,10 @@
 // app/api/content/strategy/route.ts
-// Generates a multi-day content strategy plan using AI.
-// Returns a structured plan with daily themes, hooks, CTAs, and platform assignments.
+// Generates a multi-day content strategy plan using Claude.
+// Uses full user context (business profile, persona, storytelling, resources).
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import {
   getUserContextBundle,
@@ -15,6 +14,96 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
+/* ───────── Claude helpers (same pattern as content/generate) ───────── */
+
+function resolveClaudeModel(): string {
+  const raw =
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "";
+  const v = (raw || "").trim();
+  const DEFAULT = "claude-sonnet-4-5-20250929";
+  if (!v) return DEFAULT;
+  const s = v.toLowerCase();
+  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") return DEFAULT;
+  if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")) return DEFAULT;
+  return v;
+}
+
+function getClaudeApiKey(): string {
+  return (
+    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+    process.env.ANTHROPIC_API_KEY_OWNER?.trim() ||
+    ""
+  );
+}
+
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const model = resolveClaudeModel();
+
+  const timeoutMsRaw = process.env.TIPOTE_CLAUDE_TIMEOUT_MS ?? process.env.CLAUDE_TIMEOUT_MS ?? "";
+  const timeoutMs = (() => {
+    const n = Number(String(timeoutMsRaw).trim() || "NaN");
+    return Number.isFinite(n) ? Math.max(10_000, Math.min(240_000, Math.floor(n))) : 120_000;
+  })();
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": args.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+        system: args.system,
+        messages: [{ role: "user", content: args.user }],
+      }),
+    });
+  } catch (e: any) {
+    const name = String(e?.name ?? "");
+    const msg = String(e?.message ?? "");
+    if (name === "AbortError" || /aborted|abort/i.test(msg)) {
+      throw new Error(`Claude API timeout after ${timeoutMs}ms`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  const text = parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  return text || "";
+}
+
+/* ───────── Labels ───────── */
 
 const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
@@ -33,19 +122,23 @@ const GOAL_LABELS: Record<string, string> = {
   engagement: "Engagement communauté",
 };
 
-function buildSystemPrompt(): string {
+/* ───────── Prompt building ───────── */
+
+function buildSystemPrompt(personaBlock: string, storytellingBlock: string): string {
   return `Tu es un stratège en marketing digital expert. Tu crées des plans de contenu détaillés et actionnables pour des entrepreneurs et créateurs de contenu.
 
 RÈGLES STRICTES :
-- Réponds UNIQUEMENT en JSON valide, sans texte avant ni après.
+- Réponds UNIQUEMENT en JSON valide, sans texte avant ni après. Pas de markdown, pas de \`\`\`json.
 - Le JSON doit correspondre exactement au schéma demandé.
 - Chaque jour doit avoir un thème unique et varié.
 - Alterne les types de contenu (post éducatif, storytelling, carrousel, vidéo courte, témoignage, offre, email…).
-- Les hooks doivent être accrocheurs et spécifiques (pas génériques).
+- Les hooks doivent être accrocheurs et spécifiques au business de l'utilisateur (pas génériques).
 - Les CTAs doivent être clairs et variés.
 - Adapte le style au(x) réseau(x) cible(s).
 - Si plusieurs plateformes, répartis les jours entre elles de manière équilibrée.
-- Tiens compte du contexte business de l'utilisateur pour personnaliser les thèmes.`;
+- Tiens compte du contexte business, du persona client et du storytelling pour personnaliser chaque jour.
+${personaBlock ? `\nPERSONA CLIENT IDÉAL :\n${personaBlock}` : ""}
+${storytellingBlock ? `\nSTORYTELLING DU FONDATEUR :\n${storytellingBlock}` : ""}`;
 }
 
 function buildUserPrompt(params: {
@@ -70,7 +163,7 @@ ${params.context ? `\nCONTEXTE SUPPLÉMENTAIRE : ${params.context}` : ""}
 
 ${params.userContext ? `\nPROFIL DE L'UTILISATEUR :\n${params.userContext}` : ""}
 
-Réponds avec ce JSON exact :
+Réponds avec ce JSON exact (et rien d'autre) :
 {
   "title": "Titre court du plan (ex: Plan contenu LinkedIn 14 jours)",
   "days": [
@@ -90,9 +183,62 @@ IMPORTANT :
 - Chaque jour a un seul post sur une seule plateforme.
 - Répartis les plateformes de façon équilibrée sur la durée.
 - Varie les types de contenu (ne pas faire 5 posts éducatifs d'affilée).
-- Les hooks doivent être SPÉCIFIQUES et ENGAGEANTS, pas génériques.
-- Adapte les types de contenu à la plateforme (pas de carrousel sur TikTok, pas de vidéo courte par email).`;
+- Les hooks doivent être SPÉCIFIQUES au business de l'utilisateur et ENGAGEANTS, pas génériques.
+- Adapte les types de contenu à la plateforme (pas de carrousel sur TikTok, pas de vidéo courte par email).
+- Si un storytelling fondateur est fourni, intègre-le dans au moins 2-3 jours du plan.`;
 }
+
+/* ───────── Helpers ───────── */
+
+function extractPersonaBlock(personaContext: any): string {
+  if (!personaContext) return "";
+  try {
+    return JSON.stringify(personaContext, null, 2);
+  } catch {
+    return "";
+  }
+}
+
+function extractStorytellingBlock(profile: any): string {
+  const st = profile?.storytelling;
+  if (!st || typeof st !== "object" || Array.isArray(st)) return "";
+  const steps: [string, string][] = [
+    ["Il était une fois", "situation_initiale"],
+    ["Mais un jour", "element_declencheur"],
+    ["À cause de ça", "peripeties"],
+    ["Jusqu'au jour où", "moment_critique"],
+    ["Tout s'arrange", "resolution"],
+    ["Et depuis ce jour", "situation_finale"],
+  ];
+  const lines: string[] = [];
+  for (const [label, key] of steps) {
+    const v = typeof (st as any)[key] === "string" ? (st as any)[key].trim() : "";
+    if (v) lines.push(`${label}: ${v}`);
+  }
+  return lines.join("\n");
+}
+
+function extractJsonFromText(text: string): string {
+  // Try to find JSON in the response (handles markdown code blocks)
+  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock?.[1]) return codeBlock[1].trim();
+  // Find outermost { ... }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end > start) return text.slice(start, end + 1);
+  return text;
+}
+
+function isColumnMissing(message: string) {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("does not exist") || m.includes("could not find");
+}
+
+function isTagsTypeMismatch(message: string) {
+  return /malformed array literal/i.test(message) || /invalid input syntax/i.test(message);
+}
+
+/* ───────── Route ───────── */
 
 export async function POST(req: Request) {
   try {
@@ -107,6 +253,7 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
 
     // 2. Parse body
     const body = await req.json().catch(() => null);
@@ -161,20 +308,61 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Load user context for personalization
-    const bundle = await getUserContextBundle(supabase, userId);
-    const userContext = userContextToPromptText(bundle);
-
-    // 5. Check AI client
-    if (!openai) {
+    // 4. Check API key
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Service IA indisponible" },
+        { error: "Clé Claude owner manquante (env CLAUDE_API_KEY_OWNER)." },
         { status: 503 },
       );
     }
 
-    // 6. Generate strategy
-    const systemPrompt = buildSystemPrompt();
+    // 5. Load full user context (business profile, persona, storytelling)
+    const bundle = await getUserContextBundle(supabase, userId);
+    const userContext = userContextToPromptText(bundle);
+
+    // Load business profile for storytelling
+    let profile: any = null;
+    try {
+      const profileQuery = supabase.from("business_profiles").select("*").eq("user_id", userId);
+      if (projectId) profileQuery.eq("project_id", projectId);
+      const { data } = await profileQuery.maybeSingle();
+      profile = data;
+    } catch { /* non-blocking */ }
+
+    // Load persona
+    let personaContext: any = null;
+    try {
+      const personaQuery = supabase
+        .from("personas")
+        .select("persona_json,name,description,pains,desires,objections,current_situation,desired_situation,awareness_level,budget_level")
+        .eq("user_id", userId)
+        .eq("role", "client_ideal");
+      if (projectId) personaQuery.eq("project_id", projectId);
+      const { data: personaRow } = await personaQuery
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (personaRow) {
+        const pj = (typeof (personaRow as any).persona_json === "object" && (personaRow as any).persona_json) || null;
+        personaContext = pj ?? {
+          name: (personaRow as any).name ?? null,
+          current_situation: (personaRow as any).current_situation ?? null,
+          desired_situation: (personaRow as any).desired_situation ?? null,
+          pains: (personaRow as any).pains ?? null,
+          desires: (personaRow as any).desires ?? null,
+          objections: (personaRow as any).objections ?? null,
+          awareness_level: (personaRow as any).awareness_level ?? null,
+          description: (personaRow as any).description ?? null,
+        };
+      }
+    } catch { /* non-blocking */ }
+
+    // 6. Build prompts with full context
+    const personaBlock = extractPersonaBlock(personaContext);
+    const storytellingBlock = extractStorytellingBlock(profile);
+    const systemPrompt = buildSystemPrompt(personaBlock, storytellingBlock);
     const userPrompt = buildUserPrompt({
       duration,
       platforms,
@@ -183,38 +371,36 @@ export async function POST(req: Request) {
       userContext,
     });
 
-    let resp: any;
+    // 7. Call Claude
+    let raw: string;
     try {
-      resp = await openai.chat.completions.create({
-        ...cachingParams("content_strategy"),
-        model: OPENAI_MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: duration <= 14 ? 4000 : 8000,
-      } as any);
+      raw = await callClaude({
+        apiKey,
+        system: systemPrompt,
+        user: userPrompt,
+        maxTokens: duration <= 14 ? 4000 : 8000,
+        temperature: 0.7,
+      });
     } catch (aiErr: any) {
-      console.error("OpenAI API error:", aiErr?.message, aiErr?.status, aiErr?.code);
+      console.error("Claude API error:", aiErr?.message);
       return NextResponse.json(
         { error: `Erreur IA: ${aiErr?.message || "Service indisponible"}` },
         { status: 502 },
       );
     }
 
-    const raw = resp?.choices?.[0]?.message?.content ?? "";
     if (!raw.trim()) {
-      console.error("OpenAI returned empty. finish_reason:", resp?.choices?.[0]?.finish_reason);
       return NextResponse.json(
         { error: "L'IA n'a pas retourné de contenu. Réessaye." },
         { status: 500 },
       );
     }
 
+    // 8. Parse JSON response
+    const jsonStr = extractJsonFromText(raw);
     let parsed: any;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(jsonStr);
     } catch {
       console.error("Strategy JSON parse error. Raw:", raw.slice(0, 500));
       return NextResponse.json(
@@ -223,7 +409,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate structure
     if (!parsed.title || !Array.isArray(parsed.days) || parsed.days.length === 0) {
       console.error("Strategy invalid structure:", JSON.stringify(parsed).slice(0, 500));
       return NextResponse.json(
@@ -232,7 +417,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean and validate days
+    // Clean days
     const days = parsed.days.map((d: any, i: number) => ({
       day: d.day ?? i + 1,
       theme: typeof d.theme === "string" ? d.theme : `Jour ${i + 1}`,
@@ -247,7 +432,7 @@ export async function POST(req: Request) {
       days,
     };
 
-    // 7. Consume credits
+    // 9. Consume credits
     try {
       await consumeCredits(userId, 1, {
         feature: "content_strategy",
@@ -265,12 +450,9 @@ export async function POST(req: Request) {
       console.error("Credits consumption error (non-blocking):", e);
     }
 
-    // 8. Save strategy to content_item for Content Hub
+    // 10. Save strategy to content_item for Content Hub
     let contentId: string | null = null;
     try {
-      const projectId = await getActiveProjectId(supabase, userId);
-
-      // Build readable text summary
       const textLines = [`# ${strategy.title}\n`];
       for (const d of strategy.days) {
         textLines.push(`## Jour ${d.day} — ${d.theme}`);
@@ -278,54 +460,72 @@ export async function POST(req: Request) {
         textLines.push(`Hook: ${d.hook}`);
         textLines.push(`CTA: ${d.cta}\n`);
       }
+      const textContent = textLines.join("\n");
+      const tagsArr = ["strategy", `${duration}j`, ...platforms];
+      const tagsCsv = tagsArr.join(",");
+      const metaObj = {
+        strategy_config: { duration, platforms, goals, context: context || null },
+        plan_json: strategy,
+      };
 
-      const insertPayload: Record<string, unknown> = {
+      // Try V2 (EN columns) with maybeSingle
+      const basePayload: Record<string, unknown> = {
         user_id: userId,
         type: "strategy",
         title: strategy.title,
-        content: textLines.join("\n"),
+        content: textContent,
         status: "draft",
         channel: platforms.join(", "),
-        tags: ["strategy", `${duration}j`, ...platforms],
-        meta: {
-          strategy_config: { duration, platforms, goals, context: context || null },
-          plan_json: strategy,
-        },
+        tags: tagsArr,
+        meta: metaObj,
       };
-      if (projectId) insertPayload.project_id = projectId;
+      if (projectId) basePayload.project_id = projectId;
 
-      const { data: saved, error: saveErr } = await supabase
+      let result = await (supabase as any)
         .from("content_item")
-        .insert(insertPayload)
+        .insert(basePayload)
         .select("id")
-        .single();
+        .maybeSingle();
 
-      if (saveErr) {
-        // Retry with FR columns
+      // Tags type mismatch fallback
+      if (result?.error && isTagsTypeMismatch(result.error.message)) {
+        result = await (supabase as any)
+          .from("content_item")
+          .insert({ ...basePayload, tags: tagsCsv })
+          .select("id")
+          .maybeSingle();
+      }
+
+      // Missing column fallback (try FR columns)
+      if (result?.error && isColumnMissing(result.error.message)) {
         const frPayload: Record<string, unknown> = {
           user_id: userId,
           type: "strategy",
           titre: strategy.title,
-          contenu: textLines.join("\n"),
+          contenu: textContent,
           statut: "draft",
           canal: platforms.join(", "),
-          tags: ["strategy", `${duration}j`, ...platforms],
-          meta: {
-            strategy_config: { duration, platforms, goals, context: context || null },
-            plan_json: strategy,
-          },
+          tags: tagsArr,
+          meta: metaObj,
         };
         if (projectId) frPayload.project_id = projectId;
 
-        const { data: savedFr } = await supabase
+        result = await (supabase as any)
           .from("content_item")
           .insert(frPayload)
           .select("id")
-          .single();
-        contentId = savedFr?.id ?? null;
-      } else {
-        contentId = saved?.id ?? null;
+          .maybeSingle();
+
+        if (result?.error && isTagsTypeMismatch(result.error.message)) {
+          result = await (supabase as any)
+            .from("content_item")
+            .insert({ ...frPayload, tags: tagsCsv })
+            .select("id")
+            .maybeSingle();
+        }
       }
+
+      contentId = result?.data?.id ?? null;
     } catch {
       // Non-blocking
     }
