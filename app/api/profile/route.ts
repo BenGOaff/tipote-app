@@ -49,6 +49,7 @@ const UpdateSchema = z.object({
   sio_user_api_key: z.string().trim().max(200).optional(),
 
   content_locale: z.string().trim().max(10).optional(),
+  address_form: z.enum(["tu", "vous"]).optional(),
   revenue_goal_monthly: z.string().trim().max(200).optional(),
 
   // Branding
