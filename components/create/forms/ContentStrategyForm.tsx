@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PostActionButtons } from "@/components/content/PostActionButtons";
 import {
   ArrowLeft,
   Loader2,
@@ -33,6 +35,8 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Save,
+  Copy,
 } from "lucide-react";
 
 /* ───────── Types ───────── */
@@ -95,6 +99,15 @@ const GOAL_OPTIONS = [
   { value: "authority", label: "Autorité & expertise" },
   { value: "engagement", label: "Engagement communauté" },
 ];
+
+const PLATFORM_LABELS: Record<string, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  threads: "Threads",
+  tiktok: "TikTok",
+  email: "Email",
+};
 
 /** Max concurrent generation requests to avoid overwhelming the server */
 const MAX_CONCURRENT = 3;
@@ -196,6 +209,16 @@ async function runWithConcurrency<T>(
   return results;
 }
 
+/** Group flat DayPlan array by day number */
+function groupByDay<T extends { day: number }>(items: T[]): Map<number, T[]> {
+  const map = new Map<number, T[]>();
+  for (const item of items) {
+    if (!map.has(item.day)) map.set(item.day, []);
+    map.get(item.day)!.push(item);
+  }
+  return map;
+}
+
 /* ───────── Component ───────── */
 
 type Step = "config" | "plan" | "generating" | "review";
@@ -230,8 +253,20 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
   // Content review
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [editingDay, setEditingDay] = useState<number | null>(null);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
+
+  // Content detail modal (replaces router.push)
+  const [contentModalId, setContentModalId] = useState<string | null>(null);
+  const [contentModalData, setContentModalData] = useState<{
+    title: string;
+    content: string;
+    channel: string;
+    type: string;
+    status: string;
+  } | null>(null);
+  const [contentModalLoading, setContentModalLoading] = useState(false);
+  const [contentModalSaving, setContentModalSaving] = useState(false);
 
   // Track abort
   const abortRef = useRef(false);
@@ -273,6 +308,85 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const errorCount = contents.filter((c) => c.status === "error").length;
   const totalCount = contents.length;
   const progress = totalCount > 0 ? Math.round(((doneCount + errorCount) / totalCount) * 100) : 0;
+
+  // Grouped views
+  const planDayGroups = useMemo(
+    () => (strategy ? groupByDay(strategy.days) : new Map<number, DayPlan[]>()),
+    [strategy],
+  );
+
+  const contentDayGroups = useMemo(() => {
+    const map = new Map<number, { idx: number; item: GeneratedContent }[]>();
+    for (let i = 0; i < contents.length; i++) {
+      const c = contents[i];
+      if (!map.has(c.day)) map.set(c.day, []);
+      map.get(c.day)!.push({ idx: i, item: c });
+    }
+    return map;
+  }, [contents]);
+
+  const uniqueDays = useMemo(() => {
+    if (!strategy) return 0;
+    return new Set(strategy.days.map((d) => d.day)).size;
+  }, [strategy]);
+
+  // ── Content detail modal ──
+  const openContentModal = async (jobId: string) => {
+    setContentModalId(jobId);
+    setContentModalData(null);
+    setContentModalLoading(true);
+    try {
+      const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`);
+      const json = await res.json().catch(() => null);
+      if (json?.ok && json?.item) {
+        setContentModalData({
+          title: json.item.title || "",
+          content: json.item.content || "",
+          channel: json.item.channel || "",
+          type: json.item.type || "post",
+          status: json.item.status || "draft",
+        });
+      } else {
+        throw new Error("Contenu introuvable");
+      }
+    } catch {
+      toast({ title: "Erreur lors du chargement", variant: "destructive" });
+      setContentModalId(null);
+    } finally {
+      setContentModalLoading(false);
+    }
+  };
+
+  const saveContentModal = async () => {
+    if (!contentModalId || !contentModalData) return;
+    setContentModalSaving(true);
+    try {
+      await safeFetchJson(`/api/content/${contentModalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: contentModalData.title,
+          content: contentModalData.content,
+        }),
+      });
+      // Sync back to contents list
+      setContents((prev) =>
+        prev.map((c) =>
+          c.jobId === contentModalId ? { ...c, content: contentModalData.content } : c,
+        ),
+      );
+      toast({ title: "Contenu sauvegardé !" });
+    } catch {
+      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+    } finally {
+      setContentModalSaving(false);
+    }
+  };
+
+  const closeContentModal = () => {
+    setContentModalId(null);
+    setContentModalData(null);
+  };
 
   // ── STEP 1: Generate strategy plan ──
   const handleGeneratePlan = async () => {
@@ -323,7 +437,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
     const offer = selectedOfferIdx >= 0 ? offers[selectedOfferIdx] : null;
 
-    // Initialize content entries
+    // Initialize content entries (flat — one per plan item)
     const initial: GeneratedContent[] = strategy.days.map((day) => ({
       day: day.day,
       jobId: "",
@@ -411,8 +525,8 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   };
 
   // ── Save edited content ──
-  const handleSaveEdit = async (dayIdx: number) => {
-    const item = contents[dayIdx];
+  const handleSaveEdit = async (contentIdx: number) => {
+    const item = contents[contentIdx];
     if (!item?.jobId) return;
 
     try {
@@ -422,16 +536,16 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         body: JSON.stringify({ content: editText }),
       });
       setContents((prev) =>
-        prev.map((c, i) => (i === dayIdx ? { ...c, content: editText } : c)),
+        prev.map((c, i) => (i === contentIdx ? { ...c, content: editText } : c)),
       );
-      setEditingDay(null);
+      setEditingIdx(null);
       toast({ title: "Contenu mis à jour !" });
     } catch {
       toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
     }
   };
 
-  // ── Download all as text file (no jspdf dependency) ──
+  // ── Download all as text file ──
   const handleDownloadText = useCallback(() => {
     const doneItems = contents.filter((c) => c.status === "done");
     if (doneItems.length === 0) return;
@@ -441,11 +555,18 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     lines.push("=".repeat(50));
     lines.push("");
 
-    for (const item of doneItems) {
-      lines.push(`── Jour ${item.day} — ${item.theme} (${item.platform}) ──`);
+    // Group by day for a nice download
+    const grouped = groupByDay(doneItems);
+    for (const [dayNum, items] of grouped) {
+      lines.push(`═══ Jour ${dayNum} ═══`);
       lines.push("");
-      lines.push(item.content);
-      lines.push("");
+      for (const item of items) {
+        const label = PLATFORM_LABELS[item.platform] || item.platform;
+        lines.push(`── ${label} — ${item.theme} ──`);
+        lines.push("");
+        lines.push(item.content);
+        lines.push("");
+      }
       lines.push("");
     }
 
@@ -458,7 +579,129 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     URL.revokeObjectURL(url);
   }, [contents, strategy]);
 
-  const handleOpenContent = (jobId: string) => router.push(`/contents/${jobId}`);
+  // ═════════════════════════════════════════════
+  // Content detail modal (rendered in all steps)
+  // ═════════════════════════════════════════════
+  const contentModal = (
+    <Dialog open={!!contentModalId} onOpenChange={(open) => !open && closeContentModal()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        {contentModalLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : contentModalData ? (
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle className="sr-only">Détail du contenu</DialogTitle>
+              <Input
+                value={contentModalData.title}
+                onChange={(e) =>
+                  setContentModalData((prev) =>
+                    prev ? { ...prev, title: e.target.value } : prev,
+                  )
+                }
+                className="text-lg font-bold border-none px-0 focus-visible:ring-0"
+                placeholder="Titre du contenu"
+              />
+            </DialogHeader>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary">
+                {PLATFORM_LABELS[contentModalData.channel] || contentModalData.channel}
+              </Badge>
+              <Badge variant="outline">{contentModalData.type}</Badge>
+              <Badge
+                className={
+                  contentModalData.status === "published"
+                    ? "bg-green-100 text-green-700"
+                    : contentModalData.status === "scheduled"
+                      ? "bg-blue-100 text-blue-700"
+                      : ""
+                }
+              >
+                {contentModalData.status === "published"
+                  ? "Publié"
+                  : contentModalData.status === "scheduled"
+                    ? "Planifié"
+                    : "Brouillon"}
+              </Badge>
+            </div>
+
+            <Textarea
+              value={contentModalData.content}
+              onChange={(e) =>
+                setContentModalData((prev) =>
+                  prev ? { ...prev, content: e.target.value } : prev,
+                )
+              }
+              rows={12}
+              className="text-sm leading-relaxed"
+            />
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={saveContentModal} disabled={contentModalSaving} size="sm">
+                {contentModalSaving ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-1" />
+                )}
+                Sauvegarder
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(contentModalData.content);
+                  toast({ title: "Contenu copié !" });
+                }}
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                Copier
+              </Button>
+            </div>
+
+            {contentModalId && (
+              <div className="border-t pt-4">
+                <PostActionButtons
+                  contentId={contentModalId}
+                  contentPreview={contentModalData.content}
+                  channel={contentModalData.channel}
+                  onBeforePublish={async () => {
+                    await saveContentModal();
+                    return contentModalId;
+                  }}
+                  onPublished={() => {
+                    setContentModalData((prev) =>
+                      prev ? { ...prev, status: "published" } : prev,
+                    );
+                  }}
+                  onScheduled={async (date, time) => {
+                    await safeFetchJson(`/api/content/${contentModalId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        status: "scheduled",
+                        scheduledDate: date,
+                        meta: { scheduled_time: time },
+                      }),
+                    });
+                    setContentModalData((prev) =>
+                      prev ? { ...prev, status: "scheduled" } : prev,
+                    );
+                    toast({ title: "Contenu programmé !" });
+                  }}
+                  onCopy={() => {
+                    navigator.clipboard.writeText(contentModalData.content);
+                    toast({ title: "Contenu copié !" });
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
 
   // ═════════════════════════════════════════════
   // STEP 1: Configuration
@@ -500,6 +743,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
           <div className="space-y-2">
             <Label>Plateformes</Label>
+            <p className="text-xs text-muted-foreground">
+              Tu peux en sélectionner plusieurs — du contenu sera généré pour chaque plateforme chaque jour
+            </p>
             <div className="flex flex-wrap gap-2">
               {PLATFORM_OPTIONS.map((p) => (
                 <Badge
@@ -581,12 +827,13 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             )}
           </Button>
         </Card>
+        {contentModal}
       </div>
     );
   }
 
   // ═════════════════════════════════════════════
-  // STEP 2: Plan validation
+  // STEP 2: Plan validation (grouped by day)
   // ═════════════════════════════════════════════
   if (step === "plan" && strategy) {
     return (
@@ -599,27 +846,38 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             <div>
               <h2 className="text-xl font-bold">{strategy.title}</h2>
               <p className="text-sm text-muted-foreground">
-                Valide le plan puis génère tous les contenus
+                {uniqueDays} jours — {strategy.days.length} contenus sur {platforms.length} plateforme(s)
               </p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {strategy.days.map((day) => (
-            <Card key={day.day} className="p-4">
+        <div className="space-y-4">
+          {Array.from(planDayGroups.entries()).map(([dayNum, posts]) => (
+            <Card key={dayNum} className="p-4">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">J{day.day}</span>
+                  <span className="text-sm font-bold text-primary">J{dayNum}</span>
                 </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium">{day.theme}</p>
-                    <Badge variant="secondary" className="text-xs">{day.platform}</Badge>
-                    <Badge variant="outline" className="text-xs">{day.contentType}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{day.hook}</p>
-                  <p className="text-xs text-muted-foreground">CTA: {day.cta}</p>
+                <div className="flex-1 min-w-0 space-y-3">
+                  {posts.map((post, pi) => (
+                    <div
+                      key={pi}
+                      className={pi > 0 ? "pt-3 border-t border-muted/40" : ""}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">
+                          {PLATFORM_LABELS[post.platform] || post.platform}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {post.contentType}
+                        </Badge>
+                        <p className="font-medium text-sm">{post.theme}</p>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{post.hook}</p>
+                      <p className="text-xs text-muted-foreground">CTA : {post.cta}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>
@@ -633,12 +891,13 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             size="lg"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            Générer tous les contenus ({strategy.days.length} contenus = {strategy.days.length} crédits)
+            Générer {strategy.days.length} contenus ({strategy.days.length} crédits)
           </Button>
           <Button variant="outline" onClick={() => setStep("config")}>
             Modifier
           </Button>
         </div>
+        {contentModal}
       </div>
     );
   }
@@ -671,36 +930,55 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {contents.map((item) => (
-                <div key={item.day} className="flex items-center gap-3 text-sm py-1">
-                  {item.status === "pending" && (
-                    <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
-                  )}
-                  {item.status === "generating" && (
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  )}
-                  {item.status === "done" && (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  )}
-                  {item.status === "error" && (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span className={item.status === "done" ? "text-foreground" : "text-muted-foreground"}>
-                    J{item.day} — {item.theme}
-                  </span>
-                  <Badge variant="outline" className="text-xs ml-auto">{item.platform}</Badge>
+            <div className="space-y-1 max-h-[400px] overflow-y-auto">
+              {Array.from(contentDayGroups.entries()).map(([dayNum, entries]) => (
+                <div key={dayNum}>
+                  <p className="text-xs font-semibold text-muted-foreground mt-2 mb-1">
+                    Jour {dayNum}
+                  </p>
+                  {entries.map(({ item }) => (
+                    <div
+                      key={`${item.day}-${item.platform}`}
+                      className="flex items-center gap-3 text-sm py-1 pl-3"
+                    >
+                      {item.status === "pending" && (
+                        <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
+                      )}
+                      {item.status === "generating" && (
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      )}
+                      {item.status === "done" && (
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      )}
+                      {item.status === "error" && (
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {PLATFORM_LABELS[item.platform] || item.platform}
+                      </Badge>
+                      <span
+                        className={
+                          item.status === "done"
+                            ? "text-foreground truncate"
+                            : "text-muted-foreground truncate"
+                        }
+                      >
+                        {item.theme}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
         </Card>
+        {contentModal}
       </div>
     );
   }
 
   // ═════════════════════════════════════════════
-  // STEP 4: Review all generated content
+  // STEP 4: Review all generated content (grouped by day)
   // ═════════════════════════════════════════════
   return (
     <div className="space-y-6">
@@ -720,7 +998,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           {doneCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleDownloadText}>
               <Download className="w-4 h-4 mr-1" />
-              Télécharger
+              Télécharger tout
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => router.push("/contents")}>
@@ -729,90 +1007,123 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {contents.map((item, idx) => {
-          const isExpanded = expandedDay === idx;
-          return (
-            <Card key={item.day} className="overflow-hidden">
-              <div
-                className="p-4 flex items-center gap-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => item.status === "done" && setExpandedDay(isExpanded ? null : idx)}
-              >
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">J{item.day}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{item.theme}</p>
-                    <Badge variant="secondary" className="text-xs shrink-0">{item.platform}</Badge>
-                    {item.status === "done" && (
-                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                    )}
-                    {item.status === "error" && (
-                      <Badge variant="destructive" className="text-xs">Erreur</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {item.status === "done" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => { e.stopPropagation(); handleOpenContent(item.jobId); }}
-                        title="Voir / Planifier / Publier"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => { e.stopPropagation(); setEditingDay(idx); setEditText(item.content); }}
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
-                  {item.status === "done" && (
-                    isExpanded
-                      ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
+      <div className="space-y-5">
+        {Array.from(contentDayGroups.entries()).map(([dayNum, entries]) => (
+          <div key={dayNum}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">J{dayNum}</span>
               </div>
+              <h3 className="text-sm font-semibold text-muted-foreground">Jour {dayNum}</h3>
+            </div>
 
-              {isExpanded && item.status === "done" && (
-                <div className="px-4 pb-4 border-t">
-                  <div className="pt-3 whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
-                    {item.content}
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenContent(item.jobId)}>
-                      <Eye className="w-3 h-3 mr-1" />
-                      Planifier / Publier
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setEditingDay(idx); setEditText(item.content); }}>
-                      <Edit className="w-3 h-3 mr-1" />
-                      Modifier
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
-          );
-        })}
+            <div className="space-y-2 pl-4 border-l-2 border-muted ml-4">
+              {entries.map(({ idx, item }) => {
+                const isExpanded = expandedDay === idx;
+                return (
+                  <Card key={`${item.day}-${item.platform}-${idx}`} className="overflow-hidden">
+                    <div
+                      className="p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() =>
+                        item.status === "done" && setExpandedDay(isExpanded ? null : idx)
+                      }
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            {PLATFORM_LABELS[item.platform] || item.platform}
+                          </Badge>
+                          <p className="font-medium text-sm truncate">{item.theme}</p>
+                          {item.status === "done" && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                          )}
+                          {item.status === "error" && (
+                            <Badge variant="destructive" className="text-xs">Erreur</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {item.status === "done" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openContentModal(item.jobId);
+                              }}
+                              title="Voir / Planifier / Publier"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingIdx(idx);
+                                setEditText(item.content);
+                              }}
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        {item.status === "done" &&
+                          (isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ))}
+                      </div>
+                    </div>
+
+                    {isExpanded && item.status === "done" && (
+                      <div className="px-4 pb-4 border-t">
+                        <div className="pt-3 whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
+                          {item.content}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openContentModal(item.jobId)}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Planifier / Publier
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingIdx(idx);
+                              setEditText(item.content);
+                            }}
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Modifier
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Edit dialog */}
-      <Dialog open={editingDay !== null} onOpenChange={(open) => !open && setEditingDay(null)}>
+      {/* Quick edit dialog */}
+      <Dialog open={editingIdx !== null} onOpenChange={(open) => !open && setEditingIdx(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingDay !== null && contents[editingDay]
-                ? `Modifier — Jour ${contents[editingDay].day} : ${contents[editingDay].theme}`
+              {editingIdx !== null && contents[editingIdx]
+                ? `Modifier — Jour ${contents[editingIdx].day} (${PLATFORM_LABELS[contents[editingIdx].platform] || contents[editingIdx].platform}) : ${contents[editingIdx].theme}`
                 : "Modifier"}
             </DialogTitle>
           </DialogHeader>
@@ -823,15 +1134,18 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             className="font-mono text-sm"
           />
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditingDay(null)}>
+            <Button variant="outline" onClick={() => setEditingIdx(null)}>
               Annuler
             </Button>
-            <Button onClick={() => editingDay !== null && handleSaveEdit(editingDay)}>
+            <Button onClick={() => editingIdx !== null && handleSaveEdit(editingIdx)}>
               Enregistrer
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Content detail modal */}
+      {contentModal}
     </div>
   );
 }

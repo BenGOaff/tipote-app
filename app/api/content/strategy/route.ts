@@ -130,13 +130,13 @@ function buildSystemPrompt(personaBlock: string, storytellingBlock: string): str
 RÈGLES STRICTES :
 - Réponds UNIQUEMENT en JSON valide, sans texte avant ni après. Pas de markdown, pas de \`\`\`json.
 - Le JSON doit correspondre exactement au schéma demandé.
-- Chaque jour doit avoir un thème unique et varié.
-- Alterne les types de contenu (post éducatif, storytelling, carrousel, vidéo courte, témoignage, offre, email…).
+- Chaque jour peut avoir PLUSIEURS contenus sur DIFFÉRENTES plateformes (les plateformes sont complémentaires).
+- Chaque jour a un thème principal, mais les hooks et CTAs doivent être DIFFÉRENTS entre les plateformes.
+- Alterne les types de contenu par plateforme (post éducatif, storytelling, carrousel, vidéo courte, témoignage, offre, email…).
 - Les hooks doivent être accrocheurs et spécifiques au business de l'utilisateur (pas génériques).
 - Les CTAs doivent être clairs et variés.
-- Adapte le style au(x) réseau(x) cible(s).
-- Si plusieurs plateformes, répartis les jours entre elles de manière équilibrée.
-- Tiens compte du contexte business, du persona client et du storytelling pour personnaliser chaque jour.
+- Adapte le style et le format à chaque plateforme.
+- Tiens compte du contexte business, du persona client et du storytelling pour personnaliser chaque entrée.
 ${personaBlock ? `\nPERSONA CLIENT IDÉAL :\n${personaBlock}` : ""}
 ${storytellingBlock ? `\nSTORYTELLING DU FONDATEUR :\n${storytellingBlock}` : ""}`;
 }
@@ -155,34 +155,57 @@ function buildUserPrompt(params: {
     .map((g) => GOAL_LABELS[g] || g)
     .join(", ");
 
-  return `Crée un plan de contenu sur ${params.duration} jours.
+  const nbPlatforms = params.platforms.length;
+  const estimatedTotal = params.duration * nbPlatforms;
 
-PLATEFORMES : ${platformsList}
+  return `Crée un plan de contenu sur ${params.duration} jours pour ${nbPlatforms} plateforme(s) : ${platformsList}.
+
 OBJECTIFS : ${goalsList}
 ${params.context ? `\nCONTEXTE SUPPLÉMENTAIRE : ${params.context}` : ""}
 
 ${params.userContext ? `\nPROFIL DE L'UTILISATEUR :\n${params.userContext}` : ""}
 
+RÈGLES DE RÉPARTITION DES PLATEFORMES :
+- Les plateformes sont COMPLÉMENTAIRES : chaque jour doit avoir du contenu sur PLUSIEURS plateformes.
+- Ne fais PAS une seule plateforme par jour. L'objectif est d'être présent partout chaque jour.
+- Respecte ces bonnes pratiques de fréquence :
+  * Facebook : 6-7 jours sur 7
+  * LinkedIn : 4-5 jours sur 7
+  * Instagram : 5-7 jours sur 7
+  * Email : 3-6 jours sur 7 selon la séquence
+  * Threads/TikTok : 5-7 jours sur 7
+- Un même jour peut avoir un post LinkedIn + un post Facebook + un email, par exemple.
+- Adapte le thème et l'angle à chaque plateforme même si le sujet du jour est commun.
+- Les hooks et CTAs doivent être DIFFÉRENTS entre les plateformes d'un même jour.
+
 Réponds avec ce JSON exact (et rien d'autre) :
 {
-  "title": "Titre court du plan (ex: Plan contenu LinkedIn 14 jours)",
+  "title": "Titre court du plan",
   "days": [
     {
       "day": 1,
-      "theme": "Thème du jour (ex: Storytelling fondateur)",
+      "theme": "Thème (ex: Storytelling fondateur)",
       "contentType": "Type (post, carrousel, vidéo courte, story, email, article, témoignage, offre)",
-      "platform": "plateforme (linkedin, instagram, facebook, threads, tiktok, email)",
-      "hook": "Accroche du post (la première phrase qui capte l'attention)",
-      "cta": "Appel à l'action en fin de post"
+      "platform": "plateforme",
+      "hook": "Accroche spécifique à cette plateforme",
+      "cta": "Appel à l'action"
+    },
+    {
+      "day": 1,
+      "theme": "Même thème ou variante pour une autre plateforme",
+      "contentType": "Type adapté à cette plateforme",
+      "platform": "autre plateforme",
+      "hook": "Accroche DIFFÉRENTE",
+      "cta": "CTA DIFFÉRENT"
     }
   ]
 }
 
 IMPORTANT :
-- Génère exactement ${params.duration} jours.
-- Chaque jour a un seul post sur une seule plateforme.
-- Répartis les plateformes de façon équilibrée sur la durée.
-- Varie les types de contenu (ne pas faire 5 posts éducatifs d'affilée).
+- Génère du contenu pour les jours 1 à ${params.duration}.
+- Chaque jour doit avoir PLUSIEURS entrées (une par plateforme utilisée ce jour-là).
+- Le tableau "days" contiendra environ ${estimatedTotal} entrées au total.
+- Varie les types de contenu par plateforme (ne pas faire 5 posts éducatifs d'affilée sur la même plateforme).
 - Les hooks doivent être SPÉCIFIQUES au business de l'utilisateur et ENGAGEANTS, pas génériques.
 - Adapte les types de contenu à la plateforme (pas de carrousel sur TikTok, pas de vidéo courte par email).
 - Si un storytelling fondateur est fourni, intègre-le dans au moins 2-3 jours du plan.`;
@@ -365,11 +388,13 @@ export async function POST(req: Request) {
     // 7. Call Claude
     let raw: string;
     try {
+      const estimatedItems = duration * platforms.length;
+      const maxTokens = Math.min(16000, Math.max(4000, estimatedItems * 200));
       raw = await callClaude({
         apiKey,
         system: systemPrompt,
         user: userPrompt,
-        maxTokens: duration <= 14 ? 4000 : 8000,
+        maxTokens,
         temperature: 0.7,
       });
     } catch (aiErr: any) {
