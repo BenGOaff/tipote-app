@@ -14,7 +14,6 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
-import { QuickTemplateCard } from "@/components/create/QuickTemplateCard";
 
 import { PostForm } from "@/components/create/forms/PostForm";
 import { EmailForm } from "@/components/create/forms/EmailForm";
@@ -81,58 +80,6 @@ const contentTypes = [
     description: "Planifie ton contenu sur 7, 14 ou 30 jours",
     icon: CalendarDays,
     color: "bg-amber-500",
-  },
-] as const;
-
-const quickTemplates = [
-  {
-    id: "hook",
-    label: "Hook accrocheur",
-    description: "Début percutant pour capter l'attention",
-    theme: "educate",
-    type: "post",
-  },
-  {
-    id: "story",
-    label: "Storytelling",
-    description: "Histoire engageante avec une leçon",
-    theme: "storytelling",
-    type: "post",
-  },
-  {
-    id: "tip",
-    label: "Conseil rapide",
-    description: "Astuce actionable en 1 minute",
-    theme: "educate",
-    type: "post",
-  },
-  {
-    id: "myth",
-    label: "Casser un mythe",
-    description: "Idée reçue + vérité surprenante",
-    theme: "educate",
-    type: "post",
-  },
-  {
-    id: "launch",
-    label: "Annonce Produit",
-    description: "Lancement ou promotion d'offre",
-    theme: "sell",
-    type: "post",
-  },
-  {
-    id: "bts",
-    label: "Behind The Scenes",
-    description: "Coulisses du business",
-    theme: "storytelling",
-    type: "post",
-  },
-  {
-    id: "cta",
-    label: "Call To Action",
-    description: "Invitation à l'action claire",
-    theme: "sell",
-    type: "post",
   },
 ] as const;
 
@@ -663,10 +610,6 @@ export default function CreateLovableClient() {
     }
   };
 
-  const handleQuickTemplate = (_t: (typeof quickTemplates)[number]) => {
-    setSelectedType("post");
-  };
-
   const ActiveForm = useMemo(() => {
     if (!selectedType) return null;
 
@@ -745,19 +688,6 @@ export default function CreateLovableClient() {
                   ))}
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Templates rapides</h3>
-                  <div className="grid md:grid-cols-2 gap-3">
-                    {quickTemplates.map((t) => (
-                      <QuickTemplateCard
-                        key={t.id}
-                        label={t.label}
-                        description={t.description}
-                        onClick={() => handleQuickTemplate(t)}
-                      />
-                    ))}
-                  </div>
-                </div>
               </>
             ) : (
               <Card className="p-6">{ActiveForm}</Card>

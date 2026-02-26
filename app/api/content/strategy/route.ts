@@ -183,30 +183,49 @@ export async function POST(req: Request) {
       userContext,
     });
 
-    const resp = await openai.chat.completions.create({
-      ...cachingParams("content_strategy"),
-      model: OPENAI_MODEL,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_completion_tokens: duration <= 14 ? 4000 : 8000,
-    } as any);
+    let resp: any;
+    try {
+      resp = await openai.chat.completions.create({
+        ...cachingParams("content_strategy"),
+        model: OPENAI_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: duration <= 14 ? 4000 : 8000,
+      } as any);
+    } catch (aiErr: any) {
+      console.error("OpenAI API error:", aiErr?.message, aiErr?.status, aiErr?.code);
+      return NextResponse.json(
+        { error: `Erreur IA: ${aiErr?.message || "Service indisponible"}` },
+        { status: 502 },
+      );
+    }
 
-    const raw = resp.choices?.[0]?.message?.content ?? "{}";
+    const raw = resp?.choices?.[0]?.message?.content ?? "";
+    if (!raw.trim()) {
+      console.error("OpenAI returned empty. finish_reason:", resp?.choices?.[0]?.finish_reason);
+      return NextResponse.json(
+        { error: "L'IA n'a pas retourné de contenu. Réessaye." },
+        { status: 500 },
+      );
+    }
+
     let parsed: any;
     try {
       parsed = JSON.parse(raw);
     } catch {
+      console.error("Strategy JSON parse error. Raw:", raw.slice(0, 500));
       return NextResponse.json(
-        { error: "Réponse IA invalide" },
+        { error: "Réponse IA invalide (JSON malformé)" },
         { status: 500 },
       );
     }
 
     // Validate structure
     if (!parsed.title || !Array.isArray(parsed.days) || parsed.days.length === 0) {
+      console.error("Strategy invalid structure:", JSON.stringify(parsed).slice(0, 500));
       return NextResponse.json(
         { error: "Structure de stratégie invalide" },
         { status: 500 },
@@ -243,28 +262,75 @@ export async function POST(req: Request) {
           { status: 402 },
         );
       }
-      // Non-blocking: strategy was already generated, log and continue
       console.error("Credits consumption error (non-blocking):", e);
     }
 
-    // 8. Optionally save to DB (best-effort)
+    // 8. Save strategy to content_item for Content Hub
+    let contentId: string | null = null;
     try {
       const projectId = await getActiveProjectId(supabase, userId);
-      await supabase.from("content_strategies").insert({
+
+      // Build readable text summary
+      const textLines = [`# ${strategy.title}\n`];
+      for (const d of strategy.days) {
+        textLines.push(`## Jour ${d.day} — ${d.theme}`);
+        textLines.push(`Plateforme: ${d.platform} | Type: ${d.contentType}`);
+        textLines.push(`Hook: ${d.hook}`);
+        textLines.push(`CTA: ${d.cta}\n`);
+      }
+
+      const insertPayload: Record<string, unknown> = {
         user_id: userId,
-        ...(projectId ? { project_id: projectId } : {}),
+        type: "strategy",
         title: strategy.title,
-        duration,
-        platforms,
-        goals,
-        context: context || null,
-        plan_json: strategy,
-      });
+        content: textLines.join("\n"),
+        status: "draft",
+        channel: platforms.join(", "),
+        tags: ["strategy", `${duration}j`, ...platforms],
+        meta: {
+          strategy_config: { duration, platforms, goals, context: context || null },
+          plan_json: strategy,
+        },
+      };
+      if (projectId) insertPayload.project_id = projectId;
+
+      const { data: saved, error: saveErr } = await supabase
+        .from("content_item")
+        .insert(insertPayload)
+        .select("id")
+        .single();
+
+      if (saveErr) {
+        // Retry with FR columns
+        const frPayload: Record<string, unknown> = {
+          user_id: userId,
+          type: "strategy",
+          titre: strategy.title,
+          contenu: textLines.join("\n"),
+          statut: "draft",
+          canal: platforms.join(", "),
+          tags: ["strategy", `${duration}j`, ...platforms],
+          meta: {
+            strategy_config: { duration, platforms, goals, context: context || null },
+            plan_json: strategy,
+          },
+        };
+        if (projectId) frPayload.project_id = projectId;
+
+        const { data: savedFr } = await supabase
+          .from("content_item")
+          .insert(frPayload)
+          .select("id")
+          .single();
+        contentId = savedFr?.id ?? null;
+      } else {
+        contentId = saved?.id ?? null;
+      }
     } catch {
-      // Non-blocking — table may not exist yet
+      // Non-blocking
     }
 
-    return NextResponse.json({ ok: true, strategy });
+    return NextResponse.json({ ok: true, strategy, contentId });
   } catch (e: any) {
     console.error("Content strategy error:", e);
     return NextResponse.json(

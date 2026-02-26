@@ -21,7 +21,9 @@ import {
   CalendarDays,
   Sparkles,
   ExternalLink,
+  FolderOpen,
 } from "lucide-react";
+import Link from "next/link";
 
 type DayPlan = {
   day: number;
@@ -117,8 +119,8 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         throw new Error(json.error || "Erreur lors de la génération");
       }
 
-      setStrategy(json.strategy);
-      toast({ title: "Stratégie générée !" });
+      setStrategy({ ...json.strategy, id: json.contentId || undefined });
+      toast({ title: "Stratégie générée et sauvegardée !" });
     } catch (e: any) {
       toast({
         title: "Erreur",
@@ -254,9 +256,19 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={onClose}>
-          Fermer
-        </Button>
+        <div className="flex items-center gap-2">
+          {strategy.id && (
+            <Link href={`/contents/${strategy.id}`}>
+              <Button variant="outline" size="sm">
+                <FolderOpen className="w-4 h-4 mr-1" />
+                Voir dans mes contenus
+              </Button>
+            </Link>
+          )}
+          <Button variant="outline" onClick={onClose}>
+            Fermer
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
