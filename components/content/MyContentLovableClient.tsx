@@ -160,6 +160,14 @@ const CONTENT_FOLDERS: ContentFolder[] = [
     matchType: (t) => safeString(t).toLowerCase().includes("funnel"),
   },
   {
+    id: "strategies",
+    label: "Mes Stratégies",
+    icon: CalendarDays,
+    color: "text-white",
+    bgColor: "bg-amber-500",
+    matchType: (t) => safeString(t).toLowerCase().includes("strategy") || safeString(t).toLowerCase().includes("stratégie"),
+  },
+  {
     id: "quiz",
     label: "Mes Quiz",
     icon: ClipboardList,
