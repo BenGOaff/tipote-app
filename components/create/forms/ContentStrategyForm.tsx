@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,20 +14,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Loader2,
   CalendarDays,
   Sparkles,
-  ExternalLink,
-  FolderOpen,
+  CheckCircle2,
+  Edit,
+  Download,
+  Eye,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import Link from "next/link";
+
+/* ───────── Types ───────── */
 
 type DayPlan = {
   day: number;
-  date?: string;
   theme: string;
   contentType: string;
   platform: string;
@@ -36,10 +46,31 @@ type DayPlan = {
 };
 
 type StrategyResult = {
-  id?: string;
   title: string;
   days: DayPlan[];
 };
+
+type GeneratedContent = {
+  day: number;
+  jobId: string;
+  content: string;
+  status: "generating" | "done" | "error";
+  type: string;
+  platform: string;
+  theme: string;
+};
+
+type OfferItem = {
+  name: string;
+  price: string;
+  promise: string;
+  target: string;
+  description: string;
+  format: string;
+  link: string;
+};
+
+/* ───────── Constants ───────── */
 
 const DURATION_OPTIONS = [
   { value: "7", label: "7 jours" },
@@ -64,6 +95,44 @@ const GOAL_OPTIONS = [
   { value: "engagement", label: "Engagement communauté" },
 ];
 
+/* ───────── Helpers ───────── */
+
+async function safeFetchJson(url: string, opts: RequestInit): Promise<any> {
+  const res = await fetch(url, opts);
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    throw new Error(`Erreur serveur (${res.status}). Réessaye.`);
+  }
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json?.error || `Erreur (${res.status})`);
+  }
+  return json;
+}
+
+async function pollContent(jobId: string, timeoutMs = 120_000): Promise<string> {
+  const start = Date.now();
+  let delay = 1000;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`);
+      const data = await res.json().catch(() => null);
+      if (data?.ok && data?.item) {
+        const status = String(data.item.status ?? "").toLowerCase();
+        const content = typeof data.item.content === "string" ? data.item.content.trim() : "";
+        if (content && status !== "generating") return content;
+      }
+    } catch { /* retry */ }
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(3000, Math.floor(delay * 1.3));
+  }
+  return "";
+}
+
+/* ───────── Component ───────── */
+
+type Step = "config" | "plan" | "generating" | "review";
+
 interface ContentStrategyFormProps {
   onClose: () => void;
 }
@@ -72,12 +141,58 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [duration, setDuration] = useState("14");
+  // Step
+  const [step, setStep] = useState<Step>("config");
+
+  // Config
+  const [duration, setDuration] = useState("7");
   const [platforms, setPlatforms] = useState<string[]>(["linkedin"]);
   const [goals, setGoals] = useState<string[]>(["visibility"]);
   const [context, setContext] = useState("");
   const [generating, setGenerating] = useState(false);
+
+  // Offers (loaded from settings)
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [selectedOfferIdx, setSelectedOfferIdx] = useState<number>(-1);
+
+  // Plan (Step 2)
   const [strategy, setStrategy] = useState<StrategyResult | null>(null);
+
+  // Generated content (Step 3-4)
+  const [contents, setContents] = useState<GeneratedContent[]>([]);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+
+  // Content review
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [editingDay, setEditingDay] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  // Load offers on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/profile");
+        const json = await res.json().catch(() => null);
+        const profile = json?.profile ?? json?.data ?? json;
+        if (Array.isArray(profile?.offers)) {
+          setOffers(
+            profile.offers
+              .filter((o: any) => o?.name?.trim())
+              .map((o: any) => ({
+                name: String(o.name ?? ""),
+                price: String(o.price ?? ""),
+                promise: String(o.promise ?? ""),
+                target: String(o.target ?? ""),
+                description: String(o.description ?? ""),
+                format: String(o.format ?? ""),
+                link: String(o.link ?? ""),
+              })),
+          );
+        }
+      } catch { /* non-blocking */ }
+    })();
+  }, []);
 
   const togglePlatform = (p: string) => {
     setPlatforms((prev) =>
@@ -91,7 +206,8 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     );
   };
 
-  const handleGenerate = async () => {
+  // ── STEP 1: Generate strategy plan ──
+  const handleGeneratePlan = async () => {
     if (platforms.length === 0) {
       toast({ title: "Sélectionne au moins une plateforme", variant: "destructive" });
       return;
@@ -103,7 +219,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
     setGenerating(true);
     try {
-      const res = await fetch("/api/content/strategy", {
+      const json = await safeFetchJson("/api/content/strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -114,17 +230,13 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         }),
       });
 
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(`Erreur serveur (${res.status}). Réessaye.`);
-      }
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
+      if (!json.ok || !json.strategy) {
         throw new Error(json.error || "Erreur lors de la génération");
       }
 
-      setStrategy({ ...json.strategy, id: json.contentId || undefined });
-      toast({ title: "Stratégie générée et sauvegardée !" });
+      setStrategy(json.strategy);
+      setStep("plan");
+      toast({ title: "Plan stratégique généré !" });
     } catch (e: any) {
       toast({
         title: "Erreur",
@@ -136,16 +248,146 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     }
   };
 
-  const handleCreateContent = (day: DayPlan) => {
-    const type = day.contentType === "email" ? "email" : "post";
-    const prompt = encodeURIComponent(
-      `[Stratégie J${day.day}] ${day.theme}\nHook: ${day.hook}\nCTA: ${day.cta}`,
-    );
-    router.push(`/create/${type}?prompt=${prompt}&channel=${day.platform}`);
+  // ── STEP 2: Generate all content ──
+  const handleGenerateAll = async () => {
+    if (!strategy) return;
+
+    setGeneratingAll(true);
+    setStep("generating");
+    setGenerationProgress(0);
+
+    try {
+      const offer = selectedOfferIdx >= 0 ? offers[selectedOfferIdx] : null;
+
+      const json = await safeFetchJson("/api/content/strategy/generate-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: strategy.title,
+          days: strategy.days,
+          offerContext: offer || undefined,
+        }),
+      });
+
+      if (!json.ok) {
+        throw new Error(json.error || "Erreur lors de la génération");
+      }
+
+      const jobs: Array<{ day: number; jobId: string | null; error?: string }> = json.jobs || [];
+
+      // Initialize content entries
+      const initial: GeneratedContent[] = jobs.map((j) => {
+        const dayPlan = strategy.days.find((d) => d.day === j.day);
+        return {
+          day: j.day,
+          jobId: j.jobId || "",
+          content: "",
+          status: j.jobId ? "generating" : "error",
+          type: dayPlan?.contentType === "email" ? "email" : "post",
+          platform: dayPlan?.platform || "linkedin",
+          theme: dayPlan?.theme || "",
+        };
+      });
+      setContents(initial);
+
+      // Poll all jobs in parallel
+      const total = initial.filter((c) => c.status === "generating").length;
+      let doneCount = 0;
+
+      const pollPromises = initial.map(async (item, idx) => {
+        if (item.status === "error" || !item.jobId) return;
+        try {
+          const content = await pollContent(item.jobId);
+          doneCount++;
+          setGenerationProgress(Math.round((doneCount / total) * 100));
+          setContents((prev) =>
+            prev.map((c, i) =>
+              i === idx ? { ...c, content, status: content ? "done" : "error" } : c,
+            ),
+          );
+        } catch {
+          doneCount++;
+          setGenerationProgress(Math.round((doneCount / total) * 100));
+          setContents((prev) =>
+            prev.map((c, i) => (i === idx ? { ...c, status: "error" } : c)),
+          );
+        }
+      });
+
+      await Promise.all(pollPromises);
+      setStep("review");
+      toast({ title: `${doneCount} contenus générés !` });
+    } catch (e: any) {
+      toast({
+        title: "Erreur",
+        description: e?.message || "Impossible de générer les contenus",
+        variant: "destructive",
+      });
+      setStep("plan");
+    } finally {
+      setGeneratingAll(false);
+    }
   };
 
-  // Strategy config form
-  if (!strategy) {
+  // ── Save edited content ──
+  const handleSaveEdit = async (dayIdx: number) => {
+    const item = contents[dayIdx];
+    if (!item?.jobId) return;
+
+    try {
+      await safeFetchJson(`/api/content/${item.jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editText }),
+      });
+      setContents((prev) =>
+        prev.map((c, i) => (i === dayIdx ? { ...c, content: editText } : c)),
+      );
+      setEditingDay(null);
+      toast({ title: "Contenu mis à jour !" });
+    } catch {
+      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+    }
+  };
+
+  // ── Download all as PDF ──
+  const handleDownloadPdf = useCallback(() => {
+    if (contents.length === 0) return;
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text(strategy?.title || "Stratégie de contenu", 20, 20);
+
+      let y = 35;
+      for (const item of contents) {
+        if (item.status !== "done") continue;
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Jour ${item.day} — ${item.theme} (${item.platform})`, 20, y);
+        y += 7;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(item.content || "", 170);
+        doc.text(lines, 20, y);
+        y += lines.length * 5 + 10;
+      }
+      doc.save(`strategie-${strategy?.title?.replace(/[^a-zA-Z0-9]/g, "_") || "contenu"}.pdf`);
+    });
+  }, [contents, strategy]);
+
+  // ── Navigate to content detail for scheduling ──
+  const handleOpenContent = (jobId: string) => {
+    router.push(`/contents/${jobId}`);
+  };
+
+  // ═════════════════════════════════════════════
+  // STEP 1: Configuration
+  // ═════════════════════════════════════════════
+  if (step === "config") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
@@ -158,7 +400,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               Stratégie de contenu
             </h2>
             <p className="text-sm text-muted-foreground">
-              Planifie ton contenu sur plusieurs jours avec l&apos;IA
+              Génère tous tes contenus en quelques clics
             </p>
           </div>
         </div>
@@ -212,6 +454,28 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             </div>
           </div>
 
+          {offers.length > 0 && (
+            <div className="space-y-2">
+              <Label>Offre de référence (optionnel)</Label>
+              <Select
+                value={selectedOfferIdx >= 0 ? String(selectedOfferIdx) : "none"}
+                onValueChange={(v) => setSelectedOfferIdx(v === "none" ? -1 : Number(v))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Aucune offre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune offre</SelectItem>
+                  {offers.map((o, i) => (
+                    <SelectItem key={i} value={String(i)}>
+                      {o.name}{o.price ? ` — ${o.price}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Contexte supplémentaire (optionnel)</Label>
             <Textarea
@@ -223,7 +487,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           </div>
 
           <Button
-            onClick={handleGenerate}
+            onClick={handleGeneratePlan}
             disabled={generating}
             className="w-full"
             size="lg"
@@ -231,12 +495,12 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération en cours...
+                Création du plan...
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Générer ma stratégie
+                Générer le plan stratégique
               </>
             )}
           </Button>
@@ -245,65 +509,263 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     );
   }
 
-  // Strategy results view
+  // ═════════════════════════════════════════════
+  // STEP 2: Plan validation
+  // ═════════════════════════════════════════════
+  if (step === "plan" && strategy) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setStep("config")}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h2 className="text-xl font-bold">{strategy.title}</h2>
+              <p className="text-sm text-muted-foreground">
+                Valide le plan puis génère tous les contenus
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {strategy.days.map((day) => (
+            <Card key={day.day} className="p-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">J{day.day}</span>
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium">{day.theme}</p>
+                    <Badge variant="secondary" className="text-xs">{day.platform}</Badge>
+                    <Badge variant="outline" className="text-xs">{day.contentType}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{day.hook}</p>
+                  <p className="text-xs text-muted-foreground">CTA: {day.cta}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            onClick={handleGenerateAll}
+            className="flex-1"
+            size="lg"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Générer tous les contenus ({strategy.days.length} contenus = {strategy.days.length} crédits)
+          </Button>
+          <Button variant="outline" onClick={() => setStep("config")}>
+            Modifier
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═════════════════════════════════════════════
+  // STEP 3: Generating all content
+  // ═════════════════════════════════════════════
+  if (step === "generating") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <CalendarDays className="w-5 h-5" />
+          <div>
+            <h2 className="text-xl font-bold">Génération en cours...</h2>
+            <p className="text-sm text-muted-foreground">
+              Tipote crée {strategy?.days.length || 0} contenus personnalisés
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span>Progression</span>
+              <span className="font-medium">{generationProgress}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-3">
+              <div
+                className="bg-primary h-3 rounded-full transition-all duration-500"
+                style={{ width: `${generationProgress}%` }}
+              />
+            </div>
+            <div className="space-y-2">
+              {contents.map((item) => (
+                <div key={item.day} className="flex items-center gap-3 text-sm">
+                  {item.status === "generating" ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : item.status === "done" ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full bg-red-100" />
+                  )}
+                  <span>Jour {item.day} — {item.theme}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ═════════════════════════════════════════════
+  // STEP 4: Review all generated content
+  // ═════════════════════════════════════════════
+  const doneContents = contents.filter((c) => c.status === "done");
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setStrategy(null)}>
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">{strategy.title}</h2>
+            <h2 className="text-xl font-bold">{strategy?.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {strategy.days.length} jours de contenu planifiés
+              {doneContents.length} contenus générés sur {contents.length}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {strategy.id && (
-            <Link href={`/contents/${strategy.id}`}>
-              <Button variant="outline" size="sm">
-                <FolderOpen className="w-4 h-4 mr-1" />
-                Voir dans mes contenus
-              </Button>
-            </Link>
-          )}
-          <Button variant="outline" onClick={onClose}>
-            Fermer
+          <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
+            <Download className="w-4 h-4 mr-1" />
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => router.push("/contents")}>
+            Mes contenus
           </Button>
         </div>
       </div>
 
       <div className="space-y-3">
-        {strategy.days.map((day) => (
-          <Card key={day.day} className="p-4 hover:bg-muted/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-bold text-primary">J{day.day}</span>
-              </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium">{day.theme}</p>
-                  <Badge variant="secondary" className="text-xs">{day.platform}</Badge>
-                  <Badge variant="outline" className="text-xs">{day.contentType}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{day.hook}</p>
-                <p className="text-xs text-muted-foreground">CTA: {day.cta}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={() => handleCreateContent(day)}
+        {contents.map((item, idx) => {
+          const isExpanded = expandedDay === idx;
+          return (
+            <Card key={item.day} className="overflow-hidden">
+              <div
+                className="p-4 flex items-center gap-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => setExpandedDay(isExpanded ? null : idx)}
               >
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Créer
-              </Button>
-            </div>
-          </Card>
-        ))}
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">J{item.day}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate">{item.theme}</p>
+                    <Badge variant="secondary" className="text-xs shrink-0">{item.platform}</Badge>
+                    {item.status === "done" && (
+                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                    )}
+                    {item.status === "error" && (
+                      <Badge variant="destructive" className="text-xs">Erreur</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {item.status === "done" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenContent(item.jobId);
+                        }}
+                        title="Voir / Planifier / Publier"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingDay(idx);
+                          setEditText(item.content);
+                        }}
+                        title="Modifier"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                  {isExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+
+              {isExpanded && item.status === "done" && (
+                <div className="px-4 pb-4 border-t">
+                  <div className="pt-3 whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
+                    {item.content}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenContent(item.jobId)}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Voir / Planifier / Publier
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingDay(idx);
+                        setEditText(item.content);
+                      }}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Modifier
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editingDay !== null} onOpenChange={(open) => !open && setEditingDay(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingDay !== null && contents[editingDay]
+                ? `Modifier — Jour ${contents[editingDay].day} : ${contents[editingDay].theme}`
+                : "Modifier"}
+            </DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={15}
+            className="font-mono text-sm"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditingDay(null)}>
+              Annuler
+            </Button>
+            <Button onClick={() => editingDay !== null && handleSaveEdit(editingDay)}>
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

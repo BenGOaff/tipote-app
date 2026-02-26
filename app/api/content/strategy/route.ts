@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { ensureUserCredits } from "@/lib/credits";
 import {
   getUserContextBundle,
   userContextToPromptText,
@@ -229,15 +229,6 @@ function extractJsonFromText(text: string): string {
   return text;
 }
 
-function isColumnMissing(message: string) {
-  const m = (message ?? "").toLowerCase();
-  return m.includes("does not exist") || m.includes("could not find");
-}
-
-function isTagsTypeMismatch(message: string) {
-  return /malformed array literal/i.test(message) || /invalid input syntax/i.test(message);
-}
-
 /* ───────── Route ───────── */
 
 export async function POST(req: Request) {
@@ -432,105 +423,8 @@ export async function POST(req: Request) {
       days,
     };
 
-    // 9. Consume credits
-    try {
-      await consumeCredits(userId, 1, {
-        feature: "content_strategy",
-        duration,
-        platforms,
-        goals,
-      });
-    } catch (e: any) {
-      if (e?.code === "NO_CREDITS" || e?.message?.includes("NO_CREDITS")) {
-        return NextResponse.json(
-          { error: "Plus de crédits disponibles", code: "NO_CREDITS" },
-          { status: 402 },
-        );
-      }
-      console.error("Credits consumption error (non-blocking):", e);
-    }
-
-    // 10. Save strategy to content_item for Content Hub
-    let contentId: string | null = null;
-    try {
-      const textLines = [`# ${strategy.title}\n`];
-      for (const d of strategy.days) {
-        textLines.push(`## Jour ${d.day} — ${d.theme}`);
-        textLines.push(`Plateforme: ${d.platform} | Type: ${d.contentType}`);
-        textLines.push(`Hook: ${d.hook}`);
-        textLines.push(`CTA: ${d.cta}\n`);
-      }
-      const textContent = textLines.join("\n");
-      const tagsArr = ["strategy", `${duration}j`, ...platforms];
-      const tagsCsv = tagsArr.join(",");
-      const metaObj = {
-        strategy_config: { duration, platforms, goals, context: context || null },
-        plan_json: strategy,
-      };
-
-      // Try V2 (EN columns) with maybeSingle
-      const basePayload: Record<string, unknown> = {
-        user_id: userId,
-        type: "strategy",
-        title: strategy.title,
-        content: textContent,
-        status: "draft",
-        channel: platforms.join(", "),
-        tags: tagsArr,
-        meta: metaObj,
-      };
-      if (projectId) basePayload.project_id = projectId;
-
-      let result = await (supabase as any)
-        .from("content_item")
-        .insert(basePayload)
-        .select("id")
-        .maybeSingle();
-
-      // Tags type mismatch fallback
-      if (result?.error && isTagsTypeMismatch(result.error.message)) {
-        result = await (supabase as any)
-          .from("content_item")
-          .insert({ ...basePayload, tags: tagsCsv })
-          .select("id")
-          .maybeSingle();
-      }
-
-      // Missing column fallback (try FR columns)
-      if (result?.error && isColumnMissing(result.error.message)) {
-        const frPayload: Record<string, unknown> = {
-          user_id: userId,
-          type: "strategy",
-          titre: strategy.title,
-          contenu: textContent,
-          statut: "draft",
-          canal: platforms.join(", "),
-          tags: tagsArr,
-          meta: metaObj,
-        };
-        if (projectId) frPayload.project_id = projectId;
-
-        result = await (supabase as any)
-          .from("content_item")
-          .insert(frPayload)
-          .select("id")
-          .maybeSingle();
-
-        if (result?.error && isTagsTypeMismatch(result.error.message)) {
-          result = await (supabase as any)
-            .from("content_item")
-            .insert({ ...frPayload, tags: tagsCsv })
-            .select("id")
-            .maybeSingle();
-        }
-      }
-
-      contentId = result?.data?.id ?? null;
-    } catch {
-      // Non-blocking
-    }
-
-    return NextResponse.json({ ok: true, strategy, contentId });
+    // 9. Return the plan (no credit consumed here — credits per content in generate-all)
+    return NextResponse.json({ ok: true, strategy });
   } catch (e: any) {
     console.error("Content strategy error:", e);
     return NextResponse.json(
