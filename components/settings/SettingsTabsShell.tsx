@@ -28,6 +28,7 @@ import {
   Target,
   Pencil,
   Eye,
+  BookOpen,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -105,6 +106,17 @@ type ProfileRow = {
   preferred_tone?: string | null;
   // Diagnostic profile (contains niche components from onboarding)
   diagnostic_profile?: Record<string, any> | null;
+  // Storytelling (6-step founder journey)
+  storytelling?: StorytellingData | null;
+};
+
+type StorytellingData = {
+  situation_initiale?: string;
+  element_declencheur?: string;
+  peripeties?: string;
+  moment_critique?: string;
+  resolution?: string;
+  situation_finale?: string;
 };
 
 /**
@@ -230,6 +242,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [nicheObjective, setNicheObjective] = useState("");
   const [nicheMechanism, setNicheMechanism] = useState("");
   const [nicheMarker, setNicheMarker] = useState("");
+  // Storytelling (6 steps)
+  const [storySituationInitiale, setStorySituationInitiale] = useState("");
+  const [storyElementDeclencheur, setStoryElementDeclencheur] = useState("");
+  const [storyPeripeties, setStoryPeripeties] = useState("");
+  const [storyMomentCritique, setStoryMomentCritique] = useState("");
+  const [storyResolution, setStoryResolution] = useState("");
+  const [storySituationFinale, setStorySituationFinale] = useState("");
   const [pendingProfile, startProfileTransition] = useTransition();
   const [pendingPositioning, startPositioningTransition] = useTransition();
 
@@ -316,6 +335,17 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setYoutubeUrl(row?.youtube_url ?? "");
         setWebsiteUrl(row?.website_url ?? "");
 
+        // Storytelling
+        const st = row?.storytelling;
+        if (st && typeof st === "object") {
+          setStorySituationInitiale(st.situation_initiale ?? "");
+          setStoryElementDeclencheur(st.element_declencheur ?? "");
+          setStoryPeripeties(st.peripeties ?? "");
+          setStoryMomentCritique(st.moment_critique ?? "");
+          setStoryResolution(st.resolution ?? "");
+          setStorySituationFinale(st.situation_finale ?? "");
+        }
+
         const loadedOffers = Array.isArray(row?.offers)
           ? row.offers.map((o: any) => ({
               name: String(o?.name ?? ""),
@@ -361,10 +391,32 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     return parts.join(" ");
   }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker]);
 
+  const assembledStorytelling = useMemo<StorytellingData>(() => ({
+    situation_initiale: storySituationInitiale,
+    element_declencheur: storyElementDeclencheur,
+    peripeties: storyPeripeties,
+    moment_critique: storyMomentCritique,
+    resolution: storyResolution,
+    situation_finale: storySituationFinale,
+  }), [storySituationInitiale, storyElementDeclencheur, storyPeripeties, storyMomentCritique, storyResolution, storySituationFinale]);
+
+  const storytellingHasContent = useMemo(() => {
+    return Object.values(assembledStorytelling).some((v) => (v ?? "").trim().length > 0);
+  }, [assembledStorytelling]);
+
+  const storytellingDirty = useMemo(() => {
+    const saved = initialProfile?.storytelling;
+    const keys: (keyof StorytellingData)[] = [
+      "situation_initiale", "element_declencheur", "peripeties",
+      "moment_critique", "resolution", "situation_finale",
+    ];
+    return keys.some((k) => (assembledStorytelling[k] ?? "") !== ((saved as any)?.[k] ?? ""));
+  }, [initialProfile, assembledStorytelling]);
+
   const positioningDirty = useMemo(() => {
     const i = initialProfile;
-    return assembledNiche !== (i?.niche ?? "") || mission !== (i?.mission ?? "");
-  }, [initialProfile, assembledNiche, mission]);
+    return assembledNiche !== (i?.niche ?? "") || mission !== (i?.mission ?? "") || storytellingDirty;
+  }, [initialProfile, assembledNiche, mission, storytellingDirty]);
 
   const saveProfile = () => {
     startProfileTransition(async () => {
@@ -399,6 +451,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     startPositioningTransition(async () => {
       try {
         const body: any = { niche: assembledNiche, mission };
+        if (storytellingHasContent || storytellingDirty) {
+          body.storytelling = assembledStorytelling;
+        }
 
         const res = await fetch("/api/profile", {
           method: "PATCH",
@@ -1358,6 +1413,132 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 placeholder={tSP("positioningTab.marqueurPlaceholder")}
                 value={nicheMarker}
                 onChange={(e) => setNicheMarker(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-5" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
+          </Button>
+        </Card>
+
+        {/* Storytelling */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Ton storytelling</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            Raconte ton parcours en 6 étapes. Tipote utilisera ton histoire pour personnaliser tes contenus, pages de vente, emails et posts.
+          </p>
+
+          <div className="space-y-5">
+            {/* Step 1 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
+                <Label className="text-sm font-semibold">La situation initiale</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Il était une fois… Décris ta vie / ton activité avant le déclic. Le monde &quot;normal&quot; dans lequel tu évoluais.
+              </p>
+              <Textarea
+                value={storySituationInitiale}
+                onChange={(e) => setStorySituationInitiale(e.target.value)}
+                placeholder="Ex: J'étais salarié(e) dans une grande entreprise depuis 8 ans. Je faisais ce qu'on attendait de moi, mais quelque chose manquait…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 2 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
+                <Label className="text-sm font-semibold">L&apos;élément déclencheur</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Mais un jour… Quel événement a tout changé ? Le moment où l&apos;ordre établi a été perturbé.
+              </p>
+              <Textarea
+                value={storyElementDeclencheur}
+                onChange={(e) => setStoryElementDeclencheur(e.target.value)}
+                placeholder="Ex: Un lundi matin, j'ai reçu un mail de restructuration. C'était le déclic : je ne voulais plus dépendre d'une décision qui n'était pas la mienne…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 3 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
+                <Label className="text-sm font-semibold">A cause de ça…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Les galères, les doutes, les échecs. La situation se dégrade avant de s&apos;améliorer.
+              </p>
+              <Textarea
+                value={storyPeripeties}
+                onChange={(e) => setStoryPeripeties(e.target.value)}
+                placeholder="Ex: J'ai lancé mon activité sans plan, perdu mes premières économies, eu des mois à 0€ de CA. Ma famille doutait, je doutais aussi…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 4 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">4</span>
+                <Label className="text-sm font-semibold">Jusqu&apos;au jour où…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Le pire moment. Tout semble perdu pour le héros. Mais une solution se dessine.
+              </p>
+              <Textarea
+                value={storyMomentCritique}
+                onChange={(e) => setStoryMomentCritique(e.target.value)}
+                placeholder="Ex: J'étais à deux doigts de tout arrêter. Et puis j'ai découvert une méthode / rencontré un mentor / compris quelque chose de fondamental…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 5 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">5</span>
+                <Label className="text-sm font-semibold">Tout s&apos;arrange…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                La résolution. Ta situation s&apos;améliore progressivement grâce à ce que tu as découvert.
+              </p>
+              <Textarea
+                value={storyResolution}
+                onChange={(e) => setStoryResolution(e.target.value)}
+                placeholder="Ex: En appliquant cette approche, j'ai signé mes premiers clients, puis 10, puis 50. Mon CA a atteint X€/mois en Y mois…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 6 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">6</span>
+                <Label className="text-sm font-semibold">Et depuis ce jour…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Le tableau final positif. Ta vie aujourd&apos;hui, meilleure qu&apos;avant. Et pourquoi tu aides les autres maintenant.
+              </p>
+              <Textarea
+                value={storySituationFinale}
+                onChange={(e) => setStorySituationFinale(e.target.value)}
+                placeholder="Ex: Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …"
+                className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
             </div>

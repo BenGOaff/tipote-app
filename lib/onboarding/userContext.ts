@@ -131,6 +131,28 @@ export function userContextToPromptText(bundle: UserContextBundle): string {
     const audienceEmail = safeNumber(bp.audience_email);
     if (audienceSocial !== null) lines.push(`Audience réseaux sociaux: ${audienceSocial}`);
     if (audienceEmail !== null) lines.push(`Liste email: ${audienceEmail}`);
+
+    // Storytelling (6-step founder journey)
+    const st = bp.storytelling;
+    if (st && typeof st === "object" && !Array.isArray(st)) {
+      const s = st as Record<string, unknown>;
+      const steps: [string, string][] = [
+        ["Situation initiale (il était une fois)", "situation_initiale"],
+        ["Élément déclencheur (mais un jour)", "element_declencheur"],
+        ["Péripéties (à cause de ça)", "peripeties"],
+        ["Moment critique (jusqu'au jour où)", "moment_critique"],
+        ["Résolution (tout s'arrange)", "resolution"],
+        ["Situation finale (et depuis ce jour)", "situation_finale"],
+      ];
+      const filled = steps.filter(([, k]) => typeof s[k] === "string" && (s[k] as string).trim());
+      if (filled.length > 0) {
+        lines.push("");
+        lines.push("=== STORYTELLING DU FONDATEUR ===");
+        for (const [label, key] of filled) {
+          lines.push(`${label}: ${(s[key] as string).trim()}`);
+        }
+      }
+    }
   }
 
   if (bundle.onboardingFacts.length) {
