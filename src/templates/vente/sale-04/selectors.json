@@ -1,0 +1,103 @@
+{
+  "string": {
+    "top_banner_text": ".top-banner-text",
+    "hero_logo": ".hero-logo",
+    "hero_title": ".hero-title",
+    "price_old": ".price-old",
+    "price_main": ".price-main",
+    "price_note": ".price-note",
+    "timer_label": ".timer-label",
+    "timer_note": ".timer-note",
+    "cta_primary_text": ".btn-primary",
+    "testimonials_pretitle": ".section-pretitle",
+    "testimonials_title": ".testimonials-section .section-title",
+    "strategy_title": ".strategy-title",
+    "strategy_messy_label": ".strategy-box:first-child .strategy-label-main",
+    "strategy_clear_label": ".strategy-box:last-child .strategy-label-main",
+    "content_intro_title": ".content-section h2:first-child",
+    "content_brand_highlight": ".content-section .highlight",
+    "content_total_value": ".content-section .value",
+    "content_count": ".content-pretitle",
+    "content_main_promise": ".content-subtitle",
+    "content_main_promise_highlight": ".content-subtitle-blue",
+    "bonus_title": ".bonus-section h2",
+    "guarantee_title": ".guarantee-title",
+    "guarantee_text": ".guarantee-text",
+    "situation_title": ".situation-title",
+    "situation_title_highlight": ".situation-title span",
+    "benefits_section_title": ".benefits-section .section-title",
+    "faq_title": ".faq-section .section-title",
+    "footer_logo": ".footer-logo",
+    "footer_copyright": ".footer-copyright",
+    "sticky_timer_label": ".sticky-timer-label",
+    "sticky_btn_text": ".sticky-btn"
+  },
+  "arrays": {
+    "hero_bullets": {
+      "itemSelector": ".hero-bullets li"
+    },
+    "trust_badges": {
+      "itemSelector": ".trust-badge"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_rating": ".stars",
+        "testimonial_text": ".testimonial-text",
+        "author_name": ".testimonial-author"
+      }
+    },
+    "strategy_messy_pills": {
+      "itemSelector": ".strategy-box:first-child .strategy-pill"
+    },
+    "strategy_clear_pills": {
+      "itemSelector": ".strategy-box:last-child .strategy-pill"
+    },
+    "steps": {
+      "itemSelector": ".step-card",
+      "fields": {
+        "step_number": ".step-number",
+        "step_icon": ".step-icon",
+        "step_title": ".step-title",
+        "step_text": ".step-text"
+      }
+    },
+    "formations": {
+      "itemSelector": ".formation-card",
+      "fields": {
+        "formation_badge": ".formation-badge",
+        "formation_title": ".formation-title",
+        "formation_meta": ".formation-meta-item"
+      }
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_number": ".bonus-number",
+        "bonus_name": ".bonus-name"
+      }
+    },
+    "situations": {
+      "itemSelector": ".situation-btn",
+      "fields": {
+        "situation_emoji": ".situation-emoji"
+      }
+    },
+    "benefit_blocks": {
+      "itemSelector": ".benefit-block",
+      "fields": {
+        "block_title": ".benefit-title",
+        "block_bullets": ".benefit-list li"
+      }
+    },
+    "faqs": {
+      "itemSelector": ".faq-item",
+      "fields": {
+        "faq_question": ".faq-question"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

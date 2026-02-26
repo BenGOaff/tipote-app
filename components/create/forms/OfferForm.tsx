@@ -15,6 +15,7 @@ import { downloadAsPdf } from "@/lib/content-utils";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { RefineChatPanel } from "@/components/content/RefineChatPanel";
 
 type FormMode = "create" | "improve";
 type OfferType = "lead_magnet" | "paid_training";
@@ -452,6 +453,15 @@ export function OfferForm(props: OfferFormProps) {
                 )}
               </ul>
             </div>
+          )}
+
+          {/* Chat refinement with Tipote */}
+          {result.trim() && (
+            <RefineChatPanel
+              currentContent={result}
+              contentType="offer"
+              onContentUpdated={setResult}
+            />
           )}
         </Card>
       </div>

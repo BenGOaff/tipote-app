@@ -1,0 +1,119 @@
+{
+  "string": {
+    "logo_text": ".logo",
+    "alert_banner_text": ".alert-banner",
+    "hero_eyebrow": ".hero-eyebrow",
+    "hero_title": ".hero-title",
+    "hero_meta": ".hero-subtitle",
+    "hero_quote": ".quote-text",
+    "hero_subtext": ".hero-meta",
+    "cta_primary_text": ".btn-primary",
+    "contact_bar_text": ".contact-text",
+    "section_1_intro_title": "#intervenant .section-title",
+    "section_1_intro_subtitle": "#intervenant .section-subtitle",
+    "transformation_section_title": ".content-title",
+    "program_section_title": "#programme .section-title",
+    "firewalk_section_title": ".fire-section .section-title",
+    "bonuses_section_title": ".bonus-grid ~ .text-center .section-title",
+    "pricing_section_title": "#pricing .section-title",
+    "pricing_subtitle": ".pricing-meta",
+    "testimonials_section_title": "#temoignages .section-title",
+    "faq_title": ".faq-list ~ .section-title",
+    "footer_partner_text": ".footer-logo",
+    "footer_copyright": ".footer-copyright"
+  },
+  "arrays": {
+    "nav_links": {
+      "itemSelector": ".nav a"
+    },
+    "stats": {
+      "itemSelector": ".stat-card",
+      "fields": {
+        "stat_number": ".stat-number",
+        "stat_text": ".stat-text"
+      }
+    },
+    "contact_bar_links": {
+      "itemSelector": ".contact-link"
+    },
+    "speakers": {
+      "itemSelector": ".speaker-card",
+      "fields": {
+        "speaker_name": ".speaker-name",
+        "speaker_title": ".speaker-title",
+        "speaker_bio": ".speaker-bio"
+      }
+    },
+    "pain_points_checklist": {
+      "itemSelector": ".checklist li"
+    },
+    "benefits_grid": {
+      "itemSelector": ".benefit-card",
+      "fields": {
+        "benefit_title": ".benefit-title",
+        "benefit_text": ".benefit-text"
+      }
+    },
+    "program_days": {
+      "itemSelector": ".program-day",
+      "fields": {
+        "day_title": ".day-title",
+        "day_description": ".day-text"
+      }
+    },
+    "limiting_beliefs": {
+      "itemSelector": ".fire-card"
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_title": ".bonus-title",
+        "bonus_description": ".bonus-text"
+      }
+    },
+    "pricing_plans": {
+      "itemSelector": ".pricing-card",
+      "fields": {
+        "plan_name": ".pricing-tier",
+        "plan_tagline": ".pricing-subtitle",
+        "plan_price_old": ".price-old",
+        "plan_price_new": ".price-current",
+        "plan_early_bird_label": ".pricing-badge",
+        "plan_features": ".pricing-features li"
+      }
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_name": ".testimonial-name",
+        "testimonial_text": ".testimonial-text"
+      }
+    },
+    "visual_testimonials": {
+      "itemSelector": ".video-card",
+      "fields": {
+        "visual_description": ".video-text"
+      }
+    },
+    "schedule_times": {
+      "itemSelector": ".logistics-list li"
+    },
+    "group_benefits": {
+      "itemSelector": ".group-card",
+      "fields": {
+        "benefit_title": ".group-title",
+        "benefit_text": ".group-text"
+      }
+    },
+    "faqs": {
+      "itemSelector": ".faq-item",
+      "fields": {
+        "question": ".faq-question",
+        "answer": ".faq-answer"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "string": {
+    "method_label": ".method-label",
+    "method_name": ".method-name",
+    "hero_title": ".hero h1",
+    "hero_subtitle": ".hero-subtitle",
+    "cta_button_text": ".cta-button",
+    "cta_note": ".cta-note",
+    "problem_section_title": ".problem .section-title",
+    "problem_statement": ".problem-statement",
+    "platform_note": ".platform-note",
+    "story_pretitle": ".story h2",
+    "story_title": ".story h3",
+    "solution_title": ".solution .section-title",
+    "solution_name": ".solution-name",
+    "benefits_title": ".benefits-title",
+    "benefit_note": ".benefit-note",
+    "comparison_title": ".comparison-title",
+    "method_section_logo": ".method-logo",
+    "method_section_title": ".method-header h2",
+    "method_subtitle": ".method-subtitle",
+    "bonus_intro_title": ".bonus-intro h2",
+    "faq_title": ".faq-title h2",
+    "faq_subtitle": ".faq-title h3",
+    "cta_section_price_title": ".cta-section h2",
+    "author_section_title": ".author-title h2",
+    "author_intro": ".author-content h3",
+    "author_quote": ".author-quote",
+    "recap_title": ".recap-title h2",
+    "recap_subtitle": ".recap-title h3",
+    "recap_intro_text": ".recap-box h3",
+    "price_intro_text": ".price-highlight p",
+    "price": ".price",
+    "footer_contact_text": ".footer-contact p",
+    "footer_legal_line_1": ".footer-legal p"
+  },
+  "arrays": {
+    "problem_intro_paragraphs": {
+      "itemSelector": ".problem-intro p"
+    },
+    "platforms": {
+      "itemSelector": ".platform-item",
+      "fields": {
+        "platform_icon": ".platform-icon",
+        "platform_title": ".platform-content h3",
+        "platform_description": ".platform-content p"
+      }
+    },
+    "story_paragraphs": {
+      "itemSelector": ".story p"
+    },
+    "solution_paragraphs": {
+      "itemSelector": ".solution-intro p"
+    },
+    "advantages": {
+      "itemSelector": ".advantage-card",
+      "fields": {
+        "advantage_icon": ".advantage-icon",
+        "advantage_title": "h3",
+        "advantage_description": "p"
+      }
+    },
+    "benefits": {
+      "itemSelector": ".benefit-item",
+      "fields": {
+        "benefit_icon": ".benefit-icon",
+        "benefit_title": "h4",
+        "benefit_description": "p"
+      }
+    },
+    "comparison_note_paragraphs": {
+      "itemSelector": ".comparison-note p"
+    },
+    "comparison_charts": {
+      "itemSelector": ".comparison-card h3"
+    },
+    "cake_labels": {
+      "itemSelector": ".cake-item h4"
+    },
+    "modules": {
+      "itemSelector": ".module-item",
+      "fields": {
+        "module_title": "h3",
+        "module_description": "p"
+      }
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_title": ".bonus-content h3",
+        "bonus_subtitle": ".bonus-content h4",
+        "bonus_paragraphs": ".bonus-content p"
+      }
+    },
+    "faqs": {
+      "itemSelector": ".faq-item"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_paragraphs": ".testimonial-text"
+      }
+    },
+    "author_paragraphs": {
+      "itemSelector": ".author-content p"
+    },
+    "recap_list": {
+      "itemSelector": ".recap-list li"
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

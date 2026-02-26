@@ -1,0 +1,105 @@
+{
+  "string": {
+    "hero_badge": ".hero-badge",
+    "hero_title": ".hero h1",
+    "hero_subtext": ".hero-subtext",
+    "hero_cta_text": ".cta-button",
+    "hero_cta_subtext": ".cta-subtext",
+    "benefits_title": ".benefits-section .section-title",
+    "benefits_subtitle": ".benefits-section .section-subtitle",
+    "promise_section_title": ".promise-section .section-title",
+    "promise_box_heading": ".promise-heading",
+    "promise_box_subheading": ".promise-subheading",
+    "testimonials_title": ".social-proof .section-title",
+    "story_section_title": ".story-section .section-title",
+    "results_section_title": ".results-section .section-title",
+    "engagement_proof_title": ".engagement-title",
+    "offer_section_title": ".offer-section .section-title",
+    "comparison_title": ".comparison-section .section-title",
+    "comparison_bad_label": ".comparison-bad .comparison-label",
+    "comparison_good_label": ".comparison-good .comparison-label",
+    "bonus_section_title": ".bonus-section .section-title",
+    "bonus_intro": ".bonus-intro",
+    "pricing_section_title": ".pricing-section .section-title",
+    "price_original": ".original-price",
+    "price_current": ".current-price",
+    "price_label": ".price-label",
+    "guarantee_badge_text": ".guarantee-badge-text",
+    "guarantee_title": ".guarantee-title",
+    "guarantee_description": ".guarantee-description",
+    "author_name": ".author-bio h2",
+    "order_title": ".order-title",
+    "order_subtitle": ".order-subtitle",
+    "footer_logo": ".footer-logo",
+    "footer_copyright": ".footer-copyright"
+  },
+  "arrays": {
+    "benefits": {
+      "itemSelector": ".benefit-card",
+      "fields": {
+        "benefit_title": ".benefit-title",
+        "benefit_text": ".benefit-text"
+      }
+    },
+    "promise_list": {
+      "itemSelector": ".promise-list li"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_quote": ".testimonial-quote",
+        "testimonial_author": ".testimonial-author"
+      }
+    },
+    "story_blocks": {
+      "itemSelector": ".story-grid",
+      "fields": {
+        "story_title": "h3"
+      }
+    },
+    "comments": {
+      "itemSelector": ".comment-box",
+      "fields": {
+        "comment_author": ".comment-author",
+        "comment_text": ".comment-text"
+      }
+    },
+    "modules": {
+      "itemSelector": ".module-card",
+      "fields": {
+        "module_header": ".module-header",
+        "module_promise": ".module-promise",
+        "module_description": ".module-description"
+      }
+    },
+    "comparison_bad_items": {
+      "itemSelector": ".comparison-bad .comparison-list li"
+    },
+    "comparison_good_items": {
+      "itemSelector": ".comparison-good .comparison-list li"
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_badge": ".bonus-badge",
+        "bonus_name": ".bonus-name",
+        "bonus_description": ".bonus-description"
+      }
+    },
+    "package_items": {
+      "itemSelector": ".package-item"
+    },
+    "pricing_list": {
+      "itemSelector": ".pricing-list li"
+    },
+    "author_bio_paragraphs": {
+      "itemSelector": ".author-bio p"
+    },
+    "trust_badges": {
+      "itemSelector": ".trust-badge"
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

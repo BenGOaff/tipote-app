@@ -1,0 +1,101 @@
+{
+  "string": {
+    "top_bar_line_1": ".top-bar",
+    "format_label": ".format-label",
+    "hero_title": ".hero-title",
+    "hero_subtitle": ".hero-subtitle",
+    "promise_title": ".promise-title",
+    "promise_value": ".promise-value h2",
+    "promise_subtext": ".subtext",
+    "video_cta_intro": ".video-cta p",
+    "video_cta_reminder": ".video-cta .reminder",
+    "cta_button_text": ".cta-button",
+    "problems_title_line_1": ".section-title-wrapper .accent-text",
+    "problems_title_highlight": ".section-title-wrapper .highlight",
+    "problems_title_line_2": ".section-title-wrapper .regular-text",
+    "problems_callout": ".callout-text",
+    "timing_title": ".timing-title h2",
+    "timing_orange_title": ".orange-title",
+    "timing_subtitle": ".timing-subtitle",
+    "timing_proof_caption": ".proof-caption",
+    "authority_title": ".authority-title h2",
+    "authority_subtitle": ".authority-title .big-text",
+    "solution_question": ".solution-question",
+    "solution_title_line_1": ".solution-title",
+    "method_intro": ".method-item h4",
+    "offer_intro_title": ".offer-intro h2",
+    "process_title": ".process-title h2",
+    "process_subtitle": ".process-title .subtitle",
+    "bonus_intro_title": ".bonus-intro h2",
+    "bonus_intro_callout": ".bonus-intro p",
+    "bonus_teaser_title": ".bonus-teaser-title h2",
+    "bonus_teaser_subtitle_1": ".bonus-teaser-subtitle",
+    "recap_title": ".recap-title",
+    "recap_subtitle": ".recap-subtitle",
+    "recap_bonus_title": ".bonus-recap-section h4",
+    "faq_title": ".faq-title h2",
+    "faq_cta_intro": ".faq-cta p",
+    "faq_cta_reminder": ".faq-cta .reminder-text",
+    "faq_cta_text": ".faq-cta .cta-button",
+    "footer_format": ".footer-brand .format-text",
+    "footer_title": ".footer-brand .title",
+    "footer_subtitle": ".footer-brand .au-top-footer",
+    "footer_copyright": ".footer-tm"
+  },
+  "arrays": {
+    "trust_badges": {
+      "itemSelector": ".badge-item"
+    },
+    "problem_list": {
+      "itemSelector": ".problem-item .problem-text"
+    },
+    "reasons": {
+      "itemSelector": ".reason-card",
+      "fields": {
+        "reason_title": "h3",
+        "reason_text": "p"
+      }
+    },
+    "method_steps": {
+      "itemSelector": ".method-item",
+      "fields": {
+        "step_title": "h4",
+        "step_description": "p"
+      }
+    },
+    "phases": {
+      "itemSelector": ".phase-card",
+      "fields": {
+        "phase_number": ".phase-number",
+        "phase_title": "h3",
+        "phase_subtitle": ".phase-subtitle",
+        "phase_bullets": "ul li",
+        "phase_emoji": ".phase-illustration"
+      }
+    },
+    "bonus_list_intro": {
+      "itemSelector": ".bonus-list-intro p"
+    },
+    "bonuses_detailed": {
+      "itemSelector": ".bonus-card",
+      "fields": {
+        "bonus_number": "h3",
+        "bonus_name": ".bonus-name",
+        "bonus_subtitle": ".bonus-subtitle",
+        "bonus_features": ".bonus-features ul li"
+      }
+    },
+    "recap_list": {
+      "itemSelector": ".recap-list li"
+    },
+    "recap_bonus_list": {
+      "itemSelector": ".bonus-recap-list li"
+    },
+    "faqs": {
+      "itemSelector": ".faq-item"
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

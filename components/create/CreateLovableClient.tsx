@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
-import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList } from "lucide-react";
+import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 import { QuickTemplateCard } from "@/components/create/QuickTemplateCard";
@@ -23,6 +23,7 @@ import { VideoForm } from "@/components/create/forms/VideoForm";
 import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
 import { QuizForm } from "@/components/quiz/QuizForm";
+import { ContentStrategyForm } from "@/components/create/forms/ContentStrategyForm";
 
 const contentTypes = [
   {
@@ -73,6 +74,13 @@ const contentTypes = [
     description: "Quiz interactif pour capturer des emails",
     icon: ClipboardList,
     color: "bg-teal-500",
+  },
+  {
+    id: "strategy",
+    label: "Stratégie de contenu",
+    description: "Planifie ton contenu sur 7, 14 ou 30 jours",
+    icon: CalendarDays,
+    color: "bg-amber-500",
   },
 ] as const;
 
@@ -690,6 +698,8 @@ export default function CreateLovableClient() {
         return <FunnelForm {...common} existingOffers={existingOffers} />;
       case "quiz":
         return <QuizForm onClose={common.onClose} />;
+      case "strategy":
+        return <ContentStrategyForm onClose={common.onClose} />;
       default:
         return null;
     }

@@ -1,0 +1,82 @@
+{
+  "string": {
+    "logo_text": ".logo",
+    "header_cta_text": ".header-cta",
+    "hero_title": ".hero-title",
+    "order_section_title": ".order-form-wrapper h3",
+    "order_section_title_highlight": ".order-form-wrapper h3 span",
+    "price_label": ".price-label",
+    "price_old": ".price-old",
+    "price_current": ".price-current",
+    "price_note": ".price-note",
+    "cta_primary_text": ".btn-primary",
+    "cta_primary_subtext": ".btn-primary small",
+    "testimonials_section_title": ".testimonials-section .section-title",
+    "schedule_section_badge": ".schedule-section .schedule-badge",
+    "schedule_section_title": ".schedule-section .section-title",
+    "features_section_title": "#features .section-title",
+    "steps_section_title": ".steps-section .section-title",
+    "market_section_badge": ".social-proof-section .schedule-badge",
+    "market_section_title": ".social-proof-section .section-title",
+    "qualification_badge": ".comparison-section .schedule-badge",
+    "qualification_title": ".comparison-section .section-title",
+    "qualification_final_badge": ".comparison-section .text-center .schedule-badge",
+    "faq_alert": ".faq-alert",
+    "faq_title": ".faq-section .section-title",
+    "guarantee_title": ".guarantee-section .section-title",
+    "guarantee_text": ".guarantee-content p",
+    "guarantee_badge_percent": ".guarantee-badge-text",
+    "guarantee_badge_label": ".guarantee-badge-label",
+    "footer_logo": ".footer-logo",
+    "footer_copyright": ".footer p"
+  },
+  "arrays": {
+    "top_nav_links": {
+      "itemSelector": ".top-nav a"
+    },
+    "main_components": {
+      "itemSelector": ".feature-list li"
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "testimonial_text": ".testimonial-text",
+        "author_name": ".testimonial-author"
+      }
+    },
+    "features": {
+      "itemSelector": ".feature-card",
+      "fields": {
+        "feature_badge": ".feature-badge",
+        "feature_title": ".feature-card-title",
+        "feature_price_old": ".feature-price-old",
+        "feature_description": ".feature-description",
+        "feature_modules": ".feature-modules li"
+      }
+    },
+    "steps": {
+      "itemSelector": ".step-item",
+      "fields": {
+        "step_number": ".step-number",
+        "step_title": ".step-title",
+        "step_description": ".step-text"
+      }
+    },
+    "not_for_you_list": {
+      "itemSelector": ".comparison-list.negative li"
+    },
+    "perfect_for_you_list": {
+      "itemSelector": ".comparison-list.positive li"
+    },
+    "faqs": {
+      "itemSelector": ".faq-item",
+      "fields": {
+        "faq_question": ".faq-question",
+        "faq_answer": ".faq-answer"
+      }
+    },
+    "footer_links": {
+      "itemSelector": ".footer-links a"
+    }
+  }
+}

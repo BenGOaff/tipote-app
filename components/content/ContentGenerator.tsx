@@ -8,6 +8,7 @@ import { emitCreditsUpdated } from '@/lib/credits/client'
 import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
 import { ImageUploader, type UploadedImage } from '@/components/content/ImageUploader'
 import { PostActionButtons } from '@/components/content/PostActionButtons'
+import { RefineChatPanel } from '@/components/content/RefineChatPanel'
 import { toast } from '@/components/ui/use-toast'
 
 type Props = {
@@ -451,6 +452,18 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                   />
                 </div>
               )}
+
+              {/* Chat refinement with Tipote */}
+              <div className="mt-4">
+                <RefineChatPanel
+                  currentContent={result.content ?? ''}
+                  contentType={normalizeType(type)}
+                  contentId={result.id}
+                  onContentUpdated={(newContent) =>
+                    setResult((prev) => (prev ? { ...prev, content: newContent } : prev))
+                  }
+                />
+              </div>
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">

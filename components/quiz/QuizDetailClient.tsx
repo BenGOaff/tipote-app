@@ -57,6 +57,9 @@ import {
 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { QuizPreviewModal } from "@/components/quiz/QuizPreviewModal";
+import type { PublicQuizData } from "@/components/quiz/PublicQuizClient";
+import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 
 type QuizQuestion = {
   id: string;
@@ -157,6 +160,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
+  // Preview modal
+  const [showPreview, setShowPreview] = useState(false);
+
+  // OG image for social sharing
+  const [ogImageUrl, setOgImageUrl] = useState("");
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -180,6 +189,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setViralityEnabled(q.virality_enabled);
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
+        setOgImageUrl((q as any).og_image_url ?? "");
         setStatus(q.status);
         setSioShareTagName(q.sio_share_tag_name ?? "");
         setEditQuestions(q.questions ?? []);
@@ -209,6 +219,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
+          og_image_url: ogImageUrl || null,
           status,
           sio_share_tag_name: sioShareTagName || null,
           questions: editQuestions.map((q, i) => ({
@@ -527,6 +538,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </Badge>
             </div>
             <div className="flex gap-2 ml-4">
+              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+                <Eye className="w-4 h-4 mr-1" />
+                Apercu
+              </Button>
               <Button variant="outline" size="sm" onClick={handleToggleStatus}>
                 {status === "active" ? "Dépublier" : "Publier"}
               </Button>
@@ -880,6 +895,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         rows={2}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Image de partage (og:image)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Image affichée lors du partage sur les réseaux sociaux (1200x630px recommandé)
+                      </p>
+                      <ImageUploader
+                        images={ogImageUrl ? [{ url: ogImageUrl, path: "", filename: "og-image", size: 0, type: "image/png" }] : []}
+                        onChange={(imgs) => setOgImageUrl(imgs[0]?.url ?? "")}
+                        contentId={`quiz-og-${quizId}`}
+                        maxImages={1}
+                      />
+                    </div>
                     <div className="flex items-center justify-between p-3 rounded-lg border">
                       <div>
                         <p className="font-medium text-sm">Bonus de partage</p>
@@ -1074,6 +1101,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Preview modal */}
+      {quiz && (
+        <QuizPreviewModal
+          open={showPreview}
+          onOpenChange={setShowPreview}
+          quizId={quiz.id}
+          previewData={{
+            id: quiz.id,
+            title,
+            introduction,
+            cta_text: ctaText || null,
+            cta_url: ctaUrl || null,
+            privacy_url: quiz.privacy_url,
+            consent_text: consentText || null,
+            virality_enabled: viralityEnabled,
+            bonus_description: bonusDescription || null,
+            share_message: shareMessage || null,
+            locale: null,
+            questions: editQuestions,
+            results: editResults,
+          } satisfies PublicQuizData}
+        />
+      )}
     </SidebarProvider>
   );
 }

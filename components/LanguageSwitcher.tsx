@@ -41,8 +41,8 @@ async function persistLocaleToDb(locale: string) {
 }
 
 type Props = {
-  /** "sidebar" = compact icon only; "settings" = full with label */
-  variant?: "sidebar" | "settings";
+  /** "sidebar" = compact icon only; "settings" = full with label; "bare" = just the dropdown */
+  variant?: "sidebar" | "settings" | "bare";
 };
 
 export function LanguageSwitcher({ variant = "settings" }: Props) {
@@ -81,22 +81,28 @@ export function LanguageSwitcher({ variant = "settings" }: Props) {
     );
   }
 
+  const selectEl = (
+    <Select value={locale} onValueChange={handleChange}>
+      <SelectTrigger className={variant === "bare" ? undefined : "w-[220px]"}>
+        {variant !== "bare" && <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />}
+        <SelectValue>{LANGUAGE_LABELS[locale]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {SUPPORTED_LOCALES.map((l) => (
+          <SelectItem key={l} value={l} dir={l === "ar" ? "rtl" : "ltr"}>
+            {LANGUAGE_LABELS[l]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (variant === "bare") return selectEl;
+
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">{t("label")}</p>
-      <Select value={locale} onValueChange={handleChange}>
-        <SelectTrigger className="w-[220px]">
-          <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-          <SelectValue>{LANGUAGE_LABELS[locale]}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {SUPPORTED_LOCALES.map((l) => (
-            <SelectItem key={l} value={l} dir={l === "ar" ? "rtl" : "ltr"}>
-              {LANGUAGE_LABELS[l]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {selectEl}
     </div>
   );
 }
