@@ -65,6 +65,18 @@ const UpdateSchema = z.object({
   youtube_url: z.string().trim().max(500).optional(),
   website_url: z.string().trim().max(500).optional(),
 
+  // Storytelling (6-step founder journey)
+  storytelling: z
+    .object({
+      situation_initiale: z.string().trim().max(2000).optional().default(""),
+      element_declencheur: z.string().trim().max(2000).optional().default(""),
+      peripeties: z.string().trim().max(2000).optional().default(""),
+      moment_critique: z.string().trim().max(2000).optional().default(""),
+      resolution: z.string().trim().max(2000).optional().default(""),
+      situation_finale: z.string().trim().max(2000).optional().default(""),
+    })
+    .optional(),
+
   // Auto-comments automation
   auto_comment_style_ton: z.string().trim().max(40).optional(),
   auto_comment_langage: z
