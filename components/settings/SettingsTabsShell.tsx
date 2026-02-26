@@ -51,7 +51,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
-import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 import { AIContent } from "@/components/ui/ai-content";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -90,6 +89,7 @@ type ProfileRow = {
   cgv_url?: string | null;
   sio_user_api_key?: string | null;
   content_locale?: string | null;
+  address_form?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
   youtube_url?: string | null;
@@ -220,32 +220,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   };
 
   // -------------------------
-  // User plan (from profiles table — for feature gating)
-  // -------------------------
-  const [userPlan, setUserPlan] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { getSupabaseBrowserClient } = await import("@/lib/supabaseBrowser");
-        const supabase = getSupabaseBrowserClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled || !user) return;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("plan")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!cancelled && profile) setUserPlan(profile.plan ?? "free");
-      } catch {
-        // fail-open
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // -------------------------
   // Profil (connecté à /api/profile)
   // -------------------------
   const [profileLoading, setProfileLoading] = useState(true);
@@ -270,6 +244,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [pendingSio, startSioTransition] = useTransition();
 
   const [contentLocale, setContentLocale] = useState("fr");
+  const [addressForm, setAddressForm] = useState("tu");
   const [pendingLocale, startLocaleTransition] = useTransition();
 
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -335,6 +310,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setCgvUrl(row?.cgv_url ?? "");
         setSioApiKey(row?.sio_user_api_key ?? "");
         setContentLocale(row?.content_locale ?? "fr");
+        setAddressForm(row?.address_form ?? "tu");
         setLinkedinUrl(row?.linkedin_url ?? "");
         setInstagramUrl(row?.instagram_url ?? "");
         setYoutubeUrl(row?.youtube_url ?? "");
@@ -715,19 +691,22 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   };
 
   // -------------------------
-  // Content Locale
+  // Settings (content locale + address form)
   // -------------------------
-  const localeDirty = useMemo(() => {
-    return (initialProfile?.content_locale ?? "fr") !== contentLocale;
-  }, [initialProfile, contentLocale]);
+  const settingsDirty = useMemo(() => {
+    return (
+      (initialProfile?.content_locale ?? "fr") !== contentLocale ||
+      (initialProfile?.address_form ?? "tu") !== addressForm
+    );
+  }, [initialProfile, contentLocale, addressForm]);
 
-  const saveContentLocale = () => {
+  const saveSettings = () => {
     startLocaleTransition(async () => {
       try {
         const res = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content_locale: contentLocale }),
+          body: JSON.stringify({ content_locale: contentLocale, address_form: addressForm }),
         });
 
         const json = (await res.json().catch(() => null)) as any;
@@ -736,11 +715,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
         setContentLocale(row?.content_locale ?? "fr");
+        setAddressForm(row?.address_form ?? "tu");
 
-        toast({ title: "Langue du contenu enregistrée" });
+        toast({ title: tSP("reglages.saved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
+          title: tSP("reglages.saveError"),
           description: e?.message ?? "Erreur inconnue",
           variant: "destructive",
         });
@@ -1058,7 +1038,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
             <div className="space-y-2">
               <Label>{tSP("reglages.addressLabel")}</Label>
-              <Select defaultValue="tu">
+              <Select value={addressForm} onValueChange={setAddressForm} disabled={profileLoading}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1070,9 +1050,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
           </div>
 
-          <Button variant="outline" className="mt-4" onClick={saveContentLocale} disabled={!localeDirty || pendingLocale}>
+          <Button variant="outline" className="mt-4" onClick={saveSettings} disabled={!settingsDirty || pendingLocale}>
             <Save className="w-4 h-4 mr-2" />
-            {pendingLocale ? tSP("reglages.saving") : tSP("reglages.saveLang")}
+            {pendingLocale ? tSP("reglages.saving") : tSP("reglages.save")}
           </Button>
         </Card>
 
@@ -1571,7 +1551,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       {/* IA & CRÉDITS */}
       <TabsContent value="ai" className="space-y-6">
         <AiCreditsPanel />
-        <AutoCommentSettings userPlan={userPlan} />
       </TabsContent>
 
       {/* ABONNEMENT */}
