@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
 import {
   ArrowLeft,
   Loader2,
@@ -37,6 +38,7 @@ import {
   ChevronUp,
   AlertCircle,
   Save,
+  Copy,
 } from "lucide-react";
 
 /* ───────── Types ───────── */
@@ -256,6 +258,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
 
+  // Strategy DB item (saved to "Mes Stratégies")
+  const [strategyItemId, setStrategyItemId] = useState<string | null>(null);
+
   // Content detail modal (replaces router.push)
   const [contentModalId, setContentModalId] = useState<string | null>(null);
   const [contentModalData, setContentModalData] = useState<{
@@ -269,6 +274,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const [contentModalImages, setContentModalImages] = useState<UploadedImage[]>([]);
   const [contentModalLoading, setContentModalLoading] = useState(false);
   const [contentModalSaving, setContentModalSaving] = useState(false);
+  const [emailScheduleOpen, setEmailScheduleOpen] = useState(false);
 
   // Track abort
   const abortRef = useRef(false);
@@ -449,6 +455,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       }
 
       setStrategy(json.strategy);
+      if (json.strategyItemId) setStrategyItemId(json.strategyItemId);
       setStep("plan");
       toast({ title: "Plan stratégique généré !" });
     } catch (e: any) {
@@ -482,6 +489,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     setContents(initial);
     setStep("generating");
 
+    // Collect generated IDs for strategy meta update
+    const generatedIds: string[] = [];
+
     // Build generation tasks
     const tasks = strategy.days.map((day, idx) => async () => {
       if (abortRef.current) return;
@@ -489,28 +499,30 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       const type = day.contentType === "email" ? "email" : "post";
       const channel = day.platform || "linkedin";
 
-      // Build brief
-      const briefLines: string[] = [];
-      briefLines.push(`CONTEXTE STRATÉGIE : ${strategy.title} — Jour ${day.day}`);
-      briefLines.push(`THÈME DU JOUR : ${day.theme}`);
-      briefLines.push(`HOOK (accroche à utiliser) : ${day.hook}`);
-      briefLines.push(`CTA (appel à l'action) : ${day.cta}`);
-      briefLines.push(`PLATEFORME : ${channel}`);
+      // Build the subject (theme + hook/CTA instructions).
+      // The generate route has its own prompt builder (buildSocialPostPrompt / buildEmailPrompt)
+      // so we provide the theme as `subject` and the hook/CTA as development instructions.
+      const subjectLines: string[] = [day.theme];
+      subjectLines.push("");
+      subjectLines.push(`ACCROCHE (première phrase, à développer en contenu complet) : ${day.hook}`);
+      subjectLines.push(`CTA (à placer en fin de contenu) : ${day.cta}`);
+      subjectLines.push("");
+      subjectLines.push(
+        type === "email"
+          ? "IMPORTANT : Rédige un email COMPLET avec objet, accroche, corps développé (arguments, storytelling, valeur) et CTA. Minimum 200 mots."
+          : "IMPORTANT : Rédige un post COMPLET et DÉVELOPPÉ d'au moins 150 mots. L'accroche est le DÉBUT du post, pas le post entier. Développe avec des arguments, du storytelling, de la valeur ajoutée.",
+      );
 
-      if (offer) {
-        briefLines.push("");
-        briefLines.push("OFFRE DE RÉFÉRENCE :");
-        if (offer.name) briefLines.push(`Nom: ${offer.name}`);
-        if (offer.promise) briefLines.push(`Promesse: ${offer.promise}`);
-        if (offer.target) briefLines.push(`Public cible: ${offer.target}`);
-        if (offer.price) briefLines.push(`Prix: ${offer.price}`);
-        if (offer.description) briefLines.push(`Description: ${offer.description}`);
-        if (offer.link) briefLines.push(`Lien: ${offer.link}`);
-      }
-
-      briefLines.push("");
-      briefLines.push(`Génère un contenu de type "${type}" prêt à publier, adapté à la plateforme ${channel}.`);
-      briefLines.push("Utilise le hook et le CTA fournis. Le contenu doit être directement utilisable, pas de titre, pas de markdown.");
+      // Build offer context for the generate route
+      const offerManual = offer
+        ? {
+            name: offer.name || undefined,
+            promise: offer.promise || undefined,
+            main_outcome: offer.target || undefined,
+            description: offer.description || undefined,
+            price: offer.price || undefined,
+          }
+        : undefined;
 
       // Mark as generating
       setContents((prev) =>
@@ -521,7 +533,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       const jobId = await requestGeneration({
         type,
         channel,
-        prompt: briefLines.join("\n"),
+        subject: subjectLines.join("\n"),
+        platform: channel,
+        ...(offerManual ? { offerManual } : {}),
       });
 
       if (!jobId) {
@@ -530,6 +544,8 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         );
         return;
       }
+
+      generatedIds.push(jobId);
 
       // Store jobId
       setContents((prev) =>
@@ -552,6 +568,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
     // Run with concurrency limit (3 at a time)
     await runWithConcurrency(tasks, MAX_CONCURRENT);
+
+    // Update strategy item meta with generated content IDs
+    if (strategyItemId && generatedIds.length > 0) {
+      try {
+        await safeFetchJson(`/api/content/${strategyItemId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ meta: { content_ids: generatedIds } }),
+        });
+      } catch { /* non-blocking */ }
+    }
 
     setStep("review");
   };
@@ -613,11 +640,62 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
   // ═════════════════════════════════════════════
   // Content detail modal (rendered in all steps)
-  // Same capabilities as ContentEditor: image upload, publish, schedule, copy, PDF
+  // Email: schedule + copy + download only (no social publish)
+  // Social post: publish/schedule on the CORRECT platform only
   // ═════════════════════════════════════════════
-  const modalIsSocialPost =
+  const modalIsEmail =
     contentModalData &&
+    (contentModalData.type === "email" ||
+      contentModalData.channel === "email");
+
+  const modalIsSocialPost =
+    contentModalData && !modalIsEmail &&
     (contentModalData.type === "post" || contentModalData.type === "");
+
+  // Shared: schedule handler for the modal
+  const handleModalSchedule = async (date: string, time: string) => {
+    if (!contentModalId || !contentModalData) return;
+    const payload: Record<string, any> = {
+      status: "scheduled",
+      scheduledDate: date,
+      content: contentModalData.content,
+      title: contentModalData.title,
+      meta: { scheduled_time: time },
+    };
+    if (contentModalImages.length > 0) {
+      payload.meta.images = contentModalImages.map((img) => ({
+        url: img.url, path: img.path, filename: img.filename, size: img.size, type: img.type,
+      }));
+    }
+    await safeFetchJson(`/api/content/${contentModalId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setContentModalData((prev) => prev ? { ...prev, status: "scheduled" } : prev);
+    toast({ title: "Contenu programmé !" });
+  };
+
+  const handleModalCopy = () => {
+    if (!contentModalData) return;
+    navigator.clipboard.writeText(contentModalData.content);
+    toast({ title: "Contenu copié !" });
+  };
+
+  const handleModalDownloadPdf = () => {
+    if (!contentModalData) return;
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text(contentModalData.title || "Sans titre", 20, 20);
+      doc.setFontSize(11);
+      const pdfLines = doc.splitTextToSize(contentModalData.content || "", 170);
+      doc.text(pdfLines, 20, 35);
+      doc.save(`${(contentModalData.title || "contenu").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
+    }).catch(() => {
+      toast({ title: "Erreur PDF", variant: "destructive" });
+    });
+  };
 
   const contentModal = (
     <Dialog open={!!contentModalId} onOpenChange={(open) => !open && closeContentModal()}>
@@ -675,7 +753,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               className="text-sm leading-relaxed"
             />
 
-            {/* Image upload — same as ContentEditor for social posts */}
+            {/* Image upload — only for social posts (not emails) */}
             {modalIsSocialPost && (
               <ImageUploader
                 images={contentModalImages}
@@ -697,8 +775,42 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               </Button>
             </div>
 
-            {/* Publish, schedule, copy, PDF — same as ContentEditor */}
-            {contentModalId && (
+            {/* ── EMAIL: schedule + copy + download (NO social publish) ── */}
+            {modalIsEmail && contentModalId && (
+              <>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => setEmailScheduleOpen(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <CalendarDays className="w-4 h-4 mr-1" />
+                      Planifier dans le calendrier
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={handleModalCopy}>
+                      <Copy className="w-4 h-4 mr-1" />
+                      Copier
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleModalDownloadPdf}>
+                      <Download className="w-4 h-4 mr-1" />
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+                <ScheduleModal
+                  open={emailScheduleOpen}
+                  onOpenChange={setEmailScheduleOpen}
+                  platformLabel="Email"
+                  onConfirm={handleModalSchedule}
+                />
+              </>
+            )}
+
+            {/* ── SOCIAL POST: publish/schedule on the CORRECT platform ── */}
+            {!modalIsEmail && contentModalId && (
               <PostActionButtons
                 contentId={contentModalId}
                 contentPreview={contentModalData.content}
@@ -712,53 +824,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                     prev ? { ...prev, status: "published" } : prev,
                   );
                 }}
-                onScheduled={async (date, time) => {
-                  const payload: Record<string, any> = {
-                    status: "scheduled",
-                    scheduledDate: date,
-                    content: contentModalData.content,
-                    title: contentModalData.title,
-                    meta: { scheduled_time: time },
-                  };
-                  // Include images in scheduled save
-                  if (contentModalImages.length > 0) {
-                    payload.meta.images = contentModalImages.map((img) => ({
-                      url: img.url,
-                      path: img.path,
-                      filename: img.filename,
-                      size: img.size,
-                      type: img.type,
-                    }));
-                  }
-                  await safeFetchJson(`/api/content/${contentModalId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                  });
-                  setContentModalData((prev) =>
-                    prev ? { ...prev, status: "scheduled" } : prev,
-                  );
-                  toast({ title: "Contenu programmé !" });
-                }}
-                onCopy={() => {
-                  navigator.clipboard.writeText(contentModalData.content);
-                  toast({ title: "Contenu copié !" });
-                }}
-                onDownloadPdf={() => {
-                  import("jspdf").then(({ jsPDF }) => {
-                    const doc = new jsPDF();
-                    doc.setFontSize(16);
-                    doc.text(contentModalData.title || "Sans titre", 20, 20);
-                    doc.setFontSize(11);
-                    const lines = doc.splitTextToSize(contentModalData.content || "", 170);
-                    doc.text(lines, 20, 35);
-                    doc.save(
-                      `${(contentModalData.title || "contenu").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
-                    );
-                  }).catch(() => {
-                    toast({ title: "Erreur PDF", variant: "destructive" });
-                  });
-                }}
+                onScheduled={handleModalSchedule}
+                onCopy={handleModalCopy}
+                onDownloadPdf={handleModalDownloadPdf}
                 busy={contentModalSaving}
               />
             )}
