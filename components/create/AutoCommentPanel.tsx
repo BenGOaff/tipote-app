@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -69,6 +70,7 @@ export function AutoCommentPanel({
   onChange,
   disabled = false,
 }: AutoCommentPanelProps) {
+  const t = useTranslations("autoCommentPanel");
   const plan = useMemo(() => normalizePlan(userPlan), [userPlan]);
   const hasAccess = useMemo(() => planHasAccess(plan), [plan]);
   const platformSupported = useMemo(
@@ -95,15 +97,15 @@ export function AutoCommentPanel({
     });
   }, [enabled, nbBefore, nbAfter, creditsNeeded, hasAccess, platformSupported, onChange]);
 
-  // Plateforme sans API de recherche publique → retrait discret
+  // Unsupported platform — silent removal
   if (!platformSupported) {
-    // Facebook : section "Automatiser les réponses" prend le relais, rien à afficher ici
+    // Facebook: the "Automate replies" section takes over, nothing to show here
     if (platform === "facebook") return null;
 
     const unsupportedMsg =
       platform === "linkedin"
-        ? "LinkedIn requiert une approbation partenaire (MDP) — les auto-commentaires ne sont pas disponibles pour l'instant."
-        : "Cette plateforme ne supporte pas les auto-commentaires à l'heure actuelle.";
+        ? t("unsupportedLinkedin")
+        : t("unsupportedGeneric");
     return (
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Info className="w-3.5 h-3.5 shrink-0" />
@@ -139,7 +141,7 @@ export function AutoCommentPanel({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">Auto-commentaires</span>
+                <span className="font-semibold text-sm">{t("title")}</span>
                 {!hasAccess && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600">
                     <Crown className="w-3 h-3 mr-0.5" />
@@ -149,8 +151,8 @@ export function AutoCommentPanel({
               </div>
               <p className="text-xs text-muted-foreground">
                 {hasAccess
-                  ? "Commentez automatiquement des posts similaires pour booster votre visibilité"
-                  : "Passez au plan Pro ou Elite pour débloquer cette fonctionnalité"}
+                  ? t("descriptionEnabled")
+                  : t("descriptionLocked")}
               </p>
             </div>
           </div>
@@ -172,11 +174,10 @@ export function AutoCommentPanel({
               <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
               <div className="text-xs text-amber-700 dark:text-amber-400">
                 <p className="font-medium mb-1">
-                  Boostez votre engagement avec l&apos;auto-commentaire
+                  {t("upsellTitle")}
                 </p>
                 <p className="text-amber-600 dark:text-amber-500">
-                  Tipote commente automatiquement des posts similaires au vôtre pour augmenter
-                  votre visibilité. Disponible avec les plans Pro (49€/mois) et Elite (99€/mois).
+                  {t("upsellBody")}
                 </p>
               </div>
             </div>
@@ -190,7 +191,7 @@ export function AutoCommentPanel({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm flex items-center gap-1.5">
-                  Commentaires avant publication
+                  {t("beforeLabel")}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -198,8 +199,7 @@ export function AutoCommentPanel({
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[240px]">
                         <p className="text-xs">
-                          Tipote commentera des posts similaires 2-15 min avant la publication
-                          de votre post pour générer de la visibilité en amont.
+                          {t("beforeTooltip")}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -221,7 +221,7 @@ export function AutoCommentPanel({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm flex items-center gap-1.5">
-                  Commentaires après publication
+                  {t("afterLabel")}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -229,8 +229,7 @@ export function AutoCommentPanel({
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[240px]">
                         <p className="text-xs">
-                          Tipote commentera des posts similaires 2-15 min après la publication
-                          pour prolonger l&apos;engagement.
+                          {t("afterTooltip")}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -250,7 +249,7 @@ export function AutoCommentPanel({
 
             {/* Credits info */}
             <p className="text-xs text-muted-foreground">
-              0,25 crédit par commentaire
+              {t("creditPerComment")}
             </p>
           </div>
         )}
