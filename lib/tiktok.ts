@@ -19,12 +19,13 @@ const TIKTOK_COMMENT_REPLY_URL = "https://open.tiktokapis.com/v2/comment/reply/"
 const TIKTOK_VIDEO_LIST_URL = "https://open.tiktokapis.com/v2/video/list/";
 
 // Scopes nécessaires :
-// user.info.basic : profil de base
+// user.info.basic : profil de base (display_name, avatar)
+// user.info.profile : profil étendu (username / handle)
 // video.publish : publier des vidéos
 // video.upload : uploader des vidéos
 // video.list : lister les vidéos existantes (nécessaire pour le post picker)
 // comment.list.manage : lire et répondre aux commentaires (nécessaire pour auto-reply)
-const SCOPES = ["user.info.basic", "video.publish", "video.upload", "video.list"];
+const SCOPES = ["user.info.basic", "user.info.profile", "video.publish", "video.upload", "video.list"];
 
 function getClientKey(): string {
   const key = process.env.TIKTOK_CLIENT_KEY;

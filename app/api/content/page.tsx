@@ -350,7 +350,7 @@ export default async function ContentsPage({
                             <Link href={`/contents/${item.id}`}>Voir</Link>
                           </Button>
 
-                          <ContentItemActions id={item.id} title={safeString(item.title) || "Sans titre"} />
+                          <ContentItemActions id={item.id} title={safeString(item.title) || "Sans titre"} channel={item.channel} type={item.type} />
                         </div>
                       </Card>
                     );
