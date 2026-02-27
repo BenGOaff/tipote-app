@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
+import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import {
   ArrowLeft,
   Loader2,
@@ -36,7 +37,6 @@ import {
   ChevronUp,
   AlertCircle,
   Save,
-  Copy,
 } from "lucide-react";
 
 /* ───────── Types ───────── */
@@ -264,7 +264,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     channel: string;
     type: string;
     status: string;
+    meta: Record<string, any> | null;
   } | null>(null);
+  const [contentModalImages, setContentModalImages] = useState<UploadedImage[]>([]);
   const [contentModalLoading, setContentModalLoading] = useState(false);
   const [contentModalSaving, setContentModalSaving] = useState(false);
 
@@ -334,18 +336,32 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const openContentModal = async (jobId: string) => {
     setContentModalId(jobId);
     setContentModalData(null);
+    setContentModalImages([]);
     setContentModalLoading(true);
     try {
       const res = await fetch(`/api/content/${encodeURIComponent(jobId)}`);
       const json = await res.json().catch(() => null);
       if (json?.ok && json?.item) {
+        const item = json.item;
+        let meta = item.meta ?? null;
+        if (typeof meta === "string") {
+          try { meta = JSON.parse(meta); } catch { meta = null; }
+        }
         setContentModalData({
-          title: json.item.title || "",
-          content: json.item.content || "",
-          channel: json.item.channel || "",
-          type: json.item.type || "post",
-          status: json.item.status || "draft",
+          title: item.title || "",
+          content: item.content || "",
+          channel: item.channel || "",
+          type: item.type || "post",
+          status: item.status || "draft",
+          meta,
         });
+        // Load existing images from meta
+        const metaImages = meta?.images;
+        if (Array.isArray(metaImages)) {
+          setContentModalImages(
+            metaImages.filter((img: any) => img && typeof img === "object" && img.url),
+          );
+        }
       } else {
         throw new Error("Contenu introuvable");
       }
@@ -357,17 +373,30 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     }
   };
 
-  const saveContentModal = async () => {
-    if (!contentModalId || !contentModalData) return;
+  const saveContentModal = async (): Promise<boolean> => {
+    if (!contentModalId || !contentModalData) return false;
     setContentModalSaving(true);
     try {
+      const payload: Record<string, any> = {
+        title: contentModalData.title,
+        content: contentModalData.content,
+      };
+      // Include images in meta
+      if (contentModalImages.length > 0) {
+        payload.meta = {
+          images: contentModalImages.map((img) => ({
+            url: img.url,
+            path: img.path,
+            filename: img.filename,
+            size: img.size,
+            type: img.type,
+          })),
+        };
+      }
       await safeFetchJson(`/api/content/${contentModalId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: contentModalData.title,
-          content: contentModalData.content,
-        }),
+        body: JSON.stringify(payload),
       });
       // Sync back to contents list
       setContents((prev) =>
@@ -376,8 +405,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         ),
       );
       toast({ title: "Contenu sauvegardé !" });
+      return true;
     } catch {
       toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+      return false;
     } finally {
       setContentModalSaving(false);
     }
@@ -386,6 +417,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const closeContentModal = () => {
     setContentModalId(null);
     setContentModalData(null);
+    setContentModalImages([]);
   };
 
   // ── STEP 1: Generate strategy plan ──
@@ -581,7 +613,12 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
   // ═════════════════════════════════════════════
   // Content detail modal (rendered in all steps)
+  // Same capabilities as ContentEditor: image upload, publish, schedule, copy, PDF
   // ═════════════════════════════════════════════
+  const modalIsSocialPost =
+    contentModalData &&
+    (contentModalData.type === "post" || contentModalData.type === "");
+
   const contentModal = (
     <Dialog open={!!contentModalId} onOpenChange={(open) => !open && closeContentModal()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -638,7 +675,18 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               className="text-sm leading-relaxed"
             />
 
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Image upload — same as ContentEditor for social posts */}
+            {modalIsSocialPost && (
+              <ImageUploader
+                images={contentModalImages}
+                onChange={setContentModalImages}
+                contentId={contentModalId ?? undefined}
+                maxImages={4}
+                disabled={contentModalSaving}
+              />
+            )}
+
+            <div className="flex items-center gap-2">
               <Button onClick={saveContentModal} disabled={contentModalSaving} size="sm">
                 {contentModalSaving ? (
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -647,55 +695,72 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                 )}
                 Sauvegarder
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
+            </div>
+
+            {/* Publish, schedule, copy, PDF — same as ContentEditor */}
+            {contentModalId && (
+              <PostActionButtons
+                contentId={contentModalId}
+                contentPreview={contentModalData.content}
+                channel={contentModalData.channel}
+                onBeforePublish={async () => {
+                  const ok = await saveContentModal();
+                  return ok ? contentModalId : null;
+                }}
+                onPublished={() => {
+                  setContentModalData((prev) =>
+                    prev ? { ...prev, status: "published" } : prev,
+                  );
+                }}
+                onScheduled={async (date, time) => {
+                  const payload: Record<string, any> = {
+                    status: "scheduled",
+                    scheduledDate: date,
+                    content: contentModalData.content,
+                    title: contentModalData.title,
+                    meta: { scheduled_time: time },
+                  };
+                  // Include images in scheduled save
+                  if (contentModalImages.length > 0) {
+                    payload.meta.images = contentModalImages.map((img) => ({
+                      url: img.url,
+                      path: img.path,
+                      filename: img.filename,
+                      size: img.size,
+                      type: img.type,
+                    }));
+                  }
+                  await safeFetchJson(`/api/content/${contentModalId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                  });
+                  setContentModalData((prev) =>
+                    prev ? { ...prev, status: "scheduled" } : prev,
+                  );
+                  toast({ title: "Contenu programmé !" });
+                }}
+                onCopy={() => {
                   navigator.clipboard.writeText(contentModalData.content);
                   toast({ title: "Contenu copié !" });
                 }}
-              >
-                <Copy className="w-4 h-4 mr-1" />
-                Copier
-              </Button>
-            </div>
-
-            {contentModalId && (
-              <div className="border-t pt-4">
-                <PostActionButtons
-                  contentId={contentModalId}
-                  contentPreview={contentModalData.content}
-                  channel={contentModalData.channel}
-                  onBeforePublish={async () => {
-                    await saveContentModal();
-                    return contentModalId;
-                  }}
-                  onPublished={() => {
-                    setContentModalData((prev) =>
-                      prev ? { ...prev, status: "published" } : prev,
+                onDownloadPdf={() => {
+                  import("jspdf").then(({ jsPDF }) => {
+                    const doc = new jsPDF();
+                    doc.setFontSize(16);
+                    doc.text(contentModalData.title || "Sans titre", 20, 20);
+                    doc.setFontSize(11);
+                    const lines = doc.splitTextToSize(contentModalData.content || "", 170);
+                    doc.text(lines, 20, 35);
+                    doc.save(
+                      `${(contentModalData.title || "contenu").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
                     );
-                  }}
-                  onScheduled={async (date, time) => {
-                    await safeFetchJson(`/api/content/${contentModalId}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        status: "scheduled",
-                        scheduledDate: date,
-                        meta: { scheduled_time: time },
-                      }),
-                    });
-                    setContentModalData((prev) =>
-                      prev ? { ...prev, status: "scheduled" } : prev,
-                    );
-                    toast({ title: "Contenu programmé !" });
-                  }}
-                  onCopy={() => {
-                    navigator.clipboard.writeText(contentModalData.content);
-                    toast({ title: "Contenu copié !" });
-                  }}
-                />
-              </div>
+                  }).catch(() => {
+                    toast({ title: "Erreur PDF", variant: "destructive" });
+                  });
+                }}
+                busy={contentModalSaving}
+              />
             )}
           </div>
         ) : null}
