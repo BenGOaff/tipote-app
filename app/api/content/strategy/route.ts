@@ -252,6 +252,34 @@ function extractJsonFromText(text: string): string {
   return text;
 }
 
+/* ───────── Format plan as readable text ───────── */
+
+function formatPlanAsText(strategy: { title: string; days: any[] }): string {
+  const lines: string[] = [];
+  lines.push(strategy.title);
+  lines.push("");
+
+  const grouped = new Map<number, any[]>();
+  for (const d of strategy.days) {
+    const dayNum = d.day ?? 1;
+    if (!grouped.has(dayNum)) grouped.set(dayNum, []);
+    grouped.get(dayNum)!.push(d);
+  }
+
+  for (const [dayNum, posts] of grouped) {
+    lines.push(`Jour ${dayNum}`);
+    for (const p of posts) {
+      const plat = PLATFORM_LABELS[p.platform] || p.platform || "—";
+      lines.push(`  ${plat} (${p.contentType || "post"}) — ${p.theme || ""}`);
+      if (p.hook) lines.push(`  Accroche : ${p.hook}`);
+      if (p.cta) lines.push(`  CTA : ${p.cta}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
 /* ───────── Route ───────── */
 
 export async function POST(req: Request) {
@@ -448,8 +476,55 @@ export async function POST(req: Request) {
       days,
     };
 
-    // 9. Return the plan (no credit consumed here — credits per content in generate-all)
-    return NextResponse.json({ ok: true, strategy });
+    // 9. Save strategy plan as a content_item so it appears in "Mes Stratégies"
+    let strategyItemId: string | null = null;
+    try {
+      const planText = formatPlanAsText(strategy);
+      const metaObj = { strategy_plan: strategy };
+
+      // Try EN schema first (content_type column)
+      const { data: enRow, error: enErr } = await supabase
+        .from("content_item")
+        .insert({
+          user_id: userId,
+          content_type: "strategy",
+          title: strategy.title,
+          content: planText,
+          status: "draft",
+          meta: metaObj,
+          ...(projectId ? { project_id: projectId } : {}),
+        } as any)
+        .select("id")
+        .single();
+
+      if (!enErr && enRow?.id) {
+        strategyItemId = String(enRow.id);
+      } else {
+        // Fallback: FR schema (type column)
+        const { data: frRow } = await supabase
+          .from("content_item")
+          .insert({
+            user_id: userId,
+            type: "strategy",
+            titre: strategy.title,
+            contenu: planText,
+            statut: "draft",
+            meta: metaObj,
+            ...(projectId ? { project_id: projectId } : {}),
+          } as any)
+          .select("id")
+          .single();
+
+        if (frRow?.id) {
+          strategyItemId = String(frRow.id);
+        }
+      }
+    } catch {
+      // Non-blocking — plan is still returned even if DB save fails
+    }
+
+    // 10. Return the plan (no credit consumed here — credits per content piece)
+    return NextResponse.json({ ok: true, strategy, strategyItemId });
   } catch (e: any) {
     console.error("Content strategy error:", e);
     return NextResponse.json(

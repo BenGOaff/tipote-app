@@ -146,7 +146,11 @@ export function PostActionButtons({
     if (detectedPlatform && connected.includes(detectedPlatform)) {
       return [detectedPlatform];
     }
-    // Fallback: if no specific platform detected, show all connected
+    // If a specific platform is detected but not connected, don't show OTHER platforms
+    if (detectedPlatform) {
+      return [];
+    }
+    // Only show all connected when no specific platform detected (generic content)
     const socialPlatforms = ["linkedin", "facebook", "threads", "twitter", "instagram", "pinterest", "tiktok"];
     return connected.filter((p) => socialPlatforms.includes(p));
   }, [activeConnections, detectedPlatform]);
@@ -301,11 +305,23 @@ export function PostActionButtons({
         {/* Message si aucun réseau connecté */}
         {relevantPlatforms.length === 0 && (
           <p className="text-xs text-slate-500">
-            Connecte un réseau social dans les{" "}
-            <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
-              paramètres
-            </a>{" "}
-            pour publier ou programmer directement.
+            {detectedPlatform ? (
+              <>
+                Connecte {PLATFORM_LABELS[detectedPlatform] ?? detectedPlatform} dans les{" "}
+                <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
+                  paramètres
+                </a>{" "}
+                pour publier ou programmer.
+              </>
+            ) : (
+              <>
+                Connecte un réseau social dans les{" "}
+                <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
+                  paramètres
+                </a>{" "}
+                pour publier ou programmer directement.
+              </>
+            )}
           </p>
         )}
       </div>
