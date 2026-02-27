@@ -10,17 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle, Zap, User } from "lucide-react";
+import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle, Zap } from "lucide-react";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -83,8 +73,6 @@ type Props = {
   };
   /** If set, links this automation to the published Facebook post ID */
   automationId?: string;
-  /** Whether the content includes a video (affects TikTok interaction toggles) */
-  hasVideo?: boolean;
 };
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -99,26 +87,15 @@ export function PublishModal({
   onPublished,
   autoCommentConfig,
   automationId,
-  hasVideo,
 }: Props) {
   const [step, setStep] = React.useState<PublishStep>("confirm");
   const [result, setResult] = React.useState<PublishResult | null>(null);
   const [acProgress, setAcProgress] = React.useState<AutoCommentProgress>({
     before_done: 0, before_total: 0, after_done: 0, after_total: 0,
   });
-  const { connections, isConnected } = useSocialConnections();
+  const { isConnected } = useSocialConnections();
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const contentIdRef = React.useRef<string>(contentId);
-
-  // TikTok UX compliance state (Point 2-5)
-  const [ttPrivacy, setTtPrivacy] = React.useState<string>("");
-  const [ttAllowComment, setTtAllowComment] = React.useState(false);
-  const [ttAllowDuet, setTtAllowDuet] = React.useState(false);
-  const [ttAllowStitch, setTtAllowStitch] = React.useState(false);
-  const [ttBrandedToggle, setTtBrandedToggle] = React.useState(false);
-  const [ttYourBrand, setTtYourBrand] = React.useState(false);
-  const [ttBrandedContent, setTtBrandedContent] = React.useState(false);
-  const [ttConsent, setTtConsent] = React.useState(false);
 
   const label = PLATFORM_LABELS[platform] ?? platform;
   const color = PLATFORM_COLORS[platform] ?? "#6366F1";
@@ -126,12 +103,6 @@ export function PublishModal({
   const hasAutoComments = autoCommentConfig?.enabled ?? false;
   const hasBefore = hasAutoComments && (autoCommentConfig?.nbBefore ?? 0) > 0;
   const hasAfter = hasAutoComments && (autoCommentConfig?.nbAfter ?? 0) > 0;
-  const isTikTok = platform === "tiktok";
-
-  // Point 1: Creator info from social connection
-  const tiktokConnection = isTikTok
-    ? connections.find((c) => c.platform === "tiktok")
-    : null;
 
   // Cleanup polling on unmount
   React.useEffect(() => {
@@ -151,25 +122,8 @@ export function PublishModal({
         clearInterval(pollRef.current);
         pollRef.current = null;
       }
-      // Reset TikTok-specific state (no defaults per UX guidelines)
-      setTtPrivacy("");
-      setTtAllowComment(false);
-      setTtAllowDuet(false);
-      setTtAllowStitch(false);
-      setTtBrandedToggle(false);
-      setTtYourBrand(false);
-      setTtBrandedContent(false);
-      setTtConsent(false);
     }
   }, [open, connected, contentId]);
-
-  // Reset branded sub-checkboxes when master toggle is off
-  React.useEffect(() => {
-    if (!ttBrandedToggle) {
-      setTtYourBrand(false);
-      setTtBrandedContent(false);
-    }
-  }, [ttBrandedToggle]);
 
   /** Poll auto-comment status and call onStatusChange when status changes */
   const startPolling = React.useCallback((cId: string, expectedBefore: number, expectedAfter: number, onStatusChange: (status: string, progress: AutoCommentProgress) => void) => {
@@ -226,11 +180,11 @@ export function PublishModal({
   }, [automationId, platform]);
 
   /** Publish the post via /api/social/publish */
-  const doPublish = React.useCallback(async (idToPublish: string, extraBody?: Record<string, unknown>): Promise<PublishResult> => {
+  const doPublish = React.useCallback(async (idToPublish: string): Promise<PublishResult> => {
     const res = await fetch("/api/social/publish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentId: idToPublish, platform, ...extraBody }),
+      body: JSON.stringify({ contentId: idToPublish, platform }),
     });
 
     const json: PublishResult = await res.json().catch(() => ({
@@ -241,26 +195,9 @@ export function PublishModal({
     return json;
   }, [platform]);
 
-  /** Build TikTok settings payload from current state */
-  const buildTikTokPayload = (): Record<string, unknown> | undefined => {
-    if (!isTikTok) return undefined;
-    return {
-      tiktokSettings: {
-        privacyLevel: ttPrivacy,
-        disableComment: !ttAllowComment,
-        disableDuet: !ttAllowDuet,
-        disableStitch: !ttAllowStitch,
-        autoAddMusic: true,
-        brandContentToggle: ttBrandedToggle,
-        brandOrganicToggle: ttYourBrand && !ttBrandedContent,
-      },
-    };
-  };
-
   /** Handle the full publish flow */
   const handlePublish = async () => {
     let idToPublish = contentId;
-    const tiktokPayload = buildTikTokPayload();
 
     // Save content first if needed
     if (onBeforePublish) {
@@ -305,7 +242,7 @@ export function PublishModal({
       setStep("publishing");
       let publishResult: PublishResult = { ok: false };
       try {
-        publishResult = await doPublish(idToPublish, tiktokPayload);
+        publishResult = await doPublish(idToPublish);
         if (!publishResult.ok) {
           setStep("error");
           setResult({ ok: false, error: publishResult.error ?? "Erreur inconnue" });
@@ -329,7 +266,7 @@ export function PublishModal({
     setStep("publishing");
 
     try {
-      const publishResult = await doPublish(idToPublish, tiktokPayload);
+      const publishResult = await doPublish(idToPublish);
 
       if (!publishResult.ok) {
         setStep("error");
@@ -363,12 +300,9 @@ export function PublishModal({
       : contentPreview
     : null;
 
-  // TikTok: publish button disabled until privacy selected + consent given
-  const ttCanPublish = !isTikTok || (ttPrivacy !== "" && ttConsent);
-
   return (
     <Dialog open={open} onOpenChange={isBlocking ? undefined : onOpenChange}>
-      <DialogContent className={isTikTok && step === "confirm" ? "sm:max-w-lg" : "sm:max-w-md"}>
+      <DialogContent className="sm:max-w-md">
         {/* Not connected step */}
         {step === "not_connected" && (
           <>
@@ -400,8 +334,8 @@ export function PublishModal({
           </>
         )}
 
-        {/* Confirm step — Generic (non-TikTok) */}
-        {step === "confirm" && !isTikTok && (
+        {/* Confirm step */}
+        {step === "confirm" && (
           <>
             <DialogHeader>
               <DialogTitle>Publier sur {label}</DialogTitle>
@@ -441,202 +375,6 @@ export function PublishModal({
                 className="text-white hover:opacity-90"
               >
                 {hasAutoComments ? "Lancer" : `Publier sur ${label}`}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Confirm step — TikTok (UX Guidelines compliant) */}
-        {step === "confirm" && isTikTok && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Publier sur TikTok</DialogTitle>
-              <DialogDescription>
-                Configure les paramètres de ta publication TikTok.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              {/* Point 1: Creator Info Display */}
-              <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm">
-                <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground">Compte TikTok :</span>
-                <span className="font-medium">
-                  {tiktokConnection?.platform_username ?? "Connecté"}
-                </span>
-              </div>
-
-              {/* Point 5: Content Preview */}
-              {truncatedPreview && (
-                <div className="rounded-lg border bg-muted/50 p-3 text-sm text-muted-foreground max-h-24 overflow-y-auto whitespace-pre-wrap">
-                  {truncatedPreview}
-                </div>
-              )}
-
-              {/* Point 2: Privacy Level — NO default value, user MUST select */}
-              <div className="space-y-1.5">
-                <Label>Visibilité *</Label>
-                <Select value={ttPrivacy} onValueChange={setTtPrivacy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionne la visibilité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PUBLIC_TO_EVERYONE">Public</SelectItem>
-                    <SelectItem value="MUTUAL_FOLLOW_FRIENDS">Amis (abonnements mutuels)</SelectItem>
-                    <SelectItem value="FOLLOWER_OF_CREATOR">Abonnés</SelectItem>
-                    <SelectItem value="SELF_ONLY">Moi uniquement</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Point 2: Interaction Toggles — NONE checked by default */}
-              <div className="space-y-2">
-                <Label>Interactions</Label>
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Autoriser les commentaires</span>
-                    <Switch checked={ttAllowComment} onCheckedChange={setTtAllowComment} />
-                  </div>
-                  {/* Duet & Stitch only for video (hidden for photo-only) */}
-                  {hasVideo !== false && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Autoriser les duos</span>
-                        <Switch checked={ttAllowDuet} onCheckedChange={setTtAllowDuet} />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Autoriser le Stitch</span>
-                        <Switch checked={ttAllowStitch} onCheckedChange={setTtAllowStitch} />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Point 2: Music Declaration */}
-              <div className="rounded-lg border bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-200">
-                Ton contenu peut inclure des sons TikTok. En publiant, tu acceptes la{" "}
-                <a
-                  href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline font-medium"
-                >
-                  Confirmation d&apos;utilisation musicale
-                </a>
-                {" "}de TikTok.
-              </div>
-
-              {/* Point 3: Commercial Content Disclosure */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">Contenu promotionnel</Label>
-                  <Switch checked={ttBrandedToggle} onCheckedChange={setTtBrandedToggle} />
-                </div>
-
-                {ttBrandedToggle && (
-                  <div className="pl-1 space-y-2.5 pt-1">
-                    <div className="flex items-start gap-2">
-                      <Checkbox
-                        id="tt-your-brand"
-                        checked={ttYourBrand}
-                        onCheckedChange={(v) => setTtYourBrand(v === true)}
-                        className="mt-0.5"
-                      />
-                      <label htmlFor="tt-your-brand" className="text-sm cursor-pointer leading-tight">
-                        Ta marque
-                        <span className="block text-xs text-muted-foreground">
-                          Ta publication sera étiquetée « Contenu promotionnel »
-                        </span>
-                      </label>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Checkbox
-                        id="tt-branded-content"
-                        checked={ttBrandedContent}
-                        onCheckedChange={(v) => setTtBrandedContent(v === true)}
-                        className="mt-0.5"
-                      />
-                      <label htmlFor="tt-branded-content" className="text-sm cursor-pointer leading-tight">
-                        Contenu de marque (partenariat rémunéré)
-                        <span className="block text-xs text-muted-foreground">
-                          Ta publication sera étiquetée « Partenariat rémunéré »
-                        </span>
-                      </label>
-                    </div>
-
-                    {/* Point 4: Compliance Declarations */}
-                    <div className="rounded-lg border bg-muted/50 p-2.5 text-xs text-muted-foreground space-y-1">
-                      {ttBrandedContent && (
-                        <p>
-                          En publiant, tu acceptes la{" "}
-                          <a
-                            href="https://www.tiktok.com/legal/page/global/bc-policy/en"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline"
-                          >
-                            Politique de contenu de marque
-                          </a>{" "}
-                          de TikTok.
-                        </p>
-                      )}
-                      <p>
-                        En publiant, tu acceptes la{" "}
-                        <a
-                          href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline"
-                        >
-                          Confirmation d&apos;utilisation musicale
-                        </a>{" "}
-                        de TikTok.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Point 5: Express Consent + Processing Notice */}
-              <div className="flex items-start gap-2 pt-1 border-t">
-                <Checkbox
-                  id="tt-consent"
-                  checked={ttConsent}
-                  onCheckedChange={(v) => setTtConsent(v === true)}
-                  className="mt-0.5"
-                />
-                <label htmlFor="tt-consent" className="text-xs cursor-pointer leading-relaxed">
-                  Je confirme vouloir publier ce contenu sur mon compte TikTok.
-                  Le traitement par TikTok peut prendre quelques minutes.
-                </label>
-              </div>
-
-              {/* Auto-comments info (if enabled) */}
-              {hasAutoComments && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm">
-                  <div className="flex items-center gap-2 text-primary font-medium mb-1">
-                    <MessageCircle className="w-4 h-4" />
-                    Auto-commentaires activés
-                  </div>
-                  <div className="text-xs text-primary/80 space-y-0.5">
-                    {hasBefore && <p>{autoCommentConfig!.nbBefore} commentaire{autoCommentConfig!.nbBefore > 1 ? "s" : ""} avant publication</p>}
-                    {hasAfter && <p>{autoCommentConfig!.nbAfter} commentaire{autoCommentConfig!.nbAfter > 1 ? "s" : ""} après publication</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={handleClose}>
-                Annuler
-              </Button>
-              <Button
-                onClick={handlePublish}
-                disabled={!ttCanPublish}
-                className="bg-black text-white hover:bg-black/90"
-              >
-                {hasAutoComments ? "Lancer" : "Publier sur TikTok"}
               </Button>
             </DialogFooter>
           </>
@@ -691,9 +429,7 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle>Publication en cours...</DialogTitle>
               <DialogDescription>
-                {isTikTok
-                  ? "Envoi de ton post sur TikTok. Le traitement peut prendre quelques minutes. Ne ferme pas cette fenêtre."
-                  : `Envoi de ton post sur ${label}. Ne ferme pas cette fenêtre.`}
+                Envoi de ton post sur {label}. Ne ferme pas cette fenêtre.
               </DialogDescription>
             </DialogHeader>
 

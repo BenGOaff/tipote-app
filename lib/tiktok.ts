@@ -19,12 +19,11 @@ const TIKTOK_COMMENT_REPLY_URL = "https://open.tiktokapis.com/v2/comment/reply/"
 const TIKTOK_VIDEO_LIST_URL = "https://open.tiktokapis.com/v2/video/list/";
 
 // Scopes nécessaires :
-// user.info.basic : profil de base (display_name, avatar_url)
+// user.info.basic : profil de base
 // video.publish : publier des vidéos
 // video.upload : uploader des vidéos
 // video.list : lister les vidéos existantes (nécessaire pour le post picker)
-// NOTE : user.info.profile (username/handle) nécessite une approbation séparée sur le TikTok Developer Portal.
-//        Ne pas l'ajouter ici tant que ce scope n'est pas approuvé pour l'app.
+// comment.list.manage : lire et répondre aux commentaires (nécessaire pour auto-reply)
 const SCOPES = ["user.info.basic", "video.publish", "video.upload", "video.list"];
 
 function getClientKey(): string {
@@ -192,20 +191,6 @@ export type TikTokPostResult = {
 };
 
 /**
- * Options configurables par l'utilisateur pour la publication TikTok.
- * Conformité UX Guidelines : l'utilisateur doit pouvoir choisir ces paramètres.
- */
-export type TikTokPublishOptions = {
-  privacyLevel: string;
-  disableComment?: boolean;
-  disableDuet?: boolean;
-  disableStitch?: boolean;
-  autoAddMusic?: boolean;
-  brandContentToggle?: boolean;
-  brandOrganicToggle?: boolean;
-};
-
-/**
  * Publie une ou plusieurs photos sur TikTok via le Content Posting API.
  * Les images doivent etre des URLs publiques.
  * TikTok traite la publication de maniere asynchrone — le publishId
@@ -217,27 +202,20 @@ export async function publishPhoto(
   accessToken: string,
   imageUrls: string[],
   caption: string,
-  options?: TikTokPublishOptions,
+  privacyLevel: string = "SELF_ONLY",
 ): Promise<TikTokPostResult> {
   if (imageUrls.length === 0) {
     return { ok: false, error: "Au moins une image est requise" };
   }
 
-  const postInfo: Record<string, unknown> = {
-    title: caption.slice(0, 90), // Photo title: max 90 UTF-16 runes
-    description: caption.slice(0, 4000), // Photo description: max 4000 UTF-16 runes
-    privacy_level: options?.privacyLevel ?? "SELF_ONLY",
-    disable_comment: options?.disableComment ?? false,
-    auto_add_music: options?.autoAddMusic ?? true,
-  };
-
-  if (options?.brandContentToggle) {
-    postInfo.brand_content_toggle = true;
-    postInfo.brand_organic_toggle = options.brandOrganicToggle ?? false;
-  }
-
   const body = {
-    post_info: postInfo,
+    post_info: {
+      title: caption.slice(0, 90), // Photo title: max 90 UTF-16 runes
+      description: caption.slice(0, 4000), // Photo description: max 4000 UTF-16 runes
+      privacy_level: privacyLevel,
+      disable_comment: false,
+      auto_add_music: true,
+    },
     source_info: {
       source: "PULL_FROM_URL",
       photo_cover_index: 0,
@@ -285,23 +263,14 @@ export async function publishVideo(
   accessToken: string,
   videoUrl: string,
   caption: string,
-  options?: TikTokPublishOptions,
+  privacyLevel: string = "SELF_ONLY",
 ): Promise<TikTokPostResult> {
-  const postInfo: Record<string, unknown> = {
-    title: caption.slice(0, 2200),
-    privacy_level: options?.privacyLevel ?? "SELF_ONLY",
-    disable_comment: options?.disableComment ?? false,
-    disable_duet: options?.disableDuet ?? true,
-    disable_stitch: options?.disableStitch ?? true,
-  };
-
-  if (options?.brandContentToggle) {
-    postInfo.brand_content_toggle = true;
-    postInfo.brand_organic_toggle = options.brandOrganicToggle ?? false;
-  }
-
   const body = {
-    post_info: postInfo,
+    post_info: {
+      title: caption.slice(0, 2200),
+      privacy_level: privacyLevel,
+      disable_comment: false,
+    },
     source_info: {
       source: "PULL_FROM_URL",
       video_url: videoUrl,

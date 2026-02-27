@@ -247,8 +247,6 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
                                 status={item.status}
                                 scheduledDate={item.scheduled_date}
                                 contentPreview={item.content ?? null}
-                                channel={item.channel}
-                                type={item.type}
                               />
                             </div>
                           </div>

@@ -75,80 +75,54 @@ export function VideoUploader({
         return null;
       }
 
-      // Step 1: Get a signed upload URL from our API (lightweight JSON request)
-      setUploadProgress(5);
-      let signedData: { signedUrl: string; token: string; path: string; publicUrl: string; filename: string };
-      try {
-        const signedRes = await fetch("/api/upload/video/signed-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-            contentId: contentId || undefined,
-          }),
+      // Simulate progress for UX (actual upload is single request)
+      setUploadProgress(0);
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + Math.random() * 15;
         });
-        const signedJson = await signedRes.json().catch(() => ({ ok: false, error: "Erreur réseau" }));
-        if (!signedRes.ok || !signedJson.ok) {
+      }, 500);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      if (contentId) formData.append("contentId", contentId);
+
+      try {
+        const res = await fetch("/api/upload/video", {
+          method: "POST",
+          body: formData,
+        });
+
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+
+        const json = await res.json().catch(() => ({ ok: false, error: "Erreur réseau" }));
+
+        if (!res.ok || !json.ok) {
           toast({
             title: "Erreur d'upload",
-            description: signedJson.error ?? "Impossible de préparer l'upload.",
+            description: json.error ?? "Impossible d'uploader la vidéo.",
             variant: "destructive",
           });
           return null;
         }
-        signedData = signedJson;
-      } catch {
-        toast({
-          title: "Erreur réseau",
-          description: "Impossible de préparer l'upload vidéo.",
-          variant: "destructive",
-        });
-        return null;
-      }
-
-      // Step 2: Upload directly to Supabase Storage using XMLHttpRequest for real progress
-      setUploadProgress(10);
-      try {
-        const uploaded = await new Promise<boolean>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PUT", signedData.signedUrl, true);
-          xhr.setRequestHeader("Content-Type", file.type);
-
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              // Scale progress from 10% to 100%
-              const pct = 10 + (e.loaded / e.total) * 90;
-              setUploadProgress(pct);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              setUploadProgress(100);
-              resolve(true);
-            } else {
-              reject(new Error(`Upload failed: ${xhr.status}`));
-            }
-          };
-
-          xhr.onerror = () => reject(new Error("Erreur réseau durant l'upload"));
-          xhr.send(file);
-        });
-
-        if (!uploaded) return null;
 
         return {
-          url: signedData.publicUrl,
-          path: signedData.path,
-          filename: signedData.filename,
-          size: file.size,
-          type: file.type,
+          url: json.url,
+          path: json.path,
+          filename: json.filename,
+          size: json.size,
+          type: json.type,
         };
-      } catch (err) {
+      } catch {
+        clearInterval(progressInterval);
         toast({
-          title: "Erreur d'upload",
-          description: err instanceof Error ? err.message : "Upload échoué.",
+          title: "Erreur réseau",
+          description: "Impossible d'uploader la vidéo. Vérifie ta connexion.",
           variant: "destructive",
         });
         return null;

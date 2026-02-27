@@ -45,8 +45,6 @@ type Props = {
   onCopy?: () => void;
   /** Callback pour télécharger en PDF */
   onDownloadPdf?: () => void;
-  /** Whether the content includes a video (affects TikTok interaction toggles) */
-  hasVideo?: boolean;
   /** L'action est en cours */
   busy?: boolean;
 };
@@ -130,7 +128,6 @@ export function PostActionButtons({
   onDelete,
   onCopy,
   onDownloadPdf,
-  hasVideo,
   busy = false,
 }: Props) {
   const [publishModalOpen, setPublishModalOpen] = React.useState(false);
@@ -200,7 +197,6 @@ export function PostActionButtons({
         contentPreview={contentPreview}
         onBeforePublish={onBeforePublish}
         onPublished={onPublished}
-        hasVideo={hasVideo}
       />
 
       <ScheduleModal

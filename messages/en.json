@@ -1252,20 +1252,5 @@
       "tableNotReady": "The Supabase table doesn't exist yet. Follow the setup guide above.",
       "saveFailed": "Failed to save"
     }
-  },
-  "autoCommentPanel": {
-    "title": "Auto-comments",
-    "descriptionEnabled": "Automatically comment on similar posts to boost your visibility",
-    "descriptionLocked": "Upgrade to Pro or Elite to unlock this feature",
-    "beforeLabel": "Comments before publication",
-    "beforeTooltip": "Tipote will comment on similar posts 2-15 min before your post goes live to generate upstream visibility.",
-    "afterLabel": "Comments after publication",
-    "afterTooltip": "Tipote will comment on similar posts 2-15 min after your post to extend engagement.",
-    "creditPerComment": "0.25 credit per comment",
-    "upsellTitle": "Boost your engagement with auto-comments",
-    "upsellBody": "Tipote automatically comments on posts similar to yours to increase your visibility. Available with Pro (€49/month) and Elite (€99/month) plans.",
-    "unsupportedLinkedin": "LinkedIn requires partner approval (MDP) — auto-comments are not available at this time.",
-    "unsupportedGeneric": "This platform does not support auto-comments at this time.",
-    "policyWarning": "Auto-comments on Instagram use the official API. Comments are posted on public posts related to your niche to increase your visibility."
   }
 }

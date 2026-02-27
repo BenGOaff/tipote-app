@@ -30,34 +30,7 @@ type Props = {
   status?: string | null;
   scheduledDate?: string | null; // YYYY-MM-DD
   contentPreview?: string | null;
-  /** Target platform for this content (e.g. "linkedin", "tiktok") */
-  channel?: string | null;
-  /** Content type (e.g. "post", "email", "article") */
-  type?: string | null;
 };
-
-const SOCIAL_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "instagram", "pinterest", "tiktok"];
-
-/** Detect the target platform from the channel field */
-function detectPlatform(channel?: string | null): string | null {
-  if (!channel) return null;
-  const c = channel.toLowerCase().trim();
-  if (c.includes("linkedin")) return "linkedin";
-  if (c.includes("facebook")) return "facebook";
-  if (c.includes("thread")) return "threads";
-  if (c.includes("twitter") || c === "x") return "twitter";
-  if (c.includes("instagram")) return "instagram";
-  if (c.includes("pinterest")) return "pinterest";
-  if (c.includes("tiktok")) return "tiktok";
-  return null;
-}
-
-/** Check if the content type is a social post */
-function isSocialType(type?: string | null): boolean {
-  const t = (type ?? "").toLowerCase().trim();
-  // Only "post" or empty type is a social post
-  return t === "post" || t === "";
-}
 
 type ApiResponse = { ok: true; id?: string | null } | { ok: false; error?: string; code?: string };
 
@@ -103,7 +76,7 @@ const PLATFORM_CONFIG: Record<string, { label: string; color: string; icon: Reac
   },
 };
 
-export function ContentItemActions({ id, title, status, scheduledDate, contentPreview, channel, type }: Props) {
+export function ContentItemActions({ id, title, status, scheduledDate, contentPreview }: Props) {
   const router = useRouter();
   const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
 
@@ -120,24 +93,6 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
   const normalizedStatus = (status ?? "").toLowerCase().trim();
   const isPlanned = normalizedStatus === "scheduled" || normalizedStatus === "planned";
   const isPublished = normalizedStatus === "published";
-
-  // Filter: only show publish buttons for social post types
-  const showPublish = isSocialType(type);
-  const detectedPlatform = detectPlatform(channel);
-
-  // Filter platforms: if a specific channel is set, only show that platform
-  const publishablePlatforms = React.useMemo(() => {
-    if (!showPublish) return [];
-    const connected = activeConnections.map((c) => c.platform);
-    if (detectedPlatform && connected.includes(detectedPlatform)) {
-      return [detectedPlatform];
-    }
-    if (detectedPlatform) {
-      return []; // specific platform but not connected
-    }
-    // Generic content: show all connected social platforms
-    return connected.filter((p) => SOCIAL_PLATFORMS.includes(p));
-  }, [activeConnections, detectedPlatform, showPublish]);
 
   React.useEffect(() => {
     if (planOpen) setPlanDate(scheduledDate ?? "");
@@ -363,18 +318,18 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
               </Link>
             </DropdownMenuItem>
 
-            {/* Publier sur les reseaux connectes (filtré par channel/type) */}
-            {!isPublished && publishablePlatforms.length > 0 && (
+            {/* Publier sur les reseaux connectes */}
+            {!isPublished && activeConnections.length > 0 && (
               <>
-                {publishablePlatforms.map((platformKey) => {
-                  const config = PLATFORM_CONFIG[platformKey];
+                {activeConnections.map((conn) => {
+                  const config = PLATFORM_CONFIG[conn.platform];
                   if (!config) return null;
                   return (
                     <DropdownMenuItem
-                      key={platformKey}
+                      key={conn.platform}
                       onSelect={(e) => {
                         e.preventDefault();
-                        openPublishModal(platformKey);
+                        openPublishModal(conn.platform);
                       }}
                       className="flex items-center gap-2"
                       style={{ color: config.color }}

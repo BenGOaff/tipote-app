@@ -18,17 +18,17 @@ const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
 // Facebook Pages scopes (OAuth Facebook Login – config "Tipote")
-// NOTE: instagram_manage_hashtags et instagram_manage_comments ont été retirés.
-// Ces anciennes permissions (système "Facebook Login") créaient une dépendance
-// sur instagram_basic dans le dashboard Meta, bloquant l'App Review.
-// Toutes les fonctionnalités Instagram (comments, publish, DM) passent désormais
-// par Instagram Professional Login avec les scopes instagram_business_*.
+// instagram_manage_hashtags : required for hashtag search (GET /ig_hashtag_search + recent_media)
+// instagram_manage_comments : required for commenting on public media (POST /{media-id}/comments)
+// Both require Meta Business Verification + App Review if not already approved.
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
   "pages_messaging",
   "pages_manage_metadata", // nécessaire pour abonner la page aux webhooks (feed/comments)
+  "instagram_manage_hashtags",
+  "instagram_manage_comments",
 ];
 
 

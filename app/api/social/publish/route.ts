@@ -13,7 +13,7 @@ import { publishPost, uploadImageToLinkedIn } from "@/lib/linkedin";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishVideoToFacebookPage, publishToThreads, publishToInstagram, publishVideoToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
-import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo, type TikTokPublishOptions } from "@/lib/tiktok";
+import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo } from "@/lib/tiktok";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +86,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const contentId = body?.contentId as string | undefined;
   const platform = (body?.platform as string | undefined) ?? "linkedin";
-  const tiktokSettings = body?.tiktokSettings as TikTokPublishOptions | undefined;
 
   if (!contentId) {
     return NextResponse.json({ error: "contentId manquant" }, { status: 400 });
@@ -432,11 +431,6 @@ export async function POST(req: NextRequest) {
         n8nPayload.image_urn = linkedInImageUrn;
       }
 
-      // Ajouter les settings TikTok pour le workflow n8n
-      if (platform === "tiktok" && tiktokSettings) {
-        n8nPayload.tiktok_settings = tiktokSettings;
-      }
-
       // Ajouter la vidéo pour les plateformes qui la supportent (FB, Instagram, TikTok)
       const videoUrl = contentItem.meta?.video_url;
       if (videoUrl) {
@@ -587,16 +581,16 @@ export async function POST(req: NextRequest) {
     );
     result = { ...pinResult, postId: pinResult.pinId, postUrn: undefined };
   } else if (platform === "tiktok") {
-    // TikTok : publier une photo ou une video (avec options UX configurables)
+    // TikTok : publier une photo ou une video
     const videoUrl = contentItem.meta?.video_url;
     if (videoUrl) {
-      const ttResult = await publishTikTokVideo(accessToken, videoUrl, contentItem.content, tiktokSettings);
+      const ttResult = await publishTikTokVideo(accessToken, videoUrl, contentItem.content);
       result = { ok: ttResult.ok, postId: ttResult.publishId, error: ttResult.error, statusCode: ttResult.statusCode };
     } else if (directImageUrl) {
       const imageUrls = Array.isArray(contentItem.meta?.images)
         ? contentItem.meta.images.map((img: any) => typeof img === "string" ? img : img?.url).filter(Boolean)
         : [directImageUrl];
-      const ttResult = await publishTikTokPhoto(accessToken, imageUrls, contentItem.content, tiktokSettings);
+      const ttResult = await publishTikTokPhoto(accessToken, imageUrls, contentItem.content);
       result = { ok: ttResult.ok, postId: ttResult.publishId, error: ttResult.error, statusCode: ttResult.statusCode };
     } else {
       return NextResponse.json(

@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
-import { VideoUploader, type UploadedVideo } from "@/components/content/VideoUploader";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
 import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 
@@ -148,36 +147,10 @@ export function ContentEditor({ initialItem }: Props) {
     return [];
   });
 
-  // -----------------------------
-  // Video support
-  // -----------------------------
-  const [uploadedVideo, setUploadedVideo] = useState<UploadedVideo | null>(() => {
-    let meta = (initialItem as any)?.meta;
-    if (typeof meta === "string") {
-      try { meta = JSON.parse(meta); } catch { meta = null; }
-    }
-    if (meta?.video_url && meta?.video_path) {
-      return {
-        url: meta.video_url,
-        path: meta.video_path,
-        filename: meta.video_filename ?? "video",
-        size: meta.video_size ?? 0,
-        type: meta.video_type ?? "video/mp4",
-      };
-    }
-    return null;
-  });
-
   const isSocialPost = useMemo(() => {
     const t = (type ?? "").toLowerCase();
     return t === "post" || t === "";
   }, [type]);
-
-  // Platforms that support video upload
-  const supportsVideo = useMemo(() => {
-    const c = (channel ?? "").toLowerCase();
-    return c.includes("tiktok") || c.includes("instagram") || c.includes("facebook");
-  }, [channel]);
 
   // -----------------------------
   // Funnel (pages HTML) support
@@ -436,18 +409,6 @@ export function ContentEditor({ initialItem }: Props) {
         };
       }
 
-      // ✅ Video: stocker la vidéo uploadée dans meta
-      if (uploadedVideo) {
-        payload.meta = {
-          ...(payload.meta || {}),
-          video_url: uploadedVideo.url,
-          video_path: uploadedVideo.path,
-          video_filename: uploadedVideo.filename,
-          video_size: uploadedVideo.size,
-          video_type: uploadedVideo.type,
-        };
-      }
-
       // ✅ Pinterest: stocker board_id et lien dans meta
       if (channel === "pinterest") {
         payload.meta = {
@@ -630,16 +591,6 @@ export function ContentEditor({ initialItem }: Props) {
                   size: img.size,
                   type: img.type,
                 })),
-              }
-            : {}),
-          // Video: inclure la vidéo si présente
-          ...(uploadedVideo
-            ? {
-                video_url: uploadedVideo.url,
-                video_path: uploadedVideo.path,
-                video_filename: uploadedVideo.filename,
-                video_size: uploadedVideo.size,
-                video_type: uploadedVideo.type,
               }
             : {}),
           // Pinterest: inclure board_id et lien si disponibles
@@ -1040,18 +991,6 @@ export function ContentEditor({ initialItem }: Props) {
           )}
         </Card>
 
-        {/* Video Upload (TikTok, Instagram, Facebook) */}
-        {isSocialPost && supportsVideo && (
-          <Card className="p-4">
-            <VideoUploader
-              video={uploadedVideo}
-              onChange={setUploadedVideo}
-              contentId={baseline.id}
-              disabled={saving}
-            />
-          </Card>
-        )}
-
         {/* Image Upload (pour les posts réseaux sociaux) */}
         {isSocialPost && (
           <Card className="p-4 space-y-2">
@@ -1059,7 +998,7 @@ export function ContentEditor({ initialItem }: Props) {
               images={images}
               onChange={setImages}
               contentId={baseline.id}
-              maxImages={isPinterest ? 1 : (channel ?? "").toLowerCase().includes("tiktok") ? 35 : 4}
+              maxImages={isPinterest ? 1 : 4}
               disabled={saving}
             />
             {isPinterest && (
@@ -1102,7 +1041,6 @@ export function ContentEditor({ initialItem }: Props) {
               onDelete={remove}
               onCopy={copy}
               onDownloadPdf={handleDownloadPdf}
-              hasVideo={!!uploadedVideo}
               busy={saving || deleting}
             />
           </Card>
