@@ -334,6 +334,25 @@ export default async function StrategyPage() {
   // Offres (depuis plan_json)
   const offerSets = (((planJson as AnyRecord).offer_pyramids ?? []) as AnyRecord[]) || [];
 
+  // ✅ FIX: Si pas d'offer_pyramids (cas utilisateur avec offres existantes),
+  // on utilise les offres du profil business comme source pour l'affichage
+  const userOffers = Array.isArray(profileRow?.offers) ? profileRow.offers as AnyRecord[] : [];
+  if (offerSets.length === 0 && userOffers.length > 0) {
+    // Construire un set d'offres à partir des offres utilisateur pour l'affichage
+    const userOfferSet: AnyRecord = {
+      name: "Mes offres",
+      offers: userOffers.map((o: AnyRecord) => ({
+        title: asString(o.name),
+        format: asString(o.format || o.type),
+        price: asString(o.price),
+        promise: asString(o.promise),
+        description: asString(o.description),
+        target: asString(o.target),
+      })),
+    };
+    offerSets.push(userOfferSet);
+  }
+
   const hasExplicitSelection =
     typeof (planJson as AnyRecord).selected_offer_pyramid_index === "number" && !!(planJson as AnyRecord).selected_offer_pyramid;
 
@@ -357,9 +376,10 @@ export default async function StrategyPage() {
   // On filtre STRICTEMENT par user_id -> aucune fuite de données.
   const tasksRes = await supabaseAdmin
     .from("project_tasks")
-    .select("id, title, status, priority, source, created_at, updated_at")
+    .select("id, title, status, priority, source, position, created_at, updated_at")
     .eq("user_id", user.id)
     .is("deleted_at", null)
+    .order("position", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(500);
 

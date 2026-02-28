@@ -1,0 +1,49 @@
+{
+  "string": {
+    "hero_label": ".hero-label",
+    "hero_subtitle": ".hero-subtitle",
+    "hero_live_badge": ".hero-live-badge",
+    "hero_title": ".hero-title",
+    "hero_description": ".hero-description",
+    "cta_text": ".cta-button",
+    "for_me_question": ".section-label",
+    "for_me_answer": ".section-answer",
+    "transformation_question": ".proof-text",
+    "transformation_headline": ".proof-title",
+    "trainer_name": ".trainer-content h3",
+    "trainer_proof": ".trainer-label",
+    "counter_label": ".counter-label",
+    "counter_number": ".counter-number",
+    "before_after_intro": ".before-after-title",
+    "before_after_subtitle": ".before-after-subtitle",
+    "bonus_title": ".bonus-title",
+    "bonus_subtitle": ".bonus-subtitle",
+    "bonus_total_value": ".bonus-price",
+    "bonus_offer_today": ".bonus-offer",
+    "challenge_name": ".footer-title"
+  },
+  "arrays": {
+    "floating_labels": {
+      "itemSelector": ".hero-labels"
+    },
+    "benefits": {
+      "itemSelector": ".benefits-list li"
+    },
+    "daily_program": {
+      "itemSelector": ".day-card",
+      "fields": {
+        "day_label": ".day-label",
+        "day_title": ".day-title"
+      }
+    },
+    "before_points": {
+      "itemSelector": ".comparison-list.negative li"
+    },
+    "after_points": {
+      "itemSelector": ".comparison-list.positive li"
+    },
+    "bonuses": {
+      "itemSelector": ".bonus-list li"
+    }
+  }
+}

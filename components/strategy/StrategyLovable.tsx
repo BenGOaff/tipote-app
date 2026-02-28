@@ -343,10 +343,21 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
           if (oldIndex < 0 || newIndex < 0) return prevPhases;
 
+          const reorderedTasks = arrayMove(phase.tasks, oldIndex, newIndex);
           newPhases[phaseIndex] = {
             ...phase,
-            tasks: arrayMove(phase.tasks, oldIndex, newIndex),
+            tasks: reorderedTasks,
           };
+
+          // Persist new order to database
+          const orderedIds = reorderedTasks.map((t) => t.id);
+          fetch("/api/tasks/reorder", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderedIds }),
+          }).catch(() => {
+            // Non-blocking
+          });
 
           return newPhases;
         });

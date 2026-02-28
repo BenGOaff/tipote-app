@@ -75,6 +75,8 @@ export async function GET() {
         persona_detailed_markdown: pj.persona_detailed_markdown ?? null,
         competitor_insights_markdown: pj.competitor_insights_markdown ?? null,
         narrative_synthesis_markdown: pj.narrative_synthesis_markdown ?? null,
+        // Stale enrichment flag (set when summary was modified after last enrichment)
+        persona_summary_modified: pj.persona_summary_modified === true,
       },
     }, { status: 200 });
   } catch (e) {
@@ -128,11 +130,28 @@ export async function PATCH(request: NextRequest) {
 
     const currentPj = ((currentRows?.[0]?.persona_json ?? {}) as AnyRecord);
 
+    // Check if core persona data has changed (to decide if enrichment is stale)
+    const prevTitle = cleanString(currentPj.title ?? currentPj.name, 240);
+    const prevPains = Array.isArray(currentPj.pains) ? currentPj.pains : [];
+    const prevDesires = Array.isArray(currentPj.desires) ? currentPj.desires : [];
+    const coreChanged =
+      prevTitle !== title ||
+      JSON.stringify(prevPains) !== JSON.stringify(pains) ||
+      JSON.stringify(prevDesires) !== JSON.stringify(desires);
+
+    // If core persona changed, mark enriched markdown as stale
+    // so the user sees a prompt to re-enrich
+    const enrichmentUpdates: AnyRecord = {};
+    if (coreChanged && currentPj.persona_detailed_markdown) {
+      enrichmentUpdates.persona_summary_modified = true;
+      enrichmentUpdates.persona_summary_modified_at = now;
+    }
+
     const dataFields: AnyRecord = {
       name: title,
       pains: JSON.stringify(pains),
       desires: JSON.stringify(desires),
-      persona_json: { ...currentPj, title, pains, desires, channels },
+      persona_json: { ...currentPj, title, pains, desires, channels, ...enrichmentUpdates },
       updated_at: now,
     };
 

@@ -1,0 +1,39 @@
+{
+  "string": {
+    "hero_title": ".hero-title",
+    "hero_subtitle": ".hero-subtitle",
+    "hero_date": ".hero-date",
+    "hero_description": ".hero-description",
+    "cta_button_text": ".cta-button",
+    "benefits_title": ".section-title",
+    "benefits_intro": ".benefits-intro",
+    "target_intro": ".target-title",
+    "target_conclusion": ".target-conclusion",
+    "program_intro": ".program-intro h2",
+    "about_name": ".about-content h2",
+    "about_story": ".about-content p",
+    "quote_mission": ".quote-text",
+    "coach_title": ".quote-logo span"
+  },
+  "arrays": {
+    "target_profiles": {
+      "itemSelector": ".target-card",
+      "fields": {
+        "text": ".target-card-text"
+      }
+    },
+    "program_items": {
+      "itemSelector": ".program-item",
+      "fields": {
+        "item_title": ".program-item-title",
+        "item_detail": ".program-item-text"
+      }
+    },
+    "schedule_days": {
+      "itemSelector": ".day-card",
+      "fields": {
+        "day_title": "h3"
+      }
+    }
+  }
+}

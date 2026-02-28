@@ -109,7 +109,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const admin = supabaseAdmin;
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);

@@ -98,6 +98,8 @@ type QuizData = {
   cta_url: string | null;
   privacy_url: string | null;
   consent_text: string | null;
+  capture_heading: string | null;
+  capture_subtitle: string | null;
   virality_enabled: boolean;
   bonus_description: string | null;
   share_message: string | null;
@@ -148,6 +150,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [consentText, setConsentText] = useState("");
+  const [captureHeading, setCaptureHeading] = useState("");
+  const [captureSubtitle, setCaptureSubtitle] = useState("");
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
@@ -186,6 +190,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setCtaText(q.cta_text ?? "");
         setCtaUrl(q.cta_url ?? "");
         setConsentText(q.consent_text ?? "");
+        setCaptureHeading(q.capture_heading ?? "");
+        setCaptureSubtitle(q.capture_subtitle ?? "");
         setViralityEnabled(q.virality_enabled);
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
@@ -216,6 +222,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           cta_text: ctaText,
           cta_url: ctaUrl,
           consent_text: consentText,
+          capture_heading: captureHeading || null,
+          capture_subtitle: captureSubtitle || null,
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
@@ -252,6 +260,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               cta_text: ctaText,
               cta_url: ctaUrl,
               consent_text: consentText,
+              capture_heading: captureHeading || null,
+              capture_subtitle: captureSubtitle || null,
               virality_enabled: viralityEnabled,
               bonus_description: bonusDescription,
               share_message: shareMessage,
@@ -895,6 +905,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         rows={2}
                       />
                     </div>
+                    <div className="p-3 rounded-lg border space-y-3">
+                      <p className="font-medium text-sm">Page de capture email</p>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Titre de la page de capture</Label>
+                        <Input
+                          value={captureHeading}
+                          onChange={(e) => setCaptureHeading(e.target.value)}
+                          placeholder="Ton résultat est prêt !"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Sous-titre / texte d&apos;accroche</Label>
+                        <Textarea
+                          value={captureSubtitle}
+                          onChange={(e) => setCaptureSubtitle(e.target.value)}
+                          rows={3}
+                          placeholder="Entre ton email pour découvrir ton profil."
+                        />
+                        <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label>Image de partage (og:image)</Label>
                       <p className="text-xs text-muted-foreground">
@@ -1116,6 +1147,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             cta_url: ctaUrl || null,
             privacy_url: quiz.privacy_url,
             consent_text: consentText || null,
+            capture_heading: captureHeading || null,
+            capture_subtitle: captureSubtitle || null,
             virality_enabled: viralityEnabled,
             bonus_description: bonusDescription || null,
             share_message: shareMessage || null,

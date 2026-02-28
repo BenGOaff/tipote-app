@@ -48,6 +48,8 @@ type PublicQuizData = {
   bonus_description: string | null;
   share_message: string | null;
   locale: string | null;
+  capture_heading: string | null;
+  capture_subtitle: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -256,7 +258,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         <Card className="p-8 max-w-lg w-full text-center space-y-6">
           <h1 className="text-2xl font-bold">{quiz.title}</h1>
           {quiz.introduction && (
-            <p className="text-muted-foreground">{quiz.introduction}</p>
+            <p className="text-muted-foreground whitespace-pre-line">{quiz.introduction}</p>
           )}
           <p className="text-sm text-muted-foreground">
             {totalQ} questions — ~{Math.max(1, Math.ceil(totalQ * 0.5))} min
@@ -329,9 +331,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-bold">Ton résultat est prêt !</h2>
-          <p className="text-muted-foreground">
-            Entre ton email pour découvrir ton profil.
+          <h2 className="text-xl font-bold">
+            {quiz.capture_heading || "Ton résultat est prêt !"}
+          </h2>
+          <p className="text-muted-foreground whitespace-pre-line">
+            {quiz.capture_subtitle || "Entre ton email pour découvrir ton profil."}
           </p>
 
           <div className="space-y-3 text-left">

@@ -549,8 +549,10 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   // If it's a full standalone HTML doc, do NOT wrap it again.
   if (isFullDoc) {
-    // For vente templates: inject contentData via script using selectors.json mapping
-    if (kind === "vente" && selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+    // For any full-doc template with selectors.json: inject contentData via script
+    // This covers vente templates AND capture templates (capture-02 to 05) that
+    // don't use {{placeholder}} syntax.
+    if (selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
       try {
         const selectors = JSON.parse(selectorsStr);
         out = injectVenteContentScript(out, req.contentData, selectors);

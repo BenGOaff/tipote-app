@@ -153,6 +153,18 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
             </div>
           </Card>
 
+          {/* Instructions */}
+          <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+              Ta page est prête !
+            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Télécharge le HTML pour l&apos;importer dans ton outil (Systeme.io, WordPress, etc.).
+              Tu n&apos;as plus qu&apos;à personnaliser les textes, ajouter tes images et ton logo si besoin.
+              Utilise le chat ci-dessous pour ajuster le copywriting avant de télécharger.
+            </p>
+          </div>
+
           {/* Copywriting section */}
           <Card className="overflow-hidden">
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
