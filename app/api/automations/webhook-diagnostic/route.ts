@@ -91,12 +91,13 @@ export async function GET(req: NextRequest) {
     .eq("enabled", true)
     .contains("platforms", ["facebook"]);
 
-  diagnostic.automations = automations?.map((a) => ({
+  diagnostic.facebookAutomations = automations?.map((a) => ({
     id: a.id,
     name: a.name,
     keyword: a.trigger_keyword,
     targetPostUrl: a.target_post_url,
     platforms: a.platforms,
+    enabled: a.enabled,
     stats: a.stats,
     lastWebhookProcessed: (a.meta as Record<string, unknown>)?.ig_last_processed
       ? new Date(((a.meta as Record<string, unknown>).ig_last_processed as number) * 1000).toISOString()
@@ -106,6 +107,33 @@ export async function GET(req: NextRequest) {
 
   if (!automations?.length) {
     diagnostic.automationsWarning = "Aucune automatisation Facebook active trouvée. Vérifie que l'automatisation est activée ET que 'facebook' est dans les plateformes.";
+  }
+
+  // 4b. Montrer TOUTES les automatisations de l'utilisateur (sans filtre) pour diagnostiquer
+  const { data: allAutomations } = await supabaseAdmin
+    .from("social_automations")
+    .select("id, name, trigger_keyword, target_post_url, platforms, enabled, updated_at")
+    .eq("user_id", user.id);
+
+  diagnostic.allAutomations = allAutomations?.map((a) => ({
+    id: a.id,
+    name: a.name,
+    keyword: a.trigger_keyword,
+    platforms: a.platforms,
+    enabled: a.enabled,
+    targetPostUrl: a.target_post_url,
+    hasFacebook: Array.isArray(a.platforms) && a.platforms.includes("facebook"),
+    updatedAt: a.updated_at,
+  })) ?? [];
+
+  if (allAutomations?.length && !automations?.length) {
+    const reasons: string[] = [];
+    for (const a of allAutomations) {
+      if (!a.enabled) reasons.push(`"${a.name}" est désactivée`);
+      else if (!Array.isArray(a.platforms) || !a.platforms.includes("facebook"))
+        reasons.push(`"${a.name}" a platforms=${JSON.stringify(a.platforms)} — "facebook" manquant`);
+    }
+    diagnostic.automationsBlockedReasons = reasons;
   }
 
   // 5. Récupérer les derniers logs webhook (si la table existe)

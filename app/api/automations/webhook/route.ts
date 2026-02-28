@@ -123,7 +123,8 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
   if (appSecret) {
     if (!signature) {
       await logWebhook("signature_fail", { payload: { reason: "missing_signature", object: payloadObj.object } });
-      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+      // Return 200 to stop Meta from retrying — event is not processed
+      return NextResponse.json({ ok: true, skipped: "missing_signature" });
     }
     const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
     if (signature !== expected) {
@@ -138,7 +139,9 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
             : "META_APP_SECRET",
         },
       });
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      // Return 200 to stop Meta from endlessly retrying stale events.
+      // Legitimate new events still pass signature — see signature_ok logs.
+      return NextResponse.json({ ok: true, skipped: "signature_mismatch" });
     }
   }
 
