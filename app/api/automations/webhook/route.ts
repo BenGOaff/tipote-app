@@ -565,12 +565,16 @@ async function sendMetaDM(
   recipientId: string,
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  // Préférer le token Messenger (Tipote ter, qui a pages_messaging)
+  // au token OAuth Facebook (Tipote, qui n'a pas Messenger)
+  const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
+
   try {
     const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${pageAccessToken}`,
+        Authorization: `Bearer ${messengerToken}`,
       },
       body: JSON.stringify({
         recipient: { id: recipientId },
