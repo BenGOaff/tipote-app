@@ -914,10 +914,15 @@ export async function publishToInstagram(
 // ----------------------------------------------------------------
 
 /**
- * Abonne une Page Facebook aux événements webhook (feed, messages).
+ * Abonne une Page Facebook aux événements webhook (feed).
+ * Utilise les credentials de Tipote ter (qui a le produit Webhooks),
+ * pas Tipote (qui ne l'a pas).
+ *
  * Effectue deux étapes :
  *   A. App-level : POST /{APP_ID}/subscriptions (enregistre l'URL callback)
+ *      → utilise INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET (Tipote ter)
  *   B. Page-level : POST /{PAGE_ID}/subscribed_apps (abonne la page)
+ *      → utilise MESSENGER_PAGE_ACCESS_TOKEN (token Page via Tipote ter)
  *
  * Retourne { appOk, pageOk, errors }.
  */
@@ -929,13 +934,14 @@ export async function subscribePageToWebhooks(
   let appOk = false;
   let pageOk = false;
 
-  const appId = process.env.META_APP_ID;
-  const appSecret = process.env.META_APP_SECRET;
+  // Utiliser Tipote ter (qui a le produit Webhooks) pour l'app-level subscription
+  const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const webhookCallbackUrl = `${appUrl}/api/automations/webhook`;
 
-  // A. App-level subscription
+  // A. App-level subscription (via Tipote ter)
   if (appId && appSecret && verifyToken) {
     try {
       const appParams = new URLSearchParams({
@@ -951,18 +957,21 @@ export async function subscribePageToWebhooks(
       );
       const json = await res.json();
       appOk = json.success === true;
-      if (!appOk) errors.push(`App subscription: ${JSON.stringify(json.error ?? json)}`);
+      if (!appOk) errors.push(`App subscription (Tipote ter): ${JSON.stringify(json.error ?? json)}`);
     } catch (err) {
       errors.push(`App subscription error: ${String(err)}`);
     }
   } else {
-    errors.push("Missing META_APP_ID, META_APP_SECRET, or META_WEBHOOK_VERIFY_TOKEN env vars");
+    errors.push("Missing INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, or META_WEBHOOK_VERIFY_TOKEN env vars");
   }
 
   // B. Page-level subscription
+  // Utiliser le MESSENGER_PAGE_ACCESS_TOKEN (token Page via Tipote ter) s'il existe,
+  // sinon le token OAuth Facebook (Tipote) en fallback
+  const pageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
   try {
     const pageParams = new URLSearchParams({
-      access_token: pageAccessToken,
+      access_token: pageToken,
       subscribed_fields: "feed",
     });
     const res = await fetch(

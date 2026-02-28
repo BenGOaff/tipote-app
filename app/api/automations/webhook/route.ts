@@ -31,6 +31,15 @@ export async function GET(req: NextRequest) {
 
 /* ─── Incoming comment event ─── */
 export async function POST(req: NextRequest) {
+  console.log("[webhook] ⚡ POST received", {
+    url: req.url,
+    headers: {
+      "x-hub-signature-256": req.headers.get("x-hub-signature-256") ? "present" : "missing",
+      "x-n8n-secret": req.headers.get("x-n8n-secret") ? "present" : "missing",
+      "content-type": req.headers.get("content-type"),
+    },
+  });
+
   const n8nSecret = req.headers.get("x-n8n-secret");
   const metaSig = req.headers.get("x-hub-signature-256");
 
@@ -77,13 +86,10 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
   }
 
   // Choisir le bon app secret selon l'objet du webhook
-  // Facebook Pages → META_APP_SECRET
-  // Instagram → INSTAGRAM_META_APP_SECRET (app parente "Tipote ter")
-  // Meta signe les webhooks avec le secret de l'app parente, pas la sub-app IG.
+  // Les webhooks Page ET Instagram passent tous par Tipote ter (qui a le produit Webhooks).
+  // Meta signe les webhooks avec le secret de l'app qui a l'abonnement.
   const appSecret =
-    payloadObj.object === "instagram"
-      ? (process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET)
-      : process.env.META_APP_SECRET;
+    process.env.INSTAGRAM_APP_SECRET ?? process.env.INSTAGRAM_META_APP_SECRET ?? process.env.META_APP_SECRET;
 
   if (appSecret) {
     if (!signature) {
@@ -96,9 +102,11 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
   }
 
   const payload = payloadObj;
+  console.log("[webhook] ✅ Signature OK, payload:", JSON.stringify(payload).slice(0, 500));
 
   // Seuls les events Page (Facebook) et Instagram sont traités ici
   if (payload.object !== "page" && payload.object !== "instagram") {
+    console.log("[webhook] Skipped: object is", payload.object);
     return NextResponse.json({ ok: true, skipped: true });
   }
 
@@ -139,9 +147,10 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
       }
 
       if (!pageAccessToken) {
-        console.warn("[webhook] No token found for page:", pageId);
+        console.warn("[webhook] ❌ No token found for page:", pageId);
         continue;
       }
+      console.log("[webhook] 🔑 Token found for page:", pageId, "user:", connUserId);
 
       // post_id in Meta's format is "pageId_postId"
       const rawPostId = val.post_id ?? "";
@@ -181,6 +190,8 @@ async function processComment(params: {
   const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = params;
   const commentUpper = comment_text.toUpperCase();
 
+  console.log("[webhook] 📝 processComment:", { platform, page_id, sender_name, comment_text, post_id, user_id });
+
   try {
     let query = supabaseAdmin
       .from("social_automations")
@@ -193,27 +204,35 @@ async function processComment(params: {
     const { data: automations, error } = await query;
 
     if (error || !automations?.length) {
+      console.log("[webhook] ❌ No automations found", { error, count: automations?.length ?? 0 });
       return NextResponse.json({ ok: true, matched: 0 });
     }
+
+    console.log("[webhook] 🔍 Checking", automations.length, "automations. Comment:", commentUpper);
 
     // Find the first automation whose keyword appears in the comment
     // If automation has target_post_url set, the incoming post_id must match
     const matched = automations.find((auto) => {
-      if (!commentUpper.includes(auto.trigger_keyword.toUpperCase())) return false;
+      const keywordMatch = commentUpper.includes(auto.trigger_keyword.toUpperCase());
+      console.log("[webhook]   →", auto.name, "keyword:", auto.trigger_keyword, "match:", keywordMatch, "target_post_url:", auto.target_post_url, "incoming post_id:", post_id);
+      if (!keywordMatch) return false;
       if (auto.target_post_url) {
         if (!post_id) return false;
-        // Match either exact post_id or post_id contained in stored URL/ID
-        return auto.target_post_url === post_id ||
+        const postMatch = auto.target_post_url === post_id ||
                auto.target_post_url.includes(post_id) ||
                post_id.includes(auto.target_post_url);
+        console.log("[webhook]   → post match:", postMatch);
+        return postMatch;
       }
       return true;
     });
 
     if (!matched) {
+      console.log("[webhook] ❌ No automation matched this comment");
       return NextResponse.json({ ok: true, matched: 0 });
     }
 
+    console.log("[webhook] ✅ MATCHED automation:", matched.name, "id:", matched.id);
     const firstName = extractFirstName(sender_name);
 
     // ── DEDUP: check if this comment was already processed ──

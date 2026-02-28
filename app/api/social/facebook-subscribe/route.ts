@@ -1,8 +1,7 @@
 // POST /api/social/facebook-subscribe
-// Deux étapes en une :
-//   1. Enregistre l'URL callback au niveau de l'app : POST /{APP_ID}/subscriptions
-//      (access_token = APP_ID|APP_SECRET — token d'app, pas user)
-//   2. Abonne la Page connectée aux events : POST /{PAGE_ID}/subscribed_apps
+// Deux étapes en une, via Tipote ter (qui a le produit Webhooks) :
+//   1. Enregistre l'URL callback au niveau de l'app Tipote ter : POST /{APP_ID}/subscriptions
+//   2. Abonne la Page aux events via MESSENGER_PAGE_ACCESS_TOKEN : POST /{PAGE_ID}/subscribed_apps
 // Sans l'étape 1, Meta ne sait pas où envoyer les events même si la page est abonnée.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,19 +11,19 @@ import { decrypt } from "@/lib/crypto";
 export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest) {
-  const appId = process.env.META_APP_ID;
-  const appSecret = process.env.META_APP_SECRET;
+  // Utiliser Tipote ter (qui a le produit Webhooks)
+  const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   if (!appId || !appSecret || !verifyToken) {
-    return NextResponse.json({ error: "Env vars META_APP_ID / META_APP_SECRET / META_WEBHOOK_VERIFY_TOKEN manquants" }, { status: 500 });
+    return NextResponse.json({ error: "Env vars INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET / META_WEBHOOK_VERIFY_TOKEN manquants" }, { status: 500 });
   }
 
   const callbackUrl = `${appUrl}/api/automations/webhook`;
 
-  // ── Étape 1 : Enregistrer l'URL webhook au niveau de l'App ──
-  // Le token d'app est simplement APP_ID|APP_SECRET (pas besoin d'OAuth user)
+  // ── Étape 1 : Enregistrer l'URL webhook au niveau de Tipote ter ──
   const appToken = `${appId}|${appSecret}`;
   let appSubOk = false;
   let appSubError: string | null = null;
@@ -53,7 +52,8 @@ export async function POST(_req: NextRequest) {
     console.error("[facebook-subscribe] App subscription error:", err);
   }
 
-  // ── Étape 2 : Abonner la Page de l'user connecté ──
+  // ── Étape 2 : Abonner la Page ──
+  // Utiliser MESSENGER_PAGE_ACCESS_TOKEN (token Page via Tipote ter) en priorité
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -74,11 +74,16 @@ export async function POST(_req: NextRequest) {
     }, { status: appSubOk ? 200 : 502 });
   }
 
+  // Préférer le token Messenger (Tipote ter) pour la subscription Page
   let pageToken: string;
-  try {
-    pageToken = decrypt(conn.access_token_encrypted);
-  } catch {
-    return NextResponse.json({ error: "Token illisible" }, { status: 500 });
+  if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+    pageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+  } else {
+    try {
+      pageToken = decrypt(conn.access_token_encrypted);
+    } catch {
+      return NextResponse.json({ error: "Token illisible" }, { status: 500 });
+    }
   }
 
   let pageSubOk = false;
@@ -115,5 +120,7 @@ export async function POST(_req: NextRequest) {
     page_error: pageSubError,
     page_id: conn.platform_user_id,
     callback_url: callbackUrl,
+    webhook_app: appId === process.env.INSTAGRAM_APP_ID ? "Tipote ter" : "Tipote",
+    using_messenger_token: !!process.env.MESSENGER_PAGE_ACCESS_TOKEN,
   }, { status: allOk ? 200 : 502 });
 }
