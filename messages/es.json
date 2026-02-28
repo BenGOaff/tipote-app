@@ -1169,5 +1169,20 @@
       "tableNotReady": "La tabla de Supabase todavía no existe. Sigue la guía de configuración de arriba.",
       "saveFailed": "Error al guardar"
     }
+  },
+  "autoCommentPanel": {
+    "title": "Auto-comentarios",
+    "descriptionEnabled": "Comenta automáticamente publicaciones similares para aumentar tu visibilidad",
+    "descriptionLocked": "Actualiza al plan Pro o Elite para desbloquear esta función",
+    "beforeLabel": "Comentarios antes de publicar",
+    "beforeTooltip": "Tipote comentará publicaciones similares 2-15 min antes de tu publicación para generar visibilidad previa.",
+    "afterLabel": "Comentarios después de publicar",
+    "afterTooltip": "Tipote comentará publicaciones similares 2-15 min después de tu publicación para prolongar el engagement.",
+    "creditPerComment": "0,25 crédito por comentario",
+    "upsellTitle": "Impulsa tu engagement con auto-comentarios",
+    "upsellBody": "Tipote comenta automáticamente publicaciones similares a las tuyas para aumentar tu visibilidad. Disponible con los planes Pro (49€/mes) y Elite (99€/mes).",
+    "unsupportedLinkedin": "LinkedIn requiere aprobación de socio (MDP) — los auto-comentarios no están disponibles por el momento.",
+    "unsupportedGeneric": "Esta plataforma no soporta auto-comentarios actualmente.",
+    "policyWarning": "Los auto-comentarios en Instagram usan la API oficial."
   }
 }

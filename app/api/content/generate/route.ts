@@ -2227,15 +2227,12 @@ export async function POST(req: Request) {
     const generatingStatus = "generating";
     const finalStatus = scheduledDate ? "scheduled" : "draft";
 
-    // Use title from request body if provided (e.g. strategy content: "Jour 1 — LinkedIn — Theme")
-    const requestTitle = safeStringOrNull(body.title);
-
     const placeholderEN = await insertContentEN({
       supabase,
       userId,
       projectId,
       type,
-      title: requestTitle,
+      title: null,
       content: "",
       channel,
       scheduledDate,
@@ -2261,7 +2258,7 @@ export async function POST(req: Request) {
         userId,
         projectId,
         type,
-        title: requestTitle,
+        title: null,
         content: "",
         channel,
         scheduledDate,
@@ -2365,8 +2362,7 @@ export async function POST(req: Request) {
             const keepBold = type === "article";
             const txt = keepBold ? toPlainTextKeepBold(raw) : toPlainText(raw);
             finalContent = txt;
-            // Preserve title from request (e.g. strategy: "Jour 1 — LinkedIn — Theme")
-            title = requestTitle;
+            title = null;
           }
 
           // ✅ Consommer les crédits seulement après succès IA

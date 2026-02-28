@@ -3,6 +3,10 @@
 // Doc : https://developers.facebook.com/docs/graph-api
 // Doc Instagram : https://developers.facebook.com/docs/instagram-platform/instagram-graph-api
 // Doc Threads : https://developers.facebook.com/docs/threads/
+//
+// Architecture Meta (2 apps) :
+//   App "Tipote" (META_APP_ID)       → Facebook Pages + Threads
+//   App "Tipote ter" (INSTAGRAM_APP_ID) → Instagram Professional Login
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -17,18 +21,18 @@ const INSTAGRAM_AUTH_URL = "https://www.instagram.com/oauth/authorize";
 const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
-// Facebook Pages scopes (OAuth Facebook Login – config "Tipote")
-// instagram_manage_hashtags : required for hashtag search (GET /ig_hashtag_search + recent_media)
-// instagram_manage_comments : required for commenting on public media (POST /{media-id}/comments)
-// Both require Meta Business Verification + App Review if not already approved.
+// Facebook Pages scopes (OAuth Facebook Login – app "Tipote", config_id META_CONFIG_ID)
+// NOTE: instagram_manage_hashtags et instagram_manage_comments ont été retirés.
+// Ces anciennes permissions (système "Facebook Login") créaient une dépendance
+// sur instagram_basic dans le dashboard Meta, bloquant l'App Review.
+// Toutes les fonctionnalités Instagram (comments, publish, DM) passent désormais
+// par Instagram Professional Login avec les scopes instagram_business_*.
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
   "pages_messaging",
   "pages_manage_metadata", // nécessaire pour abonner la page aux webhooks (feed/comments)
-  "instagram_manage_hashtags",
-  "instagram_manage_comments",
 ];
 
 
@@ -64,7 +68,7 @@ function getAppSecret(): string {
   return secret;
 }
 
-// Instagram Professional Login : même app Meta, fallback sur META_APP_ID / META_APP_SECRET
+// Instagram Professional Login : app "Tipote ter" (INSTAGRAM_APP_ID), fallback sur META_APP_ID
 function getInstagramAppId(): string {
   const id = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
   if (!id) throw new Error("Missing env INSTAGRAM_APP_ID or META_APP_ID");
@@ -83,7 +87,22 @@ function getInstagramRedirectUri(): string {
   return `${appUrl}/api/auth/instagram/callback`;
 }
 
-// Threads : même app Meta, fallback sur META_APP_ID / META_APP_SECRET
+// App parente "Tipote ter" — nécessaire pour les webhooks et la vérification
+// des signatures (X-Hub-Signature-256, signed_request).
+// Meta signe avec le secret de l'app parente, pas celui de la sub-app Instagram.
+export function getInstagramMetaAppId(): string {
+  const id = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  if (!id) throw new Error("Missing env INSTAGRAM_META_APP_ID, INSTAGRAM_APP_ID, or META_APP_ID");
+  return id;
+}
+
+export function getInstagramMetaAppSecret(): string {
+  const secret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  if (!secret) throw new Error("Missing env INSTAGRAM_META_APP_SECRET, INSTAGRAM_APP_SECRET, or META_APP_SECRET");
+  return secret;
+}
+
+// Threads : app "Tipote" (THREADS_APP_ID), fallback sur META_APP_ID
 function getThreadsAppId(): string {
   const id = process.env.THREADS_APP_ID ?? process.env.META_APP_ID;
   if (!id) throw new Error("Missing env THREADS_APP_ID or META_APP_ID");
@@ -270,9 +289,27 @@ export async function exchangeForLongLivedToken(shortLivedToken: string): Promis
 
 /**
  * Construit l'URL d'autorisation Instagram Professional Login.
+ * Si INSTAGRAM_CONFIG_ID est défini, utilise le config_id qui inclut
+ * déjà les permissions configurées.
+ * Sinon fallback sur le scope classique (cas actuel : pas de config_id Instagram).
  * Endpoint : https://www.instagram.com/oauth/authorize
  */
 export function buildInstagramAuthorizationUrl(state: string): string {
+  const configId = process.env.INSTAGRAM_CONFIG_ID;
+
+  if (configId) {
+    const params = new URLSearchParams({
+      client_id: getInstagramAppId(),
+      redirect_uri: getInstagramRedirectUri(),
+      response_type: "code",
+      config_id: configId,
+      state,
+    });
+    console.log("[buildInstagramAuthorizationUrl] Using config_id:", configId);
+    return `${INSTAGRAM_AUTH_URL}?${params.toString()}`;
+  }
+
+  // Fallback classique (sans config_id)
   const params = new URLSearchParams({
     client_id: getInstagramAppId(),
     redirect_uri: getInstagramRedirectUri(),
@@ -280,6 +317,7 @@ export function buildInstagramAuthorizationUrl(state: string): string {
     response_type: "code",
     state,
   });
+  console.log("[buildInstagramAuthorizationUrl] Using scope fallback (no INSTAGRAM_CONFIG_ID)");
   return `${INSTAGRAM_AUTH_URL}?${params.toString()}`;
 }
 

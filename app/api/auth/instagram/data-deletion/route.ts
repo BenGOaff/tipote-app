@@ -52,9 +52,11 @@ function getStatusUrl(confirmationCode: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  // Meta signe le signed_request avec le secret de l'app parente (Tipote ter),
+  // pas celui de la sub-app Instagram.
+  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
   if (!appSecret) {
-    return NextResponse.json({ error: "INSTAGRAM_APP_SECRET manquant" }, { status: 500 });
+    return NextResponse.json({ error: "INSTAGRAM_META_APP_SECRET ou INSTAGRAM_APP_SECRET manquant" }, { status: 500 });
   }
 
   let signedRequest: string | null = null;

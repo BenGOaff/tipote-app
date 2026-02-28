@@ -111,9 +111,10 @@ async function subscribeInstagram(userId: string, projectId: string | null): Pro
     );
   }
 
-  // Abonner l'app au webhook Instagram (object: "instagram", fields: "comments,messages")
-  const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  // Abonner l'app parente au webhook Instagram (object: "instagram", fields: "comments,messages")
+  // Les webhooks se souscrivent via l'app parente "Tipote ter", pas la sub-app Instagram.
+  const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   // Utilise le endpoint dédié Instagram pour les webhooks

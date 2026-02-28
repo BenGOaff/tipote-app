@@ -12,7 +12,7 @@
 //     → On stocke la connexion dans social_connections (platform = "instagram")
 //
 // POST : reçoit les events webhook Instagram (comments, messages)
-//        vérifie la signature X-Hub-Signature-256 avec INSTAGRAM_APP_SECRET
+//        vérifie la signature X-Hub-Signature-256 avec INSTAGRAM_META_APP_SECRET (app parente)
 
 import { createHmac } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
@@ -174,10 +174,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Abonnement webhook au niveau de l'app (non-bloquant)
-    // Fallback: même app Meta → réutilise META_APP_ID/SECRET si les vars Instagram ne sont pas définies
-    const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
-    const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+    // Abonnement webhook au niveau de l'app parente "Tipote ter"
+    // Les webhooks se souscrivent via l'app parente Meta, pas la sub-app Instagram.
+    const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+    const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
     const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
     const webhookCallbackUrl = `${appUrl}/api/auth/instagram/callback`;
 
@@ -224,8 +224,8 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("x-hub-signature-256");
 
-  // Vérification signature HMAC avec INSTAGRAM_APP_SECRET
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  // Vérification signature HMAC — Meta signe avec le secret de l'app parente
+  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
   if (appSecret) {
     if (!signature) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });

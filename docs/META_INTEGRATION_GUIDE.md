@@ -144,26 +144,47 @@
 
 ### 3.3 Variables d'environnement
 
+> **Architecture : 2 apps Meta distinctes**
+> - **App "Tipote"** (META_APP_ID) → Facebook Pages + Threads
+> - **App "Tipote ter"** (INSTAGRAM_META_APP_ID) → Instagram Professional Login
+>   - Sub-app "tipote ter-IG" (INSTAGRAM_APP_ID) → OAuth Instagram
+>
+> Un seul Facebook Login for Business config (META_CONFIG_ID) sur l'app "Tipote".
+> Pas de config_id Instagram (scopes classiques utilisés).
+>
+> **Important** : Meta signe les webhooks et signed_request avec le secret de
+> l'app parente "Tipote ter" (`INSTAGRAM_META_APP_SECRET`), pas celui de la
+> sub-app Instagram (`INSTAGRAM_APP_SECRET`).
+
 ```env
-# Meta/Facebook
-META_APP_ID=<app_id>
-META_APP_SECRET=<app_secret>
-META_CONFIG_ID=<config_id_facebook_login_for_business>
-META_WEBHOOK_VERIFY_TOKEN=<random_secure_string>
+# App "Tipote" — Facebook Pages
+META_APP_ID=<tipote_app_id>
+META_APP_SECRET=<tipote_app_secret>
+META_CONFIG_ID=<login_for_business_config_id>
 
-# Instagram (fallback sur META_APP_ID/SECRET si absent)
-INSTAGRAM_APP_ID=<optionnel>
-INSTAGRAM_APP_SECRET=<optionnel>
-INSTAGRAM_WEBHOOK_VERIFY_TOKEN=<optionnel>
+# App "Tipote ter" — app parente (webhooks, signatures, subscriptions)
+INSTAGRAM_META_APP_ID=<tipote_ter_app_id>
+INSTAGRAM_META_APP_SECRET=<tipote_ter_app_secret>
 
-# Threads (fallback sur META_APP_ID/SECRET si absent)
-THREADS_APP_ID=<optionnel>
-THREADS_APP_SECRET=<optionnel>
+# Sub-app "tipote ter-IG" — OAuth Instagram (client_id / client_secret)
+INSTAGRAM_APP_ID=<tipote_ter_ig_app_id>
+INSTAGRAM_APP_SECRET=<tipote_ter_ig_app_secret>
+# INSTAGRAM_CONFIG_ID non utilisé (scopes classiques)
+
+# App "Tipote" — Threads
+THREADS_APP_ID=<tipote_threads_app_id>
+THREADS_APP_SECRET=<tipote_threads_app_secret>
+
+# Webhooks (même token pour toutes les apps)
+META_WEBHOOK_VERIFY_TOKEN=<webhook_verify_token>
+INSTAGRAM_WEBHOOK_VERIFY_TOKEN=<webhook_verify_token>
 
 # App
 NEXT_PUBLIC_APP_URL=https://app.tipote.com
 N8N_SHARED_SECRET=<secret_partage_n8n>
 ```
+
+> Voir `.env.example` à la racine du projet pour le template complet.
 
 ---
 

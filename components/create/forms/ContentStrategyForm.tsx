@@ -529,15 +529,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         prev.map((c, i) => (i === idx ? { ...c, status: "generating" as const } : c)),
       );
 
-      // Build a clear title: "Jour X — Platform — Theme"
-      const platLabel = PLATFORM_LABELS[channel] || channel;
-      const titleForContent = `Jour ${day.day} — ${platLabel} — ${day.theme}`;
-
       // 1) Request generation → get jobId
       const jobId = await requestGeneration({
         type,
         channel,
-        title: titleForContent,
         subject: subjectLines.join("\n"),
         platform: channel,
         ...(offerManual ? { offerManual } : {}),

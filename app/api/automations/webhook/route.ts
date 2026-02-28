@@ -78,10 +78,11 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
   // Choisir le bon app secret selon l'objet du webhook
   // Facebook Pages → META_APP_SECRET
-  // Instagram Professional Login → INSTAGRAM_APP_SECRET
+  // Instagram → INSTAGRAM_META_APP_SECRET (app parente "Tipote ter")
+  // Meta signe les webhooks avec le secret de l'app parente, pas la sub-app IG.
   const appSecret =
     payloadObj.object === "instagram"
-      ? (process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET)
+      ? (process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET)
       : process.env.META_APP_SECRET;
 
   if (appSecret) {

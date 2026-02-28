@@ -56,14 +56,25 @@ export async function GET(req: NextRequest) {
 
     // 4. Recuperer les infos du profil TikTok (fallback si scope non autorise)
     let platformUserId = tokens.open_id;
-    let platformUsername = "TikTok";
+    let platformUsername = "";
     try {
       const userInfo = await getUserInfo(tokens.access_token);
       platformUserId = userInfo.open_id || platformUserId;
-      platformUsername = userInfo.display_name || userInfo.username || platformUsername;
-      console.log("[TikTok] User info OK:", platformUsername, platformUserId);
+      // Prefer @username (handle), fallback to display_name
+      const handle = userInfo.username?.trim();
+      const displayName = userInfo.display_name?.trim();
+      if (handle) {
+        platformUsername = `@${handle}`;
+      } else if (displayName) {
+        platformUsername = displayName;
+      }
+      console.log("[TikTok] User info OK:", platformUsername || "(no name)", platformUserId);
     } catch (infoErr) {
       console.warn("[TikTok] getUserInfo failed (scope missing?), using open_id from token:", infoErr);
+    }
+    // Last resort: use a truncated open_id so the user can at least identify the account
+    if (!platformUsername) {
+      platformUsername = `TikTok (${platformUserId.slice(0, 8)}...)`;
     }
 
     // 5. Chiffrer les tokens

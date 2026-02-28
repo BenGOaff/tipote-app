@@ -1253,5 +1253,20 @@
       "tableNotReady": "La table Supabase n'est pas encore créée. Suis le guide de configuration ci-dessus.",
       "saveFailed": "Erreur lors de l'enregistrement"
     }
+  },
+  "autoCommentPanel": {
+    "title": "Auto-commentaires",
+    "descriptionEnabled": "Commentez automatiquement des posts similaires pour booster votre visibilité",
+    "descriptionLocked": "Passez au plan Pro ou Elite pour débloquer cette fonctionnalité",
+    "beforeLabel": "Commentaires avant publication",
+    "beforeTooltip": "Tipote commentera des posts similaires 2-15 min avant la publication de votre post pour générer de la visibilité en amont.",
+    "afterLabel": "Commentaires après publication",
+    "afterTooltip": "Tipote commentera des posts similaires 2-15 min après la publication pour prolonger l'engagement.",
+    "creditPerComment": "0,25 crédit par commentaire",
+    "upsellTitle": "Boostez votre engagement avec l'auto-commentaire",
+    "upsellBody": "Tipote commente automatiquement des posts similaires au vôtre pour augmenter votre visibilité. Disponible avec les plans Pro (49€/mois) et Elite (99€/mois).",
+    "unsupportedLinkedin": "LinkedIn requiert une approbation partenaire (MDP) — les auto-commentaires ne sont pas disponibles pour l'instant.",
+    "unsupportedGeneric": "Cette plateforme ne supporte pas les auto-commentaires à l'heure actuelle.",
+    "policyWarning": "Les auto-commentaires sur Instagram utilisent l'API officielle. Les commentaires sont postés sur des posts publics liés à votre niche pour augmenter votre visibilité."
   }
 }
