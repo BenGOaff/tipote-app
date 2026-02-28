@@ -769,10 +769,9 @@ async function sendInstagramDMById(
 
 /**
  * Facebook Private Reply : envoie un DM lié au commentaire.
- * Essaie 3 méthodes en cascade :
- *   1. POST /{comment_id}/private_replies  (ancien endpoint Graph API)
- *   2. POST /me/messages avec recipient.comment_id  (Send API / Messenger)
- *   3. POST /{page_id}/messages avec recipient.comment_id  (variante page-specific)
+ * Le webhook envoie comment_id au format "{post_id}_{comment_id}".
+ * Certaines API Meta attendent le format complet, d'autres la partie commentaire seule.
+ * On essaie les deux formats avec 2 endpoints différents.
  * Le token doit avoir la permission pages_messaging.
  */
 async function sendFacebookPrivateReply(
@@ -783,84 +782,74 @@ async function sendFacebookPrivateReply(
 ): Promise<{ ok: boolean; error?: string }> {
   const errors: string[] = [];
 
-  // ── Méthode 1 : POST /{comment_id}/private_replies (ancien endpoint) ──
-  try {
-    const url1 = `https://graph.facebook.com/v21.0/${commentId}/private_replies`;
-    console.log("[webhook] DM tentative 1: POST /{comment_id}/private_replies", { commentId, tokenPrefix: accessToken.slice(0, 10) });
-    const res1 = await fetch(url1, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ message: text }),
-    });
+  // Préparer les deux formats de comment_id
+  // Le webhook envoie "postId_commentId" (ex: "122103762561267846_900776099482667")
+  // L'API Private Reply pourrait attendre l'un ou l'autre format
+  const commentIdFull = commentId; // format complet tel quel
+  const commentIdStripped = commentId.includes("_")
+    ? commentId.split("_").pop()!
+    : commentId; // partie commentaire seule
 
-    if (res1.ok) {
-      console.log("[webhook] DM méthode 1 OK !");
-      return { ok: true };
-    }
+  const idsToTry = commentIdFull !== commentIdStripped
+    ? [commentIdFull, commentIdStripped]
+    : [commentIdFull];
 
-    const err1 = await res1.text();
-    console.warn("[webhook] DM méthode 1 échouée:", err1.slice(0, 200));
-    errors.push(`M1(private_replies): ${err1.slice(0, 150)}`);
-  } catch (err) {
-    errors.push(`M1(exception): ${String(err).slice(0, 100)}`);
-  }
+  console.log("[webhook] DM Private Reply - formats à essayer:", { commentIdFull, commentIdStripped, tokenPrefix: accessToken.slice(0, 10) });
 
-  // ── Méthode 2 : POST /me/messages avec recipient.comment_id ──
-  try {
-    console.log("[webhook] DM tentative 2: POST /me/messages + recipient.comment_id", { commentId });
-    const res2 = await fetch("https://graph.facebook.com/v21.0/me/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        recipient: { comment_id: commentId },
-        message: { text },
-      }),
-    });
+  for (const cId of idsToTry) {
+    const idLabel = cId === commentIdFull ? "full" : "stripped";
 
-    if (res2.ok) {
-      console.log("[webhook] DM méthode 2 OK !");
-      return { ok: true };
-    }
-
-    const err2 = await res2.text();
-    console.warn("[webhook] DM méthode 2 échouée:", err2.slice(0, 200));
-    errors.push(`M2(send_api): ${err2.slice(0, 150)}`);
-  } catch (err) {
-    errors.push(`M2(exception): ${String(err).slice(0, 100)}`);
-  }
-
-  // ── Méthode 3 : POST /{page_id}/messages avec recipient.comment_id ──
-  if (pageId) {
+    // ── Méthode A : POST /{comment_id}/private_replies (ancien endpoint Graph API) ──
     try {
-      console.log("[webhook] DM tentative 3: POST /{page_id}/messages + recipient.comment_id", { pageId, commentId });
-      const res3 = await fetch(`https://graph.facebook.com/v21.0/${pageId}/messages`, {
+      const url = `https://graph.facebook.com/v21.0/${cId}/private_replies`;
+      console.log(`[webhook] DM tentative A(${idLabel}): POST /${cId}/private_replies`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ message: text }),
+      });
+
+      if (res.ok) {
+        console.log(`[webhook] DM méthode A(${idLabel}) OK !`);
+        return { ok: true };
+      }
+
+      const err = await res.text();
+      console.warn(`[webhook] DM A(${idLabel}) échouée:`, err.slice(0, 200));
+      errors.push(`A(${idLabel}): ${err.slice(0, 120)}`);
+    } catch (err) {
+      errors.push(`A(${idLabel}): ${String(err).slice(0, 80)}`);
+    }
+
+    // ── Méthode B : POST /me/messages avec recipient.comment_id (Send API) ──
+    try {
+      console.log(`[webhook] DM tentative B(${idLabel}): POST /me/messages + comment_id=${cId}`);
+      const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          recipient: { comment_id: commentId },
+          recipient: { comment_id: cId },
           message: { text },
+          messaging_type: "RESPONSE",
         }),
       });
 
-      if (res3.ok) {
-        console.log("[webhook] DM méthode 3 OK !");
+      if (res.ok) {
+        console.log(`[webhook] DM méthode B(${idLabel}) OK !`);
         return { ok: true };
       }
 
-      const err3 = await res3.text();
-      console.warn("[webhook] DM méthode 3 échouée:", err3.slice(0, 200));
-      errors.push(`M3(page_messages): ${err3.slice(0, 150)}`);
+      const err = await res.text();
+      console.warn(`[webhook] DM B(${idLabel}) échouée:`, err.slice(0, 200));
+      errors.push(`B(${idLabel}): ${err.slice(0, 120)}`);
     } catch (err) {
-      errors.push(`M3(exception): ${String(err).slice(0, 100)}`);
+      errors.push(`B(${idLabel}): ${String(err).slice(0, 80)}`);
     }
   }
 
