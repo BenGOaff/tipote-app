@@ -409,10 +409,28 @@ async function processComment(params: {
         console.log(`[webhook] Comment reply sent for ${comment_id}`);
       } catch (err) {
         console.error(`[webhook] Comment reply FAILED for ${comment_id}:`, err);
+        // Pour Facebook, essayer avec MESSENGER_PAGE_ACCESS_TOKEN en fallback
+        // (le token OAuth n'a peut-être pas pages_manage_engagement)
+        if (platform === "facebook" && process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          try {
+            await replyToComment(process.env.MESSENGER_PAGE_ACCESS_TOKEN, comment_id, replyText);
+            commentReplyOk = true;
+            console.log(`[webhook] Comment reply sent with MESSENGER token for ${comment_id}`);
+          } catch (err2) {
+            const errMsg = String(err2).slice(0, 200);
+            console.error(`[webhook] Comment reply FAILED with MESSENGER token too:`, errMsg);
+            await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error1: String(err).slice(0, 200), error2: errMsg } });
+          }
+        } else {
+          await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200) } });
+        }
       }
     }
 
-    // 2. Send DM — Instagram uses Private Reply (comment_id), Facebook uses recipient.id
+    // 2. Send DM
+    // Pour Facebook : utiliser Private Reply (recipient.comment_id) via MESSENGER token
+    // C'est la seule façon d'envoyer un DM à quelqu'un qui a juste commenté (pas de conversation ouverte).
+    // Pour Instagram : Private Reply via comment_id (déjà implémenté)
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
     let dmResult: { ok: boolean; error?: string };
 
@@ -421,6 +439,14 @@ async function processComment(params: {
       if (!dmResult.ok) {
         console.warn("[webhook] Instagram Private Reply failed, trying recipient.id fallback:", dmResult.error);
         dmResult = await sendInstagramDMById(page_access_token, page_id, sender_id, dmText);
+      }
+    } else if (platform === "facebook" && comment_id) {
+      // Facebook Private Reply : envoyer un DM lié au commentaire
+      dmResult = await sendFacebookPrivateReply(comment_id, dmText);
+      if (!dmResult.ok) {
+        console.warn("[webhook] Facebook Private Reply failed, trying recipient.id fallback:", dmResult.error);
+        // Fallback : essayer avec recipient.id (ne marchera que si conversation déjà ouverte)
+        dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
       }
     } else {
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
@@ -706,6 +732,45 @@ async function sendInstagramDMById(
       const errBody = await res.text();
       return { ok: false, error: errBody };
     }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
+ * Facebook Private Reply : envoie un DM lié au commentaire.
+ * Utilise le MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, qui a pages_messaging).
+ * C'est la seule façon d'envoyer un DM à quelqu'un qui a juste commenté
+ * sans conversation Messenger préalable.
+ */
+async function sendFacebookPrivateReply(
+  commentId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+  if (!messengerToken) {
+    return { ok: false, error: "MESSENGER_PAGE_ACCESS_TOKEN not configured" };
+  }
+
+  try {
+    const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${messengerToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, error: errBody };
+    }
+
     return { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };
