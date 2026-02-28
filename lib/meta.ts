@@ -27,15 +27,16 @@ const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 // sur instagram_basic dans le dashboard Meta, bloquant l'App Review.
 // Toutes les fonctionnalités Instagram (comments, publish, DM) passent désormais
 // par Instagram Professional Login avec les scopes instagram_business_*.
-// NOTE: pages_messaging n'est PAS ici car il nécessite le produit "Messenger"
-// qui est dans Tipote ter, pas Tipote. Les DMs Facebook passent par
-// MESSENGER_PAGE_ACCESS_TOKEN (token généré dans Tipote ter).
+// NOTE: pages_messaging est nécessaire pour le Private Reply (DM en réponse à un commentaire).
+// Le produit "Messenger" doit être ajouté à l'app Tipote dans Meta dashboard.
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
   "pages_read_user_content",
   "pages_manage_metadata",
+  "pages_manage_engagement",
+  "pages_messaging",
 ];
 
 

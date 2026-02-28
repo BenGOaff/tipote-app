@@ -441,12 +441,21 @@ async function processComment(params: {
         dmResult = await sendInstagramDMById(page_access_token, page_id, sender_id, dmText);
       }
     } else if (platform === "facebook" && comment_id) {
-      // Facebook Private Reply : envoyer un DM lié au commentaire
-      dmResult = await sendFacebookPrivateReply(comment_id, dmText);
+      // Facebook Private Reply : envoyer un DM lié au commentaire.
+      // Essayer d'abord avec le token OAuth (qui a pages_messaging après re-OAuth),
+      // puis MESSENGER_PAGE_ACCESS_TOKEN en fallback, puis recipient.id en dernier recours.
+      dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText);
       if (!dmResult.ok) {
-        console.warn("[webhook] Facebook Private Reply failed, trying recipient.id fallback:", dmResult.error);
-        // Fallback : essayer avec recipient.id (ne marchera que si conversation déjà ouverte)
-        dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+        await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
+        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        if (messengerToken && messengerToken !== page_access_token) {
+          dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText);
+        }
+        if (!dmResult.ok) {
+          await logWebhook("dm_private_reply_fail_all", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
+          // Dernier recours : recipient.id (ne marche que si conversation déjà ouverte)
+          dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+        }
       }
     } else {
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
@@ -454,6 +463,7 @@ async function processComment(params: {
 
     if (!dmResult.ok) {
       console.error("[webhook] DM send failed:", dmResult.error);
+      await logWebhook("dm_fail_final", { pageId: page_id, payload: { commentId: comment_id, senderId: sender_id, error: dmResult.error?.slice(0, 200) } });
     }
 
     await logWebhook("processed", { pageId: page_id, userId: user_id, payload: { automationId: matched.id, commentReplyOk, dmSent: dmResult.ok, dmError: dmResult.error?.slice(0, 200) } });
@@ -740,25 +750,20 @@ async function sendInstagramDMById(
 
 /**
  * Facebook Private Reply : envoie un DM lié au commentaire.
- * Utilise le MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, qui a pages_messaging).
- * C'est la seule façon d'envoyer un DM à quelqu'un qui a juste commenté
- * sans conversation Messenger préalable.
+ * Utilise recipient.comment_id pour envoyer un DM sans conversation ouverte.
+ * Le token doit avoir la permission pages_messaging.
  */
 async function sendFacebookPrivateReply(
+  accessToken: string,
   commentId: string,
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-  if (!messengerToken) {
-    return { ok: false, error: "MESSENGER_PAGE_ACCESS_TOKEN not configured" };
-  }
-
   try {
     const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${messengerToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         recipient: { comment_id: commentId },
