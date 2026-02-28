@@ -13,6 +13,25 @@ import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
+/* ─── Debug logging helper ─── */
+async function logWebhook(
+  eventType: string,
+  data: { pageId?: string; userId?: string; source?: string; payload?: unknown; result?: unknown },
+) {
+  try {
+    await supabaseAdmin.from("webhook_debug_logs").insert({
+      event_type: eventType,
+      page_id: data.pageId ?? null,
+      user_id: data.userId ?? null,
+      source: data.source ?? "meta",
+      payload_summary: data.payload ?? null,
+      result: data.result ?? null,
+    });
+  } catch {
+    // Table might not exist yet — silently ignore
+  }
+}
+
 /* ─── Meta webhook verification ─── */
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -42,6 +61,16 @@ export async function POST(req: NextRequest) {
 
   const n8nSecret = req.headers.get("x-n8n-secret");
   const metaSig = req.headers.get("x-hub-signature-256");
+
+  // Log every incoming POST to DB for debugging
+  await logWebhook("received", {
+    source: n8nSecret ? "n8n" : "meta",
+    payload: {
+      hasSignature: !!metaSig,
+      hasN8nSecret: !!n8nSecret,
+      contentType: req.headers.get("content-type"),
+    },
+  });
 
   // ── Path 1: n8n forwarded (rétrocompatible) ──
   if (n8nSecret) {
@@ -93,15 +122,29 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
   if (appSecret) {
     if (!signature) {
+      await logWebhook("signature_fail", { payload: { reason: "missing_signature", object: payloadObj.object } });
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
     const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
     if (signature !== expected) {
+      await logWebhook("signature_fail", {
+        payload: {
+          reason: "mismatch",
+          object: payloadObj.object,
+          signaturePrefix: signature.slice(0, 20),
+          expectedPrefix: expected.slice(0, 20),
+          secretUsed: appSecret === process.env.INSTAGRAM_META_APP_SECRET ? "INSTAGRAM_META_APP_SECRET"
+            : appSecret === process.env.INSTAGRAM_APP_SECRET ? "INSTAGRAM_APP_SECRET"
+            : "META_APP_SECRET",
+        },
+      });
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
 
   const payload = payloadObj;
+  const entryIds = (payload.entry ?? []).map((e) => e.id);
+  await logWebhook("signature_ok", { pageId: entryIds[0], payload: { object: payload.object, entryIds, entryCount: payload.entry?.length ?? 0 } });
   console.log("[webhook] ✅ Signature OK, payload:", JSON.stringify(payload).slice(0, 500));
 
   // Seuls les events Page (Facebook) et Instagram sont traités ici
@@ -156,9 +199,11 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
       if (!pageAccessToken) {
         console.warn("[webhook] ❌ No token found for page:", pageId);
+        await logWebhook("no_token", { pageId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id } });
         continue;
       }
       console.log("[webhook] 🔑 Token found for page:", pageId, "user:", connUserId);
+      await logWebhook("token_found", { pageId, userId: connUserId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id, commentId: val.comment_id } });
 
       // post_id in Meta's format is "pageId_postId"
       const rawPostId = val.post_id ?? "";
@@ -213,6 +258,7 @@ async function processComment(params: {
 
     if (error || !automations?.length) {
       console.log("[webhook] ❌ No automations found", { error, count: automations?.length ?? 0 });
+      await logWebhook("no_automations", { pageId: page_id, userId: user_id, payload: { platform, error: error?.message, commentText: comment_text.slice(0, 50) } });
       return NextResponse.json({ ok: true, matched: 0 });
     }
 
@@ -237,10 +283,12 @@ async function processComment(params: {
 
     if (!matched) {
       console.log("[webhook] ❌ No automation matched this comment");
+      await logWebhook("no_match", { pageId: page_id, userId: user_id, payload: { platform, commentText: comment_text.slice(0, 80), automationCount: automations.length, automationKeywords: automations.map((a) => a.trigger_keyword) } });
       return NextResponse.json({ ok: true, matched: 0 });
     }
 
     console.log("[webhook] ✅ MATCHED automation:", matched.name, "id:", matched.id);
+    await logWebhook("matched", { pageId: page_id, userId: user_id, payload: { platform, automationId: matched.id, automationName: matched.name, commentText: comment_text.slice(0, 80) } });
     const firstName = extractFirstName(sender_name);
 
     // ── DEDUP: check if this comment was already processed ──
@@ -312,6 +360,8 @@ async function processComment(params: {
     if (!dmResult.ok) {
       console.error("[webhook] DM send failed:", dmResult.error);
     }
+
+    await logWebhook("processed", { pageId: page_id, userId: user_id, payload: { automationId: matched.id, commentReplyOk, dmSent: dmResult.ok, dmError: dmResult.error?.slice(0, 200) } });
 
     // 3. Update stats only (meta already saved above)
     const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
