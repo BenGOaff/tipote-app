@@ -65,13 +65,14 @@ export async function GET() {
 
     let query = supabase
       .from("project_tasks")
-      .select("id, title, status, priority, source, created_at, updated_at")
+      .select("id, title, status, priority, source, position, created_at, updated_at")
       .eq("user_id", auth.user.id)
       .is("deleted_at", null);
 
     if (projectId) query = query.eq("project_id", projectId);
 
     const { data, error } = await query
+      .order("position", { ascending: true })
       .order("created_at", { ascending: true });
 
     if (error) {

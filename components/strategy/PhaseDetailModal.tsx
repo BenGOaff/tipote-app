@@ -141,39 +141,33 @@ const SortableTaskItem = ({
   );
 };
 
-const phaseDescriptions: Record<string, { description: string; objectives: string[] }> =
+const phaseDescriptions: Record<string, { description: string }> =
   {
     "Phase 1 : Fondations": {
       description:
-        "Cette phase vise à poser les bases solides de ton business. Tu vas créer les éléments essentiels qui vont attirer et capturer tes premiers prospects : un lead magnet irrésistible, une stratégie de contenu cohérente, et un système d'email marketing efficace.",
-      objectives: [
-        "Créer un lead magnet qui résout un problème précis de ton audience",
-        "Mettre en place un système de capture d'emails automatisé",
-        "Établir une présence régulière sur tes canaux de communication",
-        "Lancer tes premières campagnes d'acquisition",
-      ],
+        "Cette phase vise à poser les bases solides de ton business. Tu vas créer les éléments essentiels qui vont attirer et capturer tes premiers prospects.",
     },
     "Phase 2 : Croissance": {
       description:
-        "Maintenant que les fondations sont en place, il est temps d'accélérer. Tu vas optimiser tes tunnels de vente, créer plus de contenu de valeur, et commencer à développer des partenariats stratégiques pour multiplier ta visibilité.",
-      objectives: [
-        "Lancer ton offre middle ticket pour convertir tes leads",
-        "Optimiser tes pages de vente pour maximiser les conversions",
-        "Produire du contenu vidéo pour augmenter l'engagement",
-        "Développer des collaborations avec des influenceurs de ta niche",
-      ],
+        "Maintenant que les fondations sont en place, il est temps d'accélérer. Tu vas optimiser tes tunnels de vente et développer ta visibilité.",
     },
     "Phase 3 : Scale": {
       description:
-        "C'est le moment de passer à l'échelle supérieure. Tu vas lancer ton offre premium, automatiser au maximum tes processus, et créer des systèmes qui génèrent des revenus de manière prévisible et scalable.",
-      objectives: [
-        "Lancer ton offre high ticket pour maximiser tes revenus",
-        "Automatiser entièrement tes séquences de nurturing",
-        "Organiser des webinars de vente à fort impact",
-        "Créer un programme d'affiliation pour démultiplier tes ventes",
-      ],
+        "C'est le moment de passer à l'échelle supérieure. Tu vas automatiser tes processus et créer des systèmes de revenus prévisibles.",
     },
   };
+
+/** Compute key objectives dynamically from the phase's actual tasks (not yet done) */
+function computeObjectivesFromTasks(tasks: Task[]): string[] {
+  // Show up to 4 non-completed tasks as key objectives
+  const pending = tasks.filter((t) => !t.done);
+  if (pending.length === 0) {
+    // All done — show completed tasks as accomplished objectives
+    return tasks.slice(0, 4).map((t) => t.task);
+  }
+  // Prioritize high-priority tasks first, then show in order
+  return pending.slice(0, 4).map((t) => t.task);
+}
 
 export const PhaseDetailModal = ({
   isOpen,
@@ -314,6 +308,17 @@ export const PhaseDetailModal = ({
       if (oldIndex < 0 || newIndex < 0) return prev;
 
       const tasks = arrayMove(prev.tasks || [], oldIndex, newIndex);
+
+      // Persist new order to database
+      const orderedIds = tasks.map((t) => t.id);
+      fetch("/api/tasks/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds }),
+      }).catch(() => {
+        // Non-blocking: order is still visible locally
+      });
+
       return { ...prev, tasks };
     });
   }, []);
@@ -341,8 +346,14 @@ export const PhaseDetailModal = ({
 
   const objectiveText =
     localPhase.description || descriptionData?.description || "—";
+  // ✅ FIX: Compute key objectives dynamically from actual tasks
+  // instead of hardcoded generic objectives
   const objectives =
-    localPhase.objectives || descriptionData?.objectives || ["—"];
+    localPhase.objectives && localPhase.objectives.length > 0
+      ? localPhase.objectives
+      : (localPhase.tasks && localPhase.tasks.length > 0)
+        ? computeObjectivesFromTasks(localPhase.tasks)
+        : ["Aucune tâche pour l'instant"];
 
   return (
     <Dialog

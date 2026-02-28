@@ -546,6 +546,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
   const [summaryEditMode, setSummaryEditMode] = useState(false);
+  const [personaStale, setPersonaStale] = useState(false);
 
   // Load existing persona detailed data on mount
   useEffect(() => {
@@ -558,6 +559,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         if (json.persona.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
         if (json.persona.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
         if (json.persona.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+        if (json.persona.persona_summary_modified) setPersonaStale(true);
       } catch {
         // non-blocking
       }
@@ -627,6 +629,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             ...prev,
             mission: finalResult.persona_summary || prev?.mission,
           }));
+          setPersonaStale(false);
           toast({ title: "Persona enrichi avec succès" });
         } else {
           throw new Error("Aucun résultat reçu");
@@ -657,6 +660,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         ...prev,
         mission: json.persona_summary || prev?.mission,
       }));
+      setPersonaStale(false);
       toast({ title: "Persona enrichi avec succès" });
     } catch (e: any) {
       toast({
@@ -1644,6 +1648,23 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           {personaDetailTab === "detailed" && (
             <div className="rounded-lg border bg-background">
+              {personaStale && personaDetailedMarkdown && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 rounded-t-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Le résumé persona a été modifié depuis le dernier enrichissement
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour le persona détaillé avec tes modifications.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900" onClick={enrichPersona} disabled={enriching}>
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    Ré-enrichir
+                  </Button>
+                </div>
+              )}
               {personaDetailedMarkdown ? (
                 <AIContent
                   content={personaDetailedMarkdown}
@@ -1676,6 +1697,19 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           {personaDetailTab === "synthesis" && (
             <div className="rounded-lg border bg-background">
+              {personaStale && narrativeSynthesisMarkdown && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 rounded-t-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Le résumé persona a été modifié depuis le dernier enrichissement
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour la synthèse.
+                    </p>
+                  </div>
+                </div>
+              )}
               {narrativeSynthesisMarkdown ? (
                 <AIContent
                   content={narrativeSynthesisMarkdown}

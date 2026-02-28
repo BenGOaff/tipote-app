@@ -111,6 +111,113 @@ const PLATFORM_LABELS: Record<string, string> = {
   email: "Email",
 };
 
+/** Editable plan day item — allows modifying theme, hook, CTA before generation */
+function PlanDayItem({
+  post,
+  showBorder,
+  onUpdate,
+}: {
+  post: DayPlan;
+  showBorder: boolean;
+  onUpdate: (updated: Partial<DayPlan>) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [theme, setTheme] = useState(post.theme);
+  const [hook, setHook] = useState(post.hook);
+  const [cta, setCta] = useState(post.cta);
+
+  // Sync if post changes externally
+  useEffect(() => {
+    setTheme(post.theme);
+    setHook(post.hook);
+    setCta(post.cta);
+  }, [post.theme, post.hook, post.cta]);
+
+  const handleSave = () => {
+    onUpdate({ theme, hook, cta });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setTheme(post.theme);
+    setHook(post.hook);
+    setCta(post.cta);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className={showBorder ? "pt-3 border-t border-muted/40 space-y-2" : "space-y-2"}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">
+            {PLATFORM_LABELS[post.platform] || post.platform}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {post.contentType}
+          </Badge>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Thème</Label>
+          <Input
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            className="text-sm"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Accroche</Label>
+          <Textarea
+            value={hook}
+            onChange={(e) => setHook(e.target.value)}
+            rows={2}
+            className="text-sm"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">CTA</Label>
+          <Input
+            value={cta}
+            onChange={(e) => setCta(e.target.value)}
+            className="text-sm"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handleSave}>
+            <Save className="w-3 h-3 mr-1" /> Enregistrer
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleCancel}>
+            Annuler
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`group ${showBorder ? "pt-3 border-t border-muted/40" : ""}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant="secondary" className="text-xs">
+          {PLATFORM_LABELS[post.platform] || post.platform}
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          {post.contentType}
+        </Badge>
+        <p className="font-medium text-sm flex-1">{post.theme}</p>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => setIsEditing(true)}
+        >
+          <Edit className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground mt-1">{post.hook}</p>
+      <p className="text-xs text-muted-foreground">CTA : {post.cta}</p>
+    </div>
+  );
+}
+
 /** Max concurrent generation requests to avoid overwhelming the server */
 const MAX_CONCURRENT = 3;
 
@@ -985,6 +1092,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           </div>
         </div>
 
+        <p className="text-sm text-muted-foreground">
+          Clique sur le crayon pour modifier une idée avant de générer les contenus.
+        </p>
+
         <div className="space-y-4">
           {Array.from(planDayGroups.entries()).map(([dayNum, posts]) => (
             <Card key={dayNum} className="p-4">
@@ -993,24 +1104,29 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                   <span className="text-sm font-bold text-primary">J{dayNum}</span>
                 </div>
                 <div className="flex-1 min-w-0 space-y-3">
-                  {posts.map((post, pi) => (
-                    <div
-                      key={pi}
-                      className={pi > 0 ? "pt-3 border-t border-muted/40" : ""}
-                    >
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="secondary" className="text-xs">
-                          {PLATFORM_LABELS[post.platform] || post.platform}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {post.contentType}
-                        </Badge>
-                        <p className="font-medium text-sm">{post.theme}</p>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{post.hook}</p>
-                      <p className="text-xs text-muted-foreground">CTA : {post.cta}</p>
-                    </div>
-                  ))}
+                  {posts.map((post, pi) => {
+                    // Find the global index in strategy.days for editing
+                    const globalIdx = strategy.days.findIndex(
+                      (d) => d.day === post.day && d.theme === post.theme && d.platform === post.platform
+                    );
+
+                    return (
+                      <PlanDayItem
+                        key={pi}
+                        post={post}
+                        showBorder={pi > 0}
+                        onUpdate={(updated) => {
+                          if (globalIdx < 0) return;
+                          setStrategy((prev) => {
+                            if (!prev) return prev;
+                            const newDays = [...prev.days];
+                            newDays[globalIdx] = { ...newDays[globalIdx], ...updated };
+                            return { ...prev, days: newDays };
+                          });
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </Card>

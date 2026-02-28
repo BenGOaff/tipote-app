@@ -1,0 +1,28 @@
+{
+  "string": {
+    "site_name_root": ".site-name",
+    "main_headline": ".main-headline",
+    "cta_text": ".cta-primary",
+    "hero_subtitle": ".hero-title",
+    "author_name": ".author-name-text",
+    "author_story": ".author-story-text",
+    "testimonials_title": ".testimonial-title",
+    "site_name_full": ".footer-logo",
+    "footer_disclaimer": ".footer-text"
+  },
+  "arrays": {
+    "promises": {
+      "itemSelector": ".feature-card",
+      "fields": {
+        "text": ".feature-title"
+      }
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "quote": ".testimonial-quote",
+        "name": ".testimonial-name"
+      }
+    }
+  }
+}

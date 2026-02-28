@@ -1,0 +1,55 @@
+{
+  "string": {
+    "hero_label": ".hero-label",
+    "hero_title": ".hero-title",
+    "hero_description": ".hero-description",
+    "cta_text": ".cta-button",
+    "hero_disclaimer": ".hero-disclaimer",
+    "badge_label": ".badge-label",
+    "badge_title": ".badge-title",
+    "badge_dates": ".badge-dates",
+    "how_title": ".section-title",
+    "how_subtitle": ".section-subtitle",
+    "how_emphasis": ".section-emphasis",
+    "testimonials_title": ".testimonials-title",
+    "recognition_title": ".recognition-title",
+    "goals_title": ".goals-title",
+    "goals_subtitle": ".goals-subtitle",
+    "about_story": ".about-content p",
+    "final_cta_title": ".cta-final-title",
+    "final_cta_subtitle": ".cta-final-subtitle"
+  },
+  "arrays": {
+    "features": {
+      "itemSelector": ".feature-card",
+      "fields": {
+        "title": ".feature-title",
+        "description": ".feature-description"
+      }
+    },
+    "daily_schedule": {
+      "itemSelector": ".day-card",
+      "fields": {
+        "day_date": ".day-date",
+        "day_title": ".day-title"
+      }
+    },
+    "testimonials": {
+      "itemSelector": ".testimonial-card",
+      "fields": {
+        "name": ".testimonial-info h4",
+        "text": ".testimonial-text"
+      }
+    },
+    "recognition_pains": {
+      "itemSelector": ".recognition-list li"
+    },
+    "goals": {
+      "itemSelector": ".goal-card",
+      "fields": {
+        "title": ".goal-title",
+        "description": ".goal-description"
+      }
+    }
+  }
+}

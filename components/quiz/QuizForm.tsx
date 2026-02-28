@@ -83,6 +83,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [shareMessage, setShareMessage] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
   const [ctaPerResult, setCtaPerResult] = useState(false);
+  const [captureHeading, setCaptureHeading] = useState("");
+  const [captureSubtitle, setCaptureSubtitle] = useState("");
 
   // Systeme.io tags
   const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
@@ -335,6 +337,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
           share_message: shareMessage,
           locale,
           sio_share_tag_name: sioShareTagName || null,
+          capture_heading: captureHeading || null,
+          capture_subtitle: captureSubtitle || null,
           status,
           config_objective: objective,
           config_target: target,
@@ -826,6 +830,29 @@ export function QuizForm({ onClose }: QuizFormProps) {
           <div className="space-y-2">
             <Label>Texte de consentement</Label>
             <Textarea value={consentText} onChange={(e) => setConsentText(e.target.value)} rows={2} />
+          </div>
+
+          <div className="p-4 rounded-lg border space-y-3">
+            <p className="font-medium">Page de capture email</p>
+            <p className="text-sm text-muted-foreground">Personnalise le texte affiché avant la saisie de l&apos;email.</p>
+            <div className="space-y-2">
+              <Label>Titre de la page de capture</Label>
+              <Input
+                value={captureHeading}
+                onChange={(e) => setCaptureHeading(e.target.value)}
+                placeholder="Ton résultat est prêt !"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sous-titre / texte d&apos;accroche</Label>
+              <Textarea
+                value={captureSubtitle}
+                onChange={(e) => setCaptureSubtitle(e.target.value)}
+                rows={3}
+                placeholder="Entre ton email pour découvrir ton profil.&#10;&#10;Tu peux ajouter plusieurs lignes ici pour donner envie."
+              />
+              <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
+            </div>
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-lg border">

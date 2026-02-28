@@ -1575,6 +1575,12 @@ RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Si business_model = affiliate : tu NE PARLES PAS de créer une offre.
 - Zéro blabla : tout doit être actionnable, spécifique, niché.
 - Respect strict des contraintes si elles existent.
+
+🎯 ADAPTATION AU NIVEAU DU BUSINESS (CRITIQUE) :
+- Si l'utilisateur a DÉJÀ des offres (surtout middle/high ticket, >1000€) : NE PAS proposer de “créer un lead magnet”, “définir sa niche”, ou “faire ses premiers contenus”. C'est insultant pour un business avancé.
+- Pour un business avancé (offres existantes, CA > 2000€/mois) : concentre-toi sur l'OPTIMISATION et le SCALE (augmenter le taux de conversion, automatiser, upseller, créer des systèmes de vente prévisibles, développer l'audience qualifiée, structurer le closing, créer des assets marketing à haut levier).
+- Pour un business intermédiaire (offres existantes, CA < 2000€/mois) : concentre-toi sur l'ACCÉLÉRATION (systématiser l'acquisition, optimiser le funnel existant, tester de nouveaux canaux, améliorer le packaging/positionnement).
+- Les tâches du plan 90j doivent correspondre au NIVEAU RÉEL du business. Analyse les offres, prix, volume de ventes pour calibrer les actions.
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 FORMAT JSON STRICT UNIQUEMENT :
 {
@@ -1639,19 +1645,29 @@ ${JSON.stringify(
     mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
     has_offers: (businessProfile as any).has_offers ?? null,
     offers: (businessProfile as any).offers ?? null,
+    business_maturity: (businessProfile as any).business_maturity ?? null,
     revenue_goal_monthly:
       (businessProfile as any).revenue_goal_monthly ??
       (businessProfile as any).revenueGoalMonthly ??
       (businessProfile as any).target_monthly_revenue ??
       (businessProfile as any).revenue_goal ??
       null,
+    current_monthly_revenue: ((businessProfile as any).diagnostic_answers as AnyRecord)?.currentMonthlyRevenue ?? null,
+    has_already_sold: ((businessProfile as any).diagnostic_answers as AnyRecord)?.hasAlreadySold ?? null,
     weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
     biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
     is_satisfied_with_offers: isSatisfiedWithOffers,
+    audience_email: (businessProfile as any).audience_email ?? null,
+    audience_social: (businessProfile as any).audience_social ?? null,
   },
   null,
   2,
 )}
+
+⚠️ OFFRES EXISTANTES DE L'UTILISATEUR (source de vérité — à utiliser comme base de la stratégie) :
+${JSON.stringify((businessProfile as any).offers ?? [], null, 2)}
+→ Si l'utilisateur a des offres à prix élevé (>1000€), c'est un business AVANCÉ. Adapte les tâches en conséquence (pas de "créer un lead magnet" ou "définir sa niche").
+→ Si l'utilisateur a déjà vendu (has_already_sold=yes) et un CA mensuel, c'est un business ÉTABLI. Focus sur l'optimisation et le scale.
 
 ${competitorContext ? competitorContext + "\n" : ""}RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
@@ -1663,6 +1679,7 @@ CONTRAINTES TASKS
 - Minimum 6 tâches par timeframe (d30/d60/d90).
 - due_date valides et réparties.
 - Focus = 1 levier concret.
+- ⚠️ Les tâches doivent être calibrées au NIVEAU du business : si l'utilisateur a déjà des offres high ticket et des clients, ne propose PAS de tâches de débutant.
 ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans le positionnement et la stratégie." : ""}
 `.trim();
 
@@ -1870,6 +1887,11 @@ RÈGLES COACH-LEVEL :
 - Cohérence totale avec l'offre choisie.
 - 1 levier principal (focus).
 - Min 6 tâches par timeframe, due_date valides.
+
+🎯 ADAPTATION AU NIVEAU DU BUSINESS (CRITIQUE) :
+- Si l'utilisateur a DÉJÀ des offres (surtout middle/high ticket, >1000€) : concentre-toi sur l'OPTIMISATION et le SCALE.
+- Si l'utilisateur a déjà vendu et a un CA : NE PAS proposer de tâches de débutant (créer un lead magnet, définir sa niche, etc.).
+- Analyse les offres (prix, format, volume) pour calibrer les tâches au niveau réel du business.
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}${isBeginnerPath ? `
 CONTEXTE DÉBUTANT (IMPORTANT) :
 L'utilisateur part de ZÉRO. Il n'a pas encore de clients ni de preuve sociale.
@@ -1943,9 +1965,16 @@ ${JSON.stringify(
   {
     niche: (businessProfile as any).niche ?? null,
     mission_statement: (businessProfile as any).mission_statement ?? (businessProfile as any).missionStatement ?? null,
+    has_offers: (businessProfile as any).has_offers ?? null,
+    offers: (businessProfile as any).offers ?? null,
+    business_maturity: (businessProfile as any).business_maturity ?? null,
+    current_monthly_revenue: ((businessProfile as any).diagnostic_answers as AnyRecord)?.currentMonthlyRevenue ?? null,
+    has_already_sold: ((businessProfile as any).diagnostic_answers as AnyRecord)?.hasAlreadySold ?? null,
     weekly_hours: (businessProfile as any).weekly_hours ?? (businessProfile as any).weeklyHours ?? null,
     biggest_blocker: (businessProfile as any).biggest_blocker ?? (businessProfile as any).biggestBlocker ?? null,
     tone_preference: (businessProfile as any).tone_preference ?? (businessProfile as any).tonePreference ?? null,
+    audience_email: (businessProfile as any).audience_email ?? null,
+    audience_social: (businessProfile as any).audience_social ?? null,
   },
   null,
   2,
@@ -1953,6 +1982,10 @@ ${JSON.stringify(
 
 OFFRE CHOISIE
 ${JSON.stringify(selectedOffers, null, 2)}
+
+⚠️ OFFRES EXISTANTES DE L'UTILISATEUR (si applicable) :
+${JSON.stringify((businessProfile as any).offers ?? [], null, 2)}
+→ Adapte le plan 90j au niveau réel du business.
 
 ${competitorContext ? competitorContext + "\n" : ""}RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
