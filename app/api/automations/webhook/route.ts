@@ -87,9 +87,9 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
   // Choisir le bon app secret selon l'objet du webhook
   // Les webhooks Page ET Instagram passent tous par Tipote ter (qui a le produit Webhooks).
-  // Meta signe les webhooks avec le secret de l'app qui a l'abonnement.
+  // Meta signe avec le secret de l'app parente Tipote ter (INSTAGRAM_META_APP_SECRET).
   const appSecret =
-    process.env.INSTAGRAM_APP_SECRET ?? process.env.INSTAGRAM_META_APP_SECRET ?? process.env.META_APP_SECRET;
+    process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
 
   if (appSecret) {
     if (!signature) {

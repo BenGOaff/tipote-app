@@ -935,8 +935,10 @@ export async function subscribePageToWebhooks(
   let pageOk = false;
 
   // Utiliser Tipote ter (qui a le produit Webhooks) pour l'app-level subscription
-  const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  // INSTAGRAM_META_APP_ID = ID de l'app parente Tipote ter (2408789919563484)
+  // INSTAGRAM_APP_ID = peut être l'ID de la sous-app Instagram Professional Login (différent !)
+  const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const webhookCallbackUrl = `${appUrl}/api/automations/webhook`;

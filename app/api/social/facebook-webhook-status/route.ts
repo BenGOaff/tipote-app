@@ -54,8 +54,8 @@ export async function GET(req: NextRequest) {
   const pageId = connection.platform_user_id;
 
   // Credentials Tipote ter (app avec produit Webhooks)
-  const webhookAppId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
-  const webhookAppSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  const webhookAppId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const webhookAppSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   // Token Page via Tipote ter (pour page-level subscription)
   const messengerPageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
   const pageToken = messengerPageToken ?? oauthToken;

@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest) {
   // Utiliser Tipote ter (qui a le produit Webhooks)
-  const appId = process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+  const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
+  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
