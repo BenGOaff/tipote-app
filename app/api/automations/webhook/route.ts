@@ -246,10 +246,15 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
       let senderName = val.from?.name ?? "";
 
       if ((!commentText || !senderId) && val.comment_id) {
-        // Use MESSENGER_PAGE_ACCESS_TOKEN (from Tipote ter app which has webhooks)
-        // or fall back to the page's OAuth token
-        const tokenForFetch = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
-        const fetched = await fetchCommentFromGraphAPI(tokenForFetch, val.comment_id);
+        // Use pageAccessToken (OAuth, has pages_read_user_content) to read the comment.
+        // MESSENGER_PAGE_ACCESS_TOKEN is for sending DMs (pages_messaging), not reading.
+        // Try pageAccessToken first, then MESSENGER token as fallback.
+        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        let fetched = await fetchCommentFromGraphAPI(pageAccessToken, val.comment_id);
+        if (!fetched && messengerToken && messengerToken !== pageAccessToken) {
+          await logWebhook("graph_api_fetch_retry", { pageId, payload: { commentId: val.comment_id, retryWith: "MESSENGER_PAGE_ACCESS_TOKEN" } });
+          fetched = await fetchCommentFromGraphAPI(messengerToken, val.comment_id);
+        }
         if (fetched) {
           await logWebhook("graph_api_fetch_ok", { pageId, payload: { commentId: val.comment_id, fetchedMessage: fetched.message?.slice(0, 80), fetchedFromId: fetched.fromId } });
           if (!commentText && fetched.message) commentText = fetched.message;
@@ -768,7 +773,16 @@ async function fetchCommentFromGraphAPI(
     const res = await fetch(url);
     if (!res.ok) {
       const errBody = await res.text();
-      console.warn(`[webhook] Graph API fetch failed for ${commentId} (${res.status}):`, errBody.slice(0, 200));
+      console.warn(`[webhook] Graph API fetch failed for ${commentId} (${res.status}):`, errBody.slice(0, 300));
+      // Log the error to DB for debugging (token prefix helps identify which token was used)
+      await logWebhook("graph_api_error", {
+        pageId: commentId,
+        payload: {
+          status: res.status,
+          error: errBody.slice(0, 300),
+          tokenPrefix: accessToken.slice(0, 10) + "...",
+        },
+      });
       return null;
     }
     const data = await res.json();
@@ -779,6 +793,7 @@ async function fetchCommentFromGraphAPI(
     };
   } catch (err) {
     console.error(`[webhook] Graph API fetch error for ${commentId}:`, err);
+    await logWebhook("graph_api_exception", { pageId: commentId, payload: { error: String(err).slice(0, 300) } });
     return null;
   }
 }
