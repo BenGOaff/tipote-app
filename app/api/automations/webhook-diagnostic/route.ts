@@ -84,12 +84,15 @@ export async function GET(req: NextRequest) {
   }
 
   // 4. Vérifier les automatisations actives pour Facebook
-  const { data: automations } = await supabaseAdmin
+  // NOTE: .contains() on TEXT[] is unreliable in some Supabase JS versions — filter in JS
+  const { data: rawAutomations } = await supabaseAdmin
     .from("social_automations")
     .select("id, name, trigger_keyword, target_post_url, platforms, enabled, stats, meta, updated_at")
     .eq("user_id", user.id)
-    .eq("enabled", true)
-    .contains("platforms", ["facebook"]);
+    .eq("enabled", true);
+  const automations = (rawAutomations ?? []).filter(
+    (a) => Array.isArray(a.platforms) && a.platforms.includes("facebook"),
+  );
 
   diagnostic.facebookAutomations = automations?.map((a) => ({
     id: a.id,

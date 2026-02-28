@@ -249,15 +249,19 @@ async function processComment(params: {
   console.log("[webhook] 📝 processComment:", { platform, page_id, sender_name, comment_text, post_id, user_id });
 
   try {
+    // NOTE: .contains("platforms", [platform]) on TEXT[] columns is unreliable
+    // in some Supabase JS versions. Fetch all enabled automations and filter in JS.
     let query = supabaseAdmin
       .from("social_automations")
       .select("*")
-      .eq("enabled", true)
-      .contains("platforms", [platform]);
+      .eq("enabled", true);
 
     if (user_id) query = query.eq("user_id", user_id);
 
-    const { data: automations, error } = await query;
+    const { data: allAutomations, error } = await query;
+    const automations = (allAutomations ?? []).filter(
+      (a) => Array.isArray(a.platforms) && a.platforms.includes(platform),
+    );
 
     if (error || !automations?.length) {
       console.log("[webhook] ❌ No automations found", { error, count: automations?.length ?? 0 });
