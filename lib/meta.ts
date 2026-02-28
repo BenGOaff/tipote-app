@@ -31,8 +31,9 @@ const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
+  "pages_read_user_content",
   "pages_messaging",
-  "pages_manage_metadata", // nécessaire pour abonner la page aux webhooks (feed/comments)
+  "pages_manage_metadata",
 ];
 
 
