@@ -205,12 +205,14 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
         await logWebhook("skip_non_comment", { pageId, payload: { item: val.item, verb: val.verb } });
         continue;
       }
-      if (!val.message || !val.from?.id) {
-        await logWebhook("skip_missing_data", { pageId, payload: { hasMessage: !!val.message, hasFromId: !!val.from?.id } });
+
+      // We need at least a from.id OR a comment_id to proceed
+      if (!val.from?.id && !val.comment_id) {
+        await logWebhook("skip_missing_data", { pageId, payload: { hasFromId: !!val.from?.id, hasCommentId: !!val.comment_id, hasMessage: !!val.message } });
         continue;
       }
 
-      // Look up page access token + user_id from our DB
+      // Look up page access token + user_id from our DB (needed for Graph API fetch + processComment)
       let pageAccessToken: string | null = null;
       let connUserId: string | undefined;
       try {
@@ -231,11 +233,37 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
       if (!pageAccessToken) {
         console.warn("[webhook] ❌ No token found for page:", pageId);
-        await logWebhook("no_token", { pageId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id } });
+        await logWebhook("no_token", { pageId, payload: { commentId: val.comment_id, fromId: val.from?.id } });
         continue;
       }
       console.log("[webhook] 🔑 Token found for page:", pageId, "user:", connUserId);
-      await logWebhook("token_found", { pageId, userId: connUserId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id, commentId: val.comment_id } });
+      await logWebhook("token_found", { pageId, userId: connUserId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id, commentId: val.comment_id, hasMessage: !!val.message } });
+
+      // Meta's Page feed webhook often does NOT include the comment text (message field).
+      // When message is missing, fetch it from the Graph API using the comment_id.
+      let commentText = val.message ?? "";
+      let senderId = val.from?.id ?? "";
+      let senderName = val.from?.name ?? "";
+
+      if ((!commentText || !senderId) && val.comment_id) {
+        // Use MESSENGER_PAGE_ACCESS_TOKEN (from Tipote ter app which has webhooks)
+        // or fall back to the page's OAuth token
+        const tokenForFetch = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
+        const fetched = await fetchCommentFromGraphAPI(tokenForFetch, val.comment_id);
+        if (fetched) {
+          await logWebhook("graph_api_fetch_ok", { pageId, payload: { commentId: val.comment_id, fetchedMessage: fetched.message?.slice(0, 80), fetchedFromId: fetched.fromId } });
+          if (!commentText && fetched.message) commentText = fetched.message;
+          if (!senderId && fetched.fromId) senderId = fetched.fromId;
+          if (!senderName && fetched.fromName) senderName = fetched.fromName;
+        } else {
+          await logWebhook("graph_api_fetch_fail", { pageId, payload: { commentId: val.comment_id } });
+        }
+      }
+
+      if (!commentText || !senderId) {
+        await logWebhook("skip_missing_data_after_fetch", { pageId, payload: { hasMessage: !!commentText, hasFromId: !!senderId, commentId: val.comment_id } });
+        continue;
+      }
 
       // post_id in Meta's format is "pageId_postId"
       const rawPostId = val.post_id ?? "";
@@ -243,9 +271,9 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
       const res = await processComment({
         platform: "facebook",
         page_id: pageId,
-        sender_id: val.from.id,
-        sender_name: val.from.name ?? "",
-        comment_text: val.message,
+        sender_id: senderId,
+        sender_name: senderName,
+        comment_text: commentText,
         comment_id: val.comment_id,
         post_id: rawPostId, // pass full post_id for matching
         page_access_token: pageAccessToken,
@@ -723,6 +751,35 @@ async function replyToInstagramComment(igAccessToken: string, commentId: string,
   if (!res.ok) {
     const errBody = await res.text();
     throw new Error(`Instagram comment reply failed: ${errBody}`);
+  }
+}
+
+/**
+ * Fetch comment details from the Graph API.
+ * Meta's Page feed webhook often omits the comment text (message field).
+ * This function retrieves it using the comment_id.
+ */
+async function fetchCommentFromGraphAPI(
+  accessToken: string,
+  commentId: string,
+): Promise<{ message: string; fromId: string; fromName: string } | null> {
+  try {
+    const url = `https://graph.facebook.com/v21.0/${commentId}?fields=message,from&access_token=${accessToken}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.warn(`[webhook] Graph API fetch failed for ${commentId} (${res.status}):`, errBody.slice(0, 200));
+      return null;
+    }
+    const data = await res.json();
+    return {
+      message: data.message ?? "",
+      fromId: data.from?.id ?? "",
+      fromName: data.from?.name ?? "",
+    };
+  } catch (err) {
+    console.error(`[webhook] Graph API fetch error for ${commentId}:`, err);
+    return null;
   }
 }
 
