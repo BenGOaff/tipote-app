@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     });
 
   } else if (platform === "facebook") {
-    // Facebook — vérifier pages_messaging via debug_token
+    // Facebook — vérifier le token et les permissions de base
     const appId = process.env.META_APP_ID;
     const appSecret = process.env.META_APP_SECRET;
 
@@ -179,18 +179,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, step: "token", detail: "Token Facebook invalide ou expiré. Reconnecte le compte Facebook." });
     }
 
+    // Vérifier que MESSENGER_PAGE_ACCESS_TOKEN est configuré (DMs via Tipote ter)
+    const hasMessengerToken = !!process.env.MESSENGER_PAGE_ACCESS_TOKEN;
     const scopes: string[] = tokenData.scopes ?? [];
-    if (!scopes.includes("pages_messaging")) {
+
+    if (!hasMessengerToken) {
       return NextResponse.json({
         ok: false,
         step: "permissions",
-        detail: `Permission "pages_messaging" manquante dans le token Facebook. Déconnecte et reconnecte ton compte Facebook pour obtenir cette permission (ajoutée récemment). Permissions actuelles : ${scopes.join(", ")}`,
+        detail: "MESSENGER_PAGE_ACCESS_TOKEN manquant. Configure le token Messenger (depuis l'app Tipote ter) dans les variables d'environnement.",
       });
     }
 
     return NextResponse.json({
       ok: true,
-      detail: "✓ Mot-clé OK · Token Facebook valide · pages_messaging OK. Si l'automatisation ne se déclenche pas, reconnecte ton compte Facebook pour re-enregistrer le webhook.",
+      detail: `✓ Mot-clé OK · Token Facebook valide · Token Messenger configuré · Permissions : ${scopes.join(", ")}. Le webhook feed est actif, l'automatisation répondra aux commentaires.`,
     });
 
   } else {
