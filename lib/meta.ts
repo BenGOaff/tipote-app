@@ -935,8 +935,8 @@ export async function subscribePageToWebhooks(
   let pageOk = false;
 
   // Utiliser Tipote ter (qui a le produit Webhooks) pour l'app-level subscription
-  // INSTAGRAM_META_APP_ID = ID de l'app parente Tipote ter (2408789919563484)
-  // INSTAGRAM_APP_ID = peut être l'ID de la sous-app Instagram Professional Login (différent !)
+  // INSTAGRAM_META_APP_ID = app parente Tipote ter (2408789919563484) — celle qui a le produit Webhooks
+  // INSTAGRAM_APP_ID = sous-app IG Professional Login (différent !) — NE PAS utiliser pour les webhooks
   const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
   const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
@@ -949,7 +949,7 @@ export async function subscribePageToWebhooks(
       const appParams = new URLSearchParams({
         object: "page",
         callback_url: webhookCallbackUrl,
-        fields: "feed",
+        fields: "feed,messages",
         verify_token: verifyToken,
         access_token: `${appId}|${appSecret}`,
       });
@@ -964,7 +964,7 @@ export async function subscribePageToWebhooks(
       errors.push(`App subscription error: ${String(err)}`);
     }
   } else {
-    errors.push("Missing INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, or META_WEBHOOK_VERIFY_TOKEN env vars");
+    errors.push("Missing INSTAGRAM_META_APP_ID, INSTAGRAM_META_APP_SECRET, or META_WEBHOOK_VERIFY_TOKEN env vars");
   }
 
   // B. Page-level subscription
@@ -974,7 +974,7 @@ export async function subscribePageToWebhooks(
   try {
     const pageParams = new URLSearchParams({
       access_token: pageToken,
-      subscribed_fields: "feed",
+      subscribed_fields: "feed,messages",
     });
     const res = await fetch(
       `${GRAPH_API_BASE}/${pageId}/subscribed_apps`,

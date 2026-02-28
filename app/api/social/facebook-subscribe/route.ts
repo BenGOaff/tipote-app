@@ -11,14 +11,15 @@ import { decrypt } from "@/lib/crypto";
 export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest) {
-  // Utiliser Tipote ter (qui a le produit Webhooks)
+  // Utiliser Tipote ter parent (qui a le produit Webhooks)
+  // INSTAGRAM_META_APP_ID = Tipote ter parent (2408789919563484)
   const appId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
   const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   if (!appId || !appSecret || !verifyToken) {
-    return NextResponse.json({ error: "Env vars INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET / META_WEBHOOK_VERIFY_TOKEN manquants" }, { status: 500 });
+    return NextResponse.json({ error: "Env vars INSTAGRAM_META_APP_ID / INSTAGRAM_META_APP_SECRET / META_WEBHOOK_VERIFY_TOKEN manquants" }, { status: 500 });
   }
 
   const callbackUrl = `${appUrl}/api/automations/webhook`;
@@ -31,7 +32,7 @@ export async function POST(_req: NextRequest) {
     const params = new URLSearchParams({
       object: "page",
       callback_url: callbackUrl,
-      fields: "feed",
+      fields: "feed,messages",
       verify_token: verifyToken,
       access_token: appToken,
     });
@@ -91,7 +92,7 @@ export async function POST(_req: NextRequest) {
   try {
     const params = new URLSearchParams({
       access_token: pageToken,
-      subscribed_fields: "feed",
+      subscribed_fields: "feed,messages",
     });
     const pageRes = await fetch(
       `https://graph.facebook.com/v21.0/${conn.platform_user_id}/subscribed_apps`,
@@ -120,7 +121,7 @@ export async function POST(_req: NextRequest) {
     page_error: pageSubError,
     page_id: conn.platform_user_id,
     callback_url: callbackUrl,
-    webhook_app: appId === process.env.INSTAGRAM_APP_ID ? "Tipote ter" : "Tipote",
+    webhook_app: (appId === process.env.INSTAGRAM_META_APP_ID || appId === process.env.INSTAGRAM_APP_ID) ? "Tipote ter" : "Tipote",
     using_messenger_token: !!process.env.MESSENGER_PAGE_ACCESS_TOKEN,
   }, { status: allOk ? 200 : 502 });
 }

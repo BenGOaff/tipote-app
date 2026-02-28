@@ -53,7 +53,8 @@ export async function GET(req: NextRequest) {
 
   const pageId = connection.platform_user_id;
 
-  // Credentials Tipote ter (app avec produit Webhooks)
+  // Credentials Tipote ter (app parente avec produit Webhooks)
+  // INSTAGRAM_META_APP_ID = Tipote ter parent (2408789919563484)
   const webhookAppId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
   const webhookAppSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
   // Token Page via Tipote ter (pour page-level subscription)
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
   const result: Record<string, unknown> = {
     pageId,
     webhookAppId: webhookAppId,
-    webhookAppName: webhookAppId === process.env.INSTAGRAM_APP_ID ? "Tipote ter" : "Tipote",
+    webhookAppName: (webhookAppId === process.env.INSTAGRAM_META_APP_ID || webhookAppId === process.env.INSTAGRAM_APP_ID) ? "Tipote ter" : "Tipote",
     webhookCallbackUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/automations/webhook`,
     hasVerifyToken: !!process.env.META_WEBHOOK_VERIFY_TOKEN,
     hasMessengerToken: !!messengerPageToken,
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest) {
         const params = new URLSearchParams({
           object: "page",
           callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/automations/webhook`,
-          fields: "feed",
+          fields: "feed,messages",
           verify_token: process.env.META_WEBHOOK_VERIFY_TOKEN,
           access_token: `${webhookAppId}|${webhookAppSecret}`,
         });
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
     try {
       const params = new URLSearchParams({
         access_token: pageToken,
-        subscribed_fields: "feed",
+        subscribed_fields: "feed,messages",
       });
       const res = await fetch(`${GRAPH}/${pageId}/subscribed_apps`, {
         method: "POST",

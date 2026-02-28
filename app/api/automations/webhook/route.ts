@@ -87,7 +87,7 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
   // Choisir le bon app secret selon l'objet du webhook
   // Les webhooks Page ET Instagram passent tous par Tipote ter (qui a le produit Webhooks).
-  // Meta signe avec le secret de l'app parente Tipote ter (INSTAGRAM_META_APP_SECRET).
+  // Meta signe avec le secret de l'app PARENTE Tipote ter (INSTAGRAM_META_APP_SECRET).
   const appSecret =
     process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
 
@@ -119,6 +119,14 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
 
   for (const entry of payload.entry ?? []) {
     const pageId = entry.id;
+
+    // Messaging events (DMs) arrive in entry.messaging[], not entry.changes[]
+    // We must acknowledge them (return 200) or Meta will disable the webhook.
+    if (entry.messaging?.length) {
+      console.log("[webhook] 📨 Messaging event received for page:", pageId, "count:", entry.messaging.length);
+      // TODO: handle incoming DMs if needed in the future
+      continue;
+    }
 
     for (const change of entry.changes ?? []) {
       // Only handle new comment additions on feed
@@ -474,7 +482,7 @@ interface MetaNativePayload {
   entry: Array<{
     id: string;
     time?: number;
-    changes: Array<{
+    changes?: Array<{
       field: string;
       value: {
         from?: { id: string; name?: string };
@@ -485,6 +493,12 @@ interface MetaNativePayload {
         verb?: string;
         created_time?: number;
       };
+    }>;
+    messaging?: Array<{
+      sender: { id: string };
+      recipient: { id: string };
+      timestamp: number;
+      message?: { mid: string; text?: string };
     }>;
   }>;
 }
