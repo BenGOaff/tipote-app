@@ -29,6 +29,7 @@ import {
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { VideoUploader, type UploadedVideo } from "@/components/content/VideoUploader";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 
 import {
@@ -172,6 +173,9 @@ export function ContentEditor({ initialItem }: Props) {
     const t = (type ?? "").toLowerCase();
     return t === "post" || t === "";
   }, [type]);
+
+  // Schedule modal for non-social content (email, article, newsletter, etc.)
+  const [nonSocialScheduleOpen, setNonSocialScheduleOpen] = useState(false);
 
   // Platforms that support video upload
   const supportsVideo = useMemo(() => {
@@ -1105,6 +1109,55 @@ export function ContentEditor({ initialItem }: Props) {
               hasVideo={!!uploadedVideo}
               busy={saving || deleting}
             />
+          </Card>
+        )}
+
+        {/* Programmation pour les contenus non-sociaux (email, article, newsletter, etc.) */}
+        {!isSocialPost && (
+          <Card className="p-4">
+            <ScheduleModal
+              open={nonSocialScheduleOpen}
+              onOpenChange={setNonSocialScheduleOpen}
+              platformLabel="le calendrier"
+              onConfirm={handleScheduleFromButtons}
+              defaultDate={scheduledDate || undefined}
+            />
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => setNonSocialScheduleOpen(true)}
+                  disabled={saving || deleting}
+                  size="sm"
+                  variant="outline"
+                >
+                  <CalendarDays className="h-4 w-4 mr-1.5" />
+                  Programmer
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copy}
+                  disabled={saving || deleting}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copier
+                </Button>
+              </div>
+              {status === "scheduled" && scheduledDate && (
+                <p className="text-xs text-muted-foreground">
+                  Programmé pour le{" "}
+                  <span className="font-medium">
+                    {new Date(scheduledDate + "T00:00:00").toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                </p>
+              )}
+            </div>
           </Card>
         )}
       </div>

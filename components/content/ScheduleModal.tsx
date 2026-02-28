@@ -98,8 +98,8 @@ export function ScheduleModal({
                 Programmer sur {platformLabel}
               </DialogTitle>
               <DialogDescription>
-                Choisis la date et l&apos;heure de publication. Le post sera automatiquement
-                publié via Tipote.
+                Choisis la date et l&apos;heure de publication. Le contenu sera
+                programmé via Tipote.
               </DialogDescription>
             </DialogHeader>
 
@@ -146,18 +146,18 @@ export function ScheduleModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                Post programmé
+                Contenu programmé
               </DialogTitle>
             </DialogHeader>
 
             <div className="rounded-lg border bg-green-50 p-4 text-sm text-green-800">
-              Ton post sera publié sur {platformLabel} le{" "}
+              Ton contenu sera publié sur {platformLabel} le{" "}
               <span className="font-semibold">{formatDateFr(confirmedDate)}</span> à{" "}
               <span className="font-semibold">{confirmedTime}</span>.
               <br />
               <br />
-              Pour modifier ou supprimer ce post, rends-toi dans{" "}
-              <span className="font-semibold">tes contenus</span> et sur{" "}
+              Pour modifier ou reprogrammer, rends-toi dans{" "}
+              <span className="font-semibold">tes contenus</span> ou sur{" "}
               <span className="font-semibold">ton calendrier</span>.
             </div>
 
