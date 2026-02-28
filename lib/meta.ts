@@ -21,14 +21,9 @@ const INSTAGRAM_AUTH_URL = "https://www.instagram.com/oauth/authorize";
 const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
-// Facebook Pages scopes (OAuth Facebook Login – app "Tipote", config_id META_CONFIG_ID)
-// NOTE: instagram_manage_hashtags et instagram_manage_comments ont été retirés.
-// Ces anciennes permissions (système "Facebook Login") créaient une dépendance
-// sur instagram_basic dans le dashboard Meta, bloquant l'App Review.
-// Toutes les fonctionnalités Instagram (comments, publish, DM) passent désormais
-// par Instagram Professional Login avec les scopes instagram_business_*.
-// NOTE: pages_messaging est nécessaire pour le Private Reply (DM en réponse à un commentaire).
-// Le produit "Messenger" doit être ajouté à l'app Tipote dans Meta dashboard.
+// Facebook Pages scopes (OAuth Facebook Login – app "Tipote" 795320846922979)
+// NOTE: pages_messaging N'EST PAS ici — l'app Tipote n'a pas le produit Messenger.
+// Les DMs Facebook passent par MESSENGER_PAGE_ACCESS_TOKEN (token de Tipote ter 2408789919563484).
 const FB_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
@@ -36,7 +31,6 @@ const FB_SCOPES = [
   "pages_read_user_content",
   "pages_manage_metadata",
   "pages_manage_engagement",
-  "pages_messaging",
 ];
 
 

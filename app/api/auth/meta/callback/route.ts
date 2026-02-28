@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
       access_token_encrypted: pageTokenEncrypted,
       refresh_token_encrypted: null,
       token_expires_at: tokenExpiresAt,
-      scopes: "pages_show_list,pages_manage_posts,pages_read_engagement,pages_read_user_content,pages_manage_metadata,pages_manage_engagement,pages_messaging",
+      scopes: "pages_show_list,pages_manage_posts,pages_read_engagement,pages_read_user_content,pages_manage_metadata,pages_manage_engagement",
       updated_at: new Date().toISOString(),
     };
 

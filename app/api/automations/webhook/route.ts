@@ -442,20 +442,19 @@ async function processComment(params: {
       }
     } else if (platform === "facebook" && comment_id) {
       // Facebook Private Reply : envoyer un DM lié au commentaire.
-      // Essayer d'abord avec le token OAuth (qui a pages_messaging après re-OAuth),
-      // puis MESSENGER_PAGE_ACCESS_TOKEN en fallback, puis recipient.id en dernier recours.
-      dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText);
-      if (!dmResult.ok) {
-        await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
-        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-        if (messengerToken && messengerToken !== page_access_token) {
-          dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText);
-        }
+      // DOIT utiliser MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, qui a pages_messaging).
+      // L'app Tipote n'a PAS le produit Messenger, son token ne peut pas envoyer de DM.
+      const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+      if (messengerToken) {
+        dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText);
         if (!dmResult.ok) {
-          await logWebhook("dm_private_reply_fail_all", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
-          // Dernier recours : recipient.id (ne marche que si conversation déjà ouverte)
+          await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
+          // Fallback : recipient.id (ne marche que si conversation deja ouverte)
           dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
         }
+      } else {
+        // Pas de MESSENGER token — essayer quand meme avec recipient.id
+        dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
       }
     } else {
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
