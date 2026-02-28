@@ -166,20 +166,49 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
   for (const entry of payload.entry ?? []) {
     const pageId = entry.id;
 
+    // Log what we received in this entry for debugging
+    const entryShape = {
+      pageId,
+      hasChanges: !!entry.changes?.length,
+      changesCount: entry.changes?.length ?? 0,
+      hasMessaging: !!entry.messaging?.length,
+      messagingCount: entry.messaging?.length ?? 0,
+      changeFields: entry.changes?.map((c) => c.field) ?? [],
+      changeItems: entry.changes?.map((c) => `${c.value?.item}/${c.value?.verb}`) ?? [],
+    };
+    await logWebhook("entry_detail", { pageId, payload: entryShape });
+
     // Messaging events (DMs) arrive in entry.messaging[], not entry.changes[]
     // We must acknowledge them (return 200) or Meta will disable the webhook.
     if (entry.messaging?.length) {
       console.log("[webhook] 📨 Messaging event received for page:", pageId, "count:", entry.messaging.length);
-      // TODO: handle incoming DMs if needed in the future
+      await logWebhook("messaging_event", { pageId, payload: { count: entry.messaging.length } });
+      continue;
+    }
+
+    if (!entry.changes?.length) {
+      await logWebhook("no_changes", { pageId, payload: { keys: Object.keys(entry) } });
       continue;
     }
 
     for (const change of entry.changes ?? []) {
-      // Only handle new comment additions on feed
-      if (change.field !== "feed") continue;
+      // Log every change field we see
+      if (change.field !== "feed") {
+        await logWebhook("skip_non_feed", { pageId, payload: { field: change.field } });
+        continue;
+      }
       const val = change.value;
-      if (val.item !== "comment" || val.verb !== "add") continue;
-      if (!val.message || !val.from?.id) continue;
+      // Log the feed event details
+      await logWebhook("feed_event", { pageId, payload: { item: val.item, verb: val.verb, hasMessage: !!val.message, hasFrom: !!val.from?.id, messagePreview: val.message?.slice(0, 50), postId: val.post_id, commentId: val.comment_id } });
+
+      if (val.item !== "comment" || val.verb !== "add") {
+        await logWebhook("skip_non_comment", { pageId, payload: { item: val.item, verb: val.verb } });
+        continue;
+      }
+      if (!val.message || !val.from?.id) {
+        await logWebhook("skip_missing_data", { pageId, payload: { hasMessage: !!val.message, hasFromId: !!val.from?.id } });
+        continue;
+      }
 
       // Look up page access token + user_id from our DB
       let pageAccessToken: string | null = null;
