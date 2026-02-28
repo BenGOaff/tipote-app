@@ -442,19 +442,39 @@ async function processComment(params: {
       }
     } else if (platform === "facebook" && comment_id) {
       // Facebook Private Reply : envoyer un DM lié au commentaire.
-      // DOIT utiliser MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, qui a pages_messaging).
-      // L'app Tipote n'a PAS le produit Messenger, son token ne peut pas envoyer de DM.
+      // Essayer d'abord avec MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, pages_messaging).
+      // Si ça échoue, essayer aussi avec le token OAuth (Tipote) au cas où.
       const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+
+      await logWebhook("dm_attempt_start", { pageId: page_id, payload: {
+        commentId: comment_id, senderId: sender_id,
+        hasMessengerToken: !!messengerToken,
+        messengerTokenPrefix: messengerToken?.slice(0, 10),
+        oauthTokenPrefix: page_access_token.slice(0, 10),
+      }});
+
       if (messengerToken) {
-        dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText);
+        // Tentative 1 : Private Reply avec MESSENGER token (3 méthodes en cascade)
+        dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText, page_id);
         if (!dmResult.ok) {
-          await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 200) } });
-          // Fallback : recipient.id (ne marche que si conversation deja ouverte)
-          dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+          await logWebhook("dm_private_reply_fail_messenger", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+
+          // Tentative 2 : Private Reply avec token OAuth (Tipote)
+          // Le token OAuth peut "voir" le commentaire et peut-être aussi envoyer le Private Reply
+          dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
+          if (!dmResult.ok) {
+            await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+
+            // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
+            dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+          }
         }
       } else {
-        // Pas de MESSENGER token — essayer quand meme avec recipient.id
-        dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+        // Pas de MESSENGER token — essayer avec OAuth + fallback recipient.id
+        dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
+        if (!dmResult.ok) {
+          dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+        }
       }
     } else {
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
@@ -749,16 +769,49 @@ async function sendInstagramDMById(
 
 /**
  * Facebook Private Reply : envoie un DM lié au commentaire.
- * Utilise recipient.comment_id pour envoyer un DM sans conversation ouverte.
+ * Essaie 3 méthodes en cascade :
+ *   1. POST /{comment_id}/private_replies  (ancien endpoint Graph API)
+ *   2. POST /me/messages avec recipient.comment_id  (Send API / Messenger)
+ *   3. POST /{page_id}/messages avec recipient.comment_id  (variante page-specific)
  * Le token doit avoir la permission pages_messaging.
  */
 async function sendFacebookPrivateReply(
   accessToken: string,
   commentId: string,
   text: string,
+  pageId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  const errors: string[] = [];
+
+  // ── Méthode 1 : POST /{comment_id}/private_replies (ancien endpoint) ──
   try {
-    const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+    const url1 = `https://graph.facebook.com/v21.0/${commentId}/private_replies`;
+    console.log("[webhook] DM tentative 1: POST /{comment_id}/private_replies", { commentId, tokenPrefix: accessToken.slice(0, 10) });
+    const res1 = await fetch(url1, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ message: text }),
+    });
+
+    if (res1.ok) {
+      console.log("[webhook] DM méthode 1 OK !");
+      return { ok: true };
+    }
+
+    const err1 = await res1.text();
+    console.warn("[webhook] DM méthode 1 échouée:", err1.slice(0, 200));
+    errors.push(`M1(private_replies): ${err1.slice(0, 150)}`);
+  } catch (err) {
+    errors.push(`M1(exception): ${String(err).slice(0, 100)}`);
+  }
+
+  // ── Méthode 2 : POST /me/messages avec recipient.comment_id ──
+  try {
+    console.log("[webhook] DM tentative 2: POST /me/messages + recipient.comment_id", { commentId });
+    const res2 = await fetch("https://graph.facebook.com/v21.0/me/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -770,15 +823,48 @@ async function sendFacebookPrivateReply(
       }),
     });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      return { ok: false, error: errBody };
+    if (res2.ok) {
+      console.log("[webhook] DM méthode 2 OK !");
+      return { ok: true };
     }
 
-    return { ok: true };
+    const err2 = await res2.text();
+    console.warn("[webhook] DM méthode 2 échouée:", err2.slice(0, 200));
+    errors.push(`M2(send_api): ${err2.slice(0, 150)}`);
   } catch (err) {
-    return { ok: false, error: String(err) };
+    errors.push(`M2(exception): ${String(err).slice(0, 100)}`);
   }
+
+  // ── Méthode 3 : POST /{page_id}/messages avec recipient.comment_id ──
+  if (pageId) {
+    try {
+      console.log("[webhook] DM tentative 3: POST /{page_id}/messages + recipient.comment_id", { pageId, commentId });
+      const res3 = await fetch(`https://graph.facebook.com/v21.0/${pageId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient: { comment_id: commentId },
+          message: { text },
+        }),
+      });
+
+      if (res3.ok) {
+        console.log("[webhook] DM méthode 3 OK !");
+        return { ok: true };
+      }
+
+      const err3 = await res3.text();
+      console.warn("[webhook] DM méthode 3 échouée:", err3.slice(0, 200));
+      errors.push(`M3(page_messages): ${err3.slice(0, 150)}`);
+    } catch (err) {
+      errors.push(`M3(exception): ${String(err).slice(0, 100)}`);
+    }
+  }
+
+  return { ok: false, error: errors.join(" | ") };
 }
 
 async function sendMetaDM(
