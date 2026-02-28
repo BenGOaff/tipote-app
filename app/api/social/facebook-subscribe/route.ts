@@ -86,7 +86,7 @@ export async function POST(_req: NextRequest) {
   try {
     const params = new URLSearchParams({
       access_token: pageToken,
-      subscribed_fields: "feed,messages",
+      subscribed_fields: "feed",
     });
     const pageRes = await fetch(
       `https://graph.facebook.com/v21.0/${conn.platform_user_id}/subscribed_apps`,

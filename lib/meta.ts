@@ -963,7 +963,7 @@ export async function subscribePageToWebhooks(
   try {
     const pageParams = new URLSearchParams({
       access_token: pageAccessToken,
-      subscribed_fields: "feed,messages",
+      subscribed_fields: "feed",
     });
     const res = await fetch(
       `${GRAPH_API_BASE}/${pageId}/subscribed_apps`,
