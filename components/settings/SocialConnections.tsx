@@ -4,7 +4,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2, Eye, MessageSquare, Tag, User } from "lucide-react";
 
 // Icone X (Twitter) - SVG officiel du logo X
 function XIcon({ className }: { className?: string }) {
@@ -47,6 +47,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
 type Connection = {
@@ -150,6 +158,9 @@ export default function SocialConnections() {
   const [loading, setLoading] = useState(true);
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [fbContentOpen, setFbContentOpen] = useState(false);
+  const [fbContent, setFbContent] = useState<any>(null);
+  const [fbContentLoading, setFbContentLoading] = useState(false);
 
 
   // Charger les connexions
@@ -301,6 +312,20 @@ export default function SocialConnections() {
 
   const getConnection = (platform: string) => connections.find((c) => c.platform === platform);
 
+  const openFbContent = async () => {
+    setFbContentOpen(true);
+    setFbContentLoading(true);
+    try {
+      const res = await fetch("/api/social/facebook-page-content");
+      const json = await res.json();
+      setFbContent(json);
+    } catch {
+      setFbContent(null);
+    } finally {
+      setFbContentLoading(false);
+    }
+  };
+
   return (
     <Card className="p-6">
       <h3 className="text-lg font-bold mb-2">{t("title")}</h3>
@@ -354,6 +379,12 @@ export default function SocialConnections() {
                 <div className="flex items-center gap-2">
                   {connection ? (
                     <>
+                      {platform.key === "facebook" && !connection.expired && (
+                        <Button variant="outline" size="sm" onClick={openFbContent}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Voir le contenu
+                        </Button>
+                      )}
                       {connection.expired && (
                         <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
                           <RefreshCw className="w-4 h-4 mr-1" />
@@ -428,6 +459,121 @@ export default function SocialConnections() {
           ))}
         </div>
       )}
+      {/* Modale contenu Facebook — démo pages_read_user_content */}
+      <Dialog open={fbContentOpen} onOpenChange={setFbContentOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Facebook className="w-5 h-5 text-[#1877F2]" />
+              {fbContent?.page?.name
+                ? `Contenu de la Page "${fbContent.page.name}"`
+                : "Contenu de la Page Facebook"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {fbContentLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Chargement du contenu...</span>
+            </div>
+          ) : !fbContent ? (
+            <p className="text-center py-8 text-muted-foreground">Impossible de charger le contenu.</p>
+          ) : (
+            <ScrollArea className="max-h-[60vh]">
+              {/* Page info */}
+              {fbContent.page && (
+                <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-[#1877F2]/5 border border-[#1877F2]/20">
+                  {fbContent.page.picture?.data?.url && (
+                    <img
+                      src={fbContent.page.picture.data.url}
+                      alt={fbContent.page.name}
+                      className="w-12 h-12 rounded-full"
+                    />
+                  )}
+                  <div>
+                    <p className="font-semibold text-base">{fbContent.page.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {fbContent.page.category}
+                      {fbContent.page.fan_count != null && ` \u00b7 ${fbContent.page.fan_count.toLocaleString()} fans`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <Tabs defaultValue="comments">
+                <TabsList className="mb-3">
+                  <TabsTrigger value="comments" className="gap-1">
+                    <MessageSquare className="w-4 h-4" />
+                    Commentaires
+                  </TabsTrigger>
+                  <TabsTrigger value="tagged" className="gap-1">
+                    <Tag className="w-4 h-4" />
+                    Posts tagués
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Onglet Commentaires */}
+                <TabsContent value="comments" className="space-y-3">
+                  {fbContent.posts?.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-4 text-center">Aucun post trouvé.</p>
+                  )}
+                  {fbContent.posts?.map((post: any) => (
+                    <div key={post.id} className="border rounded-lg p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="text-sm font-medium line-clamp-2">
+                          {post.message || post.story || "(post sans texte)"}
+                        </p>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                          {new Date(post.created_time).toLocaleDateString("fr-FR")}
+                        </span>
+                      </div>
+                      {post.comments?.data?.length > 0 ? (
+                        <div className="ml-3 border-l-2 border-[#1877F2]/20 pl-3 space-y-2">
+                          {post.comments.data.map((comment: any) => (
+                            <div key={comment.id || Math.random()} className="text-sm">
+                              <div className="flex items-center gap-1.5">
+                                <User className="w-3 h-3 text-muted-foreground" />
+                                <span className="font-medium text-xs">{comment.from?.name ?? "Utilisateur"}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(comment.created_time).toLocaleDateString("fr-FR")}
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground ml-4">{comment.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground ml-3">Aucun commentaire</p>
+                      )}
+                    </div>
+                  ))}
+                </TabsContent>
+
+                {/* Onglet Tagged */}
+                <TabsContent value="tagged" className="space-y-3">
+                  {fbContent.tagged?.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      Aucun post ne mentionne cette Page.
+                    </p>
+                  )}
+                  {fbContent.tagged?.map((post: any) => (
+                    <div key={post.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <User className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-medium text-sm">{post.from?.name ?? "Utilisateur"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(post.created_time).toLocaleDateString("fr-FR")}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{post.message || "(post sans texte)"}</p>
+                    </div>
+                  ))}
+                </TabsContent>
+              </Tabs>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
