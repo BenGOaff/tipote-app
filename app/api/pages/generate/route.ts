@@ -130,20 +130,20 @@ type TemplateScore = { id: string; score: number };
 
 const TEMPLATE_NICHE_FIT: Record<string, Record<string, number>> = {
   // capture templates
-  "capture-01": { coaching: 9, formation: 8, "bien-etre": 7, business: 8, default: 7 },
-  "capture-02": { coaching: 8, consulting: 9, "developpement_perso": 8, default: 7 },
-  "capture-03": { "bien-etre": 9, spiritualite: 9, yoga: 9, default: 6 },
+  "capture-01": { coaching: 9, formation: 8, bien_etre: 7, business: 8, default: 7 },
+  "capture-02": { coaching: 8, consulting: 9, developpement_perso: 8, default: 7 },
+  "capture-03": { bien_etre: 9, spiritualite: 9, yoga: 9, default: 6 },
   "capture-04": { business: 9, coaching: 8, formation: 8, default: 7 },
-  "capture-05": { fitness: 9, sport: 9, "perte-poids": 9, default: 6 },
+  "capture-05": { fitness: 9, sport: 9, perte_poids: 9, default: 6 },
   // sales templates
   "sale-01": { business: 9, event: 10, seminaire: 10, formation: 8, default: 7 },
   "sale-02": { coaching: 9, formation: 9, business: 8, default: 7 },
-  "sale-03": { "bien-etre": 9, coaching: 8, default: 7 },
+  "sale-03": { bien_etre: 9, coaching: 8, default: 7 },
   "sale-04": { business: 9, consulting: 9, formation: 8, default: 7 },
   "sale-05": { coaching: 8, lifestyle: 8, default: 7 },
   "sale-06": { business: 8, consulting: 8, default: 7 },
-  "sale-07": { "bien-etre": 9, spiritualite: 8, default: 6 },
-  "sale-08": { fitness: 9, sport: 8, "perte-poids": 9, default: 6 },
+  "sale-07": { bien_etre: 9, spiritualite: 8, default: 6 },
+  "sale-08": { fitness: 9, sport: 8, perte_poids: 9, default: 6 },
   "sale-09": { video: 9, formation: 8, business: 7, default: 6 },
   "sale-10": { business: 8, coaching: 8, default: 7 },
   "sale-11": { formation: 9, elearning: 10, business: 8, default: 7 },
@@ -153,7 +153,7 @@ const TEMPLATE_NICHE_FIT: Record<string, Record<string, number>> = {
 
 function pickBestTemplate(pageType: "capture" | "sales", niche: string): string {
   const prefix = pageType === "capture" ? "capture-" : "sale-";
-  const nicheKey = (niche || "").toLowerCase().replace(/\s+/g, "_");
+  const nicheKey = (niche || "").toLowerCase().replace(/[-\s]+/g, "_");
 
   const candidates: TemplateScore[] = [];
   for (const [id, fits] of Object.entries(TEMPLATE_NICHE_FIT)) {

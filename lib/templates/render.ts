@@ -443,8 +443,18 @@ Object.keys(sf).forEach(function(k){
 var af=m.arrays||{};
 Object.keys(af).forEach(function(k){
   var arr=d[k];
-  if(!Array.isArray(arr)||!arr.length)return;
   var cfg=af[k];
+  if(!Array.isArray(arr)||!arr.length){
+    /* Array is empty or missing: hide the parent section that contains these items */
+    if(cfg&&cfg.itemSelector){
+      var emptyItems=document.querySelectorAll(cfg.itemSelector);
+      if(emptyItems.length>0){
+        var sec=emptyItems[0].closest('section')||emptyItems[0].closest('[class*="section"]');
+        if(sec)sec.style.display='none';
+      }
+    }
+    return;
+  }
   var items=document.querySelectorAll(cfg.itemSelector);
   if(!items.length)return;
   if(typeof arr[0]==='string'){
@@ -487,6 +497,37 @@ document.querySelectorAll('footer a[href="#"], .footer a[href="#"], .footer-link
   var t=(el.textContent||'').toLowerCase();
   for(var k in legalMap){if(t.indexOf(k)>=0&&legalMap[k]){el.setAttribute('href',legalMap[k]);el.setAttribute('target','_blank');break;}}
 });
+/* Hide empty bonus sections: if no bonus data provided, hide the entire section */
+var bonusKeys=['bonuses','bonuses_detailed','bonus_items','bonus_list'];
+var hasBonusData=false;
+for(var i=0;i<bonusKeys.length;i++){
+  var bv=d[bonusKeys[i]];
+  if(Array.isArray(bv)&&bv.length>0){hasBonusData=true;break;}
+}
+if(!hasBonusData){
+  var bk=Object.keys(d);
+  for(var i=0;i<bk.length;i++){
+    if(/^bonus/i.test(bk[i])&&typeof d[bk[i]]==='string'&&d[bk[i]].trim()){hasBonusData=true;break;}
+  }
+}
+if(!hasBonusData){
+  document.querySelectorAll('.bonus-section,.bonus-grid,.bonus-intro,.bonus-details,.bonus-teaser,.bonus-recap-section,.bonus-offer,.super-bonus,section.bonus,[class*="bonus-section"]').forEach(function(el){
+    var sec=el.closest('section')||el.closest('[class*="section"]')||el;
+    sec.style.display='none';
+  });
+}
+/* Hide empty countdown/timer sections: if no countdown data provided, hide */
+var countdownKeys=['countdown_label','countdown_date','countdown_end','timer_label','timer_text','counter_label'];
+var hasCountdown=false;
+for(var i=0;i<countdownKeys.length;i++){
+  if(d[countdownKeys[i]]&&String(d[countdownKeys[i]]).trim()){hasCountdown=true;break;}
+}
+if(!hasCountdown){
+  document.querySelectorAll('.countdown,.timer,.sticky-timer,.timer-countdown,[class*="countdown"],[class*="sticky-timer"]').forEach(function(el){
+    var sec=el.closest('section')||el.closest('.header-bar')||el.closest('[class*="section"]')||el;
+    sec.style.display='none';
+  });
+}
 })()</script>`;
 
   const idx = html.lastIndexOf("</body>");
