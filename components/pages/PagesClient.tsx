@@ -1,13 +1,21 @@
 // components/pages/PagesClient.tsx
-// Main pages client: lists pages, creates new pages, edits existing pages.
-// Uses SSE for page generation with animated progress steps.
+// Refactored creation flow:
+// Step 1: Capture or Sales
+// Step 2: From existing offer or from scratch
+// Generating: SSE progress
+// Editor: PageBuilder
 
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Plus, FileText, ShoppingCart, Eye, Pencil, Trash2, Globe, Copy, ExternalLink, MoreHorizontal } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import {
+  Plus, FileText, ShoppingCart, Trash2, Copy,
+  ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check,
+} from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
 import PageGenerateProgress, { type ProgressStep } from "./PageGenerateProgress";
 import PageBuilder from "./PageBuilder";
 
@@ -25,30 +33,37 @@ type PageSummary = {
   updated_at: string;
 };
 
-type View = "list" | "create" | "generating" | "edit";
+type View = "list" | "step1" | "step2" | "generating" | "edit";
 
 export default function PagesClient() {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [view, setView] = useState<View>("list");
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editPageId, setEditPageId] = useState<string | null>(null);
   const [editPage, setEditPage] = useState<any>(null);
 
   // Generate state
   const [genSteps, setGenSteps] = useState<ProgressStep[]>([]);
   const [genError, setGenError] = useState<string | null>(null);
 
-  // Create form state
+  // Step 1: page type
   const [createType, setCreateType] = useState<"capture" | "sales">("capture");
-  const [createOfferName, setCreateOfferName] = useState("");
-  const [createOfferPromise, setCreateOfferPromise] = useState("");
-  const [createOfferTarget, setCreateOfferTarget] = useState("");
-  const [createOfferPrice, setCreateOfferPrice] = useState("");
-  const [createOfferDescription, setCreateOfferDescription] = useState("");
-  const [createPaymentUrl, setCreatePaymentUrl] = useState("");
-  const [createTheme, setCreateTheme] = useState("");
-  const [createVideoUrl, setCreateVideoUrl] = useState("");
-  const [createLocale, setCreateLocale] = useState("fr");
+
+  // Step 2: offer source
+  const [offerSource, setOfferSource] = useState<"existing" | "scratch">("existing");
+  const [offers, setOffers] = useState<OfferOption[]>([]);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [offersLoading, setOffersLoading] = useState(false);
+
+  // Scratch fields
+  const [offerName, setOfferName] = useState("");
+  const [offerPromise, setOfferPromise] = useState("");
+  const [offerTarget, setOfferTarget] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerGuarantees, setOfferGuarantees] = useState("");
+  const [offerUrgency, setOfferUrgency] = useState("");
+  const [offerBenefits, setOfferBenefits] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
 
   // Fetch pages
   const fetchPages = useCallback(async () => {
@@ -64,28 +79,81 @@ export default function PagesClient() {
 
   useEffect(() => { fetchPages(); }, [fetchPages]);
 
+  // Load offers when entering step2
+  const loadOffers = useCallback(async () => {
+    setOffersLoading(true);
+    try {
+      const result = await loadAllOffers(supabase);
+      setOffers(result);
+      if (result.length > 0) {
+        setSelectedOfferId(result[0].id);
+        setOfferSource("existing");
+      } else {
+        setOfferSource("scratch");
+      }
+    } catch { /* ignore */ } finally {
+      setOffersLoading(false);
+    }
+  }, [supabase]);
+
+  // Reset create form
+  const resetCreate = useCallback(() => {
+    setOfferName("");
+    setOfferPromise("");
+    setOfferTarget("");
+    setOfferPrice("");
+    setOfferGuarantees("");
+    setOfferUrgency("");
+    setOfferBenefits("");
+    setPaymentUrl("");
+    setSelectedOfferId(null);
+  }, []);
+
+  // Go to step 2
+  const goToStep2 = useCallback(() => {
+    resetCreate();
+    loadOffers();
+    setView("step2");
+  }, [resetCreate, loadOffers]);
+
   // Generate page via SSE
   const handleGenerate = useCallback(async () => {
     setView("generating");
     setGenSteps([]);
     setGenError(null);
 
+    // Build payload from offer source
+    const payload: Record<string, any> = { pageType: createType };
+
+    if (offerSource === "existing" && selectedOfferId) {
+      const offer = offers.find((o) => o.id === selectedOfferId);
+      if (offer) {
+        payload.offerName = offer.name;
+        payload.offerPromise = offer.promise || "";
+        payload.offerTarget = offer.target || "";
+        payload.offerDescription = offer.description || "";
+        const price = formatPriceRange(offer);
+        if (price) payload.offerPrice = price;
+      }
+    } else {
+      payload.offerName = offerName;
+      payload.offerPromise = offerPromise;
+      payload.offerTarget = offerTarget;
+      payload.offerPrice = offerPrice;
+      payload.offerGuarantees = offerGuarantees;
+      payload.offerUrgency = offerUrgency;
+      payload.offerBenefits = offerBenefits;
+    }
+
+    if (createType === "sales" && paymentUrl) {
+      payload.paymentUrl = paymentUrl;
+    }
+
     try {
       const res = await fetch("/api/pages/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pageType: createType,
-          offerName: createOfferName || undefined,
-          offerPromise: createOfferPromise || undefined,
-          offerTarget: createOfferTarget || undefined,
-          offerPrice: createOfferPrice || undefined,
-          offerDescription: createOfferDescription || undefined,
-          paymentUrl: createPaymentUrl || undefined,
-          theme: createTheme || undefined,
-          videoEmbedUrl: createVideoUrl || undefined,
-          locale: createLocale || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -119,36 +187,29 @@ export default function PagesClient() {
 
             if (eventType && eventData) {
               try {
-                const payload = JSON.parse(eventData);
+                const p = JSON.parse(eventData);
 
                 if (eventType === "step") {
                   setGenSteps((prev) => {
-                    const exists = prev.findIndex((s) => s.id === payload.id);
-                    if (exists >= 0) {
-                      const next = [...prev];
-                      next[exists] = payload;
-                      return next;
-                    }
-                    return [...prev, payload];
+                    const idx = prev.findIndex((s) => s.id === p.id);
+                    if (idx >= 0) { const n = [...prev]; n[idx] = p; return n; }
+                    return [...prev, p];
                   });
                 }
 
                 if (eventType === "done") {
-                  // Load the created page and go to editor
-                  const pageRes = await fetch(`/api/pages/${payload.pageId}`);
+                  const pageRes = await fetch(`/api/pages/${p.pageId}`);
                   const pageData = await pageRes.json();
                   if (pageData.ok) {
                     setEditPage(pageData.page);
-                    setEditPageId(payload.pageId);
                     setTimeout(() => setView("edit"), 1000);
                   }
                 }
 
                 if (eventType === "error") {
-                  setGenError(payload.message || "Erreur inconnue");
+                  setGenError(p.message || "Erreur inconnue");
                 }
-              } catch { /* ignore parse errors */ }
-
+              } catch { /* ignore */ }
               eventType = "";
               eventData = "";
             }
@@ -156,20 +217,16 @@ export default function PagesClient() {
         }
       }
     } catch (err: any) {
-      setGenError(err?.message || "Erreur réseau");
+      setGenError(err?.message || "Erreur reseau");
     }
-  }, [createType, createOfferName, createOfferPromise, createOfferTarget, createOfferPrice, createOfferDescription, createPaymentUrl, createTheme, createVideoUrl]);
+  }, [createType, offerSource, selectedOfferId, offers, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
 
   // Open editor
   const handleEdit = useCallback(async (pageId: string) => {
     try {
       const res = await fetch(`/api/pages/${pageId}`);
       const data = await res.json();
-      if (data.ok) {
-        setEditPage(data.page);
-        setEditPageId(pageId);
-        setView("edit");
-      }
+      if (data.ok) { setEditPage(data.page); setView("edit"); }
     } catch { /* ignore */ }
   }, []);
 
@@ -204,146 +261,261 @@ export default function PagesClient() {
               <PageGenerateProgress steps={genSteps} error={genError} />
             )}
 
-            {/* ==================== CREATE ==================== */}
-            {view === "create" && (
-              <div className="max-w-xl mx-auto">
-                <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:text-foreground mb-6 block">
-                  &larr; Retour
+            {/* ==================== STEP 1: Type choice ==================== */}
+            {view === "step1" && (
+              <div className="max-w-lg mx-auto py-8">
+                <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Retour
                 </button>
 
-                <h1 className="text-2xl font-bold mb-2">Créer une page</h1>
+                <h1 className="text-2xl font-bold mb-2">Quel type de page ?</h1>
                 <p className="text-muted-foreground mb-8">
-                  Tipote va créer ta page en utilisant toutes tes infos (profil, branding, offres, mentions légales).
+                  Tipote cree tout : copywriting + design + hebergement.
                 </p>
 
-                {/* Type selection */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 gap-4">
                   <button
-                    onClick={() => setCreateType("capture")}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      createType === "capture" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
+                    onClick={() => { setCreateType("capture"); goToStep2(); }}
+                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 group"
                   >
-                    <FileText className="w-6 h-6 mb-2 text-blue-600" />
-                    <h3 className="font-semibold text-sm">Page de capture</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Récupère des emails avec un lead magnet</p>
-                  </button>
-                  <button
-                    onClick={() => setCreateType("sales")}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      createType === "sales" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <ShoppingCart className="w-6 h-6 mb-2 text-green-600" />
-                    <h3 className="font-semibold text-sm">Page de vente</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Vends ton offre directement</p>
-                  </button>
-                </div>
-
-                {/* Offer fields */}
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Nom de l'offre</label>
-                    <input
-                      type="text"
-                      value={createOfferName}
-                      onChange={(e) => setCreateOfferName(e.target.value)}
-                      placeholder="Ex: Formation en ligne 'Booste tes ventes'"
-                      className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Promesse principale</label>
-                    <input
-                      type="text"
-                      value={createOfferPromise}
-                      onChange={(e) => setCreateOfferPromise(e.target.value)}
-                      placeholder="Ex: Double tes revenus en 90 jours"
-                      className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Public cible</label>
-                    <input
-                      type="text"
-                      value={createOfferTarget}
-                      onChange={(e) => setCreateOfferTarget(e.target.value)}
-                      placeholder="Ex: Coachs et consultants qui veulent scaler"
-                      className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                    />
-                  </div>
-
-                  {createType === "sales" && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium block mb-1">Prix</label>
-                        <input
-                          type="text"
-                          value={createOfferPrice}
-                          onChange={(e) => setCreateOfferPrice(e.target.value)}
-                          placeholder="Ex: 497€"
-                          className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                        />
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                        <FileText className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <label className="text-sm font-medium block mb-1">Lien de paiement (optionnel)</label>
-                        <input
-                          type="url"
-                          value={createPaymentUrl}
-                          onChange={(e) => setCreatePaymentUrl(e.target.value)}
-                          placeholder="https://checkout.stripe.com/..."
-                          className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                        />
+                        <h3 className="font-semibold mb-1">Page de capture</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Recupere des emails avec un lead magnet ou une promesse de contenu gratuit.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">5 credits</p>
                       </div>
-                    </>
-                  )}
+                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
 
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Description / Brief (optionnel)</label>
-                    <textarea
-                      value={createOfferDescription}
-                      onChange={(e) => setCreateOfferDescription(e.target.value)}
-                      placeholder="Décris ton offre en quelques phrases..."
-                      rows={3}
-                      className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
-                    />
-                  </div>
-                  {/* Language selector */}
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Langue du contenu</label>
-                    <select
-                      value={createLocale}
-                      onChange={(e) => setCreateLocale(e.target.value)}
-                      className="w-full px-3 py-2.5 border rounded-lg text-sm bg-background"
-                    >
-                      <option value="fr">Français</option>
-                      <option value="en">English</option>
-                      <option value="es">Español</option>
-                      <option value="de">Deutsch</option>
-                      <option value="pt">Português</option>
-                      <option value="it">Italiano</option>
-                      <option value="nl">Nederlands</option>
-                      <option value="ar">العربية</option>
-                      <option value="tr">Türkçe</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1">Par défaut : langue du contenu de tes paramètres.</p>
-                  </div>
+                  <button
+                    onClick={() => { setCreateType("sales"); goToStep2(); }}
+                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-green-400 hover:bg-green-50/50 dark:hover:bg-green-950/20 group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                        <ShoppingCart className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Page de vente</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Vends ton offre avec une page de vente optimisee pour la conversion.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">7 credits</p>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 </div>
+              </div>
+            )}
 
-                {/* Generate button */}
-                <button
-                  onClick={handleGenerate}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-                >
-                  Créer ma page ({createType === "sales" ? "7 crédits" : "5 crédits"})
+            {/* ==================== STEP 2: Offer source ==================== */}
+            {view === "step2" && (
+              <div className="max-w-xl mx-auto py-8">
+                <button onClick={() => setView("step1")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Retour
                 </button>
 
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions légales.
-                  <br />Tu pourras modifier chaque détail ensuite.
+                <h1 className="text-2xl font-bold mb-2">
+                  {createType === "capture" ? "Page de capture" : "Page de vente"}
+                </h1>
+                <p className="text-muted-foreground mb-6">
+                  Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions legales.
                 </p>
+
+                {offersLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Source toggle */}
+                    {offers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <button
+                          onClick={() => setOfferSource("existing")}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            offerSource === "existing" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <Package className="w-5 h-5 mb-1.5 text-primary" />
+                          <h3 className="font-semibold text-sm">Offre existante</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Les infos sont deja pretes</p>
+                        </button>
+                        <button
+                          onClick={() => setOfferSource("scratch")}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            offerSource === "scratch" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <PenTool className="w-5 h-5 mb-1.5 text-primary" />
+                          <h3 className="font-semibold text-sm">De zero</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Je donne les infos moi-meme</p>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Existing offer selector */}
+                    {offerSource === "existing" && offers.length > 0 && (
+                      <div className="space-y-3 mb-6">
+                        {offers.map((offer) => (
+                          <button
+                            key={offer.id}
+                            onClick={() => setSelectedOfferId(offer.id)}
+                            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                              selectedOfferId === offer.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-sm">{offer.name}</h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {levelLabel(offer.level)}
+                                  {formatPriceRange(offer) && ` \u00B7 ${formatPriceRange(offer)}`}
+                                </p>
+                              </div>
+                              {selectedOfferId === offer.id && (
+                                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-primary-foreground" />
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+
+                        {/* Payment URL for sales */}
+                        {createType === "sales" && (
+                          <div className="pt-2">
+                            <label className="text-sm font-medium block mb-1">Lien de paiement (optionnel)</label>
+                            <input
+                              type="url"
+                              value={paymentUrl}
+                              onChange={(e) => setPaymentUrl(e.target.value)}
+                              placeholder="https://checkout.stripe.com/..."
+                              className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Scratch form */}
+                    {offerSource === "scratch" && (
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <label className="text-sm font-medium block mb-1">Nom de l&apos;offre *</label>
+                          <input
+                            type="text"
+                            value={offerName}
+                            onChange={(e) => setOfferName(e.target.value)}
+                            placeholder="Ex: Formation 'Booste tes ventes'"
+                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium block mb-1">Promesse principale *</label>
+                          <input
+                            type="text"
+                            value={offerPromise}
+                            onChange={(e) => setOfferPromise(e.target.value)}
+                            placeholder="Ex: Double tes revenus en 90 jours"
+                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium block mb-1">Public cible *</label>
+                          <input
+                            type="text"
+                            value={offerTarget}
+                            onChange={(e) => setOfferTarget(e.target.value)}
+                            placeholder="Ex: Coachs et consultants qui veulent scaler"
+                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium block mb-1">5 benefices concrets</label>
+                          <textarea
+                            value={offerBenefits}
+                            onChange={(e) => setOfferBenefits(e.target.value)}
+                            placeholder={"1. Genere tes premiers clients en 7 jours\n2. Automatise ton tunnel de vente\n3. ..."}
+                            rows={4}
+                            className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
+                          />
+                        </div>
+
+                        {createType === "sales" && (
+                          <>
+                            <div>
+                              <label className="text-sm font-medium block mb-1">Prix</label>
+                              <input
+                                type="text"
+                                value={offerPrice}
+                                onChange={(e) => setOfferPrice(e.target.value)}
+                                placeholder="Ex: 497\u20AC"
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">Garanties</label>
+                              <input
+                                type="text"
+                                value={offerGuarantees}
+                                onChange={(e) => setOfferGuarantees(e.target.value)}
+                                placeholder="Ex: Satisfait ou rembourse 30 jours"
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">Urgence / rarete</label>
+                              <input
+                                type="text"
+                                value={offerUrgency}
+                                onChange={(e) => setOfferUrgency(e.target.value)}
+                                placeholder="Ex: Offre limitee aux 50 premiers inscrits"
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">Lien de paiement</label>
+                              <input
+                                type="url"
+                                value={paymentUrl}
+                                onChange={(e) => setPaymentUrl(e.target.value)}
+                                placeholder="https://checkout.stripe.com/..."
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Generate button */}
+                    <button
+                      onClick={handleGenerate}
+                      disabled={offerSource === "scratch" && !offerName.trim()}
+                      className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Creer ma page ({createType === "sales" ? "7 credits" : "5 credits"})
+                    </button>
+
+                    <p className="text-xs text-muted-foreground text-center mt-3">
+                      Tu pourras modifier chaque detail ensuite.
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
@@ -353,10 +525,10 @@ export default function PagesClient() {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h1 className="text-3xl font-display font-bold mb-1">Mes pages</h1>
-                    <p className="text-muted-foreground">Crée et héberge tes pages de capture et de vente.</p>
+                    <p className="text-muted-foreground">Cree et heberge tes pages de capture et de vente.</p>
                   </div>
                   <button
-                    onClick={() => setView("create")}
+                    onClick={() => setView("step1")}
                     className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
@@ -365,19 +537,21 @@ export default function PagesClient() {
                 </div>
 
                 {loading ? (
-                  <div className="text-center py-20 text-muted-foreground">Chargement...</div>
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
                 ) : pages.length === 0 ? (
                   <div className="text-center py-20">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
                       <FileText className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h2 className="text-lg font-semibold mb-2">Aucune page</h2>
-                    <p className="text-muted-foreground mb-6">Crée ta première page de capture ou de vente en un clic.</p>
+                    <p className="text-muted-foreground mb-6">Cree ta premiere page de capture ou de vente en un clic.</p>
                     <button
-                      onClick={() => setView("create")}
+                      onClick={() => setView("step1")}
                       className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium"
                     >
-                      Créer ma première page
+                      Creer ma premiere page
                     </button>
                   </div>
                 ) : (
@@ -423,7 +597,7 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
             <ShoppingCart className="w-4 h-4 text-green-600" />
           )}
           <span className={`text-xs px-2 py-0.5 rounded-full ${
-            isPublished ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+            isPublished ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
           }`}>
             {isPublished ? "En ligne" : "Brouillon"}
           </span>
@@ -438,7 +612,7 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
       </h3>
 
       <p className="text-xs text-muted-foreground mb-3">
-        {page.views_count} vues · {page.leads_count} leads
+        {page.views_count} vues &middot; {page.leads_count} leads
       </p>
 
       <div className="flex items-center gap-2">
@@ -447,7 +621,7 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
         </button>
         {isPublished && (
           <button onClick={copyUrl} className="p-1.5 border rounded-md hover:bg-muted" title="Copier le lien">
-            {copied ? <ExternalLink className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         )}
         <button onClick={onArchive} className="p-1.5 border rounded-md hover:bg-muted text-destructive" title="Supprimer">

@@ -31,6 +31,10 @@ const InputSchema = z.object({
   offerTarget: z.string().optional(),
   offerPrice: z.string().optional(),
   offerDescription: z.string().optional(),
+  // New fields from "from scratch" flow
+  offerGuarantees: z.string().optional(),
+  offerUrgency: z.string().optional(),
+  offerBenefits: z.string().optional(),
   // Payment / CTA
   paymentUrl: z.string().optional(),
   paymentButtonText: z.string().optional(),
@@ -227,6 +231,9 @@ export async function POST(req: NextRequest) {
           offerTarget: input.offerTarget || "",
           offerPrice: input.offerPrice || "",
           offerDescription: input.offerDescription || "",
+          offerGuarantees: input.offerGuarantees || "",
+          offerUrgency: input.offerUrgency || "",
+          offerBenefits: input.offerBenefits || "",
           theme: input.theme || "",
           firstName,
           niche,
@@ -471,6 +478,9 @@ function buildPageUserPrompt(params: {
   offerTarget: string;
   offerPrice: string;
   offerDescription: string;
+  offerGuarantees: string;
+  offerUrgency: string;
+  offerBenefits: string;
   theme: string;
   firstName: string;
   niche: string;
@@ -485,10 +495,13 @@ function buildPageUserPrompt(params: {
   lines.push("");
 
   if (params.offerName) lines.push(`Offre : ${params.offerName}`);
-  if (params.offerPromise) lines.push(`Promesse : ${params.offerPromise}`);
+  if (params.offerPromise) lines.push(`Promesse principale : ${params.offerPromise}`);
   if (params.offerTarget) lines.push(`Public cible : ${params.offerTarget}`);
   if (params.offerPrice) lines.push(`Prix : ${params.offerPrice}`);
   if (params.offerDescription) lines.push(`Description : ${params.offerDescription}`);
+  if (params.offerBenefits) lines.push(`Bénéfices concrets :\n${params.offerBenefits}`);
+  if (params.offerGuarantees) lines.push(`Garanties : ${params.offerGuarantees}`);
+  if (params.offerUrgency) lines.push(`Urgence / Rareté : ${params.offerUrgency}`);
   if (params.theme) lines.push(`Brief/Thème : ${params.theme}`);
   if (params.firstName) lines.push(`Auteur : ${params.firstName}`);
   if (params.niche) lines.push(`Niche : ${params.niche}`);
