@@ -400,6 +400,9 @@ export async function POST(req: NextRequest) {
           throw new Error("Erreur de parsing du contenu généré.");
         }
 
+        // ---- Post-generation cleanup: strip placeholder patterns ----
+        sanitizeContentData(contentData, input);
+
         // Inject user-provided data (overrides AI-generated placeholders)
         if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
         if (brandAuthorPhoto && !contentData.author_photo_url) contentData.author_photo_url = brandAuthorPhoto;
@@ -639,10 +642,16 @@ function buildPageSystemPrompt(params: {
   lines.push("- ZÉRO balise HTML : pas de <br>, <span>, <strong>, <p>, <div>, etc. Texte brut uniquement.");
   lines.push("- ZÉRO markdown : pas de **, ##, -, >, etc.");
   lines.push("- ZÉRO placeholder/instruction : INTERDIT d'écrire des textes comme \"Écris un paragraphe qui...\", \"Décris ici...\", \"Puce promesse irrésistible : bénéfice + conséquence\", \"Option 1 : Explique l'option pourrie\", \"ton audience cible\". Ce sont des INSTRUCTIONS, pas du contenu. Rédige le VRAI texte final.");
-  lines.push("- ZÉRO contenu inventé : N'invente JAMAIS de bonus, de garanties, de témoignages ou de prix qui n'existent pas. Si l'utilisateur n'a pas fourni de bonus, écris des bénéfices de l'offre principale, PAS des bonus fictifs.");
+  lines.push("- ZÉRO contenu inventé : N'invente JAMAIS de bonus, de garanties, de témoignages, de prix, de compteurs de places, de noms de challenge qui n'existent pas.");
+  lines.push("  Si l'utilisateur n'a pas fourni de bonus → strings vides. Si pas d'urgence → strings vides pour countdown/timer.");
+  lines.push("  JAMAIS inventer : \"X places restantes\", \"14/100\", \"Il ne reste que...\", \"Challenge [Nom]\", \"Webinaire [Nom]\".");
+  lines.push("  JAMAIS utiliser de crochets [Nom], [Titre], [Bénéfice] — c'est un placeholder, pas du contenu.");
   lines.push("- ZÉRO emoji dans les textes.");
+  lines.push("- ZÉRO lorem ipsum ou texte factice.");
+  lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur. N'invente pas de nom de challenge, de formation ou de programme.");
   lines.push("- Pour les FAQ : chaque item DOIT contenir une question ET une réponse complète (2-3 phrases minimum). JAMAIS de question sans réponse.");
   lines.push("- Pour les puces promesses : chaque puce doit être une VRAIE phrase complète décrivant un bénéfice concret, PAS une instruction de rédaction.");
+  lines.push("- Le contenu doit correspondre EXACTEMENT à l'offre décrite. Si l'offre est un quiz → parler du quiz. Si c'est une formation → parler de la formation. Ne jamais imposer une structure (challenge, places limitées, etc.) qui ne correspond pas à l'offre.");
   lines.push("");
 
   if (params.toneOfVoice) {
@@ -779,6 +788,111 @@ function buildPageUserPrompt(params: {
   lines.push("- Retourne uniquement le JSON, rien d'autre.");
 
   return lines.join("\n");
+}
+
+// ---------- Content sanitization ----------
+
+/**
+ * Strip placeholder patterns, invented content, and template instructions
+ * that the AI might have leaked into the generated content.
+ */
+function sanitizeContentData(data: Record<string, any>, input: any): void {
+  // Patterns that indicate placeholder/template text (NOT real content)
+  const PLACEHOLDER_PATTERNS = [
+    /\[Nom\]/gi,
+    /\[Titre\]/gi,
+    /\[Bénéfice\]/gi,
+    /\[Audience\]/gi,
+    /\[Prénom\]/gi,
+    /\[.*?\]/g, // Any [bracketed text]
+    /Lorem ipsum[^.]*/gi,
+    /Dolor sit amet/gi,
+    /Puce promesse irrésistible/gi,
+    /bénéfice \+ conséquence/gi,
+    /Décris ici/gi,
+    /Explique l'option pourrie/gi,
+    /Promesse de ton offre/gi,
+    /Description complète du bonus/gi,
+    /Témoignage sincère d'un client/gi,
+    /PUCE PROMESSE/gi,
+    /CEO vs Entrepreneur/gi,
+  ];
+
+  // Patterns that indicate invented scarcity (when no urgency was provided)
+  const hasUrgency = !!(input.offerUrgency || "").trim();
+  const SCARCITY_PATTERNS = hasUrgency ? [] : [
+    /\d+\s*\/\s*\d+/g, // "14/100"
+    /places?\s+restantes?/gi,
+    /Il (?:ne )?reste (?:plus que |encore )?\d+/gi,
+    /Places? limitées?/gi,
+    /Dernières? places?/gi,
+  ];
+
+  // Replace offer name placeholder: "Challenge [Nom]" → actual offer name
+  const offerName = input.offerName || "";
+
+  function cleanString(val: string): string {
+    let s = val;
+
+    // Replace "Challenge [Nom]" or "[Nom] Formation" with actual offer name
+    if (offerName) {
+      s = s.replace(/Challenge\s+\[Nom\]/gi, offerName);
+      s = s.replace(/\[Nom\]\s*/gi, offerName + " ");
+    }
+
+    // Strip placeholder patterns
+    for (const p of PLACEHOLDER_PATTERNS) {
+      s = s.replace(p, "");
+    }
+
+    // Strip invented scarcity
+    for (const p of SCARCITY_PATTERNS) {
+      s = s.replace(p, "");
+    }
+
+    return s.replace(/\s{2,}/g, " ").trim();
+  }
+
+  function cleanValue(val: any): any {
+    if (typeof val === "string") return cleanString(val);
+    if (Array.isArray(val)) return val.map(cleanValue);
+    if (val && typeof val === "object") {
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(val)) {
+        out[k] = cleanValue(v);
+      }
+      return out;
+    }
+    return val;
+  }
+
+  // Clean all values in contentData
+  for (const key of Object.keys(data)) {
+    data[key] = cleanValue(data[key]);
+  }
+
+  // Force the offer name into title fields if the AI invented something else
+  if (offerName) {
+    const titleKeys = ["hero_title", "main_headline", "headline", "challenge_name"];
+    for (const k of titleKeys) {
+      if (data[k] && typeof data[k] === "string") {
+        // If the title contains "Challenge" but the offer is not a challenge, replace
+        if (/Challenge\s+[A-Z]/i.test(data[k]) && !/challenge/i.test(offerName)) {
+          data[k] = data[k].replace(/Challenge\s+[A-Z][^\s,.]*/i, offerName);
+        }
+      }
+    }
+  }
+
+  // Strip counter/places sections if no urgency
+  if (!hasUrgency) {
+    const counterKeys = Object.keys(data).filter(k =>
+      /counter|places_rest|remaining|spots/i.test(k)
+    );
+    for (const k of counterKeys) {
+      data[k] = Array.isArray(data[k]) ? [] : "";
+    }
+  }
 }
 
 // ---------- Helpers ----------
