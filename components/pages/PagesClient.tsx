@@ -242,10 +242,17 @@ export default function PagesClient() {
 
   if (view === "edit" && editPage) {
     return (
-      <PageBuilder
-        initialPage={editPage}
-        onBack={() => { setView("list"); setEditPage(null); fetchPages(); }}
-      />
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <AppSidebar />
+          <main className="flex-1 min-w-0 overflow-hidden">
+            <PageBuilder
+              initialPage={editPage}
+              onBack={() => { setView("list"); setEditPage(null); fetchPages(); }}
+            />
+          </main>
+        </div>
+      </SidebarProvider>
     );
   }
 

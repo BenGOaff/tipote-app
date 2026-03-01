@@ -173,6 +173,8 @@ function pickBestTemplate(pageType: "capture" | "sales", niche: string): string 
 
 function generateSlug(title: string): string {
   const base = (title || "ma-page")
+    .replace(/<[^>]*>/g, " ")      // Strip HTML tags (e.g. <br>, <span>)
+    .replace(/&[a-z]+;/gi, " ")    // Strip HTML entities
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -395,11 +397,30 @@ export async function POST(req: NextRequest) {
           throw new Error("Erreur de parsing du contenu généré.");
         }
 
-        // Inject user-provided data
+        // Inject user-provided data (overrides AI-generated placeholders)
         if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
         if (brandAuthorPhoto && !contentData.author_photo_url) contentData.author_photo_url = brandAuthorPhoto;
         if (firstName && !contentData.about_name) contentData.about_name = firstName;
         if (input.videoEmbedUrl) contentData.video_embed_url = input.videoEmbedUrl;
+
+        // Inject brand name into logo_text if the AI left it generic
+        const offerOrBrand = input.offerName || niche || firstName || "";
+        if (offerOrBrand && (!contentData.logo_text || /votre|your|logo/i.test(contentData.logo_text))) {
+          contentData.logo_text = offerOrBrand.toUpperCase().slice(0, 25);
+        }
+        // Also set footer_logo from brand
+        if (offerOrBrand && (!contentData.footer_logo || /votre|your|logo/i.test(contentData.footer_logo))) {
+          contentData.footer_logo = offerOrBrand.toUpperCase().slice(0, 40);
+        }
+
+        // Inject payment URL into all CTA-related fields
+        const payUrl = input.paymentUrl || "";
+        if (payUrl) {
+          if (!contentData.cta_url) contentData.cta_url = payUrl;
+          if (!contentData.cta_primary_url) contentData.cta_primary_url = payUrl;
+          if (!contentData.payment_url) contentData.payment_url = payUrl;
+          // Also set href="#" replacements to actual payment URL in the rendered HTML later
+        }
 
         await wait(400);
         send("step", { id: "design", label: "Je crée ton design personnalisé...", progress: 75, done: true });
@@ -437,7 +458,7 @@ export async function POST(req: NextRequest) {
         // ==================== STEP 9: Render HTML ====================
         send("step", { id: "render", label: "J'optimise ta page pour les téléphones...", progress: 90 });
 
-        const { html: renderedHtml } = await renderTemplateHtml({
+        let { html: renderedHtml } = await renderTemplateHtml({
           kind: templateKind,
           templateId,
           mode: "preview",
@@ -445,12 +466,35 @@ export async function POST(req: NextRequest) {
           brandTokens: Object.keys(brandTokens).length > 0 ? brandTokens : null,
         });
 
+        // Post-render: inject payment URL into CTA links (replace href="#" with actual payment URL)
+        if (payUrl) {
+          renderedHtml = renderedHtml
+            .replace(/href\s*=\s*"#"/g, `href="${payUrl.replace(/"/g, "&quot;")}"`)
+            .replace(/href\s*=\s*'#'/g, `href='${payUrl.replace(/'/g, "&#39;")}'`)
+            .replace(/href\s*=\s*"#capture"/g, `href="${payUrl.replace(/"/g, "&quot;")}"`);
+        }
+
+        // Post-render: inject brand logo image if available
+        if (brandLogoUrl) {
+          // Replace text-only logo with an <img> tag where the logo class exists
+          renderedHtml = renderedHtml.replace(
+            /(<[^>]*class="[^"]*logo[^"]*"[^>]*>)([\s\S]*?)(<\/[^>]+>)/i,
+            (match, openTag, content, closeTag) => {
+              // Only replace if content is short text (not already an img)
+              if (content.includes("<img") || content.trim().length > 100) return match;
+              return `${openTag}<img src="${brandLogoUrl.replace(/"/g, "&quot;")}" alt="Logo" style="max-height:40px;width:auto">${closeTag}`;
+            }
+          );
+        }
+
         send("step", { id: "render", label: "J'optimise ta page pour les téléphones...", progress: 93, done: true });
 
         // ==================== STEP 10: Save to database ====================
         send("step", { id: "save", label: input.paymentUrl ? "Je mets en place ton lien de paiement..." : "Je sauvegarde ta page...", progress: 95 });
 
-        const title = contentData.hero_title || contentData.headline || contentData.main_headline || "Ma page";
+        // Strip HTML tags from title for clean slug/display
+        const rawTitle = contentData.hero_title || contentData.headline || contentData.main_headline || "Ma page";
+        const title = rawTitle.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         const slug = generateSlug(title);
 
         const pageRow = {
@@ -558,6 +602,16 @@ function buildPageSystemPrompt(params: {
   lines.push("- JAMAIS de phrases vides type \"bienvenue sur notre site\" ou \"nous sommes ravis\"");
   lines.push("");
 
+  lines.push("INTERDICTIONS ABSOLUES (violation = échec total) :");
+  lines.push("- ZÉRO balise HTML : pas de <br>, <span>, <strong>, <p>, <div>, etc. Texte brut uniquement.");
+  lines.push("- ZÉRO markdown : pas de **, ##, -, >, etc.");
+  lines.push("- ZÉRO placeholder/instruction : INTERDIT d'écrire des textes comme \"Écris un paragraphe qui...\", \"Décris ici...\", \"Puce promesse irrésistible : bénéfice + conséquence\", \"Option 1 : Explique l'option pourrie\", \"ton audience cible\". Ce sont des INSTRUCTIONS, pas du contenu. Rédige le VRAI texte final.");
+  lines.push("- ZÉRO contenu inventé : N'invente JAMAIS de bonus, de garanties, de témoignages ou de prix qui n'existent pas. Si l'utilisateur n'a pas fourni de bonus, écris des bénéfices de l'offre principale, PAS des bonus fictifs.");
+  lines.push("- ZÉRO emoji dans les textes.");
+  lines.push("- Pour les FAQ : chaque item DOIT contenir une question ET une réponse complète (2-3 phrases minimum). JAMAIS de question sans réponse.");
+  lines.push("- Pour les puces promesses : chaque puce doit être une VRAIE phrase complète décrivant un bénéfice concret, PAS une instruction de rédaction.");
+  lines.push("");
+
   if (params.toneOfVoice) {
     lines.push(`TON DE VOIX DE LA MARQUE : ${params.toneOfVoice}`);
     lines.push("Adapte tout le copywriting à ce ton.");
@@ -661,10 +715,14 @@ function buildPageUserPrompt(params: {
   lines.push("IMPORTANT — RÈGLES DE COPYWRITING :");
   lines.push("- Remplis TOUS les champs du schéma JSON avec du VRAI texte de copywriting professionnel.");
   lines.push("- Le contenu doit être 100% spécifique à CETTE offre et à CE public cible.");
-  lines.push("- INTERDIT de recopier les descriptions d'aide du schéma (\"Décris ici\", \"Promesse de ton offre\", \"ton audience cible\", etc.).");
+  lines.push("- INTERDIT de recopier les descriptions d'aide du schéma (\"Décris ici\", \"Promesse de ton offre\", \"ton audience cible\", \"Puce promesse irrésistible\", \"bénéfice + conséquence\", etc.).");
   lines.push("- INTERDIT les placeholders (\"[nom]\", \"[bénéfice]\", \"...\") — rédige le contenu FINAL, prêt à publier.");
   lines.push("- INTERDIT les phrases génériques (\"bienvenue\", \"nous sommes ravis\", \"cliquer ici\").");
-  lines.push("- Si des informations manquent, invente des contenus plausibles, concrets et premium adaptés à la niche.");
+  lines.push("- INTERDIT les balises HTML (<br>, <span>, <strong>, etc.) — texte brut uniquement.");
+  lines.push("- INTERDIT d'inventer des bonus ou garanties non fournis par l'utilisateur. Si pas de bonus mentionnés, mets des bénéfices supplémentaires de l'offre principale.");
+  lines.push("- Pour les FAQ : TOUJOURS fournir question ET réponse complète. Jamais de question seule.");
+  lines.push("- Si des informations de l'offre manquent (nom, cible, bénéfices), invente des contenus plausibles et premium adaptés à la niche.");
+  lines.push("- Ne PAS inventer : bonus, prix, garanties, témoignages, noms de personnes. Seulement du copywriting.");
   lines.push("- Chaque titre, sous-titre et CTA doit être spécifique, percutant et orienté bénéfice.");
   lines.push("- Retourne uniquement le JSON, rien d'autre.");
 

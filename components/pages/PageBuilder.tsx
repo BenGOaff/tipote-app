@@ -478,7 +478,7 @@ ${textContent.split("\n").map((line) => {
   const deviceCfg = DEVICE_CONFIG[device];
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-background">
+    <div className="flex flex-col h-screen min-h-0 bg-background">
       {/* Top toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background shrink-0">
         <div className="flex items-center gap-3">
@@ -604,37 +604,40 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4 min-h-0">
-        <div
-          className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
-          style={{
-            width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
-            maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
-            height: "calc(100vh - 260px)",
-            minHeight: "400px",
-          }}
-        >
-          <iframe
-            ref={iframeRef}
-            srcDoc={getPreviewHtml(htmlPreview)}
-            title="Preview"
-            className="w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin"
-          />
+      {/* Main content + Chat side panel */}
+      <div className="flex-1 flex min-h-0">
+        {/* Preview area */}
+        <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4 min-h-0">
+          <div
+            className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
+            style={{
+              width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
+              maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
+              height: "100%",
+              minHeight: "400px",
+            }}
+          >
+            <iframe
+              ref={iframeRef}
+              srcDoc={getPreviewHtml(htmlPreview)}
+              title="Preview"
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Chat bar */}
-      <PageChatBar
-        pageId={page.id}
-        templateId={page.template_id}
-        kind={page.template_kind as "capture" | "vente"}
-        contentData={page.content_data}
-        brandTokens={page.brand_tokens}
-        onUpdate={handleChatUpdate}
-        locale={page.locale}
-      />
+        {/* Chat panel (right side) */}
+        <PageChatBar
+          pageId={page.id}
+          templateId={page.template_id}
+          kind={page.template_kind as "capture" | "vente"}
+          contentData={page.content_data}
+          brandTokens={page.brand_tokens}
+          onUpdate={handleChatUpdate}
+          locale={page.locale}
+        />
+      </div>
 
       {/* ==================== PUBLISH MODAL ==================== */}
       {showPublishModal && (

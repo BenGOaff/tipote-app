@@ -569,18 +569,30 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
       }
     }
 
+    // Inject contrast safety CSS to prevent white-on-light issues
+    out = injectContrastSafety(out);
+
+    // Inject legal footer if legal URLs are present in contentData
+    out = injectLegalFooterHtml(out, req.contentData);
+
     return { html: out };
   }
 
   const styleCss = mode === "kit" ? kitCss || css : css;
 
-  const doc = wrapAsDocument({
+  // Inject legal footer for wrapped templates
+  out = injectLegalFooterHtml(out, req.contentData);
+
+  let doc = wrapAsDocument({
     htmlBody: out,
     styleCss,
     cssVars,
     mode,
     headHtml: fontsHtml || "",
   });
+
+  // Inject contrast safety CSS
+  doc = injectContrastSafety(doc);
 
   return { html: doc };
 }
@@ -590,3 +602,75 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
  * → on garde un alias sans casser l'existant.
  */
 export const renderTemplate = renderTemplateHtml;
+
+// ---------- Contrast safety ----------
+
+/**
+ * Inject a small CSS snippet that ensures text readability.
+ * Prevents white text on light backgrounds by adding text-shadow fallbacks
+ * and ensuring section contrast is maintained.
+ */
+function injectContrastSafety(html: string): string {
+  const css = `<style>
+/* Contrast safety - prevent unreadable text */
+.section-light, .section-white, .section-cream,
+[class*="section-light"], [class*="bg-light"], [class*="bg-white"] {
+  color: #1c1c1c !important;
+}
+.section-light *, .section-white *, .section-cream * {
+  color: inherit;
+}
+.section-light .gold-text, .section-light .accent-text,
+.section-white .gold-text, .section-cream .gold-text {
+  color: #b8941f !important;
+}
+.section-dark, .section-dark * { color: #fff; }
+.section-dark .gold-text { color: #dcc285 !important; }
+/* Ensure buttons/CTAs always have contrast */
+.btn-primary, .cta-primary, [class*="btn-primary"], [class*="cta-button"], button[class*="cta"] {
+  text-shadow: none;
+}
+</style>`;
+
+  if (html.includes("</head>")) {
+    return html.replace("</head>", `${css}\n</head>`);
+  }
+  return html + css;
+}
+
+// ---------- Legal footer injection ----------
+
+/**
+ * Inject legal footer links into rendered HTML if contentData has legal URLs.
+ */
+function injectLegalFooterHtml(html: string, contentData: Record<string, any>): string {
+  const links: string[] = [];
+
+  const mentionsUrl = contentData?.legal_mentions_url;
+  const cgvUrl = contentData?.legal_cgv_url;
+  const privacyUrl = contentData?.legal_privacy_url;
+
+  // Also check footer_links array (object form with text+href)
+  const footerLinks = contentData?.footer_links;
+  if (Array.isArray(footerLinks) && footerLinks.length > 0) {
+    for (const l of footerLinks) {
+      if (l?.href && l?.text) {
+        links.push(`<a href="${safeString(l.href)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">${safeString(l.text)}</a>`);
+      }
+    }
+  } else {
+    if (mentionsUrl) links.push(`<a href="${safeString(mentionsUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">Mentions légales</a>`);
+    if (cgvUrl) links.push(`<a href="${safeString(cgvUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">CGV</a>`);
+    if (privacyUrl) links.push(`<a href="${safeString(privacyUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">Politique de confidentialité</a>`);
+  }
+
+  if (links.length === 0) return html;
+
+  const footer = `<div style="text-align:center;padding:20px 16px;font-size:12px;font-family:system-ui,sans-serif;background:#1c1c1c;color:rgba(255,255,255,0.5);border-top:1px solid rgba(255,255,255,0.1)">${links.join(" &nbsp;|&nbsp; ")}</div>`;
+
+  const bodyIdx = html.lastIndexOf("</body>");
+  if (bodyIdx !== -1) {
+    return html.slice(0, bodyIdx) + footer + "\n" + html.slice(bodyIdx);
+  }
+  return html + footer;
+}
