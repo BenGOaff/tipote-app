@@ -217,7 +217,7 @@ export default function PagesClient() {
         }
       }
     } catch (err: any) {
-      setGenError(err?.message || "Erreur reseau");
+      setGenError(err?.message || "Erreur réseau");
     }
   }, [createType, offerSource, selectedOfferId, offers, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
 
@@ -270,7 +270,7 @@ export default function PagesClient() {
 
                 <h1 className="text-2xl font-bold mb-2">Quel type de page ?</h1>
                 <p className="text-muted-foreground mb-8">
-                  Tipote cree tout : copywriting + design + hebergement.
+                  Tipote crée tout : copywriting + design + hébergement.
                 </p>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -285,9 +285,9 @@ export default function PagesClient() {
                       <div>
                         <h3 className="font-semibold mb-1">Page de capture</h3>
                         <p className="text-sm text-muted-foreground">
-                          Recupere des emails avec un lead magnet ou une promesse de contenu gratuit.
+                          Récupère des emails avec un lead magnet ou une promesse de contenu gratuit.
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">5 credits</p>
+                        <p className="text-xs text-muted-foreground mt-2">5 crédits</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -304,9 +304,9 @@ export default function PagesClient() {
                       <div>
                         <h3 className="font-semibold mb-1">Page de vente</h3>
                         <p className="text-sm text-muted-foreground">
-                          Vends ton offre avec une page de vente optimisee pour la conversion.
+                          Vends ton offre avec une page de vente optimisée pour la conversion.
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">7 credits</p>
+                        <p className="text-xs text-muted-foreground mt-2">7 crédits</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -326,7 +326,7 @@ export default function PagesClient() {
                   {createType === "capture" ? "Page de capture" : "Page de vente"}
                 </h1>
                 <p className="text-muted-foreground mb-6">
-                  Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions legales.
+                  Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions légales.
                 </p>
 
                 {offersLoading ? (
@@ -346,7 +346,7 @@ export default function PagesClient() {
                         >
                           <Package className="w-5 h-5 mb-1.5 text-primary" />
                           <h3 className="font-semibold text-sm">Offre existante</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">Les infos sont deja pretes</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Les infos sont déjà prêtes</p>
                         </button>
                         <button
                           onClick={() => setOfferSource("scratch")}
@@ -355,8 +355,8 @@ export default function PagesClient() {
                           }`}
                         >
                           <PenTool className="w-5 h-5 mb-1.5 text-primary" />
-                          <h3 className="font-semibold text-sm">De zero</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">Je donne les infos moi-meme</p>
+                          <h3 className="font-semibold text-sm">De zéro</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">Je donne les infos moi-même</p>
                         </button>
                       </div>
                     )}
@@ -442,11 +442,11 @@ export default function PagesClient() {
                         </div>
 
                         <div>
-                          <label className="text-sm font-medium block mb-1">5 benefices concrets</label>
+                          <label className="text-sm font-medium block mb-1">5 bénéfices concrets</label>
                           <textarea
                             value={offerBenefits}
                             onChange={(e) => setOfferBenefits(e.target.value)}
-                            placeholder={"1. Genere tes premiers clients en 7 jours\n2. Automatise ton tunnel de vente\n3. ..."}
+                            placeholder={"1. Génère tes premiers clients en 7 jours\n2. Automatise ton tunnel de vente\n3. ..."}
                             rows={4}
                             className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
                           />
@@ -471,18 +471,18 @@ export default function PagesClient() {
                                 type="text"
                                 value={offerGuarantees}
                                 onChange={(e) => setOfferGuarantees(e.target.value)}
-                                placeholder="Ex: Satisfait ou rembourse 30 jours"
+                                placeholder="Ex: Satisfait ou remboursé 30 jours"
                                 className="w-full px-3 py-2.5 border rounded-lg text-sm"
                               />
                             </div>
 
                             <div>
-                              <label className="text-sm font-medium block mb-1">Urgence / rarete</label>
+                              <label className="text-sm font-medium block mb-1">Urgence / rareté</label>
                               <input
                                 type="text"
                                 value={offerUrgency}
                                 onChange={(e) => setOfferUrgency(e.target.value)}
-                                placeholder="Ex: Offre limitee aux 50 premiers inscrits"
+                                placeholder="Ex: Offre limitée aux 50 premiers inscrits"
                                 className="w-full px-3 py-2.5 border rounded-lg text-sm"
                               />
                             </div>
@@ -508,11 +508,11 @@ export default function PagesClient() {
                       disabled={offerSource === "scratch" && !offerName.trim()}
                       className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Creer ma page ({createType === "sales" ? "7 credits" : "5 credits"})
+                      Créer ma page ({createType === "sales" ? "7 crédits" : "5 crédits"})
                     </button>
 
                     <p className="text-xs text-muted-foreground text-center mt-3">
-                      Tu pourras modifier chaque detail ensuite.
+                      Tu pourras modifier chaque détail ensuite.
                     </p>
                   </>
                 )}
@@ -525,7 +525,7 @@ export default function PagesClient() {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h1 className="text-3xl font-display font-bold mb-1">Mes pages</h1>
-                    <p className="text-muted-foreground">Cree et heberge tes pages de capture et de vente.</p>
+                    <p className="text-muted-foreground">Crée et héberge tes pages de capture et de vente.</p>
                   </div>
                   <button
                     onClick={() => setView("step1")}
@@ -546,12 +546,12 @@ export default function PagesClient() {
                       <FileText className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h2 className="text-lg font-semibold mb-2">Aucune page</h2>
-                    <p className="text-muted-foreground mb-6">Cree ta premiere page de capture ou de vente en un clic.</p>
+                    <p className="text-muted-foreground mb-6">Crée ta première page de capture ou de vente en un clic.</p>
                     <button
                       onClick={() => setView("step1")}
                       className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium"
                     >
-                      Creer ma premiere page
+                      Créer ma première page
                     </button>
                   </div>
                 ) : (

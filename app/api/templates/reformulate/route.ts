@@ -7,11 +7,82 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getOwnerOpenAI, OPENAI_MODEL } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+// ---------- Claude AI ----------
+
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+
+function getClaudeApiKey(): string {
+  return process.env.CLAUDE_API_KEY_OWNER?.trim() || process.env.ANTHROPIC_API_KEY_OWNER?.trim() || "";
+}
+
+function resolveClaudeModel(): string {
+  const raw =
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "";
+  const v = (raw || "").trim();
+  const DEFAULT = "claude-sonnet-4-5-20250929";
+  if (!v) return DEFAULT;
+  const s = v.toLowerCase();
+  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") return DEFAULT;
+  return v;
+}
+
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const model = resolveClaudeModel();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+
+  let res: Response;
+  try {
+    res = await fetch(CLAUDE_API_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": args.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        max_tokens: args.maxTokens ?? 200,
+        temperature: args.temperature ?? 0.3,
+        system: args.system,
+        messages: [{ role: "user", content: args.user }],
+      }),
+    });
+  } catch (e: any) {
+    if (e?.name === "AbortError") throw new Error("Claude API timeout");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API erreur (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  return parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
 
 const InputSchema = z.object({
   instruction: z.string().min(3),
@@ -27,9 +98,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const openai = getOwnerOpenAI();
-  if (!openai) {
-    return NextResponse.json({ error: "OpenAI non configure." }, { status: 500 });
+  const claudeApiKey = getClaudeApiKey();
+  if (!claudeApiKey) {
+    return NextResponse.json({ error: "Clé Claude non configurée." }, { status: 500 });
   }
 
   let body: unknown;
@@ -67,29 +138,24 @@ export async function POST(req: Request) {
   const firstPerson = firstPersonLabels[userLocale] || "Je vais";
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You are Tipote, an assistant that helps modify web pages.",
-            `The user is working on a ${pageTypeLabel}.`,
-            "Your task: rephrase the user's request in a clear and precise sentence to confirm understanding.",
-            "Respond ONLY with JSON: { \"reformulation\": \"...\" }",
-            `The reformulation MUST be in ${langLabel}, short (1-2 sentences max), first person singular ("${firstPerson}...").`,
-            "Examples:",
-            `- Input: "change the title" -> { "reformulation": "${firstPerson} modify the main title of your page." }`,
-            `- Input: "more urgent" -> { "reformulation": "${firstPerson} make the overall tone more urgent with action words." }`,
-          ].join("\n"),
-        },
-        { role: "user", content: instruction },
-      ],
-      max_completion_tokens: 200,
-      temperature: 0.3,
-    } as any);
+    const systemPrompt = [
+      "You are Tipote, an assistant that helps modify web pages.",
+      `The user is working on a ${pageTypeLabel}.`,
+      "Your task: rephrase the user's request in a clear and precise sentence to confirm understanding.",
+      "Respond ONLY with JSON: { \"reformulation\": \"...\" }",
+      `The reformulation MUST be in ${langLabel}, short (1-2 sentences max), first person singular ("${firstPerson}...").`,
+      "Examples:",
+      `- Input: "change the title" -> { "reformulation": "${firstPerson} modify the main title of your page." }`,
+      `- Input: "more urgent" -> { "reformulation": "${firstPerson} make the overall tone more urgent with action words." }`,
+    ].join("\n");
 
-    const raw = completion.choices?.[0]?.message?.content?.trim() || "";
+    const raw = await callClaude({
+      apiKey: claudeApiKey,
+      system: systemPrompt,
+      user: instruction,
+      maxTokens: 200,
+      temperature: 0.3,
+    });
     let reformulation = instruction;
 
     try {

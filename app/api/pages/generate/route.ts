@@ -2,6 +2,7 @@
 // SSE endpoint: generates a full hosted page (capture/sales) using AI.
 // Streams progress steps so the UI can show "Je rédige ton texte de vente", etc.
 // Costs 1 credit. Returns the created page ID at the end.
+// ✅ Uses Claude (Anthropic) for content generation — NOT OpenAI.
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -10,7 +11,6 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import { renderTemplateHtml } from "@/lib/templates/render";
 import { searchResourceChunks } from "@/lib/resources";
@@ -18,6 +18,82 @@ import { searchResourceChunks } from "@/lib/resources";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+// ---------- Claude AI ----------
+
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+
+function getClaudeApiKey(): string {
+  return process.env.CLAUDE_API_KEY_OWNER?.trim() || process.env.ANTHROPIC_API_KEY_OWNER?.trim() || "";
+}
+
+function resolveClaudeModel(): string {
+  const raw =
+    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "";
+  const v = (raw || "").trim();
+  const DEFAULT = "claude-sonnet-4-5-20250929";
+  if (!v) return DEFAULT;
+  const s = v.toLowerCase();
+  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") return DEFAULT;
+  return v;
+}
+
+async function callClaude(args: {
+  apiKey: string;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const model = resolveClaudeModel();
+  const timeoutMs = 180_000; // 3 minutes for page generation
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(CLAUDE_API_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": args.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 8000,
+        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+        system: args.system,
+        messages: [{ role: "user", content: args.user }],
+      }),
+    });
+  } catch (e: any) {
+    if (e?.name === "AbortError" || /aborted|abort/i.test(String(e?.message ?? ""))) {
+      throw new Error(`Claude API timeout après ${timeoutMs}ms`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Claude API erreur (${res.status}): ${t || res.statusText}`);
+  }
+
+  const json = (await res.json()) as any;
+  const parts = Array.isArray(json?.content) ? json.content : [];
+  return parts
+    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
 
 // ---------- Types ----------
 
@@ -142,9 +218,9 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: `Crédits insuffisants (${creditCost} crédits requis).`, code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" }), { status: 402, headers: { "content-type": "application/json" } });
   }
 
-  const openai = getOwnerOpenAI();
-  if (!openai) {
-    return new Response(JSON.stringify({ error: "OpenAI non configuré." }), { status: 500, headers: { "content-type": "application/json" } });
+  const claudeApiKey = getClaudeApiKey();
+  if (!claudeApiKey) {
+    return new Response(JSON.stringify({ error: "Clé Claude non configurée." }), { status: 500, headers: { "content-type": "application/json" } });
   }
 
   // SSE stream
@@ -243,18 +319,13 @@ export async function POST(req: NextRequest) {
           paymentButtonText: input.paymentButtonText || "",
         });
 
-        const completion = await openai.chat.completions.create({
-          ...cachingParams("page_generate"),
-          model: OPENAI_MODEL,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          max_completion_tokens: 8000,
+        const raw = await callClaude({
+          apiKey: claudeApiKey,
+          system: systemPrompt,
+          user: userPrompt,
+          maxTokens: 8000,
           temperature: 0.7,
-        } as any);
-
-        const raw = completion.choices?.[0]?.message?.content?.trim() || "";
+        });
 
         send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...", progress: 60, done: true });
 

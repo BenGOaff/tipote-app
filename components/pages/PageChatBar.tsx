@@ -146,7 +146,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         }),
       }).catch(() => {});
     } catch {
-      setError("Erreur reseau.");
+      setError("Erreur réseau.");
       setHistory((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
   const suggestions = [
     "Change le titre principal",
     "Rends le CTA plus urgent",
-    "Ajoute plus de benefices",
+    "Ajoute plus de bénéfices",
     "Rends le ton plus professionnel",
   ];
 
@@ -241,7 +241,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
           <button
             onClick={handleUndo}
             className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
-            title="Annuler la derniere modification"
+            title="Annuler la dernière modification"
           >
             <Undo2 className="w-4 h-4" />
           </button>
@@ -253,7 +253,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder={reformulation ? "Reformule ta demande..." : "Decris la modification souhaitee... (0.5 credit)"}
+          placeholder={reformulation ? "Reformule ta demande..." : "Décris la modification souhaitée... (0.5 crédit)"}
           disabled={disabled || loading || reformulating}
           className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
@@ -269,7 +269,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
 
       <div className="px-4 pb-2">
         <p className="text-[10px] text-muted-foreground text-center">
-          Chaque modification coute 0.5 credit
+          Chaque modification coûte 0.5 crédit
         </p>
       </div>
     </div>
