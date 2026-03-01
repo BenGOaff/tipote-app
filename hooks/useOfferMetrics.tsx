@@ -75,7 +75,7 @@ export const useOfferMetrics = () => {
       setMetrics(metricsRes?.metrics ?? []);
     } catch (error) {
       console.error("Error fetching offer metrics:", error);
-      toast({ title: "Erreur", description: "Impossible de charger les metriques", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de charger les métriques", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +168,8 @@ export const useOfferMetrics = () => {
     return metrics.filter((m) => m.offer_name !== "__email_stats__");
   }, [metrics]);
 
-  const analyzeOfferMetrics = useCallback(async (month: string): Promise<string | null> => {
+  // source: "manual" = user clicked button (1 credit), "auto" = after saving data (free)
+  const analyzeOfferMetrics = useCallback(async (month: string, source: "manual" | "auto" = "manual"): Promise<string | null> => {
     setIsAnalyzing(true);
     try {
       const currentMonth = offerMetrics.filter((m) => m.month === month);
@@ -188,6 +189,7 @@ export const useOfferMetrics = () => {
           previousMetrics: previousMonthData,
           emailStats,
           previousEmailStats,
+          source,
         }),
       });
       const json = await res.json();

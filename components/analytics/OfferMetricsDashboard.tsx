@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { format } from "date-fns";
+import { format, startOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   TrendingUp, Users, ShoppingCart, Euro, Target,
@@ -80,9 +80,16 @@ export const OfferMetricsDashboard = ({
 }: OfferMetricsDashboardProps) => {
   const hasData = metrics.length > 0;
 
-  // Chart data: monthly evolution
+  // Exclude the current (incomplete) month from charts to avoid skewing data
+  const currentMonthStr = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const completedMonths = useMemo(
+    () => sortedMonths.filter((m) => m !== currentMonthStr),
+    [sortedMonths, currentMonthStr],
+  );
+
+  // Chart data: monthly evolution (only completed months)
   const monthlyChartData = useMemo(() => {
-    return sortedMonths.map((m) => {
+    return completedMonths.map((m) => {
       const totals = getMonthTotals(m);
       const email = getEmailStats(m);
       return {
@@ -95,15 +102,15 @@ export const OfferMetricsDashboard = ({
         "Taux clics %": email?.email_click_rate ?? 0,
       };
     });
-  }, [sortedMonths, getMonthTotals, getEmailStats]);
+  }, [completedMonths, getMonthTotals, getEmailStats]);
 
   if (!hasData) {
     return (
       <Card className="p-8 text-center">
         <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Aucune donnee encore</h3>
+        <h3 className="text-lg font-medium mb-2">Aucune donnée encore</h3>
         <p className="text-muted-foreground mb-4">
-          Commence par saisir tes donnees dans l&apos;onglet &quot;Saisir mes donnees&quot; pour voir tes resultats.
+          Commence par saisir tes données dans l&apos;onglet « Saisir mes données » pour voir tes résultats.
         </p>
       </Card>
     );
@@ -115,7 +122,7 @@ export const OfferMetricsDashboard = ({
       <div>
         <h3 className="font-bold text-base mb-3 flex items-center gap-2">
           <Target className="w-4 h-4" />
-          Resultats totaux ({grandTotals.monthCount} mois de donnees)
+          Résultats totaux ({grandTotals.monthCount} mois de données)
         </h3>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -138,7 +145,7 @@ export const OfferMetricsDashboard = ({
                 <Users className="w-4 h-4 text-green-600" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Leads captures</p>
+            <p className="text-xs text-muted-foreground">Leads capturés</p>
             <p className="text-xl font-bold">{grandTotals.signups.toLocaleString("fr-FR")}</p>
             {grandTotals.captureRate > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">Taux moyen : {grandTotals.captureRate.toFixed(1)}%</p>
@@ -266,7 +273,7 @@ export const OfferMetricsDashboard = ({
             <div>
               <h3 className="font-bold">Analyse IA</h3>
               <p className="text-xs text-muted-foreground">
-                Conseils personnalises bases sur tes chiffres
+                Conseils personnalisés basés sur tes chiffres
               </p>
             </div>
           </div>
@@ -291,11 +298,11 @@ export const OfferMetricsDashboard = ({
         ) : (
           <div>
             <p className="text-sm text-muted-foreground mb-4">
-              L&apos;analyse sera generee automatiquement quand tu saisiras tes donnees. Elle diagnostique tes performances par offre, tes emails, et te donne des actions concretes.
+              L&apos;analyse sera générée automatiquement quand tu saisiras tes données. Elle diagnostique tes performances par offre, tes emails, et te donne des actions concrètes.
             </p>
             <Button onClick={onAnalyze} disabled={!hasData || isAnalyzing} className="gradient-primary">
               <Sparkles className="w-4 h-4 mr-2" />
-              Lancer l&apos;analyse
+              Lancer l&apos;analyse (1 crédit)
             </Button>
           </div>
         )}

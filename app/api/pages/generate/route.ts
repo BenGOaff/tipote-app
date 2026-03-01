@@ -194,18 +194,32 @@ function sseKeepAlive(): string {
   return `: keepalive\n\n`;
 }
 
+/** Small delay so the user sees each step animate before it completes */
+function wait(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 /**
  * Run an async task while sending SSE keepalive comments every `intervalMs`
- * to prevent proxies (Cloudflare, Vercel, QUIC/H3) from dropping idle connections.
+ * AND sub-progress updates so the user sees activity during the long AI call.
  */
-async function withKeepAlive<T>(
+async function withKeepAliveAndProgress<T>(
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder,
+  sendFn: (event: string, data: any) => void,
+  stepId: string,
+  stepLabel: string,
   task: () => Promise<T>,
-  intervalMs = 15_000,
+  intervalMs = 12_000,
 ): Promise<T> {
+  let subProgress = 47;
   const timer = setInterval(() => {
     try { controller.enqueue(encoder.encode(sseKeepAlive())); } catch { /* stream closed */ }
+    // Slowly increment progress so the UI shows activity (caps at 58 before done=true at 60)
+    if (subProgress < 58) {
+      subProgress += 2;
+      sendFn("step", { id: stepId, label: stepLabel, progress: subProgress });
+    }
   }, intervalMs);
   try {
     return await task();
@@ -282,6 +296,7 @@ export async function POST(req: NextRequest) {
         const cgvUrl = (profile as any)?.cgv_url || "";
         const contentLocale = input.locale || ((profile as any)?.content_locale ?? "fr").trim() || "fr";
 
+        await wait(600);
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
 
         // ==================== STEP 2: Pick best template ====================
@@ -290,6 +305,7 @@ export async function POST(req: NextRequest) {
         const templateKind = input.pageType === "sales" ? "vente" : "capture";
         const templateId = input.templateId || pickBestTemplate(input.pageType, niche);
 
+        await wait(800);
         send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 20, done: true, templateId });
 
         // ==================== STEP 3: Load template schema ====================
@@ -298,6 +314,7 @@ export async function POST(req: NextRequest) {
         const schema = await inferTemplateSchema({ kind: templateKind, templateId });
         const schemaPrompt = schemaToPrompt(schema);
 
+        await wait(700);
         send("step", { id: "schema", label: "Je prépare la structure de ta page...", progress: 30, done: true });
 
         // ==================== STEP 4: Search knowledge resources ====================
@@ -310,6 +327,7 @@ export async function POST(req: NextRequest) {
           knowledgeSnippets = chunks.map((c) => c.content);
         } catch { /* fail-open */ }
 
+        await wait(500);
         send("step", { id: "knowledge", label: "Je m'inspire des meilleures pages de vente...", progress: 40, done: true });
 
         // ==================== STEP 5: Generate copywriting ====================
@@ -344,10 +362,15 @@ export async function POST(req: NextRequest) {
           paymentButtonText: input.paymentButtonText || "",
         });
 
-        // Wrap the long-running Claude call with SSE keepalive heartbeats
-        // to prevent Cloudflare/Vercel/QUIC from dropping the idle connection.
-        const raw = await withKeepAlive(controller, encoder, () =>
-          callClaude({
+        const copyLabel = input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...";
+
+        // Wrap the long-running Claude call with SSE keepalive heartbeats + sub-progress
+        // to prevent Cloudflare/Vercel/QUIC from dropping the idle connection
+        // and to show the user that work is happening during the long AI call.
+        const raw = await withKeepAliveAndProgress(
+          controller, encoder, send,
+          "copy", copyLabel,
+          () => callClaude({
             apiKey: claudeApiKey,
             system: systemPrompt,
             user: userPrompt,
@@ -378,6 +401,7 @@ export async function POST(req: NextRequest) {
         if (firstName && !contentData.about_name) contentData.about_name = firstName;
         if (input.videoEmbedUrl) contentData.video_embed_url = input.videoEmbedUrl;
 
+        await wait(400);
         send("step", { id: "design", label: "Je crée ton design personnalisé...", progress: 75, done: true });
 
         // ==================== STEP 7: Apply branding ====================
@@ -388,6 +412,7 @@ export async function POST(req: NextRequest) {
         if (brandColorAccent) brandTokens["colors-accent"] = brandColorAccent;
         if (brandFont) brandTokens["typography-heading"] = brandFont;
 
+        await wait(400);
         send("step", { id: "branding", label: "J'applique ton identité visuelle...", progress: 82, done: true });
 
         // ==================== STEP 8: Add legal compliance ====================
@@ -397,6 +422,7 @@ export async function POST(req: NextRequest) {
         if (privacyUrl && !contentData.legal_privacy_url) contentData.legal_privacy_url = privacyUrl;
         if (termsUrl && !contentData.legal_mentions_url) contentData.legal_mentions_url = termsUrl;
 
+        await wait(300);
         send("step", { id: "legal", label: "J'ajoute tes mentions légales...", progress: 88, done: true });
 
         // ==================== STEP 9: Render HTML ====================
@@ -438,7 +464,6 @@ export async function POST(req: NextRequest) {
           legal_mentions_url: termsUrl,
           legal_cgv_url: cgvUrl,
           legal_privacy_url: privacyUrl,
-          locale: contentLocale,
         };
 
         const { data: page, error: insertError } = await supabaseAdmin
