@@ -483,20 +483,22 @@ Object.keys(af).forEach(function(k){
     parent.appendChild(clone);
   });
 });
-/* Inject payment URL into CTA buttons (href="#" → actual URL) */
+/* IMPORTANT: inject legal URLs FIRST so CTA replacement skips them */
+var legalMap={'mentions':d.legal_mentions_url,'cgv':d.legal_cgv_url,'privacy':d.legal_privacy_url,'confidentialit':d.legal_privacy_url,'politique':d.legal_privacy_url};
+document.querySelectorAll('footer a, .footer a, .footer-links a, [class*="footer"] a, [class*="legal"] a').forEach(function(el){
+  var t=(el.textContent||'').toLowerCase();
+  for(var k in legalMap){if(t.indexOf(k)>=0&&legalMap[k]){el.setAttribute('href',legalMap[k]);el.setAttribute('target','_blank');el.setAttribute('data-legal','1');break;}}
+});
+/* Inject payment URL into CTA buttons (href="#" → actual URL), skip legal links */
 var payUrl=d.cta_url||d.cta_primary_url||d.payment_url||'';
 if(payUrl){
   document.querySelectorAll('a[href="#"],a[href="#capture"],.cta-button,.cta-primary,.btn-primary,button[class*="cta"]').forEach(function(el){
+    if(el.getAttribute('data-legal')==='1')return;
+    if(el.closest('footer')||el.closest('[class*="footer"]')||el.closest('[class*="legal"]'))return;
     if(el.tagName==='A')el.setAttribute('href',payUrl);
-    else{var wrap=el.closest('a');if(wrap)wrap.setAttribute('href',payUrl);}
+    else{var wrap=el.closest('a');if(wrap&&wrap.getAttribute('data-legal')!=='1')wrap.setAttribute('href',payUrl);}
   });
 }
-/* Inject legal URLs into footer links (href="#" on footer/legal elements) */
-var legalMap={'mentions':d.legal_mentions_url,'cgv':d.legal_cgv_url,'privacy':d.legal_privacy_url,'confidentialit':d.legal_privacy_url};
-document.querySelectorAll('footer a[href="#"], .footer a[href="#"], .footer-links a[href="#"]').forEach(function(el){
-  var t=(el.textContent||'').toLowerCase();
-  for(var k in legalMap){if(t.indexOf(k)>=0&&legalMap[k]){el.setAttribute('href',legalMap[k]);el.setAttribute('target','_blank');break;}}
-});
 /* Hide empty bonus sections: if no bonus data provided, hide the entire section */
 var bonusKeys=['bonuses','bonuses_detailed','bonus_items','bonus_list'];
 var hasBonusData=false;
@@ -627,6 +629,12 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     // Inject contrast safety CSS to prevent white-on-light issues
     out = injectContrastSafety(out);
 
+    // Replace hardcoded template placeholder text with actual content
+    out = replaceHardcodedTemplatePlaceholders(out, req.contentData);
+
+    // Inject FAQ styling
+    out = injectFaqStyling(out);
+
     // Inject inline capture form for capture pages (email + name + privacy checkbox)
     if (kind === "capture") {
       out = injectInlineCaptureForm(out, req.contentData);
@@ -658,6 +666,12 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   // Inject contrast safety CSS
   doc = injectContrastSafety(doc);
+
+  // Replace hardcoded template placeholder text
+  doc = replaceHardcodedTemplatePlaceholders(doc, req.contentData);
+
+  // Inject FAQ styling
+  doc = injectFaqStyling(doc);
 
   return { html: doc };
 }
@@ -708,6 +722,87 @@ section + section, [class*="section"] + [class*="section"] {
 section, [class*="section"] {
   padding-top: 60px;
   padding-bottom: 60px;
+}
+</style>`;
+
+  if (html.includes("</head>")) {
+    return html.replace("</head>", `${css}\n</head>`);
+  }
+  return html + css;
+}
+
+// ---------- Hardcoded template text replacement ----------
+
+/**
+ * Replace hardcoded placeholder text in templates with actual content data.
+ * Covers all known hardcoded strings across all templates.
+ */
+function replaceHardcodedTemplatePlaceholders(html: string, contentData: Record<string, any>): string {
+  let out = html;
+  const offerName = safeString(contentData.offer_name || contentData.hero_title || contentData.challenge_name || "");
+  const logoText = safeString(contentData.logo_text || contentData.site_name || offerName || "");
+
+  // sale-05: "SYSTEME.IO ACADÉMIE", "BUNDLE SYSTÈME.IO", "BONUS 2 : MONÉTISE SYSTÈME.IO"
+  if (logoText) {
+    out = out.replace(/BUNDLE SYSTÈME\.IO/g, logoText.toUpperCase());
+    out = out.replace(/SYSTÈME\.IO ACADÉMIE/g, logoText.toUpperCase());
+    out = out.replace(/MONÉTISE SYSTÈME\.IO/g, logoText.toUpperCase());
+    out = out.replace(/SYSTEME\.IO ACADÉMIE/g, logoText.toUpperCase());
+  }
+
+  // sale-07: "[Nom de ta méthode]"
+  if (offerName) {
+    out = out.replace(/\[Nom de ta méthode\]/g, escapeHtml(offerName));
+  }
+
+  // Generic: replace any remaining [Placeholder text] patterns
+  out = out.replace(/\[Nom [^\]]*\]/g, offerName ? escapeHtml(offerName) : "");
+  out = out.replace(/\[Titre [^\]]*\]/g, "");
+  out = out.replace(/\[Votre [^\]]*\]/g, "");
+
+  // capture-01: "VOTRE LOGO", "VOTRE BASELINE ICI" — already handled by applyCapture01Replacements
+  // capture-02: "VotreSite.com" — handled by selectors injection
+
+  return out;
+}
+
+// ---------- FAQ styling injection ----------
+
+/**
+ * Inject CSS to visually distinguish FAQ questions from answers.
+ * FAQ sections use .faq-item, .faq-question, .faq-answer or similar classes.
+ */
+function injectFaqStyling(html: string): string {
+  const css = `<style>
+/* FAQ styling - distinguish questions from answers */
+.faq-item, [class*="faq-item"], .accordion-item {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,0.03);
+}
+.faq-question, [class*="faq-question"], .accordion-header, .accordion-title,
+.faq-item h3, .faq-item h4, [class*="faq-item"] h3, [class*="faq-item"] h4 {
+  font-weight: 700 !important;
+  font-size: 1.05em !important;
+  margin-bottom: 8px !important;
+  display: block;
+}
+.faq-question::before, [class*="faq-question"]::before,
+.faq-item h3::before, .faq-item h4::before,
+[class*="faq-item"] h3::before, [class*="faq-item"] h4::before {
+  content: "Q. ";
+  font-weight: 800;
+  opacity: 0.6;
+}
+.faq-answer, [class*="faq-answer"], .accordion-body, .accordion-content,
+.faq-item p, [class*="faq-item"] p {
+  opacity: 0.85;
+  line-height: 1.6;
+  padding-left: 8px;
+  border-left: 3px solid rgba(128,128,128,0.2);
+  margin-top: 4px;
 }
 </style>`;
 

@@ -265,11 +265,16 @@ export default function PagesClient() {
     } catch { /* ignore */ }
   }, []);
 
-  // Archive page
+  // Archive page (with confirmation)
   const handleArchive = useCallback(async (pageId: string) => {
+    const confirmed = window.confirm("Supprimer cette page ? Cette action est irréversible.");
+    if (!confirmed) return;
     try {
-      await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
-      setPages((prev) => prev.filter((p) => p.id !== pageId));
+      const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) {
+        setPages((prev) => prev.filter((p) => p.id !== pageId));
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -514,17 +519,6 @@ export default function PagesClient() {
                                 value={offerGuarantees}
                                 onChange={(e) => setOfferGuarantees(e.target.value)}
                                 placeholder="Ex: Satisfait ou remboursé 30 jours"
-                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium block mb-1">Urgence / rareté</label>
-                              <input
-                                type="text"
-                                value={offerUrgency}
-                                onChange={(e) => setOfferUrgency(e.target.value)}
-                                placeholder="Ex: Offre limitée aux 50 premiers inscrits"
                                 className="w-full px-3 py-2.5 border rounded-lg text-sm"
                               />
                             </div>

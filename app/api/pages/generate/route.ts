@@ -404,6 +404,7 @@ export async function POST(req: NextRequest) {
         sanitizeContentData(contentData, input);
 
         // Inject user-provided data (overrides AI-generated placeholders)
+        if (input.offerName) contentData.offer_name = input.offerName;
         if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
         if (brandAuthorPhoto && !contentData.author_photo_url) contentData.author_photo_url = brandAuthorPhoto;
         if (firstName && !contentData.about_name) contentData.about_name = firstName;
@@ -849,6 +850,13 @@ function sanitizeContentData(data: Record<string, any>, input: any): void {
     for (const p of SCARCITY_PATTERNS) {
       s = s.replace(p, "");
     }
+
+    // Strip HTML tags — AI sometimes generates <strong>, <em>, <br>, <p> etc.
+    s = s.replace(/<[^>]+>/g, "");
+    // Strip markdown bold/italic
+    s = s.replace(/\*\*(.*?)\*\*/g, "$1");
+    s = s.replace(/__(.*?)__/g, "$1");
+    s = s.replace(/\*(.*?)\*/g, "$1");
 
     return s.replace(/\s{2,}/g, " ").trim();
   }
