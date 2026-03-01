@@ -129,10 +129,11 @@ export async function POST(req: NextRequest) {
 
   const input = parsed.data;
 
-  // Check credits
+  // Check credits: 5 for capture, 7 for sales
+  const creditCost = input.pageType === "sales" ? 7 : 5;
   const balance = await ensureUserCredits(userId);
-  if (balance.total_remaining < 1) {
-    return new Response(JSON.stringify({ error: "Crédits insuffisants (1 crédit requis).", code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" }), { status: 402, headers: { "content-type": "application/json" } });
+  if (balance.total_remaining < creditCost) {
+    return new Response(JSON.stringify({ error: `Crédits insuffisants (${creditCost} crédits requis).`, code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" }), { status: 402, headers: { "content-type": "application/json" } });
   }
 
   const openai = getOwnerOpenAI();
@@ -338,9 +339,9 @@ export async function POST(req: NextRequest) {
           throw new Error(insertError?.message || "Erreur lors de la sauvegarde.");
         }
 
-        // Consume 1 credit
+        // Consume credits: 5 for capture, 7 for sales
         try {
-          await consumeCredits(userId, 1, {
+          await consumeCredits(userId, creditCost, {
             kind: "page_generate",
             page_type: input.pageType,
             template_id: templateId,

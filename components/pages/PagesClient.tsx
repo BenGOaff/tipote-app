@@ -315,7 +315,7 @@ export default function PagesClient() {
                   onClick={handleGenerate}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
                 >
-                  Créer ma page (1 crédit)
+                  Créer ma page ({createType === "sales" ? "7 crédits" : "5 crédits"})
                 </button>
 
                 <p className="text-xs text-muted-foreground text-center mt-3">
