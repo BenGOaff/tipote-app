@@ -734,7 +734,7 @@ ${textContent.split("\n").map((line) => {
                   </button>
                 )}
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Affichee quand ta page est partagee sur les reseaux sociaux.
+                  Affichée quand ta page est partagée sur les réseaux sociaux.
                 </p>
               </div>
 

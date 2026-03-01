@@ -1,6 +1,8 @@
 // app/api/analytics/offer-metrics/analyze/route.ts
 // POST: Deep AI analysis of per-offer metrics + email stats with actionable recommendations
 // Adapts to user's niche, level, positioning, and completed tasks.
+// ✅ In-memory cache (1h TTL) to avoid burning OpenAI quota on repeated visits
+// ✅ Graceful fallback when OpenAI quota exceeded (429) or unavailable
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -9,9 +11,97 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 
+// ── In-memory cache ──────────────────────────────────────
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_CACHE_SIZE = 200;
+
+interface CacheEntry {
+  analysis: string;
+  ts: number;
+}
+
+const analysisCache = new Map<string, CacheEntry>();
+
+function getCached(key: string): string | null {
+  const entry = analysisCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    analysisCache.delete(key);
+    return null;
+  }
+  return entry.analysis;
+}
+
+function setCache(key: string, analysis: string) {
+  // Evict oldest entries if cache is too large
+  if (analysisCache.size >= MAX_CACHE_SIZE) {
+    const oldest = analysisCache.keys().next().value;
+    if (oldest) analysisCache.delete(oldest);
+  }
+  analysisCache.set(key, { analysis, ts: Date.now() });
+}
+
+// ── Helpers ──────────────────────────────────────────────
+
 function safeJson(v: unknown) {
   try { return JSON.stringify(v ?? null); } catch { return "null"; }
 }
+
+function isRateLimitError(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  const msg = e.message.toLowerCase();
+  return msg.includes("429") || msg.includes("rate limit") || msg.includes("quota");
+}
+
+function buildFallbackAnalysis(currentMetrics: any[]): string {
+  const lines: string[] = [];
+  lines.push("## Analyse temporairement indisponible\n");
+  lines.push("L'analyse IA est momentanement indisponible. Voici un diagnostic automatique de tes metriques :\n");
+
+  if (!currentMetrics.length) {
+    lines.push("**Aucune metrique ce mois-ci.** Commence par renseigner tes chiffres (visiteurs, inscrits, ventes) pour chaque offre.\n");
+    return lines.join("\n");
+  }
+
+  for (const m of currentMetrics) {
+    const name = m.offer_name || "Offre";
+    lines.push(`### ${name}`);
+    const visitors = m.visitors ?? 0;
+    const signups = m.signups ?? 0;
+    const sales = m.sales_count ?? 0;
+    const captureRate = visitors > 0 ? ((signups / visitors) * 100).toFixed(1) : "0";
+    const convRate = signups > 0 ? ((sales / signups) * 100).toFixed(1) : "0";
+
+    lines.push(`- **Visiteurs** : ${visitors}`);
+    lines.push(`- **Inscrits** : ${signups} (taux de capture : **${captureRate}%**)`);
+    if (m.is_paid) {
+      lines.push(`- **Ventes** : ${sales} (conversion : **${convRate}%**)`);
+      lines.push(`- **CA** : ${(m.revenue ?? 0).toFixed(0)} €`);
+    }
+
+    // Simple diagnostics
+    if (visitors === 0) {
+      lines.push("- ⚠️ **Pas de visiteurs** → Augmente ta visibilite (posts, pub, partage)");
+    } else if (parseFloat(captureRate) < 20) {
+      lines.push("- ⚠️ **Taux de capture faible** (<20%) → Ameliore ton accroche et ta page de capture");
+    }
+    if (m.is_paid && signups > 0 && parseFloat(convRate) < 2) {
+      lines.push("- ⚠️ **Conversion faible** (<2%) → Revois ta page de vente (preuves, offre, urgence)");
+    }
+    lines.push("");
+  }
+
+  lines.push("### Checklist rapide");
+  lines.push("- [ ] Verifier que chaque tunnel a suffisamment de visiteurs");
+  lines.push("- [ ] Taux de capture < 20% → tester un nouveau titre / lead magnet");
+  lines.push("- [ ] Taux de conversion < 2% → revoir page de vente");
+  lines.push("- [ ] Taux d'ouverture email < 20% → tester de nouveaux objets");
+  lines.push("\n*L'analyse IA detaillee sera disponible lors de ta prochaine visite.*");
+
+  return lines.join("\n");
+}
+
+// ── Route handler ────────────────────────────────────────
 
 export async function POST(req: Request) {
   const supabase = await getSupabaseServerClient();
@@ -28,6 +118,13 @@ export async function POST(req: Request) {
     const previousMetrics = body.previousMetrics ?? [];
     const emailStats = body.emailStats ?? null;
     const previousEmailStats = body.previousEmailStats ?? null;
+
+    // Build cache key from user + data fingerprint
+    const cacheKey = `${user.id}:${safeJson(currentMetrics)}:${safeJson(previousMetrics)}:${safeJson(emailStats)}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return NextResponse.json({ ok: true, analysis: cached, cached: true });
+    }
 
     // Get business context
     let bpQuery = supabase.from("business_profiles").select("*").eq("user_id", user.id);
@@ -101,20 +198,35 @@ Adapte au niveau "${level}" de l'utilisateur.
 ### 5. KPIs a suivre
 Les 3-4 chiffres cles a surveiller le mois prochain.`;
 
-      const completion = await openai.chat.completions.create({
-        ...cachingParams("offer-analytics"),
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userMsg },
-        ],
-        max_completion_tokens: 4000,
-      } as any);
+      try {
+        const completion = await openai.chat.completions.create({
+          ...cachingParams("offer-analytics"),
+          model: OPENAI_MODEL,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: userMsg },
+          ],
+          max_completion_tokens: 4000,
+        } as any);
 
-      analysis = completion.choices?.[0]?.message?.content?.trim() || "Analyse indisponible.";
+        analysis = completion.choices?.[0]?.message?.content?.trim() || "Analyse indisponible.";
+      } catch (aiErr) {
+        console.error("[offer-metrics/analyze] OpenAI error:", aiErr instanceof Error ? aiErr.message : aiErr);
+
+        if (isRateLimitError(aiErr)) {
+          // Graceful fallback — don't crash, return useful diagnostic
+          analysis = buildFallbackAnalysis(currentMetrics);
+        } else {
+          // Other OpenAI errors — still degrade gracefully
+          analysis = buildFallbackAnalysis(currentMetrics);
+        }
+      }
     } else {
       analysis = `**Analyse automatique indisponible** (cle OpenAI manquante).\n\nVerifie manuellement tes ratios :\n- **Taux de capture** < 20% → Ameliore ta page de capture\n- **Taux de conversion** < 2% → Revois ta page de vente\n- **Taux d'ouverture email** < 20% → Ameliore tes objets d'email\n- **Visites faibles** → Poste plus souvent ou diversifie tes canaux`;
     }
+
+    // Cache successful analysis
+    setCache(cacheKey, analysis);
 
     return NextResponse.json({ ok: true, analysis });
   } catch (e) {
