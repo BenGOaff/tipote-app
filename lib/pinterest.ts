@@ -8,10 +8,17 @@ const PINTEREST_API_BASE = "https://api.pinterest.com/v5";
 
 // Scopes requis :
 //   boards:read        → lister les tableaux de l'utilisateur
+//   boards:write       → créer des tableaux
 //   pins:read          → lire les épingles
 //   pins:write         → créer des épingles
 //   user_accounts:read → lire le profil utilisateur
-const SCOPES = ["boards:read", "pins:read", "pins:write", "user_accounts:read"];
+const SCOPES = [
+  "boards:read",
+  "boards:write",
+  "pins:read",
+  "pins:write",
+  "user_accounts:read",
+];
 
 // ── Contraintes Pinterest ──
 // Titre   : max 100 caractères
@@ -44,6 +51,37 @@ function getRedirectUri(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) throw new Error("Missing env NEXT_PUBLIC_APP_URL");
   return `${appUrl}/api/auth/pinterest/callback`;
+}
+
+// ----------------------------------------------------------------
+// Rate limit helper — retries on 429 with exponential backoff
+// ----------------------------------------------------------------
+
+async function pinterestFetch(
+  url: string,
+  init: RequestInit,
+  maxRetries = 3
+): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    const res = await fetch(url, init);
+
+    if (res.status === 429 && attempt < maxRetries) {
+      // Respect Retry-After header if provided, else exponential backoff
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
+        : Math.min(2000 * 2 ** attempt, 30000);
+      console.warn(
+        `[pinterest] Rate limited (429), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`
+      );
+      await new Promise((r) => setTimeout(r, waitMs));
+      attempt++;
+      continue;
+    }
+
+    return res;
+  }
 }
 
 // ----------------------------------------------------------------
@@ -162,7 +200,7 @@ export type PinterestUserInfo = {
 export async function getUserInfo(
   accessToken: string
 ): Promise<PinterestUserInfo> {
-  const res = await fetch(`${PINTEREST_API_BASE}/user_account`, {
+  const res = await pinterestFetch(`${PINTEREST_API_BASE}/user_account`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -206,7 +244,7 @@ export async function getUserBoards(
     });
     if (bookmark) params.set("bookmark", bookmark);
 
-    const res = await fetch(
+    const res = await pinterestFetch(
       `${PINTEREST_API_BASE}/boards?${params.toString()}`,
       {
         headers: {
@@ -229,6 +267,42 @@ export async function getUserBoards(
   } while (true);
 
   return boards.slice(0, maxBoards);
+}
+
+/**
+ * Crée un nouveau tableau Pinterest.
+ * Nécessite le scope boards:write.
+ */
+export async function createBoard(
+  accessToken: string,
+  name: string,
+  description?: string,
+  privacy: "PUBLIC" | "SECRET" = "PUBLIC"
+): Promise<{ ok: boolean; board?: PinterestBoard; error?: string }> {
+  const payload: Record<string, unknown> = {
+    name: name.slice(0, 180), // Pinterest board name max ~180 chars
+    privacy,
+  };
+  if (description?.trim()) {
+    payload.description = description.trim();
+  }
+
+  const res = await pinterestFetch(`${PINTEREST_API_BASE}/boards`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    return { ok: false, error: `Pinterest create board failed (${res.status}): ${text}` };
+  }
+
+  const board: PinterestBoard = await res.json();
+  return { ok: true, board };
 }
 
 // ----------------------------------------------------------------
@@ -282,7 +356,7 @@ export async function createPin(
     payload.link = link.trim();
   }
 
-  const res = await fetch(`${PINTEREST_API_BASE}/pins`, {
+  const res = await pinterestFetch(`${PINTEREST_API_BASE}/pins`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

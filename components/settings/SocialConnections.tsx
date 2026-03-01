@@ -57,6 +57,98 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
+/* ── Pinterest consent modal ── */
+function PinterestConsentDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg" aria-describedby="pinterest-consent-desc">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PinterestIcon className="h-5 w-5 text-[#E60023]" />
+            Connecter Pinterest à Tipote
+          </DialogTitle>
+        </DialogHeader>
+
+        <div id="pinterest-consent-desc" className="space-y-4 text-sm">
+          <p className="text-muted-foreground">
+            Connecte ton compte Pinterest Business à Tipote pour créer et programmer
+            des épingles automatiquement depuis ton espace de travail.
+          </p>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="font-medium text-foreground">Tipote aura accès à :</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <span>Ton profil Pinterest (nom, photo de profil)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <span>Tes tableaux (pour choisir où publier tes épingles)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <span>Créer, modifier et supprimer des épingles en ton nom</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <span>Créer des tableaux en ton nom</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="font-medium text-foreground">Tes garanties :</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <span>Tes données ne seront jamais revendues à des tiers.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <span>Aucune épingle ne sera publiée sans ta validation explicite.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <span>Tu peux déconnecter ton compte à tout moment depuis les Paramètres.</span>
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            En continuant, tu acceptes nos{" "}
+            <a href="/legal/cgu" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              Conditions d&apos;utilisation
+            </a>{" "}
+            et notre{" "}
+            <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              Politique de confidentialité
+            </a>.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button onClick={onConfirm} className="bg-[#E60023] hover:bg-[#C50000] text-white gap-2">
+            <PinterestIcon className="h-4 w-4" />
+            Connecter Pinterest
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type Connection = {
   id: string;
   platform: string;
@@ -161,6 +253,7 @@ export default function SocialConnections() {
   const [fbContentOpen, setFbContentOpen] = useState(false);
   const [fbContent, setFbContent] = useState<any>(null);
   const [fbContentLoading, setFbContentLoading] = useState(false);
+  const [pinterestConsentOpen, setPinterestConsentOpen] = useState(false);
 
 
   // Charger les connexions
@@ -282,7 +375,12 @@ export default function SocialConnections() {
     }
   }, [searchParams, toast, t]);
 
-  const onConnect = (oauthUrl: string) => {
+  const onConnect = (platformKey: string, oauthUrl: string) => {
+    // Pinterest: show consent dialog before OAuth redirect
+    if (platformKey === "pinterest") {
+      setPinterestConsentOpen(true);
+      return;
+    }
     window.location.href = oauthUrl;
   };
 
@@ -386,7 +484,7 @@ export default function SocialConnections() {
                         </Button>
                       )}
                       {connection.expired && (
-                        <Button variant="outline" size="sm" onClick={() => onConnect(platform.oauthUrl)}>
+                        <Button variant="outline" size="sm" onClick={() => onConnect(platform.key, platform.oauthUrl)}>
                           <RefreshCw className="w-4 h-4 mr-1" />
                           {t("reconnect")}
                         </Button>
@@ -427,7 +525,7 @@ export default function SocialConnections() {
                     </>
                   ) : (
                     <Button
-                      onClick={() => onConnect(platform.oauthUrl)}
+                      onClick={() => onConnect(platform.key, platform.oauthUrl)}
                       className={`${platform.color} ${platform.hoverColor} text-white`}
                     >
                       {platform.icon}
@@ -459,6 +557,16 @@ export default function SocialConnections() {
           ))}
         </div>
       )}
+      {/* Pinterest consent dialog */}
+      <PinterestConsentDialog
+        open={pinterestConsentOpen}
+        onOpenChange={setPinterestConsentOpen}
+        onConfirm={() => {
+          setPinterestConsentOpen(false);
+          window.location.href = "/api/auth/pinterest";
+        }}
+      />
+
       {/* Modale contenu Facebook — démo pages_read_user_content */}
       <Dialog open={fbContentOpen} onOpenChange={setFbContentOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
