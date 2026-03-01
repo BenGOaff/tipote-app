@@ -220,6 +220,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pendingHtmlRef = useRef<string | null>(null); // Stores pending HTML during edit mode
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -244,6 +245,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // Toggle inline edit mode
   const toggleEditMode = useCallback(() => {
     const next = !editMode;
+    if (!next && pendingHtmlRef.current) {
+      // Exiting edit mode: apply pending HTML so next render uses the saved version
+      setHtmlPreview(pendingHtmlRef.current);
+      pendingHtmlRef.current = null;
+    }
     setEditMode(next);
     const iframe = iframeRef.current;
     if (iframe?.contentWindow) {
@@ -317,20 +323,28 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "tipote:text-edit") {
         setSaving(true);
-        const iframe = iframeRef.current;
-        if (iframe?.contentDocument) {
-          const updatedHtml = iframe.contentDocument.documentElement.outerHTML;
-          setHtmlPreview("<!DOCTYPE html><html>" + updatedHtml.slice(updatedHtml.indexOf("<html>") + 6));
-
-          clearTimeout((window as any).__tipoteSaveTimer);
-          (window as any).__tipoteSaveTimer = setTimeout(() => {
+        // Debounce save: extract updated HTML from iframe and persist
+        // IMPORTANT: do NOT update htmlPreview here — that causes React re-render
+        // which resets the iframe and loses edit mode state.
+        clearTimeout((window as any).__tipoteSaveTimer);
+        (window as any).__tipoteSaveTimer = setTimeout(() => {
+          const iframe = iframeRef.current;
+          if (iframe?.contentDocument) {
+            const fullHtml = "<!DOCTYPE html>" + iframe.contentDocument.documentElement.outerHTML;
+            // Save to API (persists html_snapshot in DB)
+            // Store pending HTML so it's applied when exiting edit mode
+            pendingHtmlRef.current = fullHtml;
             fetch(`/api/pages/${page.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ html_snapshot: updatedHtml }),
-            }).then(() => setSaving(false)).catch(() => setSaving(false));
-          }, 1500);
-        }
+              body: JSON.stringify({ html_snapshot: fullHtml }),
+            }).then(() => {
+              setSaving(false);
+            }).catch(() => setSaving(false));
+          } else {
+            setSaving(false);
+          }
+        }, 2000);
       }
       if (e.data?.type === "tipote:image-click") {
         handleIframeImageClick(e.data.imgId, e.data.hasImage);

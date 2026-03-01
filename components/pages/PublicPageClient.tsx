@@ -2,12 +2,11 @@
 // Renders a published hosted page in full-screen mode.
 // Displays the pre-rendered HTML snapshot in an iframe.
 // Handles lead capture: inline form injected into HTML + overlay on CTA click.
-// Supports client-side data fetching as fallback if server-side data is missing.
+// Client-side fetches via dedicated /api/pages/public/[slug] endpoint (like quiz).
 
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 
 type PublicPageData = {
   id: string;
@@ -27,9 +26,6 @@ type PublicPageData = {
   legal_privacy_url: string;
 };
 
-const PAGE_SELECT =
-  "id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status";
-
 export default function PublicPageClient({ page: serverPage, slug }: { page: PublicPageData | null; slug: string }) {
   const [page, setPage] = useState<PublicPageData | null>(serverPage);
   const [loading, setLoading] = useState(!serverPage);
@@ -40,34 +36,23 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
   const [capturing, setCapturing] = useState(false);
   const [captureSuccess, setCaptureSuccess] = useState(false);
 
-  // Client-side fallback: if server didn't return page data, fetch directly from Supabase
+  // Client-side fetch via dedicated public API endpoint (uses supabaseAdmin, bypasses RLS)
   useEffect(() => {
     if (serverPage) return;
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient(url, key);
-    supabase
-      .from("hosted_pages")
-      .select(PAGE_SELECT)
-      .eq("slug", slug)
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) console.error("[public-page-client] Supabase error:", error.message);
-        if (data) {
-          setPage(data as any);
+    fetch(`/api/pages/public/${encodeURIComponent(slug)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok && data.page) {
+          setPage(data.page);
         } else {
           setNotFound(true);
         }
+      })
+      .catch(() => {
+        setNotFound(true);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, [serverPage, slug]);

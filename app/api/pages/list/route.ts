@@ -22,6 +22,7 @@ export async function GET() {
     .from("hosted_pages")
     .select("id, title, slug, page_type, status, template_id, og_image_url, views_count, leads_count, created_at, updated_at")
     .eq("user_id", session.user.id)
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   if (projectId) {
