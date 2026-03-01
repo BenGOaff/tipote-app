@@ -683,7 +683,13 @@ export default function CreateLovableClient() {
                       description={type.description}
                       icon={type.icon}
                       color={type.color}
-                      onClick={() => setSelectedType(type.id)}
+                      onClick={() => {
+                        if (type.id === "funnel") {
+                          router.push("/pages");
+                        } else {
+                          setSelectedType(type.id);
+                        }
+                      }}
                     />
                   ))}
                 </div>
