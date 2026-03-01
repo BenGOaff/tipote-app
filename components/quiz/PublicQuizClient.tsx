@@ -365,7 +365,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 onChange={(e) => setConsent(e.target.checked)}
                 className="mt-0.5"
               />
-              <span>{quiz.consent_text || "J\u2019accepte la politique de confidentialité."}</span>
+              <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} />
             </label>
           </div>
 
@@ -547,6 +547,35 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   }
 
   return null;
+}
+
+/** Renders consent text with "politique de confidentialité" as a clickable link when a URL is available. */
+function ConsentText({ text, privacyUrl }: { text: string | null; privacyUrl: string | null }) {
+  const raw = text || "J\u2019accepte la politique de confidentialit\u00e9.";
+  const needle = "politique de confidentialit\u00e9";
+  const idx = raw.toLowerCase().indexOf(needle);
+
+  if (!privacyUrl || idx === -1) return <span>{raw}</span>;
+
+  const before = raw.slice(0, idx);
+  const match = raw.slice(idx, idx + needle.length);
+  const after = raw.slice(idx + needle.length);
+
+  return (
+    <span>
+      {before}
+      <a
+        href={privacyUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-foreground transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {match}
+      </a>
+      {after}
+    </span>
+  );
 }
 
 const tipoteFooterTexts: Record<string, string> = {
