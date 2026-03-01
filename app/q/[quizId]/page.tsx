@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 
+// Force dynamic rendering so quiz metadata/status is always fresh.
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ quizId: string }> };
 
 export async function generateMetadata({ params }: RouteContext): Promise<Metadata> {

@@ -5,6 +5,9 @@ import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 
+// Force dynamic rendering so published pages are always fresh (never cached as "not found").
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ slug: string }> };
 
 async function getPage(slug: string) {
