@@ -86,6 +86,58 @@ function asStringArray(v: unknown): string[] {
   return [];
 }
 
+/**
+ * Extract the first task title from plan_json when project_tasks is empty.
+ * This ensures the "Prochaine étape" always shows something actionable.
+ */
+function extractFirstTaskFromPlan(planJson: AnyRecord): string | null {
+  // Try tasks_by_timeframe (new schema)
+  const plan90 =
+    (planJson.plan_90_days as AnyRecord) ??
+    (planJson.plan90 as AnyRecord) ??
+    (planJson.plan_90 as AnyRecord);
+
+  const tbf =
+    (plan90 && typeof plan90 === "object" ? (plan90 as AnyRecord).tasks_by_timeframe : null) ??
+    planJson.tasks_by_timeframe;
+
+  if (tbf && typeof tbf === "object") {
+    for (const v of Object.values(tbf as Record<string, unknown>)) {
+      if (!Array.isArray(v)) continue;
+      for (const item of v) {
+        if (!item || typeof item !== "object") continue;
+        const title = (item as AnyRecord).title ?? (item as AnyRecord).task ?? (item as AnyRecord).name;
+        if (typeof title === "string" && title.trim()) return title.trim();
+      }
+    }
+  }
+
+  // Try action_plan_30_90 (legacy)
+  const ap = planJson.action_plan_30_90;
+  if (ap && typeof ap === "object") {
+    for (const [k, v] of Object.entries(ap as Record<string, unknown>)) {
+      if (!k.startsWith("weeks_") || !v || typeof v !== "object") continue;
+      const actions = (v as AnyRecord).actions;
+      if (Array.isArray(actions)) {
+        for (const a of actions) {
+          if (typeof a === "string" && a.trim()) return a.trim();
+        }
+      }
+    }
+  }
+
+  // Try tasks[] (legacy simple)
+  if (Array.isArray(planJson.tasks)) {
+    for (const item of planJson.tasks) {
+      if (!item || typeof item !== "object") continue;
+      const title = (item as AnyRecord).title ?? (item as AnyRecord).task ?? (item as AnyRecord).name;
+      if (typeof title === "string" && title.trim()) return title.trim();
+    }
+  }
+
+  return null;
+}
+
 function parseDate(v: unknown): Date | null {
   const s = toStr(v).trim();
   if (!s) return null;
@@ -636,7 +688,7 @@ export default function TodayLovable() {
           (a, b) => new Date(toStr(b.updated_at)).getTime() - new Date(toStr(a.updated_at)).getTime(),
         );
         const lastDone = sortedByUpdated.find((t) => isDoneStatus(toStr(t.status)));
-        const nextIncomplete = tasks
+        let nextIncomplete = tasks
           .filter((t) => {
             const s = toStr(t.status).toLowerCase().trim();
             return !isDoneStatus(s) && s !== "cancelled" && s !== "annulé";
@@ -647,6 +699,14 @@ export default function TodayLovable() {
             if (pa !== pb) return pa - pb;
             return new Date(toStr(a.created_at)).getTime() - new Date(toStr(b.created_at)).getTime();
           })[0];
+
+        // If project_tasks is empty but plan_json has tasks, extract first task as suggestion
+        if (!nextIncomplete && !lastDone && planJson) {
+          const firstPlanTask = extractFirstTaskFromPlan(planJson);
+          if (firstPlanTask) {
+            nextIncomplete = { title: firstPlanTask } as AnyRecord;
+          }
+        }
 
         // Content counts
         const contentCounts: Record<string, number> = {};
@@ -808,6 +868,11 @@ export default function TodayLovable() {
                     </p>
 
                     <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Positive summary (based on completed task categories) */}
+                      {positiveText ? (
+                        <p className="text-sm text-foreground font-medium leading-relaxed">{positiveText}</p>
+                      ) : null}
+
                       {/* Dernière tâche réalisée */}
                       {lastDoneTask ? (
                         <div className="flex items-start gap-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 p-4">
@@ -821,13 +886,9 @@ export default function TodayLovable() {
                             </p>
                           </div>
                         </div>
-                      ) : (
-                        positiveText ? (
-                          <p className="text-sm text-foreground font-medium leading-relaxed">{positiveText}</p>
-                        ) : null
-                      )}
+                      ) : null}
 
-                      {/* Prochaine tâche */}
+                      {/* Prochaine tâche ou coaching personnalisé */}
                       {nextTask ? (
                         <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <span className="text-primary text-base shrink-0 mt-0.5">→</span>
@@ -840,7 +901,8 @@ export default function TodayLovable() {
                             </p>
                           </div>
                         </div>
-                      ) : coaching ? (
+                      ) : !lastDoneTask && coaching ? (
+                        /* Only show generic coaching when there's nothing personalized to display */
                         <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <p className="text-sm text-foreground leading-relaxed">
                             {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.

@@ -281,15 +281,27 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         toast({ title: t("toast.error"), description: json?.error || t("toast.planError"), variant: "destructive" });
         return;
       }
+      // Also update the plan_json.revenue_goal so it persists across reloads
+      // (strategy page reads from plan_json first, then falls back to profile)
+      try {
+        await fetch("/api/strategy/revenue-goal", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ revenue_goal: val }),
+        });
+      } catch {
+        // non-blocking: profile update already succeeded
+      }
       setRevenueGoalLocal(val);
       setIsEditingRevGoal(false);
+      router.refresh();
       toast({ title: t("toast.saved"), description: t("toast.savedDesc") });
     } catch {
       toast({ title: t("toast.error"), description: t("toast.planError"), variant: "destructive" });
     } finally {
       setSavingRevGoal(false);
     }
-  }, [revGoalInput, toast, t]);
+  }, [revGoalInput, toast, t, router]);
 
   // --- Persona derived values ---
   const personaTitle = localPersona?.title || "—";
