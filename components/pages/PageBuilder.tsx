@@ -1,16 +1,19 @@
 // components/pages/PageBuilder.tsx
-// Main page editor: preview iframe + chat bar + settings panel.
-// Features: multi-device preview, inline text editing, language selector,
-// edit after publication, media upload.
+// Main page editor: preview iframe + chat bar + publish modal.
+// Features: multi-device preview, inline text editing,
+// publish modal with slug/SIO tag/OG image/meta description,
+// download HTML, download text as PDF, edit after publication.
 
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  Download, ExternalLink, Copy, Check,
-  Settings, Upload, Video, Link2, Smartphone, Tablet, Monitor,
+  Download, ExternalLink, Copy, Check, X,
+  Upload, Smartphone, Tablet, Monitor,
   Globe, Loader2, ArrowLeft, ImagePlus,
-  MousePointerClick, Languages
+  MousePointerClick, FileText, FileDown,
+  Share2, Tag, Image as ImageIcon, Link2,
+  EyeOff,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -40,6 +43,7 @@ type PageData = {
   capture_enabled: boolean;
   capture_heading: string;
   capture_subtitle: string;
+  capture_first_name: boolean;
   sio_capture_tag: string;
   views_count: number;
   leads_count: number;
@@ -52,7 +56,7 @@ type Props = {
   onBack: () => void;
 };
 
-// ---------- Device config (like quiz) ----------
+// ---------- Device config ----------
 
 type Device = "mobile" | "tablet" | "desktop";
 
@@ -70,7 +74,6 @@ const INLINE_EDIT_SCRIPT = `
   var editing = false;
   var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
 
-  // Listen for toggle from parent
   window.addEventListener('message', function(e) {
     if (e.data === 'tipote:enable-edit') {
       editing = true;
@@ -88,7 +91,7 @@ const INLINE_EDIT_SCRIPT = `
     var els = document.querySelectorAll(editableSelectors);
     els.forEach(function(el) {
       if (el.closest('script') || el.closest('style') || el.closest('noscript')) return;
-      if (el.children.length > 3) return; // skip complex containers
+      if (el.children.length > 3) return;
       el.setAttribute('contenteditable', 'true');
       el.style.outline = 'none';
       el.style.cursor = 'text';
@@ -118,17 +121,13 @@ const INLINE_EDIT_SCRIPT = `
   function onBlur(e) {
     e.target.style.outline = 'none';
     e.target.style.outlineOffset = '';
-    // Send updated text to parent
     var tag = e.target.tagName.toLowerCase();
     var text = e.target.innerText || e.target.textContent || '';
     parent.postMessage({ type: 'tipote:text-edit', tag: tag, text: text.trim(), html: e.target.innerHTML }, '*');
   }
 
-  function onInput(e) {
-    // Debounced save hint
-  }
+  function onInput(e) {}
 
-  // Edit mode styles
   var style = document.createElement('style');
   style.textContent = '.tipote-edit-mode [contenteditable]:hover { outline: 1px dashed #93c5fd !important; outline-offset: 2px; border-radius: 4px; }';
   document.head.appendChild(style);
@@ -141,13 +140,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [page, setPage] = useState<PageData>(initialPage);
   const [htmlPreview, setHtmlPreview] = useState(initialPage.html_snapshot);
   const [device, setDevice] = useState<Device>("desktop");
-  const [showSettings, setShowSettings] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Publish modal state
+  const [publishSlug, setPublishSlug] = useState(initialPage.slug);
+  const [publishTag, setPublishTag] = useState(initialPage.sio_capture_tag || "");
+  const [publishMetaDesc, setPublishMetaDesc] = useState(initialPage.meta_description || "");
+  const [publishOgUrl, setPublishOgUrl] = useState(initialPage.og_image_url || "");
+  const [uploadingOg, setUploadingOg] = useState(false);
 
   // Inject inline edit script into HTML
   const getPreviewHtml = useCallback((html: string) => {
@@ -176,15 +182,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "tipote:text-edit") {
-        // For now, show the text change via chat explanation
-        // The user sees it live in the iframe. We save the full HTML snapshot.
         setSaving(true);
         const iframe = iframeRef.current;
         if (iframe?.contentDocument) {
           const updatedHtml = iframe.contentDocument.documentElement.outerHTML;
           setHtmlPreview("<!DOCTYPE html><html>" + updatedHtml.slice(updatedHtml.indexOf("<html>") + 6));
 
-          // Save HTML snapshot to backend (debounced)
           clearTimeout((window as any).__tipoteSaveTimer);
           (window as any).__tipoteSaveTimer = setTimeout(() => {
             fetch(`/api/pages/${page.id}`, {
@@ -210,14 +213,72 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     await refreshPreview(nextContentData, nextBrandTokens);
   }, [refreshPreview]);
 
-  // Publish / unpublish
-  const togglePublish = useCallback(async () => {
+  // Settings update (debounced save)
+  const handleSettingUpdate = useCallback(async (field: string, value: any) => {
+    setPage((prev) => ({ ...prev, [field]: value }));
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    }).catch(() => {});
+  }, [page.id]);
+
+  // Open publish modal
+  const openPublishModal = useCallback(() => {
+    setPublishSlug(page.slug);
+    setPublishTag(page.sio_capture_tag || "");
+    setPublishMetaDesc(page.meta_description || "");
+    setPublishOgUrl(page.og_image_url || "");
+    setShowPublishModal(true);
+  }, [page.slug, page.sio_capture_tag, page.meta_description, page.og_image_url]);
+
+  // Publish with modal settings
+  const handlePublish = useCallback(async () => {
+    setPublishing(true);
+    try {
+      // Save settings first
+      await fetch(`/api/pages/${page.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: publishSlug,
+          sio_capture_tag: publishTag,
+          meta_description: publishMetaDesc,
+          og_image_url: publishOgUrl,
+        }),
+      });
+
+      // Publish
+      const res = await fetch(`/api/pages/${page.id}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publish: true }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPage((prev) => ({
+          ...prev,
+          status: data.page.status,
+          slug: publishSlug,
+          sio_capture_tag: publishTag,
+          meta_description: publishMetaDesc,
+          og_image_url: publishOgUrl,
+        }));
+        setShowPublishModal(false);
+      }
+    } catch { /* ignore */ } finally {
+      setPublishing(false);
+    }
+  }, [page.id, publishSlug, publishTag, publishMetaDesc, publishOgUrl]);
+
+  // Unpublish
+  const handleUnpublish = useCallback(async () => {
     setPublishing(true);
     try {
       const res = await fetch(`/api/pages/${page.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publish: page.status !== "published" }),
+        body: JSON.stringify({ publish: false }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -226,7 +287,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     } catch { /* ignore */ } finally {
       setPublishing(false);
     }
-  }, [page.id, page.status]);
+  }, [page.id]);
 
   // Copy public URL
   const copyUrl = useCallback(() => {
@@ -248,6 +309,97 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     URL.revokeObjectURL(url);
   }, [htmlPreview, page.slug]);
 
+  // Download text as PDF (printable HTML)
+  const downloadTextPdf = useCallback(() => {
+    // Extract text content from the iframe
+    const iframe = iframeRef.current;
+    let textContent = "";
+
+    if (iframe?.contentDocument) {
+      const body = iframe.contentDocument.body;
+      const elements = body.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, span, a, button, blockquote, td, th");
+      const seen = new Set<string>();
+
+      elements.forEach((el) => {
+        // Skip nested elements already captured by parent
+        if (el.closest("script") || el.closest("style") || el.closest("noscript")) return;
+        const text = (el.textContent || "").trim();
+        if (!text || text.length < 3 || seen.has(text)) return;
+        seen.add(text);
+
+        const tag = el.tagName.toLowerCase();
+        if (tag.startsWith("h")) {
+          textContent += `\n${"#".repeat(parseInt(tag[1]) || 1)} ${text}\n\n`;
+        } else if (tag === "li") {
+          textContent += `- ${text}\n`;
+        } else if (tag === "blockquote") {
+          textContent += `> ${text}\n\n`;
+        } else {
+          textContent += `${text}\n\n`;
+        }
+      });
+    } else {
+      // Fallback: extract from content_data
+      const cd = page.content_data;
+      for (const [key, val] of Object.entries(cd)) {
+        if (typeof val === "string" && val.trim() && !key.includes("url") && !key.includes("image") && !key.includes("color")) {
+          textContent += `${val}\n\n`;
+        }
+      }
+    }
+
+    if (!textContent.trim()) {
+      textContent = "Aucun contenu texte disponible.";
+    }
+
+    // Create a printable HTML document
+    const printHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>${page.title || "Page"} - Texte</title>
+<style>
+  @media print { @page { margin: 2cm; } }
+  body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.8; font-size: 14px; }
+  h1, h2, h3, h4, h5, h6 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
+  h1 { font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 17px; }
+  p { margin: 0 0 1em; }
+  blockquote { border-left: 3px solid #ddd; padding-left: 16px; color: #555; margin: 1em 0; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
+</style>
+</head>
+<body>
+<h1>${page.title || "Page"}</h1>
+${textContent.split("\n").map((line) => {
+      const l = line.trim();
+      if (!l) return "";
+      if (l.startsWith("# ")) return `<h1>${l.slice(2)}</h1>`;
+      if (l.startsWith("## ")) return `<h2>${l.slice(3)}</h2>`;
+      if (l.startsWith("### ")) return `<h3>${l.slice(4)}</h3>`;
+      if (l.startsWith("#### ")) return `<h4>${l.slice(5)}</h4>`;
+      if (l.startsWith("- ")) return `<li>${l.slice(2)}</li>`;
+      if (l.startsWith("> ")) return `<blockquote>${l.slice(2)}</blockquote>`;
+      return `<p>${l}</p>`;
+    }).join("\n")}
+<div class="footer">Genere par Tipote</div>
+</body>
+</html>`;
+
+    // Open in new window and trigger print (saves as PDF)
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(printHtml);
+      win.document.close();
+      // Auto-trigger print dialog after load
+      win.onload = () => win.print();
+      setTimeout(() => win.print(), 500);
+    }
+  }, [page.content_data, page.title]);
+
   // Open in new tab
   const openPreview = useCallback(() => {
     const win = window.open("", "_blank");
@@ -257,7 +409,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [htmlPreview]);
 
-  // Image upload
+  // Image upload (generic)
   const handleImageUpload = useCallback(async (fieldKey: string) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -293,30 +445,35 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     input.click();
   }, [page, refreshPreview]);
 
-  // Video embed update
-  const handleVideoUpdate = useCallback(async (url: string) => {
-    const nextContentData = { ...page.content_data, video_embed_url: url };
-    setPage((prev) => ({ ...prev, content_data: nextContentData, video_embed_url: url }));
+  // OG image upload (for publish modal)
+  const handleOgImageUpload = useCallback(async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
 
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ video_embed_url: url, content_data: nextContentData }),
-    }).catch(() => {});
-  }, [page]);
+      setUploadingOg(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("contentId", `page-${page.id}-og`);
 
-  // Settings update
-  const handleSettingUpdate = useCallback(async (field: string, value: any) => {
-    setPage((prev) => ({ ...prev, [field]: value }));
-
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    }).catch(() => {});
+        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.ok && data.url) {
+          setPublishOgUrl(data.url);
+        }
+      } catch { /* ignore */ } finally {
+        setUploadingOg(false);
+      }
+    };
+    input.click();
   }, [page.id]);
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
+  const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
   const deviceCfg = DEVICE_CONFIG[device];
 
@@ -331,14 +488,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <div>
             <h1 className="text-sm font-semibold truncate max-w-[200px]">{page.title}</h1>
             <p className="text-xs text-muted-foreground">
-              {page.views_count} vues · {page.leads_count} leads · {page.iteration_count} modif.
+              {page.views_count} vues · {page.leads_count} leads
               {saving && <span className="ml-2 text-primary">Sauvegarde...</span>}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Device toggle (like quiz) */}
+          {/* Device toggle */}
           <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
             {(Object.keys(DEVICE_CONFIG) as Device[]).map((d) => {
               const Icon = DEVICE_CONFIG[d].icon;
@@ -363,12 +520,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             className={`p-2 rounded-lg border transition-colors ${
               editMode ? "bg-blue-50 border-blue-300 text-blue-600 dark:bg-blue-950 dark:border-blue-700" : "hover:bg-muted text-muted-foreground"
             }`}
-            title={editMode ? "Désactiver l'édition directe" : "Modifier le texte directement"}
+            title={editMode ? "Desactiver l'edition directe" : "Modifier le texte directement"}
           >
             <MousePointerClick className="w-4 h-4" />
           </button>
 
-          {/* Media buttons */}
+          {/* Logo upload */}
           <button
             onClick={() => handleImageUpload("logo_image_url")}
             disabled={uploadingImage}
@@ -378,51 +535,64 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           </button>
 
-          <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-lg border ${showSettings ? "bg-muted" : ""} hover:bg-muted text-muted-foreground`} title="Paramètres">
-            <Settings className="w-4 h-4" />
-          </button>
-
-          <button onClick={openPreview} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Aperçu plein écran">
+          {/* Full-screen preview */}
+          <button onClick={openPreview} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Apercu plein ecran">
             <ExternalLink className="w-4 h-4" />
           </button>
 
-          <button onClick={downloadHtml} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Télécharger HTML">
+          {/* Download HTML */}
+          <button onClick={downloadHtml} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Telecharger HTML">
             <Download className="w-4 h-4" />
           </button>
 
-          {/* Publish / Unpublish button */}
-          <button
-            onClick={togglePublish}
-            disabled={publishing}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isPublished
-                ? "bg-green-600 text-white hover:bg-green-700"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            } disabled:opacity-50`}
-          >
-            {publishing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isPublished ? (
-              <span className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> En ligne</span>
-            ) : (
-              "Publier"
-            )}
+          {/* Download text as PDF */}
+          <button onClick={downloadTextPdf} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Telecharger le texte en PDF">
+            <FileDown className="w-4 h-4" />
           </button>
+
+          {/* Publish / manage */}
+          {isPublished ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={copyUrl}
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 flex items-center gap-1.5"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                {copied ? "Copie !" : "En ligne"}
+              </button>
+              <button
+                onClick={handleUnpublish}
+                disabled={publishing}
+                className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
+                title="Depublier"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={openPublishModal}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              Publier
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Published URL bar — always visible when published, editing still works */}
+      {/* Published URL bar */}
       {isPublished && (
         <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border-b text-sm">
           <Globe className="w-4 h-4 text-green-600" />
-          <span className="text-green-700 dark:text-green-400 font-medium">Ta page est en ligne :</span>
+          <span className="text-green-700 dark:text-green-400 font-medium">En ligne :</span>
           <a href={publicUrl} target="_blank" rel="noopener" className="text-green-600 underline truncate">
             {publicUrl}
           </a>
           <button onClick={copyUrl} className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-green-600" />}
           </button>
-          <span className="text-xs text-green-600/60 ml-auto">Les modifications sont appliquées en temps réel</span>
+          <span className="text-xs text-green-600/60 ml-auto">Modifications en temps reel</span>
         </div>
       )}
 
@@ -430,225 +600,31 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       {editMode && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/20 border-b text-xs text-blue-700 dark:text-blue-400">
           <MousePointerClick className="w-3.5 h-3.5" />
-          Clique sur n'importe quel texte pour le modifier directement
+          Clique sur n&apos;importe quel texte pour le modifier directement
         </div>
       )}
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Preview */}
-        <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4">
-          <div
-            className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
-            style={{
-              width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
-              maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
-              height: "calc(100vh - 200px)",
-            }}
-          >
-            <iframe
-              ref={iframeRef}
-              srcDoc={getPreviewHtml(htmlPreview)}
-              title="Preview"
-              className="w-full h-full border-0"
-              sandbox="allow-scripts allow-same-origin"
-            />
-          </div>
+      <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4">
+        <div
+          className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
+          style={{
+            width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
+            maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
+            height: "calc(100vh - 220px)",
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            srcDoc={getPreviewHtml(htmlPreview)}
+            title="Preview"
+            className="w-full h-full border-0"
+            sandbox="allow-scripts allow-same-origin"
+          />
         </div>
-
-        {/* Settings panel */}
-        {showSettings && (
-          <div className="w-80 border-l bg-background overflow-y-auto shrink-0">
-            <div className="p-4 space-y-6">
-              <h3 className="font-semibold text-sm">Paramètres de la page</h3>
-
-              {/* Slug */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">URL personnalisée</label>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">/p/</span>
-                  <input
-                    type="text"
-                    value={page.slug}
-                    onChange={(e) => handleSettingUpdate("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-                    className="flex-1 px-2 py-1.5 text-sm border rounded-md"
-                  />
-                </div>
-              </div>
-
-              {/* Language */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1 flex items-center gap-1">
-                  <Languages className="w-3.5 h-3.5" /> Langue du contenu
-                </label>
-                <select
-                  value={page.locale || "fr"}
-                  onChange={(e) => handleSettingUpdate("locale", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded-md bg-background"
-                >
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                  <option value="de">Deutsch</option>
-                  <option value="pt">Português</option>
-                  <option value="it">Italiano</option>
-                  <option value="nl">Nederlands</option>
-                  <option value="ar">العربية</option>
-                  <option value="tr">Türkçe</option>
-                </select>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Modifie la langue pour regénérer le contenu via le chat.
-                </p>
-              </div>
-
-              {/* SEO */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Titre SEO</label>
-                <input
-                  type="text"
-                  value={page.meta_title}
-                  onChange={(e) => handleSettingUpdate("meta_title", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded-md"
-                  maxLength={60}
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Description SEO</label>
-                <textarea
-                  value={page.meta_description}
-                  onChange={(e) => handleSettingUpdate("meta_description", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded-md resize-none"
-                  rows={3}
-                  maxLength={160}
-                />
-              </div>
-
-              {/* Video embed */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1 flex items-center gap-1">
-                  <Video className="w-3.5 h-3.5" /> URL vidéo (YouTube/Vimeo)
-                </label>
-                <input
-                  type="url"
-                  value={page.video_embed_url}
-                  onChange={(e) => handleVideoUpdate(e.target.value)}
-                  placeholder="https://youtube.com/embed/..."
-                  className="w-full px-2 py-1.5 text-sm border rounded-md"
-                />
-              </div>
-
-              {/* Payment URL */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1 flex items-center gap-1">
-                  <Link2 className="w-3.5 h-3.5" /> Lien de paiement
-                </label>
-                <input
-                  type="url"
-                  value={page.payment_url}
-                  onChange={(e) => handleSettingUpdate("payment_url", e.target.value)}
-                  placeholder="https://checkout.stripe.com/..."
-                  className="w-full px-2 py-1.5 text-sm border rounded-md"
-                />
-              </div>
-
-              {/* Images */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-2">Images</label>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleImageUpload("logo_image_url")}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs border rounded-md hover:bg-muted"
-                  >
-                    <Upload className="w-3.5 h-3.5" /> Changer le logo
-                  </button>
-                  <button
-                    onClick={() => handleImageUpload("author_photo_url")}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs border rounded-md hover:bg-muted"
-                  >
-                    <Upload className="w-3.5 h-3.5" /> Changer la photo auteur
-                  </button>
-                  <button
-                    onClick={() => handleImageUpload("og_image_url")}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs border rounded-md hover:bg-muted"
-                  >
-                    <Upload className="w-3.5 h-3.5" /> Image de partage (OG)
-                  </button>
-                </div>
-              </div>
-
-              {/* Lead capture */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Capture d'emails</label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={page.capture_enabled}
-                    onChange={(e) => handleSettingUpdate("capture_enabled", e.target.checked)}
-                  />
-                  Activer la capture
-                </label>
-                {page.capture_enabled && (
-                  <div className="mt-2 space-y-2">
-                    <input
-                      type="text"
-                      value={page.capture_heading}
-                      onChange={(e) => handleSettingUpdate("capture_heading", e.target.value)}
-                      placeholder="Titre du formulaire"
-                      className="w-full px-2 py-1.5 text-sm border rounded-md"
-                    />
-                    <label className="flex items-center gap-2 text-sm mt-1">
-                      <input
-                        type="checkbox"
-                        checked={(page as any).capture_first_name ?? false}
-                        onChange={(e) => handleSettingUpdate("capture_first_name", e.target.checked)}
-                      />
-                      Demander le prénom
-                    </label>
-                    <input
-                      type="text"
-                      value={page.sio_capture_tag}
-                      onChange={(e) => handleSettingUpdate("sio_capture_tag", e.target.value)}
-                      placeholder="Tag Systeme.io (optionnel)"
-                      className="w-full px-2 py-1.5 text-sm border rounded-md"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Legal */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Liens légaux</label>
-                <div className="space-y-2">
-                  <input
-                    type="url"
-                    value={page.legal_mentions_url}
-                    onChange={(e) => handleSettingUpdate("legal_mentions_url", e.target.value)}
-                    placeholder="URL Mentions légales"
-                    className="w-full px-2 py-1.5 text-sm border rounded-md"
-                  />
-                  <input
-                    type="url"
-                    value={page.legal_cgv_url}
-                    onChange={(e) => handleSettingUpdate("legal_cgv_url", e.target.value)}
-                    placeholder="URL CGV"
-                    className="w-full px-2 py-1.5 text-sm border rounded-md"
-                  />
-                  <input
-                    type="url"
-                    value={page.legal_privacy_url}
-                    onChange={(e) => handleSettingUpdate("legal_privacy_url", e.target.value)}
-                    placeholder="URL Politique de confidentialité"
-                    className="w-full px-2 py-1.5 text-sm border rounded-md"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Chat bar — always active, even when published */}
+      {/* Chat bar */}
       <PageChatBar
         pageId={page.id}
         templateId={page.template_id}
@@ -657,6 +633,150 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         brandTokens={page.brand_tokens}
         onUpdate={handleChatUpdate}
       />
+
+      {/* ==================== PUBLISH MODAL ==================== */}
+      {showPublishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPublishModal(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Publier ta page</h2>
+                <p className="text-sm text-muted-foreground">Configure les parametres avant la mise en ligne.</p>
+              </div>
+              <button onClick={() => setShowPublishModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* URL / Slug */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <Link2 className="w-4 h-4 text-muted-foreground" />
+                  URL de partage
+                </label>
+                <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-2 border">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">{typeof window !== "undefined" ? window.location.origin : ""}/p/</span>
+                  <input
+                    type="text"
+                    value={publishSlug}
+                    onChange={(e) => setPublishSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                    className="flex-1 bg-transparent text-sm font-medium focus:outline-none min-w-0"
+                    placeholder="mon-slug"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 truncate">{publishPreviewUrl}</p>
+              </div>
+
+              {/* Systeme.io tag */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  Tag Systeme.io (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={publishTag}
+                  onChange={(e) => setPublishTag(e.target.value)}
+                  placeholder="Ex: capture-ebook-fitness"
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Les leads captures seront tagges dans Systeme.io avec ce tag.
+                </p>
+              </div>
+
+              {/* OG Image */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                  Image de partage (OG)
+                </label>
+                {publishOgUrl ? (
+                  <div className="relative rounded-lg overflow-hidden border bg-muted/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={publishOgUrl} alt="OG preview" className="w-full h-32 object-cover" />
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <button
+                        onClick={handleOgImageUpload}
+                        className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs"
+                      >
+                        Changer
+                      </button>
+                      <button
+                        onClick={() => setPublishOgUrl("")}
+                        className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs text-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleOgImageUpload}
+                    disabled={uploadingOg}
+                    className="w-full py-8 border-2 border-dashed rounded-lg text-sm text-muted-foreground hover:bg-muted/30 transition-colors flex flex-col items-center gap-2"
+                  >
+                    {uploadingOg ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        <span>Ajouter une image de partage</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Affichee quand ta page est partagee sur les reseaux sociaux.
+                </p>
+              </div>
+
+              {/* Meta description */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  Description (SEO)
+                </label>
+                <textarea
+                  value={publishMetaDesc}
+                  onChange={(e) => setPublishMetaDesc(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                  rows={3}
+                  maxLength={160}
+                  placeholder="Description qui apparait dans Google..."
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {publishMetaDesc.length}/160 caracteres
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowPublishModal(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={publishing || !publishSlug.trim()}
+                className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                Mettre en ligne
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
