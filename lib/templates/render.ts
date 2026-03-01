@@ -558,6 +558,17 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
         out = injectVenteContentScript(out, req.contentData, selectors);
       } catch { /* ignore parse errors */ }
     }
+
+    // Inject brand CSS variables into full-doc templates (colors, fonts, etc.)
+    if (cssVars) {
+      const brandStyle = `<style>:root{${cssVars}}</style>`;
+      if (out.includes("</head>")) {
+        out = out.replace("</head>", `${brandStyle}\n</head>`);
+      } else if (out.includes("<body")) {
+        out = out.replace("<body", `${brandStyle}\n<body`);
+      }
+    }
+
     return { html: out };
   }
 

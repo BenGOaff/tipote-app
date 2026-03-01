@@ -348,25 +348,43 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   const lines: string[] = [];
   lines.push(`TEMPLATE_KIND: ${schema.kind}`);
   lines.push(`TEMPLATE_ID: ${schema.templateId}`);
+  if (schema.name) lines.push(`TEMPLATE_NAME: ${schema.name}`);
+  if (schema.description) lines.push(`TEMPLATE_DESCRIPTION: ${schema.description}`);
   lines.push("");
   lines.push("CHAMPS À REMPLIR (JSON) :");
+  lines.push("Pour chaque champ, rédige un VRAI texte de copywriting professionnel adapté à l'offre.");
+  lines.push("NE RECOPIE JAMAIS les descriptions ou exemples ci-dessous — ils sont là pour te guider, pas pour être copiés.");
+  lines.push("");
 
   for (const f of schema.fields) {
     // Skip fields that are purely user-provided (AI should NOT generate them)
     if (f.source === "user") continue;
 
     if (f.kind === "scalar") {
-      lines.push(`- ${f.key}: string${fieldRuleLineMax(f.maxLength)}`);
+      let line = `- ${f.key}: string${fieldRuleLineMax(f.maxLength)}`;
+      if (f.label) line += ` — ${f.label}`;
+      lines.push(line);
+      if (f.description) lines.push(`  → Objectif : ${f.description}`);
       continue;
     }
     if (f.kind === "array_scalar") {
       const lenInfo =
         typeof f.itemMaxLength === "number" ? ` (item max ${Math.floor(f.itemMaxLength)} caractères)` : "";
-      lines.push(`- ${f.key}: string[] (items: ${f.minItems}..${f.maxItems})${lenInfo}`);
+      let line = `- ${f.key}: string[] (items: ${f.minItems}..${f.maxItems})${lenInfo}`;
+      if (f.label) line += ` — ${f.label}`;
+      lines.push(line);
+      if (f.description) lines.push(`  → Objectif : ${f.description}`);
       continue;
     }
-    const inner = f.fields.map((x) => `${x.key}: string${fieldRuleLineMax(x.maxLength)}`).join("; ");
-    lines.push(`- ${f.key}: { ${inner} }[] (items: ${f.minItems}..${f.maxItems})`);
+    const inner = f.fields.map((x) => {
+      let s = `${x.key}: string${fieldRuleLineMax(x.maxLength)}`;
+      if (x.description) s += ` (${x.description})`;
+      return s;
+    }).join("; ");
+    let line = `- ${f.key}: { ${inner} }[] (items: ${f.minItems}..${f.maxItems})`;
+    if (f.label) line += ` — ${f.label}`;
+    lines.push(line);
+    if (f.description) lines.push(`  → Objectif : ${f.description}`);
   }
 
   lines.push("");
@@ -379,6 +397,7 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots).");
   lines.push("- CTA : verbe d'action clair, 2–5 mots max.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
+  lines.push("- INTERDIT : recopier les descriptions d'aide (\"Promesse de ton offre\", \"Décris ici\", etc.) — rédige le VRAI contenu de la page.");
 
   return lines.join("\n");
 }

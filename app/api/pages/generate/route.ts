@@ -422,6 +422,15 @@ export async function POST(req: NextRequest) {
         if (privacyUrl && !contentData.legal_privacy_url) contentData.legal_privacy_url = privacyUrl;
         if (termsUrl && !contentData.legal_mentions_url) contentData.legal_mentions_url = termsUrl;
 
+        // Build footer_links array with actual legal URLs for templates that use it
+        const footerLinks: Array<{ text: string; href: string }> = [];
+        if (termsUrl) footerLinks.push({ text: "Mentions Légales", href: termsUrl });
+        if (cgvUrl) footerLinks.push({ text: "Conditions générales de vente", href: cgvUrl });
+        if (privacyUrl) footerLinks.push({ text: "Politique de confidentialité", href: privacyUrl });
+        if (footerLinks.length > 0 && !contentData.footer_links) {
+          contentData.footer_links = footerLinks;
+        }
+
         await wait(300);
         send("step", { id: "legal", label: "J'ajoute tes mentions légales...", progress: 88, done: true });
 
@@ -649,10 +658,14 @@ function buildPageUserPrompt(params: {
   }
 
   lines.push("");
-  lines.push("IMPORTANT :");
-  lines.push("- Remplis TOUS les champs du schéma JSON.");
-  lines.push("- Le contenu doit être spécifique à cette offre, PAS générique.");
-  lines.push("- Si des informations manquent, invente des contenus plausibles et premium.");
+  lines.push("IMPORTANT — RÈGLES DE COPYWRITING :");
+  lines.push("- Remplis TOUS les champs du schéma JSON avec du VRAI texte de copywriting professionnel.");
+  lines.push("- Le contenu doit être 100% spécifique à CETTE offre et à CE public cible.");
+  lines.push("- INTERDIT de recopier les descriptions d'aide du schéma (\"Décris ici\", \"Promesse de ton offre\", \"ton audience cible\", etc.).");
+  lines.push("- INTERDIT les placeholders (\"[nom]\", \"[bénéfice]\", \"...\") — rédige le contenu FINAL, prêt à publier.");
+  lines.push("- INTERDIT les phrases génériques (\"bienvenue\", \"nous sommes ravis\", \"cliquer ici\").");
+  lines.push("- Si des informations manquent, invente des contenus plausibles, concrets et premium adaptés à la niche.");
+  lines.push("- Chaque titre, sous-titre et CTA doit être spécifique, percutant et orienté bénéfice.");
   lines.push("- Retourne uniquement le JSON, rien d'autre.");
 
   return lines.join("\n");
