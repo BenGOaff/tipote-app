@@ -41,7 +41,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     }
 
     // Increment views (non-blocking)
-    supabaseAdmin.rpc("increment_page_views", { p_page_id: data.id }).catch(() => {});
+    supabaseAdmin.rpc("increment_page_views", { p_page_id: data.id }).then(() => {}, () => {});
 
     return NextResponse.json({ ok: true, page: data });
   } catch (err: any) {
