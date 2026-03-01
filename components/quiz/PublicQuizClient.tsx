@@ -50,6 +50,7 @@ type PublicQuizData = {
   locale: string | null;
   capture_heading: string | null;
   capture_subtitle: string | null;
+  capture_first_name?: boolean | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -74,6 +75,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [answers, setAnswers] = useState<number[]>([]);
 
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -161,6 +163,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: email.trim(),
+            first_name: firstName.trim() || undefined,
             result_id: profile?.id ?? null,
             consent_given: consent,
           }),
@@ -339,6 +342,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           </p>
 
           <div className="space-y-3 text-left">
+            {quiz.capture_first_name && (
+              <Input
+                type="text"
+                placeholder="Ton prénom"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            )}
             <Input
               type="email"
               placeholder="ton@email.com"
