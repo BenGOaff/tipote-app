@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { BarChart3, History, Loader2, Target } from "lucide-react";
+import { BarChart3, History, Loader2, Pencil, Target } from "lucide-react";
 
 import { useOfferMetrics } from "@/hooks/useOfferMetrics";
 import { OfferMetricsForm } from "@/components/analytics/OfferMetricsForm";
@@ -27,14 +27,21 @@ export default function AnalyticsLovableClient() {
 
   const offerState = useOfferMetrics();
   const [activeTab, setActiveTab] = useState("resultats");
+  const [editMonth, setEditMonth] = useState<string | null>(null);
+
+  // Navigate to the form tab pre-selecting a specific month for editing
+  const handleEditMonth = useCallback((month: string) => {
+    setEditMonth(month);
+    setActiveTab("saisie");
+  }, []);
 
   // Latest month for analysis triggers
   const latestOfferMonth = offerState.sortedMonths[offerState.sortedMonths.length - 1] ?? null;
 
-  // Trigger analysis after saving data
+  // Trigger analysis after saving data (auto = free, no credit cost)
   const handleSaveComplete = useCallback(() => {
     if (latestOfferMonth) {
-      offerState.analyzeOfferMetrics(latestOfferMonth);
+      offerState.analyzeOfferMetrics(latestOfferMonth, "auto");
     }
     setActiveTab("resultats");
   }, [latestOfferMonth, offerState]);
@@ -56,11 +63,11 @@ export default function AnalyticsLovableClient() {
         <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="resultats" className="gap-2">
             <Target className="w-4 h-4" />
-            Resultats
+            Résultats
           </TabsTrigger>
           <TabsTrigger value="saisie" className="gap-2">
             <BarChart3 className="w-4 h-4" />
-            Saisir mes donnees
+            Saisir mes données
           </TabsTrigger>
           <TabsTrigger value="historique" className="gap-2">
             <History className="w-4 h-4" />
@@ -111,6 +118,8 @@ export default function AnalyticsLovableClient() {
               onFetchSources={offerState.fetchSources}
               isSaving={offerState.isSaving}
               onSaveComplete={handleSaveComplete}
+              initialMonth={editMonth}
+              onMonthConsumed={() => setEditMonth(null)}
             />
           )}
         </TabsContent>
@@ -125,8 +134,8 @@ export default function AnalyticsLovableClient() {
             <Card className="p-12 text-center">
               <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Aucun historique</h3>
-              <p className="text-muted-foreground mb-4">Saisis tes donnees pour voir l&apos;historique ici.</p>
-              <Button onClick={() => setActiveTab("saisie")}>Saisir mes donnees</Button>
+              <p className="text-muted-foreground mb-4">Saisis tes données pour voir l&apos;historique ici.</p>
+              <Button onClick={() => setActiveTab("saisie")}>Saisir mes données</Button>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -137,9 +146,20 @@ export default function AnalyticsLovableClient() {
 
                 return (
                   <Card key={month} className="p-5">
-                    <h4 className="font-bold capitalize mb-3">
-                      {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocale })}
-                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold capitalize">
+                        {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocale })}
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1.5 text-muted-foreground"
+                        onClick={() => handleEditMonth(month)}
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Modifier
+                      </Button>
+                    </div>
 
                     {/* Per-offer breakdown */}
                     {monthMetrics.length > 0 && (
@@ -175,7 +195,7 @@ export default function AnalyticsLovableClient() {
                         <p className="text-xs font-medium text-muted-foreground mb-1">Emails</p>
                         <div className="flex gap-4 text-xs text-muted-foreground">
                           <span>Liste : {emailStats.email_list_size}</span>
-                          <span>Envoyes : {emailStats.emails_sent}</span>
+                          <span>Envoyés : {emailStats.emails_sent}</span>
                           {emailStats.email_open_rate > 0 && <span>Ouverture : {emailStats.email_open_rate}%</span>}
                           {emailStats.email_click_rate > 0 && <span>Clics : {emailStats.email_click_rate}%</span>}
                         </div>

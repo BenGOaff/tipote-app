@@ -17,7 +17,7 @@ export const SioDataGuide = () => {
       >
         <span className="flex items-center gap-2 text-sm font-medium">
           <HelpCircle className="w-4 h-4 text-muted-foreground" />
-          Ou trouver ces chiffres dans Systeme.io ou ton CRM ?
+          Où trouver ces chiffres dans Systeme.io ou ton CRM ?
         </span>
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </Button>
@@ -41,7 +41,7 @@ export const SioDataGuide = () => {
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[100px]">Ventes :</span>
-                <span>Tunnels &gt; Statistiques &gt; colonne &laquo; Ventes &raquo; (nombre + taux + CA total)</span>
+                <span>Tunnels &gt; Statistiques &gt; colonne « Ventes » (nombre + taux + CA total)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[100px]">CA/visiteur :</span>
@@ -72,15 +72,15 @@ export const SioDataGuide = () => {
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[100px]">Stripe :</span>
-                <span>Dashboard &gt; Payments (ventes, CA) / filtrer par produit et periode</span>
+                <span>Dashboard &gt; Payments (ventes, CA) / filtrer par produit et période</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[100px]">Google Analytics :</span>
-                <span>Rapports &gt; Acquisition (visiteurs par source) / Pages et ecrans (vues par page)</span>
+                <span>Rapports &gt; Acquisition (visiteurs par source) / Pages et écrans (vues par page)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[100px]">PayPal :</span>
-                <span>Activite &gt; Historique des transactions (filtrer par mois)</span>
+                <span>Activité &gt; Historique des transactions (filtrer par mois)</span>
               </li>
             </ul>
           </div>
@@ -88,7 +88,7 @@ export const SioDataGuide = () => {
           {/* Tipote auto-data */}
           <div className="p-3 rounded-lg bg-muted/50 border">
             <p className="text-xs text-muted-foreground">
-              <strong className="text-foreground">Astuce Tipote :</strong> Les visiteurs et inscrits de tes pages de capture et quiz Tipote sont remontes automatiquement. Tu n&apos;as qu&apos;a saisir les donnees de tes tunnels Systeme.io et tes ventes.
+              <strong className="text-foreground">Astuce Tipote :</strong> Les visiteurs et inscrits de tes pages de capture et quiz Tipote sont remontés automatiquement. Tu n&apos;as qu&apos;à saisir les données de tes tunnels Système.io et tes ventes.
             </p>
           </div>
         </div>

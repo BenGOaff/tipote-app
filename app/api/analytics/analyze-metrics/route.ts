@@ -62,13 +62,13 @@ function isRateLimitError(e: unknown): boolean {
 
 const FALLBACK_ANALYSIS =
   "## Analyse temporairement indisponible\n\n" +
-  "L'analyse IA est momentanement indisponible. Voici les points cles a verifier :\n\n" +
+  "L'analyse IA est momentanément indisponible. Voici les points clés à vérifier :\n\n" +
   "- **Visiteurs** → Tes sources de trafic sont-elles actives ? (posts, pub, partage)\n" +
-  "- **Taux de capture** < 20% → Ameliore ton accroche et ta page de capture\n" +
+  "- **Taux de capture** < 20% → Améliore ton accroche et ta page de capture\n" +
   "- **Taux de conversion** < 2% → Revois ta page de vente (preuves, offre, urgence)\n" +
   "- **Taux d'ouverture email** < 20% → Teste de nouveaux objets d'email\n\n" +
-  "**Objectif du mois** : ameliorer *un seul* ratio (capture ou conversion) avant d'augmenter le volume.\n\n" +
-  "*L'analyse IA detaillee sera disponible lors de ta prochaine visite.*";
+  "**Objectif du mois** : améliorer *un seul* ratio (capture ou conversion) avant d'augmenter le volume.\n\n" +
+  "*L'analyse IA détaillée sera disponible lors de ta prochaine visite.*";
 
 // ── Route handler ────────────────────────────────────────
 

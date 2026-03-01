@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +57,10 @@ function isRateLimitError(e: unknown): boolean {
 function buildFallbackAnalysis(currentMetrics: any[]): string {
   const lines: string[] = [];
   lines.push("## Analyse temporairement indisponible\n");
-  lines.push("L'analyse IA est momentanement indisponible. Voici un diagnostic automatique de tes metriques :\n");
+  lines.push("L'analyse IA est momentanément indisponible. Voici un diagnostic automatique de tes métriques :\n");
 
   if (!currentMetrics.length) {
-    lines.push("**Aucune metrique ce mois-ci.** Commence par renseigner tes chiffres (visiteurs, inscrits, ventes) pour chaque offre.\n");
+    lines.push("**Aucune métrique ce mois-ci.** Commence par renseigner tes chiffres (visiteurs, inscrits, ventes) pour chaque offre.\n");
     return lines.join("\n");
   }
 
@@ -81,9 +82,9 @@ function buildFallbackAnalysis(currentMetrics: any[]): string {
 
     // Simple diagnostics
     if (visitors === 0) {
-      lines.push("- ⚠️ **Pas de visiteurs** → Augmente ta visibilite (posts, pub, partage)");
+      lines.push("- ⚠️ **Pas de visiteurs** → Augmente ta visibilité (posts, pub, partage)");
     } else if (parseFloat(captureRate) < 20) {
-      lines.push("- ⚠️ **Taux de capture faible** (<20%) → Ameliore ton accroche et ta page de capture");
+      lines.push("- ⚠️ **Taux de capture faible** (<20%) → Améliore ton accroche et ta page de capture");
     }
     if (m.is_paid && signups > 0 && parseFloat(convRate) < 2) {
       lines.push("- ⚠️ **Conversion faible** (<2%) → Revois ta page de vente (preuves, offre, urgence)");
@@ -92,11 +93,11 @@ function buildFallbackAnalysis(currentMetrics: any[]): string {
   }
 
   lines.push("### Checklist rapide");
-  lines.push("- [ ] Verifier que chaque tunnel a suffisamment de visiteurs");
+  lines.push("- [ ] Vérifier que chaque tunnel a suffisamment de visiteurs");
   lines.push("- [ ] Taux de capture < 20% → tester un nouveau titre / lead magnet");
   lines.push("- [ ] Taux de conversion < 2% → revoir page de vente");
   lines.push("- [ ] Taux d'ouverture email < 20% → tester de nouveaux objets");
-  lines.push("\n*L'analyse IA detaillee sera disponible lors de ta prochaine visite.*");
+  lines.push("\n*L'analyse IA détaillée sera disponible lors de ta prochaine visite.*");
 
   return lines.join("\n");
 }
@@ -118,12 +119,26 @@ export async function POST(req: Request) {
     const previousMetrics = body.previousMetrics ?? [];
     const emailStats = body.emailStats ?? null;
     const previousEmailStats = body.previousEmailStats ?? null;
+    // source: "manual" = user clicked "Lancer l'analyse" (costs 1 credit)
+    //         "auto"   = triggered after saving data (free)
+    const source: "manual" | "auto" = body.source === "auto" ? "auto" : "manual";
 
     // Build cache key from user + data fingerprint
     const cacheKey = `${user.id}:${safeJson(currentMetrics)}:${safeJson(previousMetrics)}:${safeJson(emailStats)}`;
     const cached = getCached(cacheKey);
     if (cached) {
       return NextResponse.json({ ok: true, analysis: cached, cached: true });
+    }
+
+    // Credit check: manual analysis costs 1 credit, auto-refresh is free
+    if (source === "manual") {
+      const balance = await ensureUserCredits(user.id);
+      if (balance.total_remaining < 1) {
+        return NextResponse.json(
+          { ok: false, error: "Crédits insuffisants (1 crédit requis pour l'analyse).", code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" },
+          { status: 402 },
+        );
+      }
     }
 
     // Get business context
@@ -136,8 +151,8 @@ export async function POST(req: Request) {
     if (projectId) planQuery = planQuery.eq("project_id", projectId);
     const { data: businessPlan } = await planQuery.maybeSingle();
 
-    const niche = (businessProfile as any)?.niche || "non specifie";
-    const level = (businessProfile as any)?.experience_level || (businessProfile as any)?.level || "debutant";
+    const niche = (businessProfile as any)?.niche || "non spécifié";
+    const level = (businessProfile as any)?.experience_level || (businessProfile as any)?.level || "débutant";
     const positioning = (businessProfile as any)?.mission || (businessProfile as any)?.positioning || "";
     const objectives = (businessPlan as any)?.objectives || "";
     const tasksCompleted = (businessPlan as any)?.tasks_completed || [];
@@ -147,56 +162,56 @@ export async function POST(req: Request) {
     if (openai) {
       const system = `Tu es Tipote, coach business expert en tunnels de vente, emailing et conversion.
 
-REGLES :
-- Ecris en markdown leger (## titres, listes a puces, **gras** pour les chiffres cles)
-- Chaque conseil doit etre CONCRET et ACTIONNABLE, avec un EXEMPLE SIMPLE adapte a la niche de l'user
-- Pas de blabla, pas de generalites. Sois direct et specifique.
-- Adapte ton vocabulaire au niveau de l'user (debutant = explications simples, avance = jargon ok)
+RÈGLES :
+- Écris en markdown léger (## titres, listes à puces, **gras** pour les chiffres clés)
+- Chaque conseil doit être CONCRET et ACTIONNABLE, avec un EXEMPLE SIMPLE adapté à la niche de l'user
+- Pas de blabla, pas de généralités. Sois direct et spécifique.
+- Adapte ton vocabulaire au niveau de l'user (débutant = explications simples, avancé = jargon ok)
 - Structure : Diagnostic rapide > Analyse par offre > Emailing > Plan d'action > KPIs`;
 
       const userMsg = `## Contexte de l'utilisateur
 - Niche : ${niche}
 - Niveau : ${level}
-- Positionnement : ${positioning || "a definir"}
-- Objectifs : ${objectives || "non definis"}
-- Taches recemment completees : ${Array.isArray(tasksCompleted) ? tasksCompleted.slice(-5).join(", ") : "aucune"}
+- Positionnement : ${positioning || "à définir"}
+- Objectifs : ${objectives || "non définis"}
+- Tâches récemment complétées : ${Array.isArray(tasksCompleted) ? tasksCompleted.slice(-5).join(", ") : "aucune"}
 
-## Metriques par offre ce mois-ci (funnels)
+## Métriques par offre ce mois-ci (funnels)
 ${safeJson(currentMetrics)}
 
-## Metriques par offre le mois precedent
+## Métriques par offre le mois précédent
 ${safeJson(previousMetrics)}
 
 ## Statistiques emails ce mois-ci
-${emailStats ? safeJson(emailStats) : "Non renseignees"}
+${emailStats ? safeJson(emailStats) : "Non renseignées"}
 
-## Statistiques emails le mois precedent
-${previousEmailStats ? safeJson(previousEmailStats) : "Non renseignees"}
+## Statistiques emails le mois précédent
+${previousEmailStats ? safeJson(previousEmailStats) : "Non renseignées"}
 
 ## Ta mission d'analyse approfondie :
 
 ### 1. Diagnostic rapide (3 lignes max)
-Resume la situation globale : ca progresse, stagne ou regresse ?
+Résume la situation globale : ça progresse, stagne ou régresse ?
 
-### 2. Analyse detaillee par offre
+### 2. Analyse détaillée par offre
 Pour CHAQUE offre :
-- Compare les chiffres avec le mois precedent (progression / regression / stagnation)
-- Identifie le goulot d'etranglement dans le tunnel : visiteurs > inscrits > ventes
-- Donne 1-2 actions concretes avec exemple adapte a la niche "${niche}"
-  Exemples : "Ton taux de capture est a X% > teste un titre plus specifique comme '[exemple adapte]'" ou "Tes visites sont faibles > poste 3 fois par semaine sur [plateforme adaptee a la niche]"
+- Compare les chiffres avec le mois précédent (progression / régression / stagnation)
+- Identifie le goulot d'étranglement dans le tunnel : visiteurs > inscrits > ventes
+- Donne 1-2 actions concrètes avec exemple adapté à la niche "${niche}"
+  Exemples : "Ton taux de capture est à X% > teste un titre plus spécifique comme '[exemple adapté]'" ou "Tes visites sont faibles > poste 3 fois par semaine sur [plateforme adaptée à la niche]"
 
 ### 3. Analyse emailing (si dispo)
 - Taux d'ouverture vs benchmark (20-25% = correct, >30% = bon)
 - Taux de clics vs benchmark (2-5% = correct, >5% = bon)
-- Actions concretes : objet d'email, frequence, segmentation
+- Actions concrètes : objet d'email, fréquence, segmentation
 
 ### 4. Plan d'action concret pour le mois prochain
-3-5 actions PRIORITAIRES et SPECIFIQUES, classees par impact.
-Chaque action doit etre faisable en 1-2 jours max.
+3-5 actions PRIORITAIRES et SPÉCIFIQUES, classées par impact.
+Chaque action doit être faisable en 1-2 jours max.
 Adapte au niveau "${level}" de l'utilisateur.
 
-### 5. KPIs a suivre
-Les 3-4 chiffres cles a surveiller le mois prochain.`;
+### 5. KPIs à suivre
+Les 3-4 chiffres clés à surveiller le mois prochain.`;
 
       try {
         const completion = await openai.chat.completions.create({
@@ -222,11 +237,18 @@ Les 3-4 chiffres cles a surveiller le mois prochain.`;
         }
       }
     } else {
-      analysis = `**Analyse automatique indisponible** (cle OpenAI manquante).\n\nVerifie manuellement tes ratios :\n- **Taux de capture** < 20% → Ameliore ta page de capture\n- **Taux de conversion** < 2% → Revois ta page de vente\n- **Taux d'ouverture email** < 20% → Ameliore tes objets d'email\n- **Visites faibles** → Poste plus souvent ou diversifie tes canaux`;
+      analysis = `**Analyse automatique indisponible** (clé OpenAI manquante).\n\nVérifie manuellement tes ratios :\n- **Taux de capture** < 20% → Améliore ta page de capture\n- **Taux de conversion** < 2% → Revois ta page de vente\n- **Taux d'ouverture email** < 20% → Améliore tes objets d'email\n- **Visites faibles** → Poste plus souvent ou diversifie tes canaux`;
     }
 
     // Cache successful analysis
     setCache(cacheKey, analysis);
+
+    // Consume 1 credit for manual analysis (auto-refresh is free)
+    if (source === "manual") {
+      try {
+        await consumeCredits(user.id, 1, { kind: "offer_analysis", source });
+      } catch { /* fail-open */ }
+    }
 
     return NextResponse.json({ ok: true, analysis });
   } catch (e) {

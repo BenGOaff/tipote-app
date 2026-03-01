@@ -646,7 +646,7 @@ ${textContent.split("\n").map((line) => {
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
                 <h2 className="text-lg font-bold">Publier ta page</h2>
-                <p className="text-sm text-muted-foreground">Configure les parametres avant la mise en ligne.</p>
+                <p className="text-sm text-muted-foreground">Configure les paramètres avant la mise en ligne.</p>
               </div>
               <button onClick={() => setShowPublishModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
                 <X className="w-4 h-4" />

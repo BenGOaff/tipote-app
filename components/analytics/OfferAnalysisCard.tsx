@@ -23,7 +23,7 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
           </div>
           <div>
             <h3 className="text-lg font-bold">Analyse en cours...</h3>
-            <p className="text-sm text-muted-foreground">L&apos;IA examine tes donnees par offre</p>
+            <p className="text-sm text-muted-foreground">L&apos;IA examine tes données par offre</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -51,7 +51,7 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
           </div>
         </div>
         <p className="text-muted-foreground text-sm mb-4">
-          L&apos;IA va analyser tes metriques par offre, identifier les goulots d&apos;etranglement (visiteurs &rarr; inscrits &rarr; ventes) et te donner des actions concretes : modifier le CTA, poster plus souvent, revoir le positionnement, ameliorer la page de capture...
+          L&apos;IA va analyser tes métriques par offre, identifier les goulots d&apos;étranglement (visiteurs → inscrits → ventes) et te donner des actions concrètes : modifier le CTA, poster plus souvent, revoir le positionnement, améliorer la page de capture...
         </p>
         <Button onClick={onAnalyze} disabled={!hasData} className="gradient-primary">
           <Sparkles className="w-4 h-4 mr-2" />
@@ -71,7 +71,7 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
           <div>
             <h3 className="text-lg font-bold">Diagnostic IA par offre</h3>
             <p className="text-sm text-muted-foreground">
-              Recommandations basees sur tes performances
+              Recommandations basées sur tes performances
             </p>
           </div>
         </div>

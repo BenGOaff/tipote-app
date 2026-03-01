@@ -25,6 +25,10 @@ interface OfferMetricsFormProps {
   onFetchSources: (month: string) => void;
   isSaving: boolean;
   onSaveComplete?: () => void;
+  /** Pre-select a specific month (used when editing from history tab) */
+  initialMonth?: string | null;
+  /** Called once the initial month has been consumed/applied */
+  onMonthConsumed?: () => void;
 }
 
 const getAvailableMonths = () => {
@@ -67,9 +71,19 @@ export const OfferMetricsForm = ({
   onFetchSources,
   isSaving,
   onSaveComplete,
+  initialMonth,
+  onMonthConsumed,
 }: OfferMetricsFormProps) => {
   const availableMonths = useMemo(() => getAvailableMonths(), []);
   const [month, setMonth] = useState(availableMonths[0].value);
+
+  // When navigating from history tab with a specific month to edit
+  useEffect(() => {
+    if (initialMonth) {
+      setMonth(initialMonth);
+      onMonthConsumed?.();
+    }
+  }, [initialMonth, onMonthConsumed]);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
   const [customOfferName, setCustomOfferName] = useState("");
@@ -197,7 +211,7 @@ export const OfferMetricsForm = ({
       <Card className="p-5">
         <div className="flex items-center gap-4">
           <div className="space-y-1 flex-1 max-w-xs">
-            <Label className="font-semibold">Periode des donnees</Label>
+            <Label className="font-semibold">Période des données</Label>
             <Select value={month} onValueChange={setMonth}>
               <SelectTrigger>
                 <SelectValue placeholder="Mois" />
@@ -353,7 +367,7 @@ export const OfferMetricsForm = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre total d&apos;emails dans ta liste a la fin de ce mois
+              Nombre total d&apos;emails dans ta liste à la fin de ce mois
             </Label>
             <Input
               type="number"
@@ -365,7 +379,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre d&apos;emails envoyes ce mois (newsletters, sequences...)
+              Nombre d&apos;emails envoyés ce mois (newsletters, sequences...)
             </Label>
             <Input
               type="number"
@@ -377,7 +391,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux d&apos;ouverture moyen des emails envoyes ce mois (%)
+              Taux d&apos;ouverture moyen des emails envoyés ce mois (%)
             </Label>
             <Input
               type="number"
@@ -390,7 +404,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux de clics moyen des emails envoyes ce mois (%)
+              Taux de clics moyen des emails envoyés ce mois (%)
             </Label>
             <Input
               type="number"
@@ -413,7 +427,7 @@ export const OfferMetricsForm = ({
         >
           <span className="flex items-center gap-2 text-sm font-medium">
             <HelpCircle className="w-4 h-4 text-muted-foreground" />
-            Ou trouver ces chiffres ?
+            Où trouver ces chiffres ?
           </span>
           {showGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </Button>
@@ -432,7 +446,7 @@ export const OfferMetricsForm = ({
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[120px]">Inscrits :</span>
-                  <span>Tunnels &gt; Statistiques &gt; colonne &laquo; Opt-in &raquo; (personnes ayant laisse leur email)</span>
+                  <span>Tunnels &gt; Statistiques &gt; colonne « Opt-in » (personnes ayant laissé leur email)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[120px]">Ventes :</span>
@@ -453,26 +467,26 @@ export const OfferMetricsForm = ({
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[120px]">Taille liste :</span>
-                  <span>Contacts &gt; nombre total affiche en haut (prends le chiffre en fin de mois)</span>
+                  <span>Contacts &gt; nombre total affiché en haut (prends le chiffre en fin de mois)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Emails envoyes :</span>
-                  <span>Emails &gt; Newsletters &gt; compte les emails envoyes ce mois (newsletters + broadcasts)</span>
+                  <span className="font-medium text-foreground min-w-[120px]">Emails envoyés :</span>
+                  <span>Emails &gt; Newsletters &gt; compte les emails envoyés ce mois (newsletters + broadcasts)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[120px]">Taux ouverture :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyes ce mois</span>
+                  <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyés ce mois</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[120px]">Taux de clics :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyes ce mois</span>
+                  <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyés ce mois</span>
                 </li>
               </ul>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/50 border">
               <p className="text-xs text-muted-foreground">
-                <strong className="text-foreground">Astuce :</strong> Les visiteurs et leads de tes pages Tipote sont comptabilises automatiquement. Ici tu saisis les chiffres globaux de tes tunnels (Systeme.io ou autre CRM).
+                <strong className="text-foreground">Astuce :</strong> Les visiteurs et leads de tes pages Tipote sont comptabilisés automatiquement. Ici tu saisis les chiffres globaux de tes tunnels (Système.io ou autre CRM).
               </p>
             </div>
           </div>
