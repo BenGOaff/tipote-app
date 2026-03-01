@@ -627,6 +627,11 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     // Inject contrast safety CSS to prevent white-on-light issues
     out = injectContrastSafety(out);
 
+    // Inject inline capture form for capture pages (email + name + privacy checkbox)
+    if (kind === "capture") {
+      out = injectInlineCaptureForm(out, req.contentData);
+    }
+
     // Inject legal footer if legal URLs are present in contentData
     out = injectLegalFooterHtml(out, req.contentData);
 
@@ -634,6 +639,11 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   }
 
   const styleCss = mode === "kit" ? kitCss || css : css;
+
+  // Inject inline capture form for capture pages
+  if (kind === "capture") {
+    out = injectInlineCaptureForm(out, req.contentData);
+  }
 
   // Inject legal footer for wrapped templates
   out = injectLegalFooterHtml(out, req.contentData);
@@ -705,6 +715,49 @@ section, [class*="section"] {
     return html.replace("</head>", `${css}\n</head>`);
   }
   return html + css;
+}
+
+// ---------- Inline capture form injection ----------
+
+/**
+ * Inject an inline email capture form into capture pages.
+ * This ensures ALL capture templates have a visible form, not just capture-03.
+ * The form includes: name, email, privacy checkbox, and submit button.
+ * Skips injection if the template already has a <form> element.
+ */
+function injectInlineCaptureForm(html: string, contentData: Record<string, any>): string {
+  // Skip if template already has a form (e.g., capture-03)
+  if (/<form[\s>]/i.test(html)) return html;
+
+  const ctaText = safeString(contentData.cta_text || contentData.cta_label || contentData.cta_button_text || "Je m'inscris !");
+  const privacyUrl = safeString(contentData.legal_privacy_url || "");
+
+  const formHtml = `
+<div class="tipote-capture-form-wrap" style="max-width:480px;margin:32px auto;padding:32px 24px;background:rgba(255,255,255,0.97);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);text-align:center;font-family:system-ui,sans-serif">
+  <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
+    <input type="text" name="first_name" placeholder="Ton prénom" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none;width:100%;box-sizing:border-box">
+    <input type="email" name="email" placeholder="Ton email" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none;width:100%;box-sizing:border-box">
+    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.8rem;color:#666;cursor:pointer;margin:4px 0">
+      <input type="checkbox" required style="margin-top:2px;accent-color:#2563eb;flex-shrink:0">
+      <span>J&#039;accepte de recevoir des emails.${privacyUrl ? ` <a href="${privacyUrl}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">Politique de confidentialit&#233;</a>` : ""}</span>
+    </label>
+    <button type="submit" class="cta-button cta-primary" style="padding:14px;background:var(--colors-primary,#2563eb);color:#fff;border:none;border-radius:8px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-top:4px;width:100%">${escapeHtml(ctaText)}</button>
+  </form>
+  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">Tes donn&#233;es sont prot&#233;g&#233;es et ne seront jamais partag&#233;es.</p>
+</div>`;
+
+  // Insert before <footer> if exists, otherwise before </body>
+  const footerIdx = html.search(/<footer[\s>]/i);
+  if (footerIdx !== -1) {
+    return html.slice(0, footerIdx) + formHtml + "\n" + html.slice(footerIdx);
+  }
+
+  const bodyIdx = html.lastIndexOf("</body>");
+  if (bodyIdx !== -1) {
+    return html.slice(0, bodyIdx) + formHtml + "\n" + html.slice(bodyIdx);
+  }
+
+  return html + formHtml;
 }
 
 // ---------- Legal footer injection ----------

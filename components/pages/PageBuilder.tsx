@@ -136,11 +136,11 @@ const INLINE_EDIT_SCRIPT = `
     /* Detect image placeholders: .image-placeholder, divs with gradient bg + short text, img tags */
     var placeholders = document.querySelectorAll('.image-placeholder, [class*="image-placeholder"], [class*="photo"], [class*="visual"], img[src=""], img[src="#"]');
     /* Also detect divs with gradient backgrounds that look like placeholders */
-    document.querySelectorAll('div, figure, aside').forEach(function(el) {
+    document.querySelectorAll('div, figure, aside, section, span, p, a').forEach(function(el) {
       var bg = getComputedStyle(el).backgroundImage || '';
       var text = (el.textContent || '').trim();
-      var isGradientPlaceholder = bg.indexOf('gradient') >= 0 && text.length < 80 && text.length > 0;
-      var isTextPlaceholder = /\\[.*photo.*\\]|\\[.*image.*\\]|\\[.*visuel.*\\]/i.test(text);
+      var isGradientPlaceholder = bg.indexOf('gradient') >= 0 && text.length < 80 && text.length > 0 && el.children.length < 3;
+      var isTextPlaceholder = /\\[.*(?:photo|image|visuel|avatar|profil|logo|capture|illustration).*\\]/i.test(text) && text.length < 100;
       if (isGradientPlaceholder || isTextPlaceholder) {
         placeholders = Array.from(new Set([...placeholders, el]));
       }

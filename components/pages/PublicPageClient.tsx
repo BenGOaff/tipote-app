@@ -1,11 +1,13 @@
 // components/pages/PublicPageClient.tsx
 // Renders a published hosted page in full-screen mode.
 // Displays the pre-rendered HTML snapshot in an iframe.
-// Handles lead capture overlay if enabled.
+// Handles lead capture: inline form injected into HTML + overlay on CTA click.
+// Supports client-side data fetching as fallback if server-side data is missing.
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 type PublicPageData = {
   id: string;
@@ -25,15 +27,62 @@ type PublicPageData = {
   legal_privacy_url: string;
 };
 
-export default function PublicPageClient({ page }: { page: PublicPageData }) {
+const PAGE_SELECT =
+  "id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status";
+
+export default function PublicPageClient({ page: serverPage, slug }: { page: PublicPageData | null; slug: string }) {
+  const [page, setPage] = useState<PublicPageData | null>(serverPage);
+  const [loading, setLoading] = useState(!serverPage);
+  const [notFound, setNotFound] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
   const [captureEmail, setCaptureEmail] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [captureSuccess, setCaptureSuccess] = useState(false);
 
+  // Client-side fallback: if server didn't return page data, fetch directly from Supabase
+  useEffect(() => {
+    if (serverPage) return;
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createClient(url, key);
+    supabase
+      .from("hosted_pages")
+      .select(PAGE_SELECT)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) console.error("[public-page-client] Supabase error:", error.message);
+        if (data) {
+          setPage(data as any);
+        } else {
+          setNotFound(true);
+        }
+        setLoading(false);
+      });
+  }, [serverPage, slug]);
+
+  // Listen for capture events from iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data === "tipote:capture") setShowCapture(true);
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   const handleSubmitLead = useCallback(async () => {
-    if (!captureEmail.trim() || capturing) return;
+    if (!page || !captureEmail.trim() || capturing) return;
     setCapturing(true);
 
     try {
@@ -59,9 +108,37 @@ export default function PublicPageClient({ page }: { page: PublicPageData }) {
     } finally {
       setCapturing(false);
     }
-  }, [captureEmail, captureFirstName, capturing, page.id, page.payment_url]);
+  }, [captureEmail, captureFirstName, capturing, page]);
 
-  // Inject capture form overlay script into the HTML
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 40, height: 40, border: "3px solid #e5e7eb", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Chargement...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !page) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>Page introuvable</h1>
+          <p style={{ color: "#666", marginTop: 8 }}>Cette page n&apos;existe pas ou n&apos;est plus disponible.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Non-blocking: increment views
+  try {
+    fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
+  } catch { /* ignore */ }
+
+  // Inject capture form + CTA interception script into the HTML
   const htmlWithCapture = injectCaptureScript(page);
 
   return (
@@ -200,34 +277,34 @@ export default function PublicPageClient({ page }: { page: PublicPageData }) {
           </div>
         </div>
       )}
-
-      {/* Listen for capture events from iframe */}
-      <CaptureListener onCapture={() => setShowCapture(true)} />
     </>
   );
-}
-
-// Listens for postMessage from the iframe to trigger capture overlay
-function CaptureListener({ onCapture }: { onCapture: () => void }) {
-  if (typeof window !== "undefined") {
-    window.addEventListener("message", (e) => {
-      if (e.data === "tipote:capture") onCapture();
-    }, { once: false });
-  }
-  return null;
 }
 
 // Inject a small script into the HTML that intercepts CTA clicks
 // and posts a message to the parent to open the capture overlay
 function injectCaptureScript(page: PublicPageData): string {
   const html = page.html_snapshot || "";
-  if (!page.capture_enabled) return html;
+
+  // For capture pages: inject an inline form into the HTML before any CTA
+  let withForm = html;
+  if (page.page_type === "capture" && page.capture_enabled) {
+    withForm = injectInlineCaptureForm(withForm, page);
+  }
+
+  if (!page.capture_enabled) {
+    // Still add legal footer
+    const legalFooter = buildLegalFooter(page);
+    const idx = withForm.lastIndexOf("</body>");
+    if (idx === -1) return withForm + legalFooter;
+    return withForm.slice(0, idx) + legalFooter + "\n" + withForm.slice(idx);
+  }
 
   const script = `<script>
 (function(){
   // Intercept all CTA-like button/link clicks
   document.addEventListener('click', function(e) {
-    var el = e.target.closest('a[href="#"], a[href="#capture"], button, .cta-primary, .cta-button, [data-capture]');
+    var el = e.target.closest('a[href="#"], a[href="#capture"], button[type="submit"], .cta-primary, .cta-button, [data-capture]');
     if (!el) return;
     var href = el.getAttribute('href') || '';
     // Only intercept hash/empty links and buttons, not real URLs
@@ -236,15 +313,68 @@ function injectCaptureScript(page: PublicPageData): string {
     e.stopPropagation();
     parent.postMessage('tipote:capture', '*');
   }, true);
+
+  // Also handle inline form submission
+  var inlineForm = document.getElementById('tipote-capture-form');
+  if (inlineForm) {
+    inlineForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = inlineForm.querySelector('input[type="email"]');
+      var name = inlineForm.querySelector('input[type="text"]');
+      if (email && email.value.trim()) {
+        parent.postMessage('tipote:capture', '*');
+      }
+    });
+  }
 })();
 </script>`;
 
-  // Also add legal footer if not already present
   const legalFooter = buildLegalFooter(page);
+  const idx = withForm.lastIndexOf("</body>");
+  if (idx === -1) return withForm + legalFooter + script;
+  return withForm.slice(0, idx) + legalFooter + "\n" + script + "\n" + withForm.slice(idx);
+}
 
-  const idx = html.lastIndexOf("</body>");
-  if (idx === -1) return html + legalFooter + script;
-  return html.slice(0, idx) + legalFooter + "\n" + script + "\n" + html.slice(idx);
+/** Inject an inline capture form into the page HTML. */
+function injectInlineCaptureForm(html: string, page: PublicPageData): string {
+  const heading = page.capture_heading || "Accède gratuitement";
+  const subtitle = page.capture_subtitle || "";
+  const btnText = page.payment_button_text || "C'est parti !";
+  const privacyUrl = page.legal_privacy_url || "";
+
+  const formHtml = `
+<div id="tipote-inline-capture" style="max-width:480px;margin:32px auto;padding:32px 24px;background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);text-align:center;font-family:system-ui,sans-serif">
+  <h3 style="font-size:1.35rem;font-weight:700;margin:0 0 8px;color:#1c1c1c">${escapeForHtml(heading)}</h3>
+  ${subtitle ? `<p style="color:#666;margin:0 0 20px;font-size:0.95rem">${escapeForHtml(subtitle)}</p>` : '<div style="margin-bottom:16px"></div>'}
+  <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
+    <input type="text" placeholder="Ton prénom" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
+    <input type="email" placeholder="Ton email" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
+    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.8rem;color:#666;cursor:pointer;margin:4px 0">
+      <input type="checkbox" required style="margin-top:2px;accent-color:#2563eb">
+      <span>J'accepte de recevoir des emails. ${privacyUrl ? `<a href="${escapeForHtml(privacyUrl)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">Politique de confidentialité</a>` : ''}</span>
+    </label>
+    <button type="submit" style="padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-top:4px">${escapeForHtml(btnText)}</button>
+  </form>
+  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">Tes données sont protégées et ne seront jamais partagées.</p>
+</div>`;
+
+  // Try to insert the form after the first CTA section or before the footer
+  // Strategy: insert before <footer> or before the last section or before </body>
+  const footerIdx = html.search(/<footer[\s>]/i);
+  if (footerIdx !== -1) {
+    return html.slice(0, footerIdx) + formHtml + "\n" + html.slice(footerIdx);
+  }
+
+  const bodyIdx = html.lastIndexOf("</body>");
+  if (bodyIdx !== -1) {
+    return html.slice(0, bodyIdx) + formHtml + "\n" + html.slice(bodyIdx);
+  }
+
+  return html + formHtml;
+}
+
+function escapeForHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function buildLegalFooter(page: PublicPageData): string {
