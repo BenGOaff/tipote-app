@@ -13,11 +13,15 @@ async function getPage(slug: string) {
   if (!supabaseUrl || !supabaseKey) return null;
 
   const supabase = createClient(supabaseUrl, supabaseKey);
+  // Use .limit(1).maybeSingle() to handle the edge case where different users
+  // might have the same slug published (unique per user, not globally).
   const { data } = await supabase
     .from("hosted_pages")
     .select("id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status")
     .eq("slug", slug)
     .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   return data;

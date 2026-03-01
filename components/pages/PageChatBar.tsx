@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Send, Loader2, Undo2, Check, X, MessageCircle } from "lucide-react";
+import { Send, Loader2, Undo2, Check, X, MessageCircle, Sparkles } from "lucide-react";
 
 type Props = {
   pageId: string;
@@ -123,7 +123,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
 
       if (!res.ok) {
         if (data.code === "NO_CREDITS") {
-          setError("Credits insuffisants. Recharge pour continuer.");
+          setError("Crédits insuffisants. Recharge pour continuer.");
         } else {
           setError(data.error || "Erreur lors de la modification.");
         }
@@ -131,7 +131,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         return;
       }
 
-      setLastExplanation(data.explanation || "Modification appliquee.");
+      setLastExplanation(data.explanation || "Modification appliquée.");
       setInstruction("");
       onUpdate(data.nextContentData, data.nextBrandTokens, data.explanation || "");
 
@@ -159,7 +159,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
     const last = history[history.length - 1];
     setHistory((prev) => prev.slice(0, -1));
     onUpdate(last.contentData, last.brandTokens, "Annule");
-    setLastExplanation("Modification annulee.");
+    setLastExplanation("Modification annulée.");
 
     fetch(`/api/pages/${pageId}`, {
       method: "PATCH",
@@ -236,41 +236,38 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       )}
 
       {/* Input */}
-      <div className="flex items-center gap-2 p-3">
+      <div className="flex items-center gap-2 px-4 py-2.5">
         {history.length > 0 && (
           <button
             onClick={handleUndo}
-            className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+            className="p-2 rounded-lg hover:bg-muted text-muted-foreground shrink-0"
             title="Annuler la dernière modification"
           >
             <Undo2 className="w-4 h-4" />
           </button>
         )}
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder={reformulation ? "Reformule ta demande..." : "Décris la modification souhaitée... (0.5 crédit)"}
-          disabled={disabled || loading || reformulating}
-          className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
-
-        <button
-          onClick={handleSubmit}
-          disabled={disabled || loading || reformulating || !instruction.trim()}
-          className="p-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading || reformulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
-      </div>
-
-      <div className="px-4 pb-2">
-        <p className="text-[10px] text-muted-foreground text-center">
-          Chaque modification coûte 0.5 crédit
-        </p>
+        <div className="flex-1 flex items-center gap-2 rounded-xl bg-muted/50 border border-border px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
+          <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={instruction}
+            onChange={(e) => setInstruction(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            placeholder={reformulation ? "Reformule ta demande..." : "Décris la modification souhaitée..."}
+            disabled={disabled || loading || reformulating}
+            className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none py-1 min-w-0"
+          />
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">0.5 cr.</span>
+          <button
+            onClick={handleSubmit}
+            disabled={disabled || loading || reformulating || !instruction.trim()}
+            className="p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+          >
+            {loading || reformulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
     </div>
   );

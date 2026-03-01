@@ -478,7 +478,7 @@ ${textContent.split("\n").map((line) => {
   const deviceCfg = DEVICE_CONFIG[device];
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Top toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background shrink-0">
         <div className="flex items-center gap-3">
@@ -605,13 +605,14 @@ ${textContent.split("\n").map((line) => {
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4">
+      <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4 min-h-0">
         <div
           className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
           style={{
             width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
             maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
-            height: "calc(100vh - 220px)",
+            height: "calc(100vh - 260px)",
+            minHeight: "400px",
           }}
         >
           <iframe
