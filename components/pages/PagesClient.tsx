@@ -79,6 +79,22 @@ export default function PagesClient() {
 
   useEffect(() => { fetchPages(); }, [fetchPages]);
 
+  // Open editor if ?edit=pageId is in the URL (after pages are loaded)
+  useEffect(() => {
+    if (loading || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get("edit");
+    if (editId && view === "list") {
+      (async () => {
+        try {
+          const res = await fetch(`/api/pages/${editId}`);
+          const data = await res.json();
+          if (data.ok) { setEditPage(data.page); setView("edit"); }
+        } catch { /* ignore */ }
+      })();
+    }
+  }, [loading]);
+
   // Load offers when entering step2
   const loadOffers = useCallback(async () => {
     setOffersLoading(true);

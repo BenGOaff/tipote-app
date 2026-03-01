@@ -146,12 +146,18 @@ export default async function ContentsPage({
   const initialView =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
-  const [{ data: items, error }, quizzesResult] = await Promise.all([
+  const [{ data: items, error }, quizzesResult, pagesResult] = await Promise.all([
     fetchContentsForUser(session.user.id, q, status, type, channel),
     supabase
       .from("quizzes")
       .select("id, title, status, views_count, shares_count, created_at")
       .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("hosted_pages")
+      .select("id, title, slug, page_type, status, template_id, views_count, leads_count, created_at, updated_at, payment_url")
+      .eq("user_id", session.user.id)
+      .neq("status", "archived")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -186,12 +192,28 @@ export default async function ContentsPage({
     }
   }
 
+  // Map hosted pages (funnels)
+  const funnels = ((pagesResult?.data as any[]) ?? []).map((p: any) => ({
+    id: String(p.id),
+    title: p.title ?? "",
+    slug: p.slug ?? "",
+    page_type: p.page_type ?? "capture",
+    status: p.status ?? "draft",
+    template_id: p.template_id ?? "",
+    views_count: p.views_count ?? 0,
+    leads_count: p.leads_count ?? 0,
+    payment_url: p.payment_url ?? "",
+    created_at: String(p.created_at),
+    updated_at: String(p.updated_at ?? p.created_at),
+  }));
+
   return (
     <MyContentLovableClient
       userEmail={session.user.email ?? ""}
       initialView={initialView}
       items={items}
       quizzes={quizzes}
+      funnels={funnels}
       error={error}
     />
   );

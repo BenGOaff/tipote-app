@@ -60,6 +60,10 @@ import {
   ChevronLeft,
   Package,
   Route,
+  Globe,
+  ExternalLink,
+  Download,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -80,11 +84,26 @@ type QuizListItem = {
   created_at: string;
 };
 
+type FunnelListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  page_type: string;
+  status: string;
+  template_id: string;
+  views_count: number;
+  leads_count: number;
+  payment_url: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type Props = {
   userEmail: string;
   initialView: "list" | "calendar";
   items: ContentListItem[];
   quizzes?: QuizListItem[];
+  funnels?: FunnelListItem[];
   error?: string;
 };
 
@@ -177,8 +196,9 @@ const CONTENT_FOLDERS: ContentFolder[] = [
   },
 ];
 
-function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[]): number {
+function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[], funnels: FunnelListItem[]): number {
   if (folder.id === "quiz") return quizzes.length;
+  if (folder.id === "funnels") return funnels.length;
   return items.filter((it) => folder.matchType(it.type)).length;
 }
 
@@ -250,6 +270,7 @@ export default function MyContentLovableClient({
   initialView,
   items: initialItems,
   quizzes = [],
+  funnels: initialFunnels = [],
   error,
 }: Props) {
   const router = useRouter();
@@ -269,6 +290,12 @@ export default function MyContentLovableClient({
   const [planningContent, setPlanningContent] = useState<ContentListItem | null>(null);
   const [planDate, setPlanDate] = useState<string>("");
   const [planTime, setPlanTime] = useState<string>("09:00");
+
+  // Funnel state
+  const [funnels, setFunnels] = useState<FunnelListItem[]>(initialFunnels);
+  const [deleteFunnelConfirm, setDeleteFunnelConfirm] = useState<FunnelListItem | null>(null);
+  const [funnelLeads, setFunnelLeads] = useState<{ pageId: string; leads: any[] } | null>(null);
+  const [loadingLeads, setLoadingLeads] = useState(false);
 
   const openPlan = (content: ContentListItem) => {
     setPlanningContent(content);
@@ -611,7 +638,7 @@ export default function MyContentLovableClient({
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {CONTENT_FOLDERS.map((folder) => {
-                      const count = countItemsForFolder(folder, initialItems, quizzes);
+                      const count = countItemsForFolder(folder, initialItems, quizzes, funnels);
                       const FIcon = folder.icon;
                       return (
                         <button
@@ -762,6 +789,224 @@ export default function MyContentLovableClient({
                         );
                       })}
                     </div>
+                  )}
+                </div>
+              ) : activeFolder === "funnels" ? (
+                /* ===== Funnels Folder View ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                      <Route className="w-5 h-5 text-indigo-600" />
+                      Mes Funnels
+                    </h2>
+                    <Button size="sm" asChild>
+                      <Link href="/pages">
+                        <Plus className="w-4 h-4 mr-1" /> Créer un funnel
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {funnels.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucun funnel créé.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {funnels.map((page) => {
+                        const isPublished = page.status === "published";
+                        const publicUrl = typeof window !== "undefined"
+                          ? `${window.location.origin}/p/${page.slug}`
+                          : `/p/${page.slug}`;
+                        return (
+                          <Card key={page.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className="mt-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900 p-2 shrink-0">
+                                  <Globe className="h-4 w-4 text-indigo-700 dark:text-indigo-300" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="font-medium truncate max-w-[300px]">
+                                      {page.title || "Page sans titre"}
+                                    </div>
+                                    <Badge className={isPublished
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                      : "bg-muted text-muted-foreground"
+                                    }>
+                                      {isPublished ? "En ligne" : "Brouillon"}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {page.page_type === "sales" ? "Vente" : "Capture"}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Eye className="h-3.5 w-3.5" /> {page.views_count} vues
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Users className="h-3.5 w-3.5" /> {page.leads_count} leads
+                                    </span>
+                                    {isPublished && (
+                                      <a
+                                        href={publicUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+                                      >
+                                        <ExternalLink className="h-3 w-3" /> Voir en ligne
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => router.push(`/pages?edit=${page.id}`)}>
+                                    <Edit className="w-4 h-4 mr-2" /> Éditer
+                                  </DropdownMenuItem>
+                                  {isPublished && (
+                                    <DropdownMenuItem onClick={() => window.open(publicUrl, "_blank")}>
+                                      <ExternalLink className="w-4 h-4 mr-2" /> Ouvrir
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={async () => {
+                                    setLoadingLeads(true);
+                                    setFunnelLeads(null);
+                                    try {
+                                      const res = await fetch(`/api/pages/${page.id}/leads`);
+                                      const data = await res.json();
+                                      setFunnelLeads({ pageId: page.id, leads: data.leads ?? [] });
+                                    } catch { /* ignore */ } finally {
+                                      setLoadingLeads(false);
+                                    }
+                                  }}>
+                                    <Users className="w-4 h-4 mr-2" /> Voir les leads ({page.leads_count})
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => setDeleteFunnelConfirm(page)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Leads modal */}
+                  {funnelLeads && (
+                    <Dialog open onOpenChange={() => setFunnelLeads(null)}>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Leads capturés</DialogTitle>
+                          <DialogDescription>{funnelLeads.leads.length} lead(s)</DialogDescription>
+                        </DialogHeader>
+                        {funnelLeads.leads.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-4 text-center">Aucun lead capturé pour cette page.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b text-left">
+                                    <th className="pb-2 font-medium">Email</th>
+                                    <th className="pb-2 font-medium">Prénom</th>
+                                    <th className="pb-2 font-medium">Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {funnelLeads.leads.map((lead: any, i: number) => (
+                                    <tr key={lead.id ?? i} className="border-b last:border-0">
+                                      <td className="py-2">{lead.email}</td>
+                                      <td className="py-2">{lead.first_name || "—"}</td>
+                                      <td className="py-2 text-muted-foreground">
+                                        {lead.created_at ? formatDate(lead.created_at) : "—"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const csv = ["Email,Prénom,Date"];
+                                for (const l of funnelLeads.leads) {
+                                  csv.push(`${l.email ?? ""},${l.first_name ?? ""},${l.created_at ?? ""}`);
+                                }
+                                const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = `leads-${funnelLeads.pageId}.csv`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-2" /> Télécharger en CSV
+                            </Button>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  )}
+
+                  {/* Loading leads */}
+                  {loadingLeads && (
+                    <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> Chargement des leads...
+                    </div>
+                  )}
+
+                  {/* Delete funnel confirmation */}
+                  {deleteFunnelConfirm && (
+                    <Dialog open onOpenChange={() => setDeleteFunnelConfirm(null)}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Supprimer ce funnel ?</DialogTitle>
+                          <DialogDescription>
+                            &laquo; {deleteFunnelConfirm.title || "Page sans titre"} &raquo; sera archivé et ne sera plus accessible.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setDeleteFunnelConfirm(null)}>
+                            Annuler
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              const id = deleteFunnelConfirm.id;
+                              setDeleteFunnelConfirm(null);
+                              try {
+                                await fetch(`/api/pages/${id}`, { method: "DELETE" });
+                                setFunnels((prev) => prev.filter((p) => p.id !== id));
+                                toast({ title: "Funnel supprimé" });
+                              } catch { /* ignore */ }
+                            }}
+                          >
+                            Supprimer
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               ) : (
