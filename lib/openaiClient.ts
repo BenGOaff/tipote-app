@@ -26,10 +26,22 @@ export const OPENAI_MODEL =
   "gpt-5-nano";
 
 /**
- * Backward-compatible stub — returns empty object.
- * OpenAI prompt caching is automatic for prompts > 1024 tokens.
- * No special parameter needed.
+ * Returns true if the configured model is a GPT-5 family model
+ * that requires reasoning_effort to be set.
+ */
+function isReasoningModel(model: string): boolean {
+  const m = model.toLowerCase();
+  return m.startsWith("gpt-5") || m.startsWith("o4") || m.startsWith("o3") || m.startsWith("o1");
+}
+
+/**
+ * Backward-compatible stub that also injects reasoning_effort
+ * for GPT-5 family models (gpt-5, gpt-5-mini, gpt-5-nano, etc.)
+ * which REQUIRE this parameter.
  */
 export function cachingParams(_feature: string): Record<string, unknown> {
+  if (isReasoningModel(OPENAI_MODEL)) {
+    return { reasoning_effort: "low" };
+  }
   return {};
 }

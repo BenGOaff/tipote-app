@@ -226,15 +226,12 @@ Les 3-4 chiffres clés à surveiller le mois prochain.`;
 
         analysis = completion.choices?.[0]?.message?.content?.trim() || "Analyse indisponible.";
       } catch (aiErr) {
-        console.error("[offer-metrics/analyze] OpenAI error:", aiErr instanceof Error ? aiErr.message : aiErr);
+        const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error("[offer-metrics/analyze] OpenAI error:", errMsg);
+        console.error("[offer-metrics/analyze] Model:", OPENAI_MODEL, "| Full error:", aiErr);
 
-        if (isRateLimitError(aiErr)) {
-          // Graceful fallback — don't crash, return useful diagnostic
-          analysis = buildFallbackAnalysis(currentMetrics);
-        } else {
-          // Other OpenAI errors — still degrade gracefully
-          analysis = buildFallbackAnalysis(currentMetrics);
-        }
+        // Graceful fallback — don't crash, return useful diagnostic
+        analysis = buildFallbackAnalysis(currentMetrics);
       }
     } else {
       analysis = `**Analyse automatique indisponible** (clé OpenAI manquante).\n\nVérifie manuellement tes ratios :\n- **Taux de capture** < 20% → Améliore ta page de capture\n- **Taux de conversion** < 2% → Revois ta page de vente\n- **Taux d'ouverture email** < 20% → Améliore tes objets d'email\n- **Visites faibles** → Poste plus souvent ou diversifie tes canaux`;
