@@ -17,6 +17,7 @@ type Props = {
   brandTokens: Record<string, any>;
   onUpdate: (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, explanation: string) => void;
   disabled?: boolean;
+  locale?: string;
 };
 
 type HistoryEntry = {
@@ -30,7 +31,7 @@ type ReformulationState = {
   reformulation: string;
 };
 
-export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, disabled }: Props) {
+export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, disabled, locale }: Props) {
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [reformulating, setReformulating] = useState(false);
@@ -52,7 +53,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       const res = await fetch("/api/templates/reformulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: msg, kind }),
+        body: JSON.stringify({ instruction: msg, kind, locale: locale || "fr" }),
       });
 
       if (!res.ok) {

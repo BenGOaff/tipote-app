@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -9,21 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { BarChart3, History, Loader2, Target, Sparkles } from "lucide-react";
+import { BarChart3, History, Loader2, Target } from "lucide-react";
 
-import { useTutorial } from "@/hooks/useTutorial";
-import { ContextualTooltip } from "@/components/tutorial/ContextualTooltip";
-
-import { useMetrics } from "@/hooks/useMetrics";
 import { useOfferMetrics } from "@/hooks/useOfferMetrics";
-import { MetricsForm } from "@/components/analytics/MetricsForm";
-import { MetricsSummary } from "@/components/analytics/MetricsSummary";
-import { MetricsChart } from "@/components/analytics/MetricsChart";
-import { AnalysisCard } from "@/components/analytics/AnalysisCard";
 import { OfferMetricsForm } from "@/components/analytics/OfferMetricsForm";
 import { OfferMetricsDashboard } from "@/components/analytics/OfferMetricsDashboard";
-import { OfferAnalysisCard } from "@/components/analytics/OfferAnalysisCard";
-import { SioDataGuide } from "@/components/analytics/SioDataGuide";
 
 import { format, Locale } from "date-fns";
 import { fr, enUS, es, it, ar } from "date-fns/locale";
@@ -34,30 +24,26 @@ export default function AnalyticsLovableClient() {
   const t = useTranslations("analytics");
   const locale = useLocale();
   const dateFnsLocale = DATE_FNS_LOCALES[locale] ?? fr;
-  const { hasSeenContext } = useTutorial();
-  const {
-    metrics,
-    latestMetrics,
-    previousMetrics,
-    isLoading,
-    isSaving,
-    isAnalyzing,
-    saveMetrics,
-    analyzeMetrics,
-  } = useMetrics();
 
   const offerState = useOfferMetrics();
+  const [activeTab, setActiveTab] = useState("resultats");
 
-  const [activeTab, setActiveTab] = useState("offres");
-
-  // Determine latest month for offer analysis
+  // Latest month for analysis triggers
   const latestOfferMonth = offerState.sortedMonths[offerState.sortedMonths.length - 1] ?? null;
+
+  // Trigger analysis after saving data
+  const handleSaveComplete = useCallback(() => {
+    if (latestOfferMonth) {
+      offerState.analyzeOfferMetrics(latestOfferMonth);
+    }
+    setActiveTab("resultats");
+  }, [latestOfferMonth, offerState]);
 
   return (
     <DashboardLayout
       title={t("title")}
       showAnalyticsLink={false}
-      contentClassName="p-6 space-y-6 max-w-6xl mx-auto"
+      contentClassName="p-6 space-y-6 max-w-5xl mx-auto"
     >
       {/* Header */}
       <div>
@@ -65,32 +51,28 @@ export default function AnalyticsLovableClient() {
         <p className="text-muted-foreground">{t("description")}</p>
       </div>
 
-      {/* Main Tabs */}
+      {/* 3 Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-          <TabsTrigger value="offres" className="gap-2">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsTrigger value="resultats" className="gap-2">
             <Target className="w-4 h-4" />
-            Par offre
+            Resultats
           </TabsTrigger>
           <TabsTrigger value="saisie" className="gap-2">
             <BarChart3 className="w-4 h-4" />
-            {t("tabs.enter")}
-          </TabsTrigger>
-          <TabsTrigger value="analyse" className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            Analyse IA
+            Saisir mes donnees
           </TabsTrigger>
           <TabsTrigger value="historique" className="gap-2">
             <History className="w-4 h-4" />
-            {t("tabs.history")}
+            Historique
           </TabsTrigger>
         </TabsList>
 
-        {/* ── TAB 1: Per-offer metrics ── */}
-        <TabsContent value="offres" className="mt-6 space-y-6">
+        {/* ── TAB 1: Resultats totaux ── */}
+        <TabsContent value="resultats" className="mt-6">
           {offerState.isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[...Array(5)].map((_, i) => (
                 <Card key={i} className="p-4">
                   <Skeleton className="h-8 w-8 rounded-lg mb-2" />
                   <Skeleton className="h-3 w-16 mb-1" />
@@ -99,155 +81,109 @@ export default function AnalyticsLovableClient() {
               ))}
             </div>
           ) : (
-            <>
-              {/* Dashboard with charts */}
-              <OfferMetricsDashboard
-                metrics={offerState.metrics}
-                sortedMonths={offerState.sortedMonths}
-                getMonthTotals={offerState.getMonthTotals}
-              />
-
-              {/* Per-offer entry form */}
-              <OfferMetricsForm
-                offers={offerState.offers}
-                existingMetrics={offerState.metrics}
-                sources={offerState.sources}
-                onSave={offerState.saveOfferMetric}
-                onFetchSources={offerState.fetchSources}
-                isSaving={offerState.isSaving}
-              />
-
-              {/* Guide: where to find data */}
-              <SioDataGuide />
-            </>
+            <OfferMetricsDashboard
+              metrics={offerState.metrics}
+              sortedMonths={offerState.sortedMonths}
+              grandTotals={offerState.grandTotals}
+              getMonthTotals={offerState.getMonthTotals}
+              getEmailStats={offerState.getEmailStats}
+              analysis={offerState.analysis}
+              isAnalyzing={offerState.isAnalyzing}
+              onAnalyze={() => latestOfferMonth && offerState.analyzeOfferMetrics(latestOfferMonth)}
+            />
           )}
         </TabsContent>
 
-        {/* ── TAB 2: Global metrics entry (existing) ── */}
+        {/* ── TAB 2: Saisir mes donnees ── */}
         <TabsContent value="saisie" className="mt-6">
-          {/* Summary Cards */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i} className="p-5">
-                  <Skeleton className="h-10 w-10 rounded-xl mb-3" />
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-8 w-16" />
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <MetricsSummary
-                metrics={latestMetrics}
-                previousMetrics={previousMetrics}
-              />
-              <MetricsChart metrics={metrics} />
-            </div>
-          )}
-
-          <div className="mt-6">
-            <ContextualTooltip
-              contextKey="first_analytics_visit"
-              message={
-                hasSeenContext("first_analytics_visit")
-                  ? t("tooltipUpdate")
-                  : t("tooltipFirst")
-              }
-              position="top"
-            >
-              <MetricsForm
-                initialData={latestMetrics}
-                onSave={saveMetrics}
-                onAnalyze={analyzeMetrics}
-                previousMetrics={previousMetrics}
-                isSaving={isSaving}
-                isAnalyzing={isAnalyzing}
-              />
-            </ContextualTooltip>
-          </div>
-        </TabsContent>
-
-        {/* ── TAB 3: AI Analysis ── */}
-        <TabsContent value="analyse" className="mt-6 space-y-6">
-          {/* Per-offer AI analysis */}
-          <OfferAnalysisCard
-            analysis={offerState.analysis}
-            isLoading={offerState.isAnalyzing}
-            onAnalyze={() => latestOfferMonth && offerState.analyzeOfferMetrics(latestOfferMonth)}
-            hasData={offerState.metrics.length > 0}
-          />
-
-          {/* Global AI analysis (existing) */}
-          <AnalysisCard
-            analysis={latestMetrics?.ai_analysis || null}
-            month={latestMetrics?.month}
-            isLoading={isAnalyzing}
-          />
-        </TabsContent>
-
-        {/* ── TAB 4: History ── */}
-        <TabsContent value="historique" className="mt-6">
-          {isLoading ? (
+          {offerState.isLoading ? (
             <Card className="p-6">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
             </Card>
-          ) : metrics.length === 0 ? (
+          ) : (
+            <OfferMetricsForm
+              offers={offerState.offers}
+              existingMetrics={offerState.metrics}
+              sources={offerState.sources}
+              onSave={offerState.saveOfferMetric}
+              onSaveEmail={offerState.saveEmailStats}
+              getEmailStats={offerState.getEmailStats}
+              onFetchSources={offerState.fetchSources}
+              isSaving={offerState.isSaving}
+              onSaveComplete={handleSaveComplete}
+            />
+          )}
+        </TabsContent>
+
+        {/* ── TAB 3: Historique ── */}
+        <TabsContent value="historique" className="mt-6">
+          {offerState.isLoading ? (
+            <Card className="p-6">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+            </Card>
+          ) : offerState.sortedMonths.length === 0 ? (
             <Card className="p-12 text-center">
               <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t("emptyTitle")}</h3>
-              <p className="text-muted-foreground mb-4">{t("emptyBody")}</p>
-              <Button onClick={() => setActiveTab("saisie")}>{t("enterData")}</Button>
+              <h3 className="text-lg font-medium mb-2">Aucun historique</h3>
+              <p className="text-muted-foreground mb-4">Saisis tes donnees pour voir l&apos;historique ici.</p>
+              <Button onClick={() => setActiveTab("saisie")}>Saisir mes donnees</Button>
             </Card>
           ) : (
             <div className="space-y-4">
-              {metrics.map((metric) => (
-                <Card key={metric.id} className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-bold capitalize">
-                        {format(new Date(metric.month), "MMMM yyyy", {
-                          locale: dateFnsLocale,
-                        })}
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">{t("metrics.revenue")}</p>
-                          <p className="font-medium">
-                            {(metric.revenue || 0).toLocaleString()}EUR
-                          </p>
+              {offerState.sortedMonths.slice().reverse().map((month) => {
+                const totals = offerState.getMonthTotals(month);
+                const monthMetrics = offerState.getMonthMetrics(month);
+                const emailStats = offerState.getEmailStats(month);
+
+                return (
+                  <Card key={month} className="p-5">
+                    <h4 className="font-bold capitalize mb-3">
+                      {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocale })}
+                    </h4>
+
+                    {/* Per-offer breakdown */}
+                    {monthMetrics.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Funnels</p>
+                        <div className="space-y-1">
+                          {monthMetrics.map((m) => (
+                            <div key={m.offer_name} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
+                              <span className="font-medium">{m.offer_name}</span>
+                              <div className="flex gap-4 text-xs text-muted-foreground">
+                                <span>{m.visitors} vis.</span>
+                                <span>{m.signups} insc.</span>
+                                {m.is_paid && <span>{m.sales_count} ventes</span>}
+                                {m.is_paid && m.revenue > 0 && <span>{m.revenue.toLocaleString("fr-FR")} EUR</span>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <p className="text-muted-foreground">{t("metrics.sales")}</p>
-                          <p className="font-medium">{metric.sales_count || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">{t("metrics.conversion")}</p>
-                          <p className="font-medium">
-                            {(metric.conversion_rate || 0).toFixed(1)}%
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">{t("metrics.subscribers")}</p>
-                          <p className="font-medium">{metric.new_subscribers || 0}</p>
+
+                        {/* Totals */}
+                        <div className="flex gap-4 text-xs mt-2 pt-2 border-t font-medium">
+                          <span>Total : {totals.visitors} vis.</span>
+                          <span>{totals.signups} insc.</span>
+                          <span>{totals.sales} ventes</span>
+                          {totals.revenue > 0 && <span>{totals.revenue.toLocaleString("fr-FR")} EUR</span>}
                         </div>
                       </div>
-                    </div>
-
-                    {metric.ai_analysis && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          // TODO (mature) : modal détail analyse
-                        }}
-                      >
-                        {t("seeAnalysis")}
-                      </Button>
                     )}
-                  </div>
-                </Card>
-              ))}
+
+                    {/* Email stats */}
+                    {emailStats && (emailStats.email_list_size > 0 || emailStats.emails_sent > 0) && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Emails</p>
+                        <div className="flex gap-4 text-xs text-muted-foreground">
+                          <span>Liste : {emailStats.email_list_size}</span>
+                          <span>Envoyes : {emailStats.emails_sent}</span>
+                          {emailStats.email_open_rate > 0 && <span>Ouverture : {emailStats.email_open_rate}%</span>}
+                          {emailStats.email_click_rate > 0 && <span>Clics : {emailStats.email_click_rate}%</span>}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

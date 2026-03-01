@@ -19,10 +19,21 @@ export interface OfferMetric {
   capture_rate?: number;
   sales_conversion?: number;
   revenue_per_visitor?: number;
+  email_list_size?: number;
+  emails_sent?: number;
+  email_open_rate?: number;
+  email_click_rate?: number;
   linked_page_ids?: string[];
   linked_quiz_ids?: string[];
   created_at?: string;
   updated_at?: string;
+}
+
+export interface EmailStats {
+  email_list_size: number;
+  emails_sent: number;
+  email_open_rate: number;
+  email_click_rate: number;
 }
 
 export interface AggregatedSource {
@@ -47,7 +58,6 @@ export const useOfferMetrics = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
 
-  // Aggregated sources from pages/quizzes
   const [sources, setSources] = useState<{ pages: AggregatedSource[]; quizzes: AggregatedSource[] }>({
     pages: [],
     quizzes: [],
@@ -65,7 +75,7 @@ export const useOfferMetrics = () => {
       setMetrics(metricsRes?.metrics ?? []);
     } catch (error) {
       console.error("Error fetching offer metrics:", error);
-      toast({ title: "Erreur", description: "Impossible de charger les métriques", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de charger les metriques", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -82,9 +92,7 @@ export const useOfferMetrics = () => {
       if (json?.ok) {
         setSources({ pages: json.pages ?? [], quizzes: json.quizzes ?? [] });
       }
-    } catch {
-      // non-blocking
-    }
+    } catch { /* non-blocking */ }
   }, []);
 
   const saveOfferMetric = useCallback(async (data: Omit<OfferMetric, "id" | "user_id" | "capture_rate" | "sales_conversion" | "revenue_per_visitor" | "created_at" | "updated_at">): Promise<OfferMetric | null> => {
@@ -97,8 +105,6 @@ export const useOfferMetrics = () => {
       });
       const json = await res.json();
       if (!json?.ok) throw new Error(json?.error || "Erreur");
-
-      // Refresh
       await fetchAll();
       return json.metric ?? null;
     } catch (error) {
@@ -110,15 +116,69 @@ export const useOfferMetrics = () => {
     }
   }, [fetchAll, toast]);
 
+  // Save email stats as a special "__email_stats__" offer row
+  const saveEmailStats = useCallback(async (month: string, stats: EmailStats): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/analytics/offer-metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offer_name: "__email_stats__",
+          offer_level: "email",
+          is_paid: false,
+          month,
+          visitors: 0,
+          signups: 0,
+          sales_count: 0,
+          revenue: 0,
+          email_list_size: stats.email_list_size,
+          emails_sent: stats.emails_sent,
+          email_open_rate: stats.email_open_rate,
+          email_click_rate: stats.email_click_rate,
+        }),
+      });
+      const json = await res.json();
+      if (!json?.ok) throw new Error(json?.error || "Erreur");
+      await fetchAll();
+      return true;
+    } catch (error) {
+      console.error("Error saving email stats:", error);
+      toast({ title: "Erreur", description: error instanceof Error ? error.message : "Impossible d'enregistrer", variant: "destructive" });
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchAll, toast]);
+
+  // Get email stats for a given month
+  const getEmailStats = useCallback((month: string): EmailStats | null => {
+    const row = metrics.find((m) => m.month === month && m.offer_name === "__email_stats__");
+    if (!row) return null;
+    return {
+      email_list_size: row.email_list_size ?? 0,
+      emails_sent: row.emails_sent ?? 0,
+      email_open_rate: row.email_open_rate ?? 0,
+      email_click_rate: row.email_click_rate ?? 0,
+    };
+  }, [metrics]);
+
+  // Filter out email stats rows from regular offer metrics
+  const offerMetrics = useMemo(() => {
+    return metrics.filter((m) => m.offer_name !== "__email_stats__");
+  }, [metrics]);
+
   const analyzeOfferMetrics = useCallback(async (month: string): Promise<string | null> => {
     setIsAnalyzing(true);
     try {
-      const currentMonth = metrics.filter((m) => m.month === month);
-      // Find previous month
+      const currentMonth = offerMetrics.filter((m) => m.month === month);
       const d = new Date(month);
       d.setMonth(d.getMonth() - 1);
       const prevMonth = d.toISOString().slice(0, 10);
-      const previousMonthData = metrics.filter((m) => m.month === prevMonth);
+      const previousMonthData = offerMetrics.filter((m) => m.month === prevMonth);
+
+      const emailStats = getEmailStats(month);
+      const previousEmailStats = getEmailStats(prevMonth);
 
       const res = await fetch("/api/analytics/offer-metrics/analyze", {
         method: "POST",
@@ -126,6 +186,8 @@ export const useOfferMetrics = () => {
         body: JSON.stringify({
           currentMetrics: currentMonth,
           previousMetrics: previousMonthData,
+          emailStats,
+          previousEmailStats,
         }),
       });
       const json = await res.json();
@@ -140,37 +202,29 @@ export const useOfferMetrics = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [metrics, toast]);
+  }, [offerMetrics, getEmailStats, toast]);
 
-  // Group metrics by month for charts
+  // Group offer metrics (excluding emails) by month
   const metricsByMonth = useMemo(() => {
     const grouped: Record<string, OfferMetric[]> = {};
-    for (const m of metrics) {
+    for (const m of offerMetrics) {
       if (!grouped[m.month]) grouped[m.month] = [];
       grouped[m.month].push(m);
     }
     return grouped;
+  }, [offerMetrics]);
+
+  const sortedMonths = useMemo(() => {
+    // Include months from both offer metrics and email stats
+    const allMonths = new Set<string>();
+    for (const m of metrics) allMonths.add(m.month);
+    return [...allMonths].sort((a, b) => a.localeCompare(b));
   }, [metrics]);
 
-  // Get sorted unique months
-  const sortedMonths = useMemo(() => {
-    return Object.keys(metricsByMonth).sort((a, b) => a.localeCompare(b));
-  }, [metricsByMonth]);
-
-  // Get metrics for a specific month
   const getMonthMetrics = useCallback((month: string): OfferMetric[] => {
     return metricsByMonth[month] ?? [];
   }, [metricsByMonth]);
 
-  // Get previous month metrics for comparison
-  const getPreviousMonthMetrics = useCallback((month: string): OfferMetric[] => {
-    const d = new Date(month);
-    d.setMonth(d.getMonth() - 1);
-    const prevMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-    return metricsByMonth[prevMonth] ?? [];
-  }, [metricsByMonth]);
-
-  // Totals for a given month
   const getMonthTotals = useCallback((month: string) => {
     const items = getMonthMetrics(month);
     const totalVisitors = items.reduce((s, m) => s + m.visitors, 0);
@@ -188,13 +242,45 @@ export const useOfferMetrics = () => {
     };
   }, [getMonthMetrics]);
 
+  // Grand totals across ALL months
+  const grandTotals = useMemo(() => {
+    const totalVisitors = offerMetrics.reduce((s, m) => s + m.visitors, 0);
+    const totalSignups = offerMetrics.reduce((s, m) => s + m.signups, 0);
+    const totalSales = offerMetrics.reduce((s, m) => s + m.sales_count, 0);
+    const totalRevenue = offerMetrics.reduce((s, m) => s + m.revenue, 0);
+
+    // Average email stats across all months
+    const emailRows = metrics.filter((m) => m.offer_name === "__email_stats__");
+    const avgOpenRate = emailRows.length > 0
+      ? emailRows.reduce((s, m) => s + (m.email_open_rate ?? 0), 0) / emailRows.length
+      : 0;
+    const avgClickRate = emailRows.length > 0
+      ? emailRows.reduce((s, m) => s + (m.email_click_rate ?? 0), 0) / emailRows.length
+      : 0;
+    const latestEmailRow = emailRows.sort((a, b) => b.month.localeCompare(a.month))[0];
+
+    return {
+      visitors: totalVisitors,
+      signups: totalSignups,
+      sales: totalSales,
+      revenue: totalRevenue,
+      captureRate: totalVisitors > 0 ? (totalSignups / totalVisitors) * 100 : 0,
+      salesConversion: totalSignups > 0 ? (totalSales / totalSignups) * 100 : 0,
+      avgEmailOpenRate: avgOpenRate,
+      avgEmailClickRate: avgClickRate,
+      latestEmailListSize: latestEmailRow?.email_list_size ?? 0,
+      monthCount: sortedMonths.length,
+    };
+  }, [offerMetrics, metrics, sortedMonths]);
+
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
   return {
     offers,
-    metrics,
+    metrics: offerMetrics,
+    allMetrics: metrics,
     sources,
     isLoading,
     isSaving,
@@ -202,12 +288,14 @@ export const useOfferMetrics = () => {
     analysis,
     sortedMonths,
     metricsByMonth,
+    grandTotals,
     fetchAll,
     fetchSources,
     saveOfferMetric,
+    saveEmailStats,
+    getEmailStats,
     analyzeOfferMetrics,
     getMonthMetrics,
-    getPreviousMonthMetrics,
     getMonthTotals,
   };
 };

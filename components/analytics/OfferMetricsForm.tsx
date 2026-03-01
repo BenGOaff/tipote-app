@@ -8,10 +8,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, Plus, Trash2, Info } from "lucide-react";
+import { Loader2, Save, Plus, Trash2, HelpCircle, ChevronDown, ChevronUp, Mail, BarChart3, ExternalLink } from "lucide-react";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
-import type { OfferMetric, AggregatedSource } from "@/hooks/useOfferMetrics";
+import type { OfferMetric, AggregatedSource, EmailStats } from "@/hooks/useOfferMetrics";
 import type { OfferOption } from "@/lib/offers";
 import { levelLabel } from "@/lib/offers";
 
@@ -20,8 +20,11 @@ interface OfferMetricsFormProps {
   existingMetrics: OfferMetric[];
   sources: { pages: AggregatedSource[]; quizzes: AggregatedSource[] };
   onSave: (data: Omit<OfferMetric, "id" | "user_id" | "capture_rate" | "sales_conversion" | "revenue_per_visitor" | "created_at" | "updated_at">) => Promise<OfferMetric | null>;
+  onSaveEmail: (month: string, stats: EmailStats) => Promise<boolean>;
+  getEmailStats: (month: string) => EmailStats | null;
   onFetchSources: (month: string) => void;
   isSaving: boolean;
+  onSaveComplete?: () => void;
 }
 
 const getAvailableMonths = () => {
@@ -37,14 +40,9 @@ const getAvailableMonths = () => {
   return months;
 };
 
-function clamp(n: number, min: number, max: number) {
-  if (!Number.isFinite(n)) return min;
-  return Math.min(max, Math.max(min, n));
-}
-
 function pct(n: number, d: number) {
   if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return 0;
-  return clamp(Math.round((n / d) * 1000) / 10, 0, 9999);
+  return Math.min(9999, Math.max(0, Math.round((n / d) * 1000) / 10));
 }
 
 interface OfferRow {
@@ -64,14 +62,24 @@ export const OfferMetricsForm = ({
   existingMetrics,
   sources,
   onSave,
+  onSaveEmail,
+  getEmailStats,
   onFetchSources,
   isSaving,
+  onSaveComplete,
 }: OfferMetricsFormProps) => {
   const availableMonths = useMemo(() => getAvailableMonths(), []);
   const [month, setMonth] = useState(availableMonths[0].value);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
   const [customOfferName, setCustomOfferName] = useState("");
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Email stats state
+  const [emailListSize, setEmailListSize] = useState("");
+  const [emailsSent, setEmailsSent] = useState("");
+  const [emailOpenRate, setEmailOpenRate] = useState("");
+  const [emailClickRate, setEmailClickRate] = useState("");
 
   // Initialize rows from offers + existing metrics when month changes
   useEffect(() => {
@@ -81,8 +89,6 @@ export const OfferMetricsForm = ({
     const metricMap = new Map(monthMetrics.map((m) => [m.offer_name, m]));
 
     const newRows: OfferRow[] = [];
-
-    // Add existing offers
     for (const offer of offers) {
       const existing = metricMap.get(offer.name);
       const isPaid = offer.level !== "lead_magnet" && offer.level !== "free";
@@ -100,7 +106,6 @@ export const OfferMetricsForm = ({
       metricMap.delete(offer.name);
     }
 
-    // Add metrics for offers not in the offers list (custom entries)
     for (const [, m] of metricMap) {
       newRows.push({
         offer_name: m.offer_name,
@@ -114,9 +119,22 @@ export const OfferMetricsForm = ({
         linked_quiz_ids: m.linked_quiz_ids ?? [],
       });
     }
-
     setRows(newRows);
-  }, [month, offers, existingMetrics, onFetchSources]);
+
+    // Load email stats
+    const emailData = getEmailStats(month);
+    if (emailData) {
+      setEmailListSize(emailData.email_list_size > 0 ? emailData.email_list_size.toString() : "");
+      setEmailsSent(emailData.emails_sent > 0 ? emailData.emails_sent.toString() : "");
+      setEmailOpenRate(emailData.email_open_rate > 0 ? emailData.email_open_rate.toString() : "");
+      setEmailClickRate(emailData.email_click_rate > 0 ? emailData.email_click_rate.toString() : "");
+    } else {
+      setEmailListSize("");
+      setEmailsSent("");
+      setEmailOpenRate("");
+      setEmailClickRate("");
+    }
+  }, [month, offers, existingMetrics, onFetchSources, getEmailStats]);
 
   const updateRow = (idx: number, field: keyof OfferRow, value: any) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
@@ -128,17 +146,7 @@ export const OfferMetricsForm = ({
     if (rows.some((r) => r.offer_name.toLowerCase() === name.toLowerCase())) return;
     setRows((prev) => [
       ...prev,
-      {
-        offer_name: name,
-        offer_level: "user_offer",
-        is_paid: false,
-        visitors: "",
-        signups: "",
-        sales_count: "",
-        revenue: "",
-        linked_page_ids: [],
-        linked_quiz_ids: [],
-      },
+      { offer_name: name, offer_level: "user_offer", is_paid: false, visitors: "", signups: "", sales_count: "", revenue: "", linked_page_ids: [], linked_quiz_ids: [] },
     ]);
     setCustomOfferName("");
   };
@@ -147,28 +155,10 @@ export const OfferMetricsForm = ({
     setRows((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSaveRow = async (idx: number) => {
-    const row = rows[idx];
-    setSavingIdx(idx);
-    await onSave({
-      offer_name: row.offer_name,
-      offer_level: row.offer_level,
-      is_paid: row.is_paid,
-      month,
-      visitors: parseInt(row.visitors) || 0,
-      signups: parseInt(row.signups) || 0,
-      sales_count: parseInt(row.sales_count) || 0,
-      revenue: parseFloat(row.revenue) || 0,
-      linked_page_ids: row.linked_page_ids,
-      linked_quiz_ids: row.linked_quiz_ids,
-    });
-    setSavingIdx(null);
-  };
-
   const handleSaveAll = async () => {
+    // Save offer rows
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      // Only save rows with at least some data
       if ((parseInt(row.visitors) || 0) > 0 || (parseInt(row.signups) || 0) > 0 || (parseFloat(row.revenue) || 0) > 0) {
         setSavingIdx(i);
         await onSave({
@@ -185,16 +175,29 @@ export const OfferMetricsForm = ({
         });
       }
     }
+
+    // Save email stats
+    const hasEmailData = (parseInt(emailListSize) || 0) > 0 || (parseInt(emailsSent) || 0) > 0 || (parseFloat(emailOpenRate) || 0) > 0;
+    if (hasEmailData) {
+      await onSaveEmail(month, {
+        email_list_size: parseInt(emailListSize) || 0,
+        emails_sent: parseInt(emailsSent) || 0,
+        email_open_rate: parseFloat(emailOpenRate) || 0,
+        email_click_rate: parseFloat(emailClickRate) || 0,
+      });
+    }
+
     setSavingIdx(null);
+    onSaveComplete?.();
   };
 
   return (
-    <Card className="p-6">
-      <div className="space-y-6">
-        {/* Month selector */}
+    <div className="space-y-6">
+      {/* Period selector */}
+      <Card className="p-5">
         <div className="flex items-center gap-4">
           <div className="space-y-1 flex-1 max-w-xs">
-            <Label>Mois</Label>
+            <Label className="font-semibold">Periode des donnees</Label>
             <Select value={month} onValueChange={setMonth}>
               <SelectTrigger>
                 <SelectValue placeholder="Mois" />
@@ -209,56 +212,35 @@ export const OfferMetricsForm = ({
             </Select>
           </div>
         </div>
+      </Card>
 
-        {/* Data sources hint */}
-        {(sources.pages.length > 0 || sources.quizzes.length > 0) && (
-          <div className="p-3 rounded-lg bg-muted/50 border text-sm space-y-1">
-            <p className="font-medium flex items-center gap-1.5">
-              <Info className="w-4 h-4" /> Tes pages et quiz Tipote
-            </p>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {sources.pages.map((p) => (
-                <Badge key={p.id} variant="secondary" className="text-xs">
-                  {p.title} — {p.total_views} vues, {p.month_leads} leads ce mois
-                </Badge>
-              ))}
-              {sources.quizzes.map((q) => (
-                <Badge key={q.id} variant="outline" className="text-xs">
-                  {q.title} — {q.total_views} vues, {q.month_leads} leads ce mois
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* ── CATEGORY: Funnels ── */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-base">Funnels (par offre)</h3>
+        </div>
 
-        {/* Offer rows */}
         <div className="space-y-4">
           {rows.map((row, idx) => {
             const visitors = parseInt(row.visitors) || 0;
             const signups = parseInt(row.signups) || 0;
             const sales = parseInt(row.sales_count) || 0;
             const revenue = parseFloat(row.revenue) || 0;
-
             const captureRate = pct(signups, Math.max(1, visitors));
             const salesConv = row.is_paid ? pct(sales, Math.max(1, signups)) : null;
-            const rpv = visitors > 0 ? Math.round((revenue / visitors) * 100) / 100 : 0;
 
             return (
               <div key={`${row.offer_name}-${idx}`} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h4 className="font-semibold text-sm">{row.offer_name}</h4>
-                    <Badge variant="secondary" className="text-xs">
-                      {levelLabel(row.offer_level)}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{levelLabel(row.offer_level)}</Badge>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span>Offre payante</span>
-                      <Switch
-                        checked={row.is_paid}
-                        onCheckedChange={(v) => updateRow(idx, "is_paid", v)}
-                      />
+                      <span>Payante</span>
+                      <Switch checked={row.is_paid} onCheckedChange={(v) => updateRow(idx, "is_paid", v)} />
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeRow(idx)}>
                       <Trash2 className="w-3.5 h-3.5" />
@@ -266,10 +248,11 @@ export const OfferMetricsForm = ({
                   </div>
                 </div>
 
-                {/* Input fields */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Visiteurs</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Visiteurs de la page de {row.is_paid ? "vente" : "capture"} de cette offre
+                    </Label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -279,7 +262,9 @@ export const OfferMetricsForm = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Inscrits</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {row.is_paid ? "Inscrits qui ont vu la page de vente" : "Nouveaux inscrits via cette page"}
+                    </Label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -291,7 +276,9 @@ export const OfferMetricsForm = ({
                   {row.is_paid && (
                     <>
                       <div className="space-y-1">
-                        <Label className="text-xs">Ventes</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          Nombre de ventes de &quot;{row.offer_name}&quot; ce mois
+                        </Label>
                         <Input
                           type="number"
                           placeholder="0"
@@ -301,7 +288,9 @@ export const OfferMetricsForm = ({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">CA (EUR)</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          CA total de &quot;{row.offer_name}&quot; ce mois (EUR)
+                        </Label>
                         <Input
                           type="number"
                           placeholder="0"
@@ -314,43 +303,33 @@ export const OfferMetricsForm = ({
                   )}
                 </div>
 
-                {/* Auto-calculated */}
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <span className="px-2 py-1 rounded bg-muted/50">
-                    Conv. capture : <strong>{captureRate}%</strong>
-                  </span>
-                  {salesConv !== null && (
-                    <span className="px-2 py-1 rounded bg-muted/50">
-                      Conv. vente : <strong>{salesConv}%</strong>
-                    </span>
-                  )}
-                  {row.is_paid && revenue > 0 && (
-                    <span className="px-2 py-1 rounded bg-muted/50">
-                      CA/visiteur : <strong>{rpv.toFixed(2)}EUR</strong>
-                    </span>
-                  )}
-                </div>
-
-                {/* Save single row */}
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleSaveRow(idx)}
-                    disabled={isSaving}
-                    className="text-xs"
-                  >
-                    {savingIdx === idx ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
-                    Enregistrer
-                  </Button>
-                </div>
+                {/* Auto-calculated rates */}
+                {(visitors > 0 || signups > 0) && (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {visitors > 0 && (
+                      <span className="px-2 py-1 rounded bg-muted/50">
+                        Taux de capture : <strong>{captureRate}%</strong>
+                      </span>
+                    )}
+                    {salesConv !== null && sales > 0 && (
+                      <span className="px-2 py-1 rounded bg-muted/50">
+                        Taux de conversion vente : <strong>{salesConv}%</strong>
+                      </span>
+                    )}
+                    {row.is_paid && revenue > 0 && visitors > 0 && (
+                      <span className="px-2 py-1 rounded bg-muted/50">
+                        CA/visiteur : <strong>{(revenue / visitors).toFixed(2)} EUR</strong>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
         {/* Add custom offer */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-4">
           <Input
             value={customOfferName}
             onChange={(e) => setCustomOfferName(e.target.value)}
@@ -362,15 +341,151 @@ export const OfferMetricsForm = ({
             <Plus className="w-4 h-4 mr-1" /> Ajouter
           </Button>
         </div>
+      </Card>
 
-        {/* Save all */}
-        <div className="flex justify-end pt-2">
-          <Button onClick={handleSaveAll} disabled={isSaving}>
-            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Tout enregistrer
-          </Button>
+      {/* ── CATEGORY: Emails ── */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-base">Emails</h3>
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Nombre total d&apos;emails dans ta liste a la fin de ce mois
+            </Label>
+            <Input
+              type="number"
+              placeholder="Ex: 350"
+              value={emailListSize}
+              onChange={(e) => setEmailListSize(e.target.value)}
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Nombre d&apos;emails envoyes ce mois (newsletters, sequences...)
+            </Label>
+            <Input
+              type="number"
+              placeholder="Ex: 8"
+              value={emailsSent}
+              onChange={(e) => setEmailsSent(e.target.value)}
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Taux d&apos;ouverture moyen des emails envoyes ce mois (%)
+            </Label>
+            <Input
+              type="number"
+              step="0.1"
+              placeholder="Ex: 25.3"
+              value={emailOpenRate}
+              onChange={(e) => setEmailOpenRate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Taux de clics moyen des emails envoyes ce mois (%)
+            </Label>
+            <Input
+              type="number"
+              step="0.1"
+              placeholder="Ex: 3.5"
+              value={emailClickRate}
+              onChange={(e) => setEmailClickRate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Where to find data ── */}
+      <Card className="p-4 border-dashed">
+        <Button
+          variant="ghost"
+          className="w-full flex items-center justify-between p-0 h-auto hover:bg-transparent"
+          onClick={() => setShowGuide(!showGuide)}
+        >
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+            Ou trouver ces chiffres ?
+          </span>
+          {showGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </Button>
+
+        {showGuide && (
+          <div className="mt-4 space-y-4 text-sm">
+            <div className="space-y-2">
+              <h4 className="font-bold flex items-center gap-1.5">
+                Statistiques Funnels (Systeme.io)
+                <ExternalLink className="w-3 h-3 text-muted-foreground" />
+              </h4>
+              <ul className="space-y-1.5 text-muted-foreground ml-4">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Visiteurs :</span>
+                  <span>Tunnels &gt; [Ton tunnel] &gt; Statistiques &gt; colonne &laquo; Pages vues &raquo; (visiteurs uniques de la page de capture ou vente)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Inscrits :</span>
+                  <span>Tunnels &gt; Statistiques &gt; colonne &laquo; Opt-in &raquo; (personnes ayant laisse leur email)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Ventes :</span>
+                  <span>Tunnels &gt; Statistiques &gt; &laquo; Ventes &raquo; OU Tableau de bord &gt; Ventes (filtre par produit et mois)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">CA :</span>
+                  <span>Tableau de bord &gt; Revenus (filtre par mois) OU Stripe/PayPal si paiement externe</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-bold flex items-center gap-1.5">
+                Statistiques Emails (Systeme.io)
+                <ExternalLink className="w-3 h-3 text-muted-foreground" />
+              </h4>
+              <ul className="space-y-1.5 text-muted-foreground ml-4">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Taille liste :</span>
+                  <span>Contacts &gt; nombre total affiche en haut (prends le chiffre en fin de mois)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Emails envoyes :</span>
+                  <span>Emails &gt; Newsletters &gt; compte les emails envoyes ce mois (newsletters + broadcasts)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Taux ouverture :</span>
+                  <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyes ce mois</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-foreground min-w-[120px]">Taux de clics :</span>
+                  <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyes ce mois</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/50 border">
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Astuce :</strong> Les visiteurs et leads de tes pages Tipote sont comptabilises automatiquement. Ici tu saisis les chiffres globaux de tes tunnels (Systeme.io ou autre CRM).
+              </p>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Save button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSaveAll} disabled={isSaving} size="lg">
+          {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          Enregistrer tout
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 };

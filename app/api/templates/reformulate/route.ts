@@ -16,6 +16,7 @@ export const maxDuration = 30;
 const InputSchema = z.object({
   instruction: z.string().min(3),
   kind: z.enum(["capture", "vente"]),
+  locale: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -39,8 +40,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { instruction, kind } = parsed.data;
-  const pageTypeLabel = kind === "vente" ? "page de vente" : "page de capture";
+  const { instruction, kind, locale: inputLocale } = parsed.data;
+
+  // Detect language: use provided locale, or try to detect from user's profile
+  const userLocale = inputLocale || "fr";
+  const LOCALE_LABELS: Record<string, string> = {
+    fr: "francais", en: "English", es: "espanol", it: "italiano",
+    pt: "portugues", de: "Deutsch", nl: "Nederlands", ar: "arabe", tr: "Turk",
+  };
+  const langLabel = LOCALE_LABELS[userLocale] ?? "francais";
+
+  const pageTypeLabels: Record<string, Record<string, string>> = {
+    fr: { capture: "page de capture", vente: "page de vente" },
+    en: { capture: "capture page", vente: "sales page" },
+    es: { capture: "pagina de captura", vente: "pagina de venta" },
+    it: { capture: "pagina di cattura", vente: "pagina di vendita" },
+    de: { capture: "Erfassungsseite", vente: "Verkaufsseite" },
+    pt: { capture: "pagina de captura", vente: "pagina de venda" },
+  };
+  const pageTypeLabel = pageTypeLabels[userLocale]?.[kind] || pageTypeLabels.fr[kind];
+
+  const firstPersonLabels: Record<string, string> = {
+    fr: "Je vais", en: "I will", es: "Voy a", it: "Sto per",
+    de: "Ich werde", pt: "Eu vou", nl: "Ik ga", ar: "سأقوم", tr: "Yapacagim",
+  };
+  const firstPerson = firstPersonLabels[userLocale] || "Je vais";
 
   try {
     const completion = await openai.chat.completions.create({
@@ -49,15 +73,14 @@ export async function POST(req: Request) {
         {
           role: "system",
           content: [
-            "Tu es Tipote, un assistant qui aide a modifier des pages web.",
-            `L'utilisateur travaille sur une ${pageTypeLabel}.`,
-            "Ta tache : reformuler la demande de l'utilisateur en une phrase claire et precise pour confirmer que tu as bien compris.",
-            "Reponds UNIQUEMENT avec un JSON : { \"reformulation\": \"...\" }",
-            "La reformulation doit etre courte (1-2 phrases max), en francais, a la premiere personne du singulier (\"Je vais...\").",
-            "Exemples :",
-            "- Input: \"change le titre\" -> { \"reformulation\": \"Je vais modifier le titre principal de ta page.\" }",
-            "- Input: \"plus urgent\" -> { \"reformulation\": \"Je vais rendre le ton general plus urgent avec des mots d'action et de rarete.\" }",
-            "- Input: \"ajoute des temoignages\" -> { \"reformulation\": \"Je vais ajouter des temoignages clients pour renforcer la preuve sociale.\" }",
+            "You are Tipote, an assistant that helps modify web pages.",
+            `The user is working on a ${pageTypeLabel}.`,
+            "Your task: rephrase the user's request in a clear and precise sentence to confirm understanding.",
+            "Respond ONLY with JSON: { \"reformulation\": \"...\" }",
+            `The reformulation MUST be in ${langLabel}, short (1-2 sentences max), first person singular ("${firstPerson}...").`,
+            "Examples:",
+            `- Input: "change the title" -> { "reformulation": "${firstPerson} modify the main title of your page." }`,
+            `- Input: "more urgent" -> { "reformulation": "${firstPerson} make the overall tone more urgent with action words." }`,
           ].join("\n"),
         },
         { role: "user", content: instruction },
