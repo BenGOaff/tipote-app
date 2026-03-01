@@ -189,6 +189,31 @@ function sseEncode(event: string, data: any): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+/** SSE comment keepalive — keeps the connection alive without triggering client events */
+function sseKeepAlive(): string {
+  return `: keepalive\n\n`;
+}
+
+/**
+ * Run an async task while sending SSE keepalive comments every `intervalMs`
+ * to prevent proxies (Cloudflare, Vercel, QUIC/H3) from dropping idle connections.
+ */
+async function withKeepAlive<T>(
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder,
+  task: () => Promise<T>,
+  intervalMs = 15_000,
+): Promise<T> {
+  const timer = setInterval(() => {
+    try { controller.enqueue(encoder.encode(sseKeepAlive())); } catch { /* stream closed */ }
+  }, intervalMs);
+  try {
+    return await task();
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 // ---------- Main handler ----------
 
 export async function POST(req: NextRequest) {
@@ -319,13 +344,17 @@ export async function POST(req: NextRequest) {
           paymentButtonText: input.paymentButtonText || "",
         });
 
-        const raw = await callClaude({
-          apiKey: claudeApiKey,
-          system: systemPrompt,
-          user: userPrompt,
-          maxTokens: 8000,
-          temperature: 0.7,
-        });
+        // Wrap the long-running Claude call with SSE keepalive heartbeats
+        // to prevent Cloudflare/Vercel/QUIC from dropping the idle connection.
+        const raw = await withKeepAlive(controller, encoder, () =>
+          callClaude({
+            apiKey: claudeApiKey,
+            system: systemPrompt,
+            user: userPrompt,
+            maxTokens: 8000,
+            temperature: 0.7,
+          }),
+        );
 
         send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...", progress: 60, done: true });
 
