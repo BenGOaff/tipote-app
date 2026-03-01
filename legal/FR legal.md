@@ -102,7 +102,7 @@ Pour toute question concernant le site [tipote.com](http://tipote.com/) :
 
 **Politique de confidentialité**
 
-*Dernière mise à jour : 22 décembre 2025*
+*Dernière mise à jour : 1 mars 2026*
 
 La présente politique de confidentialité décrit comment la société ETHILIFE collecte, utilise, stocke et protège vos données personnelles dans le cadre de l'utilisation du site [tipote.com](http://tipote.com/) et de l'application de création de stratégies et contenus IA.
 
@@ -238,9 +238,41 @@ Vos données peuvent être transmises aux catégories de destinataires suivants 
 
 •         **ShareThis :** boutons de partage sur les réseaux sociaux
 
+•         **Pinterest (Pinterest Europe Ltd) :** publication d'épingles et accès aux tableaux, uniquement si vous connectez votre compte Pinterest
+
 •         **Autorités compétentes :** uniquement en cas d'obligation légale
 
 **Nous ne vendons jamais vos données personnelles à des tiers.**
+
+**6bis. INTÉGRATION PINTEREST**
+
+Si vous connectez votre compte Pinterest à Tipote, les données suivantes sont collectées et traitées :
+
+**Données collectées via Pinterest :**
+
+•         Identifiant et nom d'utilisateur de votre compte Pinterest
+
+•         Liste de vos tableaux (boards) Pinterest
+
+•         Données relatives aux épingles que vous créez via Tipote (titre, description, image, lien de destination)
+
+**Finalités du traitement :**
+
+•         Permettre la création et la programmation d'épingles sur votre compte Pinterest, à votre demande explicite
+
+•         Afficher la liste de vos tableaux pour que vous puissiez choisir où publier
+
+•         Créer des tableaux Pinterest en votre nom, uniquement à votre demande
+
+**Base légale :** Exécution du contrat (Article 6.1.b RGPD) — vous choisissez librement de connecter votre compte Pinterest pour utiliser cette fonctionnalité.
+
+**Stockage des tokens :** Vos tokens d'accès Pinterest sont chiffrés en AES-256-GCM côté serveur. Le secret client (client_secret) n'est jamais exposé côté navigateur. Les tokens sont automatiquement rafraîchis avant expiration.
+
+**Aucune publication automatique :** Tipote ne publie jamais d'épingle sans votre validation explicite. Chaque épingle est prévisualisée et confirmée par vous avant publication.
+
+**Révocation :** Vous pouvez déconnecter votre compte Pinterest à tout moment depuis la page Paramètres de Tipote. La déconnexion révoque le token d'accès auprès de Pinterest et supprime toutes les données d'accès stockées.
+
+**Engagement :** Tipote ne revend pas, ne revendique pas la propriété et ne partage pas avec des tiers les données obtenues via l'API Pinterest. Tipote respecte les Pinterest Developer Terms et les Pinterest Brand Guidelines.
 
 **7\. TRANSFERTS DE DONNÉES HORS UNION EUROPÉENNE**
 
@@ -255,6 +287,8 @@ Certains de nos prestataires sont situés en dehors de l'Union européenne, nota
 •         **PayPal :** Clauses Contractuelles Types
 
 •         **ShareThis :** Clauses Contractuelles Types
+
+•         **Pinterest :** Pinterest Europe Ltd (Irlande) — les données d'API transitent par les serveurs Pinterest situés dans l'UE et aux États-Unis, encadrés par le Data Privacy Framework et les Clauses Contractuelles Types
 
 Vous pouvez obtenir une copie des garanties mises en place en nous contactant à hello@tipote.com.
 
@@ -307,6 +341,10 @@ Nous mettons en œuvre des mesures techniques et organisationnelles appropriées
 •         Mots de passe stockés sous forme hachée
 
 •         Prestataires de paiement conformes PCI-DSS
+
+•         Chiffrement AES-256-GCM des tokens d'accès aux réseaux sociaux (Pinterest, etc.)
+
+•         Secrets d'API (client_secret) stockés uniquement côté serveur, jamais exposés au navigateur
 
 •         Surveillance régulière et mises à jour de sécurité
 

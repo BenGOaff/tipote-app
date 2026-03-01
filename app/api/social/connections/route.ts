@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
+import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,43 @@ export async function DELETE(req: NextRequest) {
 
   if (!connectionId) {
     return NextResponse.json({ error: "id manquant" }, { status: 400 });
+  }
+
+  // For Pinterest: revoke the token before deleting from DB (best-effort)
+  try {
+    const { data: conn } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform, access_token_encrypted")
+      .eq("id", connectionId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (conn?.platform === "pinterest" && conn.access_token_encrypted) {
+      try {
+        const accessToken = decrypt(conn.access_token_encrypted);
+        const clientId = process.env.PINTEREST_APP_ID;
+        const clientSecret = process.env.PINTEREST_APP_SECRET;
+        if (clientId && clientSecret) {
+          const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+          await fetch("https://api.pinterest.com/v5/oauth/token/revoke", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Authorization: `Basic ${credentials}`,
+            },
+            body: new URLSearchParams({
+              token: accessToken,
+              token_type_hint: "access_token",
+            }).toString(),
+          });
+        }
+      } catch (revokeErr) {
+        // Non-blocking: log but continue with DB deletion
+        console.warn("[connections] Pinterest token revocation failed (non-blocking):", revokeErr);
+      }
+    }
+  } catch {
+    // Non-blocking: continue with DB deletion
   }
 
   const { error } = await supabase

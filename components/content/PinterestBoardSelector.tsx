@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 type Board = {
   id: string;
@@ -38,6 +39,9 @@ export function PinterestBoardSelector({
   const [boards, setBoards] = React.useState<Board[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [showNewBoard, setShowNewBoard] = React.useState(false);
+  const [newBoardName, setNewBoardName] = React.useState("");
+  const [creating, setCreating] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -69,6 +73,31 @@ export function PinterestBoardSelector({
     };
   }, []);
 
+  async function handleCreateBoard() {
+    if (!newBoardName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/social/pinterest-boards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newBoardName.trim() }),
+      });
+      const json = await res.json();
+      if (json.ok && json.board) {
+        setBoards((prev) => [json.board, ...prev]);
+        onBoardChange(json.board.id);
+        setNewBoardName("");
+        setShowNewBoard(false);
+      } else {
+        setError(json.error ?? "Impossible de créer le tableau.");
+      }
+    } catch {
+      setError("Erreur réseau lors de la création du tableau.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       {/* Tableau Pinterest */}
@@ -88,32 +117,102 @@ export function PinterestBoardSelector({
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
-        ) : boards.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucun tableau trouvé. Crée un tableau sur Pinterest d&apos;abord.
-          </p>
+        ) : boards.length === 0 && !showNewBoard ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Aucun tableau trouvé.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowNewBoard(true)}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Créer un tableau Pinterest
+            </Button>
+          </div>
         ) : (
-          <Select
-            value={boardId}
-            onValueChange={onBoardChange}
-            disabled={disabled}
-          >
-            <SelectTrigger id="pinterest-board">
-              <SelectValue placeholder="Choisir un tableau…" />
-            </SelectTrigger>
-            <SelectContent>
-              {boards.map((board) => (
-                <SelectItem key={board.id} value={board.id}>
-                  {board.name}
-                  {board.privacy !== "PUBLIC" && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({board.privacy === "SECRET" ? "secret" : "protégé"})
-                    </span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <Select
+              value={boardId}
+              onValueChange={onBoardChange}
+              disabled={disabled}
+            >
+              <SelectTrigger id="pinterest-board">
+                <SelectValue placeholder="Choisir un tableau…" />
+              </SelectTrigger>
+              <SelectContent>
+                {boards.map((board) => (
+                  <SelectItem key={board.id} value={board.id}>
+                    {board.name}
+                    {board.privacy !== "PUBLIC" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({board.privacy === "SECRET" ? "secret" : "protégé"})
+                      </span>
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!showNewBoard && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground"
+                onClick={() => setShowNewBoard(true)}
+              >
+                <Plus className="w-3 h-3" />
+                Créer un nouveau tableau
+              </Button>
+            )}
+          </>
+        )}
+
+        {/* Create new board inline form */}
+        {showNewBoard && (
+          <div className="flex items-center gap-2 mt-1">
+            <Input
+              value={newBoardName}
+              onChange={(e) => setNewBoardName(e.target.value)}
+              placeholder="Nom du tableau…"
+              className="h-8 text-sm"
+              disabled={creating}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleCreateBoard();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={handleCreateBoard}
+              disabled={creating || !newBoardName.trim()}
+            >
+              {creating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                "Créer"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={() => {
+                setShowNewBoard(false);
+                setNewBoardName("");
+              }}
+            >
+              Annuler
+            </Button>
+          </div>
         )}
 
         <p className="text-xs text-muted-foreground">
