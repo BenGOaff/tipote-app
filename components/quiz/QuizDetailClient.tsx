@@ -100,6 +100,7 @@ type QuizData = {
   consent_text: string | null;
   capture_heading: string | null;
   capture_subtitle: string | null;
+  capture_first_name?: boolean | null;
   virality_enabled: boolean;
   bonus_description: string | null;
   share_message: string | null;
@@ -152,6 +153,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  const [captureFirstName, setCaptureFirstName] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
@@ -192,6 +194,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setConsentText(q.consent_text ?? "");
         setCaptureHeading(q.capture_heading ?? "");
         setCaptureSubtitle(q.capture_subtitle ?? "");
+        setCaptureFirstName(q.capture_first_name ?? false);
         setViralityEnabled(q.virality_enabled);
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
@@ -224,6 +227,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           consent_text: consentText,
           capture_heading: captureHeading || null,
           capture_subtitle: captureSubtitle || null,
+          capture_first_name: captureFirstName,
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
@@ -262,6 +266,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               consent_text: consentText,
               capture_heading: captureHeading || null,
               capture_subtitle: captureSubtitle || null,
+              capture_first_name: captureFirstName,
               virality_enabled: viralityEnabled,
               bonus_description: bonusDescription,
               share_message: shareMessage,
@@ -925,6 +930,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         />
                         <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium">Demander le prénom</p>
+                          <p className="text-xs text-muted-foreground">Affiche un champ prénom avant l&apos;email</p>
+                        </div>
+                        <Switch
+                          checked={captureFirstName}
+                          onCheckedChange={setCaptureFirstName}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Image de partage (og:image)</Label>
@@ -1149,6 +1164,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             consent_text: consentText || null,
             capture_heading: captureHeading || null,
             capture_subtitle: captureSubtitle || null,
+            capture_first_name: captureFirstName,
             virality_enabled: viralityEnabled,
             bonus_description: bonusDescription || null,
             share_message: shareMessage || null,

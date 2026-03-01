@@ -53,8 +53,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     "custom_images", "video_embed_url", "payment_url", "payment_button_text",
     "meta_title", "meta_description", "og_image_url",
     "legal_mentions_url", "legal_cgv_url", "legal_privacy_url",
-    "capture_enabled", "capture_heading", "capture_subtitle", "sio_capture_tag",
-    "iteration_count",
+    "capture_enabled", "capture_heading", "capture_subtitle", "capture_first_name", "sio_capture_tag",
+    "iteration_count", "locale", "html_snapshot",
   ];
 
   const updates: Record<string, any> = {};

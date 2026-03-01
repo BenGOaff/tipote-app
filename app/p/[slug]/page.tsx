@@ -15,7 +15,7 @@ async function getPage(slug: string) {
   const supabase = createClient(supabaseUrl, supabaseKey);
   const { data } = await supabase
     .from("hosted_pages")
-    .select("id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status")
+    .select("id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();

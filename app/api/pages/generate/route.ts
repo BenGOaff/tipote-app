@@ -38,6 +38,8 @@ const InputSchema = z.object({
   theme: z.string().optional(),
   // Video embed
   videoEmbedUrl: z.string().optional(),
+  // Language (defaults to user's content_locale from profile)
+  locale: z.string().optional(),
 });
 
 // ---------- Template selection scoring ----------
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest) {
         const privacyUrl = (profile as any)?.privacy_url || "";
         const termsUrl = (profile as any)?.terms_url || "";
         const cgvUrl = (profile as any)?.cgv_url || "";
+        const contentLocale = input.locale || ((profile as any)?.content_locale ?? "fr").trim() || "fr";
 
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
 
@@ -214,6 +217,7 @@ export async function POST(req: NextRequest) {
           niche,
           toneOfVoice,
           knowledgeSnippets,
+          language: contentLocale,
         });
 
         const userPrompt = buildPageUserPrompt({
@@ -327,6 +331,7 @@ export async function POST(req: NextRequest) {
           legal_mentions_url: termsUrl,
           legal_cgv_url: cgvUrl,
           legal_privacy_url: privacyUrl,
+          locale: contentLocale,
         };
 
         const { data: page, error: insertError } = await supabaseAdmin
@@ -384,6 +389,7 @@ function buildPageSystemPrompt(params: {
   niche: string;
   toneOfVoice: string;
   knowledgeSnippets: string[];
+  language?: string;
 }): string {
   const lines: string[] = [];
 
@@ -431,6 +437,19 @@ function buildPageSystemPrompt(params: {
       lines.push(`\n--- Ressource ${i + 1} ---`);
       lines.push(s.slice(0, 1500));
     });
+    lines.push("");
+  }
+
+  // Language
+  const LOCALE_LABELS: Record<string, string> = {
+    fr: "français", en: "English", es: "español", it: "italiano",
+    pt: "português", de: "Deutsch", nl: "Nederlands", ar: "العربية",
+    tr: "Türkçe",
+  };
+  const lang = params.language || "fr";
+  const langLabel = LOCALE_LABELS[lang] ?? lang;
+  if (lang !== "fr") {
+    lines.push(`LANGUE OBLIGATOIRE : ${langLabel}. Tout le contenu du JSON DOIT être rédigé en ${langLabel}.`);
     lines.push("");
   }
 

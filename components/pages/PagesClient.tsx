@@ -48,6 +48,7 @@ export default function PagesClient() {
   const [createPaymentUrl, setCreatePaymentUrl] = useState("");
   const [createTheme, setCreateTheme] = useState("");
   const [createVideoUrl, setCreateVideoUrl] = useState("");
+  const [createLocale, setCreateLocale] = useState("fr");
 
   // Fetch pages
   const fetchPages = useCallback(async () => {
@@ -83,6 +84,7 @@ export default function PagesClient() {
           paymentUrl: createPaymentUrl || undefined,
           theme: createTheme || undefined,
           videoEmbedUrl: createVideoUrl || undefined,
+          locale: createLocale || undefined,
         }),
       });
 
@@ -307,6 +309,26 @@ export default function PagesClient() {
                       rows={3}
                       className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
                     />
+                  </div>
+                  {/* Language selector */}
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Langue du contenu</label>
+                    <select
+                      value={createLocale}
+                      onChange={(e) => setCreateLocale(e.target.value)}
+                      className="w-full px-3 py-2.5 border rounded-lg text-sm bg-background"
+                    >
+                      <option value="fr">Français</option>
+                      <option value="en">English</option>
+                      <option value="es">Español</option>
+                      <option value="de">Deutsch</option>
+                      <option value="pt">Português</option>
+                      <option value="it">Italiano</option>
+                      <option value="nl">Nederlands</option>
+                      <option value="ar">العربية</option>
+                      <option value="tr">Türkçe</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">Par défaut : langue du contenu de tes paramètres.</p>
                   </div>
                 </div>
 

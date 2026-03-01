@@ -37,8 +37,12 @@ CREATE TABLE IF NOT EXISTS public.hosted_pages (
   legal_cgv_url TEXT DEFAULT '',
   legal_privacy_url TEXT DEFAULT '',
 
+  -- Language
+  locale TEXT NOT NULL DEFAULT 'fr',
+
   -- Lead capture config
   capture_enabled BOOLEAN NOT NULL DEFAULT true,
+  capture_first_name BOOLEAN NOT NULL DEFAULT false,  -- Ask for first name in capture form
   capture_heading TEXT DEFAULT '',
   capture_subtitle TEXT DEFAULT '',
   sio_capture_tag TEXT DEFAULT '',                      -- Systeme.io tag for captured leads

@@ -1,17 +1,20 @@
 // components/pages/PageBuilder.tsx
 // Main page editor: preview iframe + chat bar + settings panel.
-// Loaded after page generation is complete.
+// Features: multi-device preview, inline text editing, language selector,
+// edit after publication, media upload.
 
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  Eye, EyeOff, Download, ExternalLink, Share2, Copy, Check,
-  Settings, Upload, Video, Link2, Smartphone, Monitor,
-  Globe, Loader2, ArrowLeft, ImagePlus, Trash2
+  Download, ExternalLink, Copy, Check,
+  Settings, Upload, Video, Link2, Smartphone, Tablet, Monitor,
+  Globe, Loader2, ArrowLeft, ImagePlus,
+  MousePointerClick, Languages
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
-import { renderTemplateHtml } from "./renderClient";
+
+// ---------- Types ----------
 
 type PageData = {
   id: string;
@@ -41,6 +44,7 @@ type PageData = {
   views_count: number;
   leads_count: number;
   iteration_count: number;
+  locale?: string;
 };
 
 type Props = {
@@ -48,15 +52,109 @@ type Props = {
   onBack: () => void;
 };
 
+// ---------- Device config (like quiz) ----------
+
+type Device = "mobile" | "tablet" | "desktop";
+
+const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof Monitor }> = {
+  mobile: { width: 375, label: "Mobile", icon: Smartphone },
+  tablet: { width: 768, label: "Tablette", icon: Tablet },
+  desktop: { width: 1200, label: "Desktop", icon: Monitor },
+};
+
+// ---------- Inline editing script ----------
+
+const INLINE_EDIT_SCRIPT = `
+<script>
+(function(){
+  var editing = false;
+  var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
+
+  // Listen for toggle from parent
+  window.addEventListener('message', function(e) {
+    if (e.data === 'tipote:enable-edit') {
+      editing = true;
+      document.body.classList.add('tipote-edit-mode');
+      enableEditMode();
+    }
+    if (e.data === 'tipote:disable-edit') {
+      editing = false;
+      document.body.classList.remove('tipote-edit-mode');
+      disableEditMode();
+    }
+  });
+
+  function enableEditMode() {
+    var els = document.querySelectorAll(editableSelectors);
+    els.forEach(function(el) {
+      if (el.closest('script') || el.closest('style') || el.closest('noscript')) return;
+      if (el.children.length > 3) return; // skip complex containers
+      el.setAttribute('contenteditable', 'true');
+      el.style.outline = 'none';
+      el.style.cursor = 'text';
+      el.addEventListener('focus', onFocus);
+      el.addEventListener('blur', onBlur);
+      el.addEventListener('input', onInput);
+    });
+  }
+
+  function disableEditMode() {
+    var els = document.querySelectorAll('[contenteditable="true"]');
+    els.forEach(function(el) {
+      el.removeAttribute('contenteditable');
+      el.style.cursor = '';
+      el.removeEventListener('focus', onFocus);
+      el.removeEventListener('blur', onBlur);
+      el.removeEventListener('input', onInput);
+    });
+  }
+
+  function onFocus(e) {
+    e.target.style.outline = '2px solid #2563eb';
+    e.target.style.outlineOffset = '2px';
+    e.target.style.borderRadius = '4px';
+  }
+
+  function onBlur(e) {
+    e.target.style.outline = 'none';
+    e.target.style.outlineOffset = '';
+    // Send updated text to parent
+    var tag = e.target.tagName.toLowerCase();
+    var text = e.target.innerText || e.target.textContent || '';
+    parent.postMessage({ type: 'tipote:text-edit', tag: tag, text: text.trim(), html: e.target.innerHTML }, '*');
+  }
+
+  function onInput(e) {
+    // Debounced save hint
+  }
+
+  // Edit mode styles
+  var style = document.createElement('style');
+  style.textContent = '.tipote-edit-mode [contenteditable]:hover { outline: 1px dashed #93c5fd !important; outline-offset: 2px; border-radius: 4px; }';
+  document.head.appendChild(style);
+})();
+</script>`;
+
+// ---------- Component ----------
+
 export default function PageBuilder({ initialPage, onBack }: Props) {
   const [page, setPage] = useState<PageData>(initialPage);
   const [htmlPreview, setHtmlPreview] = useState(initialPage.html_snapshot);
-  const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
+  const [device, setDevice] = useState<Device>("desktop");
   const [showSettings, setShowSettings] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Inject inline edit script into HTML
+  const getPreviewHtml = useCallback((html: string) => {
+    const idx = html.lastIndexOf("</body>");
+    if (idx === -1) return html + INLINE_EDIT_SCRIPT;
+    return html.slice(0, idx) + INLINE_EDIT_SCRIPT + html.slice(idx);
+  }, []);
 
   // Re-render HTML when content changes
   const refreshPreview = useCallback(async (contentData: Record<string, any>, brandTokens: Record<string, any>) => {
@@ -64,8 +162,46 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setHtmlPreview(html);
   }, [page.template_kind, page.template_id]);
 
+  // Toggle inline edit mode
+  const toggleEditMode = useCallback(() => {
+    const next = !editMode;
+    setEditMode(next);
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(next ? "tipote:enable-edit" : "tipote:disable-edit", "*");
+    }
+  }, [editMode]);
+
+  // Listen for inline edits from iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "tipote:text-edit") {
+        // For now, show the text change via chat explanation
+        // The user sees it live in the iframe. We save the full HTML snapshot.
+        setSaving(true);
+        const iframe = iframeRef.current;
+        if (iframe?.contentDocument) {
+          const updatedHtml = iframe.contentDocument.documentElement.outerHTML;
+          setHtmlPreview("<!DOCTYPE html><html>" + updatedHtml.slice(updatedHtml.indexOf("<html>") + 6));
+
+          // Save HTML snapshot to backend (debounced)
+          clearTimeout((window as any).__tipoteSaveTimer);
+          (window as any).__tipoteSaveTimer = setTimeout(() => {
+            fetch(`/api/pages/${page.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ html_snapshot: updatedHtml }),
+            }).then(() => setSaving(false)).catch(() => setSaving(false));
+          }, 1500);
+        }
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [page.id]);
+
   // Chat update handler
-  const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, explanation: string) => {
+  const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
     setPage((prev) => ({
       ...prev,
       content_data: nextContentData,
@@ -144,7 +280,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           setPage((prev) => ({ ...prev, content_data: nextContentData }));
           await refreshPreview(nextContentData, page.brand_tokens);
 
-          // Save to backend
           fetch(`/api/pages/${page.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -183,6 +318,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const isPublished = page.status === "published";
+  const deviceCfg = DEVICE_CONFIG[device];
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -196,28 +332,41 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             <h1 className="text-sm font-semibold truncate max-w-[200px]">{page.title}</h1>
             <p className="text-xs text-muted-foreground">
               {page.views_count} vues · {page.leads_count} leads · {page.iteration_count} modif.
+              {saving && <span className="ml-2 text-primary">Sauvegarde...</span>}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center border rounded-lg overflow-hidden">
-            <button
-              onClick={() => setViewMode("desktop")}
-              className={`p-2 ${viewMode === "desktop" ? "bg-muted" : ""}`}
-              title="Desktop"
-            >
-              <Monitor className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("mobile")}
-              className={`p-2 ${viewMode === "mobile" ? "bg-muted" : ""}`}
-              title="Mobile"
-            >
-              <Smartphone className="w-4 h-4" />
-            </button>
+          {/* Device toggle (like quiz) */}
+          <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
+            {(Object.keys(DEVICE_CONFIG) as Device[]).map((d) => {
+              const Icon = DEVICE_CONFIG[d].icon;
+              return (
+                <button
+                  key={d}
+                  onClick={() => setDevice(d)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors ${
+                    device === d ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{DEVICE_CONFIG[d].label}</span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Inline edit toggle */}
+          <button
+            onClick={toggleEditMode}
+            className={`p-2 rounded-lg border transition-colors ${
+              editMode ? "bg-blue-50 border-blue-300 text-blue-600 dark:bg-blue-950 dark:border-blue-700" : "hover:bg-muted text-muted-foreground"
+            }`}
+            title={editMode ? "Désactiver l'édition directe" : "Modifier le texte directement"}
+          >
+            <MousePointerClick className="w-4 h-4" />
+          </button>
 
           {/* Media buttons */}
           <button
@@ -241,7 +390,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             <Download className="w-4 h-4" />
           </button>
 
-          {/* Publish button */}
+          {/* Publish / Unpublish button */}
           <button
             onClick={togglePublish}
             disabled={publishing}
@@ -262,7 +411,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         </div>
       </div>
 
-      {/* Published URL bar */}
+      {/* Published URL bar — always visible when published, editing still works */}
       {isPublished && (
         <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border-b text-sm">
           <Globe className="w-4 h-4 text-green-600" />
@@ -273,6 +422,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <button onClick={copyUrl} className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-green-600" />}
           </button>
+          <span className="text-xs text-green-600/60 ml-auto">Les modifications sont appliquées en temps réel</span>
+        </div>
+      )}
+
+      {/* Edit mode banner */}
+      {editMode && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/20 border-b text-xs text-blue-700 dark:text-blue-400">
+          <MousePointerClick className="w-3.5 h-3.5" />
+          Clique sur n'importe quel texte pour le modifier directement
         </div>
       )}
 
@@ -281,14 +439,16 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         {/* Preview */}
         <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4">
           <div
-            className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${
-              viewMode === "mobile" ? "w-[390px]" : "w-full max-w-[1200px]"
-            }`}
-            style={{ height: "calc(100vh - 200px)" }}
+            className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
+            style={{
+              width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
+              maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
+              height: "calc(100vh - 200px)",
+            }}
           >
             <iframe
               ref={iframeRef}
-              srcDoc={htmlPreview}
+              srcDoc={getPreviewHtml(htmlPreview)}
               title="Preview"
               className="w-full h-full border-0"
               sandbox="allow-scripts allow-same-origin"
@@ -314,6 +474,31 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     className="flex-1 px-2 py-1.5 text-sm border rounded-md"
                   />
                 </div>
+              </div>
+
+              {/* Language */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1 flex items-center gap-1">
+                  <Languages className="w-3.5 h-3.5" /> Langue du contenu
+                </label>
+                <select
+                  value={page.locale || "fr"}
+                  onChange={(e) => handleSettingUpdate("locale", e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm border rounded-md bg-background"
+                >
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                  <option value="de">Deutsch</option>
+                  <option value="pt">Português</option>
+                  <option value="it">Italiano</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="ar">العربية</option>
+                  <option value="tr">Türkçe</option>
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Modifie la langue pour regénérer le contenu via le chat.
+                </p>
               </div>
 
               {/* SEO */}
@@ -412,6 +597,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       placeholder="Titre du formulaire"
                       className="w-full px-2 py-1.5 text-sm border rounded-md"
                     />
+                    <label className="flex items-center gap-2 text-sm mt-1">
+                      <input
+                        type="checkbox"
+                        checked={(page as any).capture_first_name ?? false}
+                        onChange={(e) => handleSettingUpdate("capture_first_name", e.target.checked)}
+                      />
+                      Demander le prénom
+                    </label>
                     <input
                       type="text"
                       value={page.sio_capture_tag}
@@ -455,7 +648,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         )}
       </div>
 
-      {/* Chat bar */}
+      {/* Chat bar — always active, even when published */}
       <PageChatBar
         pageId={page.id}
         templateId={page.template_id}

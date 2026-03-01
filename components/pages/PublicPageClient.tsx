@@ -16,6 +16,7 @@ type PublicPageData = {
   capture_enabled: boolean;
   capture_heading: string;
   capture_subtitle: string;
+  capture_first_name?: boolean;
   payment_url: string;
   payment_button_text: string;
   video_embed_url: string;
@@ -113,6 +114,7 @@ export default function PublicPageClient({ page }: { page: PublicPageData }) {
               </p>
             )}
 
+            {(page.capture_first_name !== false) && (
             <input
               type="text"
               placeholder="Ton prénom"
@@ -129,6 +131,7 @@ export default function PublicPageClient({ page }: { page: PublicPageData }) {
                 boxSizing: "border-box",
               }}
             />
+            )}
             <input
               type="email"
               placeholder="Ton email"
