@@ -65,6 +65,11 @@ export default function PagesClient() {
   const [offerBenefits, setOfferBenefits] = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
 
+  // Common fields for both existing + scratch flows
+  const [offerBonuses, setOfferBonuses] = useState("");
+  const [urgencyType, setUrgencyType] = useState<"none" | "places" | "date" | "custom">("none");
+  const [urgencyDetail, setUrgencyDetail] = useState("");
+
   // Fetch pages
   const fetchPages = useCallback(async () => {
     setLoading(true);
@@ -122,6 +127,9 @@ export default function PagesClient() {
     setOfferUrgency("");
     setOfferBenefits("");
     setPaymentUrl("");
+    setOfferBonuses("");
+    setUrgencyType("none");
+    setUrgencyDetail("");
     setSelectedOfferId(null);
   }, []);
 
@@ -159,6 +167,17 @@ export default function PagesClient() {
       payload.offerGuarantees = offerGuarantees;
       payload.offerUrgency = offerUrgency;
       payload.offerBenefits = offerBenefits;
+    }
+
+    // Common fields (both existing + scratch)
+    if (offerBonuses.trim()) payload.offerBonuses = offerBonuses;
+    if (urgencyType !== "none") {
+      const urgencyText = urgencyType === "places"
+        ? `Places limitées${urgencyDetail ? ` : ${urgencyDetail}` : ""}`
+        : urgencyType === "date"
+        ? `Date limite${urgencyDetail ? ` : ${urgencyDetail}` : ""}`
+        : urgencyDetail || "";
+      if (urgencyText) payload.offerUrgency = urgencyText;
     }
 
     if (createType === "sales" && paymentUrl) {
@@ -524,6 +543,63 @@ export default function PagesClient() {
                         )}
                       </div>
                     )}
+
+                    {/* Common options: urgency + bonuses */}
+                    <div className="space-y-4 mb-6 p-4 border rounded-xl bg-muted/30">
+                      <h3 className="text-sm font-semibold">Options avancées</h3>
+
+                      {/* Urgency */}
+                      <div>
+                        <label className="text-sm font-medium block mb-1.5">Urgence</label>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          {([
+                            { v: "none" as const, l: "Aucune" },
+                            { v: "places" as const, l: "Places limitées" },
+                            { v: "date" as const, l: "Date limite" },
+                            { v: "custom" as const, l: "Autre" },
+                          ]).map(({ v, l }) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setUrgencyType(v)}
+                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                urgencyType === v ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {l}
+                            </button>
+                          ))}
+                        </div>
+                        {urgencyType !== "none" && (
+                          <input
+                            type="text"
+                            value={urgencyDetail}
+                            onChange={(e) => setUrgencyDetail(e.target.value)}
+                            placeholder={
+                              urgencyType === "places" ? "Ex: 50 places" :
+                              urgencyType === "date" ? "Ex: 15 mars 2026" :
+                              "Ex: Offre flash 48h"
+                            }
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                          />
+                        )}
+                      </div>
+
+                      {/* Bonuses */}
+                      <div>
+                        <label className="text-sm font-medium block mb-1">Bonus inclus (optionnel)</label>
+                        <textarea
+                          value={offerBonuses}
+                          onChange={(e) => setOfferBonuses(e.target.value)}
+                          placeholder={"Si tu as des bonus, liste-les ici :\n1. Accès communauté privée\n2. Templates offerts\n\nSi pas de bonus, laisse vide."}
+                          rows={3}
+                          className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Pas de bonus ? Laisse vide et la section bonus ne sera pas générée.
+                        </p>
+                      </div>
+                    </div>
 
                     {/* Generate button */}
                     <button

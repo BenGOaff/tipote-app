@@ -473,6 +473,20 @@ Object.keys(af).forEach(function(k){
     parent.appendChild(clone);
   });
 });
+/* Inject payment URL into CTA buttons (href="#" → actual URL) */
+var payUrl=d.cta_url||d.cta_primary_url||d.payment_url||'';
+if(payUrl){
+  document.querySelectorAll('a[href="#"],a[href="#capture"],.cta-button,.cta-primary,.btn-primary,button[class*="cta"]').forEach(function(el){
+    if(el.tagName==='A')el.setAttribute('href',payUrl);
+    else{var wrap=el.closest('a');if(wrap)wrap.setAttribute('href',payUrl);}
+  });
+}
+/* Inject legal URLs into footer links (href="#" on footer/legal elements) */
+var legalMap={'mentions':d.legal_mentions_url,'cgv':d.legal_cgv_url,'privacy':d.legal_privacy_url,'confidentialit':d.legal_privacy_url};
+document.querySelectorAll('footer a[href="#"], .footer a[href="#"], .footer-links a[href="#"]').forEach(function(el){
+  var t=(el.textContent||'').toLowerCase();
+  for(var k in legalMap){if(t.indexOf(k)>=0&&legalMap[k]){el.setAttribute('href',legalMap[k]);el.setAttribute('target','_blank');break;}}
+});
 })()</script>`;
 
   const idx = html.lastIndexOf("</body>");
@@ -629,6 +643,20 @@ function injectContrastSafety(html: string): string {
 /* Ensure buttons/CTAs always have contrast */
 .btn-primary, .cta-primary, [class*="btn-primary"], [class*="cta-button"], button[class*="cta"] {
   text-shadow: none;
+}
+/* Spacing safety - prevent blocks glued to CTA buttons */
+.cta-button, .cta-primary, .btn-primary, [class*="cta-button"], [class*="btn-primary"],
+a[class*="cta"], button[class*="cta"] {
+  margin-top: 24px !important;
+  margin-bottom: 24px !important;
+}
+/* Ensure sections have breathing room */
+section + section, [class*="section"] + [class*="section"] {
+  margin-top: 0; /* Let padding handle it */
+}
+section, [class*="section"] {
+  padding-top: 60px;
+  padding-bottom: 60px;
 }
 </style>`;
 

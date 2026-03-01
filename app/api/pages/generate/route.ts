@@ -111,6 +111,8 @@ const InputSchema = z.object({
   offerGuarantees: z.string().optional(),
   offerUrgency: z.string().optional(),
   offerBenefits: z.string().optional(),
+  // Bonuses provided by user — if empty/absent, AI must NOT invent bonuses
+  offerBonuses: z.string().optional(),
   // Payment / CTA
   paymentUrl: z.string().optional(),
   paymentButtonText: z.string().optional(),
@@ -355,6 +357,7 @@ export async function POST(req: NextRequest) {
           offerGuarantees: input.offerGuarantees || "",
           offerUrgency: input.offerUrgency || "",
           offerBenefits: input.offerBenefits || "",
+          offerBonuses: input.offerBonuses || "",
           theme: input.theme || "",
           firstName,
           niche,
@@ -419,7 +422,28 @@ export async function POST(req: NextRequest) {
           if (!contentData.cta_url) contentData.cta_url = payUrl;
           if (!contentData.cta_primary_url) contentData.cta_primary_url = payUrl;
           if (!contentData.payment_url) contentData.payment_url = payUrl;
-          // Also set href="#" replacements to actual payment URL in the rendered HTML later
+        }
+
+        // Strip bonus sections if user didn't provide bonuses (prevent AI inventions)
+        const hasBonuses = !!(input.offerBonuses || "").trim();
+        if (!hasBonuses) {
+          const bonusKeys = Object.keys(contentData).filter(k =>
+            /^bonus/i.test(k) || k === "bonuses"
+          );
+          for (const k of bonusKeys) {
+            contentData[k] = Array.isArray(contentData[k]) ? [] : "";
+          }
+        }
+
+        // Strip countdown/urgency sections if user didn't provide urgency
+        const hasUrgency = !!(input.offerUrgency || "").trim();
+        if (!hasUrgency) {
+          const urgencyKeys = Object.keys(contentData).filter(k =>
+            /countdown|counter|timer/i.test(k)
+          );
+          for (const k of urgencyKeys) {
+            contentData[k] = Array.isArray(contentData[k]) ? [] : "";
+          }
         }
 
         await wait(400);
@@ -466,12 +490,21 @@ export async function POST(req: NextRequest) {
           brandTokens: Object.keys(brandTokens).length > 0 ? brandTokens : null,
         });
 
-        // Post-render: inject payment URL into CTA links (replace href="#" with actual payment URL)
+        // Post-render: inject payment URL into CTA links only (not legal/footer links)
         if (payUrl) {
-          renderedHtml = renderedHtml
-            .replace(/href\s*=\s*"#"/g, `href="${payUrl.replace(/"/g, "&quot;")}"`)
-            .replace(/href\s*=\s*'#'/g, `href='${payUrl.replace(/'/g, "&#39;")}'`)
-            .replace(/href\s*=\s*"#capture"/g, `href="${payUrl.replace(/"/g, "&quot;")}"`);
+          const safePayUrl = payUrl.replace(/"/g, "&quot;");
+          // Replace href="#" only on elements that are CTA-like (buttons, .cta-*, .btn-*)
+          renderedHtml = renderedHtml.replace(
+            /(<(?:a|button)\b[^>]*?)href\s*=\s*"#"([^>]*>)/gi,
+            (match, before, after) => {
+              const combined = (before + after).toLowerCase();
+              const isCta = /class="[^"]*(?:cta|btn|button|primary|command|order|rejoind)[^"]*"/.test(combined)
+                || combined.startsWith("<button");
+              return isCta ? `${before}href="${safePayUrl}"${after}` : match;
+            }
+          );
+          // Also replace href="#capture"
+          renderedHtml = renderedHtml.replace(/href\s*=\s*"#capture"/g, `href="${safePayUrl}"`);
         }
 
         // Post-render: inject brand logo image if available
@@ -669,6 +702,7 @@ function buildPageUserPrompt(params: {
   offerGuarantees: string;
   offerUrgency: string;
   offerBenefits: string;
+  offerBonuses: string;
   theme: string;
   firstName: string;
   niche: string;
@@ -690,6 +724,7 @@ function buildPageUserPrompt(params: {
   if (params.offerBenefits) lines.push(`Bénéfices concrets :\n${params.offerBenefits}`);
   if (params.offerGuarantees) lines.push(`Garanties : ${params.offerGuarantees}`);
   if (params.offerUrgency) lines.push(`Urgence / Rareté : ${params.offerUrgency}`);
+  if (params.offerBonuses) lines.push(`Bonus inclus dans l'offre :\n${params.offerBonuses}`);
   if (params.theme) lines.push(`Brief/Thème : ${params.theme}`);
   if (params.firstName) lines.push(`Auteur : ${params.firstName}`);
   if (params.niche) lines.push(`Niche : ${params.niche}`);
@@ -719,11 +754,28 @@ function buildPageUserPrompt(params: {
   lines.push("- INTERDIT les placeholders (\"[nom]\", \"[bénéfice]\", \"...\") — rédige le contenu FINAL, prêt à publier.");
   lines.push("- INTERDIT les phrases génériques (\"bienvenue\", \"nous sommes ravis\", \"cliquer ici\").");
   lines.push("- INTERDIT les balises HTML (<br>, <span>, <strong>, etc.) — texte brut uniquement.");
-  lines.push("- INTERDIT d'inventer des bonus ou garanties non fournis par l'utilisateur. Si pas de bonus mentionnés, mets des bénéfices supplémentaires de l'offre principale.");
   lines.push("- Pour les FAQ : TOUJOURS fournir question ET réponse complète. Jamais de question seule.");
   lines.push("- Si des informations de l'offre manquent (nom, cible, bénéfices), invente des contenus plausibles et premium adaptés à la niche.");
   lines.push("- Ne PAS inventer : bonus, prix, garanties, témoignages, noms de personnes. Seulement du copywriting.");
   lines.push("- Chaque titre, sous-titre et CTA doit être spécifique, percutant et orienté bénéfice.");
+  lines.push("- Chaque puce/bullet doit être une VRAIE PHRASE COMPLÈTE décrivant un bénéfice concret. JAMAIS écrire \"Puce promesse irrésistible : bénéfice + conséquence\" — c'est une INSTRUCTION, pas du contenu. Exemple correct : \"Génère tes premiers clients en 7 jours grâce au système d'acquisition automatisé\".");
+  lines.push("");
+
+  // Conditional: bonuses
+  if (params.offerBonuses.trim()) {
+    lines.push("BONUS : L'utilisateur a fourni des bonus ci-dessus. Utilise-les tels quels dans les sections bonus. Ne les modifie pas et n'en invente pas d'autres.");
+  } else {
+    lines.push("BONUS : L'utilisateur N'A PAS de bonus. Pour tous les champs bonus (bonus_section_title, bonuses, bonus_*, etc.), mets des strings vides \"\" ou des tableaux vides []. N'invente AUCUN bonus.");
+  }
+
+  // Conditional: urgency/countdown
+  if (params.offerUrgency.trim()) {
+    lines.push(`URGENCE : L'utilisateur a une urgence : "${params.offerUrgency}". Utilise-la dans les sections countdown/urgence/timing.`);
+  } else {
+    lines.push("URGENCE : L'utilisateur N'A PAS d'urgence. Pour tous les champs countdown/timer/urgence (countdown_label, timing_*, counter_*, etc.), mets des strings vides \"\". Pas de faux décompte ni de fausse rareté.");
+  }
+
+  lines.push("");
   lines.push("- Retourne uniquement le JSON, rien d'autre.");
 
   return lines.join("\n");

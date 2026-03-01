@@ -400,7 +400,14 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   lines.push("- CTA : verbe d'action clair, 2–5 mots max.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
   lines.push("- FAQ : chaque item DOIT avoir une question ET une réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
-  lines.push("- INTERDIT : recopier les descriptions d'aide (\"Promesse de ton offre\", \"Décris ici\", \"Puce promesse irrésistible\", \"bénéfice + conséquence + curiosité\", \"Explique l'option pourrie\", etc.) — rédige le VRAI contenu FINAL de la page.");
+  lines.push("- INTERDIT : recopier les descriptions/objectifs ci-dessus. Ce sont des INSTRUCTIONS pour toi, pas du contenu. Ne JAMAIS écrire :");
+  lines.push('  × "Puce promesse irrésistible : bénéfice + conséquence + curiosité"');
+  lines.push('  × "Décris ici...", "Explique l\'option pourrie", "Promesse de ton offre"');
+  lines.push('  × "ton audience cible", "bénéfice + conséquence concrète du bénéfice"');
+  lines.push('  × "Nom du Contenu", "PUCE PROMESSE", "Bénéfice + conséquence concrète"');
+  lines.push('  × "Témoignage sincère d\'un client", "Description complète du bonus"');
+  lines.push("  Au lieu de ça, rédige du VRAI TEXTE FINAL spécifique à l'offre.");
+  lines.push("  Exemple correct : \"Maîtrise la prospection LinkedIn pour décrocher 5 rendez-vous qualifiés par semaine\"");
 
   return lines.join("\n");
 }

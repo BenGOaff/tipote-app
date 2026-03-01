@@ -2,7 +2,7 @@
 // Public hosted page (no auth required) — like /q/[quizId] for quizzes.
 
 import type { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 
 // Force dynamic rendering so published pages are always fresh (never cached as "not found").
@@ -10,23 +10,22 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
-async function getPage(slug: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
+const PAGE_SELECT = "id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status";
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  // Use .limit(1).maybeSingle() to handle the edge case where different users
-  // might have the same slug published (unique per user, not globally).
-  const { data } = await supabase
+async function getPage(slug: string) {
+  // Use supabaseAdmin (service_role) — bypasses RLS, same client used for inserts.
+  const { data, error } = await supabaseAdmin
     .from("hosted_pages")
-    .select("id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status")
+    .select(PAGE_SELECT)
     .eq("slug", slug)
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
+  if (error) {
+    console.error("[public-page] Supabase error for slug:", slug, error.message);
+  }
   return data;
 }
 
@@ -69,12 +68,7 @@ export default async function PublicPage({ params }: RouteContext) {
 
   // Non-blocking: increment views
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      supabase.rpc("increment_page_views", { p_page_id: page.id }).then(() => {});
-    }
+    supabaseAdmin.rpc("increment_page_views", { p_page_id: page.id }).then(() => {});
   } catch { /* ignore */ }
 
   return <PublicPageClient page={page} />;

@@ -79,11 +79,42 @@ const INLINE_EDIT_SCRIPT = `
       editing = true;
       document.body.classList.add('tipote-edit-mode');
       enableEditMode();
+      enableImagePlaceholders();
     }
     if (e.data === 'tipote:disable-edit') {
       editing = false;
       document.body.classList.remove('tipote-edit-mode');
       disableEditMode();
+    }
+    if (e.data && e.data.type === 'tipote:image-uploaded') {
+      var sel = e.data.selector;
+      var url = e.data.url;
+      if (sel && url) {
+        var el = document.querySelector(sel);
+        if (el) {
+          if (el.tagName === 'IMG') { el.src = url; }
+          else {
+            el.style.backgroundImage = 'url(' + url + ')';
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.textContent = '';
+            el.classList.add('tipote-has-image');
+          }
+        }
+      }
+    }
+    if (e.data && e.data.type === 'tipote:image-removed') {
+      var sel2 = e.data.selector;
+      if (sel2) {
+        var el2 = document.querySelector(sel2);
+        if (el2 && el2.tagName !== 'IMG') {
+          el2.style.backgroundImage = '';
+          el2.style.display = 'none';
+          el2.classList.remove('tipote-has-image');
+        } else if (el2 && el2.tagName === 'IMG') {
+          el2.style.display = 'none';
+        }
+      }
     }
   });
 
@@ -101,6 +132,46 @@ const INLINE_EDIT_SCRIPT = `
     });
   }
 
+  function enableImagePlaceholders() {
+    /* Detect image placeholders: .image-placeholder, divs with gradient bg + short text, img tags */
+    var placeholders = document.querySelectorAll('.image-placeholder, [class*="image-placeholder"], [class*="photo"], [class*="visual"], img[src=""], img[src="#"]');
+    /* Also detect divs with gradient backgrounds that look like placeholders */
+    document.querySelectorAll('div, figure, aside').forEach(function(el) {
+      var bg = getComputedStyle(el).backgroundImage || '';
+      var text = (el.textContent || '').trim();
+      var isGradientPlaceholder = bg.indexOf('gradient') >= 0 && text.length < 80 && text.length > 0;
+      var isTextPlaceholder = /\\[.*photo.*\\]|\\[.*image.*\\]|\\[.*visuel.*\\]/i.test(text);
+      if (isGradientPlaceholder || isTextPlaceholder) {
+        placeholders = Array.from(new Set([...placeholders, el]));
+      }
+    });
+
+    var idx = 0;
+    (Array.isArray(placeholders) ? placeholders : Array.from(placeholders)).forEach(function(el) {
+      var id = 'tipote-img-' + (idx++);
+      el.setAttribute('data-tipote-img-id', id);
+      el.style.cursor = 'pointer';
+      el.style.position = 'relative';
+
+      /* Add overlay with upload icon */
+      var overlay = document.createElement('div');
+      overlay.className = 'tipote-img-overlay';
+      overlay.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span style="font-size:13px;font-weight:600">Ajouter une image</span><span style="font-size:11px;opacity:0.8">ou cliquer pour supprimer</span></div>';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s;border-radius:inherit;z-index:10;pointer-events:none';
+      if (el.style.position === 'static' || !el.style.position) el.style.position = 'relative';
+      el.appendChild(overlay);
+
+      el.addEventListener('mouseenter', function() { overlay.style.opacity = '1'; overlay.style.pointerEvents = 'auto'; });
+      el.addEventListener('mouseleave', function() { overlay.style.opacity = '0'; overlay.style.pointerEvents = 'none'; });
+
+      el.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: el.classList.contains('tipote-has-image') || el.tagName === 'IMG' }, '*');
+      });
+    });
+  }
+
   function disableEditMode() {
     var els = document.querySelectorAll('[contenteditable="true"]');
     els.forEach(function(el) {
@@ -110,6 +181,8 @@ const INLINE_EDIT_SCRIPT = `
       el.removeEventListener('blur', onBlur);
       el.removeEventListener('input', onInput);
     });
+    /* Remove image overlays */
+    document.querySelectorAll('.tipote-img-overlay').forEach(function(o) { o.remove(); });
   }
 
   function onFocus(e) {
@@ -178,6 +251,67 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [editMode]);
 
+  // Handle image click from iframe — upload or remove
+  const handleIframeImageClick = useCallback((imgId: string, hasImage: boolean) => {
+    if (hasImage) {
+      // Ask: replace or remove?
+      const action = window.confirm("Remplacer l'image ? (Annuler pour la supprimer)");
+      if (action) {
+        // Upload new image
+        triggerImageUploadForIframe(imgId);
+      } else {
+        // Remove image
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage({ type: "tipote:image-removed", selector: `[data-tipote-img-id="${imgId}"]` }, "*");
+          saveIframeHtml();
+        }
+      }
+    } else {
+      triggerImageUploadForIframe(imgId);
+    }
+  }, []);
+
+  const triggerImageUploadForIframe = useCallback((imgId: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setUploadingImage(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("contentId", `page-${page.id}-img-${imgId}`);
+        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.ok && data.url) {
+          const iframe = iframeRef.current;
+          if (iframe?.contentWindow) {
+            iframe.contentWindow.postMessage({ type: "tipote:image-uploaded", selector: `[data-tipote-img-id="${imgId}"]`, url: data.url }, "*");
+            setTimeout(() => saveIframeHtml(), 300);
+          }
+        }
+      } catch { /* ignore */ } finally {
+        setUploadingImage(false);
+      }
+    };
+    input.click();
+  }, [page.id]);
+
+  const saveIframeHtml = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) return;
+    const updatedHtml = iframe.contentDocument.documentElement.outerHTML;
+    setHtmlPreview("<!DOCTYPE html><html>" + updatedHtml.slice(updatedHtml.indexOf("<html>") + 6));
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html_snapshot: updatedHtml }),
+    }).catch(() => {});
+  }, [page.id]);
+
   // Listen for inline edits from iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -198,10 +332,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           }, 1500);
         }
       }
+      if (e.data?.type === "tipote:image-click") {
+        handleIframeImageClick(e.data.imgId, e.data.hasImage);
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [page.id]);
+  }, [page.id, handleIframeImageClick]);
 
   // Chat update handler
   const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
