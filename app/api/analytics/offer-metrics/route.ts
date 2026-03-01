@@ -86,6 +86,12 @@ export async function POST(req: NextRequest) {
   const salesConversion = isPaid ? safePct(salesCount, signups) : 0;
   const revenuePerVisitor = safeDiv(revenue, visitors);
 
+  // Email stats (only relevant for __email_stats__ rows, but stored generically)
+  const emailListSize = Math.max(0, parseInt(body.email_list_size) || 0);
+  const emailsSent = Math.max(0, parseInt(body.emails_sent) || 0);
+  const emailOpenRate = Math.max(0, Math.min(100, parseFloat(body.email_open_rate) || 0));
+  const emailClickRate = Math.max(0, Math.min(100, parseFloat(body.email_click_rate) || 0));
+
   const payload: Record<string, any> = {
     user_id: user.id,
     offer_name: offerName,
@@ -101,6 +107,10 @@ export async function POST(req: NextRequest) {
     revenue_per_visitor: revenuePerVisitor,
     linked_page_ids: body.linked_page_ids ?? [],
     linked_quiz_ids: body.linked_quiz_ids ?? [],
+    email_list_size: emailListSize,
+    emails_sent: emailsSent,
+    email_open_rate: emailOpenRate,
+    email_click_rate: emailClickRate,
     updated_at: new Date().toISOString(),
   };
 

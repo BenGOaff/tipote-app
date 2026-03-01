@@ -632,6 +632,7 @@ ${textContent.split("\n").map((line) => {
         contentData={page.content_data}
         brandTokens={page.brand_tokens}
         onUpdate={handleChatUpdate}
+        locale={page.locale}
       />
 
       {/* ==================== PUBLISH MODAL ==================== */}
