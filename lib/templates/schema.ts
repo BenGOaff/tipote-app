@@ -392,12 +392,15 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   lines.push("- Retourne UNIQUEMENT un objet JSON valide (double quotes, pas de commentaire, pas de texte autour).");
   lines.push("- Respecte STRICTEMENT les clés ci-dessus (aucune clé en plus, aucune clé manquante).");
   lines.push('- Aucune valeur null/undefined : si tu n\'as pas l\'info, mets une string vide "".');
-  lines.push("- Pas de markdown. Pas de balises HTML. Pas d'emojis.");
+  lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, <p>, <div>, etc.) — texte brut uniquement.");
+  lines.push("- ZÉRO markdown (**, ##, >, -, etc.).");
+  lines.push("- ZÉRO emoji.");
   lines.push("- Les strings : 1–2 phrases max, pas de sauts de ligne.");
-  lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots).");
+  lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots). Chaque item doit être un VRAI texte, pas une instruction.");
   lines.push("- CTA : verbe d'action clair, 2–5 mots max.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
-  lines.push("- INTERDIT : recopier les descriptions d'aide (\"Promesse de ton offre\", \"Décris ici\", etc.) — rédige le VRAI contenu de la page.");
+  lines.push("- FAQ : chaque item DOIT avoir une question ET une réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
+  lines.push("- INTERDIT : recopier les descriptions d'aide (\"Promesse de ton offre\", \"Décris ici\", \"Puce promesse irrésistible\", \"bénéfice + conséquence + curiosité\", \"Explique l'option pourrie\", etc.) — rédige le VRAI contenu FINAL de la page.");
 
   return lines.join("\n");
 }

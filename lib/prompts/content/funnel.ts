@@ -83,11 +83,16 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   lines.push("");
 
   lines.push("RÈGLES CRITIQUES :");
-  lines.push("- Ne mets PAS de markdown.");
-  lines.push("- Pas d'emoji.");
+  lines.push("- ZÉRO markdown (pas de **, ##, >, -, etc.).");
+  lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, <p>, <div>, etc.) — texte brut uniquement.");
+  lines.push("- ZÉRO emoji.");
   lines.push("- Pas de retours à la ligne dans les strings (une ligne par champ).");
   lines.push("- Ne mets pas de guillemets typographiques. Utilise \" si nécessaire.");
   lines.push("- Si une info est inconnue, reste générique et plausible, sans inventer un prix ou une garantie.");
+  lines.push("- INTERDIT d'inventer des bonus, des noms de personnes, des témoignages ou des garanties non fournis.");
+  lines.push("- INTERDIT de recopier les descriptions d'aide du schéma comme contenu (\"Décris ici\", \"Puce promesse\", \"bénéfice + conséquence\", etc.).");
+  lines.push("- Chaque champ doit contenir du VRAI texte de copywriting professionnel, prêt à publier.");
+  lines.push("- Pour les FAQ : chaque item doit avoir une question ET une réponse complète (2-3 phrases).");
   lines.push("- Chaque titre/promo doit être clair, spécifique et orienté résultat.");
   lines.push("");
 
