@@ -272,7 +272,7 @@ export function ArticleEditorModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* ✅ Fix UX: le modal ne doit jamais déborder de l'écran */}
-      <DialogContent className="max-w-5xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-5xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
         {/* ✅ Le contenu (header+form+éditeur) scrolle, pas la page */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <DialogHeader className="space-y-1">
@@ -467,7 +467,7 @@ export function ArticleEditorModal({
                   contentEditable
                   suppressContentEditableWarning
                   onInput={syncFromEditor}
-                  className="outline-none prose prose-sm max-w-none overflow-y-auto min-h-[420px] max-h-[calc(90vh-360px)]"
+                  className="outline-none prose prose-sm max-w-none overflow-y-auto min-h-[200px] sm:min-h-[420px] max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-360px)]"
                   style={{
                     lineHeight: "1.6",
                     fontSize: "14px",

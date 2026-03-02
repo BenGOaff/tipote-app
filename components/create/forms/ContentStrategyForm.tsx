@@ -806,7 +806,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
   const contentModal = (
     <Dialog open={!!contentModalId} onOpenChange={(open) => !open && closeContentModal()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         {contentModalLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -1368,7 +1368,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
       {/* Quick edit dialog */}
       <Dialog open={editingIdx !== null} onOpenChange={(open) => !open && setEditingIdx(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingIdx !== null && contents[editingIdx]

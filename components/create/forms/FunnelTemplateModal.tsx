@@ -25,7 +25,7 @@ export function FunnelTemplateModal({ open, onClose, onSelect, filterType }: Fun
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Choisir un template</DialogTitle>
         </DialogHeader>

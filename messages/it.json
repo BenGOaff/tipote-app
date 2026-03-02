@@ -327,7 +327,22 @@
       "disconnectSuccess": "Account disconnesso correttamente.",
       "disconnectError": "Errore durante la disconnessione dell'account.",
       "pinterestOk": "Pinterest connesso",
-      "pinterestOkDesc": "Il tuo account Pinterest è ora collegato a Tipote."
+      "pinterestOkDesc": "Il tuo account Pinterest è ora collegato a Tipote.",
+      "linkedinOk": "LinkedIn connesso",
+      "linkedinOkDesc": "Il tuo account LinkedIn è ora collegato a Tipote.",
+      "facebookOk": "Facebook connesso",
+      "facebookOkDesc": "La tua pagina Facebook è ora collegata a Tipote.",
+      "threadsOk": "Threads connesso",
+      "threadsOkDesc": "Il tuo account Threads è ora collegato a Tipote.",
+      "twitterOk": "X connesso",
+      "twitterOkDesc": "Il tuo account X è ora collegato a Tipote.",
+      "tiktokOk": "TikTok connesso",
+      "tiktokOkDesc": "Il tuo account TikTok è ora collegato a Tipote.",
+      "disconnected": "Account disconnesso",
+      "disconnectedDesc": "La connessione è stata rimossa.",
+      "errorTitle": "Errore",
+      "errorUnknown": "Errore sconosciuto",
+      "errorNetwork": "Errore di rete"
     }
   },
   "aiCredits": {
@@ -356,6 +371,10 @@
     "upsell": {
       "title": "Funzione premium",
       "body": "Gli auto-commenti sono disponibili a partire dal piano Pro.",
+      "bullet1": "2–5 commenti prima e dopo ogni pubblicazione",
+      "bullet2": "Stile e tono personalizzati al tuo profilo",
+      "bullet3": "Angoli variati: accordo, dibattito, domanda, approfondimento",
+      "bullet4": "Protezione anti-spam integrata",
       "cta": "Vedi piani"
     },
     "styleTitle": "Stile del commento",
@@ -366,7 +385,13 @@
       "friendly": "Amichevole",
       "humorous": "Umoristico",
       "inspirational": "Ispirazionale",
-      "direct": "Diretto"
+      "direct": "Diretto",
+      "amical": "Amichevole",
+      "professionnel": "Professionale",
+      "provocateur": "Provocatorio",
+      "storytelling": "Storytelling",
+      "humoristique": "Umoristico",
+      "serieux": "Serio"
     },
     "objectifsTitle": "Obiettivi",
     "objectifsDesc": "Cosa vuoi ottenere con i tuoi commenti?",
@@ -374,7 +399,12 @@
       "engagement": "Generare interazione",
       "visibility": "Aumentare visibilità",
       "authority": "Dimostrare autorità",
-      "network": "Ampliare la rete"
+      "network": "Ampliare la rete",
+      "eduquer": "Educare",
+      "vendre": "Vendere",
+      "divertir": "Intrattenere",
+      "inspirer": "Ispirare",
+      "community": "Creare community"
     },
     "langageTitle": "Lingua",
     "langageDesc": "Lingua in cui verranno generati i commenti.",
@@ -388,7 +418,11 @@
     "save": "Salva preferenze",
     "toast": {
       "saveSuccess": "Preferenze salvate correttamente.",
-      "saveError": "Errore nel salvataggio delle preferenze."
+      "saveError": "Errore nel salvataggio delle preferenze.",
+      "ok": "Impostazioni salvate",
+      "okDesc": "Le tue preferenze di auto-commento sono state aggiornate.",
+      "error": "Errore",
+      "errorDesc": "Impossibile salvare"
     }
   },
   "settingsPage": {
@@ -401,11 +435,33 @@
       "save": "Salva profilo",
       "saving": "Salvataggio…",
       "saveSuccess": "Profilo aggiornato correttamente.",
-      "saveError": "Errore nel salvataggio del profilo."
+      "saveError": "Errore nel salvataggio del profilo.",
+      "password": "Password",
+      "changePassword": "Cambia",
+      "timezoneLabel": "Fuso orario",
+      "logoutTitle": "Esci",
+      "logoutDesc": "Esci dal tuo account Tipote su questo dispositivo.",
+      "danger": {
+        "title": "Zona pericolosa",
+        "subtitle": "Reimposta il mio Tipote",
+        "desc": "Hai cambiato direzione o ti sei perso lungo il percorso? Vuoi ricominciare da zero con il tuo Tipote? Clicca questo pulsante. Attenzione: tutti i contenuti, le attività e le personalizzazioni creati dalla tua iscrizione saranno eliminati e ripartirai da zero. È permanente e irreversibile.",
+        "reset": "Reimposta il mio Tipote",
+        "resetting": "Reimpostazione…"
+      },
+      "passwordDialog": {
+        "description": "Cambia la tua password di Tipote"
+      }
     },
     "connections": {
       "title": "Connessioni",
-      "description": "Gestisci le tue integrazioni e gli account connessi."
+      "description": "Gestisci le tue integrazioni e gli account connessi.",
+      "sioTitle": "Systeme.io",
+      "sioDesc": "Collega il tuo account Systeme.io per esportare automaticamente i lead dai tuoi quiz con tag.",
+      "sioApiHelp": "Come trovo la mia chiave API?",
+      "sioLabel": "Chiave API Systeme.io",
+      "sioPlaceholder": "Incolla qui la tua chiave API...",
+      "save": "Salva",
+      "saving": "Salvataggio…"
     },
     "reglages": {
       "title": "Preferenze",
@@ -414,7 +470,47 @@
       "theme": "Tema",
       "themeLight": "Chiaro",
       "themeDark": "Scuro",
-      "themeSystem": "Sistema"
+      "themeSystem": "Sistema",
+      "langTitle": "Lingua e contenuto",
+      "uiLangLabel": "Lingua dell'interfaccia",
+      "uiLangDesc": "Lingua di visualizzazione di Tipote — la modifica si applica immediatamente.",
+      "contentLangLabel": "Lingua dei contenuti generati",
+      "addressLabel": "Forma di indirizzo predefinita",
+      "tu": "Informale (Tu)",
+      "vous": "Formale (Lei)",
+      "saveLang": "Salva",
+      "saving": "Salvataggio…",
+      "saved": "Impostazioni salvate",
+      "saveError": "Errore nel salvataggio",
+      "legalTitle": "Note legali e condizioni",
+      "legalDesc": "Questi URL saranno utilizzati automaticamente nei tuoi quiz, funnel e pagine pubbliche. Puoi anche generare documenti legali adattati al tuo paese e alla tua attività.",
+      "privacy": "Informativa sulla privacy",
+      "privacyPlaceholder": "https://miosito.com/privacy",
+      "mentions": "Note legali / Condizioni d'uso",
+      "mentionsPlaceholder": "https://miosito.com/note-legali",
+      "cgv": "Condizioni generali di vendita",
+      "cgvPlaceholder": "https://miosito.com/condizioni-vendita",
+      "generate": "Genera",
+      "save": "Salva",
+      "linksTitle": "Link e social",
+      "offersTitle": "Lista delle offerte",
+      "offersDesc": "Aggiungi le tue offerte con i loro dettagli affinché l'IA possa creare contenuti pertinenti.",
+      "offerN": "Offerta {n}",
+      "offerName": "Nome dell'offerta *",
+      "offerNamePlaceholder": "Es: Corso di Copywriting",
+      "offerPrice": "Prezzo",
+      "offerPricePlaceholder": "Es: 297€",
+      "offerPromise": "Promessa principale",
+      "offerPromisePlaceholder": "Es: Impara a scrivere testi che vendono in 30 giorni",
+      "offerTarget": "Pubblico target",
+      "offerTargetPlaceholder": "Es: Imprenditori e freelancer che vogliono vendere online",
+      "offerDesc": "Descrizione breve",
+      "offerDescPlaceholder": "In 2–3 frasi, descrivi cosa include la tua offerta e il risultato atteso",
+      "offerFormat": "Formato",
+      "offerFormatPlaceholder": "Es: Video, PDF, coaching, ebook...",
+      "offerLink": "Link",
+      "addOffer": "Aggiungi un'offerta",
+      "saveOffers": "Salva offerte"
     },
     "positioningTab": {
       "title": "Il mio posizionamento",
@@ -422,7 +518,25 @@
       "save": "Salva posizionamento",
       "saving": "Salvataggio…",
       "saveSuccess": "Posizionamento salvato correttamente.",
-      "saveError": "Errore nel salvataggio del posizionamento."
+      "saveError": "Errore nel salvataggio del posizionamento.",
+      "nicheTitle": "La mia formula di nicchia",
+      "nicheDesc": "Compila i 4 elementi per definire la tua nicchia in modo chiaro e distintivo.",
+      "cible": "Pubblico target",
+      "ciblePlaceholder": "Es: solopreneur, responsabili HR...",
+      "objectif": "Obiettivo del pubblico",
+      "objectifPlaceholder": "Es: ottenere i primi 3 clienti...",
+      "mecanisme": "Meccanismo unico",
+      "mecanismePlaceholder": "Es: il mio metodo Contenuto Magnetico...",
+      "marqueur": "Indicatore temporale",
+      "marqueurPlaceholder": "Es: 90 giorni, senza pubblicità a pagamento...",
+      "personaTitle": "Il mio persona dettagliato",
+      "personaDesc": "Generato dopo l'onboarding e arricchibile con l'IA. Utilizzato in tutti i contenuti generati.",
+      "personaPlaceholder": "Descrivi il tuo persona target in dettaglio...",
+      "enrich": "Arricchisci con IA",
+      "enriching": "Arricchimento…",
+      "enrichDesc": "L'arricchimento con IA utilizza i tuoi dati di onboarding, l'analisi competitiva e le conversazioni del coach per migliorare il tuo persona. Costo: 1 credito.",
+      "formulaPreview": "Aiuto {cible} a {objectif} con {mecanisme} in {marqueur}",
+      "saved": "Posizionamento salvato"
     }
   },
   "today": {
@@ -527,7 +641,14 @@
       "educational": "Educativo",
       "storytelling": "Narrativo",
       "direct": "Diretto",
-      "provocative": "Provocatorio"
+      "provocative": "Provocatorio",
+      "professionnel": "Professionale",
+      "authentique": "Autentico",
+      "inspirant": "Ispirante",
+      "humoristique": "Umoristico",
+      "educatif": "Educativo",
+      "provocateur": "Provocatorio",
+      "minimaliste": "Minimalista"
     },
     "platforms": {
       "linkedin": "LinkedIn",
@@ -537,7 +658,8 @@
       "threads": "Threads",
       "tiktok": "TikTok",
       "youtube": "YouTube",
-      "blog": "Blog"
+      "blog": "Blog",
+      "email": "Email"
     },
     "contentTypes": {
       "post": "Post",
