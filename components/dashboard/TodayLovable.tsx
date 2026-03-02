@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Target,
   Lightbulb,
+  CalendarClock,
 } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -506,6 +507,7 @@ export default function TodayLovable() {
   const [coaching, setCoaching] = useState<CoachingInsight | null>(null);
   const [lastDoneTask, setLastDoneTask] = useState<string | null>(null);
   const [nextTask, setNextTask] = useState<string | null>(null);
+  const [scheduledToday, setScheduledToday] = useState<{ title: string; channel: string; time: string | null }[]>([]);
   const [progression, setProgression] = useState<ProgressionData>({
     hasMetrics: false,
     revenue: null,
@@ -643,6 +645,28 @@ export default function TodayLovable() {
           break;
         }
 
+        // ------ Fetch scheduled content for today ------
+        let todayScheduled: { title: string; channel: string; time: string | null }[] = [];
+        try {
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const schedRes = await supabase
+            .from("content_item")
+            .select("title,channel,meta,scheduled_date")
+            .eq("user_id", userId)
+            .eq("status", "scheduled")
+            .eq("scheduled_date", todayStr)
+            .limit(20);
+          if (!schedRes.error && Array.isArray(schedRes.data)) {
+            todayScheduled = schedRes.data.map((r: any) => ({
+              title: toStr(r.title || r.titre).trim() || "Contenu sans titre",
+              channel: toStr(r.channel || r.canal).trim(),
+              time: r.meta && typeof r.meta === "object" ? toStr((r.meta as AnyRecord).scheduled_time).trim() || null : null,
+            }));
+          }
+        } catch {
+          // fail-open: scheduled_date column may not exist on all instances
+        }
+
         if (cancelled) return;
 
         // ------ Process data ------
@@ -722,6 +746,7 @@ export default function TodayLovable() {
           setCoaching(coach);
           setLastDoneTask(toStr(lastDone?.title) || null);
           setNextTask(toStr(nextIncomplete?.title) || null);
+          setScheduledToday(todayScheduled);
           setProgression({
             hasMetrics,
             revenue,
@@ -846,6 +871,47 @@ export default function TodayLovable() {
                           </Link>
                         </Button>
                       </div>
+                    </div>
+                  </Card>
+                )}
+
+                {/* ================================================= */}
+                {/* BLOC 1b — Contenus programmés aujourd'hui           */}
+                {/* ================================================= */}
+                {scheduledToday.length > 0 && (
+                  <Card className="border-amber-200 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-950/20 overflow-hidden">
+                    <div className="p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                          <CalendarClock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {scheduledToday.length === 1
+                              ? "1 contenu programmé aujourd\u2019hui"
+                              : `${scheduledToday.length} contenus programmés aujourd\u2019hui`}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">N&apos;oublie pas de les publier !</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {scheduledToday.map((item, i) => (
+                          <div key={i} className="flex items-center gap-3 rounded-lg bg-background/80 border border-border/50 px-3 py-2">
+                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase min-w-[60px]">
+                              {item.channel || "—"}
+                            </span>
+                            <span className="text-sm text-foreground flex-1 truncate">{item.title}</span>
+                            {item.time && (
+                              <span className="text-xs text-muted-foreground shrink-0">{item.time}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="w-full mt-3 gap-2">
+                        <Link href="/contents?view=calendar">
+                          Voir le calendrier <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </Button>
                     </div>
                   </Card>
                 )}

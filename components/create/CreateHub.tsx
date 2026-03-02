@@ -29,12 +29,13 @@ import {
   Video,
   MessageSquare,
   Save,
-  Send,
-  Calendar,
+  CalendarDays,
   ArrowLeft,
   Loader2,
   Wand2,
 } from "lucide-react";
+
+import { ScheduleModal } from "@/components/content/ScheduleModal";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -128,7 +129,7 @@ export default function CreateHub({ profile, plan }: Props) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [platform, setPlatform] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // AI Generation
@@ -201,8 +202,11 @@ export default function CreateHub({ profile, plan }: Props) {
     }
   }
 
-  async function handleSave(status: "draft" | "scheduled" | "published") {
+  async function handleSave(status: "draft" | "scheduled" | "published", scheduledDate?: string, scheduledTime?: string) {
     if (!title.trim()) return;
+
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
 
     setIsSubmitting(true);
     try {
@@ -215,7 +219,8 @@ export default function CreateHub({ profile, plan }: Props) {
           type: selectedType,
           platform: platform || undefined,
           status,
-          scheduled_at: scheduledAt || undefined,
+          scheduled_date: scheduledDate,
+          meta: Object.keys(meta).length > 0 ? meta : undefined,
         }),
       });
 
@@ -238,6 +243,10 @@ export default function CreateHub({ profile, plan }: Props) {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleScheduleConfirm(date: string, time: string) {
+    await handleSave("scheduled", date, time);
   }
 
   return (
@@ -381,16 +390,6 @@ export default function CreateHub({ profile, plan }: Props) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="scheduled">Planifier pour</Label>
-                <Input
-                  id="scheduled"
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="content">Contenu</Label>
                 <Textarea
                   id="content"
@@ -415,27 +414,22 @@ export default function CreateHub({ profile, plan }: Props) {
                 Brouillon
               </Button>
 
-              {scheduledAt && (
-                <Button
-                  variant="secondary"
-                  onClick={() => handleSave("scheduled")}
-                  disabled={!title.trim() || isSubmitting}
-                  type="button"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Planifier
-                </Button>
-              )}
-
               <Button
-                onClick={() => handleSave("published")}
+                onClick={() => setScheduleModalOpen(true)}
                 disabled={!title.trim() || isSubmitting}
                 type="button"
               >
-                <Send className="w-4 h-4 mr-2" />
+                <CalendarDays className="w-4 h-4 mr-2" />
                 Programmer
               </Button>
             </div>
+
+            <ScheduleModal
+              open={scheduleModalOpen}
+              onOpenChange={setScheduleModalOpen}
+              platformLabel={platforms.find((p) => p.id === platform)?.label ?? "Calendrier"}
+              onConfirm={handleScheduleConfirm}
+            />
           </div>
         </main>
       </div>

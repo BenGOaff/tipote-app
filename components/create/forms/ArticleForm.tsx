@@ -11,8 +11,7 @@ import {
   Wand2,
   RefreshCw,
   Save,
-  Calendar,
-  Send,
+  CalendarDays,
   X,
   Pencil,
   Copy,
@@ -20,6 +19,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
 import {
   Select,
   SelectContent,
@@ -59,7 +59,7 @@ export function ArticleForm({
 
   const [generatedContent, setGeneratedContent] = useState(""); // contient le plan OU l’article selon step
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   // flow 2 étapes
   const [articleStep, setArticleStep] = useState<ArticleStep>("plan");
@@ -144,7 +144,10 @@ export function ArticleForm({
     return handleWriteArticle();
   };
 
-  const handleSave = async (status: "draft" | "scheduled" | "published") => {
+  const handleSave = async (status: "draft" | "scheduled" | "published", scheduledDate?: string, scheduledTime?: string) => {
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
+
     if (savedContentId) {
       // Update existing entry instead of creating a duplicate
       try {
@@ -155,7 +158,8 @@ export function ArticleForm({
             title,
             content: generatedContent,
             status,
-            scheduledDate: scheduledAt || undefined,
+            scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
           }),
         });
       } catch {
@@ -168,10 +172,15 @@ export function ArticleForm({
         type: "article",
         platform: "blog",
         status,
-        scheduled_at: scheduledAt || undefined,
+        scheduled_date: scheduledDate,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
       });
       if (id) setSavedContentId(id);
     }
+  };
+
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    await handleSave("scheduled", date, time);
   };
 
   const isArticleReady =
@@ -367,85 +376,62 @@ export function ArticleForm({
 
           {/* ✅ Save uniquement quand on a l’article (pas juste le plan) */}
           {isArticleReady && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleSave("draft")}
-                  disabled={!title || isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-1" />
-                  )}
-                  Brouillon
-                </Button>
-
-                {scheduledAt && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave("scheduled")}
-                    disabled={!title || isSaving}
-                  >
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Planifier
-                  </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleSave("draft")}
+                disabled={!title || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-1" />
                 )}
+                Brouillon
+              </Button>
 
-                <Button
-                  size="sm"
-                  onClick={() => handleSave("published")}
-                  disabled={!title || isSaving}
-                >
-                  <Send className="w-4 h-4 mr-1" />
-                  Programmer
-                </Button>
+              <Button
+                size="sm"
+                onClick={() => setScheduleModalOpen(true)}
+                disabled={!title || isSaving}
+              >
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Programmer
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRegenerate}
-                  disabled={isGenerating}
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Regénérer
-                </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isGenerating}
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Regénérer
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    const ok = await copyToClipboard(generatedContent);
-                    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
-                  }}
-                  disabled={!generatedContent}
-                >
-                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copied ? "Copié" : "Copier"}
-                </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const ok = await copyToClipboard(generatedContent);
+                  if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+                }}
+                disabled={!generatedContent}
+              >
+                {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied ? "Copié" : "Copier"}
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadAsPdf(generatedContent, title || "Article")}
-                  disabled={!generatedContent}
-                >
-                  <FileDown className="w-4 h-4 mr-1" />
-                  PDF
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadAsPdf(generatedContent, title || "Article")}
+                disabled={!generatedContent}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
             </div>
           )}
 
@@ -477,6 +463,13 @@ export function ArticleForm({
           )}
         </div>
       </div>
+
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        platformLabel="Blog"
+        onConfirm={handleScheduleConfirm}
+      />
 
       {/* ✅ MODALE ÉDITEUR */}
       <ArticleEditorModal
