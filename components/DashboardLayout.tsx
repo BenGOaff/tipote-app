@@ -20,7 +20,7 @@ export default function DashboardLayout({
   title,
   showAnalyticsLink = true,
   headerActions,
-  contentClassName = "p-6 space-y-6 max-w-7xl mx-auto",
+  contentClassName = "p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto",
 }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
@@ -28,10 +28,10 @@ export default function DashboardLayout({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+          <header className="h-14 sm:h-16 border-b border-border flex items-center px-4 sm:px-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
             <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">{title}</h1>
+            <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl font-display font-bold truncate">{title}</h1>
             </div>
 
             {headerActions ? (

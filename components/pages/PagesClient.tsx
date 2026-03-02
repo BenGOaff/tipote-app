@@ -384,7 +384,7 @@ export default function PagesClient() {
                   <>
                     {/* Source toggle */}
                     {offers.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                         <button
                           onClick={() => setOfferSource("existing")}
                           className={`p-4 rounded-xl border-2 text-left transition-all ${
@@ -545,7 +545,7 @@ export default function PagesClient() {
                       {/* Urgency */}
                       <div>
                         <label className="text-sm font-medium block mb-1.5">Urgence</label>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                           {([
                             { v: "none" as const, l: "Aucune" },
                             { v: "places" as const, l: "Places limitées" },

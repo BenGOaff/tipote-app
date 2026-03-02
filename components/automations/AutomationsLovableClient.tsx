@@ -603,7 +603,7 @@ export default function AutomationsLovableClient() {
             {!isTikTok && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">{t("form.type")}</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(["comment_to_dm", "comment_to_email"] as AutomationType[]).map((type) => (
                     <button
                       key={type}

@@ -260,15 +260,15 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           </Badge>
         </div>
 
-        <div className="p-4">
-          <Table>
+        <div className="p-4 overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[280px]">Email</TableHead>
-                <TableHead className="w-[180px]">Plan</TableHead>
-                <TableHead className="w-[200px]">Crédits IA</TableHead>
-                <TableHead className="w-[160px]">Updated</TableHead>
-                <TableHead className="w-[140px] text-right">Action</TableHead>
+                <TableHead className="min-w-[180px]">Email</TableHead>
+                <TableHead className="min-w-[120px]">Plan</TableHead>
+                <TableHead className="min-w-[140px]">Crédits IA</TableHead>
+                <TableHead className="min-w-[120px] hidden sm:table-cell">Updated</TableHead>
+                <TableHead className="min-w-[100px] text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -384,7 +384,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       )}
                     </TableCell>
 
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
                       {fmtDate(u.updated_at)}
                     </TableCell>
 

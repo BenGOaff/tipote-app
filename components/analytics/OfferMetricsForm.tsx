@@ -441,19 +441,19 @@ export const OfferMetricsForm = ({
               </h4>
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Visiteurs :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Visiteurs :</span>
                   <span>Tunnels &gt; [Ton tunnel] &gt; Statistiques &gt; colonne &laquo; Pages vues &raquo; (visiteurs uniques de la page de capture ou vente)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Inscrits :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Inscrits :</span>
                   <span>Tunnels &gt; Statistiques &gt; colonne « Opt-in » (personnes ayant laissé leur email)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Ventes :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Ventes :</span>
                   <span>Tunnels &gt; Statistiques &gt; &laquo; Ventes &raquo; OU Tableau de bord &gt; Ventes (filtre par produit et mois)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">CA :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">CA :</span>
                   <span>Tableau de bord &gt; Revenus (filtre par mois) OU Stripe/PayPal si paiement externe</span>
                 </li>
               </ul>
@@ -466,19 +466,19 @@ export const OfferMetricsForm = ({
               </h4>
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Taille liste :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taille liste :</span>
                   <span>Contacts &gt; nombre total affiché en haut (prends le chiffre en fin de mois)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Emails envoyés :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Emails envoyés :</span>
                   <span>Emails &gt; Newsletters &gt; compte les emails envoyés ce mois (newsletters + broadcasts)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Taux ouverture :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux ouverture :</span>
                   <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyés ce mois</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[120px]">Taux de clics :</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux de clics :</span>
                   <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyés ce mois</span>
                 </li>
               </ul>

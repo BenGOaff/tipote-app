@@ -32,27 +32,27 @@ export const SioDataGuide = () => {
             </h4>
             <ul className="space-y-1.5 text-muted-foreground ml-4">
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Visiteurs :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Visiteurs :</span>
                 <span>Tunnels &gt; [Ton tunnel] &gt; Statistiques &gt; colonne &laquo; Pages vues &raquo;</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Inscrits :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Inscrits :</span>
                 <span>Tunnels &gt; Statistiques &gt; colonne &laquo; Opt-in &raquo; (nombre + taux)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Ventes :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Ventes :</span>
                 <span>Tunnels &gt; Statistiques &gt; colonne « Ventes » (nombre + taux + CA total)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">CA/visiteur :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">CA/visiteur :</span>
                 <span>Tunnels &gt; Statistiques &gt; colonne &laquo; Revenu par visiteur &raquo;</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Contacts :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Contacts :</span>
                 <span>Contacts &gt; filtrer par tag pour voir les inscrits par offre</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">CA global :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">CA global :</span>
                 <span>Tableau de bord &gt; section revenus (filtrer par mois)</span>
               </li>
             </ul>
@@ -63,23 +63,23 @@ export const SioDataGuide = () => {
             <h4 className="font-bold">Autres CRM / outils</h4>
             <ul className="space-y-1.5 text-muted-foreground ml-4">
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Mailchimp :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Mailchimp :</span>
                 <span>Audience &gt; Dashboard (inscrits) / Campaigns &gt; Reports (taux ouverture, clics)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">ConvertKit :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">ConvertKit :</span>
                 <span>Subscribers (inscrits) / Broadcasts &gt; Stats (ouverture, clics)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Stripe :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Stripe :</span>
                 <span>Dashboard &gt; Payments (ventes, CA) / filtrer par produit et période</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">Google Analytics :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Google Analytics :</span>
                 <span>Rapports &gt; Acquisition (visiteurs par source) / Pages et écrans (vues par page)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-medium text-foreground min-w-[100px]">PayPal :</span>
+                <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">PayPal :</span>
                 <span>Activité &gt; Historique des transactions (filtrer par mois)</span>
               </li>
             </ul>

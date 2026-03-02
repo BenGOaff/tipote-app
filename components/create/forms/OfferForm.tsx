@@ -406,14 +406,14 @@ export function OfferForm(props: OfferFormProps) {
           </div>
 
           {!showRawEditor ? (
-            <div className="rounded-xl border bg-background p-4 min-h-[520px]">
+            <div className="rounded-xl border bg-background p-4 min-h-[280px] sm:min-h-[520px]">
               <AIContent content={result} mode="auto" />
             </div>
           ) : (
             <Textarea
               value={result}
               onChange={(e) => setResult(e.target.value)}
-              className="min-h-[520px]"
+              className="min-h-[280px] sm:min-h-[520px]"
               placeholder="Le texte généré apparaîtra ici..."
             />
           )}

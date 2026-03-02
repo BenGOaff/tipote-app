@@ -444,7 +444,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Ton</Label>
               <Select value={tone} onValueChange={setTone}>
@@ -475,7 +475,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nombre de profils résultat</Label>
               <Select value={resultCount} onValueChange={setResultCount}>

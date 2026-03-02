@@ -999,7 +999,7 @@ export function ContentEditor({ initialItem }: Props) {
                         <Badge variant="secondary">HTML complet</Badge>
                       </div>
                       <div className="border rounded-lg overflow-hidden bg-white">
-                        <iframe title="Preview" srcDoc={htmlPreview || "<html><body></body></html>"} className="w-full h-[560px]" />
+                        <iframe title="Preview" srcDoc={htmlPreview || "<html><body></body></html>"} className="w-full h-[360px] sm:h-[560px]" />
                       </div>
                     </div>
 

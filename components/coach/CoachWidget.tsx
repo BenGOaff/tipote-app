@@ -467,7 +467,7 @@ export function CoachWidget() {
       ) : null}
 
       {open ? (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-24px)]">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[380px] max-w-[calc(100vw-24px)]">
           <div className="rounded-2xl border bg-background shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <div className="flex items-center gap-2">
@@ -485,7 +485,7 @@ export function CoachWidget() {
               </Button>
             </div>
 
-            <div ref={listRef} className="h-[420px] overflow-auto px-3 py-3 space-y-3">
+            <div ref={listRef} className="h-[min(420px,60vh)] overflow-auto px-3 py-3 space-y-3">
               {messages.map((m) => {
                 const isUser = m.role === "user";
                 return (

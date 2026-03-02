@@ -200,7 +200,7 @@ export const OfferMetricsDashboard = ({
               <TrendingUp className="w-4 h-4 text-primary" />
               <h4 className="font-bold text-sm">Visiteurs et leads</h4>
             </div>
-            <div className="h-[220px] w-full">
+            <div className="h-[180px] sm:h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -221,7 +221,7 @@ export const OfferMetricsDashboard = ({
               <Target className="w-4 h-4 text-amber-500" />
               <h4 className="font-bold text-sm">Taux de capture et conversion</h4>
             </div>
-            <div className="h-[220px] w-full">
+            <div className="h-[180px] sm:h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -242,7 +242,7 @@ export const OfferMetricsDashboard = ({
               <Mail className="w-4 h-4 text-blue-500" />
               <h4 className="font-bold text-sm">Ouverture et clics emails</h4>
             </div>
-            <div className="h-[220px] w-full">
+            <div className="h-[180px] sm:h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

@@ -327,7 +327,22 @@
       "disconnectSuccess": "Cuenta desconectada correctamente.",
       "disconnectError": "Error al desconectar la cuenta.",
       "pinterestOk": "Pinterest conectado",
-      "pinterestOkDesc": "Tu cuenta de Pinterest está ahora vinculada a Tipote."
+      "pinterestOkDesc": "Tu cuenta de Pinterest está ahora vinculada a Tipote.",
+      "linkedinOk": "LinkedIn conectado",
+      "linkedinOkDesc": "Tu cuenta de LinkedIn está vinculada a Tipote.",
+      "facebookOk": "Facebook conectado",
+      "facebookOkDesc": "Tu página de Facebook está vinculada a Tipote.",
+      "threadsOk": "Threads conectado",
+      "threadsOkDesc": "Tu cuenta de Threads está vinculada a Tipote.",
+      "twitterOk": "X conectado",
+      "twitterOkDesc": "Tu cuenta de X está vinculada a Tipote.",
+      "tiktokOk": "TikTok conectado",
+      "tiktokOkDesc": "Tu cuenta de TikTok está vinculada a Tipote.",
+      "disconnected": "Cuenta desconectada",
+      "disconnectedDesc": "La conexión ha sido eliminada.",
+      "errorTitle": "Error",
+      "errorUnknown": "Error desconocido",
+      "errorNetwork": "Error de red"
     }
   },
   "aiCredits": {
@@ -356,7 +371,11 @@
     "upsell": {
       "title": "Función premium",
       "body": "Los auto-comentarios están disponibles a partir del plan Pro.",
-      "cta": "Ver planes"
+      "cta": "Ver planes",
+      "bullet1": "2–5 comentarios antes y después de cada publicación",
+      "bullet2": "Estilo y tono personalizados según tu perfil",
+      "bullet3": "Ángulos variados: acuerdo, debate, pregunta, desarrollo",
+      "bullet4": "Protección anti-spam integrada"
     },
     "styleTitle": "Estilo de comentario",
     "styleDesc": "Elige cómo quieres que suenen tus comentarios.",
@@ -366,7 +385,13 @@
       "friendly": "Cercano",
       "humorous": "Humorístico",
       "inspirational": "Inspirador",
-      "direct": "Directo"
+      "direct": "Directo",
+      "amical": "Amigable",
+      "professionnel": "Profesional",
+      "provocateur": "Provocador",
+      "storytelling": "Storytelling",
+      "humoristique": "Humorístico",
+      "serieux": "Serio"
     },
     "objectifsTitle": "Objetivos",
     "objectifsDesc": "¿Qué quieres conseguir con tus comentarios?",
@@ -374,7 +399,12 @@
       "engagement": "Generar interacción",
       "visibility": "Aumentar visibilidad",
       "authority": "Demostrar autoridad",
-      "network": "Ampliar red"
+      "network": "Ampliar red",
+      "eduquer": "Educar",
+      "vendre": "Vender",
+      "divertir": "Entretener",
+      "inspirer": "Inspirar",
+      "community": "Crear comunidad"
     },
     "langageTitle": "Idioma",
     "langageDesc": "Idioma en el que se generarán los comentarios.",
@@ -388,7 +418,11 @@
     "save": "Guardar preferencias",
     "toast": {
       "saveSuccess": "Preferencias guardadas correctamente.",
-      "saveError": "Error al guardar las preferencias."
+      "saveError": "Error al guardar las preferencias.",
+      "ok": "Ajustes guardados",
+      "okDesc": "Tus preferencias de auto-comentarios se han actualizado.",
+      "error": "Error",
+      "errorDesc": "No se pudo guardar"
     }
   },
   "settingsPage": {
@@ -401,11 +435,33 @@
       "save": "Guardar perfil",
       "saving": "Guardando…",
       "saveSuccess": "Perfil actualizado correctamente.",
-      "saveError": "Error al guardar el perfil."
+      "saveError": "Error al guardar el perfil.",
+      "password": "Contraseña",
+      "changePassword": "Cambiar",
+      "timezoneLabel": "Zona horaria",
+      "logoutTitle": "Cerrar sesión",
+      "logoutDesc": "Cerrar sesión de tu cuenta Tipote en este dispositivo.",
+      "danger": {
+        "title": "Zona de peligro",
+        "subtitle": "Reiniciar mi Tipote",
+        "desc": "¿Cambiaste de dirección o te perdiste en el camino? ¿Quieres empezar de cero con tu Tipote? Haz clic en este botón. Atención: todo el contenido, las tareas y las personalizaciones creadas desde tu registro serán eliminados y empezarás desde cero. Es permanente e irreversible.",
+        "reset": "Reiniciar mi Tipote",
+        "resetting": "Reiniciando…"
+      },
+      "passwordDialog": {
+        "description": "Cambiar tu contraseña de Tipote"
+      }
     },
     "connections": {
       "title": "Conexiones",
-      "description": "Gestiona tus integraciones y cuentas conectadas."
+      "description": "Gestiona tus integraciones y cuentas conectadas.",
+      "sioTitle": "Systeme.io",
+      "sioDesc": "Conecta tu cuenta Systeme.io para exportar automáticamente los leads de tus quizzes con etiquetas.",
+      "sioApiHelp": "¿Cómo encuentro mi clave API?",
+      "sioLabel": "Clave API Systeme.io",
+      "sioPlaceholder": "Pega tu clave API aquí...",
+      "save": "Guardar",
+      "saving": "Guardando…"
     },
     "reglages": {
       "title": "Preferencias",
@@ -414,7 +470,47 @@
       "theme": "Tema",
       "themeLight": "Claro",
       "themeDark": "Oscuro",
-      "themeSystem": "Sistema"
+      "themeSystem": "Sistema",
+      "langTitle": "Idioma y contenido",
+      "uiLangLabel": "Idioma de la interfaz",
+      "uiLangDesc": "Idioma de visualización de Tipote — el cambio se aplica inmediatamente.",
+      "contentLangLabel": "Idioma del contenido generado",
+      "addressLabel": "Forma de tratamiento predeterminada",
+      "tu": "Informal (Tú)",
+      "vous": "Formal (Usted)",
+      "saveLang": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Ajustes guardados",
+      "saveError": "Error al guardar",
+      "legalTitle": "Avisos legales y condiciones",
+      "legalDesc": "Estas URLs se utilizarán automáticamente en tus quizzes, funnels y páginas públicas. También puedes generar documentos legales adaptados a tu país y negocio.",
+      "privacy": "Política de privacidad",
+      "privacyPlaceholder": "https://misitio.com/politica-privacidad",
+      "mentions": "Aviso legal / Condiciones de uso",
+      "mentionsPlaceholder": "https://misitio.com/aviso-legal",
+      "cgv": "Condiciones generales de venta",
+      "cgvPlaceholder": "https://misitio.com/condiciones-venta",
+      "generate": "Generar",
+      "save": "Guardar",
+      "linksTitle": "Enlaces y redes",
+      "offersTitle": "Lista de ofertas",
+      "offersDesc": "Añade tus ofertas con sus detalles para que la IA pueda crear contenido relevante.",
+      "offerN": "Oferta {n}",
+      "offerName": "Nombre de la oferta *",
+      "offerNamePlaceholder": "Ej: Curso de Copywriting",
+      "offerPrice": "Precio",
+      "offerPricePlaceholder": "Ej: 297€",
+      "offerPromise": "Promesa principal",
+      "offerPromisePlaceholder": "Ej: Aprende a escribir textos que vendan en 30 días",
+      "offerTarget": "Público objetivo",
+      "offerTargetPlaceholder": "Ej: Emprendedores y freelancers que quieren vender online",
+      "offerDesc": "Descripción corta",
+      "offerDescPlaceholder": "En 2–3 frases, describe qué incluye tu oferta y el resultado esperado",
+      "offerFormat": "Formato",
+      "offerFormatPlaceholder": "Ej: Vídeo, PDF, coaching, ebook...",
+      "offerLink": "Enlace",
+      "addOffer": "Añadir una oferta",
+      "saveOffers": "Guardar ofertas"
     },
     "positioningTab": {
       "title": "Mi posicionamiento",
@@ -422,7 +518,25 @@
       "save": "Guardar posicionamiento",
       "saving": "Guardando…",
       "saveSuccess": "Posicionamiento guardado correctamente.",
-      "saveError": "Error al guardar el posicionamiento."
+      "saveError": "Error al guardar el posicionamiento.",
+      "nicheTitle": "Mi fórmula de nicho",
+      "nicheDesc": "Completa los 4 elementos para definir tu nicho de forma clara y diferenciadora.",
+      "cible": "Público objetivo",
+      "ciblePlaceholder": "Ej: solopreneurs, directores de RRHH...",
+      "objectif": "Objetivo del público",
+      "objectifPlaceholder": "Ej: conseguir sus primeros 3 clientes...",
+      "mecanisme": "Mecanismo único",
+      "mecanismePlaceholder": "Ej: mi método de Contenido Magnético...",
+      "marqueur": "Marcador temporal",
+      "marqueurPlaceholder": "Ej: 90 días, sin publicidad de pago...",
+      "personaTitle": "Mi persona detallado",
+      "personaDesc": "Generado después del onboarding y enriquecible con IA. Se utiliza en todo el contenido generado.",
+      "personaPlaceholder": "Describe tu persona objetivo en detalle...",
+      "enrich": "Enriquecer con IA",
+      "enriching": "Enriqueciendo…",
+      "enrichDesc": "El enriquecimiento con IA utiliza tus datos de onboarding, análisis competitivo y conversaciones del coach para mejorar tu persona. Coste: 1 crédito.",
+      "formulaPreview": "Ayudo a {cible} a {objectif} con {mecanisme} en {marqueur}",
+      "saved": "Posicionamiento guardado"
     }
   },
   "today": {
@@ -527,7 +641,14 @@
       "educational": "Educativo",
       "storytelling": "Narrativo",
       "direct": "Directo",
-      "provocative": "Provocador"
+      "provocative": "Provocador",
+      "professionnel": "Profesional",
+      "authentique": "Auténtico",
+      "inspirant": "Inspirador",
+      "humoristique": "Humorístico",
+      "educatif": "Educativo",
+      "provocateur": "Provocador",
+      "minimaliste": "Minimalista"
     },
     "platforms": {
       "linkedin": "LinkedIn",
@@ -537,7 +658,8 @@
       "threads": "Threads",
       "tiktok": "TikTok",
       "youtube": "YouTube",
-      "blog": "Blog"
+      "blog": "Blog",
+      "email": "Email"
     },
     "contentTypes": {
       "post": "Post",

@@ -327,7 +327,22 @@
       "disconnectSuccess": "تم قطع اتصال الحساب بنجاح.",
       "disconnectError": "حدث خطأ أثناء قطع اتصال الحساب.",
       "pinterestOk": "تم توصيل Pinterest",
-      "pinterestOkDesc": "تم ربط حساب Pinterest الخاص بك بـ Tipote الآن."
+      "pinterestOkDesc": "تم ربط حساب Pinterest الخاص بك بـ Tipote الآن.",
+      "linkedinOk": "تم ربط LinkedIn",
+      "linkedinOkDesc": "حسابك على LinkedIn مرتبط الآن بـ Tipote.",
+      "facebookOk": "تم ربط Facebook",
+      "facebookOkDesc": "صفحتك على Facebook مرتبطة الآن بـ Tipote.",
+      "threadsOk": "تم ربط Threads",
+      "threadsOkDesc": "حسابك على Threads مرتبط الآن بـ Tipote.",
+      "twitterOk": "تم ربط X",
+      "twitterOkDesc": "حسابك على X مرتبط الآن بـ Tipote.",
+      "tiktokOk": "تم ربط TikTok",
+      "tiktokOkDesc": "حسابك على TikTok مرتبط الآن بـ Tipote.",
+      "disconnected": "تم فصل الحساب",
+      "disconnectedDesc": "تمت إزالة الاتصال.",
+      "errorTitle": "خطأ",
+      "errorUnknown": "خطأ غير معروف",
+      "errorNetwork": "خطأ في الشبكة"
     }
   },
   "aiCredits": {
@@ -356,7 +371,11 @@
     "upsell": {
       "title": "ميزة مدفوعة",
       "body": "التعليقات التلقائية متاحة ابتداءً من الخطة الاحترافية.",
-      "cta": "عرض الخطط"
+      "cta": "عرض الخطط",
+      "bullet1": "2–5 تعليقات قبل وبعد كل منشور",
+      "bullet2": "أسلوب ونبرة مخصصة لملفك الشخصي",
+      "bullet3": "زوايا متنوعة: موافقة، نقاش، سؤال، تطوير",
+      "bullet4": "حماية مدمجة ضد الرسائل غير المرغوبة"
     },
     "styleTitle": "أسلوب التعليق",
     "styleDesc": "اختر الطريقة التي تريد أن تبدو عليها تعليقاتك.",
@@ -366,7 +385,13 @@
       "friendly": "ودي",
       "humorous": "فكاهي",
       "inspirational": "ملهم",
-      "direct": "مباشر"
+      "direct": "مباشر",
+      "amical": "ودي",
+      "professionnel": "مهني",
+      "provocateur": "استفزازي",
+      "storytelling": "سرد قصصي",
+      "humoristique": "فكاهي",
+      "serieux": "جدي"
     },
     "objectifsTitle": "الأهداف",
     "objectifsDesc": "ماذا تريد أن تحقق من خلال تعليقاتك؟",
@@ -374,7 +399,12 @@
       "engagement": "زيادة التفاعل",
       "visibility": "توسيع الانتشار",
       "authority": "إثبات الخبرة",
-      "network": "توسيع الشبكة"
+      "network": "توسيع الشبكة",
+      "eduquer": "تعليم",
+      "vendre": "بيع",
+      "divertir": "ترفيه",
+      "inspirer": "إلهام",
+      "community": "بناء مجتمع"
     },
     "langageTitle": "اللغة",
     "langageDesc": "اللغة التي ستُنشأ بها التعليقات.",
@@ -388,7 +418,11 @@
     "save": "حفظ التفضيلات",
     "toast": {
       "saveSuccess": "تم حفظ التفضيلات بنجاح.",
-      "saveError": "خطأ في حفظ التفضيلات."
+      "saveError": "خطأ في حفظ التفضيلات.",
+      "ok": "تم حفظ الإعدادات",
+      "okDesc": "تم تحديث تفضيلات التعليقات التلقائية.",
+      "error": "خطأ",
+      "errorDesc": "تعذر الحفظ"
     }
   },
   "settingsPage": {
@@ -401,11 +435,33 @@
       "save": "حفظ الملف الشخصي",
       "saving": "جارٍ الحفظ…",
       "saveSuccess": "تم تحديث الملف الشخصي بنجاح.",
-      "saveError": "خطأ في حفظ الملف الشخصي."
+      "saveError": "خطأ في حفظ الملف الشخصي.",
+      "password": "كلمة المرور",
+      "changePassword": "تغيير",
+      "timezoneLabel": "المنطقة الزمنية",
+      "logoutTitle": "تسجيل الخروج",
+      "logoutDesc": "تسجيل الخروج من حساب Tipote على هذا الجهاز.",
+      "danger": {
+        "title": "منطقة خطرة",
+        "subtitle": "إعادة تعيين Tipote",
+        "desc": "هل غيرت اتجاهك أو ضعت في الطريق؟ تريد البدء من جديد مع Tipote؟ انقر على هذا الزر. تحذير: سيتم حذف جميع المحتويات والمهام والتخصيصات التي تم إنشاؤها منذ تسجيلك وستبدأ من الصفر. هذا نهائي ولا يمكن التراجع عنه.",
+        "reset": "إعادة تعيين Tipote",
+        "resetting": "جاري إعادة التعيين…"
+      },
+      "passwordDialog": {
+        "description": "تغيير كلمة مرور Tipote"
+      }
     },
     "connections": {
       "title": "الاتصالات",
-      "description": "أدر تكاملاتك وحساباتك المتصلة."
+      "description": "أدر تكاملاتك وحساباتك المتصلة.",
+      "sioTitle": "Systeme.io",
+      "sioDesc": "اربط حسابك على Systeme.io لتصدير العملاء المحتملين تلقائياً من اختباراتك مع العلامات.",
+      "sioApiHelp": "كيف أجد مفتاح API الخاص بي؟",
+      "sioLabel": "مفتاح API لـ Systeme.io",
+      "sioPlaceholder": "الصق مفتاح API هنا...",
+      "save": "حفظ",
+      "saving": "جاري الحفظ…"
     },
     "reglages": {
       "title": "التفضيلات",
@@ -414,7 +470,47 @@
       "theme": "السمة",
       "themeLight": "فاتح",
       "themeDark": "داكن",
-      "themeSystem": "النظام"
+      "themeSystem": "النظام",
+      "langTitle": "اللغة والمحتوى",
+      "uiLangLabel": "لغة الواجهة",
+      "uiLangDesc": "لغة عرض Tipote — يُطبَّق التغيير فوراً.",
+      "contentLangLabel": "لغة المحتوى المُنشأ",
+      "addressLabel": "صيغة المخاطبة الافتراضية",
+      "tu": "غير رسمي (أنت)",
+      "vous": "رسمي (حضرتك)",
+      "saveLang": "حفظ",
+      "saving": "جاري الحفظ…",
+      "saved": "تم حفظ الإعدادات",
+      "saveError": "فشل في الحفظ",
+      "legalTitle": "الإشعارات القانونية والشروط",
+      "legalDesc": "ستُستخدم هذه الروابط تلقائياً في اختباراتك وصفحاتك العامة. يمكنك أيضاً إنشاء مستندات قانونية مخصصة لبلدك ونشاطك.",
+      "privacy": "سياسة الخصوصية",
+      "privacyPlaceholder": "https://موقعي.com/سياسة-الخصوصية",
+      "mentions": "الإشعارات القانونية / شروط الاستخدام",
+      "mentionsPlaceholder": "https://موقعي.com/قانوني",
+      "cgv": "الشروط والأحكام العامة للبيع",
+      "cgvPlaceholder": "https://موقعي.com/شروط-البيع",
+      "generate": "إنشاء",
+      "save": "حفظ",
+      "linksTitle": "الروابط والشبكات",
+      "offersTitle": "قائمة العروض",
+      "offersDesc": "أضف عروضك مع تفاصيلها حتى يتمكن الذكاء الاصطناعي من إنشاء محتوى ملائم.",
+      "offerN": "العرض {n}",
+      "offerName": "اسم العرض *",
+      "offerNamePlaceholder": "مثال: دورة كتابة المحتوى",
+      "offerPrice": "السعر",
+      "offerPricePlaceholder": "مثال: 297$",
+      "offerPromise": "الوعد الرئيسي",
+      "offerPromisePlaceholder": "مثال: تعلم كتابة نصوص تبيع في 30 يوماً",
+      "offerTarget": "الجمهور المستهدف",
+      "offerTargetPlaceholder": "مثال: رواد الأعمال والمستقلون الذين يريدون البيع عبر الإنترنت",
+      "offerDesc": "وصف مختصر",
+      "offerDescPlaceholder": "في 2–3 جمل، صف ما يتضمنه عرضك والنتيجة المتوقعة",
+      "offerFormat": "الصيغة",
+      "offerFormatPlaceholder": "مثال: فيديو، PDF، تدريب، كتاب إلكتروني...",
+      "offerLink": "الرابط",
+      "addOffer": "إضافة عرض",
+      "saveOffers": "حفظ العروض"
     },
     "positioningTab": {
       "title": "تموضعي",
@@ -422,7 +518,25 @@
       "save": "حفظ التموضع",
       "saving": "جارٍ الحفظ…",
       "saveSuccess": "تم حفظ التموضع بنجاح.",
-      "saveError": "خطأ في حفظ التموضع."
+      "saveError": "خطأ في حفظ التموضع.",
+      "nicheTitle": "صيغة تخصصي",
+      "nicheDesc": "أكمل العناصر الأربعة لتحديد تخصصك بشكل واضح ومميز.",
+      "cible": "الجمهور المستهدف",
+      "ciblePlaceholder": "مثال: رواد أعمال منفردون، مديرو موارد بشرية...",
+      "objectif": "هدف الجمهور",
+      "objectifPlaceholder": "مثال: الحصول على أول 3 عملاء...",
+      "mecanisme": "الآلية الفريدة",
+      "mecanismePlaceholder": "مثال: طريقتي في المحتوى المغناطيسي...",
+      "marqueur": "المؤشر الزمني",
+      "marqueurPlaceholder": "مثال: 90 يوماً، بدون إعلانات مدفوعة...",
+      "personaTitle": "شخصيتي المفصلة",
+      "personaDesc": "تم إنشاؤها بعد الإعداد ويمكن إثراؤها بالذكاء الاصطناعي. تُستخدم في جميع المحتويات المُنشأة.",
+      "personaPlaceholder": "صف شخصيتك المستهدفة بالتفصيل...",
+      "enrich": "إثراء بالذكاء الاصطناعي",
+      "enriching": "جاري الإثراء…",
+      "enrichDesc": "يستخدم الإثراء بالذكاء الاصطناعي بيانات الإعداد والتحليل التنافسي ومحادثات المدرب لتحسين شخصيتك. التكلفة: 1 رصيد.",
+      "formulaPreview": "أساعد {cible} على {objectif} بواسطة {mecanisme} في {marqueur}",
+      "saved": "تم حفظ التموضع"
     }
   },
   "today": {
@@ -527,7 +641,14 @@
       "educational": "تعليمي",
       "storytelling": "قصصي",
       "direct": "مباشر",
-      "provocative": "استفزازي"
+      "provocative": "استفزازي",
+      "professionnel": "مهني",
+      "authentique": "أصيل",
+      "inspirant": "ملهم",
+      "humoristique": "فكاهي",
+      "educatif": "تعليمي",
+      "provocateur": "استفزازي",
+      "minimaliste": "بسيط"
     },
     "platforms": {
       "linkedin": "LinkedIn",
@@ -537,7 +658,8 @@
       "threads": "Threads",
       "tiktok": "TikTok",
       "youtube": "YouTube",
-      "blog": "مدونة"
+      "blog": "مدونة",
+      "email": "بريد إلكتروني"
     },
     "contentTypes": {
       "post": "منشور",

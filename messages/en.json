@@ -1243,7 +1243,11 @@
       "targetPostHint": "Select the post on which you want to activate this automation.",
       "commentReplies": "Automatic comment reply",
       "commentRepliesPlaceholder": "It's in your DMs!\nLet me know if you received it 👌\nCheck your private messages\nGreat, sending it in 2 min ✉️\nCheck your DMs!",
-      "commentRepliesHint": "One variant per line. A random reply will be posted as a comment before sending the DM."
+      "commentRepliesHint": "One variant per line. A random reply will be posted as a comment before sending the DM.",
+      "tiktokCommentOnly": "Comment reply only",
+      "tiktokCommentRepliesPlaceholder": "Thanks for your comment! ...\nGreat, thanks for participating!\nHappy to hear that! ...\nNice one, appreciate it!\nThanks for sharing your thoughts!",
+      "tiktokCommentRepliesHint": "One variant per line. A random reply will be posted in response to the comment.",
+      "tiktokNote": "TikTok doesn't provide a DM API. The automation will reply directly in a comment under the target post."
     },
     "card": {
       "postTargeted": "Targeted post",

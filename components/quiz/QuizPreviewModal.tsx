@@ -33,7 +33,7 @@ export function QuizPreviewModal({ open, onOpenChange, quizId, previewData }: Qu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[1200px] h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[1200px] sm:max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle>Apercu du quiz</DialogTitle>
