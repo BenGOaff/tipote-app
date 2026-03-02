@@ -2340,7 +2340,18 @@ export async function POST(req: Request) {
               const brandingDefaults: Record<string, string | undefined> = {
                 logo_image_url: bp.brand_logo_url || undefined,
                 author_photo_url: bp.brand_author_photo_url || undefined,
+                about_img_url: bp.brand_author_photo_url || undefined,
+                trainer_img_url: bp.brand_author_photo_url || undefined,
+                speaker_photo_url: bp.brand_author_photo_url || undefined,
+                expert_photo_url: bp.brand_author_photo_url || undefined,
+                coach_photo_url: bp.brand_author_photo_url || undefined,
+                profile_photo_url: bp.brand_author_photo_url || undefined,
               };
+              // Inject all photo field defaults
+              for (const [key, val] of Object.entries(brandingDefaults)) {
+                if (val && !contentData[key]) contentData[key] = val;
+              }
+              // Also inject via schema
               for (const f of (schema as any).fields ?? []) {
                 if (f.source === "user" && f.inputType === "image_url" && brandingDefaults[f.key]) {
                   if (!contentData[f.key]) {

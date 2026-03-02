@@ -648,6 +648,9 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     // Inject legal footer if legal URLs are present in contentData
     out = injectLegalFooterHtml(out, req.contentData);
 
+    // Final sanitization pass: strip ALL remaining placeholders from HTML
+    out = sanitizeHtmlPlaceholders(out, req.contentData);
+
     return { html: out };
   }
 
@@ -677,6 +680,9 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   // Inject FAQ styling
   doc = injectFaqStyling(doc);
+
+  // Final sanitization pass: strip ALL remaining placeholders from HTML
+  doc = sanitizeHtmlPlaceholders(doc, req.contentData);
 
   return { html: doc };
 }
@@ -784,6 +790,80 @@ function replaceHardcodedTemplatePlaceholders(html: string, contentData: Record<
 
   // capture-01: "VOTRE LOGO", "VOTRE BASELINE ICI" — already handled by applyCapture01Replacements
   // capture-02: "VotreSite.com" — also handled above now
+
+  // Replace placeholder text for images/icons
+  const authorPhoto = contentData.author_photo_url || contentData.about_img_url || contentData.trainer_img_url || "";
+  if (authorPhoto) {
+    // Replace img src placeholders with actual photo
+    out = out.replace(
+      /(<img[^>]*class="[^"]*(?:author|trainer|coach|expert|speaker|profile|about|photo)[^"]*"[^>]*src=["'])([^"']*)(['"][^>]*>)/gi,
+      `$1${safeString(authorPhoto)}$3`
+    );
+  }
+
+  // Replace remaining "[Photo ...]" text with empty (will be handled by CSS/layout)
+  out = out.replace(/>\s*\[(?:Photo|Image|Icône|Icon|Ta photo)[^\]]*\]\s*</g, "><");
+
+  return out;
+}
+
+// ---------- Post-render HTML placeholder sanitization ----------
+
+/**
+ * Aggressively strip ALL remaining placeholder/instruction text from the final HTML.
+ * This is the last line of defense: runs on the full HTML after all rendering.
+ * Handles text that templates hardcode and that selectors.json missed.
+ */
+function sanitizeHtmlPlaceholders(html: string, contentData: Record<string, any>): string {
+  let out = html;
+
+  // 1. Strip [bracketed placeholder] patterns from visible text
+  //    But preserve [href] or [class] attributes inside HTML tags
+  out = out.replace(/>([^<]*)\[(?:Icône|Icon|Photo|Image|Ta photo|Ton nom|Nom|Prénom|Titre|Bénéfice|Audience|Logo|Votre)[^\]]*\]([^<]*)</g, ">$1$2<");
+
+  // 2. Strip "Lorem ipsum" text blocks (but not inside attributes)
+  out = out.replace(/>([^<]*?)Lorem ipsum[^<]*/g, (match, before) => `>${before}`);
+  out = out.replace(/>([^<]*?)Dolor sit amet[^<]*/g, (match, before) => `>${before}`);
+
+  // 3. Strip challenge/template-specific instruction text
+  const INSTRUCTION_PATTERNS = [
+    /Exercice du jour \d+/g,
+    /Objectif du challenge/g,
+    /Puce promesse (?:irrésistible|avec bénéfice)[^<]*/g,
+    /(?:bénéfice|Bénéfice) \+ (?:conséquence|Conséquence)[^<]*/g,
+    /(?:Décris|Explique) (?:ici|ce que|ton|ta|les)[^<]*/g,
+    /\bOption \d+ : Explique[^<]*/g,
+    /Description de l'?(?:exercice|objectif|étape|jour)[^<]*/g,
+  ];
+  for (const pat of INSTRUCTION_PATTERNS) {
+    out = out.replace(pat, "");
+  }
+
+  // 4. Replace photo placeholder <img> tags with actual branding photo
+  const authorPhotoUrl = contentData.about_img_url || contentData.author_photo_url || contentData.brand_author_photo_url || "";
+  if (authorPhotoUrl) {
+    // Replace img tags that have placeholder alt text
+    out = out.replace(
+      /<img([^>]*?)(?:alt=["'](?:Photo|Ta photo|Photo professionnelle|Photo de|Votre photo|Photo représent)[^"']*["'])([^>]*?)(?:src=["'][^"']*["'])?([^>]*?)>/gi,
+      `<img$1 alt="Photo" $2 src="${safeString(authorPhotoUrl)}" $3>`
+    );
+    // Also replace images with placeholder src (data:, placeholder.com, etc.)
+    out = out.replace(
+      /<img([^>]*?)src=["'](?:data:image\/[^;]+;base64,[^"']*|https?:\/\/(?:via\.placeholder|placehold)[^"']*)["']([^>]*?)>/gi,
+      `<img$1 src="${safeString(authorPhotoUrl)}" $2>`
+    );
+  }
+
+  // 5. Hide sections that only contain placeholder text (empty after stripping)
+  //    Look for elements that became empty and add display:none
+  out = out.replace(/<(?:h[1-6]|p|span|li|div)([^>]*)>\s*<\/(?:h[1-6]|p|span|li|div)>/g, (match, attrs) => {
+    // Don't hide elements with specific functional classes
+    if (attrs && /(tipote-|cta-|btn-|form|capture|footer)/.test(attrs)) return match;
+    return match.replace(">", ' style="display:none">');
+  });
+
+  // 6. Strip remaining {{mustache}} template variables that weren't filled
+  out = out.replace(/\{\{[a-zA-Z_][a-zA-Z0-9_.]*\}\}/g, "");
 
   return out;
 }
@@ -895,7 +975,18 @@ const LEGAL_LABELS: Record<string, { mentions: string; cgv: string; privacy: str
 
 function injectLegalFooterHtml(html: string, contentData: Record<string, any>, locale?: string): string {
   // Guard: prevent double injection of legal footer
-  if (html.includes("tipote-legal-footer") || html.includes("data-tipote-legal")) return html;
+  // Guard: prevent double injection if ANY legal footer already exists
+  // Check for: Tipote injected footer, template built-in footer, or legal URL links
+  if (
+    html.includes("tipote-legal-footer") ||
+    html.includes("data-tipote-legal") ||
+    html.includes('class="footer-links"') ||
+    html.includes("class='footer-links'") ||
+    // Check if the template already has rendered legal links
+    (contentData?.legal_mentions_url && html.includes(contentData.legal_mentions_url)) ||
+    (contentData?.legal_cgv_url && html.includes(contentData.legal_cgv_url)) ||
+    (contentData?.legal_privacy_url && html.includes(contentData.legal_privacy_url))
+  ) return html;
 
   const lang = (locale || "fr").slice(0, 2);
   const labels = LEGAL_LABELS[lang] || LEGAL_LABELS.fr;
