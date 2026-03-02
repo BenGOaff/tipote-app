@@ -1,8 +1,6 @@
 // app/api/pepites/list/route.ts
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
-
 export async function GET() {
   const supabase = await getSupabaseServerClient();
   const {
@@ -13,15 +11,11 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const projectId = await getActiveProjectId(supabase, user.id);
-
-  let query = supabase
+  // Note: pas de filtre project_id car les pépites sont globales (pas liées à un projet)
+  const { data, error } = await supabase
     .from("user_pepites")
     .select("id,assigned_at,seen_at,pepites(id,title,body,created_at)")
-    .eq("user_id", user.id);
-  if (projectId) query = query.eq("project_id", projectId);
-
-  const { data, error } = await query
+    .eq("user_id", user.id)
     .order("assigned_at", { ascending: false });
 
   if (error) {

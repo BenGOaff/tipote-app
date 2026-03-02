@@ -661,6 +661,19 @@ export function QuizForm({ onClose }: QuizFormProps) {
                               ))}
                             </SelectContent>
                           </Select>
+                          {q.options.length > 2 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newOpts = q.options.filter((_, i) => i !== oi);
+                                updateQuestion(qi, "options", newOpts);
+                              }}
+                              className="text-destructive shrink-0 h-8 w-8"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                       <Button

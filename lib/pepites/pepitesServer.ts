@@ -25,8 +25,8 @@ export type UserPepitesStateRow = {
   updated_at: string;
 };
 
-const INTERVAL_DAYS = 10;
-const JITTER_DAYS = 4; // 0..4 jours => l'user ne sait pas exactement quand ça tombe
+const INTERVAL_DAYS = 2;
+const JITTER_DAYS = 2; // 0..2 jours => intervalle de 2-4 jours, moyenne ~3
 
 function addDaysIso(base: Date, days: number) {
   const d = new Date(base.getTime());

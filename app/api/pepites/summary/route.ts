@@ -1,7 +1,6 @@
 // app/api/pepites/summary/route.ts
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   getOrCreatePepitesState,
@@ -19,8 +18,6 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const projectId = await getActiveProjectId(supabase, user.id);
-
   const state = await getOrCreatePepitesState(supabase, user.id);
 
   let current = state.current_user_pepite_id
@@ -31,13 +28,11 @@ export async function GET() {
   const due = new Date(state.next_reveal_at).getTime() <= now.getTime();
 
   // ✅ Si l'user n'a JAMAIS reçu de pépite, on force l'assignation maintenant
-  let countQuery = supabase
+  // Note: pas de filtre project_id car les pépites sont globales (pas liées à un projet)
+  const { count: receivedCount, error: countErr } = await supabase
     .from("user_pepites")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
-  if (projectId) countQuery = countQuery.eq("project_id", projectId);
-
-  const { count: receivedCount, error: countErr } = await countQuery;
 
   const hasNeverReceived = !countErr && (receivedCount ?? 0) === 0;
 

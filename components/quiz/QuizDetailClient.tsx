@@ -720,6 +720,26 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <h3 className="font-bold">
                       Questions ({editQuestions.length})
                     </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditQuestions((prev) => [
+                          ...prev,
+                          {
+                            id: undefined as any,
+                            question_text: "",
+                            options: Array.from({ length: editResults.length || 3 }, (_, i) => ({
+                              text: "",
+                              result_index: i,
+                            })),
+                            sort_order: prev.length,
+                          },
+                        ]);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Question
+                    </Button>
                   </div>
                   {editQuestions.map((q, qi) => (
                     <Card key={q.id || qi} className="p-4 space-y-3">
@@ -735,6 +755,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           className="flex-1"
                           placeholder="Texte de la question"
                         />
+                        {editQuestions.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditQuestions((prev) => prev.filter((_, i) => i !== qi))}
+                            className="text-destructive shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                       <div className="pl-6 space-y-2">
                         {q.options.map((opt, oi) => (
@@ -771,8 +801,36 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                 </option>
                               ))}
                             </select>
+                            {q.options.length > 2 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const next = [...editQuestions];
+                                  const newOpts = next[qi].options.filter((_, i) => i !== oi);
+                                  next[qi] = { ...next[qi], options: newOpts };
+                                  setEditQuestions(next);
+                                }}
+                                className="text-destructive shrink-0 h-8 w-8"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
                         ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const next = [...editQuestions];
+                            const newOpts = [...next[qi].options, { text: "", result_index: 0 }];
+                            next[qi] = { ...next[qi], options: newOpts };
+                            setEditQuestions(next);
+                          }}
+                          className="text-xs"
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> Option
+                        </Button>
                       </div>
                     </Card>
                   ))}
