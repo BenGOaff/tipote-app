@@ -825,28 +825,48 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 function ConsentText({ text, privacyUrl, locale }: { text: string | null; privacyUrl: string | null; locale: string | null }) {
   const t = getT(locale);
   const raw = text || t.defaultConsent;
+
+  if (!privacyUrl) return <span>{raw}</span>;
+
   const needle = t.consentNeedle;
   const idx = raw.toLowerCase().indexOf(needle);
 
-  if (!privacyUrl || idx === -1) return <span>{raw}</span>;
+  // If the needle is found in the text, make it a clickable link inline
+  if (idx !== -1) {
+    const before = raw.slice(0, idx);
+    const match = raw.slice(idx, idx + needle.length);
+    const after = raw.slice(idx + needle.length);
 
-  const before = raw.slice(0, idx);
-  const match = raw.slice(idx, idx + needle.length);
-  const after = raw.slice(idx + needle.length);
+    return (
+      <span>
+        {before}
+        <a
+          href={privacyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline text-primary hover:text-primary/80 transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {match}
+        </a>
+        {after}
+      </span>
+    );
+  }
 
+  // Fallback: needle not found in text — show consent text + separate visible link
   return (
     <span>
-      {before}
+      {raw}{" "}
       <a
         href={privacyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="underline hover:text-foreground transition-colors"
+        className="underline text-primary hover:text-primary/80 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
-        {match}
+        {t.privacyPolicy}
       </a>
-      {after}
     </span>
   );
 }

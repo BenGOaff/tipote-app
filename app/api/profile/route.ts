@@ -64,6 +64,14 @@ const UpdateSchema = z.object({
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),
   website_url: z.string().trim().max(500).optional(),
+  tiktok_url: z.string().trim().max(500).optional(),
+  pinterest_url: z.string().trim().max(500).optional(),
+  threads_url: z.string().trim().max(500).optional(),
+  facebook_url: z.string().trim().max(500).optional(),
+  custom_links: z.array(z.object({
+    label: z.string().trim().max(100),
+    url: z.string().trim().max(500),
+  })).max(10).optional(),
 
   // Storytelling (6-step founder journey)
   storytelling: z

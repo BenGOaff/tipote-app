@@ -13,6 +13,7 @@ import {
   Linkedin,
   Instagram,
   Youtube,
+  Facebook,
   Link as LinkIcon,
   AlertTriangle,
   RotateCcw,
@@ -29,6 +30,7 @@ import {
   Pencil,
   Eye,
   BookOpen,
+  AtSign,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -54,6 +56,22 @@ import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 import { AIContent } from "@/components/ui/ai-content";
 import LogoutButton from "@/components/LogoutButton";
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.72a8.2 8.2 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.15z" />
+    </svg>
+  );
+}
+
+function PinterestIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+    </svg>
+  );
+}
 
 type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
 
@@ -95,6 +113,11 @@ type ProfileRow = {
   instagram_url?: string | null;
   youtube_url?: string | null;
   website_url?: string | null;
+  tiktok_url?: string | null;
+  pinterest_url?: string | null;
+  threads_url?: string | null;
+  facebook_url?: string | null;
+  custom_links?: { label: string; url: string }[] | null;
   // Branding
   brand_font?: string | null;
   brand_color_base?: string | null;
@@ -270,6 +293,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [instagramUrl, setInstagramUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
+  const [pinterestUrl, setPinterestUrl] = useState("");
+  const [threadsUrl, setThreadsUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [customLinks, setCustomLinks] = useState<{ label: string; url: string }[]>([]);
   const [pendingLinks, startLinksTransition] = useTransition();
 
   const [offers, setOffers] = useState<OfferItem[]>([]);
@@ -334,6 +362,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInstagramUrl(row?.instagram_url ?? "");
         setYoutubeUrl(row?.youtube_url ?? "");
         setWebsiteUrl(row?.website_url ?? "");
+        setTiktokUrl(row?.tiktok_url ?? "");
+        setPinterestUrl(row?.pinterest_url ?? "");
+        setThreadsUrl(row?.threads_url ?? "");
+        setFacebookUrl(row?.facebook_url ?? "");
+        setCustomLinks(Array.isArray(row?.custom_links) ? row.custom_links : []);
 
         // Storytelling
         const st = row?.storytelling;
@@ -796,9 +829,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       (i?.linkedin_url ?? "") !== linkedinUrl ||
       (i?.instagram_url ?? "") !== instagramUrl ||
       (i?.youtube_url ?? "") !== youtubeUrl ||
-      (i?.website_url ?? "") !== websiteUrl
+      (i?.website_url ?? "") !== websiteUrl ||
+      (i?.tiktok_url ?? "") !== tiktokUrl ||
+      (i?.pinterest_url ?? "") !== pinterestUrl ||
+      (i?.threads_url ?? "") !== threadsUrl ||
+      (i?.facebook_url ?? "") !== facebookUrl ||
+      JSON.stringify(Array.isArray(i?.custom_links) ? i.custom_links : []) !== JSON.stringify(customLinks)
     );
-  }, [initialProfile, linkedinUrl, instagramUrl, youtubeUrl, websiteUrl]);
+  }, [initialProfile, linkedinUrl, instagramUrl, youtubeUrl, websiteUrl, tiktokUrl, pinterestUrl, threadsUrl, facebookUrl, customLinks]);
 
   const saveLinks = () => {
     startLinksTransition(async () => {
@@ -808,6 +846,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         if ((initialProfile?.instagram_url ?? "") !== instagramUrl) body.instagram_url = instagramUrl;
         if ((initialProfile?.youtube_url ?? "") !== youtubeUrl) body.youtube_url = youtubeUrl;
         if ((initialProfile?.website_url ?? "") !== websiteUrl) body.website_url = websiteUrl;
+        if ((initialProfile?.tiktok_url ?? "") !== tiktokUrl) body.tiktok_url = tiktokUrl;
+        if ((initialProfile?.pinterest_url ?? "") !== pinterestUrl) body.pinterest_url = pinterestUrl;
+        if ((initialProfile?.threads_url ?? "") !== threadsUrl) body.threads_url = threadsUrl;
+        if ((initialProfile?.facebook_url ?? "") !== facebookUrl) body.facebook_url = facebookUrl;
+        const prevCustom = Array.isArray(initialProfile?.custom_links) ? initialProfile.custom_links : [];
+        if (JSON.stringify(prevCustom) !== JSON.stringify(customLinks)) body.custom_links = customLinks.filter(l => l.url.trim());
 
         const res = await fetch("/api/profile", {
           method: "PATCH",
@@ -824,11 +868,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInstagramUrl(row?.instagram_url ?? "");
         setYoutubeUrl(row?.youtube_url ?? "");
         setWebsiteUrl(row?.website_url ?? "");
+        setTiktokUrl(row?.tiktok_url ?? "");
+        setPinterestUrl(row?.pinterest_url ?? "");
+        setThreadsUrl(row?.threads_url ?? "");
+        setFacebookUrl(row?.facebook_url ?? "");
+        setCustomLinks(Array.isArray(row?.custom_links) ? row.custom_links : []);
 
-        toast({ title: "Liens enregistrés" });
+        toast({ title: tSP("reglages.linksSaved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
+          title: tSP("reglages.linksSaveError"),
           description: e?.message ?? "Erreur inconnue",
           variant: "destructive",
         });
@@ -1206,12 +1255,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Linkedin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Facebook className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <Input
-                placeholder="https://linkedin.com/in/..."
+                placeholder="https://facebook.com/..."
                 className="flex-1"
-                value={linkedinUrl}
-                onChange={(e) => setLinkedinUrl(e.target.value)}
+                value={facebookUrl}
+                onChange={(e) => setFacebookUrl(e.target.value)}
                 disabled={profileLoading}
               />
             </div>
@@ -1226,6 +1275,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               />
             </div>
             <div className="flex items-center gap-3">
+              <TikTokIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://tiktok.com/@..."
+                className="flex-1"
+                value={tiktokUrl}
+                onChange={(e) => setTiktokUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
               <Youtube className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <Input
                 placeholder="https://youtube.com/@..."
@@ -1236,7 +1295,37 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               />
             </div>
             <div className="flex items-center gap-3">
-              <LinkIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Linkedin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://linkedin.com/in/..."
+                className="flex-1"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <PinterestIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://pinterest.com/..."
+                className="flex-1"
+                value={pinterestUrl}
+                onChange={(e) => setPinterestUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <AtSign className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://threads.net/@..."
+                className="flex-1"
+                value={threadsUrl}
+                onChange={(e) => setThreadsUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <Input
                 placeholder="https://monsite.com"
                 className="flex-1"
@@ -1245,6 +1334,57 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 disabled={profileLoading}
               />
             </div>
+
+            {/* Custom links */}
+            {customLinks.map((link, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <Input
+                  placeholder="Label"
+                  className="w-28 sm:w-36 flex-shrink-0"
+                  value={link.label}
+                  onChange={(e) => {
+                    const copy = [...customLinks];
+                    copy[i] = { ...copy[i], label: e.target.value };
+                    setCustomLinks(copy);
+                  }}
+                  disabled={profileLoading}
+                />
+                <Input
+                  placeholder="https://..."
+                  className="flex-1"
+                  value={link.url}
+                  onChange={(e) => {
+                    const copy = [...customLinks];
+                    copy[i] = { ...copy[i], url: e.target.value };
+                    setCustomLinks(copy);
+                  }}
+                  disabled={profileLoading}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0"
+                  onClick={() => setCustomLinks(customLinks.filter((_, j) => j !== i))}
+                  disabled={profileLoading}
+                >
+                  <Trash2 className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+
+            {customLinks.length < 10 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={() => setCustomLinks([...customLinks, { label: "", url: "" }])}
+                disabled={profileLoading}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {tSP("reglages.addLink")}
+              </Button>
+            )}
           </div>
 
           <Button variant="outline" className="mt-4" onClick={saveLinks} disabled={!linksDirty || pendingLinks}>
