@@ -96,15 +96,10 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     }
   }
 
-  // Increment leads_count via RPC-style raw update (non-blocking)
-  supabase.rpc("increment_page_leads", { p_page_id: pageId }).catch(() => {
-    // Fallback: plain SQL increment
-    supabase
-      .from("hosted_pages")
-      .update({ leads_count: supabase.raw?.("leads_count + 1") ?? 1 })
-      .eq("id", pageId)
-      .then(() => {});
-  });
+  // Increment leads_count via RPC (non-blocking)
+  supabase
+    .rpc("increment_page_leads", { p_page_id: pageId })
+    .then(() => {}, () => {});
 
   // Systeme.io sync (non-blocking)
   if (page.sio_capture_tag) {
