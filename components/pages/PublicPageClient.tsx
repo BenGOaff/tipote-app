@@ -3,6 +3,11 @@
 // Displays the pre-rendered HTML snapshot in an iframe.
 // Handles lead capture: inline form injected into HTML + overlay on CTA click.
 // Client-side fetches via dedicated /api/pages/public/[slug] endpoint (like quiz).
+//
+// IMPORTANT: The html_snapshot from render.ts already includes:
+// - Inline capture form (tipote-capture-form-wrap)
+// - Legal footer (injectLegalFooterHtml)
+// This client must NOT re-inject them to avoid duplicates.
 
 "use client";
 
@@ -25,6 +30,9 @@ type PublicPageData = {
   legal_cgv_url: string;
   legal_privacy_url: string;
   address_form?: string;
+  // Thank-you page customization (editable by user)
+  thank_you_title?: string;
+  thank_you_message?: string;
 };
 
 function pageTexts(addressForm?: string) {
@@ -41,11 +49,13 @@ function pageTexts(addressForm?: string) {
       ? "Vos donn\u00e9es sont prot\u00e9g\u00e9es et ne seront jamais partag\u00e9es."
       : "Tes donn\u00e9es sont prot\u00e9g\u00e9es et ne seront jamais partag\u00e9es.",
     privacyPolicy: "Politique de confidentialit\u00e9",
-    thanksTitle: "Merci !",
-    thanksRedirect: "Redirection en cours...",
-    thanksConfirmation: v
-      ? "Vous allez recevoir un email de confirmation."
-      : "Tu vas recevoir un email de confirmation.",
+    thanksTitle: v ? "Merci pour votre inscription !" : "Merci pour ton inscription !",
+    thanksMessage: v
+      ? "Votre inscription est valid\u00e9e ! Vous allez recevoir vos acc\u00e8s par email dans les 10 prochaines minutes. Pensez \u00e0 v\u00e9rifier vos spams si vous ne le recevez pas."
+      : "Ton inscription est valid\u00e9e ! Tu vas recevoir tes acc\u00e8s par email dans les 10 prochaines minutes. Pense \u00e0 v\u00e9rifier tes spams si tu ne le re\u00e7ois pas.",
+    thanksRedirect: v
+      ? "Vous allez \u00eatre redirig\u00e9(e) dans quelques instants..."
+      : "Tu vas \u00eatre redirig\u00e9(e) dans quelques instants...",
     consentLabel: v
       ? "J\u2019accepte de recevoir des emails."
       : "J\u2019accepte de recevoir des emails.",
@@ -109,11 +119,11 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
       });
       setCaptureSuccess(true);
 
-      // If there's a payment URL, redirect after capture
+      // If there's a payment URL, redirect after showing thank-you briefly
       if (page.payment_url) {
         setTimeout(() => {
           window.location.href = page.payment_url;
-        }, 1500);
+        }, 3000);
       }
     } catch {
       // Silent fail for UX
@@ -152,7 +162,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
     fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
   } catch { /* ignore */ }
 
-  // Inject capture form + CTA interception script into the HTML
+  // Inject CTA interception script into the HTML (NO legal footer or capture form — already in html_snapshot)
   const htmlWithCapture = injectCaptureScript(page);
 
   return (
@@ -270,24 +280,99 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
         </div>
       )}
 
+      {/* Thank-you / confirmation page after successful capture */}
       {captureSuccess && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.6)",
+            background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 9999,
+            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
-          <div style={{ background: "#fff", borderRadius: 16, padding: "40px 32px", textAlign: "center", maxWidth: 400 }}>
-            <div style={{ fontSize: "3rem", marginBottom: 12 }}>&#10003;</div>
-            <h2 style={{ fontWeight: 700, marginBottom: 8 }}>{txt.thanksTitle}</h2>
-            <p style={{ color: "#666" }}>
-              {page.payment_url ? txt.thanksRedirect : txt.thanksConfirmation}
+          <div style={{
+            background: "#fff",
+            borderRadius: 24,
+            padding: "48px 40px",
+            textAlign: "center",
+            maxWidth: 500,
+            width: "90%",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.3)",
+          }}>
+            {/* Success icon */}
+            <div style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+              boxShadow: "0 8px 30px rgba(16,185,129,0.3)",
+            }}>
+              <svg width="36" height="36" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+
+            <h2 style={{
+              fontSize: "1.75rem",
+              fontWeight: 800,
+              marginBottom: 16,
+              color: "#1c1c1c",
+              lineHeight: 1.3,
+            }}>
+              {page.thank_you_title || txt.thanksTitle}
+            </h2>
+
+            <p style={{
+              color: "#555",
+              fontSize: "1.05rem",
+              lineHeight: 1.7,
+              marginBottom: 24,
+              maxWidth: 380,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}>
+              {page.thank_you_message || txt.thanksMessage}
             </p>
+
+            {/* Email icon hint */}
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 24px",
+              background: "#f0fdf4",
+              borderRadius: 12,
+              border: "1px solid #bbf7d0",
+              marginBottom: page.payment_url ? 24 : 0,
+            }}>
+              <svg width="20" height="20" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <span style={{ fontSize: "0.9rem", color: "#059669", fontWeight: 600 }}>
+                {page.address_form === "vous" ? "V\u00e9rifiez votre bo\u00eete email" : "V\u00e9rifie ta bo\u00eete email"}
+              </span>
+            </div>
+
+            {/* Redirect notice */}
+            {page.payment_url && (
+              <p style={{
+                color: "#999",
+                fontSize: "0.85rem",
+                marginTop: 16,
+                fontStyle: "italic",
+              }}>
+                {txt.thanksRedirect}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -296,22 +381,15 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
 }
 
 // Inject a small script into the HTML that intercepts CTA clicks
-// and posts a message to the parent to open the capture overlay
+// and posts a message to the parent to open the capture overlay.
+// IMPORTANT: Does NOT re-inject legal footer or capture form (already in html_snapshot from render.ts).
 function injectCaptureScript(page: PublicPageData): string {
   const html = page.html_snapshot || "";
 
-  // For capture pages: inject an inline form into the HTML before any CTA
-  let withForm = html;
-  if (page.page_type === "capture" && page.capture_enabled) {
-    withForm = injectInlineCaptureForm(withForm, page);
-  }
-
   if (!page.capture_enabled) {
-    // Still add legal footer
-    const legalFooter = buildLegalFooter(page);
-    const idx = withForm.lastIndexOf("</body>");
-    if (idx === -1) return withForm + legalFooter;
-    return withForm.slice(0, idx) + legalFooter + "\n" + withForm.slice(idx);
+    // No capture interception needed — page is served as-is
+    // Legal footer is already in the html_snapshot from render.ts
+    return html;
   }
 
   const script = `<script>
@@ -343,62 +421,7 @@ function injectCaptureScript(page: PublicPageData): string {
 })();
 </script>`;
 
-  const legalFooter = buildLegalFooter(page);
-  const idx = withForm.lastIndexOf("</body>");
-  if (idx === -1) return withForm + legalFooter + script;
-  return withForm.slice(0, idx) + legalFooter + "\n" + script + "\n" + withForm.slice(idx);
-}
-
-/** Inject an inline capture form into the page HTML. */
-function injectInlineCaptureForm(html: string, page: PublicPageData): string {
-  const txt = pageTexts(page.address_form);
-  const heading = page.capture_heading || txt.defaultHeading;
-  const subtitle = page.capture_subtitle || "";
-  const btnText = page.payment_button_text || txt.defaultCta;
-  const privacyUrl = page.legal_privacy_url || "";
-
-  const formHtml = `
-<div id="tipote-inline-capture" style="max-width:480px;margin:32px auto;padding:32px 24px;background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);text-align:center;font-family:system-ui,sans-serif">
-  <h3 style="font-size:1.35rem;font-weight:700;margin:0 0 8px;color:#1c1c1c">${escapeForHtml(heading)}</h3>
-  ${subtitle ? `<p style="color:#666;margin:0 0 20px;font-size:0.95rem">${escapeForHtml(subtitle)}</p>` : '<div style="margin-bottom:16px"></div>'}
-  <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
-    <input type="text" placeholder="${escapeForHtml(txt.firstNamePlaceholder)}" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
-    <input type="email" placeholder="${escapeForHtml(txt.emailPlaceholder)}" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
-    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.8rem;color:#666;cursor:pointer;margin:4px 0">
-      <input type="checkbox" required style="margin-top:2px;accent-color:#2563eb">
-      <span>${escapeForHtml(txt.consentLabel)} ${privacyUrl ? `<a href="${escapeForHtml(privacyUrl)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">${escapeForHtml(txt.privacyPolicy)}</a>` : ''}</span>
-    </label>
-    <button type="submit" style="padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-top:4px">${escapeForHtml(btnText)}</button>
-  </form>
-  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">${escapeForHtml(txt.dataProtectedLong)}</p>
-</div>`;
-
-  // Try to insert the form after the first CTA section or before the footer
-  // Strategy: insert before <footer> or before the last section or before </body>
-  const footerIdx = html.search(/<footer[\s>]/i);
-  if (footerIdx !== -1) {
-    return html.slice(0, footerIdx) + formHtml + "\n" + html.slice(footerIdx);
-  }
-
-  const bodyIdx = html.lastIndexOf("</body>");
-  if (bodyIdx !== -1) {
-    return html.slice(0, bodyIdx) + formHtml + "\n" + html.slice(bodyIdx);
-  }
-
-  return html + formHtml;
-}
-
-function escapeForHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function buildLegalFooter(page: PublicPageData): string {
-  const links: string[] = [];
-  if (page.legal_mentions_url) links.push(`<a href="${page.legal_mentions_url}" target="_blank" style="color:#999;text-decoration:underline">Mentions légales</a>`);
-  if (page.legal_cgv_url) links.push(`<a href="${page.legal_cgv_url}" target="_blank" style="color:#999;text-decoration:underline">CGV</a>`);
-  if (page.legal_privacy_url) links.push(`<a href="${page.legal_privacy_url}" target="_blank" style="color:#999;text-decoration:underline">Politique de confidentialité</a>`);
-
-  if (links.length === 0) return "";
-
-  return `<div style="text-align:center;padding:16px;font-size:12px;color:#999;font-family:system-ui;border-top:1px solid #eee;margin-top:24px">${links.join(" | ")}</div>`;
+  const idx = html.lastIndexOf("</body>");
+  if (idx === -1) return html + script;
+  return html.slice(0, idx) + script + "\n" + html.slice(idx);
 }

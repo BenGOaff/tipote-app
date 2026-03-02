@@ -741,6 +741,8 @@ function replaceHardcodedTemplatePlaceholders(html: string, contentData: Record<
   let out = html;
   const offerName = safeString(contentData.offer_name || contentData.hero_title || contentData.challenge_name || "");
   const logoText = safeString(contentData.logo_text || contentData.site_name || offerName || "");
+  const authorName = safeString(contentData.about_name || contentData.author_name || "");
+  const contactEmail = safeString(contentData.contact_email || "");
 
   // sale-05: "SYSTEME.IO ACADÉMIE", "BUNDLE SYSTÈME.IO", "BONUS 2 : MONÉTISE SYSTÈME.IO"
   if (logoText) {
@@ -760,8 +762,23 @@ function replaceHardcodedTemplatePlaceholders(html: string, contentData: Record<
   out = out.replace(/\[Titre [^\]]*\]/g, "");
   out = out.replace(/\[Votre [^\]]*\]/g, "");
 
+  // Replace "Nom Prénom" placeholder with actual author name
+  if (authorName && authorName !== "Nom Prénom") {
+    out = out.replace(/(?<![a-zA-ZÀ-ÿ])Nom\s+(?:et\s+)?Pr[eé]nom(?![a-zA-ZÀ-ÿ])/g, escapeHtml(authorName));
+  }
+
+  // Replace "votresite.com" / "contact@votresite.com" / "VotreSite.com" with actual data
+  if (contactEmail) {
+    out = out.replace(/contact@votresite\.com/gi, escapeHtml(contactEmail));
+  }
+  // Replace standalone "votresite.com" / "VotreSite.com"
+  const siteReplacement = contactEmail ? contactEmail.split("@")[1] || "" : logoText || "";
+  if (siteReplacement) {
+    out = out.replace(/(?:www\.)?(?:V|v)otre(?:S|s)ite\.com/g, escapeHtml(siteReplacement));
+  }
+
   // capture-01: "VOTRE LOGO", "VOTRE BASELINE ICI" — already handled by applyCapture01Replacements
-  // capture-02: "VotreSite.com" — handled by selectors injection
+  // capture-02: "VotreSite.com" — also handled above now
 
   return out;
 }
@@ -821,8 +838,9 @@ function injectFaqStyling(html: string): string {
  * Skips injection if the template already has a <form> element.
  */
 function injectInlineCaptureForm(html: string, contentData: Record<string, any>): string {
-  // Skip if template already has a form (e.g., capture-03)
+  // Skip if template already has a form (e.g., capture-03) or already injected
   if (/<form[\s>]/i.test(html)) return html;
+  if (html.includes("tipote-capture-form-wrap") || html.includes("tipote-capture-form")) return html;
 
   const ctaText = safeString(contentData.cta_text || contentData.cta_label || contentData.cta_button_text || "Je m'inscris !");
   const privacyUrl = safeString(contentData.legal_privacy_url || "");
@@ -861,6 +879,9 @@ function injectInlineCaptureForm(html: string, contentData: Record<string, any>)
  * Inject legal footer links into rendered HTML if contentData has legal URLs.
  */
 function injectLegalFooterHtml(html: string, contentData: Record<string, any>): string {
+  // Guard: prevent double injection of legal footer
+  if (html.includes("tipote-legal-footer") || html.includes("data-tipote-legal")) return html;
+
   const links: string[] = [];
 
   const mentionsUrl = contentData?.legal_mentions_url;
@@ -883,7 +904,7 @@ function injectLegalFooterHtml(html: string, contentData: Record<string, any>): 
 
   if (links.length === 0) return html;
 
-  const footer = `<div style="text-align:center;padding:20px 16px;font-size:12px;font-family:system-ui,sans-serif;background:#1c1c1c;color:rgba(255,255,255,0.5);border-top:1px solid rgba(255,255,255,0.1)">${links.join(" &nbsp;|&nbsp; ")}</div>`;
+  const footer = `<div data-tipote-legal="1" class="tipote-legal-footer" style="text-align:center;padding:20px 16px;font-size:12px;font-family:system-ui,sans-serif;background:#1c1c1c;color:rgba(255,255,255,0.5);border-top:1px solid rgba(255,255,255,0.1)">${links.join(" &nbsp;|&nbsp; ")}</div>`;
 
   const bodyIdx = html.lastIndexOf("</body>");
   if (bodyIdx !== -1) {

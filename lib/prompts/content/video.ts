@@ -168,6 +168,15 @@ export function buildVideoScriptPrompt(params: VideoScriptPromptParams): string 
     "- Tu fais 1 idée principale, une progression logique, et une fin satisfaisante.",
     "- Tu ajoutes 2-3 \"pattern interrupts\" (surprise, contradiction, mini-histoire, analogie).",
     "- CTA: naturel et non pushy.",
+    "",
+    "CADRE DE PERSUASION (Blair Warren) — intègre naturellement :",
+    "1. Encourage les rêves (la transformation est possible).",
+    "2. Justifie les échecs (pas la bonne méthode avant).",
+    "3. Apaise les peurs (réassurance).",
+    "4. Confirme les soupçons (valide ce que le spectateur ressent).",
+    "5. Ennemi commun (un obstacle externe).",
+    "",
+    "Chaque script doit être : UTILE, SPÉCIFIQUE, CIBLÉ, APPLICABLE, UNIQUE.",
   ].join("\n");
 
   const context = [

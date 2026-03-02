@@ -2348,6 +2348,38 @@ export async function POST(req: Request) {
                   }
                 }
               }
+
+              // ✅ Inject text branding defaults (name, email, logo, site URL)
+              const profileFirstName = bp.first_name || "";
+              const profileLastName = bp.last_name || "";
+              const profileFullName = [profileFirstName, profileLastName].filter(Boolean).join(" ").trim();
+              const profileEmail = bp.contact_email || bp.email || "";
+              const profileBrandName = bp.brand_name || bp.business_name || "";
+              const profileWebsite = bp.website_url || bp.site_url || "";
+
+              // about_name: replace "Nom Prénom" placeholder
+              if (profileFullName && (!contentData.about_name || /^Nom\s*(et\s*)?Pr[eé]nom$/i.test(String(contentData.about_name)))) {
+                contentData.about_name = profileFullName;
+              }
+
+              // contact_email: replace "contact@votresite.com" placeholder
+              if (profileEmail && (!contentData.contact_email || /votresite|yoursite|example\.com/i.test(String(contentData.contact_email)))) {
+                contentData.contact_email = profileEmail;
+              }
+
+              // logo_text: replace "VOTRE LOGO" placeholder
+              const brandOrOffer = profileBrandName || (contentData.offer_name as string) || "";
+              if (brandOrOffer && (!contentData.logo_text || /votre|your|logo/i.test(String(contentData.logo_text)))) {
+                contentData.logo_text = brandOrOffer.toUpperCase().slice(0, 25);
+              }
+
+              // Replace votresite.com in all string fields
+              for (const key of Object.keys(contentData)) {
+                if (typeof contentData[key] === "string" && /votresite\.com|yoursite\.com|example\.com/i.test(contentData[key] as string)) {
+                  const replacement = profileWebsite || (profileEmail ? profileEmail.split("@")[1] || "" : "");
+                  contentData[key] = (contentData[key] as string).replace(/(?:contact@)?(?:votresite|yoursite|example)\.com/gi, replacement || profileEmail || "");
+                }
+              }
             }
 
             finalContent = JSON.stringify(

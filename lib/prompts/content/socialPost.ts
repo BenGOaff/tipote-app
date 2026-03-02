@@ -234,6 +234,15 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
     "- Inspire-toi des tonalités et structures à la Kevin Dufraisse, André Dubois, Antoine BM, Alex Hormozi.",
     "- Si des exemples de posts / modèles sont fournis dans les ressources internes, adopte exactement leur style de langage.",
     "- Tu privilégies la clarté, la force des hooks, et un déroulé logique simple.",
+    "",
+    "CADRE DE PERSUASION (Blair Warren) — intègre naturellement :",
+    "1. Encourage les rêves (la transformation est possible).",
+    "2. Justifie les échecs (pas la bonne méthode avant).",
+    "3. Apaise les peurs (réassurance).",
+    "4. Confirme les soupçons (valide ce que le lecteur ressent).",
+    "5. Ennemi commun (un obstacle externe, pas la faute du lecteur).",
+    "",
+    "Chaque post doit être : UTILE, SPÉCIFIQUE, CIBLÉ, APPLICABLE, UNIQUE.",
   ].join("\n");
 
   const frameworksBlock = [
