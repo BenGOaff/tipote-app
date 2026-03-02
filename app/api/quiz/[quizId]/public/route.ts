@@ -120,27 +120,30 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // Fetch creator's address_form preference (tu/vous)
+    // Fetch creator's address_form + privacy_url fallback from business_profiles
     const quizUserId = (quizRes.data as any).user_id as string | undefined;
     let addressForm = "tu";
+    let fallbackPrivacyUrl = "";
     if (quizUserId) {
       const { data: bp } = await admin
         .from("business_profiles")
-        .select("address_form")
+        .select("address_form, privacy_url")
         .eq("user_id", quizUserId)
         .maybeSingle();
       addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+      fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
     }
 
     // Increment view count (non-blocking)
     admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
 
-    // Strip user_id from public response, inject address_form
+    // Strip user_id from public response, inject address_form + fallback privacy_url
     const { user_id: _uid, ...quizPublic } = quizRes.data as any;
+    const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
     return NextResponse.json({
       ok: true,
-      quiz: { ...quizPublic, address_form: addressForm },
+      quiz: { ...quizPublic, address_form: addressForm, privacy_url: effectivePrivacyUrl || null },
       questions: (questionsRes.data ?? []).map((q: any) => ({
         ...q,
         options: q.options as { text: string; result_index: number }[],
