@@ -287,8 +287,13 @@ export async function POST(req: NextRequest) {
 
         const niche = (profile as any)?.niche || "";
         const firstName = (profile as any)?.first_name || "";
+        const lastName = (profile as any)?.last_name || "";
+        const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
         const country = (profile as any)?.country || "France";
         const mission = (profile as any)?.mission || "";
+        const brandName = (profile as any)?.brand_name || (profile as any)?.business_name || "";
+        const websiteUrl = (profile as any)?.website_url || (profile as any)?.site_url || "";
+        const contactEmail = (profile as any)?.contact_email || (profile as any)?.email || session.user.email || "";
         const toneOfVoice = (profile as any)?.brand_tone_of_voice || (profile as any)?.preferred_tone || "";
         const brandFont = (profile as any)?.brand_font || "";
         const brandColorBase = (profile as any)?.brand_color_base || "";
@@ -359,7 +364,7 @@ export async function POST(req: NextRequest) {
           offerBenefits: input.offerBenefits || "",
           offerBonuses: input.offerBonuses || "",
           theme: input.theme || "",
-          firstName,
+          firstName: fullName || firstName,
           niche,
           mission,
           profile,
@@ -407,17 +412,47 @@ export async function POST(req: NextRequest) {
         if (input.offerName) contentData.offer_name = input.offerName;
         if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
         if (brandAuthorPhoto && !contentData.author_photo_url) contentData.author_photo_url = brandAuthorPhoto;
-        if (firstName && !contentData.about_name) contentData.about_name = firstName;
         if (input.videoEmbedUrl) contentData.video_embed_url = input.videoEmbedUrl;
 
+        // Inject full name into about_name (replace "Nom Prénom" placeholder)
+        const authorName = fullName || firstName || "";
+        if (authorName) {
+          if (!contentData.about_name || /^Nom\s*(et\s*)?Pr[eé]nom$/i.test(contentData.about_name) || contentData.about_name === "Nom Prénom") {
+            contentData.about_name = authorName;
+          }
+        }
+
+        // Inject contact email (replace "contact@votresite.com" placeholder)
+        if (contactEmail) {
+          if (!contentData.contact_email || /votresite|yoursite|example\.com/i.test(contentData.contact_email)) {
+            contentData.contact_email = contactEmail;
+          }
+        }
+
         // Inject brand name into logo_text if the AI left it generic
-        const offerOrBrand = input.offerName || niche || firstName || "";
+        const offerOrBrand = brandName || input.offerName || niche || fullName || "";
         if (offerOrBrand && (!contentData.logo_text || /votre|your|logo/i.test(contentData.logo_text))) {
           contentData.logo_text = offerOrBrand.toUpperCase().slice(0, 25);
         }
         // Also set footer_logo from brand
         if (offerOrBrand && (!contentData.footer_logo || /votre|your|logo/i.test(contentData.footer_logo))) {
           contentData.footer_logo = offerOrBrand.toUpperCase().slice(0, 40);
+        }
+
+        // Inject logo_subtitle from brand tagline if available
+        const brandTagline = (profile as any)?.brand_tagline || (profile as any)?.tagline || (profile as any)?.slogan || "";
+        if (brandTagline && (!contentData.logo_subtitle || /baseline|votre/i.test(contentData.logo_subtitle))) {
+          contentData.logo_subtitle = brandTagline.slice(0, 30);
+        }
+
+        // Replace any remaining "votresite.com" or placeholder URLs in all string fields
+        for (const key of Object.keys(contentData)) {
+          if (typeof contentData[key] === "string") {
+            if (/votresite\.com|yoursite\.com|example\.com/i.test(contentData[key])) {
+              const replacement = websiteUrl || (contactEmail ? contactEmail.split("@")[1] || "" : "");
+              contentData[key] = contentData[key].replace(/(?:contact@)?(?:votresite|yoursite|example)\.com/gi, replacement || contactEmail || "");
+            }
+          }
         }
 
         // Inject payment URL into all CTA-related fields
@@ -626,6 +661,25 @@ function buildPageSystemPrompt(params: {
     lines.push("OBJECTIF : Créer une page de vente qui VEND. Chaque mot doit rapprocher le prospect de l'achat.");
     lines.push("Structure : Hook → Problème → Agitation → Solution → Mécanisme → Preuves → Offre → Objections → Urgence → Garantie → CTA");
   }
+  lines.push("");
+
+  // ---- BLAIR WARREN ONE SENTENCE PERSUASION FRAMEWORK ----
+  lines.push("CADRE DE PERSUASION (Blair Warren — à utiliser comme fil conducteur du copywriting) :");
+  lines.push("Le contenu doit naturellement intégrer ces 5 leviers psychologiques :");
+  lines.push("1. ENCOURAGER LES RÊVES : Montre au prospect que son rêve est atteignable grâce à cette offre. Peins le tableau de sa transformation.");
+  lines.push("2. JUSTIFIER LES ÉCHECS : Explique pourquoi ses tentatives passées n'ont pas fonctionné (ce n'est pas de sa faute, il n'avait pas la bonne méthode/le bon outil).");
+  lines.push("3. APAISER LES PEURS : Anticipe ses peurs et ses doutes, et rassure-le concrètement (garanties, simplicité, accompagnement).");
+  lines.push("4. CONFIRMER LES SOUPÇONS : Valide ce qu'il soupçonne déjà (\"Tu le savais au fond de toi...\", \"Ce que personne ne te dit...\").");
+  lines.push("5. TROUVER UN ENNEMI COMMUN : Identifie un obstacle externe (le système, les méthodes traditionnelles, la désinformation) pour se placer du côté du prospect.");
+  lines.push("");
+
+  // ---- 5 CRITÈRES D'UN CONTENU DE VALEUR ----
+  lines.push("5 CRITÈRES OBLIGATOIRES DU CONTENU (chaque texte doit cocher les 5) :");
+  lines.push("- UTILE : Le lecteur doit pouvoir en tirer un bénéfice concret et immédiat.");
+  lines.push("- SPÉCIFIQUE : Donne une stratégie, un outil, une méthode précise — jamais de vague.");
+  lines.push("- CIBLÉ : Tu t'adresses à UNE seule audience avec SES mots, SES problèmes, SES rêves.");
+  lines.push("- APPLICABLE : Le lecteur repart avec une action concrète à mettre en place.");
+  lines.push("- UNIQUE : Le texte doit refléter la personnalité et l'expertise de l'auteur — pas un contenu générique interchangeable.");
   lines.push("");
 
   lines.push("RÈGLES CRITIQUES DE COPYWRITING :");

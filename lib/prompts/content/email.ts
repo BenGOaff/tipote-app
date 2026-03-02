@@ -187,6 +187,16 @@ export function buildEmailPrompt(params: EmailPromptParams): string {
   lines.push("");
   lines.push(`Tutoiement/Vouvoiement: ${formality}.`);
   lines.push("");
+  // Blair Warren persuasion framework
+  lines.push("CADRE DE PERSUASION (Blair Warren) — intègre naturellement dans chaque email :");
+  lines.push("1. Encourage les rêves du lecteur (sa transformation est possible).");
+  lines.push("2. Justifie ses échecs passés (il n'avait pas la bonne méthode).");
+  lines.push("3. Apaise ses peurs (réassurance concrète).");
+  lines.push("4. Confirme ses soupçons (valide ce qu'il ressent).");
+  lines.push("5. Identifie un ennemi commun (obstacle externe, pas sa faute).");
+  lines.push("");
+  lines.push("Chaque email doit être : UTILE (bénéfice concret), SPÉCIFIQUE (une méthode précise), CIBLÉ (une audience), APPLICABLE (une action), UNIQUE (ton personnel).");
+  lines.push("");
 
   if (type === "newsletter") {
     lines.push("Type: Newsletter.");

@@ -11,8 +11,13 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
-const PAGE_SELECT =
+// Full select — contains all columns expected by PublicPageClient
+const PAGE_SELECT_FULL =
   "id, user_id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, status";
+
+// Minimal select — fallback if some columns have not been migrated yet
+const PAGE_SELECT_MINIMAL =
+  "id, user_id, title, slug, page_type, html_snapshot, status";
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   const { slug } = await ctx.params;
@@ -22,44 +27,105 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
+    // Try full select first
+    let result = await supabaseAdmin
       .from("hosted_pages")
-      .select(PAGE_SELECT)
+      .select(PAGE_SELECT_FULL)
       .eq("slug", slug)
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (error) {
-      console.error("[public-page-api] Supabase error for slug:", slug, error.message);
+    // If column error, fallback to minimal select
+    if (result.error) {
+      const msg = (result.error.message ?? "").toLowerCase();
+      const isColumnError = msg.includes("does not exist") || msg.includes("column") || msg.includes("pgrst");
+      if (isColumnError) {
+        console.warn("[public-page-api] Column error, falling back to minimal select:", result.error.message);
+        result = await supabaseAdmin
+          .from("hosted_pages")
+          .select(PAGE_SELECT_MINIMAL)
+          .eq("slug", slug)
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+      }
+    }
+
+    if (result.error) {
+      console.error("[public-page-api] Supabase error for slug:", slug, result.error.message, result.error.code);
       return NextResponse.json({ ok: false, error: "Database error" }, { status: 500 });
     }
 
-    if (!data) {
+    if (!result.data) {
+      // Also try without status filter to give a better error message
+      const { data: anyPage } = await supabaseAdmin
+        .from("hosted_pages")
+        .select("id, slug, status")
+        .eq("slug", slug)
+        .limit(1)
+        .maybeSingle();
+
+      if (anyPage) {
+        console.warn("[public-page-api] Page found but not published:", slug, "status:", (anyPage as any).status);
+        return NextResponse.json({ ok: false, error: "Page not published yet" }, { status: 404 });
+      }
+
       return NextResponse.json({ ok: false, error: "Page not found" }, { status: 404 });
     }
 
+    const data = result.data as any;
+
     // Fetch creator's address_form preference (tu/vous)
     let addressForm = "tu";
-    if ((data as any).user_id) {
-      const { data: bp } = await supabaseAdmin
-        .from("business_profiles")
-        .select("address_form")
-        .eq("user_id", (data as any).user_id)
-        .maybeSingle();
-      addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+    try {
+      if (data.user_id) {
+        const { data: bp } = await supabaseAdmin
+          .from("business_profiles")
+          .select("address_form")
+          .eq("user_id", data.user_id)
+          .maybeSingle();
+        addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+      }
+    } catch {
+      // fail-open: keep default "tu"
     }
 
-    // Increment views (non-blocking)
-    supabaseAdmin.rpc("increment_page_views", { p_page_id: data.id }).then(() => {}, () => {});
+    // Increment views (non-blocking, fire-and-forget)
+    try {
+      supabaseAdmin.rpc("increment_page_views", { p_page_id: data.id }).then(() => {}, () => {});
+    } catch {
+      // ignore
+    }
 
     // Strip user_id from public response, inject address_form
-    const { user_id: _uid, ...pagePublic } = data as any;
+    const { user_id: _uid, ...pagePublic } = data;
 
-    return NextResponse.json({ ok: true, page: { ...pagePublic, address_form: addressForm } });
+    // Ensure defaults for optional fields that client expects
+    return NextResponse.json({
+      ok: true,
+      page: {
+        capture_enabled: true,
+        capture_heading: "",
+        capture_subtitle: "",
+        capture_first_name: false,
+        payment_url: "",
+        payment_button_text: "",
+        video_embed_url: "",
+        legal_mentions_url: "",
+        legal_cgv_url: "",
+        legal_privacy_url: "",
+        og_image_url: "",
+        meta_title: "",
+        meta_description: "",
+        ...pagePublic,
+        address_form: addressForm,
+      },
+    });
   } catch (err: any) {
-    console.error("[public-page-api] Unexpected error:", err?.message);
+    console.error("[public-page-api] Unexpected error for slug:", slug, err?.message, err?.stack?.slice(0, 300));
     return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }

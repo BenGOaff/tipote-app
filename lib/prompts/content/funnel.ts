@@ -83,6 +83,25 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   );
   lines.push("");
 
+  // ---- CADRE DE PERSUASION Blair Warren ----
+  lines.push("CADRE DE PERSUASION (Blair Warren — fil conducteur du copywriting) :");
+  lines.push("Le contenu doit naturellement intégrer ces 5 leviers psychologiques :");
+  lines.push("1. ENCOURAGER LES RÊVES : Montre au prospect que son rêve est atteignable. Peins le tableau de sa transformation.");
+  lines.push("2. JUSTIFIER LES ÉCHECS : Explique pourquoi ses tentatives passées n'ont pas fonctionné (pas la bonne méthode/le bon outil).");
+  lines.push("3. APAISER LES PEURS : Anticipe ses doutes et rassure concrètement (garanties, simplicité, accompagnement).");
+  lines.push("4. CONFIRMER LES SOUPÇONS : Valide ce qu'il soupçonne déjà (\"Ce que personne ne te dit...\").");
+  lines.push("5. TROUVER UN ENNEMI COMMUN : Identifie un obstacle externe (le système, les méthodes traditionnelles) pour se placer du côté du prospect.");
+  lines.push("");
+
+  // ---- 5 CRITÈRES D'UN CONTENU DE VALEUR ----
+  lines.push("5 CRITÈRES DE CONTENU (chaque texte doit cocher les 5) :");
+  lines.push("- UTILE : Bénéfice concret et immédiat pour le lecteur.");
+  lines.push("- SPÉCIFIQUE : Une stratégie, un outil, une méthode précise — jamais de vague.");
+  lines.push("- CIBLÉ : S'adresse à UNE seule audience avec SES mots, SES problèmes, SES rêves.");
+  lines.push("- APPLICABLE : Le lecteur repart avec une action concrète.");
+  lines.push("- UNIQUE : Reflète la personnalité de l'auteur — pas un contenu interchangeable.");
+  lines.push("");
+
   lines.push("RÈGLES CRITIQUES :");
   lines.push("- ZÉRO markdown (pas de **, ##, >, -, etc.).");
   lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, <p>, <div>, etc.) — texte brut uniquement.");

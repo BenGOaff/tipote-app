@@ -125,6 +125,23 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "- Tu fais des choix: tu ne listes pas 50 options. Tu proposes, tu justifies, tu verrouilles une direction.",
   ].join("\n");
 
+  const persuasionFramework = [
+    "CADRE DE PERSUASION (Blair Warren) :",
+    "Structure chaque offre en intégrant naturellement ces 5 leviers :",
+    "1. ENCOURAGER LES RÊVES : Peins le tableau de la transformation atteignable.",
+    "2. JUSTIFIER LES ÉCHECS : Explique pourquoi les tentatives passées n'ont pas fonctionné.",
+    "3. APAISER LES PEURS : Anticipe les doutes et rassure concrètement.",
+    "4. CONFIRMER LES SOUPÇONS : Valide ce que le prospect soupçonne déjà.",
+    "5. ENNEMI COMMUN : Identifie un obstacle externe pour se placer du côté du prospect.",
+    "",
+    "5 CRITÈRES DE CONTENU :",
+    "- UTILE : Bénéfice concret et immédiat.",
+    "- SPÉCIFIQUE : Stratégie, outil ou méthode précise.",
+    "- CIBLÉ : UNE audience avec SES mots et SES problèmes.",
+    "- APPLICABLE : Action concrète à mettre en place.",
+    "- UNIQUE : Refléter la personnalité de l'auteur.",
+  ].join("\n");
+
   const sourceBlock =
     mode === "from_existing"
       ? [
@@ -209,6 +226,8 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
       globalContext,
       "",
       strategyRules,
+      "",
+      persuasionFramework,
       "",
       mode === "from_existing" ? sourceBlock : "",
       mode === "from_existing" ? "" : "",
@@ -306,6 +325,8 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     globalContext,
     "",
     strategyRules,
+    "",
+    persuasionFramework,
     "",
     mode === "from_existing" ? sourceBlock : "",
     mode === "from_existing" ? "" : "",
