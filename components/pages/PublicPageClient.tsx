@@ -102,11 +102,44 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
   // Listen for capture events from iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      if (e.data === "tipote:capture") setShowCapture(true);
+      const msg = typeof e.data === "string" ? e.data : "";
+      if (msg === "tipote:capture") {
+        // Simple CTA click — open capture overlay
+        setShowCapture(true);
+      } else if (msg.startsWith("tipote:capture:")) {
+        // Inline form submitted with pre-filled data — auto-submit the lead
+        try {
+          const data = JSON.parse(msg.slice("tipote:capture:".length));
+          if (data.email) {
+            setCaptureEmail(data.email);
+            setCaptureFirstName(data.first_name || "");
+            // Auto-submit since they already filled the inline form
+            if (page) {
+              fetch(`/api/pages/${page.id}/leads`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: data.email.trim(),
+                  first_name: (data.first_name || "").trim(),
+                  referrer: typeof document !== "undefined" ? document.referrer : "",
+                }),
+              }).then(() => {
+                setCaptureSuccess(true);
+                // Auto-redirect only if no custom CTA
+                if (page.payment_url && !page.thank_you_cta_url) {
+                  setTimeout(() => { window.location.href = page.payment_url; }, 3000);
+                }
+              }).catch(() => {});
+            }
+          }
+        } catch {
+          setShowCapture(true);
+        }
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [page]);
 
   const handleSubmitLead = useCallback(async () => {
     if (!page || !captureEmail.trim() || capturing) return;
@@ -468,30 +501,32 @@ function injectCaptureScript(page: PublicPageData): string {
 
   const script = `<script>
 (function(){
-  // Intercept all CTA-like button/link clicks
+  // Intercept ALL form submissions (template forms + injected forms)
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    var email = form.querySelector('input[type="email"]');
+    if (email && email.value.trim()) {
+      e.preventDefault();
+      e.stopPropagation();
+      parent.postMessage('tipote:capture:' + JSON.stringify({
+        email: email.value.trim(),
+        first_name: (form.querySelector('input[type="text"]') || {}).value || ''
+      }), '*');
+      return false;
+    }
+  }, true);
+
+  // Intercept all CTA-like button/link clicks (for buttons that open overlay)
   document.addEventListener('click', function(e) {
-    var el = e.target.closest('a[href="#"], a[href="#capture"], button[type="submit"], .cta-primary, .cta-button, [data-capture]');
+    var el = e.target.closest('a[href="#"], a[href="#capture"], .cta-primary, .cta-button, [data-capture]');
     if (!el) return;
     var href = el.getAttribute('href') || '';
-    // Only intercept hash/empty links and buttons, not real URLs
     if (href && href !== '#' && href !== '#capture' && !href.startsWith('#')) return;
     e.preventDefault();
     e.stopPropagation();
     parent.postMessage('tipote:capture', '*');
   }, true);
-
-  // Also handle inline form submission
-  var inlineForm = document.getElementById('tipote-capture-form');
-  if (inlineForm) {
-    inlineForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      var email = inlineForm.querySelector('input[type="email"]');
-      var name = inlineForm.querySelector('input[type="text"]');
-      if (email && email.value.trim()) {
-        parent.postMessage('tipote:capture', '*');
-      }
-    });
-  }
 })();
 </script>`;
 

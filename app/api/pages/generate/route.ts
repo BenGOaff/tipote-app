@@ -479,7 +479,13 @@ export async function POST(req: NextRequest) {
         // Inject user-provided data (overrides AI-generated placeholders)
         if (input.offerName) contentData.offer_name = input.offerName;
         if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
-        if (brandAuthorPhoto && !contentData.author_photo_url) contentData.author_photo_url = brandAuthorPhoto;
+        // Inject author photo into ALL possible photo field names
+        if (brandAuthorPhoto) {
+          const photoFields = ["author_photo_url", "about_img_url", "trainer_img_url", "speaker_photo_url", "expert_photo_url", "coach_photo_url", "profile_photo_url", "hero_img_url"];
+          for (const field of photoFields) {
+            if (!contentData[field]) contentData[field] = brandAuthorPhoto;
+          }
+        }
         if (input.videoEmbedUrl) contentData.video_embed_url = input.videoEmbedUrl;
 
         // Inject full name into about_name (replace "Nom Prénom" placeholder)
@@ -777,6 +783,20 @@ function buildPageSystemPrompt(params: {
   lines.push("- Le contenu doit correspondre EXACTEMENT à l'offre décrite. Si l'offre est un quiz → parler du quiz. Si c'est une formation → parler de la formation. Ne jamais imposer une structure (challenge, places limitées, etc.) qui ne correspond pas à l'offre.");
   lines.push("");
 
+  // CRITICAL: Template adaptation instruction
+  lines.push("ADAPTATION DU TEMPLATE (RÈGLE FONDAMENTALE) :");
+  lines.push("- Le template ci-dessous est une INSPIRATION pour la structure visuelle (sections, mise en page, couleurs).");
+  lines.push("- Les noms de champs du template (\"daily_program\", \"goals\", \"schedule_days\", \"program_items\") sont des STRUCTURES DE DONNÉES, pas des instructions de contenu.");
+  lines.push("- Tu DOIS adapter TOUS les champs au contexte réel de l'offre :");
+  lines.push("  × Si le champ s'appelle \"daily_program\" mais que l'offre est un SaaS → remplis avec les fonctionnalités/modules du SaaS");
+  lines.push("  × Si le champ s'appelle \"goals\" mais que l'offre n'est pas un challenge → remplis avec les objectifs/résultats de l'offre réelle");
+  lines.push("  × Si le champ s'appelle \"schedule_days\" → adapte en étapes/phases du programme ou laisse vide si non pertinent");
+  lines.push("  × Si le champ s'appelle \"trainer_name\" → utilise le nom de l'auteur/créateur");
+  lines.push("- INTERDIT d'utiliser le vocabulaire du template quand il ne correspond pas à l'offre (\"exercice\", \"challenge\", \"séance\", \"entraînement\", \"jour 1/2/3\" pour un SaaS)");
+  lines.push("- Si un champ n'a AUCUN sens pour l'offre réelle, mets une string vide \"\" ou un tableau vide [].");
+  lines.push("- Le résultat final doit sembler avoir été écrit SUR MESURE pour cette offre, pas copié d'un template générique.");
+  lines.push("");
+
   if (params.toneOfVoice) {
     lines.push(`TON DE VOIX DE LA MARQUE : ${params.toneOfVoice}`);
     lines.push("Adapte tout le copywriting à ce ton.");
@@ -954,18 +974,30 @@ function sanitizeContentData(data: Record<string, any>, input: any): void {
     /\[Bénéfice\]/gi,
     /\[Audience\]/gi,
     /\[Prénom\]/gi,
-    /\[.*?\]/g, // Any [bracketed text]
+    /\[Icône\]/gi,
+    /\[Photo[^\]]*\]/gi,
+    /\[Ta photo[^\]]*\]/gi,
+    /\[Image[^\]]*\]/gi,
+    /\[Ton nom[^\]]*\]/gi,
+    /\[Votre[^\]]*\]/gi,
+    /\[Logo[^\]]*\]/gi,
+    /\[.*?\]/g, // Any remaining [bracketed text]
     /Lorem ipsum[^.]*/gi,
     /Dolor sit amet/gi,
-    /Puce promesse irrésistible/gi,
-    /bénéfice \+ conséquence/gi,
-    /Décris ici/gi,
-    /Explique l'option pourrie/gi,
+    /Puce promesse[^.!\n]*/gi,
+    /bénéfice \+ conséquence[^.!\n]*/gi,
+    /Décris ici[^.!\n]*/gi,
+    /Explique (?:ici|ce que|l'option)[^.!\n]*/gi,
     /Promesse de ton offre/gi,
-    /Description complète du bonus/gi,
+    /Description (?:complète )?d(?:e l'|u )[^.!\n]*/gi,
     /Témoignage sincère d'un client/gi,
     /PUCE PROMESSE/gi,
     /CEO vs Entrepreneur/gi,
+    /Exercice du jour \d+/gi,
+    /Objectif du challenge/gi,
+    /Description de l'exercice/gi,
+    /Photo représentat[^.!\n]*/gi,
+    /ton audience cible/gi,
   ];
 
   // Patterns that indicate invented scarcity (when no urgency was provided)
