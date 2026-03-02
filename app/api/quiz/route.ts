@@ -69,17 +69,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "title is required" }, { status: 400 });
     }
 
-    // If user has a privacy_url in profile, use it as default
+    // Fetch profile for privacy_url and address_form
+    let bpQuery = supabase
+      .from("business_profiles")
+      .select("privacy_url, address_form")
+      .eq("user_id", user.id);
+    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const { data: bpProfile } = await bpQuery.maybeSingle();
+
     let privacyUrl = String(body.privacy_url ?? "").trim();
     if (!privacyUrl) {
-      let bpQuery = supabase
-        .from("business_profiles")
-        .select("privacy_url")
-        .eq("user_id", user.id);
-      if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
-      const { data: profile } = await bpQuery.maybeSingle();
-      privacyUrl = profile?.privacy_url ?? "";
+      privacyUrl = (bpProfile as any)?.privacy_url ?? "";
     }
+
+    const addressForm = ((bpProfile as any)?.address_form ?? "tu") === "vous" ? "vous" : "tu";
+    const defaultConsent = addressForm === "vous"
+      ? "En renseignant votre email, vous acceptez notre politique de confidentialité."
+      : "En renseignant ton email, tu acceptes notre politique de confidentialité.";
 
     // Insert quiz
     const { data: quiz, error: quizError } = await supabase
@@ -92,7 +98,7 @@ export async function POST(req: NextRequest) {
         cta_text: body.cta_text ?? null,
         cta_url: body.cta_url ?? null,
         privacy_url: privacyUrl || null,
-        consent_text: body.consent_text ?? "En renseignant ton email, tu acceptes notre politique de confidentialité.",
+        consent_text: body.consent_text ?? defaultConsent,
         virality_enabled: Boolean(body.virality_enabled),
         bonus_description: body.bonus_description ?? null,
         share_message: body.share_message ?? null,

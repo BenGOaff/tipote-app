@@ -1534,6 +1534,7 @@ export async function POST(req: Request) {
     const { data: profile } = await profileQuery.maybeSingle();
 
     const contentLocale = ((profile as any)?.content_locale ?? "fr").trim() || "fr";
+    const profileAddressForm: "tu" | "vous" = ((profile as any)?.address_form ?? "tu") === "vous" ? "vous" : "tu";
 
     const planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
     if (projectId) planQuery.eq("project_id", projectId);
@@ -1822,6 +1823,7 @@ export async function POST(req: Request) {
           promoKind,
           offerLink,
           language: contentLocale,
+          formality: profileAddressForm,
         } as any);
 
         // ✅ Ajout contexte offre (existante ou manual)
@@ -1893,13 +1895,14 @@ export async function POST(req: Request) {
           targetWordCount: typeof body.targetWordCount === "number" ? body.targetWordCount : undefined,
           offerLink: safeString(body.offerLink).trim() || undefined,
           language: contentLocale,
+          formality: profileAddressForm,
         } as any);
       }
 
       if (type === "email") {
         const emailTypeRaw = safeString(body.emailType).trim().toLowerCase();
         const salesModeRaw = safeString(body.salesMode).trim().toLowerCase();
-        const formality = normalizeFormality(body.formality);
+        const formality = body.formality ? normalizeFormality(body.formality) : profileAddressForm;
 
         const newsletterTheme = safeString(body.newsletterTheme).trim();
         const newsletterCta = safeString(body.newsletterCta).trim();
@@ -1985,6 +1988,7 @@ export async function POST(req: Request) {
           ctaLink,
           approvedPlan: step === "write" ? approvedPlan : null,
           language: contentLocale,
+          formality: profileAddressForm,
         } as any);
       }
 
@@ -2093,6 +2097,7 @@ export async function POST(req: Request) {
           } : null,
 
           language: contentLocale,
+          formality: profileAddressForm,
         } as any);
       }
 

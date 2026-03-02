@@ -12,6 +12,7 @@ export type ArticlePromptParams = {
   subject: string;
   objective: ArticleObjective;
   language?: string;
+  formality?: "tu" | "vous";
 
   // SEO
   primaryKeyword?: string;
@@ -98,12 +99,14 @@ export function buildArticlePrompt(params: ArticlePromptParams): string {
   const lines: string[] = [];
 
   const language = clean(params.language, 20) || "fr";
+  const formality = params.formality === "vous" ? "vous" : "tu";
 
   lines.push("Tu es un rédacteur web senior expert en copywriting et SEO.");
   lines.push("Tu écris comme un humain : fluide, vivant, concret, sans jargon inutile.");
   lines.push("Tu utilises le persona + business profile + business plan + ressources internes fournis dans le contexte.");
   lines.push("Objectif: produire un article très utile, très lisible, et optimisé SEO.");
   lines.push(`LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT l'article dans cette langue.`);
+  lines.push(`Tutoiement/Vouvoiement: utilise "${formality}" pour t'adresser au lecteur.`);
   lines.push("");
 
   // Format rules

@@ -12,6 +12,7 @@ type QuizPromptParams = {
   niche?: string;
   mission?: string;
   locale?: string;
+  addressForm?: "tu" | "vous";
 };
 
 export function buildQuizGenerationPrompt(params: QuizPromptParams): {
@@ -29,7 +30,10 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     niche = "",
     mission = "",
     locale = "fr",
+    addressForm = "tu",
   } = params;
+
+  const formality = addressForm === "vous" ? "vous" : "tu";
 
   const localeLabels: Record<string, string> = {
     fr: "français",
@@ -52,6 +56,7 @@ PRINCIPES :
 - Chaque résultat contient un insight fort, une projection motivante, et un pont naturel vers le CTA.
 - Le quiz doit être engageant, rapide (2-3 min), avec des questions simples et des options claires.
 - Le ton doit être ${tone}, jamais condescendant.
+- TUTOIEMENT/VOUVOIEMENT : Tu dois ${formality === "vous" ? "VOUVOYER" : "TUTOYER"} le lecteur du quiz dans TOUT le contenu (introduction, questions, options, résultats, projections, CTA, share_message). Utilise systématiquement "${formality}" et ses formes associées.
 - Les questions doivent être variées (pas juste des échelles 1-5).
 - Chaque option de réponse est mappée vers un profil résultat (result_index).
 
@@ -74,7 +79,7 @@ FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
       "title": "Nom du profil",
       "description": "Description valorisante du profil (2-3 phrases)",
       "insight": "Prise de conscience forte et spécifique",
-      "projection": "Si tu continues comme ça... / Si tu passes à l'action...",
+      "projection": "${formality === "vous" ? "Si vous continuez comme ça... / Si vous passez à l'action..." : "Si tu continues comme ça... / Si tu passes à l'action..."}",
       "cta_text": "Texte du CTA personnalisé pour ce profil"
     }
   ],
@@ -96,6 +101,7 @@ FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
   if (mission) userParts.push(`PERSONA CIBLE (contexte) : ${mission}`);
 
   userParts.push(`LANGUE : ${langLabel}`);
+  userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
   userParts.push(
     `\nIMPORTANT :`,
     `- Génère exactement ${questionCount} questions avec ${resultCount} options chacune (une par profil).`,
