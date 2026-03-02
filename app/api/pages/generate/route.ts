@@ -151,14 +151,64 @@ const TEMPLATE_NICHE_FIT: Record<string, Record<string, number>> = {
   "sale-13": { business: 8, coaching: 8, default: 7 },
 };
 
-function pickBestTemplate(pageType: "capture" | "sales", niche: string): string {
+// Template feature tags for smarter selection
+const TEMPLATE_FEATURES: Record<string, string[]> = {
+  "capture-01": ["minimal", "versatile"],
+  "capture-02": ["professional", "corporate"],
+  "capture-03": ["soft", "wellness", "feminine"],
+  "capture-04": ["bold", "business"],
+  "capture-05": ["dynamic", "fitness", "video"],
+  "sale-01": ["event", "corporate", "premium"],
+  "sale-02": ["versatile", "coaching"],
+  "sale-03": ["soft", "wellness"],
+  "sale-04": ["professional", "corporate"],
+  "sale-05": ["lifestyle", "casual"],
+  "sale-06": ["minimal", "business"],
+  "sale-07": ["soft", "spiritual", "feminine"],
+  "sale-08": ["dynamic", "fitness"],
+  "sale-09": ["video", "course", "multimedia"],
+  "sale-10": ["professional", "versatile"],
+  "sale-11": ["elearning", "course", "structured"],
+  "sale-12": ["fun", "casual", "lifestyle"],
+  "sale-13": ["professional", "versatile"],
+};
+
+function pickBestTemplate(
+  pageType: "capture" | "sales",
+  niche: string,
+  options?: { hasVideo?: boolean; brandStyle?: string; offerLevel?: string },
+): string {
   const prefix = pageType === "capture" ? "capture-" : "sale-";
   const nicheKey = (niche || "").toLowerCase().replace(/[-\s]+/g, "_");
 
   const candidates: TemplateScore[] = [];
   for (const [id, fits] of Object.entries(TEMPLATE_NICHE_FIT)) {
     if (!id.startsWith(prefix)) continue;
-    const score = fits[nicheKey] ?? fits.default ?? 5;
+    let score = fits[nicheKey] ?? fits.default ?? 5;
+
+    const features = TEMPLATE_FEATURES[id] || [];
+
+    // Boost video-friendly templates when user has video
+    if (options?.hasVideo && features.includes("video")) score += 3;
+
+    // Brand style matching
+    if (options?.brandStyle) {
+      const style = options.brandStyle.toLowerCase();
+      if (style.includes("premium") && features.includes("premium")) score += 2;
+      if (style.includes("minimaliste") && features.includes("minimal")) score += 2;
+      if (style.includes("fun") && features.includes("fun")) score += 2;
+      if (style.includes("pro") && features.includes("professional")) score += 2;
+      if ((style.includes("doux") || style.includes("soft")) && features.includes("soft")) score += 2;
+      if (style.includes("bold") && features.includes("bold")) score += 2;
+    }
+
+    // Offer level matching
+    if (options?.offerLevel) {
+      const level = options.offerLevel.toLowerCase();
+      if (level.includes("high") && features.includes("premium")) score += 2;
+      if (level.includes("lead") && features.includes("minimal")) score += 1;
+    }
+
     candidates.push({ id, score });
   }
 
@@ -305,6 +355,18 @@ export async function POST(req: NextRequest) {
         const cgvUrl = (profile as any)?.cgv_url || "";
         const contentLocale = input.locale || ((profile as any)?.content_locale ?? "fr").trim() || "fr";
 
+        // Fetch user's testimonials for injection
+        let userTestimonials: any[] = [];
+        try {
+          const { data: testimonials } = await supabaseAdmin
+            .from("testimonials")
+            .select("author_name, author_role, content, rating")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          userTestimonials = testimonials || [];
+        } catch { /* fail-open */ }
+
         await wait(600);
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
 
@@ -312,7 +374,12 @@ export async function POST(req: NextRequest) {
         send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 15 });
 
         const templateKind = input.pageType === "sales" ? "vente" : "capture";
-        const templateId = input.templateId || pickBestTemplate(input.pageType, niche);
+        const brandStyle = (profile as any)?.brand_style || (profile as any)?.brand_tone_of_voice || "";
+        const templateId = input.templateId || pickBestTemplate(input.pageType, niche, {
+          hasVideo: !!input.videoEmbedUrl,
+          brandStyle,
+          offerLevel: input.offerPrice ? (parseFloat(input.offerPrice.replace(/[^\d.]/g, "")) > 200 ? "high_ticket" : "low_ticket") : undefined,
+        });
 
         await wait(800);
         send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 20, done: true, templateId });
@@ -370,6 +437,7 @@ export async function POST(req: NextRequest) {
           profile,
           paymentUrl: input.paymentUrl || "",
           paymentButtonText: input.paymentButtonText || "",
+          testimonials: userTestimonials,
         });
 
         const copyLabel = input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...";
@@ -745,6 +813,20 @@ function buildPageSystemPrompt(params: {
     lines.push("");
   }
 
+  // Locale-specific conventions
+  const LOCALE_CONVENTIONS: Record<string, string> = {
+    fr: "Conventions françaises : prix en format \"497 €\" (espace avant €), virgule pour les décimaux (19,90 €), tutoiement par défaut, accents corrects (é, è, ê, à, ù, ç).",
+    en: "English conventions: prices as \"$497\" or \"£497\" (symbol before number), period for decimals ($19.90). Use 'you' form.",
+    es: "Convenciones españolas: precios como \"497 €\" (símbolo después), coma para decimales. Usar tuteo o ustedeo según el tono.",
+    de: "Deutsche Konventionen: Preise als \"497 €\" (Symbol nach Zahl), Komma für Dezimalstellen.",
+    it: "Convenzioni italiane: prezzi come \"497 €\", virgola per i decimali.",
+    pt: "Convenções portuguesas: preços como \"497 €\" ou \"R$ 497\", vírgula para decimais.",
+  };
+  if (LOCALE_CONVENTIONS[lang]) {
+    lines.push(LOCALE_CONVENTIONS[lang]);
+    lines.push("");
+  }
+
   lines.push("CONTRAINTE DE SORTIE :");
   lines.push("- Retourne UNIQUEMENT un objet JSON valide.");
   lines.push("- Pas de markdown, pas de commentaire, pas de texte autour.");
@@ -774,6 +856,7 @@ function buildPageUserPrompt(params: {
   profile: any;
   paymentUrl: string;
   paymentButtonText: string;
+  testimonials?: any[];
 }): string {
   const lines: string[] = [];
 
@@ -830,6 +913,18 @@ function buildPageUserPrompt(params: {
     lines.push("BONUS : L'utilisateur a fourni des bonus ci-dessus. Utilise-les tels quels dans les sections bonus. Ne les modifie pas et n'en invente pas d'autres.");
   } else {
     lines.push("BONUS : L'utilisateur N'A PAS de bonus. Pour tous les champs bonus (bonus_section_title, bonuses, bonus_*, etc.), mets des strings vides \"\" ou des tableaux vides []. N'invente AUCUN bonus.");
+  }
+
+  // Conditional: testimonials
+  if (params.testimonials && params.testimonials.length > 0) {
+    lines.push("");
+    lines.push("TÉMOIGNAGES RÉELS DE L'UTILISATEUR (utilise-les dans les sections testimonials) :");
+    params.testimonials.forEach((t: any, i: number) => {
+      lines.push(`${i + 1}. "${t.content}" — ${t.author_name}${t.author_role ? ` (${t.author_role})` : ""}${t.rating ? ` ★${t.rating}/5` : ""}`);
+    });
+    lines.push("Utilise ces témoignages TELS QUELS. Ne les modifie pas. N'en invente pas d'autres.");
+  } else {
+    lines.push("TÉMOIGNAGES : L'utilisateur N'A PAS de témoignages. Pour tous les champs testimonials (testimonials, testimonials_title, visual_testimonials, etc.), mets des strings vides \"\" ou des tableaux vides []. N'invente AUCUN témoignage.");
   }
 
   // Conditional: urgency/countdown

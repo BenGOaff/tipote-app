@@ -706,6 +706,11 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
 
       <p className="text-xs text-muted-foreground mb-3">
         {page.views_count} vues &middot; {page.leads_count} leads
+        {page.views_count > 0 && (
+          <span className="ml-1 font-medium text-primary">
+            &middot; {((page.leads_count / page.views_count) * 100).toFixed(1)}%
+          </span>
+        )}
       </p>
 
       <div className="flex items-center gap-2">

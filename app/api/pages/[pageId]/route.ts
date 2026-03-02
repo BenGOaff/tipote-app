@@ -50,11 +50,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // Allowed fields to update
   const allowed = [
     "title", "slug", "status", "content_data", "brand_tokens",
+    "template_id",
     "custom_images", "video_embed_url", "payment_url", "payment_button_text",
     "meta_title", "meta_description", "og_image_url",
     "legal_mentions_url", "legal_cgv_url", "legal_privacy_url",
     "capture_enabled", "capture_heading", "capture_subtitle", "capture_first_name", "sio_capture_tag",
     "thank_you_title", "thank_you_message", "thank_you_cta_text", "thank_you_cta_url",
+    "facebook_pixel_id", "google_tag_id",
     "iteration_count", "locale", "html_snapshot",
   ];
 

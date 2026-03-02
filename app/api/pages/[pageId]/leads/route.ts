@@ -96,24 +96,27 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     }
   }
 
-  // Increment leads_count (non-blocking)
-  supabase
-    .from("hosted_pages")
-    .update({ leads_count: (page as any).leads_count + 1 })
-    .eq("id", pageId)
-    .then(() => {});
+  // Increment leads_count via RPC-style raw update (non-blocking)
+  supabase.rpc("increment_page_leads", { p_page_id: pageId }).catch(() => {
+    // Fallback: plain SQL increment
+    supabase
+      .from("hosted_pages")
+      .update({ leads_count: supabase.raw?.("leads_count + 1") ?? 1 })
+      .eq("id", pageId)
+      .then(() => {});
+  });
 
   // Systeme.io sync (non-blocking)
   if (page.sio_capture_tag) {
-    syncLeadToSystemeIo({ userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase }).catch(() => {});
+    syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase }).catch(() => {});
   }
 
   return NextResponse.json({ ok: true });
 }
 
-// ---------- GET: Owner's leads list ----------
+// ---------- GET: Owner's leads list (JSON or CSV) ----------
 
-export async function GET(_req: NextRequest, ctx: RouteContext) {
+export async function GET(req: NextRequest, ctx: RouteContext) {
   const { pageId } = await ctx.params;
   const supabase = await getSupabaseServerClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -125,7 +128,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   // Verify ownership
   const { data: page } = await supabase
     .from("hosted_pages")
-    .select("id")
+    .select("id, title")
     .eq("id", pageId)
     .eq("user_id", session.user.id)
     .single();
@@ -136,21 +139,59 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
   const { data: leads, error } = await supabase
     .from("page_leads")
-    .select("id, email, first_name, phone, sio_synced, utm_source, created_at")
+    .select("id, email, first_name, phone, sio_synced, utm_source, utm_medium, utm_campaign, referrer, created_at")
     .eq("page_id", pageId)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(2000);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, leads: leads ?? [] });
+  const rows = leads ?? [];
+
+  // CSV export: GET /api/pages/[pageId]/leads?format=csv
+  const url = new URL(req.url);
+  if (url.searchParams.get("format") === "csv") {
+    const header = "Email,Prénom,Téléphone,Synchronisé SIO,Source UTM,Medium UTM,Campagne UTM,Référent,Date\n";
+    const csvRows = rows.map((l: any) =>
+      [
+        escapeCsv(l.email),
+        escapeCsv(l.first_name),
+        escapeCsv(l.phone),
+        l.sio_synced ? "Oui" : "Non",
+        escapeCsv(l.utm_source),
+        escapeCsv(l.utm_medium),
+        escapeCsv(l.utm_campaign),
+        escapeCsv(l.referrer),
+        l.created_at ? new Date(l.created_at).toLocaleString("fr-FR") : "",
+      ].join(",")
+    ).join("\n");
+
+    const csv = "\uFEFF" + header + csvRows; // BOM for Excel
+    const filename = `leads-${(page as any).title || pageId}.csv`.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    return new NextResponse(csv, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  }
+
+  return NextResponse.json({ ok: true, leads: rows });
+}
+
+function escapeCsv(val: any): string {
+  const s = String(val ?? "").replace(/"/g, '""');
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
 }
 
 // ---------- Systeme.io helper ----------
 
 async function syncLeadToSystemeIo(params: {
+  pageId: string;
   userId: string;
   email: string;
   firstName: string;
@@ -214,6 +255,13 @@ async function syncLeadToSystemeIo(params: {
       headers,
       body: JSON.stringify({ tagId }),
     });
+
+    // Mark lead as synced with contact ID
+    await params.supabase
+      .from("page_leads")
+      .update({ sio_synced: true, sio_contact_id: String(contactId) })
+      .eq("page_id", params.pageId)
+      .eq("email", params.email);
   } catch {
     // fail-open
   }

@@ -13,7 +13,8 @@ import {
   Globe, Loader2, ArrowLeft, ImagePlus,
   MousePointerClick, FileText, FileDown,
   Share2, Tag, Image as ImageIcon, Link2,
-  EyeOff,
+  EyeOff, Users, QrCode, HelpCircle,
+  RefreshCw, Shuffle,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -45,6 +46,8 @@ type PageData = {
   capture_subtitle: string;
   capture_first_name: boolean;
   sio_capture_tag: string;
+  facebook_pixel_id?: string;
+  google_tag_id?: string;
   views_count: number;
   leads_count: number;
   iteration_count: number;
@@ -228,6 +231,23 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [publishMetaDesc, setPublishMetaDesc] = useState(initialPage.meta_description || "");
   const [publishOgUrl, setPublishOgUrl] = useState(initialPage.og_image_url || "");
   const [uploadingOg, setUploadingOg] = useState(false);
+  const [publishFbPixel, setPublishFbPixel] = useState(initialPage.facebook_pixel_id || "");
+  const [publishGtag, setPublishGtag] = useState(initialPage.google_tag_id || "");
+
+  // Leads modal state
+  const [showLeadsModal, setShowLeadsModal] = useState(false);
+  const [leadsData, setLeadsData] = useState<any[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+
+  // QR code state
+  const [showQrModal, setShowQrModal] = useState(false);
+
+  // Section regeneration
+  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
+
+  // Template swap
+  const [showTemplateSwap, setShowTemplateSwap] = useState(false);
+  const [swapping, setSwapping] = useState(false);
 
   // Inject inline edit script into HTML
   const getPreviewHtml = useCallback((html: string) => {
@@ -374,14 +394,97 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }).catch(() => {});
   }, [page.id]);
 
+  // Load leads for leads modal
+  const loadLeads = useCallback(async () => {
+    setLeadsLoading(true);
+    try {
+      const res = await fetch(`/api/pages/${page.id}/leads`);
+      const data = await res.json();
+      if (data.ok) setLeadsData(data.leads || []);
+    } catch { /* ignore */ } finally {
+      setLeadsLoading(false);
+    }
+  }, [page.id]);
+
+  // Download leads CSV
+  const downloadLeadsCsv = useCallback(() => {
+    window.open(`/api/pages/${page.id}/leads?format=csv`, "_blank");
+  }, [page.id]);
+
+  // Regenerate a specific section via AI
+  const regenerateSection = useCallback(async (sectionKey: string) => {
+    setRegeneratingSection(sectionKey);
+    try {
+      const res = await fetch("/api/templates/iterate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: page.template_id,
+          kind: page.template_kind,
+          contentData: page.content_data,
+          brandTokens: page.brand_tokens,
+          instruction: `Régénère uniquement la section "${sectionKey}" avec un angle d'écriture différent, plus percutant et persuasif. Garde le même ton et la même structure mais change les mots, les accroches et les arguments. Ne modifie AUCUNE autre section.`,
+        }),
+      });
+      const data = await res.json();
+      if (data.nextContentData) {
+        const nextCd = data.nextContentData;
+        setPage((prev) => ({ ...prev, content_data: nextCd }));
+        await refreshPreview(nextCd, page.brand_tokens);
+        // Persist
+        fetch(`/api/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_data: nextCd }),
+        }).catch(() => {});
+      }
+    } catch { /* ignore */ } finally {
+      setRegeneratingSection(null);
+    }
+  }, [page, refreshPreview]);
+
+  // Swap template while keeping content
+  const swapTemplate = useCallback(async (newTemplateId: string) => {
+    setSwapping(true);
+    try {
+      const res = await fetch("/api/templates/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: page.template_kind,
+          templateId: newTemplateId,
+          mode: "preview",
+          contentData: page.content_data,
+          brandTokens: page.brand_tokens,
+        }),
+      });
+      const html = await res.text();
+      if (html && !html.includes('"error"')) {
+        setPage((prev) => ({ ...prev, template_id: newTemplateId, html_snapshot: html }));
+        setHtmlPreview(html);
+        // Persist
+        await fetch(`/api/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ template_id: newTemplateId, html_snapshot: html }),
+        });
+        setShowTemplateSwap(false);
+      }
+    } catch { /* ignore */ } finally {
+      setSwapping(false);
+    }
+  }, [page]);
+
   // Open publish modal
   const openPublishModal = useCallback(() => {
     setPublishSlug(page.slug);
     setPublishTag(page.sio_capture_tag || "");
     setPublishMetaDesc(page.meta_description || "");
     setPublishOgUrl(page.og_image_url || "");
+    setPublishFbPixel(page.facebook_pixel_id || "");
+    setPublishGtag(page.google_tag_id || "");
     setShowPublishModal(true);
-  }, [page.slug, page.sio_capture_tag, page.meta_description, page.og_image_url]);
+  }, [page.slug, page.sio_capture_tag, page.meta_description, page.og_image_url, page.facebook_pixel_id, page.google_tag_id]);
 
   // Publish with modal settings
   const handlePublish = useCallback(async () => {
@@ -396,6 +499,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           sio_capture_tag: publishTag,
           meta_description: publishMetaDesc,
           og_image_url: publishOgUrl,
+          facebook_pixel_id: publishFbPixel,
+          google_tag_id: publishGtag,
         }),
       });
 
@@ -414,13 +519,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           sio_capture_tag: publishTag,
           meta_description: publishMetaDesc,
           og_image_url: publishOgUrl,
+          facebook_pixel_id: publishFbPixel,
+          google_tag_id: publishGtag,
         }));
         setShowPublishModal(false);
       }
     } catch { /* ignore */ } finally {
       setPublishing(false);
     }
-  }, [page.id, publishSlug, publishTag, publishMetaDesc, publishOgUrl]);
+  }, [page.id, publishSlug, publishTag, publishMetaDesc, publishOgUrl, publishFbPixel, publishGtag]);
 
   // Unpublish
   const handleUnpublish = useCallback(async () => {
@@ -686,20 +793,54 @@ ${textContent.split("\n").map((line) => {
             {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           </button>
 
+          {/* View leads */}
+          <button
+            onClick={() => { setShowLeadsModal(true); loadLeads(); }}
+            className="p-2 rounded-lg border hover:bg-muted text-muted-foreground relative"
+            title="Voir les leads"
+          >
+            <Users className="w-4 h-4" />
+            {page.leads_count > 0 && (
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {page.leads_count > 99 ? "99+" : page.leads_count}
+              </span>
+            )}
+          </button>
+
+          {/* Template swap */}
+          <button
+            onClick={() => setShowTemplateSwap(true)}
+            className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
+            title="Changer de template"
+          >
+            <Shuffle className="w-4 h-4" />
+          </button>
+
           {/* Full-screen preview */}
-          <button onClick={openPreview} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Apercu plein ecran">
+          <button onClick={openPreview} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Aperçu plein écran">
             <ExternalLink className="w-4 h-4" />
           </button>
 
           {/* Download HTML */}
-          <button onClick={downloadHtml} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Telecharger HTML">
+          <button onClick={downloadHtml} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Télécharger HTML">
             <Download className="w-4 h-4" />
           </button>
 
           {/* Download text as PDF */}
-          <button onClick={downloadTextPdf} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Telecharger le texte en PDF">
+          <button onClick={downloadTextPdf} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Télécharger le texte en PDF">
             <FileDown className="w-4 h-4" />
           </button>
+
+          {/* QR code (only when published) */}
+          {isPublished && (
+            <button
+              onClick={() => setShowQrModal(true)}
+              className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
+              title="QR Code"
+            >
+              <QrCode className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Publish / manage */}
           {isPublished ? (
@@ -754,6 +895,14 @@ ${textContent.split("\n").map((line) => {
           Clique sur n&apos;importe quel texte pour le modifier directement
         </div>
       )}
+
+      {/* Section regeneration bar */}
+      <SectionRegenBar
+        contentData={page.content_data}
+        kind={page.template_kind}
+        regeneratingSection={regeneratingSection}
+        onRegenerate={regenerateSection}
+      />
 
       {/* Main content + Chat side panel */}
       <div className="flex-1 flex min-h-0">
@@ -905,10 +1054,52 @@ ${textContent.split("\n").map((line) => {
                   className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
                   rows={3}
                   maxLength={160}
-                  placeholder="Description qui apparait dans Google..."
+                  placeholder="Description qui apparaît dans Google..."
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  {publishMetaDesc.length}/160 caracteres
+                  {publishMetaDesc.length}/160 caractères
+                </p>
+              </div>
+
+              {/* Facebook Pixel */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  Facebook Pixel ID
+                  <a href="https://www.facebook.com/business/help/952192354843755" target="_blank" rel="noopener" title="Comment trouver son Pixel ID ?">
+                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-primary" />
+                  </a>
+                </label>
+                <input
+                  type="text"
+                  value={publishFbPixel}
+                  onChange={(e) => setPublishFbPixel(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="Ex: 123456789012345"
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Suivi des conversions Facebook/Meta Ads.
+                </p>
+              </div>
+
+              {/* Google Tag */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
+                  Google Tag (gtag)
+                  <a href="https://support.google.com/tagmanager/answer/6102821" target="_blank" rel="noopener" title="Comment trouver son Google Tag ?">
+                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-primary" />
+                  </a>
+                </label>
+                <input
+                  type="text"
+                  value={publishGtag}
+                  onChange={(e) => setPublishGtag(e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
+                  placeholder="Ex: G-XXXXXXXXXX ou GTM-XXXXXX"
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Suivi Google Analytics / Google Ads.
                 </p>
               </div>
             </div>
@@ -933,6 +1124,290 @@ ${textContent.split("\n").map((line) => {
           </div>
         </div>
       )}
+
+      {/* ==================== LEADS MODAL ==================== */}
+      {showLeadsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLeadsModal(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Leads capturés</h2>
+                <p className="text-sm text-muted-foreground">
+                  {leadsData.length} lead{leadsData.length !== 1 ? "s" : ""} ·{" "}
+                  {page.views_count > 0 ? ((page.leads_count / page.views_count) * 100).toFixed(1) : "0"}% de conversion
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={downloadLeadsCsv}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-muted flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Exporter CSV
+                </button>
+                <button onClick={() => setShowLeadsModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {leadsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : leadsData.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Aucun lead capturé pour le moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {leadsData.map((lead: any) => (
+                    <div key={lead.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{lead.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {lead.first_name && <span>{lead.first_name} · </span>}
+                          {new Date(lead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                          {lead.utm_source && <span> · via {lead.utm_source}</span>}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {lead.sio_synced ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            Sync SIO
+                          </span>
+                        ) : page.sio_capture_tag ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            En attente
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== QR CODE MODAL ==================== */}
+      {showQrModal && isPublished && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowQrModal(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">QR Code</h2>
+              <button onClick={() => setShowQrModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center gap-4">
+              {/* QR code via public API (no dependency needed) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}`}
+                alt="QR Code"
+                className="w-60 h-60 rounded-lg border"
+              />
+              <p className="text-xs text-muted-foreground text-center break-all">{publicUrl}</p>
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=${encodeURIComponent(publicUrl)}`;
+                    link.download = `qr-${page.slug}.png`;
+                    link.click();
+                  }}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium border hover:bg-muted flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Télécharger PNG
+                </button>
+                <button
+                  onClick={copyUrl}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1.5"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? "Copié !" : "Copier le lien"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== TEMPLATE SWAP MODAL ==================== */}
+      {showTemplateSwap && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowTemplateSwap(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Changer de template</h2>
+                <p className="text-sm text-muted-foreground">Le contenu sera conservé, seul le design change.</p>
+              </div>
+              <button onClick={() => setShowTemplateSwap(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <TemplateSwapList
+                currentId={page.template_id}
+                kind={page.template_kind}
+                onSelect={swapTemplate}
+                swapping={swapping}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Template swap list ----------
+
+function TemplateSwapList({ currentId, kind, onSelect, swapping }: {
+  currentId: string;
+  kind: string;
+  onSelect: (id: string) => void;
+  swapping: boolean;
+}) {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/templates/list")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && Array.isArray(data.templates)) {
+          // Filter by same kind (capture or sales)
+          const matching = data.templates.filter((t: any) =>
+            (kind === "capture" && t.type === "capture") ||
+            (kind === "vente" && t.type === "sales") ||
+            (kind === "sales" && t.type === "sales")
+          );
+          setTemplates(matching);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [kind]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (templates.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-8">Aucun template alternatif disponible.</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {templates.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => t.id !== currentId && onSelect(t.id)}
+          disabled={swapping || t.id === currentId}
+          className={`p-3 rounded-xl border-2 text-left transition-all ${
+            t.id === currentId
+              ? "border-primary bg-primary/5 opacity-70"
+              : "border-border hover:border-primary/50 hover:bg-muted/30"
+          } ${swapping ? "opacity-50" : ""}`}
+        >
+          {t.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={t.imageUrl} alt={t.name} className="w-full h-24 object-cover rounded-lg mb-2" />
+          )}
+          <h4 className="text-xs font-semibold truncate">{t.name}</h4>
+          <p className="text-[10px] text-muted-foreground truncate">{t.description}</p>
+          {t.id === currentId && (
+            <span className="text-[9px] text-primary font-medium mt-1 block">Actuel</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Section regeneration bar ----------
+
+const SECTION_LABELS: Record<string, string> = {
+  hero_title: "Titre principal",
+  hero_subtitle: "Sous-titre",
+  hero_description: "Description hero",
+  bullets: "Points clés",
+  features: "Fonctionnalités",
+  benefits: "Bénéfices",
+  testimonials: "Témoignages",
+  faq_items: "FAQ",
+  cta_text: "Bouton CTA",
+  about_story: "À propos",
+  guarantee_text: "Garantie",
+  bonuses: "Bonus",
+  steps: "Étapes",
+  pricing_tiers: "Tarifs",
+  pain_points_checklist: "Points de douleur",
+  offer_hook: "Accroche offre",
+  hero_bullets: "Puces hero",
+};
+
+function SectionRegenBar({ contentData, kind, regeneratingSection, onRegenerate }: {
+  contentData: Record<string, any>;
+  kind: string;
+  regeneratingSection: string | null;
+  onRegenerate: (key: string) => void;
+}) {
+  // Detect which sections exist in the current content
+  const sections = Object.keys(contentData || {}).filter((key) => {
+    const val = contentData[key];
+    if (!val) return false;
+    // Only show sections that have meaningful content
+    if (typeof val === "string" && val.length < 5) return false;
+    // Skip non-content keys
+    if (key.includes("url") || key.includes("image") || key.includes("color") || key.includes("font")) return false;
+    return SECTION_LABELS[key] !== undefined;
+  });
+
+  if (sections.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 px-4 py-1.5 border-b bg-muted/20 overflow-x-auto">
+      <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap mr-1">
+        <RefreshCw className="w-3 h-3 inline mr-0.5" />
+        Régénérer :
+      </span>
+      {sections.map((key) => (
+        <button
+          key={key}
+          onClick={() => onRegenerate(key)}
+          disabled={!!regeneratingSection}
+          className={`px-2.5 py-1 rounded-md text-[10px] font-medium border transition-colors whitespace-nowrap ${
+            regeneratingSection === key
+              ? "bg-primary/10 border-primary text-primary"
+              : "hover:bg-muted border-transparent hover:border-border"
+          } ${regeneratingSection && regeneratingSection !== key ? "opacity-40" : ""}`}
+        >
+          {regeneratingSection === key && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}
+          {SECTION_LABELS[key] || key}
+        </button>
+      ))}
     </div>
   );
 }

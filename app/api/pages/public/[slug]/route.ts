@@ -13,7 +13,7 @@ type RouteContext = { params: Promise<{ slug: string }> };
 
 // Full select — contains all columns expected by PublicPageClient
 const PAGE_SELECT_FULL =
-  "id, user_id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, thank_you_title, thank_you_message, thank_you_cta_text, thank_you_cta_url, status";
+  "id, user_id, title, slug, page_type, html_snapshot, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, thank_you_title, thank_you_message, thank_you_cta_text, thank_you_cta_url, facebook_pixel_id, google_tag_id, status";
 
 // Minimal select — fallback if some columns have not been migrated yet
 const PAGE_SELECT_MINIMAL =
@@ -124,6 +124,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         thank_you_message: "",
         thank_you_cta_text: "",
         thank_you_cta_url: "",
+        facebook_pixel_id: "",
+        google_tag_id: "",
         ...pagePublic,
         address_form: addressForm,
       },
