@@ -51,6 +51,7 @@ import {
   Plus,
   Info,
   ChevronDown,
+  ChevronRight,
   Pencil,
   X,
 } from "lucide-react";
@@ -80,6 +81,11 @@ type QuizResult = {
   sort_order: number;
 };
 
+type QuizLeadAnswer = {
+  question_index: number;
+  option_index: number;
+};
+
 type QuizLead = {
   id: string;
   email: string;
@@ -88,6 +94,7 @@ type QuizLead = {
   bonus_unlocked: boolean;
   consent_given: boolean;
   created_at: string;
+  answers?: QuizLeadAnswer[] | null;
 };
 
 type QuizData = {
@@ -113,6 +120,61 @@ type QuizData = {
   results: QuizResult[];
   leads: QuizLead[];
 };
+
+function LeadRow({ lead, questions }: { lead: QuizLead; questions: QuizQuestion[] }) {
+  const [open, setOpen] = useState(false);
+  const hasAnswers = Array.isArray(lead.answers) && lead.answers.length > 0;
+
+  return (
+    <>
+      <TableRow
+        className={hasAnswers ? "cursor-pointer hover:bg-muted/50" : ""}
+        onClick={() => hasAnswers && setOpen(!open)}
+      >
+        <TableCell className="w-8 px-2">
+          {hasAnswers && (
+            open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+          )}
+        </TableCell>
+        <TableCell className="font-medium">{lead.email}</TableCell>
+        <TableCell>{lead.result_title ?? "—"}</TableCell>
+        <TableCell>
+          {lead.has_shared ? (
+            <Badge className="bg-green-100 text-green-700">Oui</Badge>
+          ) : (
+            <span className="text-muted-foreground">Non</span>
+          )}
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {lead.created_at
+            ? format(new Date(lead.created_at), "dd MMM yyyy", { locale: fr })
+            : "—"}
+        </TableCell>
+      </TableRow>
+      {open && hasAnswers && (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-muted/30 p-4">
+            <div className="space-y-1 text-sm">
+              {lead.answers!.map((a) => {
+                const q = questions[a.question_index];
+                if (!q) return null;
+                const opt = q.options?.[a.option_index];
+                return (
+                  <div key={a.question_index} className="flex gap-2">
+                    <span className="font-medium text-muted-foreground shrink-0">
+                      Q{a.question_index + 1}:
+                    </span>
+                    <span>{opt?.text ?? `Option ${a.option_index + 1}`}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
 
 interface QuizDetailClientProps {
   quizId: string;
@@ -342,17 +404,44 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   const handleExportCSV = () => {
     if (!quiz?.leads?.length) return;
-    const headers = ["Email", "Profil", "Partagé", "Bonus", "Consentement", "Date"];
-    const rows = quiz.leads.map((l) => [
-      l.email,
-      l.result_title ?? "",
-      l.has_shared ? "Oui" : "Non",
-      l.bonus_unlocked ? "Oui" : "Non",
-      l.consent_given ? "Oui" : "Non",
-      l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm") : "",
-    ]);
+
+    // Build per-question headers
+    const questionHeaders = quiz.questions.map(
+      (_q, i) => `Q${i + 1} Réponse`,
+    );
+
+    const headers = [
+      "Email",
+      "Profil",
+      ...questionHeaders,
+      "Partagé",
+      "Bonus",
+      "Consentement",
+      "Date",
+    ];
+
+    const rows = quiz.leads.map((l) => {
+      // Map answers to option text
+      const answerCols = quiz.questions.map((_q, qIdx) => {
+        const ans = l.answers?.find((a) => a.question_index === qIdx);
+        if (ans == null) return "";
+        const q = quiz.questions[qIdx];
+        const opt = q?.options?.[ans.option_index];
+        return opt?.text ?? `Option ${ans.option_index + 1}`;
+      });
+
+      return [
+        l.email,
+        l.result_title ?? "",
+        ...answerCols,
+        l.has_shared ? "Oui" : "Non",
+        l.bonus_unlocked ? "Oui" : "Non",
+        l.consent_given ? "Oui" : "Non",
+        l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm") : "",
+      ];
+    });
     const csv =
-      [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join(
+      [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join(
         "\n",
       );
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -1081,6 +1170,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-8"></TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Profil</TableHead>
                           <TableHead>Partagé</TableHead>
@@ -1089,28 +1179,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </TableHeader>
                       <TableBody>
                         {quiz.leads.map((lead) => (
-                          <TableRow key={lead.id}>
-                            <TableCell className="font-medium">
-                              {lead.email}
-                            </TableCell>
-                            <TableCell>{lead.result_title ?? "—"}</TableCell>
-                            <TableCell>
-                              {lead.has_shared ? (
-                                <Badge className="bg-green-100 text-green-700">
-                                  Oui
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">Non</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {lead.created_at
-                                ? format(new Date(lead.created_at), "dd MMM yyyy", {
-                                    locale: fr,
-                                  })
-                                : "—"}
-                            </TableCell>
-                          </TableRow>
+                          <LeadRow
+                            key={lead.id}
+                            lead={lead}
+                            questions={quiz.questions}
+                          />
                         ))}
                       </TableBody>
                     </Table>
