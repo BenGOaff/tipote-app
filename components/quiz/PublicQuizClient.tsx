@@ -432,6 +432,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
       // In preview mode, skip the actual lead submission
       if (!previewData) {
+        // Build per-question answers for analytics / export
+        const answersPayload = answers.map((optionIdx: number, qIdx: number) => ({
+          question_index: qIdx,
+          option_index: optionIdx,
+        }));
+
         await fetch(`/api/quiz/${quizId}/public`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -440,6 +446,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             first_name: firstName.trim() || undefined,
             result_id: profile?.id ?? null,
             consent_given: consent,
+            answers: answersPayload,
           }),
         });
       }

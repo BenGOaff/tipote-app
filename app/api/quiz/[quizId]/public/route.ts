@@ -191,6 +191,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const resultId = body.result_id ?? null;
     const firstName = String(body.first_name ?? "").trim().slice(0, 100);
+    const answers = Array.isArray(body.answers) ? body.answers : null;
 
     // Upsert lead (unique on quiz_id + email)
     const { data: lead, error } = await admin
@@ -202,6 +203,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           first_name: firstName || null,
           result_id: resultId,
           consent_given: Boolean(body.consent_given),
+          ...(answers ? { answers } : {}),
         },
         { onConflict: "quiz_id,email" },
       )

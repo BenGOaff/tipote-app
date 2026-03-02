@@ -462,16 +462,19 @@ export function QuizForm({ onClose }: QuizFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Nombre de questions</Label>
-              <Select value={questionCount} onValueChange={setQuestionCount}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 questions</SelectItem>
-                  <SelectItem value="7">7 questions</SelectItem>
-                  <SelectItem value="10">10 questions</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                type="number"
+                min={3}
+                max={30}
+                value={questionCount}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "" || (/^\d+$/.test(v) && parseInt(v) <= 30)) {
+                    setQuestionCount(v);
+                  }
+                }}
+                placeholder="7"
+              />
             </div>
           </div>
 
@@ -648,6 +651,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
                               <SelectValue placeholder="Profil →" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="-1">
+                                <span className="text-muted-foreground">Aucun profil</span>
+                              </SelectItem>
                               {results.map((r, ri) => (
                                 <SelectItem key={ri} value={String(ri)}>
                                   Profil {ri + 1}
