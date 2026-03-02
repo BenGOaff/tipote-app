@@ -54,6 +54,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     "meta_title", "meta_description", "og_image_url",
     "legal_mentions_url", "legal_cgv_url", "legal_privacy_url",
     "capture_enabled", "capture_heading", "capture_subtitle", "capture_first_name", "sio_capture_tag",
+    "thank_you_title", "thank_you_message", "thank_you_cta_text", "thank_you_cta_url",
     "iteration_count", "locale", "html_snapshot",
   ];
 

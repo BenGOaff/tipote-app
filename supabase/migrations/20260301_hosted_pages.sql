@@ -47,6 +47,12 @@ CREATE TABLE IF NOT EXISTS public.hosted_pages (
   capture_subtitle TEXT DEFAULT '',
   sio_capture_tag TEXT DEFAULT '',                      -- Systeme.io tag for captured leads
 
+  -- Thank-you page customization
+  thank_you_title TEXT DEFAULT '',                      -- Custom title for post-capture confirmation
+  thank_you_message TEXT DEFAULT '',                    -- Custom message for post-capture confirmation
+  thank_you_cta_text TEXT DEFAULT '',                   -- CTA button text (e.g. "Rejoins-moi sur Instagram")
+  thank_you_cta_url TEXT DEFAULT '',                    -- CTA button link (e.g. social, offer, blog URL)
+
   -- Analytics
   views_count INTEGER NOT NULL DEFAULT 0,
   leads_count INTEGER NOT NULL DEFAULT 0,
