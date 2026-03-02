@@ -65,6 +65,237 @@ interface PublicQuizClientProps {
 
 export type { PublicQuizData };
 
+// ─── Translations dictionary ─────────────────────────────────────────────────
+// All user-facing strings keyed by quiz locale.
+// Supports: fr, en, es, de, pt, it, ar
+// Falls back to French for unknown locales.
+
+type QuizTranslations = {
+  quizUnavailable: string;
+  loadError: string;
+  quizNotFound: string;
+  start: string;
+  previous: string;
+  questions: string;
+  min: string;
+  captureHeadingDefault: string;
+  captureSubtitleDefault: string;
+  firstNamePlaceholder: string;
+  viewResult: string;
+  privacyPolicy: string;
+  defaultConsent: string;
+  consentNeedle: string;
+  yourProfile: string;
+  resultFallback: string;
+  insight: string;
+  projection: string;
+  exclusiveBonus: string;
+  shareToUnlock: string;
+  copyLink: string;
+  copied: string;
+  bonusUnlocked: string;
+  thanksForSharing: string;
+  defaultShareMessage: (title: string) => string;
+};
+
+const translations: Record<string, QuizTranslations> = {
+  fr: {
+    quizUnavailable: "Ce quiz n\u2019est pas disponible.",
+    loadError: "Impossible de charger le quiz.",
+    quizNotFound: "Quiz introuvable",
+    start: "Commencer",
+    previous: "Pr\u00e9c\u00e9dent",
+    questions: "questions",
+    min: "min",
+    captureHeadingDefault: "Ton r\u00e9sultat est pr\u00eat !",
+    captureSubtitleDefault: "Entre ton email pour d\u00e9couvrir ton profil.",
+    firstNamePlaceholder: "Ton pr\u00e9nom",
+    viewResult: "Voir mon r\u00e9sultat",
+    privacyPolicy: "Politique de confidentialit\u00e9",
+    defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
+    consentNeedle: "politique de confidentialit\u00e9",
+    yourProfile: "Ton profil",
+    resultFallback: "R\u00e9sultat",
+    insight: "Prise de conscience",
+    projection: "Et si...",
+    exclusiveBonus: "Bonus exclusif",
+    shareToUnlock: "Partage sur un r\u00e9seau pour d\u00e9bloquer ton bonus :",
+    copyLink: "Copier le lien",
+    copied: "Copi\u00e9 !",
+    bonusUnlocked: "Bonus d\u00e9bloqu\u00e9 ! V\u00e9rifie ta bo\u00eete mail.",
+    thanksForSharing: "Merci pour le partage !",
+    defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Fais-le aussi :`,
+  },
+  en: {
+    quizUnavailable: "This quiz is not available.",
+    loadError: "Unable to load the quiz.",
+    quizNotFound: "Quiz not found",
+    start: "Start",
+    previous: "Previous",
+    questions: "questions",
+    min: "min",
+    captureHeadingDefault: "Your result is ready!",
+    captureSubtitleDefault: "Enter your email to discover your profile.",
+    firstNamePlaceholder: "Your first name",
+    viewResult: "See my result",
+    privacyPolicy: "Privacy policy",
+    defaultConsent: "I accept the privacy policy.",
+    consentNeedle: "privacy policy",
+    yourProfile: "Your profile",
+    resultFallback: "Result",
+    insight: "Key insight",
+    projection: "What if...",
+    exclusiveBonus: "Exclusive bonus",
+    shareToUnlock: "Share on a network to unlock your bonus:",
+    copyLink: "Copy link",
+    copied: "Copied!",
+    bonusUnlocked: "Bonus unlocked! Check your inbox.",
+    thanksForSharing: "Thanks for sharing!",
+    defaultShareMessage: (title) => `I just took the quiz "${title}"! Try it too:`,
+  },
+  es: {
+    quizUnavailable: "Este quiz no est\u00e1 disponible.",
+    loadError: "No se pudo cargar el quiz.",
+    quizNotFound: "Quiz no encontrado",
+    start: "Empezar",
+    previous: "Anterior",
+    questions: "preguntas",
+    min: "min",
+    captureHeadingDefault: "\u00a1Tu resultado est\u00e1 listo!",
+    captureSubtitleDefault: "Ingresa tu email para descubrir tu perfil.",
+    firstNamePlaceholder: "Tu nombre",
+    viewResult: "Ver mi resultado",
+    privacyPolicy: "Pol\u00edtica de privacidad",
+    defaultConsent: "Acepto la pol\u00edtica de privacidad.",
+    consentNeedle: "pol\u00edtica de privacidad",
+    yourProfile: "Tu perfil",
+    resultFallback: "Resultado",
+    insight: "Toma de conciencia",
+    projection: "\u00bfY si...?",
+    exclusiveBonus: "Bonus exclusivo",
+    shareToUnlock: "Comparte en una red para desbloquear tu bonus:",
+    copyLink: "Copiar enlace",
+    copied: "\u00a1Copiado!",
+    bonusUnlocked: "\u00a1Bonus desbloqueado! Revisa tu correo.",
+    thanksForSharing: "\u00a1Gracias por compartir!",
+    defaultShareMessage: (title) => `\u00a1Acabo de hacer el quiz "${title}"! Hazlo t\u00fa tambi\u00e9n:`,
+  },
+  de: {
+    quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
+    loadError: "Quiz konnte nicht geladen werden.",
+    quizNotFound: "Quiz nicht gefunden",
+    start: "Starten",
+    previous: "Zur\u00fcck",
+    questions: "Fragen",
+    min: "Min",
+    captureHeadingDefault: "Dein Ergebnis ist bereit!",
+    captureSubtitleDefault: "Gib deine E-Mail ein, um dein Profil zu entdecken.",
+    firstNamePlaceholder: "Dein Vorname",
+    viewResult: "Mein Ergebnis sehen",
+    privacyPolicy: "Datenschutzerkl\u00e4rung",
+    defaultConsent: "Ich akzeptiere die Datenschutzerkl\u00e4rung.",
+    consentNeedle: "datenschutzerkl\u00e4rung",
+    yourProfile: "Dein Profil",
+    resultFallback: "Ergebnis",
+    insight: "Erkenntnis",
+    projection: "Was w\u00e4re wenn...",
+    exclusiveBonus: "Exklusiver Bonus",
+    shareToUnlock: "Teile in einem Netzwerk, um deinen Bonus freizuschalten:",
+    copyLink: "Link kopieren",
+    copied: "Kopiert!",
+    bonusUnlocked: "Bonus freigeschaltet! Pr\u00fcfe dein Postfach.",
+    thanksForSharing: "Danke f\u00fcrs Teilen!",
+    defaultShareMessage: (title) => `Ich habe gerade das Quiz "${title}" gemacht! Probier es auch:`,
+  },
+  pt: {
+    quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
+    loadError: "N\u00e3o foi poss\u00edvel carregar o quiz.",
+    quizNotFound: "Quiz n\u00e3o encontrado",
+    start: "Come\u00e7ar",
+    previous: "Anterior",
+    questions: "perguntas",
+    min: "min",
+    captureHeadingDefault: "Seu resultado est\u00e1 pronto!",
+    captureSubtitleDefault: "Digite seu email para descobrir seu perfil.",
+    firstNamePlaceholder: "Seu nome",
+    viewResult: "Ver meu resultado",
+    privacyPolicy: "Pol\u00edtica de privacidade",
+    defaultConsent: "Aceito a pol\u00edtica de privacidade.",
+    consentNeedle: "pol\u00edtica de privacidade",
+    yourProfile: "Seu perfil",
+    resultFallback: "Resultado",
+    insight: "Tomada de consci\u00eancia",
+    projection: "E se...",
+    exclusiveBonus: "B\u00f4nus exclusivo",
+    shareToUnlock: "Compartilhe em uma rede para desbloquear seu b\u00f4nus:",
+    copyLink: "Copiar link",
+    copied: "Copiado!",
+    bonusUnlocked: "B\u00f4nus desbloqueado! Verifique seu e-mail.",
+    thanksForSharing: "Obrigado por compartilhar!",
+    defaultShareMessage: (title) => `Acabei de fazer o quiz "${title}"! Fa\u00e7a voc\u00ea tamb\u00e9m:`,
+  },
+  it: {
+    quizUnavailable: "Questo quiz non \u00e8 disponibile.",
+    loadError: "Impossibile caricare il quiz.",
+    quizNotFound: "Quiz non trovato",
+    start: "Inizia",
+    previous: "Precedente",
+    questions: "domande",
+    min: "min",
+    captureHeadingDefault: "Il tuo risultato \u00e8 pronto!",
+    captureSubtitleDefault: "Inserisci la tua email per scoprire il tuo profilo.",
+    firstNamePlaceholder: "Il tuo nome",
+    viewResult: "Vedi il mio risultato",
+    privacyPolicy: "Informativa sulla privacy",
+    defaultConsent: "Accetto l\u2019informativa sulla privacy.",
+    consentNeedle: "informativa sulla privacy",
+    yourProfile: "Il tuo profilo",
+    resultFallback: "Risultato",
+    insight: "Presa di coscienza",
+    projection: "E se...",
+    exclusiveBonus: "Bonus esclusivo",
+    shareToUnlock: "Condividi su un social per sbloccare il tuo bonus:",
+    copyLink: "Copia link",
+    copied: "Copiato!",
+    bonusUnlocked: "Bonus sbloccato! Controlla la tua casella email.",
+    thanksForSharing: "Grazie per la condivisione!",
+    defaultShareMessage: (title) => `Ho appena fatto il quiz "${title}"! Fallo anche tu:`,
+  },
+  ar: {
+    quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
+    loadError: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631.",
+    quizNotFound: "\u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f",
+    start: "\u0627\u0628\u062f\u0623",
+    previous: "\u0627\u0644\u0633\u0627\u0628\u0642",
+    questions: "\u0623\u0633\u0626\u0644\u0629",
+    min: "\u062f\u0642\u064a\u0642\u0629",
+    captureHeadingDefault: "\u0646\u062a\u064a\u062c\u062a\u0643 \u062c\u0627\u0647\u0632\u0629!",
+    captureSubtitleDefault: "\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0644\u0627\u0643\u062a\u0634\u0627\u0641 \u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062e\u0635\u064a.",
+    firstNamePlaceholder: "\u0627\u0633\u0645\u0643 \u0627\u0644\u0623\u0648\u0644",
+    viewResult: "\u0639\u0631\u0636 \u0646\u062a\u064a\u062c\u062a\u064a",
+    privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
+    defaultConsent: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.",
+    consentNeedle: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
+    yourProfile: "\u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062e\u0635\u064a",
+    resultFallback: "\u0627\u0644\u0646\u062a\u064a\u062c\u0629",
+    insight: "\u0625\u062f\u0631\u0627\u0643",
+    projection: "\u0645\u0627\u0630\u0627 \u0644\u0648...",
+    exclusiveBonus: "\u0645\u0643\u0627\u0641\u0623\u0629 \u062d\u0635\u0631\u064a\u0629",
+    shareToUnlock: "\u0634\u0627\u0631\u0643 \u0639\u0644\u0649 \u0634\u0628\u0643\u0629 \u0627\u062c\u062a\u0645\u0627\u0639\u064a\u0629 \u0644\u0641\u062a\u062d \u0645\u0643\u0627\u0641\u0623\u062a\u0643:",
+    copyLink: "\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637",
+    copied: "\u062a\u0645 \u0627\u0644\u0646\u0633\u062e!",
+    bonusUnlocked: "\u062a\u0645 \u0641\u062a\u062d \u0627\u0644\u0645\u0643\u0627\u0641\u0623\u0629! \u062a\u062d\u0642\u0642 \u0645\u0646 \u0628\u0631\u064a\u062f\u0643.",
+    thanksForSharing: "\u0634\u0643\u0631\u0627\u064b \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629!",
+    defaultShareMessage: (title) => `\u0644\u0642\u062f \u0623\u062c\u0631\u064a\u062a \u0627\u062e\u062a\u0628\u0627\u0631 "${title}"! \u062c\u0631\u0628\u0647 \u0623\u0646\u062a \u0623\u064a\u0636\u0627\u064b:`,
+  },
+};
+
+function getT(locale: string | null | undefined): QuizTranslations {
+  return translations[locale ?? "fr"] ?? translations.fr;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function PublicQuizClient({ quizId, previewData }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
@@ -83,6 +314,8 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
 
+  const t = getT(quiz?.locale);
+
   useEffect(() => {
     // In preview mode, data is already provided via props
     if (previewData) {
@@ -96,7 +329,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         const res = await fetch(`/api/quiz/${quizId}/public`);
         const json = await res.json();
         if (!json?.ok || !json.quiz) {
-          setError("Ce quiz n\u2019est pas disponible.");
+          setError(getT(json?.quiz?.locale).quizUnavailable);
           return;
         }
         // API returns quiz, questions, results as separate fields
@@ -107,7 +340,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         };
         setQuiz(quizData);
       } catch {
-        setError("Impossible de charger le quiz.");
+        setError(getT(null).loadError);
       } finally {
         setLoading(false);
       }
@@ -184,8 +417,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const getShareData = () => {
     const shareText =
-      quiz?.share_message ||
-      `Je viens de faire le quiz "${quiz?.title}" ! Fais-le aussi :`;
+      quiz?.share_message || t.defaultShareMessage(quiz?.title ?? "");
     const shareUrl = typeof window !== "undefined" ? window.location.href : "";
     return { shareText, shareUrl };
   };
@@ -246,7 +478,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
         <Card className="p-8 max-w-md text-center">
-          <p className="text-muted-foreground">{error || "Quiz introuvable"}</p>
+          <p className="text-muted-foreground">{error || t.quizNotFound}</p>
         </Card>
       </div>
     );
@@ -264,10 +496,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             <p className="text-muted-foreground whitespace-pre-line">{quiz.introduction}</p>
           )}
           <p className="text-sm text-muted-foreground">
-            {totalQ} questions — ~{Math.max(1, Math.ceil(totalQ * 0.5))} min
+            {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
           </p>
           <Button size="lg" onClick={() => setStep("quiz")}>
-            Commencer <ArrowRight className="w-4 h-4 ml-2" />
+            {t.start} <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </Card>
         <TipoteFooter locale={quiz.locale} />
@@ -318,7 +550,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               size="sm"
               onClick={() => setCurrentQ(currentQ - 1)}
             >
-              <ArrowLeft className="w-4 h-4 mr-1" /> Précédent
+              <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
             </Button>
           )}
         </Card>
@@ -335,17 +567,17 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             <Mail className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-xl font-bold">
-            {quiz.capture_heading || "Ton résultat est prêt !"}
+            {quiz.capture_heading || t.captureHeadingDefault}
           </h2>
           <p className="text-muted-foreground whitespace-pre-line">
-            {quiz.capture_subtitle || "Entre ton email pour découvrir ton profil."}
+            {quiz.capture_subtitle || t.captureSubtitleDefault}
           </p>
 
           <div className="space-y-3 text-left">
             {quiz.capture_first_name && (
               <Input
                 type="text"
-                placeholder="Ton prénom"
+                placeholder={t.firstNamePlaceholder}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
@@ -365,7 +597,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 onChange={(e) => setConsent(e.target.checked)}
                 className="mt-0.5"
               />
-              <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} />
+              <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} locale={quiz.locale} />
             </label>
           </div>
 
@@ -380,7 +612,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             ) : (
               <ArrowRight className="w-4 h-4 mr-2" />
             )}
-            Voir mon résultat
+            {t.viewResult}
           </Button>
 
           {quiz.privacy_url && (
@@ -391,7 +623,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 rel="noopener noreferrer"
                 className="underline"
               >
-                Politique de confidentialité
+                {t.privacyPolicy}
               </a>
             </p>
           )}
@@ -410,9 +642,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8 text-primary" />
             </div>
-            <Badge className="text-sm">Ton profil</Badge>
+            <Badge className="text-sm">{t.yourProfile}</Badge>
             <h2 className="text-2xl font-bold">
-              {resultProfile?.title ?? "Résultat"}
+              {resultProfile?.title ?? t.resultFallback}
             </h2>
           </div>
 
@@ -422,14 +654,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
           {resultProfile?.insight && (
             <div className="p-4 rounded-lg bg-muted/50 border">
-              <p className="text-sm font-medium mb-1">Prise de conscience</p>
+              <p className="text-sm font-medium mb-1">{t.insight}</p>
               <p className="text-sm text-muted-foreground">{resultProfile.insight}</p>
             </div>
           )}
 
           {resultProfile?.projection && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-sm font-medium mb-1">Et si...</p>
+              <p className="text-sm font-medium mb-1">{t.projection}</p>
               <p className="text-sm text-muted-foreground">
                 {resultProfile.projection}
               </p>
@@ -454,7 +686,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             <Card className="p-4 space-y-3 border-dashed">
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-primary" />
-                <span className="font-medium">Bonus exclusif</span>
+                <span className="font-medium">{t.exclusiveBonus}</span>
               </div>
               {quiz.bonus_description && (
                 <p className="text-sm text-muted-foreground">
@@ -464,7 +696,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               {!hasShared ? (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Partage sur un réseau pour débloquer ton bonus :
+                    {t.shareToUnlock}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -511,18 +743,17 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
-                      {linkCopied ? "Copié !" : "Copier le lien"}
+                      {linkCopied ? t.copied : t.copyLink}
                     </button>
                   </div>
                 </div>
               ) : bonusUnlocked ? (
                 <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> Bonus débloqué ! Vérifie ta
-                  boîte mail.
+                  <CheckCircle2 className="w-4 h-4" /> {t.bonusUnlocked}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> Merci pour le partage !
+                  <CheckCircle2 className="w-4 h-4" /> {t.thanksForSharing}
                 </div>
               )}
             </Card>
@@ -536,7 +767,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 rel="noopener noreferrer"
                 className="underline"
               >
-                Politique de confidentialité
+                {t.privacyPolicy}
               </a>
             </p>
           )}
@@ -549,10 +780,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   return null;
 }
 
-/** Renders consent text with "politique de confidentialité" as a clickable link when a URL is available. */
-function ConsentText({ text, privacyUrl }: { text: string | null; privacyUrl: string | null }) {
-  const raw = text || "J\u2019accepte la politique de confidentialit\u00e9.";
-  const needle = "politique de confidentialit\u00e9";
+/** Renders consent text with the privacy policy phrase as a clickable link when a URL is available. */
+function ConsentText({ text, privacyUrl, locale }: { text: string | null; privacyUrl: string | null; locale: string | null }) {
+  const t = getT(locale);
+  const raw = text || t.defaultConsent;
+  const needle = t.consentNeedle;
   const idx = raw.toLowerCase().indexOf(needle);
 
   if (!privacyUrl || idx === -1) return <span>{raw}</span>;
@@ -583,8 +815,9 @@ const tipoteFooterTexts: Record<string, string> = {
   en: "This quiz is powered by Tipote",
   es: "Este quiz es ofrecido por Tipote",
   de: "Dieses Quiz wird Ihnen von Tipote bereitgestellt",
-  pt: "Este quiz é oferecido por Tipote",
-  it: "Questo quiz è offerto da Tipote",
+  pt: "Este quiz \u00e9 oferecido por Tipote",
+  it: "Questo quiz \u00e8 offerto da Tipote",
+  ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tipote",
 };
 
 function TipoteFooter({ locale }: { locale?: string | null }) {
