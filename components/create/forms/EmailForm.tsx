@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, CalendarDays, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
 import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
 
@@ -71,7 +72,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [formality, setFormality] = useState<"tu" | "vous">("vous");
   const [emails, setEmails] = useState<string[]>([]);
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   // ✅ UX: aperçu "beau" + option "texte brut"
   const [showRawEditor, setShowRawEditor] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -189,7 +190,6 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   // UX: reset quelques champs quand on change de type
   useEffect(() => {
     setEmails([]);
-    setScheduledAt("");
     setShowRawEditor(false);
     // ne reset pas title (souvent utile), mais si vide on le remplira au generate
   }, [emailType]);
@@ -282,7 +282,10 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     if (genId && !savedContentId) setSavedContentId(genId);
   };
 
-  const handleSave = async (status: "draft" | "scheduled" | "published") => {
+  const handleSave = async (status: "draft" | "scheduled" | "published", scheduledDate?: string, scheduledTime?: string) => {
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
+
     if (savedContentId) {
       try {
         await fetch(`/api/content/${savedContentId}`, {
@@ -292,7 +295,8 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             title,
             content: generatedContent,
             status,
-            scheduledDate: scheduledAt || undefined,
+            scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
           }),
         });
       } catch {
@@ -305,10 +309,15 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
         type: "email",
         platform: "newsletter",
         status,
-        scheduled_at: scheduledAt || undefined,
+        scheduled_date: scheduledDate,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
       });
       if (id) setSavedContentId(id);
     }
+  };
+
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    await handleSave("scheduled", date, time);
   };
 
   const regenerateDisabled = isGenerating || !canGenerate;
@@ -726,87 +735,71 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
 
           {generatedContent && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Programmer (optionnel)</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleSave("draft")}
-                  disabled={!title || isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-1" />
-                  )}
-                  Brouillon
-                </Button>
-
-                {scheduledAt && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave("scheduled")}
-                    disabled={!title || isSaving}
-                  >
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Planifier
-                  </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleSave("draft")}
+                disabled={!title || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-1" />
                 )}
+                Brouillon
+              </Button>
 
-                <Button
-                  size="sm"
-                  onClick={() => handleSave("published")}
-                  disabled={!title || isSaving}
-                >
-                  <Send className="w-4 h-4 mr-1" />
-                  Programmer
-                </Button>
+              <Button
+                size="sm"
+                onClick={() => setScheduleModalOpen(true)}
+                disabled={!title || isSaving}
+              >
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Programmer
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={regenerateDisabled}
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Regénérer
-                </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerate}
+                disabled={regenerateDisabled}
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Regénérer
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    const ok = await copyToClipboard(generatedContent);
-                    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
-                  }}
-                  disabled={!generatedContent}
-                >
-                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copied ? "Copié" : "Copier"}
-                </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const ok = await copyToClipboard(generatedContent);
+                  if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+                }}
+                disabled={!generatedContent}
+              >
+                {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied ? "Copié" : "Copier"}
+              </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadAsPdf(generatedContent, title || "Email")}
-                  disabled={!generatedContent}
-                >
-                  <FileDown className="w-4 h-4 mr-1" />
-                  PDF
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadAsPdf(generatedContent, title || "Email")}
+                disabled={!generatedContent}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
             </div>
           )}
+
+          <ScheduleModal
+            open={scheduleModalOpen}
+            onOpenChange={setScheduleModalOpen}
+            platformLabel="Email"
+            onConfirm={handleScheduleConfirm}
+          />
         </div>
       </div>
     </div>

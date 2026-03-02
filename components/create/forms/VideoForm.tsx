@@ -6,9 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Wand2, RefreshCw, Save, Calendar, Send, X, Copy, Check, FileDown } from "lucide-react";
+import { Loader2, Wand2, RefreshCw, Save, CalendarDays, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
 import { downloadAsPdf } from "@/lib/content-utils";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
+
+const VIDEO_PLATFORM_CHANNELS: Record<string, string> = {
+  reel: "instagram",
+  tiktok: "tiktok",
+  youtube_long: "youtube",
+  youtube_shorts: "youtube",
+};
+
+const VIDEO_PLATFORM_LABELS: Record<string, string> = {
+  reel: "Instagram",
+  tiktok: "TikTok",
+  youtube_long: "YouTube",
+  youtube_shorts: "YouTube Shorts",
+};
 
 interface VideoFormProps {
   onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
@@ -40,8 +55,8 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   const [duration, setDuration] = useState("5min");
   const [generatedContent, setGeneratedContent] = useState("");
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   // Track saved content to avoid duplicates
   const [savedContentId, setSavedContentId] = useState<string | null>(null);
@@ -74,7 +89,12 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
     if (genId && !savedContentId) setSavedContentId(genId);
   };
 
-  const handleSave = async (status: "draft" | "scheduled" | "published") => {
+  const handleSave = async (status: "draft" | "scheduled" | "published", scheduledDate?: string, scheduledTime?: string) => {
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
+
+    const channel = VIDEO_PLATFORM_CHANNELS[platform] ?? platform;
+
     if (savedContentId) {
       try {
         await fetch(`/api/content/${savedContentId}`, {
@@ -84,7 +104,9 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             title,
             content: generatedContent,
             status,
-            scheduledDate: scheduledAt || undefined,
+            channel,
+            scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
           }),
         });
       } catch {
@@ -95,12 +117,17 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
         title,
         content: generatedContent,
         type: "video",
-        platform,
+        platform: channel,
         status,
-        scheduled_at: scheduledAt || undefined,
+        scheduled_date: scheduledDate,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
       });
       if (id) setSavedContentId(id);
     }
+  };
+
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    await handleSave("scheduled", date, time);
   };
 
   const handleCopy = async () => {
@@ -231,54 +258,47 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           </div>
 
           {generatedContent && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Programmer (optionnel)</Label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Brouillon
+              </Button>
 
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
-                  {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                  Brouillon
-                </Button>
+              <Button size="sm" onClick={() => setScheduleModalOpen(true)} disabled={!title || isSaving}>
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Programmer
+              </Button>
 
-                {scheduledAt && (
-                  <Button variant="secondary" size="sm" onClick={() => handleSave("scheduled")} disabled={!title || isSaving}>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Planifier
-                  </Button>
-                )}
+              <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Regénérer
+              </Button>
 
-                <Button size="sm" onClick={() => handleSave("published")} disabled={!title || isSaving}>
-                  <Send className="w-4 h-4 mr-1" />
-                  Programmer
-                </Button>
+              <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
+                {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied ? "Copié" : "Copier"}
+              </Button>
 
-                <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Regénérer
-                </Button>
-
-                <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
-                  {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copied ? "Copié" : "Copier"}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadAsPdf(generatedContent, title || "Script Vidéo")}
-                  disabled={!generatedContent}
-                >
-                  <FileDown className="w-4 h-4 mr-1" />
-                  PDF
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadAsPdf(generatedContent, title || "Script Vidéo")}
+                disabled={!generatedContent}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
             </div>
           )}
         </div>
       </div>
+
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        platformLabel={VIDEO_PLATFORM_LABELS[platform] ?? platform}
+        onConfirm={handleScheduleConfirm}
+      />
     </div>
   );
 }
