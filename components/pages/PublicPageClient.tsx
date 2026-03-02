@@ -35,6 +35,9 @@ type PublicPageData = {
   thank_you_message?: string;
   thank_you_cta_text?: string;
   thank_you_cta_url?: string;
+  // Tracking pixels
+  facebook_pixel_id?: string;
+  google_tag_id?: string;
 };
 
 function pageTexts(addressForm?: string) {
@@ -410,11 +413,52 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
   );
 }
 
+// Build tracking pixel snippets (Facebook Pixel + Google Tag)
+function buildTrackingSnippets(page: PublicPageData): string {
+  let snippets = "";
+
+  if (page.facebook_pixel_id) {
+    const pid = page.facebook_pixel_id.replace(/[^a-zA-Z0-9]/g, "");
+    snippets += `
+<!-- Facebook Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','${pid}');fbq('track','PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${pid}&ev=PageView&noscript=1"/></noscript>`;
+  }
+
+  if (page.google_tag_id) {
+    const gid = page.google_tag_id.replace(/[^a-zA-Z0-9-]/g, "");
+    snippets += `
+<!-- Google Tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${gid}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gid}');</script>`;
+  }
+
+  return snippets;
+}
+
 // Inject a small script into the HTML that intercepts CTA clicks
 // and posts a message to the parent to open the capture overlay.
 // IMPORTANT: Does NOT re-inject legal footer or capture form (already in html_snapshot from render.ts).
 function injectCaptureScript(page: PublicPageData): string {
-  const html = page.html_snapshot || "";
+  let html = page.html_snapshot || "";
+
+  // Inject tracking pixels into <head>
+  const trackingSnippets = buildTrackingSnippets(page);
+  if (trackingSnippets) {
+    const headIdx = html.indexOf("</head>");
+    if (headIdx !== -1) {
+      html = html.slice(0, headIdx) + trackingSnippets + "\n" + html.slice(headIdx);
+    } else {
+      html = trackingSnippets + "\n" + html;
+    }
+  }
 
   if (!page.capture_enabled) {
     // No capture interception needed — page is served as-is

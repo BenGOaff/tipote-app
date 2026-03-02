@@ -35,6 +35,9 @@ export type RenderTemplateRequest = {
   // optional runtime tokens to override template tokens
   // (ex: user brand colors)
   brandTokens?: Record<string, any> | null;
+
+  // locale for language-aware rendering (default "fr")
+  locale?: string;
 };
 
 type TemplateTokens = Record<string, any>;
@@ -221,11 +224,13 @@ function wrapAsDocument(args: {
   cssVars: string;
   mode: RenderMode;
   headHtml?: string;
+  locale?: string;
 }): string {
   const body = args.mode === "kit" ? `<div class="tpt-scope">${args.htmlBody}</div>` : args.htmlBody;
+  const lang = (args.locale || "fr").slice(0, 2);
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${lang}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -878,10 +883,22 @@ function injectInlineCaptureForm(html: string, contentData: Record<string, any>)
 /**
  * Inject legal footer links into rendered HTML if contentData has legal URLs.
  */
-function injectLegalFooterHtml(html: string, contentData: Record<string, any>): string {
+// Locale-aware legal link labels
+const LEGAL_LABELS: Record<string, { mentions: string; cgv: string; privacy: string }> = {
+  fr: { mentions: "Mentions l\u00e9gales", cgv: "CGV", privacy: "Politique de confidentialit\u00e9" },
+  en: { mentions: "Legal Notice", cgv: "Terms of Sale", privacy: "Privacy Policy" },
+  es: { mentions: "Aviso legal", cgv: "Condiciones de venta", privacy: "Pol\u00edtica de privacidad" },
+  de: { mentions: "Impressum", cgv: "AGB", privacy: "Datenschutz" },
+  it: { mentions: "Note legali", cgv: "Condizioni di vendita", privacy: "Privacy" },
+  pt: { mentions: "Avisos legais", cgv: "Condi\u00e7\u00f5es de venda", privacy: "Pol\u00edtica de privacidade" },
+};
+
+function injectLegalFooterHtml(html: string, contentData: Record<string, any>, locale?: string): string {
   // Guard: prevent double injection of legal footer
   if (html.includes("tipote-legal-footer") || html.includes("data-tipote-legal")) return html;
 
+  const lang = (locale || "fr").slice(0, 2);
+  const labels = LEGAL_LABELS[lang] || LEGAL_LABELS.fr;
   const links: string[] = [];
 
   const mentionsUrl = contentData?.legal_mentions_url;
@@ -897,9 +914,9 @@ function injectLegalFooterHtml(html: string, contentData: Record<string, any>): 
       }
     }
   } else {
-    if (mentionsUrl) links.push(`<a href="${safeString(mentionsUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">Mentions légales</a>`);
-    if (cgvUrl) links.push(`<a href="${safeString(cgvUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">CGV</a>`);
-    if (privacyUrl) links.push(`<a href="${safeString(privacyUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">Politique de confidentialité</a>`);
+    if (mentionsUrl) links.push(`<a href="${safeString(mentionsUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">${labels.mentions}</a>`);
+    if (cgvUrl) links.push(`<a href="${safeString(cgvUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">${labels.cgv}</a>`);
+    if (privacyUrl) links.push(`<a href="${safeString(privacyUrl)}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.7);text-decoration:underline">${labels.privacy}</a>`);
   }
 
   if (links.length === 0) return html;
