@@ -56,10 +56,15 @@ export async function GET(req: NextRequest) {
   // ── Use Europe/Paris timezone (users set times in their local tz) ──
   const parisNow = new Date();
   const parisDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(parisNow); // YYYY-MM-DD
-  const parisTime = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", hour12: false }).format(parisNow); // HH:MM
+
+  // Utiliser formatToParts pour un format HH:MM fiable (évite les séparateurs localisés
+  // comme "h" en français qui cassent la comparaison avec scheduled_time stocké en "HH:MM")
+  const timeParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(parisNow);
+  const parisHour = timeParts.find(p => p.type === "hour")?.value ?? "00";
+  const parisMinute = timeParts.find(p => p.type === "minute")?.value ?? "00";
+  const nowHHMM = `${parisHour}:${parisMinute}`;
 
   const todayStr = parisDate;
-  const nowHHMM = parisTime;
 
   // --- Atomic claim: fetch + lock scheduled posts in one transaction ---
   // Uses RPC claim_scheduled_posts() with FOR UPDATE SKIP LOCKED to prevent
@@ -145,6 +150,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Convertit "HH:MM" (ou "H:MM") en minutes depuis minuit pour comparaison fiable
+  function timeToMinutes(hhmm: string): number {
+    const parts = hhmm.split(":");
+    const h = parseInt(parts[0] ?? "0", 10);
+    const m = parseInt(parts[1] ?? "0", 10);
+    return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+  }
+
+  const nowMinutes = timeToMinutes(nowHHMM);
+
   // Filtrer par heure (si meta.scheduled_time est defini)
   const duePosts = (items ?? []).filter((item) => {
     const scheduledTime = item.meta?.scheduled_time as string | undefined;
@@ -152,7 +167,8 @@ export async function GET(req: NextRequest) {
       return true;
     }
     if (item.scheduled_date === todayStr) {
-      return scheduledTime <= nowHHMM;
+      // Comparaison numérique robuste (insensible au format "7:00" vs "07:00")
+      return timeToMinutes(scheduledTime) <= nowMinutes;
     }
     return true;
   });
@@ -347,6 +363,8 @@ export async function GET(req: NextRequest) {
       }
     }
   }
+
+  console.log(`[scheduled-posts] platform=${platformFilter ?? "all"} today=${todayStr} now=${nowHHMM} claimed=${(items ?? []).length} due=${duePosts.length} valid=${validPosts.length}`);
 
   return NextResponse.json({
     ok: true,

@@ -520,7 +520,29 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.error("n8n publish error:", err);
-      // Fallback : publication directe
+      // Fallback : publication directe — mais d'abord vérifier si le callback
+      // n8n a déjà marqué le post comme publié (évite les double-posts)
+      const { data: recheck } = await supabaseAdmin
+        .from("content_item")
+        .select("status, meta")
+        .eq("id", contentId)
+        .single();
+
+      const recheckStatus = ((recheck?.status ?? "") as string).toLowerCase();
+      const recheckMeta = (recheck?.meta && typeof recheck.meta === "object") ? recheck.meta as Record<string, unknown> : {};
+
+      if (recheckStatus === "published" || recheckMeta.published_at) {
+        console.log(`[publish] Post ${contentId} already published by n8n callback, skipping direct fallback`);
+        const existingPostId = recheckMeta[`${platform}_post_id`] as string | undefined;
+        const existingPostUrl = recheckMeta[`${platform}_post_url`] as string | undefined;
+        return NextResponse.json({
+          ok: true,
+          mode: "n8n-callback",
+          postId: existingPostId ?? null,
+          postUrl: existingPostUrl ?? null,
+          message: `Post publié sur ${platformLabel} via n8n.`,
+        });
+      }
     }
   }
 

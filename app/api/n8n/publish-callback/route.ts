@@ -73,6 +73,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "content_id manquant" }, { status: 400 });
   }
 
+  // Echo back the postId so the n8n Respond node can read it
+  // (fixes double-post bug where n8n response had empty postId → fallback to direct publish)
+  const echoPostId = postId ?? postUrn ?? "";
+
   if (success) {
     // Marquer comme publié + stocker les infos du post dans meta
     const meta: Record<string, string> = {
@@ -163,7 +167,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, postId: echoPostId });
 }
 
 // ─── Fire-and-forget: run after-comments via shared engine ───────────────────

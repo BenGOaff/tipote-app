@@ -513,6 +513,8 @@ export async function publishToFacebookPage(
 
 /**
  * Publie un post photo sur une Page Facebook (message + image URL).
+ * Pour les GIF animés, utilise un upload multipart (source) au lieu de l'URL
+ * afin d'empêcher Facebook de re-encoder le GIF en JPEG statique.
  */
 export async function publishPhotoToFacebookPage(
   pageAccessToken: string,
@@ -520,6 +522,12 @@ export async function publishPhotoToFacebookPage(
   message: string,
   imageUrl: string
 ): Promise<MetaPostResult> {
+  const isGif = imageUrl.toLowerCase().includes(".gif") || imageUrl.toLowerCase().includes("image/gif");
+
+  if (isGif) {
+    return publishGifToFacebookPage(pageAccessToken, pageId, message, imageUrl);
+  }
+
   const res = await fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -537,6 +545,79 @@ export async function publishPhotoToFacebookPage(
 
   const text = await res.text();
   return { ok: false, error: text, statusCode: res.status };
+}
+
+/**
+ * Publie un GIF animé sur une Page Facebook via upload multipart (source).
+ * Le paramètre "url" de l'API Photos re-encode les images → perd l'animation.
+ * En uploadant le binaire directement via "source", Facebook préserve le GIF.
+ */
+async function publishGifToFacebookPage(
+  pageAccessToken: string,
+  pageId: string,
+  message: string,
+  gifUrl: string
+): Promise<MetaPostResult> {
+  try {
+    // Étape 1 : Télécharger le GIF
+    const gifRes = await fetch(gifUrl);
+    if (!gifRes.ok) {
+      console.warn(`[meta] GIF download failed (${gifRes.status}), falling back to URL upload`);
+      // Fallback: essayer avec l'URL classique (mieux que rien)
+      return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
+    }
+    const gifBuffer = await gifRes.arrayBuffer();
+
+    // Étape 2 : Upload multipart avec le champ "source"
+    const formData = new FormData();
+    formData.append("source", new Blob([gifBuffer], { type: "image/gif" }), "animation.gif");
+    formData.append("message", message);
+    formData.append("access_token", pageAccessToken);
+
+    const res = await fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      return { ok: true, postId: json.post_id ?? json.id };
+    }
+
+    const text = await res.text();
+    console.warn(`[meta] GIF multipart upload failed: ${text}, falling back to URL upload`);
+    // Fallback: essayer avec l'URL classique
+    return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
+  } catch (err) {
+    console.error("[meta] GIF upload error:", err);
+    // Fallback ultime
+    return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
+  }
+}
+
+/** Upload photo classique via URL (utilisé comme fallback). */
+function publishPhotoViaUrl(
+  pageAccessToken: string,
+  pageId: string,
+  message: string,
+  imageUrl: string
+): Promise<MetaPostResult> {
+  return fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      url: imageUrl,
+      access_token: pageAccessToken,
+    }),
+  }).then(async (res) => {
+    if (res.ok) {
+      const json = await res.json();
+      return { ok: true, postId: json.post_id ?? json.id };
+    }
+    const text = await res.text();
+    return { ok: false, error: text, statusCode: res.status };
+  });
 }
 
 /**
