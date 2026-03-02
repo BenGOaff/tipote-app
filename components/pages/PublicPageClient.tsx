@@ -24,7 +24,34 @@ type PublicPageData = {
   legal_mentions_url: string;
   legal_cgv_url: string;
   legal_privacy_url: string;
+  address_form?: string;
 };
+
+function pageTexts(addressForm?: string) {
+  const v = addressForm === "vous";
+  return {
+    loading: "Chargement...",
+    notFoundTitle: "Page introuvable",
+    notFoundDesc: "Cette page n\u2019existe pas ou n\u2019est plus disponible.",
+    firstNamePlaceholder: v ? "Votre pr\u00e9nom" : "Ton pr\u00e9nom",
+    emailPlaceholder: v ? "Votre email" : "Ton email",
+    defaultCta: "C\u2019est parti !",
+    dataProtected: v ? "Vos donn\u00e9es sont prot\u00e9g\u00e9es." : "Tes donn\u00e9es sont prot\u00e9g\u00e9es.",
+    dataProtectedLong: v
+      ? "Vos donn\u00e9es sont prot\u00e9g\u00e9es et ne seront jamais partag\u00e9es."
+      : "Tes donn\u00e9es sont prot\u00e9g\u00e9es et ne seront jamais partag\u00e9es.",
+    privacyPolicy: "Politique de confidentialit\u00e9",
+    thanksTitle: "Merci !",
+    thanksRedirect: "Redirection en cours...",
+    thanksConfirmation: v
+      ? "Vous allez recevoir un email de confirmation."
+      : "Tu vas recevoir un email de confirmation.",
+    consentLabel: v
+      ? "J\u2019accepte de recevoir des emails."
+      : "J\u2019accepte de recevoir des emails.",
+    defaultHeading: v ? "Acc\u00e9dez gratuitement" : "Acc\u00e8de gratuitement",
+  };
+}
 
 export default function PublicPageClient({ page: serverPage, slug }: { page: PublicPageData | null; slug: string }) {
   const [page, setPage] = useState<PublicPageData | null>(serverPage);
@@ -95,12 +122,14 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
     }
   }, [captureEmail, captureFirstName, capturing, page]);
 
+  const txt = pageTexts(page?.address_form);
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 40, height: 40, border: "3px solid #e5e7eb", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ color: "#666" }}>Chargement...</p>
+          <p style={{ color: "#666" }}>{txt.loading}</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -111,8 +140,8 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>Page introuvable</h1>
-          <p style={{ color: "#666", marginTop: 8 }}>Cette page n&apos;existe pas ou n&apos;est plus disponible.</p>
+          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>{txt.notFoundTitle}</h1>
+          <p style={{ color: "#666", marginTop: 8 }}>{txt.notFoundDesc}</p>
         </div>
       </div>
     );
@@ -168,7 +197,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 8, textAlign: "center" }}>
-              {page.capture_heading || "Accède gratuitement"}
+              {page.capture_heading || txt.defaultHeading}
             </h2>
             {page.capture_subtitle && (
               <p style={{ color: "#666", textAlign: "center", marginBottom: 20, fontSize: "0.95rem" }}>
@@ -179,7 +208,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
             {(page.capture_first_name !== false) && (
             <input
               type="text"
-              placeholder="Ton prénom"
+              placeholder={txt.firstNamePlaceholder}
               value={captureFirstName}
               onChange={(e) => setCaptureFirstName(e.target.value)}
               style={{
@@ -196,7 +225,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
             )}
             <input
               type="email"
-              placeholder="Ton email"
+              placeholder={txt.emailPlaceholder}
               value={captureEmail}
               onChange={(e) => setCaptureEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmitLead()}
@@ -226,14 +255,14 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
                 cursor: capturing ? "not-allowed" : "pointer",
               }}
             >
-              {capturing ? "..." : page.payment_button_text || "C'est parti !"}
+              {capturing ? "..." : page.payment_button_text || txt.defaultCta}
             </button>
 
             <p style={{ fontSize: "0.75rem", color: "#999", textAlign: "center", marginTop: 12 }}>
-              Tes données sont protégées.{" "}
+              {txt.dataProtected}{" "}
               {page.legal_privacy_url && (
                 <a href={page.legal_privacy_url} target="_blank" rel="noopener" style={{ color: "#999", textDecoration: "underline" }}>
-                  Politique de confidentialité
+                  {txt.privacyPolicy}
                 </a>
               )}
             </p>
@@ -255,9 +284,9 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
         >
           <div style={{ background: "#fff", borderRadius: 16, padding: "40px 32px", textAlign: "center", maxWidth: 400 }}>
             <div style={{ fontSize: "3rem", marginBottom: 12 }}>&#10003;</div>
-            <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Merci !</h2>
+            <h2 style={{ fontWeight: 700, marginBottom: 8 }}>{txt.thanksTitle}</h2>
             <p style={{ color: "#666" }}>
-              {page.payment_url ? "Redirection en cours..." : "Tu vas recevoir un email de confirmation."}
+              {page.payment_url ? txt.thanksRedirect : txt.thanksConfirmation}
             </p>
           </div>
         </div>
@@ -322,9 +351,10 @@ function injectCaptureScript(page: PublicPageData): string {
 
 /** Inject an inline capture form into the page HTML. */
 function injectInlineCaptureForm(html: string, page: PublicPageData): string {
-  const heading = page.capture_heading || "Accède gratuitement";
+  const txt = pageTexts(page.address_form);
+  const heading = page.capture_heading || txt.defaultHeading;
   const subtitle = page.capture_subtitle || "";
-  const btnText = page.payment_button_text || "C'est parti !";
+  const btnText = page.payment_button_text || txt.defaultCta;
   const privacyUrl = page.legal_privacy_url || "";
 
   const formHtml = `
@@ -332,15 +362,15 @@ function injectInlineCaptureForm(html: string, page: PublicPageData): string {
   <h3 style="font-size:1.35rem;font-weight:700;margin:0 0 8px;color:#1c1c1c">${escapeForHtml(heading)}</h3>
   ${subtitle ? `<p style="color:#666;margin:0 0 20px;font-size:0.95rem">${escapeForHtml(subtitle)}</p>` : '<div style="margin-bottom:16px"></div>'}
   <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
-    <input type="text" placeholder="Ton prénom" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
-    <input type="email" placeholder="Ton email" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
+    <input type="text" placeholder="${escapeForHtml(txt.firstNamePlaceholder)}" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
+    <input type="email" placeholder="${escapeForHtml(txt.emailPlaceholder)}" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none">
     <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.8rem;color:#666;cursor:pointer;margin:4px 0">
       <input type="checkbox" required style="margin-top:2px;accent-color:#2563eb">
-      <span>J'accepte de recevoir des emails. ${privacyUrl ? `<a href="${escapeForHtml(privacyUrl)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">Politique de confidentialité</a>` : ''}</span>
+      <span>${escapeForHtml(txt.consentLabel)} ${privacyUrl ? `<a href="${escapeForHtml(privacyUrl)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">${escapeForHtml(txt.privacyPolicy)}</a>` : ''}</span>
     </label>
     <button type="submit" style="padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-top:4px">${escapeForHtml(btnText)}</button>
   </form>
-  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">Tes données sont protégées et ne seront jamais partagées.</p>
+  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">${escapeForHtml(txt.dataProtectedLong)}</p>
 </div>`;
 
   // Try to insert the form after the first CTA section or before the footer

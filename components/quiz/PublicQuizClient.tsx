@@ -48,6 +48,7 @@ type PublicQuizData = {
   bonus_description: string | null;
   share_message: string | null;
   locale: string | null;
+  address_form?: string | null;
   capture_heading: string | null;
   capture_subtitle: string | null;
   capture_first_name?: boolean | null;
@@ -95,6 +96,7 @@ type QuizTranslations = {
   copied: string;
   bonusUnlocked: string;
   thanksForSharing: string;
+  emailPlaceholder: string;
   defaultShareMessage: (title: string) => string;
 };
 
@@ -123,8 +125,37 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Copier le lien",
     copied: "Copi\u00e9 !",
     bonusUnlocked: "Bonus d\u00e9bloqu\u00e9 ! V\u00e9rifie ta bo\u00eete mail.",
+    emailPlaceholder: "ton@email.com",
     thanksForSharing: "Merci pour le partage !",
     defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Fais-le aussi :`,
+  },
+  fr_vous: {
+    quizUnavailable: "Ce quiz n\u2019est pas disponible.",
+    loadError: "Impossible de charger le quiz.",
+    quizNotFound: "Quiz introuvable",
+    start: "Commencer",
+    previous: "Pr\u00e9c\u00e9dent",
+    questions: "questions",
+    min: "min",
+    captureHeadingDefault: "Votre r\u00e9sultat est pr\u00eat !",
+    captureSubtitleDefault: "Entrez votre email pour d\u00e9couvrir votre profil.",
+    firstNamePlaceholder: "Votre pr\u00e9nom",
+    viewResult: "Voir mon r\u00e9sultat",
+    privacyPolicy: "Politique de confidentialit\u00e9",
+    defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
+    consentNeedle: "politique de confidentialit\u00e9",
+    yourProfile: "Votre profil",
+    resultFallback: "R\u00e9sultat",
+    insight: "Prise de conscience",
+    projection: "Et si...",
+    exclusiveBonus: "Bonus exclusif",
+    shareToUnlock: "Partagez sur un r\u00e9seau pour d\u00e9bloquer votre bonus :",
+    copyLink: "Copier le lien",
+    copied: "Copi\u00e9 !",
+    bonusUnlocked: "Bonus d\u00e9bloqu\u00e9 ! V\u00e9rifiez votre bo\u00eete mail.",
+    emailPlaceholder: "votre@email.com",
+    thanksForSharing: "Merci pour le partage !",
+    defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Faites-le aussi :`,
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -150,6 +181,7 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Copy link",
     copied: "Copied!",
     bonusUnlocked: "Bonus unlocked! Check your inbox.",
+    emailPlaceholder: "your@email.com",
     thanksForSharing: "Thanks for sharing!",
     defaultShareMessage: (title) => `I just took the quiz "${title}"! Try it too:`,
   },
@@ -177,6 +209,7 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Copiar enlace",
     copied: "\u00a1Copiado!",
     bonusUnlocked: "\u00a1Bonus desbloqueado! Revisa tu correo.",
+    emailPlaceholder: "tu@email.com",
     thanksForSharing: "\u00a1Gracias por compartir!",
     defaultShareMessage: (title) => `\u00a1Acabo de hacer el quiz "${title}"! Hazlo t\u00fa tambi\u00e9n:`,
   },
@@ -204,6 +237,7 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Link kopieren",
     copied: "Kopiert!",
     bonusUnlocked: "Bonus freigeschaltet! Pr\u00fcfe dein Postfach.",
+    emailPlaceholder: "deine@email.com",
     thanksForSharing: "Danke f\u00fcrs Teilen!",
     defaultShareMessage: (title) => `Ich habe gerade das Quiz "${title}" gemacht! Probier es auch:`,
   },
@@ -231,6 +265,7 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Copiar link",
     copied: "Copiado!",
     bonusUnlocked: "B\u00f4nus desbloqueado! Verifique seu e-mail.",
+    emailPlaceholder: "seu@email.com",
     thanksForSharing: "Obrigado por compartilhar!",
     defaultShareMessage: (title) => `Acabei de fazer o quiz "${title}"! Fa\u00e7a voc\u00ea tamb\u00e9m:`,
   },
@@ -258,6 +293,7 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "Copia link",
     copied: "Copiato!",
     bonusUnlocked: "Bonus sbloccato! Controlla la tua casella email.",
+    emailPlaceholder: "tua@email.com",
     thanksForSharing: "Grazie per la condivisione!",
     defaultShareMessage: (title) => `Ho appena fatto il quiz "${title}"! Fallo anche tu:`,
   },
@@ -285,12 +321,17 @@ const translations: Record<string, QuizTranslations> = {
     copyLink: "\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637",
     copied: "\u062a\u0645 \u0627\u0644\u0646\u0633\u062e!",
     bonusUnlocked: "\u062a\u0645 \u0641\u062a\u062d \u0627\u0644\u0645\u0643\u0627\u0641\u0623\u0629! \u062a\u062d\u0642\u0642 \u0645\u0646 \u0628\u0631\u064a\u062f\u0643.",
+    emailPlaceholder: "بريدك@email.com",
     thanksForSharing: "\u0634\u0643\u0631\u0627\u064b \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629!",
     defaultShareMessage: (title) => `\u0644\u0642\u062f \u0623\u062c\u0631\u064a\u062a \u0627\u062e\u062a\u0628\u0627\u0631 "${title}"! \u062c\u0631\u0628\u0647 \u0623\u0646\u062a \u0623\u064a\u0636\u0627\u064b:`,
   },
 };
 
-function getT(locale: string | null | undefined): QuizTranslations {
+function getT(locale: string | null | undefined, addressForm?: string | null): QuizTranslations {
+  // For French locale: use "fr_vous" variant when creator prefers vouvoiement
+  if ((locale ?? "fr") === "fr" && addressForm === "vous") {
+    return translations.fr_vous;
+  }
   return translations[locale ?? "fr"] ?? translations.fr;
 }
 
@@ -314,7 +355,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
 
-  const t = getT(quiz?.locale);
+  const t = getT(quiz?.locale, quiz?.address_form);
 
   useEffect(() => {
     // In preview mode, data is already provided via props
@@ -584,7 +625,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             )}
             <Input
               type="email"
-              placeholder="ton@email.com"
+              placeholder={t.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}

@@ -111,7 +111,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const admin = supabaseAdmin;
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -120,12 +120,27 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
+    // Fetch creator's address_form preference (tu/vous)
+    const quizUserId = (quizRes.data as any).user_id as string | undefined;
+    let addressForm = "tu";
+    if (quizUserId) {
+      const { data: bp } = await admin
+        .from("business_profiles")
+        .select("address_form")
+        .eq("user_id", quizUserId)
+        .maybeSingle();
+      addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+    }
+
     // Increment view count (non-blocking)
     admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
 
+    // Strip user_id from public response, inject address_form
+    const { user_id: _uid, ...quizPublic } = quizRes.data as any;
+
     return NextResponse.json({
       ok: true,
-      quiz: quizRes.data,
+      quiz: { ...quizPublic, address_form: addressForm },
       questions: (questionsRes.data ?? []).map((q: any) => ({
         ...q,
         options: q.options as { text: string; result_index: number }[],

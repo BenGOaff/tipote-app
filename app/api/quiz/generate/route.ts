@@ -92,10 +92,12 @@ export async function POST(req: NextRequest) {
     // Get user context for better generation
     let bpQuery = supabase
       .from("business_profiles")
-      .select("niche, mission")
+      .select("niche, mission, address_form")
       .eq("user_id", userId);
     if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
     const { data: profile } = await bpQuery.maybeSingle();
+
+    const addressForm = ((profile as any)?.address_form ?? "tu") === "vous" ? "vous" as const : "tu" as const;
 
     const prompts = buildQuizGenerationPrompt({
       objective,
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
       niche: profile?.niche ?? "",
       mission: profile?.mission ?? "",
       locale: String(body.locale ?? "fr"),
+      addressForm,
     });
     system = prompts.system;
     userPrompt = prompts.user;

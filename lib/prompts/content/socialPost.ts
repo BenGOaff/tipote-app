@@ -19,6 +19,7 @@ export type SocialPostPromptParams = {
   tone?: SocialTone | string;
   batchCount?: number;
   language?: string;
+  formality?: "tu" | "vous";
 
   // pour les posts de vente / lead magnet
   promoKind?: "paid" | "free";
@@ -214,8 +215,11 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
     `LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT le contenu généré dans cette langue.`,
   ].join("\n");
 
+  const formality = params.formality === "vous" ? "vous" : "tu";
+
   const hardRules = [
     "RÈGLES DE SORTIE (à respecter strictement):",
+    `- Tutoiement/Vouvoiement: utilise "${formality}" pour t'adresser au lecteur.`,
     "- Texte brut uniquement. Pas de markdown. Pas de mots en gras. Pas de titres.",
     "- Retour à la ligne après CHAQUE phrase pour aérer la lecture.",
     "- Phrases courtes et directes. N'utilise jamais 15 mots si 10 suffisent.",

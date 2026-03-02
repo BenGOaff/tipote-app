@@ -58,6 +58,7 @@ export type FunnelPromptParams = {
   branding?: FunnelBrandingContext | null;
 
   language?: string;
+  formality?: "tu" | "vous";
 };
 
 function safeString(v: unknown): string {
@@ -149,6 +150,10 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
     lines.push("");
   }
 
+  const formalityPremium = params.formality === "vous" ? "vous" : "tu";
+  lines.push(`TUTOIEMENT/VOUVOIEMENT : Utilise "${formalityPremium}" pour t'adresser au lecteur dans tout le contenu.`);
+  lines.push("");
+
   lines.push("IMPORTANT :");
   lines.push("- Respecte maxLength / minItems / maxItems / itemMaxLength.");
   lines.push("- Remplis tous les champs requis.");
@@ -163,11 +168,14 @@ function buildLegacyTextPrompt(params: FunnelPromptParams): string {
 
   const pageName = params.page === "capture" ? "Page de capture" : "Page de vente";
 
+  const formalityLegacy = params.formality === "vous" ? "vous" : "tu";
+
   lines.push(`${pageName} — Copywriting premium.`);
   lines.push("IMPORTANT: Retourne uniquement le contenu final, sans explication, sans markdown.");
   if (params.language && params.language !== "fr") {
     lines.push(`LANGUE OBLIGATOIRE: ${params.language}. Tout le contenu doit être rédigé dans cette langue.`);
   }
+  lines.push(`Tutoiement/Vouvoiement: utilise "${formalityLegacy}" pour t'adresser au lecteur.`);
   lines.push("");
 
   if ((params.mode === "from_offer" || params.mode === "from_existing") && params.offer) {

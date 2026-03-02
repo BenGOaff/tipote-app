@@ -18,6 +18,7 @@ export type VideoScriptPromptParams = {
   tone?: string; // ex: "direct", "bienveillant", "punchy"
   objective?: string; // ex: "leads", "vente", "notoriété"
   language?: string; // défaut: fr
+  formality?: "tu" | "vous";
 
   // Override explicite si déjà calculé côté UI / API
   targetWordCount?: number;
@@ -178,10 +179,12 @@ export function buildVideoScriptPrompt(params: VideoScriptPromptParams): string 
     `- Sujet: ${subject}.`,
   ].join("\n");
 
+  const formality = params.formality === "vous" ? "vous" : "tu";
+
   const systemStyle = [
     "INSTRUCTIONS DE STYLE:",
     `- Langue: ${lang} (si fr: français naturel, pas trop scolaire).`,
-    "- Voix: 2e personne (\"tu\") sauf si le sujet impose autrement.",
+    `- Voix: 2e personne ("${formality}") sauf si le sujet impose autrement.`,
     "- Interdits: phrases trop longues, jargon inutile, blabla d'intro, moralisation.",
   ].join("\n");
 
