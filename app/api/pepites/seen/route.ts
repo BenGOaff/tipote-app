@@ -1,8 +1,6 @@
 // app/api/pepites/seen/route.ts
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
-
 export async function POST(req: Request) {
   const supabase = await getSupabaseServerClient();
   const {
@@ -13,8 +11,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const projectId = await getActiveProjectId(supabase, user.id);
-
   const body = await req.json().catch(() => ({}));
   const userPepiteId = String(body?.userPepiteId ?? "").trim();
 
@@ -22,14 +18,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_userPepiteId" }, { status: 400 });
   }
 
-  let query = supabase
+  // Note: pas de filtre project_id car les pépites sont globales (pas liées à un projet)
+  const { error } = await supabase
     .from("user_pepites")
     .update({ seen_at: new Date().toISOString() })
     .eq("id", userPepiteId)
     .eq("user_id", user.id);
-  if (projectId) query = query.eq("project_id", projectId);
-
-  const { error } = await query;
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
