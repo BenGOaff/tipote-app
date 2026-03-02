@@ -33,6 +33,8 @@ type PublicPageData = {
   // Thank-you page customization (editable by user)
   thank_you_title?: string;
   thank_you_message?: string;
+  thank_you_cta_text?: string;
+  thank_you_cta_url?: string;
 };
 
 function pageTexts(addressForm?: string) {
@@ -119,8 +121,9 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
       });
       setCaptureSuccess(true);
 
-      // If there's a payment URL, redirect after showing thank-you briefly
-      if (page.payment_url) {
+      // Auto-redirect to payment URL ONLY if no custom CTA button is configured
+      // (if user set a thank_you_cta_url, they want manual click, not auto-redirect)
+      if (page.payment_url && !page.thank_you_cta_url) {
         setTimeout(() => {
           window.location.href = page.payment_url;
         }, 3000);
@@ -351,7 +354,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
               background: "#f0fdf4",
               borderRadius: 12,
               border: "1px solid #bbf7d0",
-              marginBottom: page.payment_url ? 24 : 0,
+              marginBottom: 24,
             }}>
               <svg width="20" height="20" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -362,12 +365,39 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
               </span>
             </div>
 
-            {/* Redirect notice */}
-            {page.payment_url && (
+            {/* Optional CTA button (user-configured: link to offer, social, blog, etc.) */}
+            {page.thank_you_cta_url && (
+              <div style={{ marginBottom: 16 }}>
+                <a
+                  href={page.thank_you_cta_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-block",
+                    padding: "14px 32px",
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 12,
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(37,99,235,0.3)",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                >
+                  {page.thank_you_cta_text || (page.address_form === "vous" ? "Continuer" : "Continuer")}
+                </a>
+              </div>
+            )}
+
+            {/* Redirect notice (auto-redirect to payment URL) */}
+            {page.payment_url && !page.thank_you_cta_url && (
               <p style={{
                 color: "#999",
                 fontSize: "0.85rem",
-                marginTop: 16,
+                marginTop: 0,
                 fontStyle: "italic",
               }}>
                 {txt.thanksRedirect}
