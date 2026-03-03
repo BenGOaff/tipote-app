@@ -61,9 +61,6 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   // Credits state
   const [creditsById, setCreditsById] = useState<Record<string, CreditsSnapshot>>({});
   const [loadingCreditsId, setLoadingCreditsId] = useState<string | null>(null);
-  const [addCreditsId, setAddCreditsId] = useState<string | null>(null);
-  const [addCreditsAmount, setAddCreditsAmount] = useState("");
-  const [savingCreditsId, setSavingCreditsId] = useState<string | null>(null);
 
   // Create user state
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -188,47 +185,6 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       });
     } finally {
       setLoadingCreditsId(null);
-    }
-  }
-
-  async function addBonusCredits(userId: string) {
-    const amount = parseInt(addCreditsAmount, 10);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast({
-        title: "Montant invalide",
-        description: "Le nombre de crédits doit être > 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSavingCreditsId(userId);
-    try {
-      const res = await fetch(`/api/admin/users`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, action: "add", amount }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.ok) {
-        throw new Error(json?.error || "Failed to add credits");
-      }
-      setCreditsById((prev) => ({ ...prev, [userId]: json.credits }));
-      setAddCreditsAmount("");
-      setAddCreditsId(null);
-
-      toast({
-        title: "Crédits ajoutés",
-        description: `+${amount} crédits bonus`,
-      });
-    } catch (e) {
-      toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible d'ajouter les crédits",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingCreditsId(null);
     }
   }
 
@@ -387,8 +343,6 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 const dirty = draft !== current;
                 const credits = creditsById[u.id];
                 const isLoadingCredits = loadingCreditsId === u.id;
-                const isAddingCredits = addCreditsId === u.id;
-                const isSavingCredits = savingCreditsId === u.id;
 
                 return (
                   <TableRow key={u.id}>
@@ -433,51 +387,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       {credits ? (
                         <div className="space-y-1">
                           <div className="text-sm font-medium">
-                            {credits.total_remaining} restants
+                            {credits.monthly_remaining} / {credits.monthly_credits_total}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Mensuel: {credits.monthly_remaining}/{credits.monthly_credits_total}
-                            {" · "}
-                            Bonus: {credits.bonus_remaining}/{credits.bonus_credits_total}
+                            Utilisés : {credits.monthly_credits_used}
                           </div>
-                          {isAddingCredits ? (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Input
-                                type="number"
-                                min="1"
-                                value={addCreditsAmount}
-                                onChange={(e) => setAddCreditsAmount(e.target.value)}
-                                placeholder="Nb"
-                                className="w-20 h-7 text-xs"
-                              />
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="h-7 text-xs px-2"
-                                disabled={isSavingCredits}
-                                onClick={() => addBonusCredits(u.id)}
-                              >
-                                {isSavingCredits ? "…" : "+"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs px-2"
-                                onClick={() => { setAddCreditsId(null); setAddCreditsAmount(""); }}
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-xs px-1"
-                              onClick={() => { setAddCreditsId(u.id); setAddCreditsAmount(""); }}
-                            >
-                              + Ajouter bonus
-                            </Button>
-                          )}
                         </div>
                       ) : (
                         <Button

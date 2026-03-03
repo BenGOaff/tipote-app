@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { ensureUserCredits, addBonusCredits } from "@/lib/credits";
+import { ensureUserCredits } from "@/lib/credits";
 
 type UserRow = {
   id: string;
@@ -388,53 +388,24 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// PATCH — Admin: view or add bonus credits for a user
+// PATCH — Admin: view credits for a user
 export async function PATCH(req: NextRequest) {
   try {
-    const { ok, session } = await assertAdmin(req);
+    const { ok } = await assertAdmin(req);
     if (!ok) {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
     const body = (await req.json().catch(() => ({}))) as {
       user_id: string;
-      action: "get" | "add";
-      amount?: number;
     };
 
     const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
-    const action = body?.action ?? "get";
 
     if (!userId) {
       return NextResponse.json({ ok: false, error: "Missing user_id" }, { status: 400 });
     }
 
-    if (action === "add") {
-      const amount = Number(body?.amount ?? 0);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return NextResponse.json({ ok: false, error: "amount must be > 0" }, { status: 400 });
-      }
-
-      // Add bonus credits via RPC (handles table access inside Postgres)
-      const snapshot = await addBonusCredits(userId, amount);
-
-      // Log the credit addition (best-effort)
-      try {
-        await supabaseAdmin.from("plan_change_log").insert({
-          actor_user_id: session?.user?.id ?? null,
-          target_user_id: userId,
-          old_plan: null,
-          new_plan: null,
-          reason: `admin: +${amount} bonus credits`,
-        } as any);
-      } catch {
-        // ignore
-      }
-
-      return NextResponse.json({ ok: true, credits: snapshot });
-    }
-
-    // Default action: get credits
     const snapshot = await ensureUserCredits(userId);
     return NextResponse.json({ ok: true, credits: snapshot });
   } catch (e) {

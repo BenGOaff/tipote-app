@@ -461,10 +461,10 @@ export async function POST(req: NextRequest) {
             `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} keeps existing plan="${existingPlan}".`,
           );
         } else {
-          // New user with no plan — default to "beta" (current offer)
-          plan = "beta";
-          console.warn(
-            `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". Defaulting to "beta" for new user ${resolvedEmail}.`,
+          // Unknown offer — do NOT default to a paid plan. Keep as free.
+          // Admin can manually assign the correct plan after checking webhook_logs.
+          console.error(
+            `[Systeme.io webhook] ❌ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} stays "free". Check OFFER_PRICE_PLAN_ID_TO_PLAN mapping.`,
           );
         }
       } else {
