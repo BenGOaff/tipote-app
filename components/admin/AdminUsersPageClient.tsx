@@ -65,6 +65,14 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   const [addCreditsAmount, setAddCreditsAmount] = useState("");
   const [savingCreditsId, setSavingCreditsId] = useState<string | null>(null);
 
+  // Create user state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPlan, setCreatePlan] = useState<string>("beta");
+  const [createFirstName, setCreateFirstName] = useState("");
+  const [createLastName, setCreateLastName] = useState("");
+  const [creating, setCreating] = useState(false);
+
   const filteredUsers = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return users;
@@ -224,6 +232,56 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     }
   }
 
+  async function createUser() {
+    const email = createEmail.trim().toLowerCase();
+    if (!email) {
+      toast({ title: "Erreur", description: "Email requis", variant: "destructive" });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/admin/users`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          plan: createPlan,
+          first_name: createFirstName.trim() || undefined,
+          last_name: createLastName.trim() || undefined,
+          send_magic_link: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Erreur lors de la création");
+      }
+
+      toast({
+        title: json.already_existed ? "Utilisateur mis à jour" : "Utilisateur créé",
+        description: `${email} → ${createPlan}${json.magic_link_sent ? " (magic link envoyé)" : ""}`,
+      });
+
+      // Reset form
+      setCreateEmail("");
+      setCreateFirstName("");
+      setCreateLastName("");
+      setCreatePlan("beta");
+      setShowCreateForm(false);
+
+      // Refresh user list
+      await loadUsers();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de créer l'utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -246,8 +304,58 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             <Button onClick={loadUsers} disabled={loading}>
               {loading ? "Chargement…" : "Rafraîchir"}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateForm((v) => !v)}
+            >
+              {showCreateForm ? "Annuler" : "+ Créer user"}
+            </Button>
           </div>
         </div>
+
+        {showCreateForm && (
+          <div className="mt-4 border-t pt-4 space-y-3">
+            <div className="text-sm font-medium">Créer un utilisateur manuellement</div>
+            <div className="text-xs text-muted-foreground">
+              Crée le compte Supabase + profil + envoie un magic link de connexion.
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <div className="sm:col-span-2">
+                <Input
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  placeholder="Email de l'acheteur *"
+                />
+              </div>
+              <Input
+                value={createFirstName}
+                onChange={(e) => setCreateFirstName(e.target.value)}
+                placeholder="Prénom (optionnel)"
+              />
+              <Input
+                value={createLastName}
+                onChange={(e) => setCreateLastName(e.target.value)}
+                placeholder="Nom (optionnel)"
+              />
+              <Select value={createPlan} onValueChange={setCreatePlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLANS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={createUser} disabled={creating || !createEmail.trim()}>
+                {creating ? "Création…" : "Créer et envoyer magic link"}
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card className="p-0 overflow-hidden">
