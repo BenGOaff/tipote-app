@@ -25,7 +25,7 @@ export async function POST() {
     // Check if profile row already exists
     const { data: existing } = await supabaseAdmin
       .from("profiles")
-      .select("id,plan")
+      .select("id,email,plan")
       .eq("id", userId)
       .maybeSingle();
 
