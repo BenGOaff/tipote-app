@@ -333,11 +333,29 @@ export async function POST(req: NextRequest) {
     }
 
     const rawBody = await readBodyAny(req);
+
+    // Log every incoming webhook call for debugging (helps trace missed buyers)
+    console.log(
+      `[Systeme.io webhook] Incoming request — type=${rawBody?.type ?? "unknown"} email=${rawBody?.data?.customer?.email ?? rawBody?.email ?? "?"}`,
+    );
+
     if (!rawBody) {
       console.error("[Systeme.io webhook] Could not parse body", {
         contentType: req.headers.get("content-type"),
       });
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    }
+
+    // Best-effort: log raw payload to webhook_logs table for audit
+    try {
+      await supabaseAdmin.from("webhook_logs").insert({
+        source: "systeme_io",
+        event_type: rawBody?.type ?? null,
+        payload: rawBody,
+        received_at: new Date().toISOString(),
+      } as any);
+    } catch {
+      // table may not exist — that's fine
     }
 
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
@@ -424,13 +442,31 @@ export async function POST(req: NextRequest) {
           sio_contact_id: sioContactId,
         }));
 
-      const plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
+      let plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
 
       // Log when plan cannot be determined — helps debug installment payment IDs
       if (!plan) {
-        console.warn(
-          `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} will keep current plan.`,
-        );
+        // Check if user already has a plan in the DB
+        const { data: existingProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const existingPlan = (existingProfile?.plan ?? "").toString().trim();
+
+        if (existingPlan && existingPlan !== "free") {
+          // User already has a paid plan — keep it
+          console.warn(
+            `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} keeps existing plan="${existingPlan}".`,
+          );
+        } else {
+          // New user with no plan — default to "beta" (current offer)
+          plan = "beta";
+          console.warn(
+            `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". Defaulting to "beta" for new user ${resolvedEmail}.`,
+          );
+        }
       } else {
         console.log(
           `[Systeme.io webhook] ✅ Plan inferred: ${plan} from offer_id="${offerId}" name="${offerName}"`,

@@ -5,6 +5,7 @@
 // ✅ Source de vérité: public.profiles.plan
 
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
@@ -218,6 +219,154 @@ export async function POST(req: NextRequest) {
       email: targetEmail || null,
       old_plan: oldPlan,
       new_plan: plan,
+      credits,
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+// PUT — Admin: create a new user (auth + profile + magic link)
+// Use case: buyer purchased on Systeme.io but webhook didn't fire
+export async function PUT(req: NextRequest) {
+  try {
+    const { ok, session } = await assertAdmin(req);
+    if (!ok) {
+      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = (await req.json().catch(() => ({}))) as {
+      email?: string;
+      plan?: string;
+      first_name?: string;
+      last_name?: string;
+      send_magic_link?: boolean;
+    };
+
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!email) {
+      return NextResponse.json({ ok: false, error: "Email requis" }, { status: 400 });
+    }
+
+    const plan = normalizePlan(String(body?.plan ?? "beta"));
+    const firstName = typeof body?.first_name === "string" ? body.first_name.trim() : null;
+    const lastName = typeof body?.last_name === "string" ? body.last_name.trim() : null;
+    const sendMagicLink = body?.send_magic_link !== false; // default true
+
+    // 1. Check if user already exists in auth
+    let userId = "";
+    let alreadyExisted = false;
+
+    try {
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
+      const authUsers = (authData as any)?.users ?? [];
+      const existing = authUsers.find(
+        (u: any) => (u.email ?? "").toLowerCase() === email,
+      );
+      if (existing?.id) {
+        userId = existing.id;
+        alreadyExisted = true;
+      }
+    } catch {
+      // ignore — will try to create
+    }
+
+    // 2. Create auth user if not found
+    if (!userId) {
+      const { data: createdUser, error: createErr } =
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            source: "admin_create",
+          },
+        });
+
+      if (createErr || !createdUser?.user) {
+        return NextResponse.json(
+          { ok: false, error: createErr?.message || "Failed to create auth user" },
+          { status: 400 },
+        );
+      }
+      userId = createdUser.user.id;
+    }
+
+    // 3. Upsert profile
+    const { error: upsertErr } = await supabaseAdmin
+      .from("profiles")
+      .upsert(
+        {
+          id: userId,
+          email,
+          plan,
+          first_name: firstName,
+          last_name: lastName,
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "id" },
+      );
+
+    if (upsertErr) {
+      return NextResponse.json({ ok: false, error: upsertErr.message }, { status: 400 });
+    }
+
+    // 4. Ensure credits bucket
+    let credits = null;
+    try {
+      credits = await ensureUserCredits(userId);
+    } catch {
+      // ignore — DB function may not exist yet
+    }
+
+    // 5. Send magic link (so the buyer can log in immediately)
+    let magicLinkSent = false;
+    if (sendMagicLink) {
+      try {
+        const anonClient = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { auth: { persistSession: false } },
+        );
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+        const { error: otpErr } = await anonClient.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${appUrl}/auth/callback`,
+            shouldCreateUser: false,
+          },
+        });
+        magicLinkSent = !otpErr;
+      } catch {
+        // non-blocking
+      }
+    }
+
+    // 6. Log
+    try {
+      await supabaseAdmin.from("plan_change_log").insert({
+        actor_user_id: session?.user?.id ?? null,
+        target_user_id: userId,
+        target_email: email,
+        old_plan: null,
+        new_plan: plan,
+        reason: "admin: create user",
+      } as any);
+    } catch {
+      // ignore
+    }
+
+    return NextResponse.json({
+      ok: true,
+      user_id: userId,
+      email,
+      plan,
+      already_existed: alreadyExisted,
+      magic_link_sent: magicLinkSent,
       credits,
     });
   } catch (e) {
