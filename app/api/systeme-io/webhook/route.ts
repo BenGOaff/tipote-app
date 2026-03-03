@@ -201,15 +201,27 @@ function extractNumber(body: any, paths: string[]): number | null {
 
 // ---------- Helpers Supabase ----------
 
+// Pagination safe: search ALL auth users, not just first 1000
 async function findUserByEmail(email: string) {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) {
-    console.error("[Systeme.io webhook] listUsers error:", error);
-    throw error;
-  }
-  const users = (data as any)?.users ?? [];
   const lower = email.toLowerCase();
-  return users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower) ?? null;
+  let page = 1;
+  const perPage = 1000;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error("[Systeme.io webhook] listUsers error:", error);
+      throw error;
+    }
+
+    const users = (data as any)?.users ?? [];
+    const found = users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower);
+    if (found) return found;
+
+    if (users.length < perPage) break; // last page
+    page += 1;
+  }
+  return null;
 }
 
 async function findProfileByContactId(contactId: string) {
@@ -238,21 +250,31 @@ async function getOrCreateSupabaseUser(params: {
 }) {
   const { email, first_name, last_name, sio_contact_id } = params;
 
-  const existingUser = await findUserByEmail(email);
-  if (existingUser) return existingUser.id as string;
-
+  // Strategy: try create first (fast path for new users).
+  // If user already exists, fall back to search.
   const { data: createdUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true,
     user_metadata: { first_name, last_name, sio_contact_id },
   });
 
-  if (createUserError || !createdUser?.user) {
-    console.error("[Systeme.io webhook] Error creating user:", createUserError);
-    throw new Error("Failed to create user");
+  if (createdUser?.user) {
+    console.log(`[Systeme.io webhook] ✅ New Supabase user created: ${email}`);
+    return createdUser.user.id as string;
   }
 
-  return createdUser.user.id as string;
+  // User already exists — find them (with pagination)
+  if (createUserError?.message?.toLowerCase().includes("already been registered")) {
+    console.log(`[Systeme.io webhook] User ${email} already exists, looking up…`);
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) return existingUser.id as string;
+    // Edge case: user exists in auth but findUserByEmail didn't find them
+    console.error(`[Systeme.io webhook] ❌ User ${email} exists in auth but not found via listUsers`);
+    throw new Error(`User ${email} exists but could not be found`);
+  }
+
+  console.error("[Systeme.io webhook] ❌ Error creating user:", createUserError);
+  throw new Error(`Failed to create user: ${createUserError?.message || "Unknown error"}`);
 }
 
 async function upsertProfile(params: {
@@ -309,18 +331,29 @@ async function sendMagicLink(email: string) {
   }
 }
 
-// ---------- Debug GET ----------
-
+// ---------- GET = diagnostic only ----------
+// ⚠️ If Systeme.io hits GET instead of POST, the webhook body is lost.
+// This happens when tipote.com redirects (301/302) to www.tipote.com,
+// converting POST → GET. Systeme.io sees 200 OK but no user is created.
 export async function GET(req: NextRequest) {
-  return NextResponse.json({
-    ok: true,
-    route: "/api/systeme-io/webhook",
-    host: req.headers.get("host"),
-    now: new Date().toISOString(),
-    env: {
-      SYSTEME_IO_WEBHOOK_SECRET: Boolean(process.env.SYSTEME_IO_WEBHOOK_SECRET),
+  console.warn(
+    `[Systeme.io webhook] ⚠️ GET request received (expected POST). ` +
+    `Host: ${req.headers.get("host")} — This may indicate a domain redirect issue (tipote.com → www.tipote.com).`,
+  );
+
+  return NextResponse.json(
+    {
+      error: "This endpoint only accepts POST requests from Systeme.io webhooks. " +
+        "If you are seeing this, the webhook URL may be misconfigured. " +
+        "Use https://www.tipote.com/api/systeme-io/webhook (with www).",
+      route: "/api/systeme-io/webhook",
+      host: req.headers.get("host"),
+      method: "GET",
+      expected_method: "POST",
+      now: new Date().toISOString(),
     },
-  });
+    { status: 405 },
+  );
 }
 
 // ---------- Handler principal ----------

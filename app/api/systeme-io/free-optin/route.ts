@@ -120,7 +120,7 @@ async function ensureCredits(userId: string) {
   if (error) throw error;
 }
 
-async function sendMagicLink(email: string) {
+async function sendMagicLink(email: string): Promise<boolean> {
   const { error } = await supabaseAnon.auth.signInWithOtp({
     email,
     options: {
@@ -128,7 +128,12 @@ async function sendMagicLink(email: string) {
       shouldCreateUser: false, // on a déjà créé le user côté admin
     },
   });
-  if (error) throw error;
+  if (error) {
+    // Non-blocking: user exists, they can use "mot de passe oublié"
+    console.error("[Systeme.io free-optin] sendMagicLink error:", error);
+    return false;
+  }
+  return true;
 }
 
 export async function POST(req: NextRequest) {
@@ -178,8 +183,8 @@ export async function POST(req: NextRequest) {
     // DB = source de vérité des crédits (inclut free one-shot)
     await ensureCredits(userId);
 
-    // Magic link
-    await sendMagicLink(email);
+    // Magic link (non-blocking: user exists even if link fails)
+    const magicLinkSent = await sendMagicLink(email);
 
     return NextResponse.json({
       status: "ok",
@@ -187,7 +192,7 @@ export async function POST(req: NextRequest) {
       email,
       user_id: userId,
       plan: "free",
-      redirected_to: `${APP_URL}/auth/callback`,
+      magic_link_sent: magicLinkSent,
     });
   } catch (err) {
     console.error("[Systeme.io free-optin] error:", err);
