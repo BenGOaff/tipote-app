@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { ensureUserCredits } from "@/lib/credits";
+import { ensureUserCredits, addBonusCredits } from "@/lib/credits";
 
 type UserRow = {
   id: string;
@@ -17,6 +17,7 @@ type UserRow = {
   plan: string | null;
   created_at: string | null;
   updated_at: string | null;
+  last_sign_in_at: string | null;
 };
 
 const VALID_PLANS = ["free", "basic", "pro", "elite", "beta"] as const;
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
         plan: profile?.plan ?? null,
         created_at: au.created_at ?? profile?.created_at ?? null,
         updated_at: profile?.updated_at ?? au.updated_at ?? null,
+        last_sign_in_at: au.last_sign_in_at ?? null,
       };
     });
 
