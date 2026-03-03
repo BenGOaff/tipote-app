@@ -48,46 +48,57 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
 
-    let query = supabaseAdmin
+    // Source of truth: auth.users (every buyer has an auth account).
+    // We merge with profiles to get plan info.
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (authError) {
+      return NextResponse.json({ ok: false, error: authError.message }, { status: 400 });
+    }
+
+    const authUsers = (authData as any)?.users ?? [];
+
+    // Load all profiles in one query to merge
+    const { data: profilesData } = await supabaseAdmin
       .from("profiles")
-      .select("id,email,plan,created_at,updated_at")
-      .order("updated_at", { ascending: false });
+      .select("id,email,plan,created_at,updated_at");
 
+    const profileById = new Map<string, any>();
+    for (const p of profilesData ?? []) {
+      profileById.set(p.id, p);
+    }
+
+    // Build merged user list: auth.users + profile data
+    let users: UserRow[] = authUsers.map((au: any) => {
+      const profile = profileById.get(au.id);
+      const email = (au.email ?? profile?.email ?? "").toLowerCase();
+      return {
+        id: au.id,
+        email: email || null,
+        plan: profile?.plan ?? null,
+        created_at: au.created_at ?? profile?.created_at ?? null,
+        updated_at: profile?.updated_at ?? au.updated_at ?? null,
+      };
+    });
+
+    // Filter by search query
     if (q) {
-      query = query.ilike("email", `%${q}%`);
+      users = users.filter(
+        (u) =>
+          (u.email ?? "").includes(q) ||
+          u.id.toLowerCase().includes(q),
+      );
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
-
-    const users = (data ?? []) as UserRow[];
-
-    // Also search auth.users for users who have no profile yet (e.g. webhook missed).
-    // This ensures new signups are always visible in the admin dashboard.
-    if (q) {
-      const profileIds = new Set(users.map((u) => u.id));
-      try {
-        const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
-        const authUsers = (authData as any)?.users ?? [];
-        for (const au of authUsers) {
-          if (profileIds.has(au.id)) continue;
-          const auEmail = (au.email ?? "").toLowerCase();
-          if (!auEmail.includes(q)) continue;
-          users.push({
-            id: au.id,
-            email: auEmail,
-            plan: "free",
-            created_at: au.created_at ?? null,
-            updated_at: au.updated_at ?? null,
-          });
-        }
-      } catch {
-        // Best-effort: if listUsers fails, just return profiles
-      }
-    }
+    // Sort: most recently updated first
+    users.sort((a, b) => {
+      const da = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const db = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return db - da;
+    });
 
     return NextResponse.json({ ok: true, users });
   } catch (e) {

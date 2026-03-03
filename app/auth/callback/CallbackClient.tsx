@@ -136,6 +136,15 @@ export default function CallbackClient() {
       return;
     }
 
+    // Ensure the user has a "profiles" row (plan, email, credits).
+    // Without this, users whose Systeme.io webhook missed are invisible
+    // in the admin dashboard and default to "free".
+    try {
+      await fetch("/api/account/ensure-profile", { method: "POST" });
+    } catch {
+      // non-blocking
+    }
+
     const force = await mustForceSetPassword(supabase, userId);
     if (force) {
       router.replace("/auth/set-password");
